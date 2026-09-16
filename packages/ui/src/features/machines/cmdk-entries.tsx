@@ -1,3 +1,4 @@
+import {useMemo} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
@@ -15,13 +16,15 @@ export function useMachinesCmdkEntries(): CmdkEntry[] {
 	const isOwner = userQ.data?.role === 'owner'
 	const {machines} = useMachines({enabled: isOwner})
 
-	if (!isOwner) return []
+	return useMemo(() => {
+		if (!isOwner) return []
 
-	return machines.map((machine) => ({
-		id: `machine:${machine.id}`,
-		title: machine.name,
-		keywords: [t('machines')],
-		icon: <OsIcon osId={machine.osId} state={machine.state} className='h-full w-full' />,
-		onSelect: () => navigate(machinePath(machine.id)),
-	}))
+		return machines.map((machine) => ({
+			id: `machine:${machine.id}`,
+			title: machine.name,
+			keywords: [t('machines')],
+			icon: <OsIcon osId={machine.osId} state={machine.state} className='h-full w-full' />,
+			onSelect: () => navigate(machinePath(machine.id)),
+		}))
+	}, [isOwner, machines, t, navigate])
 }

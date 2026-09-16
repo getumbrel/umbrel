@@ -16,11 +16,23 @@ export function useStoreSearch() {
 		activeInputRef.current = input
 	}, [])
 
+	const writtenQuery = useRef(searchParams.get('q') ?? '')
 	useEffect(() => {
 		if (deferredQuery) searchParams.set('q', deferredQuery)
 		else searchParams.delete('q')
+		writtenQuery.current = deferredQuery
 		setSearchParams(searchParams, {replace: true})
 	}, [deferredQuery])
+
+	// A search handed in from outside (Cmd+K's "More in App Store" while the
+	// store is already open) replaces the field. Our own writes above come back
+	// through the URL too; those are recognised and left alone.
+	const urlQuery = searchParams.get('q') ?? ''
+	useEffect(() => {
+		if (urlQuery === writtenQuery.current) return
+		writtenQuery.current = urlQuery
+		setQuery(urlQuery)
+	}, [urlQuery])
 
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {

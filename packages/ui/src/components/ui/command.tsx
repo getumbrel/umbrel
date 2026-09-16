@@ -10,12 +10,7 @@ import {useFadeScroller} from '@/components/fade-scroller'
 import {Dialog} from '@/components/ui/dialog'
 import {cn} from '@/lib/utils'
 
-import {
-	dialogContentAnimationClass,
-	dialogContentClass,
-	dialogOverlayClass,
-	preventDialogDismissForToasts,
-} from './shared/dialog'
+import {dialogOverlayClass, preventDialogDismissForToasts} from './shared/dialog'
 
 function Command({
 	className,
@@ -29,21 +24,30 @@ function Command({
 	)
 }
 
-type CommandDialogProps = DialogProps
+type CommandDialogProps = DialogProps & {
+	contentClassName?: string
+	// Passed straight to the cmdk root: a controlled `value`, `onValueChange`…
+	commandProps?: Omit<React.ComponentPropsWithoutRef<typeof CommandPrimitive>, 'children'>
+	onEscapeKeyDown?: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>['onEscapeKeyDown']
+}
 
-const CommandDialog = ({children, ...props}: CommandDialogProps) => {
+// The dialog is a transparent stage; whatever it holds (the search orb, the
+// results card) paints and animates itself. Radix keeps the stage mounted for
+// as long as an animation runs on it, so a no-op hold on close (see
+// `.cmdk-stage` in index.css) gives the children time to leave.
+const CommandDialog = ({children, contentClassName, commandProps, onEscapeKeyDown, ...props}: CommandDialogProps) => {
+	const {className: commandClassName, ...restCommandProps} = commandProps ?? {}
 	return (
 		<Dialog {...props}>
 			<BlurOverlay />
 			<DialogPrimitive.Content
 				onPointerDownOutside={preventDialogDismissForToasts}
+				onEscapeKeyDown={onEscapeKeyDown}
+				aria-describedby={undefined}
 				className={cn(
-					dialogContentClass,
-					dialogContentAnimationClass,
-					'data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-top-0',
-					'top-4 translate-y-0 overflow-hidden p-3 md:p-[30px] lg:top-[10%]',
-					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
-					'z-[999]',
+					'cmdk-stage fixed left-1/2 z-[999] flex -translate-x-1/2 flex-col items-center outline-hidden',
+					'top-4 max-h-[calc(100dvh-32px)] w-full max-w-[calc(100%-32px)] sm:max-w-[720px] lg:top-[8%] lg:max-h-[84dvh]',
+					contentClassName,
 				)}
 			>
 				<Command
@@ -51,7 +55,8 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 					// Rows are ranked in JS before they're rendered (see cmdk-search.ts), so
 					// cmdk must not re-score or reorder them
 					shouldFilter={false}
-					className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-3 md:gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0'
+					className={cn('min-h-0 items-center overflow-visible', commandClassName)}
+					{...restCommandProps}
 				>
 					{children}
 				</Command>
@@ -62,22 +67,53 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 
 function CommandInput({
 	className,
+	wrapperClassName,
+	leading,
+	trailing,
+	onClear,
+	clearLabel = 'Clear',
 	ref,
 	...props
 }: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> & {
 	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.Input>>
+	wrapperClassName?: string
+	// Decoration before the field (a search glyph) and after it (a scope chip).
+	// Without `trailing` the dialog's close button takes that slot.
+	leading?: React.ReactNode
+	trailing?: React.ReactNode
+	// Shows a clear button while the (controlled) value is non-empty
+	onClear?: () => void
+	clearLabel?: string
 }) {
+	const localRef = React.useRef<HTMLInputElement>(null)
+	const hasValue = typeof props.value === 'string' && props.value.length > 0
 	return (
-		<div className='flex items-center pr-2' cmdk-input-wrapper=''>
+		<div className={cn('flex items-center pr-2', wrapperClassName)} cmdk-input-wrapper=''>
+			{leading && <span className='flex shrink-0 items-center justify-center text-white/45'>{leading}</span>}
 			<CommandPrimitive.Input
-				ref={ref}
+				ref={mergeRefs([localRef, ref])}
 				className={cn(
-					'flex w-full rounded-md bg-transparent p-2 text-15 font-medium -tracking-2 outline-hidden placeholder:text-white/25 disabled:cursor-not-allowed disabled:opacity-50',
+					'flex w-full min-w-0 rounded-md bg-transparent p-2 text-15 font-medium -tracking-2 outline-hidden placeholder:text-white/25 disabled:cursor-not-allowed disabled:opacity-50',
 					className,
 				)}
 				{...props}
 			/>
-			<CommandCloseButton />
+			{onClear && hasValue && (
+				<button
+					type='button'
+					aria-label={clearLabel}
+					className='mr-1 flex shrink-0 items-center rounded-full text-white/30 outline-hidden transition-colors hover:text-white/55 focus-visible:ring-2 focus-visible:ring-ring'
+					// Keep the caret in the field: the clear must not blur it
+					onMouseDown={(event) => event.preventDefault()}
+					onClick={() => {
+						onClear()
+						localRef.current?.focus()
+					}}
+				>
+					<RiCloseCircleFill className='size-[18px]' />
+				</button>
+			)}
+			{trailing ?? <CommandCloseButton />}
 		</div>
 	)
 }
@@ -93,7 +129,7 @@ function CommandList({
 	return (
 		<CommandPrimitive.List
 			ref={mergeRefs([localRef, ref])}
-			className={cn(scrollerClass, 'overflow-x-hidden overflow-y-auto', className)}
+			className={cn(scrollerClass, 'min-h-0 overflow-x-hidden overflow-y-auto', className)}
 			{...props}
 		/>
 	)
@@ -136,18 +172,21 @@ function CommandItem({
 	ref,
 	icon,
 	iconVariant = 'bare',
+	showShortcut = true,
 	children,
 	...props
 }: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {
 	icon?: CommandItemIcon
 	iconVariant?: 'bare' | 'tile'
+	// The ↵ hint on the selected row; tiles and links do without
+	showShortcut?: boolean
 	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.Item>>
 }) {
 	return (
 		<CommandPrimitive.Item
 			ref={ref}
 			className={cn(
-				'group relative flex cursor-default items-center gap-3 rounded-8 p-2 text-13 font-medium -tracking-2 outline-hidden aria-selected:bg-white/4 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 md:text-15',
+				'group relative flex cursor-default items-center gap-3 rounded-8 p-2 text-13 font-medium -tracking-2 outline-hidden aria-selected:bg-white/6 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 md:text-15',
 				className,
 			)}
 			{...props}
@@ -167,7 +206,7 @@ function CommandItem({
 					<span className='flex size-6 shrink-0 items-center justify-center lg:size-9'>{icon}</span>
 				))}
 			{children}
-			<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
+			{showShortcut && <CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>}
 		</CommandPrimitive.Item>
 	)
 }

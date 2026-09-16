@@ -1,3 +1,4 @@
+import {useMemo} from 'react'
 import {useTranslation} from 'react-i18next'
 import {resolvePath, useLocation, useNavigate, type Location} from 'react-router-dom'
 
@@ -25,30 +26,38 @@ export function useSettingsCmdkEntries(): CmdkEntry[] {
 	const isMember = userQ.data?.role === 'member'
 	const {repositories} = useBackups({repositoriesEnabled: Boolean(userQ.data) && !isMember})
 
-	if (!userQ.data) return []
+	const hasUser = Boolean(userQ.data)
+	const sambaEnabled = userQ.data?.sambaEnabled === true
+	const hasRepositories = (repositories?.length ?? 0) > 0
 
-	const catalog = createSettingsCatalog(t, {deviceName, isMember, sambaEnabled: userQ.data.sambaEnabled === true})
-	const defaultItems = new Set(getDefaultSettingsCommandItems(catalog))
+	// Built once per input change, not per keystroke: the catalog resolves
+	// every page's copy through t(), and the palette re-renders as you type
+	return useMemo(() => {
+		if (!hasUser) return []
 
-	return getSettingsCommandItems(catalog).map((item) => ({
-		id: `settings:${item.id}`,
-		title: item.title,
-		subtitle: `${t('generic-in')} ${t('settings')}`,
-		keywords: [item.description, ...(item.keywords ?? [])].filter((keyword) => keyword !== undefined),
-		default: defaultItems.has(item),
-		icon: systemAppsKeyed['UMBREL_settings'].icon,
-		onSelect: () => {
-			const target = getSettingsCommandTarget(item)
-			if (target.type === 'external') window.open(target.to, '_blank', 'noopener,noreferrer')
-			else if (target.type === 'backups') {
-				navigate((repositories?.length ?? 0) > 0 ? '/settings/backups/configure' : '/settings/backups/setup')
-			} else if (target.type === 'current-location-dialog') {
-				navigate(addDialogToLocation(location, target.dialog))
-			} else {
-				navigate(target.to, {replace: shouldReplaceSettingsNavigation(location.pathname, target.to)})
-			}
-		},
-	}))
+		const catalog = createSettingsCatalog(t, {deviceName, isMember, sambaEnabled})
+		const defaultItems = new Set(getDefaultSettingsCommandItems(catalog))
+
+		return getSettingsCommandItems(catalog).map((item) => ({
+			id: `settings:${item.id}`,
+			title: item.title,
+			subtitle: `${t('generic-in')} ${t('settings')}`,
+			keywords: [item.description, ...(item.keywords ?? [])].filter((keyword) => keyword !== undefined),
+			default: defaultItems.has(item),
+			icon: systemAppsKeyed['UMBREL_settings'].icon,
+			onSelect: () => {
+				const target = getSettingsCommandTarget(item)
+				if (target.type === 'external') window.open(target.to, '_blank', 'noopener,noreferrer')
+				else if (target.type === 'backups') {
+					navigate(hasRepositories ? '/settings/backups/configure' : '/settings/backups/setup')
+				} else if (target.type === 'current-location-dialog') {
+					navigate(addDialogToLocation(location, target.dialog))
+				} else {
+					navigate(target.to, {replace: shouldReplaceSettingsNavigation(location.pathname, target.to)})
+				}
+			},
+		}))
+	}, [t, navigate, location, deviceName, isMember, sambaEnabled, hasUser, hasRepositories])
 }
 
 export function addDialogToLocation(location: Pick<Location, 'pathname' | 'search' | 'hash'>, dialog: 'logout') {

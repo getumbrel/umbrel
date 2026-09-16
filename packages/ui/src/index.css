@@ -290,6 +290,58 @@ html {
 		animation: umbrel-dock-bounce 400ms ease-in-out;
 	}
 
+	/* Cmd+K. The dialog is a transparent stage; the orb and the card beneath
+	   it animate on their own. `cmdk-hold` changes nothing: it keeps Radix from
+	   unmounting the stage until the longest exit has landed. */
+	.cmdk-stage[data-state='closed'] {
+		animation: cmdk-hold 200ms linear both;
+	}
+
+	.cmdk-orb-stage {
+		animation: cmdk-orb-rise 380ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		will-change: transform, opacity;
+	}
+
+	.cmdk-stage[data-state='closed'] .cmdk-orb-stage {
+		animation: cmdk-orb-sink 180ms cubic-bezier(0.32, 0.72, 0, 1) both;
+	}
+
+	/* Concentric with the field's pill: its radius plus the card padding
+	   (h-11 + p-3 on phones, h-12 + p-3 from sm) */
+	.cmdk-card {
+		--material-modal-radius: 34px;
+		transform-origin: 50% 0;
+		animation: cmdk-card-in 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		transition: height 260ms cubic-bezier(0.32, 0.72, 0, 1);
+	}
+
+	@media (width >= 640px) {
+		.cmdk-card {
+			--material-modal-radius: 36px;
+		}
+	}
+
+	/* Keys press the orb; the release springs back with a little overshoot */
+	.cmdk-orb-body {
+		transition: transform 320ms cubic-bezier(0.34, 1.45, 0.64, 1);
+		will-change: transform;
+	}
+
+	.cmdk-orb-body[data-pressed] {
+		transform: scale(0.9);
+		transition: transform 90ms cubic-bezier(0.2, 0, 0, 1);
+	}
+
+	.cmdk-stage[data-state='closed'] .cmdk-card {
+		animation: cmdk-card-out 160ms cubic-bezier(0.32, 0.72, 0, 1) both;
+	}
+
+	/* A section that appears mid-search rises in. Sections are keyed by id, so
+	   one already showing never replays this while its contents change. */
+	.cmdk-section {
+		animation: cmdk-section-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	}
+
 	/* Rows darken progressively down each section, bottoming out at tone 6 —
 	   rows past the sixth stay at the darkest tone. */
 	.settings-list-group > .settings-list-row {
@@ -359,6 +411,23 @@ html {
 	.umbrel-sheet-zoom[data-state='closed'],
 	.umbrel-dock-bounce {
 		animation: none;
+	}
+
+	.cmdk-orb-stage,
+	.cmdk-card,
+	.cmdk-section {
+		animation: cmdk-fade 150ms ease-out both;
+		transition: none;
+	}
+
+	.cmdk-stage[data-state='closed'] :is(.cmdk-orb-stage, .cmdk-card) {
+		animation: cmdk-fade 150ms ease-out reverse both;
+	}
+
+	.cmdk-orb-body,
+	.cmdk-orb-body[data-pressed] {
+		transform: none;
+		transition: none;
 	}
 }
 
@@ -798,6 +867,81 @@ html {
    close opacity holds through the first 30% so the sheet visibly detaches and
    sinks before it dissolves. Unspecified ends fall back to the element's
    resting style. */
+@keyframes cmdk-hold {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes cmdk-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes cmdk-orb-rise {
+	from {
+		transform: translateY(18px) scale(0.55);
+		opacity: 0;
+		filter: blur(6px);
+	}
+	to {
+		transform: none;
+		opacity: 1;
+		filter: blur(0);
+	}
+}
+
+@keyframes cmdk-orb-sink {
+	from {
+		transform: none;
+		opacity: 1;
+	}
+	to {
+		transform: translateY(10px) scale(0.7);
+		opacity: 0;
+	}
+}
+
+@keyframes cmdk-card-in {
+	from {
+		transform: translateY(10px) scale(0.97);
+		opacity: 0;
+	}
+	to {
+		transform: none;
+		opacity: 1;
+	}
+}
+
+@keyframes cmdk-card-out {
+	from {
+		transform: none;
+		opacity: 1;
+	}
+	to {
+		transform: translateY(6px) scale(0.98);
+		opacity: 0;
+	}
+}
+
+@keyframes cmdk-section-in {
+	from {
+		transform: translateY(4px);
+		opacity: 0;
+	}
+	to {
+		transform: none;
+		opacity: 1;
+	}
+}
+
 @keyframes umbrel-sheet-in {
 	from {
 		transform: translateY(28px) scale(0.94);
@@ -865,13 +1009,15 @@ html {
 	/* min-height: 200px; */
 	max-height: 500px;
 	/* Results cross the overflow threshold constantly while typing; keep the
-	   scrollbar's space reserved so rows don't jitter sideways */
-	scrollbar-gutter: stable;
+	   scrollbar's space reserved so rows don't jitter sideways — on both edges,
+	   so rows stay centred under the search field */
+	scrollbar-gutter: stable both-edges;
 	/* scroll-padding-block-start: 20px; */
 	/* scroll-padding-block-end: 20px; */
 }
 
-[cmdk-item] + [cmdk-item] {
+/* Breathing room between list rows only; tiles sit in their own grid */
+.cmdk-rows > [cmdk-item] + [cmdk-item] {
 	@apply mt-1 md:mt-2.5;
 }
 

@@ -30,23 +30,47 @@ export function normalizeSearchText(value: string) {
 		.replace(/[\u0300-\u036f]/g, '')
 }
 
-// Match tiers, best first. Ties keep entry order, so sources are listed by
-// priority (system actions, settings, installed apps, shortcuts, app store).
-function scoreEntry(entry: CmdkEntry, query: string, wordStart: RegExp) {
-	const title = normalizeSearchText(entry.title)
-	if (title === query) return 7
-	if (title.startsWith(query)) return 6
-	if (wordStart.test(title)) return 5
-	if (title.includes(query)) return 4
+// How well a title (and its keywords) match a query, on one scale every
+// source shares — the local entries, the App Store's index, file names — so
+// results from different places can be compared. Best first. Ties keep the
+// order they came in, so sources list by priority (system actions, settings,
+// installed apps, shortcuts, app store).
+export const CMDK_MATCH = {
+	exact: 7,
+	prefix: 6,
+	wordPrefix: 5,
+	substring: 4,
+	keywordWordPrefix: 3,
+	keywordSubstring: 2,
+	subsequence: 1,
+	none: 0,
+} as const
 
-	const keywords = entry.keywords?.map(normalizeSearchText) ?? []
-	if (keywords.some((keyword) => wordStart.test(keyword))) return 3
-	if (keywords.some((keyword) => keyword.includes(query))) return 2
+export type CmdkMatcher = (title: string, keywords?: readonly string[]) => number
 
-	// Compact queries like "chpass" → "Change password". Only for titles and
-	// only from three characters, otherwise everything matches.
-	if (query.length >= 3 && isSubsequence(query, title)) return 1
-	return 0
+// Null for an empty query: nothing matches nothing
+export function createCmdkMatcher(query: string): CmdkMatcher | null {
+	const normalizedQuery = normalizeSearchText(query)
+	if (!normalizedQuery) return null
+	// The query at the start of a word: "fi" in "Wi-Fi", "mcp" in "AI agents (MCP)"
+	const wordStart = new RegExp(`(?:^|[^\\p{L}\\p{N}])${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u')
+
+	return (rawTitle, rawKeywords) => {
+		const title = normalizeSearchText(rawTitle)
+		if (title === normalizedQuery) return CMDK_MATCH.exact
+		if (title.startsWith(normalizedQuery)) return CMDK_MATCH.prefix
+		if (wordStart.test(title)) return CMDK_MATCH.wordPrefix
+		if (title.includes(normalizedQuery)) return CMDK_MATCH.substring
+
+		const keywords = rawKeywords?.map(normalizeSearchText) ?? []
+		if (keywords.some((keyword) => wordStart.test(keyword))) return CMDK_MATCH.keywordWordPrefix
+		if (keywords.some((keyword) => keyword.includes(normalizedQuery))) return CMDK_MATCH.keywordSubstring
+
+		// Compact queries like "chpass" → "Change password". Only for titles and
+		// only from three characters, otherwise everything matches.
+		if (normalizedQuery.length >= 3 && isSubsequence(normalizedQuery, title)) return CMDK_MATCH.subsequence
+		return CMDK_MATCH.none
+	}
 }
 
 function isSubsequence(query: string, text: string) {
@@ -58,16 +82,33 @@ function isSubsequence(query: string, text: string) {
 }
 
 export function rankCmdkEntries(entries: CmdkEntry[], query: string, limit: number): CmdkEntry[] {
-	const normalizedQuery = normalizeSearchText(query)
-	if (!normalizedQuery) return []
+	return rankCmdkEntriesScored(entries, query, limit).map(({entry}) => entry)
+}
 
-	// The query at the start of a word: "fi" in "Wi-Fi", "mcp" in "AI agents (MCP)"
-	const wordStart = new RegExp(`(?:^|[^\\p{L}\\p{N}])${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'u')
-
+export function rankCmdkEntriesScored(
+	entries: CmdkEntry[],
+	query: string,
+	limit: number,
+): {entry: CmdkEntry; score: number}[] {
+	const matcher = createCmdkMatcher(query)
+	if (!matcher) return []
 	return entries
-		.map((entry) => ({entry, score: scoreEntry(entry, normalizedQuery, wordStart)}))
+		.map((entry) => ({entry, score: matcher(entry.title, entry.keywords)}))
 		.filter(({score}) => score > 0)
 		.sort((a, b) => b.score - a.score)
 		.slice(0, limit)
-		.map(({entry}) => entry)
+}
+
+// Results from one source, best match first; ties keep the source's own order
+export function sortByMatch<T>(items: readonly T[], matchOf: (item: T) => number): T[] {
+	return items
+		.map((item, index) => ({item, index, match: matchOf(item)}))
+		.sort((a, b) => b.match - a.match || a.index - b.index)
+		.map(({item}) => item)
+}
+
+// Whichever source holds the best match leads; between equals, the source
+// with the lower priority number (the more direct kind of result) comes first
+export function orderSectionsByMatch<T extends {bestMatch: number; priority: number}>(sections: readonly T[]): T[] {
+	return [...sections].sort((a, b) => b.bestMatch - a.bestMatch || a.priority - b.priority)
 }
