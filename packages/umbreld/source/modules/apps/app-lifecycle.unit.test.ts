@@ -186,6 +186,23 @@ describe('app lifecycle serialization', () => {
 	})
 })
 
+describe('app update failures', () => {
+	test('stops after a failed file phase and clears the updating state', async () => {
+		const app = await createApp()
+		const patchCompose = vi.spyOn(app, 'patchComposeFile')
+		const pull = vi.spyOn(app, 'pull')
+		vi.mocked(appScript).mockRejectedValueOnce(new Error('exports failed'))
+
+		await expect(app.update()).rejects.toThrow('exports failed')
+
+		expect(patchCompose).not.toHaveBeenCalled()
+		expect(pull).not.toHaveBeenCalled()
+		expect(appScript).toHaveBeenCalledTimes(1)
+		expect(app.state).toBe('unknown')
+		expect(app.stateProgress).toBe(0)
+	})
+})
+
 describe('storage settings after an app update', () => {
 	test('forgets a custom mount whose service was removed', async () => {
 		const app = await createApp()

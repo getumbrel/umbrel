@@ -818,15 +818,10 @@ if [[ "$command" = "update" ]]; then
   # App updates will only copy files from this whitelist:
   UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh torrc hooks"
 
-  # We copy umbrel-app.yml after the app has started
-  # That way the frontend knows the update has finished
-  # And the app is running again
+  # Keep the previous manifest if exports, templates, or image pulls fail.
   UPDATE_FILES_WHITELIST_POST="umbrel-app.yml"
 
   copy_app_files "${UPDATE_FILES_WHITELIST_PRE}"
-
-  # Ensure remaining files are copied in case of unexpected exit
-  trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
 
   # Source env. after new exports.sh is copied (done above via 'copy_app_files')
   source_app "${app}"
@@ -837,7 +832,7 @@ if [[ "$command" = "update" ]]; then
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
 
-  # Copy remaining files to mark update as complete
+  # Publish the new manifest after package preparation succeeds.
   copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
 
   if [[ "$*" != *"--skip-start"* ]]; then
@@ -877,15 +872,11 @@ if [[ "$command" = "pre-patch-update" ]]; then
   # App updates will only copy files from this whitelist:
   UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh torrc hooks"
 
-  # We copy umbrel-app.yml after the app has started
-  # That way the frontend knows the update has finished
-  # And the app is running again
+  # Keep the previous manifest if loading exports or rendering templates fails.
+  # Umbreld needs the new metadata once this file phase succeeds.
   UPDATE_FILES_WHITELIST_POST="umbrel-app.yml"
 
   copy_app_files "${UPDATE_FILES_WHITELIST_PRE}"
-
-  # Ensure remaining files are copied in case of unexpected exit
-  trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
 
   # Source env. after new exports.sh is copied (done above via 'copy_app_files')
   source_app "${app}"
@@ -893,7 +884,7 @@ if [[ "$command" = "pre-patch-update" ]]; then
   # Now apply templates
   template_app "${app}"
 
-  # Copy remaining files to mark update as complete
+  # Publish the new manifest for umbreld's compose patching and startup phases.
   copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
 
   exit
