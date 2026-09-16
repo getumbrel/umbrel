@@ -14,6 +14,9 @@ import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
 import {getHostname, getIpAddresses} from '../system/system.js'
 import runEvery from '../utilities/run-every.js'
+import {forwardTcp} from './forward-tcp.js'
+import {readNativeTlsPrelude} from './native-tls-preread.js'
+import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.js'
 import AppGateway, {readAppGatewayConfig, type AppGatewayConfig} from '../app-gateway/app-gateway.js'
 
 const NFT_BIN = '/usr/sbin/nft'
@@ -34,6 +37,7 @@ type AppIngressRoute = {
 	publicPort: number
 	hiddenPort: number
 	gateway?: AppGatewayConfig
+	nativeTls?: NativeTlsPolicy
 }
 
 type IngressPortMapping = {
@@ -277,9 +281,10 @@ export default class LanIngress {
 	// Rebuild certs, routes, nftables rules, and listeners from current state.
 	private async applyCurrentState() {
 		await fse.ensureDir(this.directory)
-		await this.ensureServerCertificate()
+		const sans = await this.getServerSans()
+		await this.ensureServerCertificate(sans)
 
-		const nextAppRoutes = this.removeConflictingAppRoutes(await this.getAppRoutes())
+		const nextAppRoutes = this.removeConflictingAppRoutes(await this.getAppRoutes(sans.dns))
 		const currentAppRoutes = [...this.#appMuxServers.values()].map((entry) => entry.route)
 		const guardedPortMappings = this.mergePortMappingsByHiddenPort(currentAppRoutes, nextAppRoutes)
 		// Hidden Node listeners bind on wildcard addresses so nftables can redirect LAN
@@ -336,10 +341,8 @@ export default class LanIngress {
 		await fse.chmod(this.caCertificatePath, 0o644)
 	}
 
-	private async ensureServerCertificate() {
+	private async ensureServerCertificate(sans: Awaited<ReturnType<LanIngress['getServerSans']>>) {
 		await this.ensureCa()
-
-		const sans = await this.getServerSans()
 		const previousSans = await fse.readJson(this.serverSansPath).catch(() => null)
 		const serverCertificateExists =
 			(await fse.pathExists(this.serverCertificatePath)) && (await fse.pathExists(this.serverKeyPath))
@@ -407,8 +410,8 @@ export default class LanIngress {
 
 	// Read app manifests/compose files once, returning app routes plus every
 	// app-published port we must not use for hidden ingress listeners.
-	private async getAppIngressCandidates(): Promise<{
-		routes: Array<Pick<AppIngressRoute, 'id' | 'publicPort'>>
+	private async getAppIngressCandidates(reservedHostnames: string[]): Promise<{
+		routes: Array<Omit<AppIngressRoute, 'hiddenPort'>>
 		reservedPorts: number[]
 	}> {
 		const appDataDirectory = `${this.#umbreld.dataDirectory}/app-data`
@@ -426,7 +429,12 @@ export default class LanIngress {
 					const manifestPath = `${appDataDirectory}/${appId}/umbrel-app.yml`
 					const manifest = await fse.readFile(manifestPath, 'utf8').catch(() => '')
 					if (!manifest) return null
-					const parsed = yaml.load(manifest) as {port?: unknown; name?: unknown; icon?: unknown} | null
+					const parsed = yaml.load(manifest) as {
+						port?: unknown
+						name?: unknown
+						icon?: unknown
+						nativeTlsHostnameSuffixes?: unknown
+					} | null
 					const publicPort = Number(parsed?.port)
 					if (!Number.isInteger(publicPort) || publicPort <= 0 || publicPort > 65_535) return null
 
@@ -475,6 +483,7 @@ export default class LanIngress {
 						route: {
 							id: appId,
 							publicPort,
+							nativeTls: getNativeTlsPolicy(parsed?.nativeTlsHostnameSuffixes, compose?.services, reservedHostnames),
 						},
 					}
 				} catch (error) {
@@ -489,8 +498,8 @@ export default class LanIngress {
 		}
 	}
 
-	private async getAppRoutes(): Promise<AppIngressRoute[]> {
-		const {routes, reservedPorts} = await this.getAppIngressCandidates()
+	private async getAppRoutes(reservedHostnames: string[]): Promise<AppIngressRoute[]> {
+		const {routes, reservedPorts} = await this.getAppIngressCandidates(reservedHostnames)
 		const allocations = this.allocateAppIngressPorts(routes, reservedPorts)
 		return routes.map((route) => ({...route, hiddenPort: allocations[route.id].hiddenPort}))
 	}
@@ -772,11 +781,13 @@ export default class LanIngress {
 	private async updateAppMuxServers(appRoutes: AppIngressRoute[]) {
 		for (const [id, entry] of this.#appMuxServers) {
 			const nextRoute = appRoutes.find((route) => route.id === id)
+			// Policy changes must close existing connections as well as affect new ones.
 			if (
 				nextRoute &&
 				nextRoute.publicPort === entry.route.publicPort &&
 				nextRoute.hiddenPort === entry.route.hiddenPort &&
-				JSON.stringify(nextRoute.gateway) === JSON.stringify(entry.route.gateway)
+				JSON.stringify(nextRoute.gateway) === JSON.stringify(entry.route.gateway) &&
+				JSON.stringify(nextRoute.nativeTls) === JSON.stringify(entry.route.nativeTls)
 			) {
 				continue
 			}
@@ -801,13 +812,13 @@ export default class LanIngress {
 				upstreamPort = this.serverPort(gatewayServer)
 			}
 			const httpsProxyServer = await this.createHttpsProxyServer(upstreamPort, {includeForwardedFor: false})
-			// The public app port still belongs to the app. nftables redirects LAN
-			// traffic to the mux, and TLS requests go to this loopback HTTPS proxy.
+			// The app owns its public port; nftables sends LAN traffic through this mux.
 			await this.listen(httpsProxyServer, 0, '127.0.0.1')
 			const server = this.createMuxServer({
 				listenPort: route.hiddenPort,
 				httpPort: upstreamPort,
 				getHttpsProxyServer: () => httpsProxyServer,
+				nativeTls: route.gateway ? undefined : route.nativeTls,
 			})
 			await this.listen(server, route.hiddenPort)
 			this.#appMuxServers.set(route.id, {route, server, httpsProxyServer, gatewayServer})
@@ -845,68 +856,54 @@ export default class LanIngress {
 		listenPort,
 		httpPort,
 		getHttpsProxyServer,
+		nativeTls,
 	}: {
 		listenPort: number
 		httpPort: number
 		getHttpsProxyServer: () => https.Server | undefined
+		nativeTls?: NativeTlsPolicy
 	}) {
 		const server = net.createServer((socket) => {
+			const forward = (chunks: Buffer[], tls: boolean, hostname?: string, release = () => {}) => {
+				if (socket.destroyed) return release()
+				let port = httpPort
+				if (tls && !(nativeTls && matchesNativeTlsHostname(hostname, nativeTls))) {
+					const address = getHttpsProxyServer()?.address()
+					if (!address || typeof address === 'string') {
+						release()
+						socket.destroy()
+						return
+					}
+					port = address.port
+				}
+				forwardTcp(socket, chunks, port, release)
+			}
+			// Only opted-in apps need SNI; ordinary apps keep their existing fast path.
+			if (nativeTls) {
+				socket.on('error', () => {})
+				void readNativeTlsPrelude(socket)
+					.then(({chunks, tls, hostname, release}) => forward(chunks, tls, hostname, release))
+					.catch(() => socket.destroy())
+				return
+			}
 			const chunks: Buffer[] = []
 			let length = 0
 			const classify = (chunk: Buffer) => {
 				chunks.push(chunk)
 				length += chunk.length
-				// A TLS record header needs three bytes to distinguish it from HTTP.
-				// TCP is a byte stream, so even these first bytes may be fragmented.
+				// Even the TLS record prefix can arrive across several TCP reads.
 				if (length < 3) return
 				socket.off('data', classify)
-				// Pause immediately after peeking. Request bodies can arrive in
-				// later chunks, and those bytes must wait until the upstream pipe
-				// exists or POST requests can hang waiting for a body we already lost.
+				// Preserve later request bytes until the upstream pipe is ready.
 				socket.pause()
 				const firstChunk = Buffer.concat(chunks, length)
-				if (this.isTlsClientHello(firstChunk)) {
-					this.handleTlsSocket(socket, firstChunk, getHttpsProxyServer())
-					return
-				}
-				this.forwardTcp(socket, firstChunk, httpPort)
+				forward([firstChunk], this.isTlsClientHello(firstChunk))
 			}
 			socket.on('data', classify)
 			socket.setTimeout(5000, () => socket.destroy())
 			socket.on('error', (error) => this.logger.verbose(`LAN ingress mux socket error on ${listenPort}: ${error}`))
 		})
 		return server
-	}
-
-	private handleTlsSocket(socket: net.Socket, firstChunk: Buffer, httpsProxyServer?: https.Server) {
-		if (!httpsProxyServer) {
-			socket.destroy()
-			return
-		}
-		const address = httpsProxyServer.address()
-		if (typeof address === 'string' || address === null) {
-			socket.destroy()
-			return
-		}
-		this.forwardTcp(socket, firstChunk, address.port)
-	}
-
-	// Forward the peeked first chunk, then pipe the rest after both sockets are ready.
-	private forwardTcp(clientSocket: net.Socket, firstChunk: Buffer, upstreamPort: number) {
-		clientSocket.setTimeout(0)
-		const upstreamSocket = net.createConnection({host: '127.0.0.1', port: upstreamPort}, () => {
-			upstreamSocket.write(firstChunk)
-			clientSocket.pipe(upstreamSocket)
-			upstreamSocket.pipe(clientSocket)
-			// Resume only after both pipes exist so buffered bytes flow upstream.
-			clientSocket.resume()
-		})
-		const destroyBoth = () => {
-			clientSocket.destroy()
-			upstreamSocket.destroy()
-		}
-		clientSocket.on('error', destroyBoth)
-		upstreamSocket.on('error', destroyBoth)
 	}
 
 	private isTlsClientHello(chunk: Buffer) {

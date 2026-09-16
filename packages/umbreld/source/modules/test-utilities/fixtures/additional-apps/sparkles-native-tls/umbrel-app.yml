@@ -1,0 +1,15 @@
+manifestVersion: 1
+id: sparkles-native-tls
+name: Native TLS Test
+tagline: Exercises app-owned HTTP and TLS on one port
+category: Development
+version: '1.0.0'
+port: 4002
+description: A dual-protocol server for LAN ingress tests.
+developer: Umbrel
+website: https://umbrel.com
+support: https://github.com/getumbrel/umbrel/issues
+gallery: []
+dependencies: []
+nativeTlsHostnameSuffixes:
+  - native.example
