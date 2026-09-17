@@ -170,6 +170,13 @@ export default router({
 
 	sources: router({
 		list: privateProcedureWithMembers.query(({ctx}) => ctx.umbreld.photos.listSources(accountId(ctx))),
+		rename: privateProcedureWithMembers
+			.input(z.object({id: z.string(), name: backupSourceInput.shape.suggestedName}))
+			.mutation(async ({ctx, input}) => {
+				if (!(await ctx.umbreld.photos.renameSource(accountId(ctx), input.id, input.name))) {
+					throw new TRPCError({code: 'NOT_FOUND'})
+				}
+			}),
 		update: privateProcedureWithMembers
 			.input(
 				z.object({

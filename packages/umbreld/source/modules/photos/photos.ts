@@ -795,6 +795,41 @@ export default class Photos {
 		return this.#umbreld.files.fileIndex.photosListSources(accountId)
 	}
 
+	async renameSource(accountId: string, id: string, name: string) {
+		accountId = validateAccountId(accountId)
+		name = normalizeBackupSourceName(name)
+		const sources = (await this.#umbreld.store.get('photos.backupSources')) ?? []
+		const source = sources.find(
+			(candidate) => candidate.accountId === accountId && backupLibrarySourceId(accountId, candidate.id) === id,
+		)
+		if (!source) return false
+
+		return this.#withBackupSourceLock(accountId, source.id, async () => {
+			let renamed: PhotoBackupSource | undefined
+			await this.#umbreld.store.getWriteLock(async ({get, set}) => {
+				const sources = (await get('photos.backupSources')) ?? []
+				const current = sources.find((candidate) => candidate.accountId === accountId && candidate.id === source.id)
+				const removals = (await get('photos.backupSourceRemovals')) ?? []
+				if (!current || removals.some((removal) => removal.accountId === accountId && removal.sourceId === source.id)) {
+					return
+				}
+
+				// Persist the display name first so reconnects and restarts retain it.
+				// The folder and source identity stay unchanged, including for queued uploads.
+				const updated = {...current, name}
+				await set(
+					'photos.backupSources',
+					sources.map((candidate) => (candidate === current ? updated : candidate)),
+				)
+				renamed = updated
+			})
+			if (!renamed) return false
+			await this.#upsertBackupSource(renamed)
+			this.#changed(accountId)
+			return true
+		})
+	}
+
 	async updateSource(accountId: string, id: string, scope?: {mode: PhotoScopeMode; paths: string[]}) {
 		const source = await this.#umbreld.files.fileIndex.photosUpdateSource(accountId, id, scope)
 		if (source) {

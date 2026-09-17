@@ -33,11 +33,14 @@ export function usePhotoSource(id: string | undefined) {
 export function usePhotoSourceActions() {
 	const utils = trpcReact.useUtils()
 	const update = trpcReact.photos.sources.update.useMutation({onSuccess: () => utils.photos.sources.invalidate()})
+	const rename = trpcReact.photos.sources.rename.useMutation({onSuccess: () => utils.photos.sources.invalidate()})
 	const remove = trpcReact.photos.sources.remove.useMutation({onSuccess: () => utils.photos.invalidate()})
 
 	return {
 		updateSettings: ({id, settings}: {id: string; settings: Partial<SourceSettings>}) =>
 			update.mutateAsync({id, ...settings}),
+		renameSource: rename.mutateAsync,
+		isRenaming: rename.isPending,
 		removeSource: remove.mutateAsync,
 		isRemoving: remove.isPending,
 	}

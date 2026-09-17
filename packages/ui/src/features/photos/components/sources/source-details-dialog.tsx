@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/drawer'
 import {toast} from '@/components/ui/toast'
 import {useHomePath} from '@/features/files/hooks/use-home-path'
+import {PhoneSourceName} from '@/features/photos/components/sources/phone-source-name'
 import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {PushSourceSettings, UmbrelScopeSettings} from '@/features/photos/components/sources/source-settings'
 import {sourceTypeLabel, timeAgo} from '@/features/photos/components/sources/source-status'
@@ -35,7 +36,7 @@ export function SourceDetailsDialog() {
 
 	if (!source) return null
 
-	const body = <SourceDetailsBody source={source} />
+	const body = <SourceDetailsBody key={source.id} source={source} />
 
 	// The identity block carries the visible title; the structural title and
 	// description stay for screen readers only
@@ -81,9 +82,8 @@ function SourceDetailsBody({source}: {source: PhotoSource}) {
 	const homePath = useHomePath()
 	const {t, i18n} = useTranslation()
 	const {updateSettings} = usePhotoSourceActions()
-	// This Umbrel is always here and always watching its folders; phones back
-	// themselves up from the Umbrel app and here only introduce themselves —
-	// the mark, the name, what they hold, when they last called
+	// Phones keep their backup settings in the app; only their Photos display
+	// name is editable here.
 	const isUmbrel = source.type === 'umbrel'
 
 	const number = (n: number) => formatNumberI18n({n, showDecimals: false, locale: i18n.language})
@@ -103,8 +103,8 @@ function SourceDetailsBody({source}: {source: PhotoSource}) {
 			) : (
 				<div className='flex flex-col items-center gap-3 pt-2 pb-1 text-center'>
 					<SourceIcon type={source.type} size={64} />
-					<div>
-						<p className='text-15 font-semibold -tracking-2'>{source.name}</p>
+					<div className='w-full min-w-0'>
+						<PhoneSourceName source={source} />
 						<p className='mt-1 text-12 text-white/50'>
 							{t('photos-source.fact-items-value', {
 								photos: number(source.stats.photos),
