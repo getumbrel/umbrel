@@ -1,7 +1,10 @@
 import http from 'node:http'
 import net from 'node:net'
+import {once} from 'node:events'
 
 import {describe, expect, test, vi} from 'vitest'
+import getPort from 'get-port'
+import type {AppGatewayConfig} from '../app-gateway/app-gateway.js'
 
 const {dockerCommand, execaDollar} = vi.hoisted(() => {
 	const dockerCommand = vi.fn()
@@ -11,6 +14,75 @@ const {dockerCommand, execaDollar} = vi.hoisted(() => {
 vi.mock('execa', () => ({$: execaDollar}))
 
 import LanIngress, {appAuthDashboardRedirect} from './lan-ingress.js'
+
+describe('app gateway TCP readiness', () => {
+	function createIngress() {
+		const logger = {createChildLogger: () => logger}
+		return new LanIngress({dataDirectory: '/tmp', logger} as never)
+	}
+
+	const config = (targetPort: number) => ({targetHost: '127.0.0.1', targetPort}) as AppGatewayConfig
+
+	test('waits for a closed TCP port, independently of another app, without requesting HTTP', async () => {
+		const ingress = createIngress()
+		const controller = new AbortController()
+		const port = await getPort({host: '127.0.0.1'})
+		const onRequest = vi.fn((_request, response) => response.writeHead(302, {location: '/login'}).end())
+		const upstream = http.createServer(onRequest)
+		const otherUpstream = http.createServer(onRequest).listen(0, '127.0.0.1')
+		await once(otherUpstream, 'listening')
+		let ready = false
+		const waiting = ingress.waitForAppGateway('slow', config(port), {}, controller.signal).then(() => {
+			ready = true
+		})
+		try {
+			const otherPort = (otherUpstream.address() as net.AddressInfo).port
+			await ingress.waitForAppGateway('fast', config(otherPort), {}, controller.signal)
+			expect(ready).toBe(false)
+			upstream.listen(port, '127.0.0.1')
+			await once(upstream, 'listening')
+			await waiting
+			expect(ready).toBe(true)
+			expect(onRequest).not.toHaveBeenCalled()
+		} finally {
+			controller.abort()
+			await waiting.catch(() => {})
+			await Promise.all(
+				[upstream, otherUpstream].map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
+			)
+		}
+	})
+
+	test('re-resolves a container address and aborts a pending wait promptly', async () => {
+		const ingress = createIngress()
+		const internals = ingress as unknown as {resolveAppTarget(): Promise<string | null>}
+		const resolveTarget = vi
+			.spyOn(internals, 'resolveAppTarget')
+			.mockResolvedValueOnce(null)
+			.mockResolvedValue('127.0.0.1')
+		const controller = new AbortController()
+		const upstream = net.createServer((socket) => socket.end()).listen(0, '127.0.0.1')
+		await once(upstream, 'listening')
+		try {
+			await ingress.waitForAppGateway(
+				'app',
+				config((upstream.address() as net.AddressInfo).port),
+				{},
+				controller.signal,
+			)
+			expect(resolveTarget).toHaveBeenCalledTimes(2)
+			resolveTarget.mockResolvedValue(null)
+			const waiting = ingress.waitForAppGateway('app', config(1), {}, controller.signal)
+			const cancelled = expect(waiting).rejects.toThrow(/abort/i)
+			await new Promise((resolve) => setImmediate(resolve))
+			controller.abort()
+			await cancelled
+		} finally {
+			controller.abort()
+			await new Promise<void>((resolve) => upstream.close(() => resolve()))
+		}
+	})
+})
 
 describe('LAN ingress shutdown', () => {
 	test('drains an active HTTP response while closing an upgraded socket', async () => {

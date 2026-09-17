@@ -539,6 +539,9 @@ export default class App {
 	dataDirectory: string
 	userSettingsComposePath: string
 	#state: AppState = 'unknown'
+	// Proxy lifetime follows container teardown/startup, independently of UI state
+	// and hooks that may still be running after the upstream starts listening.
+	appGatewayEnabled = true
 	stateProgress = 0
 	store: FileStore<AppSettings>
 	// Set while setSettings() validates, persists, and applies a settings change
@@ -682,8 +685,15 @@ export default class App {
 		try {
 			if (['install', 'initialize-data-root', 'start', 'restart', 'reinstall', 'update'].includes(command)) {
 				await this.#ensureAppDataRootBindSources(dataRoots[this.id])
+				this.appGatewayEnabled = true
+				await this.refreshLanIngress()
 			}
-			return await appScript(this.#umbreld, command, this.id, inheritStdio, {maxOutputBytes, dataRoots})
+			const result = await appScript(this.#umbreld, command, this.id, inheritStdio, {maxOutputBytes, dataRoots})
+			if (['stop', 'force-stop', 'pre-patch-update', 'nuke-images'].includes(command)) {
+				this.appGatewayEnabled = false
+				await this.refreshLanIngress()
+			}
+			return result
 		} finally {
 			releaseStorage()
 		}

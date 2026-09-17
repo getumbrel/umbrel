@@ -1,9 +1,11 @@
 import https from 'node:https'
+import http from 'node:http'
 import net from 'node:net'
 import {once} from 'node:events'
 
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
+import getPort from 'get-port'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
 import type {AppGatewayConfig} from '../app-gateway/app-gateway.js'
@@ -20,6 +22,8 @@ type Route = {
 }
 type Candidate = Omit<Route, 'hiddenPort'>
 type IngressInternals = {
+	closeAllServers(): Promise<void>
+	appGatewayCanListen(...args: unknown[]): boolean
 	getAppIngressCandidates(reservedHostnames: string[]): Promise<{routes: Candidate[]; reservedPorts: number[]}>
 	getAppRoutes(reservedHostnames: string[]): Promise<Route[]>
 	updateAppMuxServers(routes: Route[]): Promise<void>
@@ -42,7 +46,7 @@ describe('native TLS installed-app discovery', () => {
 	let dataDirectory: string
 	let ingress: IngressInternals
 	let installedAppIds: string[]
-	let instances: Array<{id: string; state: string}>
+	let instances: Array<{id: string; state: string; appGatewayEnabled?: boolean}>
 	let authOverrides: Map<string, boolean>
 	const clients: net.Socket[] = []
 
@@ -66,7 +70,7 @@ describe('native TLS installed-app discovery', () => {
 
 	afterEach(async () => {
 		for (const client of clients.splice(0)) client.destroy()
-		await ingress.updateAppMuxServers([])
+		await ingress.closeAllServers()
 		vi.restoreAllMocks()
 		await directory.destroyRoot()
 	})
@@ -116,6 +120,141 @@ describe('native TLS installed-app discovery', () => {
 		expect(candidates.reservedPorts).not.toContain(routes[0].hiddenPort)
 	})
 
+	test('waits before opening the proxy on start and restart without changing app state', async () => {
+		const createMux = useEphemeralListeners()
+		const instance = {id: 'native-app', state: 'ready', appGatewayEnabled: true}
+		instances.push(instance)
+		const port = await getPort({host: '127.0.0.1'})
+		const onRequest = vi.fn((_request, response) => response.end('upstream ready'))
+		const upstream = http.createServer(onRequest)
+		await writeApp({
+			compose: {services: {app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: port, PROXY_AUTH_ADD: 'false'}}}},
+		})
+		const reconcile = async () => ingress.updateAppMuxServers(await ingress.getAppRoutes(reservedHostnames))
+		const closeUpstream = () => new Promise<void>((resolve) => upstream.close(() => resolve()))
+		try {
+			for (const phase of ['start', 'restart']) {
+				const previousMuxCount = createMux.mock.calls.length
+				await reconcile()
+				expect(instance.state).toBe('ready')
+				expect(createMux).toHaveBeenCalledTimes(previousMuxCount)
+				upstream.listen(port, '127.0.0.1')
+				await once(upstream, 'listening')
+				await vi.waitFor(async () => expect(await ingress.getAppRoutes(reservedHostnames)).toHaveLength(1), {
+					timeout: 3000,
+				})
+				await reconcile()
+				const mux = createMux.mock.results[previousMuxCount].value as net.Server
+				const address = mux.address() as net.AddressInfo
+				expect(instance.state).toBe('ready')
+				expect(onRequest).not.toHaveBeenCalled()
+				const response = await fetch(`http://127.0.0.1:${address.port}/`)
+				expect(await response.text()).toBe('upstream ready')
+
+				// Removing the containers resets the former sidecar's TCP check.
+				instance.state = phase === 'start' ? 'restarting' : 'stopped'
+				instance.appGatewayEnabled = false
+				await reconcile()
+				expect(mux.listening).toBe(false)
+				await closeUpstream()
+				onRequest.mockClear()
+				instance.state = 'ready'
+				instance.appGatewayEnabled = true
+			}
+		} finally {
+			await closeUpstream()
+		}
+	})
+
+	test.each(['installing', 'starting', 'restarting', 'updating'])(
+		'opens the proxy while %s hooks are still running and retains it when ready',
+		async (state) => {
+			const createMux = useEphemeralListeners()
+			const instance = {id: 'native-app', state}
+			instances.push(instance)
+			const upstream = http.createServer((_request, response) => response.end('hook can reach upstream'))
+			upstream.listen(0, '127.0.0.1')
+			await once(upstream, 'listening')
+			try {
+				const {port} = upstream.address() as net.AddressInfo
+				await writeApp({
+					compose: {
+						services: {app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: port, PROXY_AUTH_ADD: 'false'}}},
+					},
+				})
+				await vi.waitFor(async () => expect(await ingress.getAppRoutes(reservedHostnames)).toHaveLength(1))
+				await ingress.updateAppMuxServers(await ingress.getAppRoutes(reservedHostnames))
+				const mux = createMux.mock.results[0].value as net.Server
+				const address = mux.address() as net.AddressInfo
+				expect(await (await fetch(`http://127.0.0.1:${address.port}/`)).text()).toBe('hook can reach upstream')
+				expect(instance.state).toBe(state)
+				const muxCount = createMux.mock.calls.length
+				// Boot can discover an already-running container before Apps.start().
+				// Its reachable proxy must survive every UI state transition.
+				for (const nextState of ['ready', 'starting', 'ready']) {
+					instance.state = nextState
+					await ingress.updateAppMuxServers(await ingress.getAppRoutes(reservedHostnames))
+					expect(mux.listening).toBe(true)
+					expect(createMux).toHaveBeenCalledTimes(muxCount)
+				}
+			} finally {
+				await new Promise<void>((resolve) => upstream.close(() => resolve()))
+			}
+		},
+	)
+
+	test.each(['stopped', 'uninstalling', 'restarting'])(
+		'cancels the pending proxy wait when the app is %s',
+		async (state) => {
+			const instance = {id: 'native-app', state: 'ready', appGatewayEnabled: true}
+			instances.push(instance)
+			const pending = ingress as unknown as {
+				waitForAppGateway(id: string, config: unknown, compose: unknown, signal: AbortSignal): Promise<void>
+			}
+			let signal!: AbortSignal
+			let finish!: () => void
+			vi.spyOn(pending, 'waitForAppGateway').mockImplementation(async (_id, _config, _compose, abortSignal) => {
+				signal = abortSignal
+				await new Promise<void>((resolve) => {
+					finish = resolve
+				})
+			})
+			await writeApp({compose: {services: {app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: 8080}}}}})
+			expect((await ingress.getAppIngressCandidates(reservedHostnames)).routes).toEqual([])
+			instance.state = state
+			if (state === 'restarting') instance.appGatewayEnabled = false
+			expect((await ingress.getAppIngressCandidates(reservedHostnames)).routes).toEqual([])
+			expect(signal.aborted).toBe(true)
+			finish()
+			await Promise.resolve()
+			expect(instance.state).toBe(state)
+			expect((await ingress.getAppIngressCandidates(reservedHostnames)).routes).toEqual([])
+		},
+	)
+
+	test('closing ingress cancels a pending proxy without changing app state', async () => {
+		const instance = {id: 'native-app', state: 'ready'}
+		instances.push(instance)
+		const pending = ingress as unknown as {
+			waitForAppGateway(id: string, config: unknown, compose: unknown, signal: AbortSignal): Promise<void>
+		}
+		let signal!: AbortSignal
+		let finish!: () => void
+		vi.spyOn(pending, 'waitForAppGateway').mockImplementation(async (_id, _config, _compose, abortSignal) => {
+			signal = abortSignal
+			await new Promise<void>((resolve) => {
+				finish = resolve
+			})
+		})
+		await writeApp({compose: {services: {app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: 8080}}}}})
+		await ingress.getAppIngressCandidates(reservedHostnames)
+		await ingress.closeAllServers()
+		expect(signal.aborted).toBe(true)
+		finish()
+		await Promise.resolve()
+		expect(instance.state).toBe('ready')
+	})
+
 	test.each([
 		{name: 'host networking', compose: hostNetworkCompose},
 		{name: 'a published browser port', compose: {services: {server: {ports: ['32400:8080']}}}},
@@ -139,6 +278,7 @@ describe('native TLS installed-app discovery', () => {
 	})
 
 	test('invalid native metadata preserves the gateway authentication override', async () => {
+		vi.spyOn(ingress, 'appGatewayCanListen').mockReturnValue(true)
 		const compose = {
 			services: {
 				app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: 8080}},
@@ -164,6 +304,7 @@ describe('native TLS installed-app discovery', () => {
 			value: {environment: {APP_HOST: '127.0.0.1', APP_PORT: 8080, PROXY_AUTH_ADD: 'false'}},
 		},
 	])('a raw app_proxy key excludes native TLS with $name', async ({value}) => {
+		vi.spyOn(ingress, 'appGatewayCanListen').mockReturnValue(true)
 		const compose = {services: {...hostNetworkCompose.services, app_proxy: value}}
 		const appDirectory = await writeApp({compose})
 		const before = await ingress.getAppIngressCandidates(reservedHostnames)
@@ -248,6 +389,7 @@ describe('native TLS installed-app discovery', () => {
 	})
 
 	test('adding a gateway closes the previous native route even when its metadata remains', async () => {
+		vi.spyOn(ingress, 'appGatewayCanListen').mockReturnValue(true)
 		const createMux = useEphemeralListeners()
 		await writeApp({metadata: {nativeTlsHostnameSuffixes}})
 		await ingress.updateAppMuxServers(await ingress.getAppRoutes(reservedHostnames))

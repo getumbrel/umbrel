@@ -4,6 +4,7 @@ import net from 'node:net'
 import {X509Certificate} from 'node:crypto'
 import {lookup} from 'node:dns/promises'
 import {rename} from 'node:fs/promises'
+import {setTimeout as delay} from 'node:timers/promises'
 
 import {$} from 'execa'
 import fse from 'fs-extra'
@@ -122,6 +123,7 @@ export default class LanIngress {
 	#appAuthHttpProxyServer?: http.Server
 	#appAuthHttpsProxyServer?: https.Server
 	#appMuxServers = new Map<string, AppMuxServer>()
+	#appGatewayWaits = new Map<string, {target: string; controller: AbortController; ready: boolean}>()
 	// Track sockets at the TCP layer because Node's HTTP force-close helper does not cover
 	// upgraded/raw sockets, and the mux servers are plain net.Server instances.
 	#activeSocketsByServer = new WeakMap<net.Server | http.Server, Set<net.Socket>>()
@@ -246,6 +248,55 @@ export default class LanIngress {
 
 	async getCaCertificate() {
 		return fse.readFile(this.caCertificatePath, 'utf8')
+	}
+
+	// The old app_proxy container waited for its upstream TCP port before
+	// listening. Wait per app, outside the shared ingress refresh, so a slow
+	// upstream cannot hold up the dashboard or other apps.
+	async waitForAppGateway(appId: string, config: AppGatewayConfig, compose: ComposeFile, signal: AbortSignal) {
+		while (true) {
+			signal.throwIfAborted()
+			// Resolve again on each attempt: a starting/recreated container may
+			// not have an address yet, or may acquire a different one.
+			const host = await this.resolveAppTarget(appId, config.targetHost, compose)
+			signal.throwIfAborted()
+			if (host) {
+				const listening = await new Promise<boolean>((resolve) => {
+					const socket = net.createConnection({host, port: config.targetPort, signal})
+					const finish = (listening: boolean) => {
+						socket.destroy()
+						resolve(listening)
+					}
+					socket.once('connect', () => finish(true))
+					socket.once('error', () => finish(false))
+					socket.setTimeout(1000, () => finish(false))
+				})
+				signal.throwIfAborted()
+				if (listening) return
+			}
+			await delay(1000, undefined, {signal})
+		}
+	}
+
+	private appGatewayCanListen(appId: string, config: AppGatewayConfig, compose: ComposeFile) {
+		const target = JSON.stringify([config.targetHost, config.targetPort])
+		const previous = this.#appGatewayWaits.get(appId)
+		if (previous?.target === target) return previous.ready
+		previous?.controller.abort()
+		const wait = {target, controller: new AbortController(), ready: false}
+		this.#appGatewayWaits.set(appId, wait)
+		this.waitForAppGateway(appId, config, compose, wait.controller.signal)
+			.then(async () => {
+				if (wait.controller.signal.aborted) return
+				wait.ready = true
+				await this.refresh()
+			})
+			.catch((error) => {
+				if (wait.controller.signal.aborted) return
+				this.#appGatewayWaits.delete(appId)
+				this.logger.error(`Failed waiting for app gateway ${appId}`, error)
+			})
+		return false
 	}
 
 	// Queue a refresh of LAN ingress state; callers share the running refresh promise.
@@ -420,6 +471,7 @@ export default class LanIngress {
 		// Include installed apps from the store and in-flight app instances. Ignore orphaned
 		// app-data directories so failed installs do not leave stale routes behind.
 		const appIds = [...new Set([...installedAppIds, ...activeAppIds])]
+		const gatewayIds = new Set<string>()
 		const results = await Promise.all(
 			appIds.map(async (appId) => {
 				// A single app with corrupt on-disk YAML (e.g. a partial write during power loss)
@@ -456,6 +508,13 @@ export default class LanIngress {
 							})
 						: null
 					if (gateway) {
+						// Forget the old sidecar's wait after its containers are removed.
+						// Starting/ready UI state must not gate listening: hooks may need
+						// the proxy before the lifecycle command has completed.
+						if (app?.appGatewayEnabled === false) return {reservedPorts, route: null}
+						gatewayIds.add(appId)
+						if (!this.appGatewayCanListen(appId, gateway, compose!)) return {reservedPorts, route: null}
+
 						// The user can override the app's default gateway authentication in
 						// app settings. Applied here so an auth change takes effect on the
 						// next ingress refresh without restarting the app.
@@ -492,6 +551,11 @@ export default class LanIngress {
 				}
 			}),
 		)
+		for (const [appId, wait] of this.#appGatewayWaits) {
+			if (gatewayIds.has(appId)) continue
+			wait.controller.abort()
+			this.#appGatewayWaits.delete(appId)
+		}
 		return {
 			routes: results.flatMap((result) => (result?.route ? [result.route] : [])),
 			reservedPorts: results.flatMap((result) => result?.reservedPorts ?? []),
@@ -1155,6 +1219,8 @@ export default class LanIngress {
 	}
 
 	private async closeAllServers() {
+		for (const wait of this.#appGatewayWaits.values()) wait.controller.abort()
+		this.#appGatewayWaits.clear()
 		await Promise.all([
 			this.closeServer(this.#dashboardHttpServer, {drainActiveResponses: true}).then(
 				() => (this.#dashboardHttpServer = undefined),

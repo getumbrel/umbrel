@@ -98,6 +98,52 @@ async function createApp({
 	return app
 }
 
+describe('app lifecycle state with a pending proxy', () => {
+	test.each(['restart', 'update'] as const)(
+		'%s repeats the TCP wait after teardown, before startup hooks',
+		async (action) => {
+			const app = await createApp()
+			const proxyPhases: boolean[] = []
+			vi.spyOn(app, 'refreshLanIngress').mockImplementation(async () => {
+				proxyPhases.push(app.appGatewayEnabled)
+			})
+			vi.mocked(appScript).mockImplementation(async (_umbreld, command) => {
+				if (command === 'stop' || command === 'pre-patch-update') {
+					// Pre-stop hooks can still use the existing proxy.
+					expect(app.appGatewayEnabled).toBe(true)
+				}
+				if (command === 'start') {
+					expect(proxyPhases).toContain(false)
+					expect(proxyPhases.at(-1)).toBe(true)
+					// Post-start hooks run before the app changes to ready.
+					expect(app.state).toBe(action === 'restart' ? 'restarting' : 'updating')
+				}
+				return {stdout: ''} as any
+			})
+			await expect(app[action]()).resolves.toBe(true)
+			expect(app.state).toBe('ready')
+		},
+	)
+
+	test.each(['start', 'restart', 'update', 'install'] as const)(
+		'%s still reports ready when the container command completes',
+		async (action) => {
+			const app = await createApp({apps: {getDataRootPathsForApps: vi.fn(async () => [])}})
+			await app.writeCompose({
+				services: {
+					server: {image: 'example/test'},
+					app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: 1}},
+				},
+			})
+			if (action === 'install') app.state = 'installing'
+			// Gateway readiness belongs to ingress. App lifecycle commands retain
+			// their former state timing even when that upstream is not listening.
+			await expect(action === 'install' ? app.install({dependencies: {}}) : app[action]()).resolves.toBe(true)
+			expect(app.state).toBe('ready')
+		},
+	)
+})
+
 function pauseMoveRecovery(app: App) {
 	const originalGet = app.store.get.bind(app.store) as (property?: string) => Promise<unknown>
 	let release!: () => void
