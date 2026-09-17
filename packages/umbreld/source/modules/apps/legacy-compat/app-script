@@ -87,7 +87,7 @@ Usage: app <command> <app> [<arguments>]
 
 Commands:
     install                     Pulls down images for an app and starts it
-    uninstall                   Removes images and destroys all data for an app
+    uninstall                   Removes containers and destroys all data for an app
     reinstall                   Calls 'uninstall', followed by 'install' for an app
     start                       Starts an installed app
     stop                        Stops an installed app
@@ -402,7 +402,12 @@ compose() {
   shift
 
   # Source env.
-  source_app "${app}"
+  if [[ "${command}" == "images" ]]; then
+    # Keep exports' diagnostic output out of the machine-readable image list.
+    source_app "${app}" >&2
+  else
+    source_app "${app}"
+  fi
 
   # Define support compose files
   local -r app_gateway_compose_file="${SCRIPT_DOCKER_FRAGMENTS}/docker-compose.app_gateway.yml"
@@ -421,38 +426,47 @@ compose() {
   has_app_proxy_service=$(cat "${app_compose_file}" | yq ".services | has(\"${APP_PROXY_SERVICE_NAME}\")")
 
   if [[ "${has_app_proxy_service}" == "true" ]]; then
-    # Render app_proxy configuration with the exact environment Docker Compose
-    # uses for the app. Umbreld consumes this file for its in-process gateway;
-    # the app_proxy service itself is still removed from the runtime compose.
-    local app_gateway_config_file="${app_data_dir}/app-gateway.json"
-    local app_gateway_config_temp_file="${app_gateway_config_file}.tmp.$$"
-    if ! docker compose \
-      --project-name "${app}" \
-      --file "${app_gateway_compose_file}" \
-      --file "${app_compose_file}" \
-      config --format json \
-      | jq '(.services.app_proxy.environment // {}) | {
-          APP_HOST: .APP_HOST,
-          APP_PORT: .APP_PORT,
-          APP_PROTOCOL: .APP_PROTOCOL,
-          PROXY_AUTH_ADD: .PROXY_AUTH_ADD,
-          PROXY_AUTH_WHITELIST: .PROXY_AUTH_WHITELIST,
-          PROXY_AUTH_BLACKLIST: .PROXY_AUTH_BLACKLIST,
-          PROXY_TRUST_UPSTREAM: .PROXY_TRUST_UPSTREAM,
-          PROXY_TIMEOUT: .PROXY_TIMEOUT
-        } | with_entries(select(.value != null))' > "${app_gateway_config_temp_file}"
-    then
-      rm -f "${app_gateway_config_temp_file}"
-      return 1
-    fi
-    mv "${app_gateway_config_temp_file}" "${app_gateway_config_file}"
-    chmod 600 "${app_gateway_config_file}"
+    if [[ "${command}" == "images" ]]; then
+      # Resolve the installed config without rewriting the running app's gateway
+      # or runtime files. Keep the temporary file beside the original so relative
+      # Compose paths retain their meaning.
+      app_runtime_compose_file="$(mktemp "${app_data_dir}/docker-compose.images.XXXXXX")"
+      _umbrel_runtime_track_temp_file "${app_runtime_compose_file}"
+      yq 'del(.services.app_proxy)' "${app_compose_file}" > "${app_runtime_compose_file}"
+    else
+      # Render app_proxy configuration with the exact environment Docker Compose
+      # uses for the app. Umbreld consumes this file for its in-process gateway;
+      # the app_proxy service itself is still removed from the runtime compose.
+      local app_gateway_config_file="${app_data_dir}/app-gateway.json"
+      local app_gateway_config_temp_file="${app_gateway_config_file}.tmp.$$"
+      if ! docker compose \
+        --project-name "${app}" \
+        --file "${app_gateway_compose_file}" \
+        --file "${app_compose_file}" \
+        config --format json \
+        | jq '(.services.app_proxy.environment // {}) | {
+            APP_HOST: .APP_HOST,
+            APP_PORT: .APP_PORT,
+            APP_PROTOCOL: .APP_PROTOCOL,
+            PROXY_AUTH_ADD: .PROXY_AUTH_ADD,
+            PROXY_AUTH_WHITELIST: .PROXY_AUTH_WHITELIST,
+            PROXY_AUTH_BLACKLIST: .PROXY_AUTH_BLACKLIST,
+            PROXY_TRUST_UPSTREAM: .PROXY_TRUST_UPSTREAM,
+            PROXY_TIMEOUT: .PROXY_TIMEOUT
+          } | with_entries(select(.value != null))' > "${app_gateway_config_temp_file}"
+      then
+        rm -f "${app_gateway_config_temp_file}"
+        return 1
+      fi
+      mv "${app_gateway_config_temp_file}" "${app_gateway_config_file}"
+      chmod 600 "${app_gateway_config_file}"
 
-    # app_proxy is now implemented in umbreld. Keep its declaration in the
-    # installed compose file as gateway configuration, but never create a sidecar.
-    app_runtime_compose_file="${app_data_dir}/docker-compose.umbreld.yml"
-    yq 'del(.services.app_proxy)' "${app_compose_file}" > "${app_runtime_compose_file}"
-  else
+      # app_proxy is now implemented in umbreld. Keep its declaration in the
+      # installed compose file as gateway configuration, but never create a sidecar.
+      app_runtime_compose_file="${app_data_dir}/docker-compose.umbreld.yml"
+      yq 'del(.services.app_proxy)' "${app_compose_file}" > "${app_runtime_compose_file}"
+    fi
+  elif [[ "${command}" != "images" ]]; then
     rm -f "${app_data_dir}/app-gateway.json"
   fi
 
@@ -707,8 +721,8 @@ if [[ "$command" = "uninstall" ]]; then
     post_uninstall_app_hook=""
   fi
 
-  echo "Removing images for app ${app}..."
-  compose "${app}" down --rmi all --remove-orphans
+  echo "Removing containers for app ${app}..."
+  compose "${app}" down --remove-orphans
 
   echo "Deleting app data for app ${app}..."
   if [[ -d "${app_data_dir}" ]]; then
@@ -744,7 +758,8 @@ if [[ "$command" = "stop" ]]; then
 fi
 
 # Removes app containers without running hooks. This is reserved for recovery
-# when the app's configured storage is unavailable and its hooks cannot run.
+# when storage is unavailable, and for the final teardown during uninstall.
+# Image removal belongs to umbreld's sweep, which protects stopped apps too.
 if [[ "$command" = "force-stop" ]]; then
   compose "${app}" down --remove-orphans
   exit
@@ -805,9 +820,6 @@ if [[ "$command" = "update" ]]; then
   fi
 
   echo "Updating '${app}' from: ${app_repo_dir}"
-  # Save current images to clean up later
-  app_compose_file="${app_data_dir}/docker-compose.yml"
-  app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
 
   if [[ "$*" != *"--skip-stop"* ]]; then
     "${0}" "stop" "${app}"
@@ -837,8 +849,6 @@ if [[ "$command" = "update" ]]; then
 
   if [[ "$*" != *"--skip-start"* ]]; then
     "${0}" "start" "${app}"
-    # Remove any old images we don't need anymore
-    docker rmi $app_old_images || true
   fi
 
   execute_hook "${app}" "post-update"
@@ -859,9 +869,6 @@ if [[ "$command" = "pre-patch-update" ]]; then
   fi
 
   echo "Updating '${app}' from: ${app_repo_dir}"
-  # Save current images to clean up later
-  app_compose_file="${app_data_dir}/docker-compose.yml"
-  app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
 
   if [[ "$*" != *"--skip-stop"* ]]; then
     "${0}" "stop" "${app}"
@@ -900,9 +907,8 @@ if [[ "$command" = "post-patch-update" ]]; then
   exit
 fi
 
-# Nuke app images
-if [[ "$command" = "nuke-images" ]]; then
-  compose "${app}" down --rmi all --remove-orphans
+if [[ "$command" = "images" ]]; then
+  compose "${app}" --profile '*' config --images
   exit
 fi
 

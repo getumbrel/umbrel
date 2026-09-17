@@ -37,7 +37,9 @@ function createApps(umbrelVersion: string) {
 		lanIngress: {refresh: vi.fn(async () => {})},
 	} as unknown as Umbreld
 
-	return {apps: new Apps(umbreld), umbreld, assertAppPortAvailable, resolveStorageDestination}
+	const apps = new Apps(umbreld)
+	umbreld.apps = apps
+	return {apps, umbreld, assertAppPortAvailable, resolveStorageDestination}
 }
 
 beforeEach(() => {

@@ -668,7 +668,7 @@ export default class App {
 		// Hook-free container teardown and logs do not need bind sources. Keep those
 		// recovery actions available when a drive/share is offline; commands that run
 		// app hooks or may start/mutate an app must resolve the real storage first.
-		const requireAvailable = !['force-stop', 'logs', 'nuke-images'].includes(command)
+		const requireAvailable = !['force-stop', 'logs', 'images'].includes(command)
 		const {dataRoots, storagePaths} = await this.#umbreld.apps.getRuntimeDataRootContext(this.id, {
 			requireAvailable,
 			fallbackToInternal,
@@ -687,6 +687,13 @@ export default class App {
 		} finally {
 			releaseStorage()
 		}
+	}
+
+	// Resolve installed Compose, exports, system fragments and user overrides even
+	// when the app is stopped or its external data storage is disconnected.
+	async getExpectedImages() {
+		const {stdout} = await this.#runAppScript('images', false)
+		return stdout.split('\n').filter(Boolean)
 	}
 
 	async #readDataRootMove() {
@@ -882,7 +889,11 @@ export default class App {
 		}
 	}
 
-	async moveDataRoot(destinationParentPath: string | null) {
+	async moveDataRoot(destinationParentPath: string | null): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#moveDataRoot(destinationParentPath))
+	}
+
+	async #moveDataRoot(destinationParentPath: string | null) {
 		const moveLock = this.#acquireDataRootMoveLock()
 		const shouldRestart = moveLock.shouldRestart
 		const dependentLocks: Array<{app: App; shouldRestart: boolean; release: () => void}> = []
@@ -1089,7 +1100,11 @@ export default class App {
 		}
 	}
 
-	async resetDataRoot() {
+	async resetDataRoot(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#resetDataRoot())
+	}
+
+	async #resetDataRoot() {
 		const moveLock = this.#acquireDataRootMoveLock()
 		const shouldRemainRunning = moveLock.shouldRestart
 		const dependentLocks: Array<{app: App; shouldRestart: boolean; release: () => void}> = []
@@ -2042,7 +2057,11 @@ export default class App {
 	// untouched (and never re-validated, so e.g. storage settings staled by an
 	// app update don't block an unrelated auth change). For the auth override,
 	// null clears it so the app follows its default.
-	async setSettings({
+	async setSettings(settings: AppSettingsUpdate): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#setSettings(settings))
+	}
+
+	async #setSettings({
 		appProxyAuthEnabled,
 		customMounts,
 		folderAccess,
@@ -2275,7 +2294,14 @@ export default class App {
 		})
 	}
 
-	async install({
+	async install(options: {
+		dependencies: Record<string, string>
+		folderAccess?: AppFolderAccessSelection[]
+	}): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#install(options), {cleanupAfter: true})
+	}
+
+	async #install({
 		dependencies,
 		folderAccess = [],
 	}: {
@@ -2336,7 +2362,11 @@ export default class App {
 		}
 	}
 
-	async update() {
+	async update(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#update(), {cleanupAfter: true})
+	}
+
+	async #update() {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
 		this.state = 'updating'
@@ -2350,12 +2380,6 @@ export default class App {
 		try {
 			await this.#recoverDataRootMove()
 
-			// Get a reference to the old images
-			const compose = await this.readCompose()
-			const oldImages = Object.values(compose.services!)
-				.map((service) => service.image)
-				.filter(Boolean) as string[]
-
 			// Update the app, patching the compose file half way through
 			await this.#runAppScript('pre-patch-update')
 			await this.patchComposeFile()
@@ -2367,12 +2391,6 @@ export default class App {
 			await this.refreshLanIngress()
 			await this.#runStartOrDataRootInitialization()
 			await this.#runAppScript('post-patch-update')
-
-			// Delete the old images if we can. Silently fail on error cos docker
-			// will return an error even if only one image is still needed.
-			try {
-				await $({stdio: 'inherit'})`docker rmi ${oldImages}`
-			} catch {}
 
 			this.state = 'ready'
 			this.stateProgress = 0
@@ -2436,8 +2454,10 @@ export default class App {
 	}
 
 	async start() {
-		this.#assertNoSettingsInProgress()
-		return this.#start()
+		return this.#umbreld.apps.imageCleanup.runOperation(() => {
+			this.#assertNoSettingsInProgress()
+			return this.#start()
+		})
 	}
 
 	async #stop({persistState = false}: {persistState?: boolean} = {}) {
@@ -2478,11 +2498,17 @@ export default class App {
 	}
 
 	async stop(options: {persistState?: boolean} = {}) {
-		this.#assertNoSettingsInProgress()
-		return this.#stop(options)
+		return this.#umbreld.apps.imageCleanup.runOperation(() => {
+			this.#assertNoSettingsInProgress()
+			return this.#stop(options)
+		})
 	}
 
 	async restart(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#restart())
+	}
+
+	async #restart(): Promise<boolean> {
 		this.#assertNoSettingsInProgress()
 		try {
 			await this.#runStateTransition('restarting', async () => {
@@ -2507,7 +2533,11 @@ export default class App {
 		}
 	}
 
-	async uninstall() {
+	async uninstall(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#uninstall(), {cleanupAfter: true})
+	}
+
+	async #uninstall() {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
 		this.state = 'uninstalling'
@@ -2529,10 +2559,10 @@ export default class App {
 				retries: 2,
 			}).catch((error) => {
 				// A malformed storage record must not make local container teardown and
-				// uninstall impossible. nuke-images below performs the hook-free force path.
+				// uninstall impossible. force-stop below performs the hook-free teardown.
 				this.logger.error(`Could not run stop hooks while uninstalling ${this.id}; forcing container teardown`, error)
 			})
-			await this.#runAppScript('nuke-images', true, {fallbackToInternal: true})
+			await this.#runAppScript('force-stop', true, {fallbackToInternal: true})
 			// Revoke references before deleting app data so a later reinstall cannot
 			// inherit favorites or access granted to the previous installation.
 			await this.#umbreld.files.removeReferencesWithin(`/Apps/${this.id}`)
@@ -2782,7 +2812,11 @@ export default class App {
 	}
 
 	// Set the app's selected dependencies
-	async setSelectedDependencies(selectedDependencies: Record<string, string>) {
+	async setSelectedDependencies(selectedDependencies: Record<string, string>): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#setSelectedDependencies(selectedDependencies))
+	}
+
+	async #setSelectedDependencies(selectedDependencies: Record<string, string>) {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
 		const {dependencies} = await this.readManifest()

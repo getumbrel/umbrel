@@ -8,7 +8,7 @@ import type Umbreld from '../../../index.js'
 export default async function appEnvironment(umbreld: Umbreld, command: string) {
 	let inheritStdio = true
 	// Prevent breaking test output
-	if (process.env.TEST === 'true') inheritStdio = false
+	if (process.env.TEST === 'true' || command === 'images') inheritStdio = false
 
 	const currentFilename = fileURLToPath(import.meta.url)
 	const currentDirname = dirname(currentFilename)
@@ -37,6 +37,11 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 		await $(
 			options as any,
 		)`docker compose --project-name umbrel --file ${composePath} ${command} --build --detach --remove-orphans`
+	} else if (command === 'images') {
+		const {stdout} = await $(
+			options as any,
+		)`docker compose --project-name umbrel --file ${composePath} --profile * config --images`
+		return stdout.split('\n').filter(Boolean)
 	} else {
 		await $(options as any)`docker compose --project-name umbrel --file ${composePath} ${command}`
 	}

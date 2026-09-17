@@ -8,6 +8,7 @@ import {afterEach, describe, expect, test, vi} from 'vitest'
 
 import type Umbreld from '../../index.js'
 import App from './app.js'
+import ImageCleanup from './image-cleanup.js'
 import appScript from './legacy-compat/app-script.js'
 
 vi.mock('./legacy-compat/app-script.js', () => ({
@@ -66,6 +67,7 @@ async function createApp({
 		},
 		eventBus: {emit: vi.fn(async () => undefined)},
 		apps: {
+			imageCleanup: new ImageCleanup(async () => {}, {log: vi.fn(), error: vi.fn()}),
 			getRuntimeDataRootContext: vi.fn(async () => ({
 				dataRoots: {[appId]: path.join(appDataDirectory, 'data')},
 				storagePaths: [],
@@ -130,12 +132,16 @@ describe('app lifecycle serialization', () => {
 	})
 
 	test('uninstall keeps app data when reference cleanup fails', async () => {
+		const sweep = vi.fn(async () => {})
+		const imageCleanup = new ImageCleanup(sweep, {log: vi.fn(), error: vi.fn()})
 		const removeReferencesWithin = vi.fn(async () => {
 			throw new Error('share cleanup failed')
 		})
-		const app = await createApp({files: {removeReferencesWithin}})
+		const app = await createApp({apps: {imageCleanup}, files: {removeReferencesWithin}})
 
 		await expect(app.uninstall()).rejects.toThrow('share cleanup failed')
+		await imageCleanup.runOperation(async () => {})
+		expect(sweep).toHaveBeenCalledOnce()
 		await expect(fse.pathExists(app.dataDirectory)).resolves.toBe(true)
 	})
 

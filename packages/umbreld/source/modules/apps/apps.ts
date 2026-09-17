@@ -20,6 +20,7 @@ import type {AppManifest} from './schema.js'
 import {fillSelectedDependencies} from '../utilities/dependencies.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 import {assertManifestVersionCompatible} from './manifest-compatibility.js'
+import ImageCleanup, {removeUnusedImages} from './image-cleanup.js'
 
 export type AppDataRootStatus = 'available' | 'storage-unavailable' | 'data-missing'
 
@@ -32,6 +33,7 @@ export default class Apps {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	instances: App[] = []
+	readonly imageCleanup: ImageCleanup
 	isTorBeingToggled = false
 	#storageChangeUnsubscribes: Array<() => void> = []
 	#storageRetryInFlight = false
@@ -48,6 +50,23 @@ export default class Apps {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+		this.imageCleanup = new ImageCleanup(() => this.#cleanUnusedImages(), this.logger)
+	}
+
+	async #cleanUnusedImages() {
+		// Include persisted IDs as well as instances: a missing config or a partial
+		// install must never silently drop an installed app from the keep set.
+		const installedIds = await this.#umbreld.store.get('apps')
+		if (!Array.isArray(installedIds)) throw new Error('Installed app list is unavailable')
+		const appIds = new Set([...installedIds, ...this.instances.map((app) => app.id)])
+		const expectedImages = await appEnvironment(this.#umbreld, 'images')
+		if (!expectedImages?.length) throw new Error('System image list is unavailable')
+		for (const appId of appIds) {
+			const app = this.instances.find((app) => app.id === appId) ?? new App(this.#umbreld, appId)
+			expectedImages.push(...(await app.getExpectedImages()))
+		}
+		this.logger.log('Cleaning up unused Docker images')
+		await removeUnusedImages(expectedImages, this.logger)
 	}
 
 	// This is a really brutal and heavy handed way of cleaning up old Docker state.
@@ -77,6 +96,18 @@ export default class Apps {
 	}
 
 	async start() {
+		return this.imageCleanup.runOperation(async () => {
+			try {
+				await this.#start()
+			} finally {
+				// Let startup and initial user activity finish before low-priority cleanup.
+				this.imageCleanup.schedule(10 * 60 * 1000)
+			}
+		})
+	}
+
+	async #start() {
+		this.imageCleanup.enabled = true
 		// Set apps to empty array on first start
 		if ((await this.#umbreld.store.get('apps')) === undefined) {
 			await this.#umbreld.store.set('apps', [])
@@ -229,7 +260,7 @@ export default class Apps {
 		// Snapshot of currently installed apps (minus apps missing their data directories that will be reinstalled)
 		// We start these apps (save Promise), fire reinstalls without awaiting, then await the starts.
 		const appsToStart = [...this.instances]
-		const startAppsPromise = Promise.all(
+		const startAppsPromise = Promise.allSettled(
 			appsToStart.map(async (app) => {
 				const shouldStart = await app.shouldAutoStart()
 				if (!shouldStart) {
@@ -255,7 +286,12 @@ export default class Apps {
 		)
 
 		// Wait for current installed apps to finish starting
-		await startAppsPromise
+		const startResults = await startAppsPromise
+		for (const [index, result] of startResults.entries()) {
+			if (result.status !== 'rejected') continue
+			appsToStart[index].state = 'unknown'
+			this.logger.error(`Failed to start app ${appsToStart[index].id}`, result.reason)
+		}
 		initialAppStartsSettled = true
 		if (retryAfterInitialAppStarts) await this.startAppsAwaitingStorage()
 		await this.#umbreld.lanIngress
@@ -264,6 +300,10 @@ export default class Apps {
 	}
 
 	private async reinstallMissingAppsAfterRestore(appIds: string[]) {
+		return this.imageCleanup.runOperation(() => this.#reinstallMissingAppsAfterRestore(appIds))
+	}
+
+	async #reinstallMissingAppsAfterRestore(appIds: string[]) {
 		// Only run on the first start after a backup restore
 		if (!this.#umbreld.isBackupRestoreFirstStart) return
 
@@ -706,6 +746,13 @@ export default class Apps {
 	}
 
 	async stop() {
+		return this.imageCleanup.runOperation(() => this.#stop())
+	}
+
+	async #stop() {
+		// A backup restore can replace app files after shutdown. Any pending
+		// cleanup must wait for the next startup to establish the installed set.
+		this.imageCleanup.enabled = false
 		this.logger.log('Stopping apps')
 		this.#storageChangeUnsubscribes.forEach((unsubscribe) => unsubscribe())
 		this.#storageChangeUnsubscribes = []
@@ -879,6 +926,10 @@ export default class Apps {
 	}
 
 	async install(appId: string, options: InstallOptions = {}) {
+		return this.imageCleanup.runOperation(() => this.#installOperation(appId, options), {cleanupAfter: true})
+	}
+
+	async #installOperation(appId: string, options: InstallOptions = {}) {
 		if (this.#installsInProgress.has(appId)) throw new Error(`App ${appId} is already being installed`)
 		this.#installsInProgress.add(appId)
 		try {
@@ -949,6 +1000,10 @@ export default class Apps {
 	}
 
 	async uninstall(appId: string) {
+		return this.imageCleanup.runOperation(() => this.#uninstallOperation(appId), {cleanupAfter: true})
+	}
+
+	async #uninstallOperation(appId: string) {
 		const dataRootPath = this.#dataRootLocations.get(appId)?.path ?? `/Apps/${appId}/data`
 		if (this.hasActiveStoragePathOverlap(dataRootPath)) {
 			throw new Error('[apps-settings-source-managed] App storage is currently in use')
@@ -997,6 +1052,10 @@ export default class Apps {
 	}
 
 	async startApp(appId: string) {
+		return this.imageCleanup.runOperation(() => this.#startApp(appId))
+	}
+
+	async #startApp(appId: string) {
 		const app = this.getApp(appId)
 
 		// We quickly try to start the app env before starting the app. In most normal cases
@@ -1007,6 +1066,10 @@ export default class Apps {
 	}
 
 	async restart(appId: string) {
+		return this.imageCleanup.runOperation(() => this.#restart(appId))
+	}
+
+	async #restart(appId: string) {
 		const app = this.getApp(appId)
 
 		// We quickly try to start the app env before restarting the app. In most normal cases
@@ -1017,6 +1080,10 @@ export default class Apps {
 	}
 
 	async update(appId: string) {
+		return this.imageCleanup.runOperation(() => this.#update(appId), {cleanupAfter: true})
+	}
+
+	async #update(appId: string) {
 		const app = this.getApp(appId)
 		await this.#readCompatibleAppTemplate(appId)
 
@@ -1050,6 +1117,10 @@ export default class Apps {
 	}
 
 	async setTorEnabled(torEnabled: boolean) {
+		return this.imageCleanup.runOperation(() => this.#setTorEnabled(torEnabled))
+	}
+
+	async #setTorEnabled(torEnabled: boolean) {
 		if (this.isTorBeingToggled) {
 			throw new Error(
 				'Tor is already in the process of being toggled. Please wait until the current process is finished.',
