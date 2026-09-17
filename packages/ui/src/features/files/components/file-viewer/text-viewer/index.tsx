@@ -7,6 +7,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {FaEye, FaEyeSlash} from 'react-icons/fa'
 import {RiCloseLine, RiEditLine, RiSave3Line} from 'react-icons/ri'
+import {useNavigate} from 'react-router-dom'
 
 import {
 	AlertDialog,
@@ -33,9 +34,12 @@ import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-
 import type {ViewerMode} from '@/features/files/store/slices/file-viewer-slice'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getAppComposeFile} from '@/features/files/utils/app-compose-file'
 import {dashboardAuthHeaders, useAuthorizedHttpUrl, useAuthorizedHttpUrlQuery} from '@/modules/auth/http-auth'
+import {useUserApp} from '@/providers/apps'
 import {useWallpaper, WallpaperAvifSource} from '@/providers/wallpaper'
 import {trpcReact} from '@/trpc/trpc'
+import {useLinkToDialog} from '@/utils/dialog'
 
 const MAX_EDITOR_FILE_SIZE = 1_048_576 * 50 // 50MB
 const MAX_CONTROL_CHARACTER_RATIO = 0.02 // 2% allows sparse odd control chars in text while rejecting valid UTF-8 binary blobs
@@ -147,7 +151,13 @@ export default function TextViewer({item}: TextViewerProps) {
 	const utils = trpcReact.useUtils()
 	const {wallpaper} = useWallpaper()
 	const isPreviewMode = viewerMode === 'preview'
-	const [isEditing, setIsEditing] = useState(!isPreviewMode && !isReadOnly)
+	// Hand-editing an app's compose file is rarely the right move, so going into
+	// edit mode first offers App Settings instead. The viewer remounts per file,
+	// so confirming once covers this viewing of it.
+	const composeFile = getAppComposeFile(item.path)
+	const wantsEditOnOpen = !isPreviewMode && !isReadOnly
+	const [isEditing, setIsEditing] = useState(wantsEditOnOpen && !composeFile)
+	const [showComposeDialog, setShowComposeDialog] = useState(wantsEditOnOpen && !!composeFile)
 	const editable = isEditing && !isReadOnly
 
 	const editorRef = useRef<ReactCodeMirrorRef>(null)
@@ -175,6 +185,33 @@ export default function TextViewer({item}: TextViewerProps) {
 	const languageLabel = getLanguageLabel(item.name, item.type)
 	const ext = getFileExtension(item.name)
 	const isPreviewUI = !editable && !isEditing
+
+	const navigate = useNavigate()
+	const linkToDialog = useLinkToDialog()
+	const composeApp = useUserApp(composeFile?.appId).app
+	const userQ = trpcReact.user.get.useQuery()
+	// App settings are owner-only, and only exist for installed apps
+	const canOpenAppSettings = !!composeApp && userQ.data?.role === 'owner'
+	const composeAppName = composeApp?.name ?? composeFile?.appId ?? ''
+
+	const requestEdit = useCallback(() => {
+		if (composeFile) setShowComposeDialog(true)
+		else setIsEditing(true)
+	}, [composeFile])
+
+	const handleEditAnyway = useCallback(() => {
+		setShowComposeDialog(false)
+		setIsEditing(true)
+	}, [])
+
+	const handleOpenAppSettings = useCallback(() => {
+		if (!composeFile) return
+		setShowComposeDialog(false)
+		// Close the viewer rather than leaving it underneath: a read-only viewer
+		// closes on outside clicks and swallows spaces typed into the settings
+		setViewerItem(null)
+		navigate(linkToDialog('app-settings', {for: composeFile.appId}))
+	}, [composeFile, linkToDialog, navigate, setViewerItem])
 
 	// Reset markdown preview when file changes (prevents carrying over state from a previous .md file)
 	useEffect(() => {
@@ -349,6 +386,8 @@ export default function TextViewer({item}: TextViewerProps) {
 	// Keyboard shortcuts: Cmd+S, Cmd+F, Escape
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
+			// The compose dialog owns the keyboard; Escape there keeps the file open
+			if (showComposeDialog) return
 			if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 				e.preventDefault()
 				handleSave()
@@ -376,7 +415,7 @@ export default function TextViewer({item}: TextViewerProps) {
 		}
 		window.addEventListener('keydown', handler)
 		return () => window.removeEventListener('keydown', handler)
-	}, [handleSave, handleClose, showSearch, isPreviewUI, isMarkdown])
+	}, [handleSave, handleClose, showSearch, isPreviewUI, isMarkdown, showComposeDialog])
 
 	// Search: find and highlight next match
 	const searchNext = useCallback(() => {
@@ -494,9 +533,9 @@ export default function TextViewer({item}: TextViewerProps) {
 	return (
 		<>
 			<ViewerWrapper
-				dontCloseOnSpacebar={!isPreviewUI || isMarkdown}
-				dontCloseOnEscape={editable}
-				dontCloseOnClickOutside={editable}
+				dontCloseOnSpacebar={!isPreviewUI || isMarkdown || showComposeDialog}
+				dontCloseOnEscape={editable || showComposeDialog}
+				dontCloseOnClickOutside={editable || showComposeDialog}
 				className={animationClass}
 			>
 				<div
@@ -550,7 +589,7 @@ export default function TextViewer({item}: TextViewerProps) {
 								<div className='pr-0.5'>
 									{!isReadOnly && (
 										<button
-											onClick={() => setIsEditing(true)}
+											onClick={requestEdit}
 											className='umbrel-button inline-flex h-[30px] items-center gap-1.5 rounded-full border-[0.5px] border-white/10 bg-white/6 px-3 text-12 font-medium text-white/75 transition-colors duration-300 hover:bg-white/10 active:bg-white/6'
 										>
 											<RiEditLine className='h-3.5 w-3.5 opacity-80' />
@@ -734,6 +773,39 @@ export default function TextViewer({item}: TextViewerProps) {
 					{/* close content z-10 wrapper */}
 				</div>
 			</ViewerWrapper>
+
+			{/* App compose file dialog — Escape keeps the file open read-only */}
+			{composeFile && (
+				<AlertDialog open={showComposeDialog} onOpenChange={setShowComposeDialog}>
+					<AlertDialogContent
+						// Closing re-arms the viewer's own Escape and outside-click listeners
+						// mid-event, which would close the file too. Keep Escape to the dialog,
+						// and ask for an explicit choice instead of dismissing on outside clicks.
+						onEscapeKeyDown={(e) => e.stopPropagation()}
+						onPointerDownOutside={(e) => e.preventDefault()}
+					>
+						<AlertDialogHeader>
+							<AlertDialogTitle>{t('files-text-editor.compose-dialog.title', {name: item.name})}</AlertDialogTitle>
+							<AlertDialogDescription>
+								{composeFile.generated
+									? t('files-text-editor.compose-dialog.generated', {app: composeAppName})
+									: t('files-text-editor.compose-dialog.definition', {app: composeAppName})}
+								{canOpenAppSettings && ` ${t('files-text-editor.compose-dialog.settings-hint')}`}
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							{canOpenAppSettings && (
+								<AlertDialogAction onClick={handleOpenAppSettings}>
+									{t('files-text-editor.compose-dialog.open-app-settings')}
+								</AlertDialogAction>
+							)}
+							<AlertDialogAction variant={canOpenAppSettings ? 'default' : 'primary'} onClick={handleEditAnyway}>
+								{t('files-text-editor.compose-dialog.edit-anyway')}
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			)}
 
 			{/* Discard unsaved changes dialog */}
 			<AlertDialog open={showDiscardDialog} onOpenChange={handleDiscardDialogOpenChange}>

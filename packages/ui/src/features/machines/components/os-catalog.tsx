@@ -113,7 +113,7 @@ export default function OsCatalog({intro: introRequested = false}: {intro?: bool
 		// Desktop shows the whole catalog on the wall; phones keep only a curated
 		// recognizable spread (hidden via CSS below md) so the pile stays a
 		// single-glance composition there.
-		const MOBILE_WALL_IDS = ['ubuntu', 'debian', 'android', 'windows-11', 'custom', 'alpine', 'windows-xp']
+		const MOBILE_WALL_IDS = ['ubuntu', 'debian', 'android', 'omarchy', 'windows-11', 'custom', 'alpine', 'windows-xp']
 		const entries = [
 			...[...popularFamilies, ...moreFamilies].map((family) => ({
 				id: family.familyId,

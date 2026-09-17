@@ -25,6 +25,7 @@ import {LightboxButton, lightboxButtonClass} from '@/features/photos/components/
 import {LivePhoto} from '@/features/photos/components/viewer/live-photo'
 import {useNeighborPrefetch} from '@/features/photos/components/viewer/neighbor-prefetch'
 import {usePictureFlight} from '@/features/photos/components/viewer/picture-flight'
+import {useSeedRenditions} from '@/features/photos/components/viewer/seed-rendition'
 import {PANE_GAP, useStageGestures} from '@/features/photos/components/viewer/stage-gestures'
 import {
 	itemOriginalUrl,
@@ -34,6 +35,7 @@ import {
 	useItemNeighbors,
 	useItems,
 	type Item,
+	type ThumbSize,
 } from '@/features/photos/hooks/use-items'
 import {useAlbumActions, useAlbums} from '@/features/photos/hooks/use-library'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
@@ -157,8 +159,8 @@ export function ItemViewer() {
 		[isMobile],
 	)
 
-	// What the picture is: the list's item the moment the lightbox opens (its
-	// thumbnail is the tile's, already decoded), the fetched detail otherwise
+	// What the picture is: the list's item the moment the lightbox opens, the
+	// fetched detail otherwise
 	const shown = items[index] ?? item
 	const isVideo = shown?.kind === 'video'
 	// The inspector stays open while stepping through items; whether a session
@@ -194,10 +196,15 @@ export function ItemViewer() {
 	const restingUrl = useAuthorizedHttpUrl(id ? itemThumbnailUrl(id, 1280) : undefined)
 	const videoUrl = useAuthorizedHttpUrl(id && isVideo ? itemOriginalUrl(id) : undefined)
 	const downloadUrl = useAuthorizedHttpUrl(id ? itemOriginalUrl(id, {download: true}) : undefined)
-	// The tile's own rendition sits under the resting image until that has
-	// loaded — same URL the grid showed, so it is already decoded — and, blown
-	// up and blurred, is the backdrop
-	const thumbnailUrl = useSharedAuthorizedHttpUrl(id ? itemThumbnailUrl(id, 512) : undefined)
+	// The seed — the rendition the item's tile has on screen, already decoded,
+	// else the 192 (see useSeedRenditions) — is what flies in, sits under the
+	// resting image until that has loaded and, blown up and blurred, is the
+	// backdrop. It is never traded for a finer thumbnail on the way: the wire
+	// is the 1280's.
+	const seedFor = useSeedRenditions(dialogProps.open)
+	const thumbnailUrl = useSharedAuthorizedHttpUrl(
+		dialogProps.open && id ? itemThumbnailUrl(id, seedFor(id)) : undefined,
+	)
 	// The item whose resting image has arrived, so the thumbnail can give way to it
 	const [loadedId, setLoadedId] = useState<string>()
 
@@ -205,14 +212,20 @@ export function ItemViewer() {
 	const goTo = useCallback((target?: string) => target && add('photos-item-id', target, {replace: true}), [add])
 
 	// Opening and closing: the picture flies, everything else follows `closing`
-	const flight = usePictureFlight({open: dialogProps.open, id, reduceMotion, tileRect: grid?.tileRect})
+	const flight = usePictureFlight({
+		open: dialogProps.open,
+		id,
+		reduceMotion,
+		tileRect: grid?.tileRect,
+		liftTile: grid?.liftTile,
+	})
 
 	// The picture's shape is the thumbnail's bitmap — what is actually drawn,
 	// so it holds even where stored dimensions and rendered pixels disagree
-	// (EXIF-rotated photos). A decoded thumbnail, the tile's, answers before
-	// paint, so the flight is measured on the right frame; an item whose
-	// thumbnail can't be served (a broken file) is measured from the resting
-	// rendition instead.
+	// (EXIF-rotated photos). A decoded thumbnail — the seed is the tile's own —
+	// answers before paint, so the flight is measured on the right frame; an
+	// item whose thumbnail can't be served (a broken file) is measured from the
+	// resting rendition instead.
 	// The measurement belongs to its URL: the opening flight waits for the
 	// right one, while stepping keeps the last shape until the next is known.
 	// A future optimization can seed the shape from the indexed
@@ -294,8 +307,8 @@ export function ItemViewer() {
 	// to each side of the picture, so the next item slides in with the finger
 	// (iOS-style) rather than appearing once the swipe has landed
 	const peekRefs = {prev: useRef<HTMLElement | null>(null), next: useRef<HTMLElement | null>(null)}
-	const peekPrev = usePeek(isTouch && index > 0 ? items[index - 1] : undefined)
-	const peekNext = usePeek(isTouch && index >= 0 ? items[index + 1] : undefined)
+	const peekPrev = usePeek(isTouch && dialogProps.open && index > 0 ? items[index - 1] : undefined, seedFor)
+	const peekNext = usePeek(isTouch && dialogProps.open && index >= 0 ? items[index + 1] : undefined, seedFor)
 	const gestures = useStageGestures({
 		open: dialogProps.open,
 		enabled: isTouch && dialogProps.open && !closing && flight.arrived,
@@ -315,15 +328,14 @@ export function ItemViewer() {
 		if (hasMore && index >= 0 && index >= items.length - 2) loadMore()
 	}, [hasMore, index, items.length, loadMore])
 
-	// Decode the neighbours while the user looks at this one, so ←/→ is instant
-	const prevUrl = useAuthorizedHttpUrl(
-		index > 0 && items[index - 1]!.kind !== 'video' ? itemThumbnailUrl(items[index - 1]!.id, 512) : undefined,
-	)
-	const nextUrl = useAuthorizedHttpUrl(
-		index >= 0 && items[index + 1] && items[index + 1]!.kind !== 'video'
-			? itemThumbnailUrl(items[index + 1]!.id, 512)
-			: undefined,
-	)
+	// Decode the neighbours' seeds while the user looks at this one, so ←/→ is
+	// instant (usually a cache hit: the tile or the filmstrip already has them)
+	const neighborSeedUrl = (neighbor: Item | undefined) =>
+		dialogProps.open && neighbor && neighbor.kind !== 'video'
+			? itemThumbnailUrl(neighbor.id, seedFor(neighbor.id))
+			: undefined
+	const prevUrl = useSharedAuthorizedHttpUrl(neighborSeedUrl(index > 0 ? items[index - 1] : undefined))
+	const nextUrl = useSharedAuthorizedHttpUrl(neighborSeedUrl(index >= 0 ? items[index + 1] : undefined))
 	useEffect(() => {
 		if (!dialogProps.open) return
 		const handle = setTimeout(() => {
@@ -332,8 +344,8 @@ export function ItemViewer() {
 		return () => clearTimeout(handle)
 	}, [dialogProps.open, prevUrl, nextUrl])
 
-	// … and once this one's original is up, their originals too (stills only),
-	// so the step lands full-size (see useNeighborPrefetch)
+	// … and once this one's resting image is up, theirs too (stills only), so
+	// the step lands full-size (see useNeighborPrefetch)
 	const {warm} = useNeighborPrefetch({
 		open: dialogProps.open,
 		settled: flight.arrived && (isVideo || (!!id && loadedId === id)),
@@ -590,7 +602,11 @@ export function ItemViewer() {
 										{/* The resting image only once the picture is in place — decoding a
 											    full-size image would stall the flight, and a player would
 											    paint black over the flying thumbnail and start playing —
-											    and only once the item is rested on or prefetched (REST_MS) */}
+											    and only once the item is rested on or prefetched (REST_MS).
+											    The same goes for the flight home: the picture leaves as the
+											    resting image when that is what was being looked at, and as
+											    the seed it flew in on when that never arrived — one still
+											    loading is let go rather than left to land mid-flight. */}
 										{item &&
 											flight.arrived &&
 											(restedId === item.id || warm(item.id)) &&
@@ -606,7 +622,7 @@ export function ItemViewer() {
 														className='absolute inset-0 h-full w-full'
 													/>
 												)
-											) : restingUrl ? (
+											) : restingUrl && (!closing || loadedId === item.id) ? (
 												<img
 													key={item.id}
 													src={restingUrl}
@@ -740,11 +756,12 @@ export function ItemViewer() {
 	)
 }
 
-// A neighbour's picture, ready for the swipe: its thumbnail (usually already
-// decoded for the ←/→ warm-up) and the shape of that bitmap, so its pane can
-// be fitted exactly the way the stage fits the current picture
-function usePeek(item: Item | undefined) {
-	const url = useSharedAuthorizedHttpUrl(item ? itemThumbnailUrl(item.id, 512) : undefined)
+// A neighbour's picture, ready for the swipe: its seed — the very rendition
+// the stage will show once the swipe lands, usually already decoded for the
+// ←/→ warm-up — and the shape of that bitmap, so its pane can be fitted
+// exactly the way the stage fits the current picture
+function usePeek(item: Item | undefined, seedFor: (id: string) => ThumbSize) {
+	const url = useSharedAuthorizedHttpUrl(item ? itemThumbnailUrl(item.id, seedFor(item.id)) : undefined)
 	const [measured, setMeasured] = useState<{url: string; aspect: number}>()
 	useLayoutEffect(() => {
 		if (!url) return

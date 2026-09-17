@@ -46,6 +46,10 @@ export type GridHandle = {
 	// the lightbox, closed on an item stepped far from where it opened, leaves
 	// the timeline at that item with a tile for the picture to fly back to
 	revealTile: (id: string) => void
+	// The lightbox has this item's picture in the air — flying out of the grid,
+	// up on the stage, flying home — so its tile is empty until it lands
+	// (undefined). Takes effect at once, in either renderer, without a render.
+	liftTile: (id: string | undefined) => void
 }
 
 // How many items a list asks for at a time. A screenful at a 14px tile is

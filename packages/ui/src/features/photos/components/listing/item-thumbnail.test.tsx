@@ -4,7 +4,7 @@ import {act} from 'react'
 import {createRoot, type Root} from 'react-dom/client'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import {ItemThumbnail, thumbSizeForTile} from './item-thumbnail'
+import {ItemThumbnail, renditionOnScreen, thumbSizeForTile} from './item-thumbnail'
 import {ThumbnailQueue} from './thumbnail-queue'
 
 vi.mock('@/modules/auth/http-url-authorizer', () => ({
@@ -34,12 +34,45 @@ const imgs = () => [...host.querySelectorAll('img')]
 const load = (img: HTMLImageElement) => act(() => void img.dispatchEvent(new Event('load')))
 
 describe('thumbSizeForTile', () => {
-	test('the 192 the canvas shares while its short side covers the tile, the 512 above', () => {
+	test('the 192 the canvas shares while its short edge covers the tile, the 512 above', () => {
 		expect(thumbSizeForTile(48)).toBe(192)
-		expect(thumbSizeForTile(96)).toBe(192)
 		expect(thumbSizeForTile(128)).toBe(192)
-		expect(thumbSizeForTile(129)).toBe(512)
-		expect(thumbSizeForTile(400)).toBe(512)
+		expect(thumbSizeForTile(192)).toBe(192)
+		expect(thumbSizeForTile(193)).toBe(512)
+		expect(thumbSizeForTile(800)).toBe(512)
+	})
+})
+
+describe('renditionOnScreen', () => {
+	// jsdom has no CSS.escape; these ids need none
+	beforeEach(() => vi.stubGlobal('CSS', {escape: (value: string) => value}))
+	afterEach(() => vi.unstubAllGlobals())
+
+	const tile = (size: 192 | 512) => (
+		<div data-item-id='a'>
+			<ItemThumbnail item={{id: 'a', tint: 0x336699}} size={size} />
+		</div>
+	)
+
+	test('nothing for an item with no tile, or a tile still waiting on its pixels', () => {
+		expect(renditionOnScreen('a')).toBeUndefined()
+		render(tile(192))
+		expect(renditionOnScreen('a')).toBeUndefined()
+	})
+
+	test('the rendition that is painted, through an upgrade and past a step down', async () => {
+		render(tile(192))
+		load(imgs()[0]!)
+		expect(renditionOnScreen('a')).toBe(192)
+		// Upgrading: the 192 is still what is on screen until the 512 lands
+		render(tile(512))
+		expect(renditionOnScreen('a')).toBe(192)
+		load(imgs()[1]!)
+		expect(renditionOnScreen('a')).toBe(512)
+		await act(async () => {})
+		// A step down is ignored, so the 512 is still what the tile shows
+		render(tile(192))
+		expect(renditionOnScreen('a')).toBe(512)
 	})
 })
 

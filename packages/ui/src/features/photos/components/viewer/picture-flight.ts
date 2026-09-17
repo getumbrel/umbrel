@@ -32,6 +32,8 @@ const AT_REST = {transform: 'none', clipPath: `inset(0px round ${PICTURE_RADIUS}
 // Where a tile is, from the layout rather than the DOM: below the seam the
 // grid's tiles are cells of a canvas and have no elements to measure
 export type TileRect = (id: string) => (Rect & {radius: number}) | null
+// Empty an item's tile while its picture is away from it, or fill it again
+export type LiftTile = (id: string | undefined) => void
 
 // The grid's tile for an item, when it is on screen to fly from or to
 function tileOf(id: string | undefined, tileRect?: TileRect) {
@@ -55,25 +57,33 @@ function tileOf(id: string | undefined, tileRect?: TileRect) {
 // which in a portal is a commit after the open. `arrived` says the picture
 // is at rest, for what shouldn't happen in flight — decoding the full-size
 // original, or playing a video.
+//
+// While the picture is up its tile is empty (`liftTile`): what flies is the
+// photograph itself, leaving its place in the grid and coming back to it.
 export function usePictureFlight({
 	open,
 	id,
 	reduceMotion,
 	tileRect,
+	liftTile,
 }: {
 	open: boolean
 	id: string | undefined
 	reduceMotion: boolean
 	tileRect?: TileRect
+	liftTile?: LiftTile
 }) {
 	const [picture, setPicture] = useState<HTMLElement | null>(null)
 	// Whether the picture has arrived: what only makes sense at rest (a
 	// playing video, say) waits for it
 	const [arrived, setArrived] = useState(false)
 	const flown = useRef(false)
+	// The close has taken over the picture (see back)
+	const leaving = useRef(false)
 	useLayoutEffect(() => {
 		if (!open) {
 			flown.current = false
+			leaving.current = false
 			setArrived(false)
 			return
 		}
@@ -94,8 +104,26 @@ export function usePictureFlight({
 					APPEAR,
 				)
 		const land = () => setArrived(true)
-		animation.finished.then(land, land)
+		// Landed — or cut short by something other than a close, which must not
+		// leave the stage waiting for ever. A close that cancels an opening
+		// still in the air is not a landing: what waits for one — a video's
+		// autoplaying player above all — has no business mounting on a picture
+		// that is on its way home.
+		animation.finished.then(land, () => leaving.current || land())
 	}, [picture, open, id, reduceMotion])
+
+	// The tile empties in the commit the picture takes off in — the picture's
+	// first frame sits exactly over it, so nothing is seen to vanish — follows
+	// the item being looked at while stepping, so the way home always leads to
+	// an empty place, and fills again in the commit the lightbox leaves in,
+	// under the picture that has just landed on it.
+	useLayoutEffect(() => {
+		if (!liftTile) return
+		if (!open) liftTile(undefined)
+		else if (picture && id) liftTile(id)
+	}, [liftTile, open, picture, id])
+	// … and whatever happens to the lightbox, a tile is never left empty
+	useLayoutEffect(() => () => liftTile?.(undefined), [liftTile])
 
 	return {
 		ref: setPicture,
@@ -107,6 +135,7 @@ export function usePictureFlight({
 		back: (start?: string) => {
 			if (!picture || reduceMotion) return Promise.resolve()
 			// Measured at rest: an opening still in flight is cut short
+			leaving.current = true
 			for (const animation of picture.getAnimations()) animation.cancel()
 			const first = start ? {...AT_REST, transform: start} : AT_REST
 			const from = tileOf(id, tileRect)

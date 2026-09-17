@@ -33,6 +33,7 @@ import {isWholeLibrary} from '@/features/photos/components/listing/route-filter'
 import type {Frame} from '@/features/photos/components/listing/surface'
 import {ThumbnailQueue} from '@/features/photos/components/listing/thumbnail-queue'
 import {TileLayer} from '@/features/photos/components/listing/tile-layer'
+import {createTileLift} from '@/features/photos/components/listing/tile-lift'
 import {monthsFromItems, railDomain} from '@/features/photos/components/listing/time-rail/rail-scale'
 import {
 	RAIL_HIDE_VIEWPORTS,
@@ -615,6 +616,7 @@ export function TimelineGrid({
 				viewport: {width: committed.width, height: committed.height},
 				selected: selectionRef.current,
 				hovered: hoveredRef.current,
+				lifted: liftedRef.current,
 				focal: eyeRef.current,
 				settled: live === null,
 				animate: !reduceMotion,
@@ -622,6 +624,30 @@ export function TimelineGrid({
 			racing,
 		)
 	}
+	// The tile the lightbox has lifted (see tile-lift.ts): a rule for the tiles
+	// that are elements, a cell left out of the frame for the ones that are not
+	const liftedRef = useRef<string | undefined>(undefined)
+	const [tileLift] = useState(createTileLift)
+	useEffect(
+		() => () => {
+			liftedRef.current = undefined
+			tileLift.dispose()
+		},
+		[tileLift],
+	)
+	const paintRef = useRef(paint)
+	useLayoutEffect(() => {
+		paintRef.current = paint
+	})
+	const liftTileOf = useCallback(
+		(id: string | undefined) => {
+			if (id === liftedRef.current) return
+			liftedRef.current = id
+			tileLift.set(id)
+			paintRef.current(null)
+		},
+		[tileLift],
+	)
 	// The stops the gesture may reach, and the count the grid is at when it did
 	// not put it there itself: a change of preference, or of width. Only then —
 	// a step taken without a spring to run has told the gesture where it is
@@ -925,9 +951,22 @@ export function TimelineGrid({
 			regroup,
 			tileRect: tileRectOf,
 			revealTile: revealTileOf,
+			liftTile: liftTileOf,
 		})
 		return () => setGrid(null)
-	}, [width, floor, grouping, setGrid, setColumns, liveColumns, onLiveColumns, regroup, tileRectOf, revealTileOf])
+	}, [
+		width,
+		floor,
+		grouping,
+		setGrid,
+		setColumns,
+		liveColumns,
+		onLiveColumns,
+		regroup,
+		tileRectOf,
+		revealTileOf,
+		liftTileOf,
+	])
 
 	// ⌘A selects everything loaded — the keyboard's way in — and Escape
 	// leaves; not while picking for an album, when a selection gathered

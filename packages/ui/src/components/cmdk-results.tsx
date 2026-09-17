@@ -22,9 +22,13 @@ export function CmdkResultsList({results, listRef}: {results: CmdkResults; listR
 				</div>
 			) : (
 				<div className='flex flex-col'>
-					{sections.map((section, index) => (
-						<Section key={section.id} section={section} first={index === 0} />
-					))}
+					{/* Thumbnails carry the API token — photo tiles and file rows
+					    alike; one provider serves every one of them */}
+					<HttpUrlAuthorizerProvider>
+						{sections.map((section, index) => (
+							<Section key={section.id} section={section} first={index === 0} />
+						))}
+					</HttpUrlAuthorizerProvider>
 					{footer && (
 						<div className='cmdk-section mt-3 px-2'>
 							<CommandItem
@@ -108,7 +112,7 @@ function SectionItems({section}: {section: CmdkSection}) {
 	}
 
 	const placeholders = section.loading && section.items.length === 0
-	const grid = (
+	return (
 		<div className='grid grid-cols-3 gap-1 sm:grid-cols-6'>
 			{placeholders
 				? Array.from({length: PLACEHOLDER_TILES}, (_, index) => (
@@ -123,8 +127,6 @@ function SectionItems({section}: {section: CmdkSection}) {
 					)}
 		</div>
 	)
-	// Thumbnails carry the API token; one provider serves every tile
-	return section.layout === 'photos' ? <HttpUrlAuthorizerProvider>{grid}</HttpUrlAuthorizerProvider> : grid
 }
 
 function Tile({item}: {item: CmdkItem}) {
@@ -160,7 +162,9 @@ function PhotoTile({item}: {item: CmdkItem}) {
 			className='rounded-10 p-[3px] aria-selected:bg-white/20'
 		>
 			<span className='relative block aspect-square w-full overflow-hidden rounded-8'>
-				<ItemThumbnail item={item.photo} size={512} className='absolute inset-0' />
+				{/* ~100px tiles: the 192 covers them, and it is the rendition the
+				    lightbox seeds from when a result is opened (see useSeedRenditions) */}
+				<ItemThumbnail item={item.photo} size={192} className='absolute inset-0' />
 			</span>
 		</CommandItem>
 	)

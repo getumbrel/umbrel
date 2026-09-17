@@ -13,12 +13,24 @@ import {useSharedAuthorizedHttpUrl} from '@/modules/auth/http-url-authorizer'
 export const tintColor = (tint: number | undefined) =>
 	tint === undefined ? undefined : `#${tint.toString(16).padStart(6, '0')}`
 
-// The rendition a square tile of this many device pixels wants. The 192 —
-// which is also the one the canvas draws its cells from, so the two renderers
-// either side of the GPU seam share the browser's cache and neither crossing
-// refetches what is on screen — covers the square as long as its short side
-// does: 128 is a 3:2 photo's short side at 192-fit. Above that, the 512.
-export const thumbSizeForTile = (devicePx: number): ThumbSize => (devicePx <= 128 ? 192 : 512)
+// The rendition a square tile of this many device pixels wants. A rendition
+// is scaled until its short edge reaches its size (see CONTRACT.md), and a
+// tile crops the centre square — so the 192 covers a tile pixel for pixel
+// right up to 192, whatever the photo's shape. It is also the one the canvas
+// draws its cells from, so the two renderers either side of the GPU seam
+// share the browser's cache and neither crossing refetches what is on
+// screen. Above that, the 512.
+export const thumbSizeForTile = (devicePx: number): ThumbSize => (devicePx <= 192 ? 192 : 512)
+
+// The finest rendition an item's tile has on screen right now — undefined
+// when it has no tile, or one still waiting on its first pixels. Asked of the
+// DOM, because only the tile knows: renditions only ever sharpen, so a tile
+// zoomed out from 512 keeps it however small the grid has since made it.
+export function renditionOnScreen(id: string): ThumbSize | undefined {
+	const thumbnail = document.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(id)}"] [data-rendition]`)
+	const size = Number(thumbnail?.dataset.rendition)
+	return size === 192 || size === 512 || size === 1280 ? size : undefined
+}
 
 // A thumbnail <img> for an item. The URL is derived from the id — every
 // rendition always exists (see CONTRACT.md); `size` picks the one this
@@ -110,6 +122,8 @@ export function ItemThumbnail({
 
 	return (
 		<div
+			// What is painted, not what is wanted (see renditionOnScreen)
+			data-rendition={loaded !== 'none' ? fine.size : (coarse ?? undefined)}
 			className={cn('relative overflow-hidden', item.tint === undefined && 'bg-white/6', className)}
 			style={{backgroundColor: tintColor(item.tint)}}
 		>

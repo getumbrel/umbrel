@@ -207,6 +207,7 @@ export default class Photos {
 		)
 		if (pendingRemoval) await this.#completeBackupSourceRemoval(pendingRemoval)
 		let source!: PhotoBackupSource
+		let created = false
 
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			const sources = (await get('photos.backupSources')) ?? []
@@ -236,6 +237,7 @@ export default class Photos {
 				createdAt: Date.now(),
 			}
 			await set('photos.backupSources', [...sources, source])
+			created = true
 		})
 
 		await this.#ensureBackupSourceDirectory(source!)
@@ -253,6 +255,9 @@ export default class Photos {
 				)
 			})
 		}
+		// A new phone in the sources list is a library change the UI should hear
+		// about right away; re-registrations (re-auth, startup replay) change nothing
+		if (created) this.#changed(accountId)
 		return source
 	}
 

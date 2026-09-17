@@ -345,11 +345,15 @@ of these URLs from item ids — API responses carry no URL fields.
   auto-orientation runs before resizing. When several renditions are missing,
   ImageMagick writes them from one oriented decode/invocation.
 
-  | `s`  | Scaling           | WebP quality | Serves                                                                                              |
-  | ---- | ----------------- | ------------ | --------------------------------------------------------------------------------------------------- |
-  | 192  | 192px short edge  | 75           | zoomed-out WebGL mosaic (client crops the centre square itself), filmstrip, instant lightbox seed   |
-  | 512  | 512px short edge  | 80           | grid tiles, album covers, lightbox open/close flight placeholder                                    |
-  | 1280 | 1280px short edge | 80           | lightbox resting image (original fetched only for zoom/download), video posters, largest grid tiles |
+  | `s`  | Scaling           | WebP quality | Serves                                                                                                                                  |
+  | ---- | ----------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+  | 192  | 192px short edge  | 75           | WebGL mosaic (client crops the centre square itself), grid tiles up to 192 device px, filmstrip, ⌘K tiles, the lightbox's fallback seed |
+  | 512  | 512px short edge  | 80           | grid tiles above 192 device px, album covers                                                                                            |
+  | 1280 | 1280px short edge | 80           | lightbox resting image (original fetched only for download), video posters                                                              |
+
+  The lightbox never requests a 192 or 512 of its own choosing: it flies in on
+  whichever rendition the item's tile already has on screen (the 192 when there
+  is no tile), and everything it fetches is the 1280.
 
 - `GET /api/photos/original/:id` — the original bytes; range requests for video.
   `?download` switches to attachment disposition.

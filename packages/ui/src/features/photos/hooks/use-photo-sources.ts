@@ -30,6 +30,14 @@ export function usePhotoSource(id: string | undefined) {
 	return {source: id ? sources.find((source) => source.id === id) : undefined, isLoading}
 }
 
+// Whether a phone is backing up into this library. Undefined until the sources
+// have loaded, so callers can tell "no phone yet" from "not yet known".
+export function usePhoneSourceConnected() {
+	const {sources, isLoading} = usePhotoSources()
+	if (isLoading) return undefined
+	return sources.some((source) => sourceKind(source.type) === 'push')
+}
+
 export function usePhotoSourceActions() {
 	const utils = trpcReact.useUtils()
 	const update = trpcReact.photos.sources.update.useMutation({onSuccess: () => utils.photos.sources.invalidate()})

@@ -179,6 +179,9 @@ export type Frame = {
 	viewport: {width: number; height: number}
 	selected: ReadonlySet<string>
 	hovered: string | undefined
+	// The item whose picture the lightbox has in the air: its cell is left out
+	// of the frame, so the place it left is empty (see tile-lift.ts)
+	lifted: string | undefined
 	// Where the eye is, in the scroller's viewport px, when a pointer or a
 	// pinch's midpoint set it: what the pixels fill outward from
 	focal: {x: number; y: number} | null
@@ -293,7 +296,7 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 	}
 
 	function fill(frame: Frame, now: number) {
-		const {layout, items, selected, hovered} = frame
+		const {layout, items, selected, hovered, lifted} = frame
 		const count = Math.max(0, items.end - items.start + 1)
 		if (instances.length < count * STRIDE) instances = new Float32Array(count * STRIDE * 2)
 		let fading = false
@@ -301,6 +304,7 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 		for (let index = items.start; index <= items.end; index++) {
 			const item = layout.items[index]
 			if (!item) break
+			if (item.id === lifted) continue
 			const rect = rectOf(layout, index)
 			const slot = atlas.slotOf(index)
 			const resident = atlas.resident[slot] === item.id

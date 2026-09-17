@@ -45,6 +45,7 @@ import {useCloudBadge} from '@/features/files/hooks/use-cloud-badge'
 import {MachineFolderMetadata} from '@/features/files/hooks/use-machine-folder'
 import {useNetworkDeviceType} from '@/features/files/hooks/use-network-device-type'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
+import {useOnDemandThumbnail} from '@/features/files/hooks/use-on-demand-thumbnail'
 import {useShares} from '@/features/files/hooks/use-shares'
 import type {FileSystemItem} from '@/features/files/types'
 import {CLOUD_SELF_TILE_BRANDS, cloudAccountBrand} from '@/features/files/utils/cloud'
@@ -53,8 +54,7 @@ import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-n
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {OsIcon} from '@/features/machines/components/os-icon'
 import type {Machine} from '@/features/machines/types'
-import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
-import {trpcReact} from '@/trpc/trpc'
+import {EnsureHttpUrlAuthorizer, useSharedAuthorizedHttpUrl} from '@/modules/auth/http-url-authorizer'
 
 interface FileItemIconProps {
 	item: FileSystemItem
@@ -346,31 +346,21 @@ const AppFolderBottomIcon = ({appId}: {appId: string}) => {
 	)
 }
 
-// Thumbnail component with on‑demand fetch
-function useOnDemandThumbnail(item: FileSystemItem) {
-	const [url, setUrl] = useState<string | undefined>(item.thumbnail)
+// A file's own thumbnail, asked of the backend when the listing didn't carry
+// it (see useOnDemandThumbnail). The URL is authorized through the provider
+// above — Files, ⌘K — or one of its own where there is none.
+const Thumbnail = (props: {
+	item: FileSystemItem
+	fallback: React.ReactNode
+	className?: string
+	overlay?: React.ReactNode
+}) => (
+	<EnsureHttpUrlAuthorizer>
+		<AuthorizedThumbnail {...props} />
+	</EnsureHttpUrlAuthorizer>
+)
 
-	const getThumbnailMutation = trpcReact.files.getThumbnail.useMutation()
-
-	// Reset state when the file item changes
-	useEffect(() => {
-		setUrl(item.thumbnail)
-	}, [item.path, item.thumbnail])
-
-	useEffect(() => {
-		if (url !== undefined) return
-
-		getThumbnailMutation.mutateAsync({path: item.path}).then((res) => {
-			if (res) {
-				setUrl(res)
-			}
-		})
-	}, [url, item.path])
-
-	return {thumbnailUrl: url}
-}
-
-const Thumbnail = ({
+const AuthorizedThumbnail = ({
 	item,
 	fallback,
 	className,
@@ -381,8 +371,7 @@ const Thumbnail = ({
 	className?: string
 	overlay?: React.ReactNode
 }) => {
-	const {thumbnailUrl} = useOnDemandThumbnail(item)
-	const authorizedThumbnailUrl = useAuthorizedHttpUrl(thumbnailUrl)
+	const authorizedThumbnailUrl = useSharedAuthorizedHttpUrl(useOnDemandThumbnail(item))
 
 	// Track if the image failed to load so we can gracefully fall back to the
 	// default thumbnail component
@@ -398,6 +387,7 @@ const Thumbnail = ({
 			<img
 				src={authorizedThumbnailUrl}
 				alt={item.name}
+				decoding='async'
 				onError={() => setHadError(true)}
 				className={`rounded-xs object-contain ${className || ''}`}
 			/>

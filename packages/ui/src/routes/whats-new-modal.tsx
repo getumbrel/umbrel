@@ -57,16 +57,16 @@ const FEATURES: Feature[] = [
 		descriptionTKey: 'whats-new-umbrelos-2-0.machines-description',
 	},
 	{
-		id: 'multi-user',
-		image: '/assets/whats-new/multi-user.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.multi-user-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.multi-user-description',
-	},
-	{
 		id: 'ai-agents',
 		image: '/assets/whats-new/ai-agents.webp',
 		titleTKey: 'whats-new-umbrelos-2-0.ai-agents-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.ai-agents-description',
+	},
+	{
+		id: 'multi-user',
+		image: '/assets/whats-new/multi-user.webp',
+		titleTKey: 'whats-new-umbrelos-2-0.multi-user-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-0.multi-user-description',
 	},
 	{
 		id: 'storage-manager',

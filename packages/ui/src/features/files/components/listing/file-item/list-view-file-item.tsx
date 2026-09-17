@@ -92,7 +92,10 @@ export function ListViewFileItem({
 									? t('files-type.network-drive')
 									: isDirectoryAnUmbrelBackup(item.name)
 										? t('files-type.umbrel-backup')
-										: t('files-type.directory')
+										: // Folder sizes come from the index, so one that isn't indexed yet falls back to the label
+											item.size != null
+											? formatFilesystemSize(item.size)
+											: t('files-type.directory')
 							: formatFilesystemSize(item.size ?? null)}
 					</span>
 				</div>
