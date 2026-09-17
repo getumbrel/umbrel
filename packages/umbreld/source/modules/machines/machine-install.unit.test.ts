@@ -384,6 +384,7 @@ describe('background machine installation', () => {
 		const directory = nodePath.join(root, 'machines', machine.id)
 		const readDefinition = async () => yaml.load(await fsp.readFile(nodePath.join(directory, 'machine.yaml'), 'utf8'))
 		expect(await readDefinition()).toMatchObject({
+			osName: 'Omarchy',
 			installMedia: 'media/install.iso',
 			seedMedia: 'media/seed.iso',
 			firstBootSetup: expect.any(Object),

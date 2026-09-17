@@ -686,7 +686,6 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			id: 'omarchy-4.0.4-amd64',
 			familyId: 'omarchy',
 			name: 'Omarchy',
-			variantName: 'Desktop',
 			version: 'Omarchy 4.0.4',
 			sizeMb: 6_186,
 			estimatedInstalledSizeMb: 6_800,

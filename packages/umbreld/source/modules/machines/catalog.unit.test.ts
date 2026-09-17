@@ -56,7 +56,7 @@ describe('built-in Machines catalog', () => {
 				version: 'Android 13 · Waydroid',
 			},
 			...(arch === 'amd64'
-				? [{id: 'omarchy-4.0.4-amd64', familyId: 'omarchy', variantName: 'Desktop', version: 'Omarchy 4.0.4'}]
+				? [{id: 'omarchy-4.0.4-amd64', familyId: 'omarchy', variantName: undefined, version: 'Omarchy 4.0.4'}]
 				: []),
 		])
 		expect(images.every((image) => image.requiresCredentials)).toBe(true)
@@ -78,9 +78,11 @@ describe('built-in Machines catalog', () => {
 		const images = builtinMachinesCatalog.images.filter(({familyId}) => familyId === 'omarchy')
 		expect(images).toHaveLength(1)
 		expect(images[0]).toMatchObject({
+			name: 'Omarchy',
 			arch: 'amd64',
 			platformProfile: 'modern-x86',
 			requiresCredentials: true,
+			estimatedInstalledSizeMb: 6_800,
 			url: 'https://iso.omarchy.org/omarchy-4.0.4.iso',
 		})
 		expect(images[0].cloudInit).toBeUndefined()
@@ -198,7 +200,6 @@ describe('built-in Machines catalog', () => {
 			'fedora-44-desktop-arm64': 6_200,
 			'debian-13-desktop-amd64': 3_400,
 			'debian-13-desktop-arm64': 6_100,
-			'omarchy-4.0.4-amd64': 6_800,
 		})
 
 		for (const familyId of ['ubuntu', 'fedora', 'debian']) {

@@ -241,7 +241,7 @@ curl --silent --output /dev/null --write-out '%{http_code}' http://10.203.0.1:22
 			{
 				id: 'omarchy-4.0.4-amd64',
 				familyId: 'omarchy',
-				variantName: 'Desktop',
+				variantName: undefined,
 				arch: 'amd64',
 				requiresCredentials: true,
 				state: 'available',

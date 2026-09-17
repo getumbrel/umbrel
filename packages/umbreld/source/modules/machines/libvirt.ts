@@ -103,7 +103,7 @@ export async function findGpuRenderNode(root = GPU_RENDER_NODE_ROOT) {
 
 export function supportsVirglGraphics(definition: MachineDefinition) {
 	return (
-		(definition.osVariant === 'Desktop' || definition.osId === 'android') &&
+		(definition.osVariant === 'Desktop' || definition.osId === 'android' || definition.osId === 'omarchy') &&
 		VIRGL_LINUX_FAMILIES.has(definition.osId) &&
 		(definition.platformProfile === 'modern-x86' || definition.platformProfile === 'modern-arm64')
 	)

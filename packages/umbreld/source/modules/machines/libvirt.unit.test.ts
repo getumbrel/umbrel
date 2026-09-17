@@ -85,6 +85,7 @@ describe('virgl graphics', () => {
 	test('only enables virgl for built-in modern Linux desktops', () => {
 		expect(supportsVirglGraphics(definition())).toBe(true)
 		expect(supportsVirglGraphics(definition({osId: 'omarchy'}))).toBe(true)
+		expect(supportsVirglGraphics(definition({osId: 'omarchy', osVariant: undefined}))).toBe(true)
 		expect(supportsVirglGraphics(definition({arch: 'arm64', platformProfile: 'modern-arm64'}))).toBe(true)
 		expect(supportsVirglGraphics(definition({osId: 'android', osVariant: undefined}))).toBe(true)
 		expect(supportsVirglGraphics(definition({osVariant: 'Server'}))).toBe(false)
