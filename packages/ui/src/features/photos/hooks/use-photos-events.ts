@@ -105,6 +105,11 @@ export function usePhotosEvents() {
 	trpcReact.eventBus.listen.useSubscription(
 		{event: 'photos:change'},
 		{
+			onStarted: () => {
+				// Refresh details after subscribing to catch changes missed while Photos was closed.
+				// Cancel older reads first so late responses cannot restore stale cached details.
+				void utils.photos.items.get.cancel().then(() => utils.photos.items.get.invalidate())
+			},
 			onData: schedule,
 			onError: (err) => console.error('eventBus.listen(photos:change)', err),
 		},
