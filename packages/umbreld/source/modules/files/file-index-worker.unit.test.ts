@@ -84,12 +84,19 @@ test('rebuilds the filesystem index and enrichment artifacts from scratch', asyn
 
 	await index.start()
 	await index.reconcileRoot('/Home', 'rebuild-fixture')
+	await index.photosSummary('owner')
+	const previousReaders = (await index.status()).readers!.threadIds
+	expect(previousReaders.length).toBeGreaterThan(0)
 	const indexSentinel = nodePath.join(dataDirectory, 'file-index', 'stale-index-state')
 	const thumbnailSentinel = nodePath.join(dataDirectory, 'thumbnails', 'stale-enrichment-artifact')
 	await writeFile(indexSentinel, 'stale')
 	await writeFile(thumbnailSentinel, 'stale')
 
 	await index.rebuild()
+	await index.photosSummary('owner')
+	const nextReaders = (await index.status()).readers!.threadIds
+	expect(nextReaders.length).toBeGreaterThan(0)
+	expect(nextReaders.every((id) => !previousReaders.includes(id))).toBe(true)
 
 	await expect(fse.pathExists(indexSentinel)).resolves.toBe(false)
 	await expect(fse.pathExists(thumbnailSentinel)).resolves.toBe(false)

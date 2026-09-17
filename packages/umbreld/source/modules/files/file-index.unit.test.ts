@@ -22,6 +22,8 @@ import {
 	migrateFileIndex,
 	type FileIndexMigration,
 } from './file-index/migrations.js'
+import FileIndexReaderPool from './file-index/reader-pool.js'
+import type {SqlRead} from './file-index/read-database.js'
 import {THUMBNAIL_GENERATION_TIMEOUT_MS} from './file-index-enrichment.js'
 import {
 	PHOTOS_THUMBNAIL_VARIANTS,
@@ -4634,7 +4636,7 @@ test('runs artifact maintenance while an unreadable file is waiting for its hash
 	expect(hashFile).toHaveBeenCalledOnce()
 })
 
-test('settles queued thumbnail requests when the index stops', async () => {
+test('settles pending thumbnail requests when the index stops', async () => {
 	let releaseGeneration!: () => void
 	let signalGeneration!: () => void
 	const generationStarted = new Promise<void>((resolve) => (signalGeneration = resolve))
@@ -4663,7 +4665,9 @@ test('settles queued thumbnail requests when the index stops', async () => {
 	releaseGeneration()
 
 	await expect(active).resolves.toMatchObject({kind: 'content', key: '78'.repeat(32)})
-	await expect(queuedResult).resolves.toBe('File enrichment is unavailable')
+	// Shutdown may catch the pending request in its reader lookup or after it
+	// reaches enrichment. Both stages must reject instead of leaving it pending.
+	expect(['File enrichment is unavailable', 'File index readers are stopped']).toContain(await queuedResult)
 	await expect(stopping).resolves.toBeUndefined()
 })
 
@@ -4806,21 +4810,21 @@ test('does not poll the retry scheduler while due hash work is already in flight
 	database.prepare('UPDATE entries SET hash_retry_at = 0').run()
 	database.close()
 
-	const prepare = vi.spyOn(BetterSqlite3.prototype, 'prepare')
+	const read = vi.spyOn(FileIndexReaderPool.prototype, 'read')
+	const schedulerQueries = () =>
+		read.mock.calls.filter(
+			([method, args]) => method === 'sql' && (args[0] as SqlRead).sql.includes('SELECT MIN(attempt_at) AS attempt_at'),
+		)
 	index.startBackgroundReconciliation()
 	try {
 		await hashStarted
+		await vi.waitFor(() => expect(schedulerQueries().length).toBeGreaterThan(0))
 		await new Promise((resolve) => setTimeout(resolve, 50))
-		const settledQueryCount = prepare.mock.calls.filter(([sql]) =>
-			String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-		).length
+		const settledQueryCount = schedulerQueries().length
 		await new Promise((resolve) => setTimeout(resolve, 100))
-		const schedulerQueries = prepare.mock.calls.filter(([sql]) =>
-			String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-		)
-		expect(schedulerQueries).toHaveLength(settledQueryCount)
+		expect(schedulerQueries()).toHaveLength(settledQueryCount)
 	} finally {
-		prepare.mockRestore()
+		read.mockRestore()
 		releaseHash()
 	}
 
@@ -4851,20 +4855,18 @@ test('ignores orphaned failed variants when scheduling the next retry wake', asy
 		.run(orphan.id, THUMBNAIL_VARIANT, Date.now())
 	database.close()
 
-	const prepare = vi.spyOn(BetterSqlite3.prototype, 'prepare')
+	const read = vi.spyOn(FileIndexReaderPool.prototype, 'read')
+	const schedulerQueries = () =>
+		read.mock.calls.filter(
+			([method, args]) => method === 'sql' && (args[0] as SqlRead).sql.includes('SELECT MIN(attempt_at) AS attempt_at'),
+		)
 	index.startBackgroundReconciliation()
-	await vi.waitFor(() =>
-		expect(prepare.mock.calls.some(([sql]) => String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'))).toBe(true),
-	)
+	await vi.waitFor(() => expect(schedulerQueries().length).toBeGreaterThan(0))
 	await new Promise((resolve) => setTimeout(resolve, 50))
-	const settledQueryCount = prepare.mock.calls.filter(([sql]) =>
-		String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-	).length
+	const settledQueryCount = schedulerQueries().length
 	await new Promise((resolve) => setTimeout(resolve, 100))
-	const schedulerQueries = prepare.mock.calls.filter(([sql]) =>
-		String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-	)
-	expect(schedulerQueries).toHaveLength(settledQueryCount)
+	expect(schedulerQueries()).toHaveLength(settledQueryCount)
+	read.mockRestore()
 })
 
 test('discards stale hash and thumbnail work when the source changes during generation', async () => {
@@ -6152,13 +6154,15 @@ test('recovers from a non-corruption open failure without restarting', async () 
 	await expect(index.status()).resolves.toMatchObject({available: false})
 	await fse.remove(blockingPath)
 
-	await pRetry(
-		async () => expect(await index.status()).toMatchObject({available: true, schemaVersion: FILE_INDEX_SCHEMA_VERSION}),
-		{
-			retries: 20,
-			minTimeout: 10,
-			maxTimeout: 10,
+	// Recovery now boots both real reader workers before becoming available.
+	// Wait for readiness without imposing a 200 ms worker-startup budget on CI.
+	await vi.waitFor(
+		async () => {
+			const status = await index.status()
+			expect(status).toMatchObject({available: true, schemaVersion: FILE_INDEX_SCHEMA_VERSION})
+			expect(status.readers.threadIds).toHaveLength(2)
 		},
+		{timeout: 10_000, interval: 25},
 	)
 	expect(logger.log).toHaveBeenCalledWith('Recovered file index database')
 })

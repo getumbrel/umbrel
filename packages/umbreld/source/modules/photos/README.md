@@ -16,6 +16,73 @@ so SQLite can keep their joins indexed. Filtered pages count before hydrating a
 bounded page. Search keeps the existing full-text indexes and account-scoped
 location checks.
 
+## Reader workers
+
+Files and Photos share **two reader threads**: one reserved for quick requests
+and one that serves both quick and bulk work. Files search, folder-size scans,
+full-index diagnostics, Photos text search, summaries, source totals, album lists,
+album/source-filtered neighbors and bulk item resolution (over 200 IDs or an
+unbounded file list) use the shared reader. Album lists aggregate memberships and
+choose covers; filtered neighbors materialize the matching collection. Neither
+can occupy the reader reserved for quick requests. Paged album/source browsing
+without text search and neighbors without album/source/text filters remain quick
+requests, which can use both readers when capacity is available.
+
+Two readers balance responsiveness with limited RAM. Device tests using SQLite's
+default cache found that reserving one reader removed most thumbnail queuing
+during slow reads at roughly half the warmed memory of four readers. Larger
+pools improved some bulk workloads but did not provide a consistent overall win.
+A dedicated slow-only reader slightly improved cache reuse but made point-read
+bursts slower by limiting them to one reader, so the shared reader can help with those bursts.
+
+Standalone persistent-table reads run on these read-only connections: Photos
+browsing/media locations, Files entry lookups and recents, thumbnail-cache checks,
+and enrichment lookups. Fuzzy matching also executes on the reader thread. Files
+and enrichment reads do not enter the writer queue or require Photos to be
+available. Query results are discarded if their indexed root changes in flight.
+
+The existing file-index worker still owns writes and the reads within those write
+operations, migrations/recovery, and its connection-private temporary scheduling
+tables. Upload preparation, source removal, thumbnail repair and publication
+remain coordinated there. Background work selection and its in-memory reservation
+are serialized separately, so two background jobs cannot claim the same item.
+
+Photos reads first reserve a reader, then briefly enter the writer's mutation
+queue to drain projection journals (and indexing counters when requested). The
+reader opens and pins snapshots of both attached databases before acknowledging
+readiness. The writer then resumes while the query executes. This prevents mixing
+an old index projection with newer durable Photos state. Files reads use an
+independent index snapshot without this writer handshake. Each request releases
+its transaction before returning a result; later requests see subsequent commits.
+
+Root-scan writes use background priority. Photos preparation keeps the default
+priority shared by user mutations, so it can pass a queued scan batch without
+overtaking an earlier favorite or album edit in the writer queue. This changes
+which queued operation runs next; it cannot interrupt a running write or shorten
+projection maintenance. Sustained foreground traffic can delay background scans.
+
+Bulk requests queue for the shared reader; quick requests can also use the
+reserved reader. This protects lookup latency while limiting concurrent bulk
+queries to one. Execution is limited by the worker count, while
+waiting requests are retained: a normal Files search can fan out to hundreds of
+thumbnail lookups, and rejecting excess reads would silently omit metadata from
+the response. Files entry lookups and on-demand thumbnail metadata share a higher
+priority than background enrichment. Equal-priority requests are FIFO, so newer
+thumbnail lookups cannot repeatedly overtake an earlier file lookup. Existing
+thumbnail requests still run before later file lookups at the same priority.
+
+Both workers start before the file index becomes available, moving module loading
+and connection setup out of the first browsing request. This allocates worker
+heaps at startup; SQLite page caches and prepared statements still fill on demand,
+using SQLite's default page-cache setting. Startup and snapshot acknowledgment
+have deadlines. A partial startup closes all readers and uses the index's existing
+recovery path; later worker failures reject affected requests and subsequent work
+starts a replacement in the same group. Shutdown and rebuild stop readers before
+replacing database files. `FileIndex.status().readers` reports thread IDs and
+active/queued counts. Long reads can delay WAL checkpoints. Photos preparation and
+rebuilds still run on the writer, so sustained ingestion can still delay reads.
+No schema migration is needed.
+
 ## Maintaining consistency
 
 Existing file-index hooks refresh eagerly. Persistent change journals in **each**

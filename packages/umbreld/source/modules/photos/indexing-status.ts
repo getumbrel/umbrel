@@ -118,8 +118,8 @@ export default class PhotosIndexingStatus {
 			.immediate()
 	}
 
-	counts(database: Database, accountId: string) {
-		this.sync(database)
+	counts(database: Database, accountId: string, synchronize = true) {
+		if (synchronize) this.sync(database)
 		return (
 			(database
 				.prepare('SELECT total, completed, failures FROM photos_indexing_counts WHERE account_id = ?')

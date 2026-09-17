@@ -83,6 +83,19 @@ export default class PhotosRepository {
 	#readModel = new PhotosReadModel()
 	#indexingStatus = new PhotosIndexingStatus()
 	#preparedStatements = new WeakMap<Database, Map<string, DatabaseTypes.Statement>>()
+	#readonly: boolean
+
+	constructor({readonly = false}: {readonly?: boolean} = {}) {
+		this.#readonly = readonly
+	}
+
+	// The writer runs maintenance before handing a consistent snapshot to a
+	// reader. Reader connections cannot create sources or update projections.
+	prepareRead(database: Database, accountId: string, indexing = false) {
+		this.#ensureSource(database, accountId)
+		this.syncPendingChanges(database)
+		if (indexing) this.#indexingStatus.sync(database)
+	}
 
 	syncEntry(database: Database, entry: IndexedPhotoEntry) {
 		const root = database.prepare('SELECT owner_id, kind FROM index_roots WHERE id = ?').get(entry.rootId) as
@@ -272,6 +285,9 @@ export default class PhotosRepository {
 			)
 			.get()
 		if (!dirty && this.#projectionGenerationMatches(database)) return
+		if (this.#readonly) {
+			throw Object.assign(new Error('Photos snapshot requires writer maintenance'), {code: 'PHOTOS_READ_RETRY'})
+		}
 		// Startup/recovery may need a full backfill. Once initialized, a pending
 		// tint or one missed callback must not scan every durable content row.
 		if (
@@ -1293,7 +1309,7 @@ export default class PhotosRepository {
 			.prepare("SELECT state, last_error FROM index_roots WHERE owner_id = ? AND kind = 'home'")
 			.get(accountId) as {state: 'warming' | 'ready' | 'degraded'; last_error: string | null} | undefined
 		if (!root || root.state === 'warming') return {phase: 'indexing'}
-		const counts = this.#indexingStatus.counts(database, accountId)
+		const counts = this.#indexingStatus.counts(database, accountId, !this.#readonly)
 		const total = Number(counts.total)
 		const completed = Number(counts.completed)
 		const percentage = total === 0 ? 100 : Math.floor((completed / total) * 100)
@@ -1500,6 +1516,7 @@ export default class PhotosRepository {
 
 	#ensureSource(database: Database, accountId: string) {
 		const id = umbrelSourceId(accountId)
+		if (this.#readonly) return id
 		database
 			.prepare(
 				`INSERT INTO umbrel.photos_sources(id, account_id, type, name, scope_mode, scope_paths, created_at)

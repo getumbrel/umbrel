@@ -1,5 +1,5 @@
 import {constants as fsConstants} from 'node:fs'
-import {lstat, mkdir, open, opendir} from 'node:fs/promises'
+import {mkdir, open, opendir} from 'node:fs/promises'
 import {availableParallelism as nodeAvailableParallelism} from 'node:os'
 import nodePath from 'node:path'
 import {createHash, randomUUID} from 'node:crypto'
@@ -10,6 +10,8 @@ import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
 import {photoKind, type PhotoKind, type PhotoSubKind} from '../photos/types.js'
+import {readDatabase, type ReadDatabase, type ReadLane, type ReadSql} from './file-index/read-database.js'
+import {BACKGROUND_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.js'
 import {Blake3Hasher} from './blake3.js'
 import {foldSearchName} from './file-index/migrations.js'
 import {
@@ -26,8 +28,6 @@ import {
 
 type Database = DatabaseTypes.Database
 
-const BACKGROUND_DATABASE_PRIORITY = -10
-const ON_DEMAND_DATABASE_PRIORITY = 20
 const HASH_RETRY_BASE_MS = 30_000
 const THUMBNAIL_RETRY_BASE_MS = 60_000
 const MAX_RETRY_MS = 24 * 60 * 60 * 1000
@@ -160,6 +160,7 @@ export type FileIndexEnrichmentLogger = {
 export type FileIndexEnrichmentOptions = {
 	dataDirectory: string
 	logger: FileIndexEnrichmentLogger
+	readSql: ReadSql
 	withDatabase: <T>(operation: (database: Database) => T, priority?: number) => Promise<T>
 	photosAvailable: () => boolean
 	onStalePath: (systemPath: string) => Promise<void>
@@ -206,6 +207,8 @@ export default class FileIndexEnrichment {
 	readonly logger: FileIndexEnrichmentLogger
 
 	#withDatabase: FileIndexEnrichmentOptions['withDatabase']
+	#readSql: ReadSql
+	#selectionQueue = new PQueue({concurrency: 1})
 	#photosAvailable: () => boolean
 	#onStalePath: (systemPath: string) => Promise<void>
 	#onContentAttached?: (entryId: number, hash: Buffer) => Promise<void>
@@ -252,6 +255,7 @@ export default class FileIndexEnrichment {
 			dataDirectory,
 			logger,
 			withDatabase,
+			readSql,
 			photosAvailable,
 			onStalePath,
 			onContentAttached,
@@ -276,6 +280,7 @@ export default class FileIndexEnrichment {
 		this.thumbnailDirectory = nodePath.join(dataDirectory, 'thumbnails')
 		this.logger = logger
 		this.#withDatabase = withDatabase
+		this.#readSql = readSql
 		this.#photosAvailable = photosAvailable
 		this.#onStalePath = onStalePath
 		this.#onContentAttached = onContentAttached
@@ -302,6 +307,16 @@ export default class FileIndexEnrichment {
 		this.#backgroundConcurrency = concurrency.background
 		this.#backgroundQueue = new PQueue({concurrency: concurrency.background})
 		this.#onDemandQueue = new PQueue({concurrency: concurrency.onDemand})
+	}
+
+	#readDatabase<T>(operation: (database: ReadDatabase) => Promise<T>, priority = 0, lane: ReadLane = 'interactive') {
+		return operation(readDatabase(this.#readSql, priority, lane))
+	}
+
+	#selectDatabase<T>(operation: (database: ReadDatabase) => Promise<T>, priority: number): Promise<T> {
+		// Selection and the in-memory reservation must remain serial even though
+		// the database lookup now yields to another thread.
+		return this.#selectionQueue.add(() => this.#readDatabase(operation, priority)) as Promise<T>
 	}
 
 	async start() {
@@ -524,10 +539,10 @@ export default class FileIndexEnrichment {
 		}
 		const content = await this.#contentForEntry(entryId, ON_DEMAND_DATABASE_PRIORITY)
 		if (!content) return
-		const ready = await this.#withDatabase(
-			(database) =>
+		const ready = await this.#readDatabase(
+			async (database) =>
 				Boolean(
-					database
+					await database
 						.prepare(
 							`SELECT 1 FROM thumbnail_variants
 							WHERE content_id = ? AND variant = ? AND state = 'ready'`,
@@ -562,10 +577,11 @@ export default class FileIndexEnrichment {
 	}
 
 	async status() {
-		return this.#withDatabase((database) => {
-			const row = database
-				.prepare(
-					`SELECT
+		return this.#readDatabase(
+			async (database) => {
+				const row = (await database
+					.prepare(
+						`SELECT
 						COUNT(*) FILTER (WHERE thumbnail_identity_kind IS NOT NULL) AS eligible_entries,
 						COUNT(*) FILTER (WHERE thumbnail_identity_kind = 'content' AND content_id IS NOT NULL) AS hashed_entries,
 						COUNT(*) FILTER (WHERE thumbnail_identity_kind = 'content' AND content_id IS NULL
@@ -581,20 +597,23 @@ export default class FileIndexEnrichment {
 						(SELECT COUNT(*) FROM media_metadata WHERE state = 'failed') AS media_failures
 					FROM entries
 					JOIN index_roots ON index_roots.id = entries.root_id`,
-				)
-				.get() as Record<string, number>
-			return {
-				eligibleEntries: Number(row.eligible_entries),
-				hashedEntries: Number(row.hashed_entries),
-				pendingHashes: Number(row.pending_hashes),
-				hashFailures: Number(row.hash_failures),
-				uniqueContents: Number(row.unique_contents),
-				readyThumbnails: Number(row.ready_thumbnails),
-				thumbnailFailures: Number(row.thumbnail_failures),
-				readyMedia: Number(row.ready_media),
-				mediaFailures: Number(row.media_failures),
-			}
-		}, ON_DEMAND_DATABASE_PRIORITY)
+					)
+					.get()) as Record<string, number>
+				return {
+					eligibleEntries: Number(row.eligible_entries),
+					hashedEntries: Number(row.hashed_entries),
+					pendingHashes: Number(row.pending_hashes),
+					hashFailures: Number(row.hash_failures),
+					uniqueContents: Number(row.unique_contents),
+					readyThumbnails: Number(row.ready_thumbnails),
+					thumbnailFailures: Number(row.thumbnail_failures),
+					readyMedia: Number(row.ready_media),
+					mediaFailures: Number(row.media_failures),
+				}
+			},
+			ON_DEMAND_DATABASE_PRIORITY,
+			'bulk',
+		)
 	}
 
 	async stop() {
@@ -771,11 +790,11 @@ export default class FileIndexEnrichment {
 	}
 
 	async #nextEntryNeedingHash() {
-		return this.#withDatabase((database) => {
+		return this.#selectDatabase(async (database) => {
 			const excludedIds = [...this.#activeHashEntries]
 			const exclusion =
 				excludedIds.length > 0 ? `AND candidate.id NOT IN (${excludedIds.map(() => '?').join(', ')})` : ''
-			const row = database
+			const row = (await database
 				.prepare(
 					`SELECT entries.id, entries.device, entries.inode, entries.size, entries.modified_ns,
 						entries.ctime_ns, entries.thumbnail_identity_kind,
@@ -796,7 +815,7 @@ export default class FileIndexEnrichment {
 					ORDER BY entries.hash_retry_at, entries.id
 					LIMIT 1`,
 				)
-				.get(Date.now(), ...excludedIds) as
+				.get(Date.now(), ...excludedIds)) as
 				| {
 						id: number
 						device: string
@@ -811,18 +830,19 @@ export default class FileIndexEnrichment {
 				| undefined
 			if (!row) return
 			const candidate = entryCandidate(row)
+			if (this.#activeHashEntries.has(candidate.id)) return
 			this.#activeHashEntries.add(candidate.id)
 			return candidate
 		}, BACKGROUND_DATABASE_PRIORITY)
 	}
 
 	async #nextContentNeedingMetadata() {
-		return this.#withDatabase((database) => {
+		return this.#selectDatabase(async (database) => {
 			const excluded = [...this.#activeMediaContents]
 			const exclusion =
 				excluded.length > 0 ? `AND media_metadata.content_id NOT IN (${excluded.map(() => '?').join(', ')})` : ''
-			const select = (state: 'pending' | 'failed') =>
-				database
+			const select = async (state: 'pending' | 'failed') =>
+				(await database
 					.prepare(
 						`SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
 							entries.device, entries.inode, entries.size, entries.modified_ns,
@@ -839,10 +859,11 @@ export default class FileIndexEnrichment {
 						ORDER BY ${state === 'failed' ? 'media_metadata.retry_at,' : ''} media_metadata.content_id, entries.id
 						LIMIT 1`,
 					)
-					.get(...(state === 'failed' ? [Date.now()] : []), ...excluded) as ContentCandidateRow | undefined
-			const row = select('pending') ?? select('failed')
+					.get(...(state === 'failed' ? [Date.now()] : []), ...excluded)) as ContentCandidateRow | undefined
+			const row = (await select('pending')) ?? (await select('failed'))
 			if (!row) return
 			const candidate = contentCandidate(row)
+			if (this.#activeMediaContents.has(candidate.id)) return
 			this.#activeMediaContents.add(candidate.id)
 			return candidate
 		}, BACKGROUND_DATABASE_PRIORITY)
@@ -850,11 +871,11 @@ export default class FileIndexEnrichment {
 
 	async #ensureMediaMetadata(content: ContentCandidate, onDemand: boolean, freshReference = false) {
 		const priority = onDemand ? ON_DEMAND_DATABASE_PRIORITY : BACKGROUND_DATABASE_PRIORITY
-		const current = await this.#withDatabase(
-			(database) =>
-				database
+		const current = await this.#readDatabase(
+			async (database) =>
+				(await database
 					.prepare('SELECT state, retry_at, last_error FROM media_metadata WHERE content_id = ?')
-					.get(content.id) as
+					.get(content.id)) as
 					| {state: 'pending' | 'ready' | 'failed'; retry_at: number | null; last_error: string | null}
 					| undefined,
 			priority,
@@ -1002,7 +1023,16 @@ export default class FileIndexEnrichment {
 	}
 
 	async #nextAttemptAt() {
-		return this.#withDatabase((database) => {
+		// This TEMP table is private scheduling state on the writer connection.
+		// Read its deadline there; the persistent-table scans run on a reader.
+		const deferred = await this.#withDatabase(
+			(database) =>
+				database
+					.prepare('SELECT MIN(deferred_at + ?) AS attempt_at FROM content_gc_candidates')
+					.get(this.#orphanGcMaxDeferralMs) as {attempt_at: number | null},
+			BACKGROUND_DATABASE_PRIORITY,
+		)
+		return this.#readDatabase(async (database) => {
 			const variants = [...this.#enabledThumbnailVariants]
 			const excludedEntryIds = [...this.#activeHashEntries]
 			const excludedContentIds = [...this.#activeThumbnailContents]
@@ -1017,7 +1047,7 @@ export default class FileIndexEnrichment {
 				excludedMediaIds.length > 0
 					? `AND failed_media.content_id NOT IN (${excludedMediaIds.map(() => '?').join(', ')})`
 					: ''
-			const row = database
+			const row = (await database
 				.prepare(
 					`SELECT MIN(attempt_at) AS attempt_at FROM (
 						SELECT attempt_at FROM (
@@ -1060,17 +1090,10 @@ export default class FileIndexEnrichment {
 							ORDER BY retry_at, content_id LIMIT 1
 						)
 						UNION ALL
-						SELECT MIN(deferred_at + ?) AS attempt_at
-						FROM content_gc_candidates
+						SELECT ? AS attempt_at
 					)`,
 				)
-				.get(
-					...excludedEntryIds,
-					...variants,
-					...excludedContentIds,
-					...excludedMediaIds,
-					this.#orphanGcMaxDeferralMs,
-				) as {
+				.get(...excludedEntryIds, ...variants, ...excludedContentIds, ...excludedMediaIds, deferred.attempt_at)) as {
 				attempt_at: number | null
 			}
 			return row.attempt_at === null ? undefined : Number(row.attempt_at)
@@ -1211,21 +1234,21 @@ export default class FileIndexEnrichment {
 	}
 
 	async #nextContentNeedingThumbnail() {
-		return this.#withDatabase((database) => {
+		return this.#selectDatabase(async (database) => {
 			const variants = [...this.#enabledThumbnailVariants]
 			const excludedIds = [...this.#activeThumbnailContents]
 			const exclusion =
 				excludedIds.length > 0
 					? `AND thumbnail_variants.content_id NOT IN (${excludedIds.map(() => '?').join(', ')})`
 					: ''
-			const select = (state: 'pending' | 'failed', variant: ThumbnailVariant) => {
+			const select = async (state: 'pending' | 'failed', variant: ThumbnailVariant) => {
 				const workIndex = state === 'pending' ? 'thumbnail_variants_pending_work' : 'thumbnail_variants_failed_work'
 				const retryPredicate = state === 'pending' ? '' : 'AND thumbnail_variants.retry_at <= ?'
 				const workOrder =
 					state === 'pending'
 						? 'thumbnail_variants.content_id, entries.id'
 						: 'thumbnail_variants.retry_at, thumbnail_variants.content_id, entries.id'
-				return database
+				return (await database
 					.prepare(
 						`SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
 							thumbnail_variants.variant,
@@ -1243,15 +1266,21 @@ export default class FileIndexEnrichment {
 						ORDER BY ${workOrder}
 						LIMIT 1`,
 					)
-					.get(variant, ...(state === 'failed' ? [Date.now()] : []), ...excludedIds) as
+					.get(variant, ...(state === 'failed' ? [Date.now()] : []), ...excludedIds)) as
 					| ContentThumbnailCandidateRow
 					| undefined
 			}
-			const row =
-				variants.map((variant) => select('pending', variant)).find(Boolean) ??
-				variants.map((variant) => select('failed', variant)).find(Boolean)
+			let row: ContentThumbnailCandidateRow | undefined
+			for (const state of ['pending', 'failed'] as const) {
+				for (const variant of variants) {
+					row = await select(state, variant)
+					if (row) break
+				}
+				if (row) break
+			}
 			if (!row) return
 			const candidate: ContentThumbnailCandidate = {...contentCandidate(row), variant: row.variant}
+			if (this.#activeThumbnailContents.has(candidate.id)) return
 			this.#activeThumbnailContents.add(candidate.id)
 			return candidate
 		}, BACKGROUND_DATABASE_PRIORITY)
@@ -1263,11 +1292,11 @@ export default class FileIndexEnrichment {
 		priority: number,
 		freshReference = false,
 	) {
-		const rows = await this.#withDatabase(
-			(database) =>
-				database
+		const rows = await this.#readDatabase(
+			async (database) =>
+				(await database
 					.prepare('SELECT variant, state, retry_at, last_error FROM thumbnail_variants WHERE content_id = ?')
-					.all(contentId) as Array<{
+					.all(contentId)) as Array<{
 					variant: string
 					state: 'pending' | 'ready' | 'failed'
 					retry_at: number | null
@@ -1302,11 +1331,11 @@ export default class FileIndexEnrichment {
 			async () => {
 				const states = new Map(
 					(
-						await this.#withDatabase(
-							(database) =>
-								database
+						await this.#readDatabase(
+							async (database) =>
+								(await database
 									.prepare('SELECT variant, state, retry_at, last_error FROM thumbnail_variants WHERE content_id = ?')
-									.all(content.id) as Array<{
+									.all(content.id)) as Array<{
 									variant: ThumbnailVariant
 									state: 'pending' | 'ready' | 'failed'
 									retry_at: number | null
@@ -1463,14 +1492,14 @@ export default class FileIndexEnrichment {
 		const identity = transientIdentity(candidate, variant)
 		await this.#withArtifactOperation(identity, async () => {
 			const destination = thumbnailSystemPath(this.thumbnailDirectory, identity)
-			const existing = await this.#withDatabase(
-				(database) =>
-					database
+			const existing = await this.#readDatabase(
+				async (database) =>
+					(await database
 						.prepare(
 							`SELECT artifact_key, state FROM transient_thumbnail_variants
 							WHERE entry_id = ? AND variant = ?`,
 						)
-						.get(candidate.id, variant) as {artifact_key: string; state: 'pending' | 'ready' | 'failed'} | undefined,
+						.get(candidate.id, variant)) as {artifact_key: string; state: 'pending' | 'ready' | 'failed'} | undefined,
 				ON_DEMAND_DATABASE_PRIORITY,
 			)
 			if (
@@ -1516,10 +1545,10 @@ export default class FileIndexEnrichment {
 		variant: ThumbnailVariant,
 	): Promise<ThumbnailReference | undefined> {
 		const identity = transientIdentity(candidate, variant)
-		const ready = await this.#withDatabase(
-			(database) =>
+		const ready = await this.#readDatabase(
+			async (database) =>
 				Boolean(
-					database
+					await database
 						.prepare(
 							`SELECT 1 FROM transient_thumbnail_variants
 							WHERE entry_id = ? AND variant = ? AND artifact_key = ? AND state = 'ready'`,
@@ -1684,10 +1713,10 @@ export default class FileIndexEnrichment {
 		priority: number,
 		backgroundOnly = false,
 	) {
-		return this.#withDatabase((database) => {
+		return this.#readDatabase(async (database) => {
 			const excluded = [...excludedEntryIds]
 			const placeholders = excluded.map(() => '?').join(', ')
-			const row = database
+			const row = (await database
 				.prepare(
 					`SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
 						entries.device, entries.inode, entries.size, entries.modified_ns,
@@ -1701,7 +1730,7 @@ export default class FileIndexEnrichment {
 						AND entries.id NOT IN (${placeholders})
 					ORDER BY entries.id LIMIT 1`,
 				)
-				.get(contentId, ...excluded) as ContentCandidateRow | undefined
+				.get(contentId, ...excluded)) as ContentCandidateRow | undefined
 			return row ? contentCandidate(row) : undefined
 		}, priority)
 	}
@@ -1740,8 +1769,8 @@ export default class FileIndexEnrichment {
 	}
 
 	async #entryCandidate(entryId: number, priority: number) {
-		return this.#withDatabase((database) => {
-			const row = database
+		return this.#readDatabase(async (database) => {
+			const row = (await database
 				.prepare(
 					`SELECT entries.id, entries.device, entries.inode, entries.size, entries.modified_ns,
 						entries.ctime_ns, entries.thumbnail_identity_kind,
@@ -1750,14 +1779,14 @@ export default class FileIndexEnrichment {
 					JOIN index_roots ON index_roots.id = entries.root_id
 					WHERE entries.id = ? AND entries.thumbnail_identity_kind IS NOT NULL`,
 				)
-				.get(entryId) as EntryCandidateRow | undefined
+				.get(entryId)) as EntryCandidateRow | undefined
 			return row ? entryCandidate(row) : undefined
 		}, priority)
 	}
 
 	async #contentForEntry(entryId: number, priority: number) {
-		return this.#withDatabase((database) => {
-			const row = database
+		return this.#readDatabase(async (database) => {
+			const row = (await database
 				.prepare(
 					`SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
 						entries.device, entries.inode, entries.size, entries.modified_ns,
@@ -1768,7 +1797,7 @@ export default class FileIndexEnrichment {
 					JOIN index_roots ON index_roots.id = entries.root_id
 					WHERE entries.id = ? AND entries.thumbnail_identity_kind = 'content'`,
 				)
-				.get(entryId) as ContentCandidateRow | undefined
+				.get(entryId)) as ContentCandidateRow | undefined
 			return row ? contentCandidate(row) : undefined
 		}, priority)
 	}
@@ -2005,10 +2034,10 @@ export default class FileIndexEnrichment {
 	}
 
 	async #hasUnsettledContentHashes() {
-		return this.#withDatabase(
-			(database) =>
+		return this.#readDatabase(
+			async (database) =>
 				Boolean(
-					database
+					await database
 						.prepare(
 							`SELECT 1 FROM index_roots
 							WHERE ${BACKGROUND_ENRICHMENT_ROOT_SQL}
@@ -2028,8 +2057,8 @@ export default class FileIndexEnrichment {
 	}
 
 	async #nextReadyThumbnails(after: {variant: string; contentId: number}) {
-		return this.#withDatabase((database) => {
-			const rows = database
+		return this.#readDatabase(async (database) => {
+			const rows = (await database
 				.prepare(
 					`SELECT thumbnail_variants.content_id, thumbnail_variants.variant, hex(contents.blake3) AS hash
 						FROM thumbnail_variants
@@ -2047,7 +2076,7 @@ export default class FileIndexEnrichment {
 					after.variant,
 					after.contentId,
 					ARTIFACT_MAINTENANCE_BATCH_SIZE,
-				) as Array<{
+				)) as Array<{
 				content_id: number
 				variant: ThumbnailVariant
 				hash: string
@@ -2081,39 +2110,39 @@ export default class FileIndexEnrichment {
 
 	async #trackedContentHashes(hashes: string[]) {
 		if (hashes.length === 0) return new Set<string>()
-		return this.#withDatabase((database) => {
+		return this.#readDatabase(async (database) => {
 			const unique = [...new Set(hashes)]
 			const placeholders = unique.map(() => '?').join(', ')
-			const rows = database
+			const rows = (await database
 				.prepare(
 					`SELECT hex(blake3) AS hash FROM contents
 					WHERE blake3 IN (${placeholders})`,
 				)
-				.all(...unique.map((hash) => Buffer.from(hash, 'hex'))) as Array<{hash: string}>
+				.all(...unique.map((hash) => Buffer.from(hash, 'hex')))) as Array<{hash: string}>
 			return new Set(rows.map(({hash}) => hash.toLowerCase()))
 		}, BACKGROUND_DATABASE_PRIORITY)
 	}
 
 	async #trackedTransientArtifactKeys(keys: string[]) {
 		if (keys.length === 0) return new Set<string>()
-		return this.#withDatabase((database) => {
+		return this.#readDatabase(async (database) => {
 			const unique = [...new Set(keys)]
 			const placeholders = unique.map(() => '?').join(', ')
-			const rows = database
+			const rows = (await database
 				.prepare(
 					`SELECT DISTINCT artifact_key FROM transient_thumbnail_variants
 						WHERE artifact_key IN (${placeholders})`,
 				)
-				.all(...unique) as Array<{artifact_key: string}>
+				.all(...unique)) as Array<{artifact_key: string}>
 			return new Set(rows.map(({artifact_key}) => artifact_key))
 		}, BACKGROUND_DATABASE_PRIORITY)
 	}
 
 	async #thumbnailIdentityIsTracked(identity: ThumbnailIdentity) {
-		return this.#withDatabase((database) => {
+		return this.#readDatabase(async (database) => {
 			if (identity.kind === 'content') {
 				return Boolean(
-					database
+					await database
 						.prepare(
 							`SELECT 1 FROM thumbnail_variants
 							JOIN contents ON contents.id = thumbnail_variants.content_id
@@ -2123,7 +2152,7 @@ export default class FileIndexEnrichment {
 				)
 			}
 			return Boolean(
-				database
+				await database
 					.prepare('SELECT 1 FROM transient_thumbnail_variants WHERE artifact_key = ? AND variant = ?')
 					.get(identity.key, identity.variant),
 			)
