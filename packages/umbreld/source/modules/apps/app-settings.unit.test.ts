@@ -8,6 +8,7 @@ import {afterEach, describe, expect, test, vi} from 'vitest'
 
 import type Umbreld from '../../index.js'
 import App, {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from './app.js'
+import ImageCleanup from './image-cleanup.js'
 import type {AppManifest} from './schema.js'
 
 const temporaryDirectories: string[] = []
@@ -27,6 +28,7 @@ async function createApp() {
 		eventBus: {emit: vi.fn(async () => undefined)},
 		apps: {
 			instances,
+			imageCleanup: new ImageCleanup(async () => {}, {log: vi.fn(), error: vi.fn()}),
 			getDataRootPathsForApps: vi.fn(async () => []),
 			getDataRootPathRelation: vi.fn(() => null),
 			setFolderAccessSourcePaths: vi.fn(),
