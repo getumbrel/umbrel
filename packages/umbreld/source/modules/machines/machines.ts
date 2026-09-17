@@ -34,6 +34,7 @@ import {MACHINE_GUEST_HOST_ADDRESS, machineIpAddressSchema, nextMachineIpAddress
 import MachineStore from './machine-store.js'
 import {safeDownload} from './safe-download.js'
 import {prepareWindowsInstallMedia, type WindowsInstaller} from './windows-image.js'
+import {prepareOmarchySeed, probeOmarchySetup, removeOmarchySetupCredentials} from './omarchy-install.js'
 import MachineGuestApi from './guest-api.js'
 import {encodeScreenshot, performInputAction, type MachineInputAction, type PointerTarget} from './machine-control.js'
 import type {InputFeedback, PointerMotion} from './input-motion.js'
@@ -681,6 +682,21 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			platformProfile: 'modern-arm64',
 			cloudInit: {commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
 		},
+		{
+			id: 'omarchy-4.0.4-amd64',
+			familyId: 'omarchy',
+			name: 'Omarchy',
+			variantName: 'Desktop',
+			version: 'Omarchy 4.0.4',
+			sizeMb: 6_186,
+			estimatedInstalledSizeMb: 6_800,
+			arch: 'amd64',
+			platform: 'linux',
+			requiresCredentials: true,
+			url: 'https://iso.omarchy.org/omarchy-4.0.4.iso',
+			sha256: 'ddeded2758c48318d201dfdac905ecb28f570441883f0c052ea3cd5d05acf92d',
+			platformProfile: 'modern-x86',
+		},
 		// Mirrors are checksum-pinned so media cannot change underneath an
 		// install. Legacy XP/98 media requires a user-supplied product key.
 		{
@@ -939,6 +955,7 @@ export default class Machines {
 	#lastFirstBootSetupStates = new Map<string, boolean>()
 	#pollTimer?: NodeJS.Timeout
 	#polling = false
+	#omarchySetupProbes = new Map<string, Promise<void>>()
 	#libvirtActivated = false
 	#libvirtActivation?: Promise<void>
 	#nextLibvirtProbeAt = 0
@@ -1039,6 +1056,8 @@ export default class Machines {
 
 	async stop() {
 		if (this.#pollTimer) clearInterval(this.#pollTimer)
+		this.#pollTimer = undefined
+		await Promise.allSettled(this.#omarchySetupProbes.values())
 		for (const job of this.#installJobs.values()) job.controller.abort(new Error('[machine-install-cancelled]'))
 		await Promise.allSettled([...this.#installJobs.values()].map(({promise}) => promise))
 		for (const job of this.#imageDownloads.values())
@@ -1089,15 +1108,35 @@ export default class Machines {
 			const definitions = await this.#store.list()
 			if (this.#libvirtActivated) await this.#libvirt.ensureFirewall(definitions)
 			const states = await Promise.all(
-				definitions.map(async (definition) => ({
-					id: definition.id,
-					state: await this.#state(definition),
-					firstBootSetup: isFirstBootSetupActive(
-						definition.firstBootSetup,
-						Date.now(),
-						firstBootSetupTimeoutMs(definition),
-					),
-				})),
+				definitions.map(async (definition) => {
+					const state = await this.#state(definition)
+					if (
+						this.#pollTimer &&
+						definition.osId === 'omarchy' &&
+						definition.firstBootSetup &&
+						state === 'running' &&
+						!this.#omarchySetupProbes.has(definition.id)
+					) {
+						// A guest's SSH timeout must not delay state updates for other machines.
+						const probe = probeOmarchySetup(
+							this.#store.directory(definition.id),
+							definition.username!,
+							definition.ipAddress!,
+						)
+							.catch((error) => this.logger.error(`Failed probing Omarchy setup for ${definition.id}`, error))
+							.finally(() => this.#omarchySetupProbes.delete(definition.id))
+						this.#omarchySetupProbes.set(definition.id, probe)
+					}
+					return {
+						id: definition.id,
+						state,
+						firstBootSetup: isFirstBootSetupActive(
+							definition.firstBootSetup,
+							Date.now(),
+							firstBootSetupTimeoutMs(definition),
+						),
+					}
+				}),
 			)
 			let changed = states.length !== this.#lastStates.size
 			for (const machine of states) {
@@ -1471,7 +1510,7 @@ export default class Machines {
 
 	async #view(definition: MachineDefinition): Promise<Machine> {
 		const acceleration = resolveAcceleration(definition.arch, this.#libvirt.kvmAvailable)
-		const {firstBootSetup, installSource, installMedia, bootMedia, ...publicDefinition} = definition
+		const {firstBootSetup, installSource, installMedia, seedMedia, bootMedia, ...publicDefinition} = definition
 		const externalDiskAvailable = await this.#externalDiskAvailable(definition)
 		const state = externalDiskAvailable ? await this.#state(definition) : 'error'
 		const firstBootSetupActive = isFirstBootSetupActive(firstBootSetup, Date.now(), firstBootSetupTimeoutMs(definition))
@@ -1962,7 +2001,19 @@ export default class Machines {
 			}
 			if (signal.aborted) throw signal.reason
 
-			if (unattended && !sourceImage?.windows) {
+			if (sourceImage?.familyId === 'omarchy') {
+				await prepareOmarchySeed(
+					stagingDirectory,
+					{
+						hostname: slugifyHostname(definition.name),
+						diskSizeGb: definition.diskSizeGb,
+						username: credentials.username!,
+						password: credentials.password!,
+						completionUrl: completionUrl!,
+					},
+					signal,
+				)
+			} else if (unattended && !sourceImage?.windows) {
 				await this.#createCloudInitSeed(
 					stagingDirectory,
 					definition,
@@ -2177,6 +2228,7 @@ export default class Machines {
 					? 'media/seed.iso'
 					: undefined,
 			bootMedia: sourceImage?.windows?.installer === 'windows-98' ? 'media/boot.img' : undefined,
+			seedMedia: sourceImage?.familyId === 'omarchy' ? 'media/seed.iso' : undefined,
 			portForwards: [],
 		}
 
@@ -2269,8 +2321,13 @@ export default class Machines {
 					await fse.remove(nodePath.join(this.#store.directory(id), definition.bootMedia))
 					delete definition.bootMedia
 				}
+				if (definition.seedMedia) {
+					await fse.remove(nodePath.join(this.#store.directory(id), definition.seedMedia))
+					delete definition.seedMedia
+				}
 			}
 			await this.#store.write(definition)
+			if (definition.osId === 'omarchy') await removeOmarchySetupCredentials(this.#store.directory(id))
 			await this.#emitMachines()
 			return true
 		})
@@ -2533,7 +2590,7 @@ export default class Machines {
 			if (definition.firstBootSetup) throw new Error('[machine-first-boot-setup-in-progress]')
 			if ((await this.#libvirt.state(id)) !== 'stopped') await this.#libvirt.ejectInstallMedia(definition)
 
-			const mediaPaths = [definition.installMedia, definition.bootMedia]
+			const mediaPaths = [definition.installMedia, definition.seedMedia, definition.bootMedia]
 				.filter((path): path is string => !!path)
 				.map((path) => nodePath.join(this.#store.directory(id), path))
 			if (definition.installMedia) {
@@ -2542,6 +2599,7 @@ export default class Machines {
 			if (definition.bootMedia) {
 				delete definition.bootMedia
 			}
+			delete definition.seedMedia
 			await this.#store.write(definition)
 			await Promise.all(mediaPaths.map((path) => fse.remove(path)))
 			await this.#emitMachines()

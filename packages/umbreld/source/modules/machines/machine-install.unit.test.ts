@@ -17,6 +17,9 @@ const downloadControls = vi.hoisted(
 		}>,
 )
 const preparedWindowsOptions = vi.hoisted(() => [] as Array<{licenseKey?: string}>)
+const preparedOmarchyOptions = vi.hoisted(() => [] as Array<{completionUrl: string}>)
+const omarchyProbes = vi.hoisted(() => [] as string[])
+const omarchyProbeControls = vi.hoisted(() => ({barrier: undefined as Promise<void> | undefined}))
 const cloudInitUserData = vi.hoisted(() => [] as string[])
 const downloadHooks = vi.hoisted(() => ({onStart: undefined as (() => void) | undefined}))
 const guestApiControls = vi.hoisted(() => ({starts: 0, stops: 0}))
@@ -110,6 +113,27 @@ vi.mock('./guest-api.js', () => ({
 		}
 	},
 }))
+
+vi.mock('./omarchy-install.js', async () => {
+	const fsp = await import('node:fs/promises')
+	const path = await import('node:path')
+	return {
+		prepareOmarchySeed: async (directory: string, options: {completionUrl: string}) => {
+			preparedOmarchyOptions.push(options)
+			await fsp.writeFile(path.join(directory, 'media/seed.iso'), 'omarchy seed')
+			await fsp.writeFile(path.join(directory, 'media/omarchy-setup-key'), 'private key', {mode: 0o600})
+			await fsp.writeFile(path.join(directory, 'media/omarchy-setup-password'), 'temporary password', {mode: 0o600})
+		},
+		probeOmarchySetup: async (directory: string) => {
+			omarchyProbes.push(directory)
+			await omarchyProbeControls.barrier
+		},
+		removeOmarchySetupCredentials: async (directory: string) => {
+			await fsp.rm(path.join(directory, 'media/omarchy-setup-key'), {force: true})
+			await fsp.rm(path.join(directory, 'media/omarchy-setup-password'), {force: true})
+		},
+	}
+})
 
 vi.mock('./rfb-client.js', async () => ({
 	...(await vi.importActual<typeof import('./rfb-client.js')>('./rfb-client.js')),
@@ -276,6 +300,7 @@ vi.mock('./libvirt.js', async () => {
 })
 
 import Machines from './machines.js'
+import * as machineDomain from './domain.js'
 
 const roots: string[] = []
 const instances: Machines[] = []
@@ -284,6 +309,9 @@ afterEach(async () => {
 	await Promise.all(instances.splice(0).map((machines) => machines.stop()))
 	downloadControls.splice(0)
 	preparedWindowsOptions.splice(0)
+	preparedOmarchyOptions.splice(0)
+	omarchyProbes.splice(0)
+	vi.restoreAllMocks()
 	cloudInitUserData.splice(0)
 	downloadHooks.onStart = undefined
 	guestApiControls.starts = 0
@@ -304,9 +332,9 @@ afterEach(async () => {
 	await Promise.all(roots.splice(0).map((root) => fse.remove(root)))
 })
 
-async function createMachines() {
-	const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-install-'))
-	roots.push(root)
+async function createMachines(existingRoot?: string) {
+	const root = existingRoot ?? (await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-install-')))
+	if (!existingRoot) roots.push(root)
 	const filesRoot = nodePath.join(root, 'files')
 	await Promise.all([
 		fse.ensureDir(nodePath.join(filesRoot, 'External')),
@@ -337,6 +365,77 @@ async function createMachines() {
 describe('background machine installation', () => {
 	const catalogOsId = process.arch === 'arm64' ? 'ubuntu-26.04-server-arm64' : 'ubuntu-26.04-server-amd64'
 	const catalogCreate = {osId: catalogOsId, username: 'umbrel', password: 'password'}
+
+	test('installs Omarchy with separate seed media and cleans up only after authenticated completion', async () => {
+		vi.spyOn(machineDomain, 'hostArchitecture').mockReturnValue('amd64')
+		const {machines, root, eventBus} = await createMachines()
+		const machine = await machines.create({
+			name: 'Omarchy',
+			osId: 'omarchy-4.0.4-amd64',
+			username: 'umbrel',
+			password: 'password',
+			diskSizeGb: 4,
+			cores: 2,
+			memoryGb: 4,
+		})
+		await pWaitFor(() => downloadControls.length === 1)
+		await downloadControls[0].resolve()
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+		const directory = nodePath.join(root, 'machines', machine.id)
+		const readDefinition = async () => yaml.load(await fsp.readFile(nodePath.join(directory, 'machine.yaml'), 'utf8'))
+		expect(await readDefinition()).toMatchObject({
+			installMedia: 'media/install.iso',
+			seedMedia: 'media/seed.iso',
+			firstBootSetup: expect.any(Object),
+		})
+		expect(cloudInitUserData).toHaveLength(0)
+		expect((await machines.list())[0]).not.toHaveProperty('seedMedia')
+		await expect(machines.completeFirstBootSetup(machine.id, '00'.repeat(32))).rejects.toThrow(
+			'[machine-first-boot-token-invalid]',
+		)
+		await expect(machines.ejectInstallMedia(machine.id)).rejects.toThrow('[machine-first-boot-setup-in-progress]')
+		await expect(fse.pathExists(nodePath.join(directory, 'media/seed.iso'))).resolves.toBe(true)
+		await pWaitFor(() => omarchyProbes.includes(directory))
+
+		// State updates continue while an SSH connection is waiting to time out.
+		let releaseProbe!: () => void
+		omarchyProbeControls.barrier = new Promise<void>((resolve) => (releaseProbe = resolve))
+		omarchyProbes.splice(0)
+		try {
+			await pWaitFor(() => omarchyProbes.includes(directory), {timeout: 5_000})
+			libvirtControls.suspendedIds.add(machine.id)
+			await pWaitFor(
+				() =>
+					eventBus.emit.mock.calls.some(
+						([event, payload]) =>
+							event === 'machines:updated' &&
+							payload.some(({id, state}: {id: string; state: string}) => id === machine.id && state === 'suspended'),
+					),
+				{timeout: 5_000},
+			)
+		} finally {
+			releaseProbe()
+			omarchyProbeControls.barrier = undefined
+			libvirtControls.suspendedIds.delete(machine.id)
+		}
+
+		// A host restart during setup must resume detection using the saved key,
+		// without needing the user's password again.
+		await machines.stop()
+		omarchyProbes.splice(0)
+		const {machines: resumed} = await createMachines(root)
+		await pWaitFor(() => omarchyProbes.includes(directory))
+		expect(preparedOmarchyOptions).toHaveLength(1)
+		await expect(fse.pathExists(nodePath.join(directory, 'media/omarchy-setup-key'))).resolves.toBe(true)
+		const token = new URL(preparedOmarchyOptions[0].completionUrl).pathname.split('/').at(-1)!
+		await resumed.completeFirstBootSetup(machine.id, token)
+		expect(libvirtControls.ejectCalls).toContain(machine.id)
+		expect((await resumed.list())[0]).toMatchObject({firstBootSetup: false, installationState: undefined})
+		for (const field of ['firstBootSetup', 'installMedia', 'seedMedia'])
+			expect(await readDefinition()).not.toHaveProperty(field)
+		for (const file of ['install.iso', 'seed.iso', 'omarchy-setup-key', 'omarchy-setup-password'])
+			await expect(fse.pathExists(nodePath.join(directory, 'media', file))).resolves.toBe(false)
+	})
 
 	test('keeps umbreld startup alive when transient machine networking cannot be reconciled', async () => {
 		libvirtControls.reconcileNetworkFailures = 1

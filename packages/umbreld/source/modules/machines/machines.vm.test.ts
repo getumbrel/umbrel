@@ -161,7 +161,7 @@ curl --silent --output /dev/null --write-out '%{http_code}' http://10.203.0.1:22
 		expect(output.trim().endsWith('404')).toBe(true)
 	})
 
-	test('ships native cloud-init Server and Desktop templates in the built-in catalog', async () => {
+	test('ships native Linux templates in the built-in catalog', async () => {
 		const allImages = await umbreld.client.machines.osImages.query()
 		const images = allImages.filter(({platform}) => platform === 'linux')
 		expect(
@@ -234,6 +234,14 @@ curl --silent --output /dev/null --write-out '%{http_code}' http://10.203.0.1:22
 				id: 'android-13-amd64',
 				familyId: 'android',
 				variantName: undefined,
+				arch: 'amd64',
+				requiresCredentials: true,
+				state: 'available',
+			},
+			{
+				id: 'omarchy-4.0.4-amd64',
+				familyId: 'omarchy',
+				variantName: 'Desktop',
 				arch: 'amd64',
 				requiresCredentials: true,
 				state: 'available',

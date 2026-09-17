@@ -84,6 +84,7 @@ describe('virgl graphics', () => {
 
 	test('only enables virgl for built-in modern Linux desktops', () => {
 		expect(supportsVirglGraphics(definition())).toBe(true)
+		expect(supportsVirglGraphics(definition({osId: 'omarchy'}))).toBe(true)
 		expect(supportsVirglGraphics(definition({arch: 'arm64', platformProfile: 'modern-arm64'}))).toBe(true)
 		expect(supportsVirglGraphics(definition({osId: 'android', osVariant: undefined}))).toBe(true)
 		expect(supportsVirglGraphics(definition({osVariant: 'Server'}))).toBe(false)
@@ -308,6 +309,19 @@ describe('libvirt domain state', () => {
 })
 
 describe('installation media eject', () => {
+	test('ejects both Omarchy CDs after setup', async () => {
+		const libvirt = new Libvirt({
+			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},
+		} as unknown as Umbreld)
+		const machine = definition({osId: 'omarchy', installMedia: 'media/install.iso', seedMedia: 'media/seed.iso'})
+		execaMock.mockResolvedValueOnce({stdout: 'running', stderr: '', exitCode: 0})
+		await libvirt.ejectInstallMedia(machine)
+		const targets = execaMock.mock.calls
+			.filter(([, args]) => args?.includes('change-media'))
+			.map(([, args]) => args?.[4])
+		expect(targets).toEqual(['sda', 'sdb'])
+	})
+
 	test('detaches a SATA installer from its actual live target', async () => {
 		const libvirt = new Libvirt({
 			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},

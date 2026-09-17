@@ -32,6 +32,27 @@ function definition(overrides: Partial<MachineDefinition> = {}): MachineDefiniti
 }
 
 describe('libvirt domain XML', () => {
+	test('attaches an Omarchy installer and its separate non-bootable configuration CD', () => {
+		const xml = buildDomainXml({
+			definition: definition({osId: 'omarchy', installMedia: 'media/install.iso', seedMedia: 'media/seed.iso'}),
+			machineDirectory: '/data/machines/omarchy',
+			runtimeDirectory: '/run/umbrel-machines/omarchy',
+			acceleration: 'kvm',
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+		})
+		const disks = xml.match(/<disk\b[\s\S]*?<\/disk>/g)!
+		expect(disks).toHaveLength(3)
+		expect(disks[0]).toContain("<boot order='1'/>")
+		expect(disks[1]).toContain('/media/install.iso')
+		expect(disks[1]).toContain("<target dev='sda' bus='sata'/>")
+		expect(disks[1]).toContain("<boot order='2'/>")
+		expect(disks[2]).toContain('/media/seed.iso')
+		expect(disks[2]).toContain("<target dev='sdb' bus='sata'/>")
+		expect(disks[2]).not.toContain('<boot ')
+		expect(xml).not.toContain("secure='yes'")
+		expect(xml).not.toContain('<tpm')
+	})
+
 	test('uses KVM, pinned q35 hardware, the transient NAT network, UEFI state, and a Unix-only display', () => {
 		const xml = buildDomainXml({
 			definition: definition(),

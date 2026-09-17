@@ -38,7 +38,7 @@ export {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.js'
 const LIBVIRT_URI = 'qemu:///system'
 const LIBVIRT_SWTPM_STATE_ROOT = '/var/lib/libvirt/swtpm'
 const GPU_RENDER_NODE_ROOT = '/dev/dri'
-const VIRGL_LINUX_FAMILIES = new Set(['ubuntu', 'fedora', 'debian', 'android'])
+const VIRGL_LINUX_FAMILIES = new Set(['ubuntu', 'fedora', 'debian', 'android', 'omarchy'])
 const AUDIO_CARD_INDEX_START = 8
 const AUDIO_CARD_COUNT = 8
 const AUDIO_SUBSTREAMS_PER_CARD = 8
@@ -795,6 +795,13 @@ export default class Libvirt {
 		)
 		if (cdrom.exitCode !== 0) {
 			throw new Error(`[machine-install-media-eject-failed]${cdrom.stderr ? ` ${cdrom.stderr}` : ''}`)
+		}
+		if (definition.seedMedia) {
+			await execa(
+				'virsh',
+				['--connect', LIBVIRT_URI, 'change-media', this.domainName(definition.id), 'sdb', '--eject', '--live'],
+				{timeout: 10_000},
+			)
 		}
 		if (definition.bootMedia) {
 			const floppy = await execa(

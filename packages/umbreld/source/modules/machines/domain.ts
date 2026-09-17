@@ -59,6 +59,7 @@ export type MachineDefinition = {
 	secureBoot?: boolean
 	tpm?: boolean
 	installMedia?: string
+	seedMedia?: string
 	bootMedia?: string
 	portForwards: PortForward[]
 }
@@ -258,6 +259,7 @@ export function buildDomainXml({
       <boot order='${definition.bootMedia ? '2' : '1'}'/>
     </disk>
     ${cdrom}
+    ${definition.seedMedia ? `<disk type='file' device='cdrom'><driver name='qemu' type='raw'/><source file='${escapeXml(nodePath.join(machineDirectory, definition.seedMedia))}' startupPolicy='optional'/><target dev='sdb' bus='sata'/><readonly/></disk>` : ''}
     ${bootFloppy}
 		<interface type='network'>
 			<mac address='${escapeXml(definition.macAddress)}'/>

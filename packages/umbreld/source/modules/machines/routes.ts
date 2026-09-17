@@ -34,7 +34,7 @@ export default router({
 					diskBus: z.enum(['virtio', 'sata']).optional(),
 					diskDirectory: z.string().min(1).optional(),
 					username: z.string().min(1).max(32).optional(),
-					// Only used to set up the OS account during install — never stored
+					// Only used during OS setup — never part of the machine definition
 					password: z.string().min(1).max(128).optional(),
 					// XP/98 keys are install-time secrets. Machines consumes this value
 					// directly while preparing private media and never persists it.

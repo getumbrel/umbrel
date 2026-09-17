@@ -55,6 +55,9 @@ describe('built-in Machines catalog', () => {
 				variantName: undefined,
 				version: 'Android 13 · Waydroid',
 			},
+			...(arch === 'amd64'
+				? [{id: 'omarchy-4.0.4-amd64', familyId: 'omarchy', variantName: 'Desktop', version: 'Omarchy 4.0.4'}]
+				: []),
 		])
 		expect(images.every((image) => image.requiresCredentials)).toBe(true)
 		expect(images.every((image) => image.platformProfile === (arch === 'amd64' ? 'modern-x86' : 'modern-arm64'))).toBe(
@@ -69,6 +72,18 @@ describe('built-in Machines catalog', () => {
 		expect(images.every(({variantName, requiresCredentials}) => variantName === undefined && requiresCredentials)).toBe(
 			true,
 		)
+	})
+
+	test('ships the official Omarchy ISO only on amd64 with credentials for unattended setup', () => {
+		const images = builtinMachinesCatalog.images.filter(({familyId}) => familyId === 'omarchy')
+		expect(images).toHaveLength(1)
+		expect(images[0]).toMatchObject({
+			arch: 'amd64',
+			platformProfile: 'modern-x86',
+			requiresCredentials: true,
+			url: 'https://iso.omarchy.org/omarchy-4.0.4.iso',
+		})
+		expect(images[0].cloudInit).toBeUndefined()
 	})
 
 	test('ships Android as a graphical native image on both architectures', () => {
@@ -183,6 +198,7 @@ describe('built-in Machines catalog', () => {
 			'fedora-44-desktop-arm64': 6_200,
 			'debian-13-desktop-amd64': 3_400,
 			'debian-13-desktop-arm64': 6_100,
+			'omarchy-4.0.4-amd64': 6_800,
 		})
 
 		for (const familyId of ['ubuntu', 'fedora', 'debian']) {
@@ -206,6 +222,7 @@ describe('built-in Machines catalog', () => {
 				'download.fedoraproject.org',
 				'cloud.debian.org',
 				'dl-cdn.alpinelinux.org',
+				'iso.omarchy.org',
 				'archive.org',
 			]).toContain(url.hostname)
 			expect(image.url).not.toMatch(/\/(current|latest|daily)\//)

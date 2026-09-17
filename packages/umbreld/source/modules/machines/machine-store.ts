@@ -73,6 +73,7 @@ const machineDefinitionSchema = z
 		secureBoot: z.boolean().optional(),
 		tpm: z.boolean().optional(),
 		installMedia: z.enum(['media/install.iso', 'media/install.img', 'media/seed.iso']).optional(),
+		seedMedia: z.literal('media/seed.iso').optional(),
 		bootMedia: z.literal('media/boot.img').optional(),
 		portForwards: z.array(portForwardSchema),
 	})
