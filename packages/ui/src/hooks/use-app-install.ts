@@ -9,6 +9,7 @@ import {AppState, AppStateOrLoading, trpcReact} from '@/trpc/trpc'
 import {stripErrorCode} from '@/utils/backend-error'
 
 import {beginAppAction, finishAppAction} from './app-action-guard'
+import {usePendingAppUpdateIds} from './use-update-app'
 
 // TODO: consider adding `stopped` and `unknown`
 /** States where we want to frequently poll (on the order of seconds) */
@@ -35,6 +36,7 @@ export const canRestart = (state: AppStateOrLoading) => arrayIncludes(['running'
  * invalidations; the transition polling itself lives in useAppInstall.
  */
 export function useAppState(appId: string): AppStateOrLoading {
+	const pendingUpdateIds = usePendingAppUpdateIds()
 	const listQ = trpcReact.apps.list.useQuery(undefined, {
 		select: (apps): AppState | 'not-installed' => {
 			const app = apps.find((app) => app.id === appId)
@@ -44,6 +46,10 @@ export function useAppState(appId: string): AppStateOrLoading {
 		},
 	})
 	const perAppQ = trpcReact.apps.state.useQuery({appId}, {enabled: false})
+	// Update requests stay pending until completion. An early poll can still
+	// report ready while the server prepares the update, so keep the optimistic
+	// state visible until this app's mutation settles.
+	if (pendingUpdateIds.includes(appId)) return 'updating'
 	// The per-app cache wins whenever it's fresher than the list: optimistic
 	// seeds (setData bumps dataUpdatedAt) show instantly, and a poll's terminal
 	// state ends a transition the moment it lands rather than waiting on the

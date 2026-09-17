@@ -6,10 +6,12 @@ import {arrayIncludes} from 'ts-extras'
 import {AppIcon} from '@/components/app-icon'
 import {Markdown} from '@/components/markdown'
 import {ProgressButton} from '@/components/progress-button'
+import {AnimatedNumber} from '@/components/ui/animated-number'
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {Separator} from '@/components/ui/separator'
+import {UNKNOWN} from '@/constants'
 import {pollStates, useAppInstallProgress} from '@/hooks/use-app-install'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useUpdateAllApps} from '@/hooks/use-update-all-apps'
@@ -127,7 +129,18 @@ function AppItem({app}: {app: RegistryApp}) {
 						['--progress-button-bg' as string]: 'hsl(0 0 30%)',
 					}}
 				>
-					{inProgress ? appStateToString(state, t) + '...' : t('app-updates.update')}
+					{state === 'updating' ? (
+						<>
+							{t('app.updating')}{' '}
+							<span className='inline-block w-[4ch] text-right -tracking-[0.08em] opacity-40'>
+								{progress === undefined ? UNKNOWN() : <AnimatedNumber to={progress} />}%
+							</span>
+						</>
+					) : inProgress ? (
+						appStateToString(state, t) + '...'
+					) : (
+						t('app-updates.update')
+					)}
 				</ProgressButton>
 			</div>
 			{app.releaseNotes && (

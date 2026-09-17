@@ -1,3 +1,4 @@
+import {usePendingAppUpdateIds} from '@/hooks/use-update-app'
 import {canExecuteUpdate, isAppUpdateAvailable} from '@/modules/app-store/update-availability'
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
@@ -6,15 +7,15 @@ import type {RegistryApp} from '@/trpc/trpc'
 const none: RegistryApp[] = []
 
 /**
- * Installed apps whose registry version differs from the installed one,
- * derived from the cached apps list and registry (no requests of its own).
- * An app stays in the list while its update runs — the version only changes
- * once the update completes — so `updatingApps` singles those out for the
- * surfaces that must not fire a second update or must read "updating".
+ * Installed apps with an available or ongoing update, derived from the cached
+ * apps list and registry (no requests of its own). Keep updating apps visible
+ * even after their versions match: the backend replaces the manifest before
+ * pulling images and starting the updated app.
  */
 export function useAppsWithUpdates() {
 	const apps = useApps()
 	const availableApps = useAllAvailableApps()
+	const pendingUpdateIds = usePendingAppUpdateIds()
 
 	// NOTE: a parent should have the apps loaded before we get here, but don't wanna assume
 	if (apps.isLoading || availableApps.isLoading) {
@@ -22,17 +23,19 @@ export function useAppsWithUpdates() {
 	}
 
 	const userApps = apps.userApps ?? []
+	const getState = (appId: string) =>
+		pendingUpdateIds.includes(appId) ? 'updating' : (apps.userAppsKeyed?.[appId]?.state ?? 'not-installed')
 	const appsWithUpdates = userApps
-		.filter((app) => isAppUpdateAvailable(app.version, availableApps.appsKeyed[app.id]))
+		.filter((app) => {
+			const availableApp = availableApps.appsKeyed[app.id]
+			return availableApp && (getState(app.id) === 'updating' || isAppUpdateAvailable(app.version, availableApp))
+		})
 		.map((app) => availableApps.appsKeyed[app.id])
 
-	// The list's state is authoritative here: the shared update mutation seeds
-	// it optimistically, and server-side transitions (other tabs, agents)
-	// arrive through the apps:state:change subscription
-	const updatingApps = appsWithUpdates.filter((app) => apps.userAppsKeyed?.[app.id]?.state === 'updating')
-	const updatableApps = appsWithUpdates.filter((app) =>
-		canExecuteUpdate(apps.userAppsKeyed?.[app.id]?.state ?? 'not-installed', app.compatible),
-	)
+	// Local mutations cover update preparation; the list also tracks updates
+	// started elsewhere through the apps:state:change subscription.
+	const updatingApps = appsWithUpdates.filter((app) => getState(app.id) === 'updating')
+	const updatableApps = appsWithUpdates.filter((app) => canExecuteUpdate(getState(app.id), app.compatible))
 
 	return {appsWithUpdates, updatingApps, updatableApps, isLoading: false} as const
 }
