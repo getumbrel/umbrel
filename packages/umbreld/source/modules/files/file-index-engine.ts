@@ -29,6 +29,7 @@ import {
 	joinVirtualPath,
 } from './file-index/paths.js'
 import {FILE_INDEX_SCHEMA_VERSION, foldSearchName, migrateFileIndex} from './file-index/migrations.js'
+import DirectorySizes from './file-index/directory-sizes.js'
 import {
 	FILES_THUMBNAIL_VARIANT,
 	PHOTOS_THUMBNAIL_VARIANTS,
@@ -290,6 +291,7 @@ export default class FileIndexEngine {
 	readonly logger: FileIndexLogger
 
 	#database?: Database
+	#directorySizes?: DirectorySizes
 	#schemaVersion = 0
 	#available = false
 	#started = false
@@ -486,12 +488,18 @@ export default class FileIndexEngine {
 		this.#database.pragma('journal_mode = WAL')
 		this.#database.pragma('foreign_keys = ON')
 		this.#database.function('file_index_now_ms', () => Date.now())
+		const migrationStartedAt = performance.now()
 		this.#schemaVersion = await migrateFileIndex(this.#database)
+		this.logger.log(
+			`File index migrations completed in ${Math.round(performance.now() - migrationStartedAt)}ms (schema v${this.#schemaVersion})`,
+		)
 		if (this.#schemaVersion !== FILE_INDEX_SCHEMA_VERSION) {
 			throw new UnsupportedFileIndexSchemaError(
 				`Unsupported file index schema v${this.#schemaVersion}; expected v${FILE_INDEX_SCHEMA_VERSION}`,
 			)
 		}
+		this.#directorySizes = new DirectorySizes(this.#database)
+		this.#directorySizes.sync()
 		this.#photosAvailable = false
 		await this.#openUmbrelDatabase().catch((error) => {
 			this.logger.error('Umbrel database is unavailable; file indexing will continue without Photos', error)
@@ -597,10 +605,11 @@ export default class FileIndexEngine {
 		this.#photosRecoveryAttempts++
 		this.#photosRecoveryTimer = setTimeout(() => {
 			this.#photosRecoveryTimer = undefined
-			const recovery = this.#mutate(async () => {
-				if (this.#photosAvailable || this.#stopping) return
-				await this.#openUmbrelDatabase()
-			})
+			const recovery = this.#mutationQueue
+				.add(async () => {
+					if (this.#photosAvailable || this.#stopping) return
+					await this.#openUmbrelDatabase()
+				})
 				.then(async () => {
 					if (!this.#photosAvailable || this.#stopping) return
 					await this.#enrichment.enableThumbnailVariants(PHOTOS_THUMBNAIL_VARIANTS)
@@ -1406,7 +1415,8 @@ export default class FileIndexEngine {
 
 	#applyPathMutation(database: Database, mutation: PathMutation) {
 		const photosChangedAccountIds = new Set<string>()
-		const apply = database.transaction((mutation: PathMutation) => {
+		// #mutate owns the transaction, including size maintenance.
+		const apply = (mutation: PathMutation) => {
 			if (mutation.type === 'delete') {
 				const detached = this.#photosAvailable
 					? this.#photos.detachPath(database, mutation.rootId, mutation.relativePath)
@@ -1625,8 +1635,8 @@ export default class FileIndexEngine {
 				}
 				if (detached.length > 0) this.#photos.refreshEffectiveTakenAt(database, detached)
 			}
-		})
-		apply.immediate(mutation)
+		}
+		apply(mutation)
 		this.#notifyPhotosChanged(photosChangedAccountIds)
 	}
 
@@ -1870,10 +1880,12 @@ export default class FileIndexEngine {
 				// This limits idle reader reservations without letting fresh reads
 				// repeatedly overtake a queued favorite/album edit.
 				return await readers.read(method, args, (begin) =>
-					this.#mutate(async (database) => {
+					this.#mutationQueue.add(async () => {
 						this.#requirePhotos()
 						if (this.#stopping) throw new Error('Photos readers are stopped')
-						this.#photos.prepareRead(database, args[0] as string, method === 'indexingState')
+						// Commit Photos maintenance before pinning the reader snapshot.
+						// Hold the writer queue, but never a SQLite transaction, across await.
+						this.#photos.prepareRead(this.#requireDatabase(), args[0] as string, method === 'indexingState')
 						await begin()
 					}),
 				)
@@ -2114,7 +2126,7 @@ export default class FileIndexEngine {
 			if (!root?.id || root.scanEnabled === false || root.state !== 'ready') return []
 			const relativePath = relativeVirtualPath(root.virtualPath, virtualPath)
 			if (relativePath && isReservedMemberTrashPath(root, relativePath)) return []
-			return [{virtualPath, rootId: root.id, relativePath, reservedTrash: hasReservedMemberTrashPath(root)}]
+			return [{virtualPath, rootId: root.id, relativePath}]
 		})
 		const results = await this.#readFiles('directorySizes', [requests])
 		return results.filter(({virtualPath}) => {
@@ -2192,8 +2204,25 @@ export default class FileIndexEngine {
 			.sort((a, b) => b.virtualPath.length - a.virtualPath.length)[0]
 	}
 
-	async #mutate<T>(operation: (database: Database) => T | Promise<T>, priority = 0): Promise<T> {
-		return (await this.#mutationQueue.add(() => operation(this.#requireDatabase()), {priority})) as T
+	async #mutate<T>(operation: (database: Database) => T, priority = 0): Promise<T> {
+		return (await this.#mutationQueue.add(
+			() => {
+				const database = this.#requireDatabase()
+				// Entry changes and their folder totals share one commit. Nested
+				// transactions become savepoints; any maintenance failure rolls back
+				// the entries too. WAL readers keep seeing the previous complete state
+				// until commit, so size reads never need to recalculate a subtree.
+				// Callbacks must be synchronous; reader handshakes use the queue directly.
+				return database
+					.transaction(() => {
+						const result = operation(database)
+						this.#directorySizes?.sync()
+						return result
+					})
+					.immediate()
+			},
+			{priority},
+		)) as T
 	}
 
 	#requireDatabase() {

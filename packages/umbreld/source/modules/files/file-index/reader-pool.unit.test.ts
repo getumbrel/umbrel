@@ -228,7 +228,7 @@ test.each(['getEntryByVirtualPath', 'getEntryBySystemPath'] as const)(
 		const dispatch = vi.spyOn(FileIndexReaderPool.prototype, 'read')
 		const first = index[method](path)
 		const pool = dispatch.mock.contexts[0] as FileIndexReaderPool
-		const scan = pool.read('directorySizes', [[]], directly)
+		const scan = pool.read('summary', ['owner'], directly)
 		const scanResult = Promise.allSettled([scan])
 		await vi.waitFor(() => expect(workers.every((worker) => worker.messages.length === 1)).toBe(true))
 		for (const worker of workers) worker.snapshot()
@@ -459,17 +459,70 @@ test('quick bursts use both readers by default', async () => {
 	await expect(Promise.all(quick)).resolves.toHaveLength(2)
 })
 
+test.each([1, 200])('a %i-folder size lookup uses the reserved reader while a slow query runs', async (count) => {
+	const {pool, workers} = fixture()
+	const slow = pool.read('summary', ['owner'], directly)
+	const slowResult = Promise.allSettled([slow])
+	const requests = Array.from({length: count}, (_, id) => ({
+		rootId: 1,
+		relativePath: `folder-${id}`,
+		virtualPath: `/Home/folder-${id}`,
+	}))
+	const sizes = pool.read('directorySizes', [requests], directly)
+	const sizeResult = Promise.allSettled([sizes])
+	await vi.waitFor(() => expect(workers).toHaveLength(2))
+	await vi.waitFor(() => expect(workers.every((worker) => worker.messages.length === 1)).toBe(true))
+	expect(workers[0]!.messages[0]!.method).toBe('summary')
+	expect(workers[1]!.messages[0]!.method).toBe('directorySizes')
+	workers[0]!.snapshot()
+	workers[1]!.snapshot()
+	const expected = requests.map(({virtualPath}) => ({virtualPath, size: 123}))
+	workers[1]!.finish(expected)
+	await expect(sizeResult).resolves.toEqual([{status: 'fulfilled', value: expected}])
+	expect(pool.status()).toMatchObject({active: 1, queued: 0})
+	workers[0]!.finish({})
+	await slowResult
+})
+
+test('concurrent Home and favorites size lookups can use both readers', async () => {
+	const {pool, workers} = fixture()
+	const requests: FileIndexReadArgs<'directorySizes'>[] = [
+		[[{rootId: 1, relativePath: '', virtualPath: '/Home'}]],
+		[[{rootId: 1, relativePath: 'Photos', virtualPath: '/Home/Photos'}]],
+	]
+	const results = Promise.allSettled(requests.map((args) => pool.read('directorySizes', args, directly)))
+	await vi.waitFor(() => expect(workers).toHaveLength(2))
+	await vi.waitFor(() => expect(workers.every((worker) => worker.messages.length === 1)).toBe(true))
+	for (const worker of workers) {
+		expect(worker.messages[0]!.method).toBe('directorySizes')
+		worker.snapshot()
+		worker.finish([])
+	}
+	expect((await results).every(({status}) => status === 'fulfilled')).toBe(true)
+})
+
 test.each<{
 	description: string
-	method: 'listAlbums' | 'neighbors'
-	args: FileIndexReadArgs<'listAlbums'> | FileIndexReadArgs<'neighbors'>
+	method: 'listAlbums' | 'neighbors' | 'directorySizes'
+	args: FileIndexReadArgs<'listAlbums'> | FileIndexReadArgs<'neighbors'> | FileIndexReadArgs<'directorySizes'>
 }>([
 	{description: 'album listing', method: 'listAlbums', args: ['owner']},
 	{description: 'album-filtered neighbors', method: 'neighbors', args: ['owner', 'item', {albumIds: ['album']}]},
 	{description: 'source-filtered neighbors', method: 'neighbors', args: ['owner', 'item', {sourceIds: ['source']}]},
+	{
+		description: 'a large folder-size batch',
+		method: 'directorySizes',
+		args: [
+			Array.from({length: 201}, (_, id) => ({
+				rootId: 1,
+				relativePath: `folder-${id}`,
+				virtualPath: `/Home/folder-${id}`,
+			})),
+		],
+	},
 ])('$description waits for the shared reader while thumbnail lookups proceed', async ({method, args}) => {
 	const {pool, workers} = fixture()
-	const scan = pool.read('directorySizes', [[]], directly)
+	const scan = pool.read('summary', ['owner'], directly)
 	const photos = pool.read(method, args, directly)
 	const pending = Promise.allSettled([scan, photos])
 	const thumbnailQuery = {
@@ -480,7 +533,7 @@ test.each<{
 	const thumbnailResult = Promise.allSettled([thumbnail])
 	await vi.waitFor(() => expect(workers.every((worker) => worker.messages.length === 1)).toBe(true))
 	expect(workers).toHaveLength(2)
-	expect(workers[0]!.messages[0]!.method).toBe('directorySizes')
+	expect(workers[0]!.messages[0]!.method).toBe('summary')
 	expect(workers[1]!.messages[0]).toMatchObject({method: 'sql', args: [thumbnailQuery]})
 	workers[0]!.snapshot()
 	workers[1]!.snapshot()
@@ -500,7 +553,7 @@ test.each<{
 
 test('replacing a reserved reader preserves quick capacity during a scan backlog', async () => {
 	const {pool, workers} = fixture({size: 4, reservedReaders: 2})
-	const scans = Promise.allSettled(Array.from({length: 4}, () => pool.read('directorySizes', [[]], directly)))
+	const scans = Promise.allSettled(Array.from({length: 4}, () => pool.read('summary', ['owner'], directly)))
 	const first = pool.read('getItem', ['owner', 'first'], directly)
 	const second = pool.read('getItem', ['owner', 'second'], directly)
 	const waiting = pool.read('getItem', ['owner', 'waiting'], directly)
@@ -521,14 +574,14 @@ test('replacing a reserved reader preserves quick capacity during a scan backlog
 
 test('a failed shared reader is replaced without consuming the reserved reader', async () => {
 	const {pool, workers} = fixture()
-	const slow = pool.read('directorySizes', [[]], directly)
-	const waiting = pool.read('directorySizes', [[]], directly)
+	const slow = pool.read('summary', ['owner'], directly)
+	const waiting = pool.read('summary', ['owner'], directly)
 	const quick = pool.read('getItem', ['owner', 'item'], directly)
 	await vi.waitFor(() => expect(workers.every((worker) => worker.messages.length === 1)).toBe(true))
 	workers[0]!.emit('exit', 1)
 	await expect(slow).rejects.toThrow('exited with code 1')
 	await vi.waitFor(() => expect(workers[2]?.messages).toHaveLength(1))
-	expect(workers[2]!.messages[0]!.method).toBe('directorySizes')
+	expect(workers[2]!.messages[0]!.method).toBe('summary')
 	workers[1]!.snapshot()
 	workers[1]!.finish([])
 	await expect(quick).resolves.toEqual([])
@@ -582,6 +635,7 @@ test('Files and thumbnail reads and writes complete while a slow Files search is
 		const source = nodePath.join(home, 'photo.jpg')
 		await writeFile(source, 'image')
 		await index.reconcilePath(source)
+		await index.reconcileRoot('/Home', 'ready-size-reads')
 		search = index.searchCandidates('/Home', 'photo', 10)
 		await searchStarted
 		await expect(index.photosCreateAlbum('owner', 'While searching')).resolves.toMatchObject({name: 'While searching'})
@@ -590,6 +644,7 @@ test('Files and thumbnail reads and writes complete while a slow Files search is
 		await expect(index.matchesThumbnail(source, thumbnail.kind, thumbnail.key, thumbnail.variant)).resolves.toBe(true)
 		await expect(index.getEntryByVirtualPath('/Home/photo.jpg')).resolves.toMatchObject({name: 'photo.jpg'})
 		await expect(index.recentCandidates('/Home', 10)).resolves.toMatchObject([{name: 'photo.jpg'}])
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([{virtualPath: '/Home', size: 5}])
 		releaseSearch()
 		await expect(search).resolves.toMatchObject([{name: 'photo.jpg'}])
 	} finally {

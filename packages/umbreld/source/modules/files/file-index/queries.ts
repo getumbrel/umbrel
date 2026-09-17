@@ -7,7 +7,7 @@ import type {FileIndexRoot, SearchCandidate, IndexedDirectorySize} from '../file
 type Database = DatabaseTypes.Database
 type SearchRow = {id: number; name: string; relative_path: string}
 type FtsVocabularyRow = {term: string; doc: number}
-type DirectorySizeRequest = {virtualPath: string; rootId: number; relativePath: string; reservedTrash: boolean}
+type DirectorySizeRequest = {virtualPath: string; rootId: number; relativePath: string}
 const SEARCH_MATCH_THRESHOLD = 0.66
 const MAX_MATCHES_DURING_SEARCH = 10_000
 const MIN_TRIGRAM_QUERY_LENGTH = 3
@@ -57,49 +57,15 @@ export const fileIndexQueries = {
 		return bestMatches().map(({id, name, virtualPath}) => ({id, name, virtualPath}))
 	},
 	directorySizes(database: Database, requests: DirectorySizeRequest[]): IndexedDirectorySize[] {
-		const directory = database.prepare(`SELECT type FROM entries WHERE root_id = ? AND relative_path = ?`)
-		const rootSize = database.prepare(
-			`SELECT COALESCE(SUM(size), 0) AS size
-				FROM (
-					SELECT MAX(size) AS size
-					FROM entries
-					WHERE root_id = ? AND type = 'file'
-						AND (? = 0 OR (relative_path != 'Trash' AND relative_path NOT GLOB 'Trash/*'))
-					GROUP BY CASE
-						WHEN device = '' OR inode = '' THEN 'entry:' || id
-						ELSE 'inode:' || device || ':' || inode
-					END
-				)`,
-		)
-		const subtreeSize = database.prepare(
-			`SELECT COALESCE(SUM(size), 0) AS size
-				FROM (
-					SELECT MAX(size) AS size
-					FROM entries
-					WHERE root_id = ? AND type = 'file'
-						AND relative_path >= ? AND relative_path < ?
-					GROUP BY CASE
-						WHEN device = '' OR inode = '' THEN 'entry:' || id
-						ELSE 'inode:' || device || ':' || inode
-					END
-				)`,
-		)
-
-		const sizes: IndexedDirectorySize[] = []
-		for (const {virtualPath, rootId, relativePath, reservedTrash} of requests) {
-			if (relativePath) {
-				const row = directory.get(rootId, relativePath) as {type: string} | undefined
-				if (row?.type !== 'directory') continue
-			}
-
-			const row = (
-				relativePath
-					? subtreeSize.get(rootId, `${relativePath}/`, `${relativePath}0`)
-					: rootSize.get(rootId, Number(reservedTrash))
-			) as {size: number}
-			sizes.push({virtualPath, size: Number(row.size)})
-		}
-		return sizes
+		// The writer commits entries and totals together. Each reader snapshot
+		// therefore contains a complete version of both, with no scan fallback.
+		const directory = database.prepare('SELECT type FROM entries WHERE root_id = ? AND relative_path = ?')
+		const total = database.prepare('SELECT size FROM directory_sizes WHERE root_id = ? AND relative_path = ?')
+		return requests.flatMap(({rootId, relativePath, virtualPath}) => {
+			if (relativePath && (directory.get(rootId, relativePath) as {type: string} | undefined)?.type !== 'directory')
+				return []
+			return [{virtualPath, size: (total.get(rootId, relativePath) as {size: number} | undefined)?.size ?? 0}]
+		})
 	},
 }
 

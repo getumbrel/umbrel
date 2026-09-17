@@ -1,4 +1,5 @@
 import type BetterSqlite3 from 'better-sqlite3'
+import {createDirectorySizes} from './directory-sizes.js'
 
 import {photosIndexingSchema} from '../../photos/indexing-schema.js'
 
@@ -498,6 +499,7 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 			database.exec('ALTER TABLE photos_library_items DROP COLUMN source_name')
 		},
 	},
+	{version: 21, up: createDirectorySizes},
 ]
 
 export const FILE_INDEX_SCHEMA_VERSION = fileIndexMigrations.at(-1)?.version ?? 0

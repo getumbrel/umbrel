@@ -41,7 +41,10 @@ export function isPhotosRead(method: FileIndexReadMethod): method is PhotosReadM
 // lookups. These are conservative query shapes, not runtime latency guesses.
 export function readLane(method: FileIndexReadMethod, args: unknown[]): ReadLane {
 	// Album listing aggregates memberships and selects covers across every album.
-	if (['searchCandidates', 'directorySizes', 'summary', 'listSources', 'listAlbums'].includes(method)) return 'bulk'
+	if (['searchCandidates', 'summary', 'listSources', 'listAlbums'].includes(method)) return 'bulk'
+	// Sizes are stored lookups, independent of subtree size. Keep unusually
+	// large batches off the reserved reader, as with bulk Photos resolution.
+	if (method === 'directorySizes' && (args[0] as unknown[]).length > 200) return 'bulk'
 	if (method === 'listItems' || method === 'neighbors') {
 		const filter = args[method === 'listItems' ? 1 : 2] as PhotoFilter
 		if (filter.query) return 'bulk'

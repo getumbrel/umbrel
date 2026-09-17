@@ -23,6 +23,7 @@ import {
 	type FileIndexMigration,
 } from './file-index/migrations.js'
 import FileIndexReaderPool from './file-index/reader-pool.js'
+import DirectorySizes from './file-index/directory-sizes.js'
 import type {SqlRead} from './file-index/read-database.js'
 import {THUMBNAIL_GENERATION_TIMEOUT_MS} from './file-index-enrichment.js'
 import {
@@ -5121,6 +5122,163 @@ test('updates indexed directory aggregates after writes, copies, moves, and dele
 	await index.removePath(destinationPath)
 	await expect(index.directorySizes(['/Home/destination'])).resolves.toStrictEqual([
 		{virtualPath: '/Home/destination', size: 0},
+	])
+})
+
+test('commits indexed entries and totals together while readers retain complete snapshots', async () => {
+	const {index, homeDirectory} = await fixture()
+	const path = nodePath.join(homeDirectory, 'file.txt')
+	await writeFile(path, 'before')
+	await index.reconcileRoot('/Home', 'atomic-sizes')
+	const reader = new BetterSqlite3(index.databasePath, {readonly: true})
+	const snapshot = new BetterSqlite3(index.databasePath, {readonly: true})
+	const assertVisible = (database: BetterSqlite3.Database, size: number) => {
+		expect(database.prepare("SELECT size FROM entries WHERE relative_path='file.txt'").get()).toEqual({size})
+		expect(database.prepare("SELECT size FROM directory_sizes WHERE relative_path=''").get()).toEqual({size})
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toEqual([])
+	}
+	snapshot.exec('BEGIN')
+	assertVisible(snapshot, 6)
+	const sync = DirectorySizes.prototype.sync
+	const maintenance = vi.spyOn(DirectorySizes.prototype, 'sync').mockImplementation(function (this: DirectorySizes) {
+		// Separate read-only connections must see the old entry AND total even
+		// after entry changes finish, and after totals are updated.
+		assertVisible(reader, 6)
+		sync.call(this)
+		assertVisible(reader, 6)
+	})
+	try {
+		await writeFile(path, 'after change')
+		await index.reconcilePath(path)
+		expect(maintenance).toHaveBeenCalled()
+		assertVisible(reader, 12)
+		assertVisible(snapshot, 6)
+		snapshot.exec('COMMIT')
+		assertVisible(snapshot, 12)
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([{virtualPath: '/Home', size: 12}])
+	} finally {
+		maintenance.mockRestore()
+		reader.close()
+		snapshot.close()
+	}
+})
+
+test('a totals maintenance failure rolls back the engine entry change and can be retried', async () => {
+	const {index, homeDirectory} = await fixture()
+	const path = nodePath.join(homeDirectory, 'file.txt')
+	await writeFile(path, 'before')
+	await index.reconcileRoot('/Home', 'atomic-size-failure')
+	const database = new BetterSqlite3(index.databasePath)
+	try {
+		database.exec(`CREATE TRIGGER fail_totals BEFORE UPDATE ON directory_sizes
+			BEGIN SELECT RAISE(ABORT,'injected totals failure'); END;`)
+		await writeFile(path, 'after change')
+		await expect(index.reconcilePath(path)).rejects.toThrow('injected totals failure')
+		expect(database.prepare("SELECT size FROM entries WHERE relative_path='file.txt'").get()).toEqual({size: 6})
+		expect(database.prepare("SELECT size FROM directory_sizes WHERE relative_path=''").get()).toEqual({size: 6})
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toEqual([])
+		// The failed path operation degrades the root until reconciliation succeeds.
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([])
+		database.exec('DROP TRIGGER fail_totals')
+		await index.reconcileRoot('/Home', 'retry-size-maintenance')
+		await expect(index.getEntryByVirtualPath('/Home/file.txt')).resolves.toMatchObject({size: 12})
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([{virtualPath: '/Home', size: 12}])
+	} finally {
+		database.close()
+	}
+})
+
+test('drains legacy size journals on startup before making readers available', async () => {
+	const {index, homeDirectory} = await fixture()
+	const path = nodePath.join(homeDirectory, 'file.txt')
+	await writeFile(path, 'before')
+	await index.reconcileRoot('/Home', 'legacy-sizes')
+	await index.stop()
+	const database = new BetterSqlite3(index.databasePath)
+	try {
+		// Simulate the earlier build committing an entry before totals maintenance.
+		database.exec("UPDATE entries SET size=12 WHERE relative_path='file.txt'")
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toHaveLength(1)
+		await index.start()
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([{virtualPath: '/Home', size: 12}])
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toEqual([])
+	} finally {
+		database.close()
+	}
+})
+
+test('keeps totals when a live file arrives before its parent directory events', async () => {
+	const {index, homeDirectory} = await fixture()
+	await index.reconcileRoot('/Home', 'empty-ready-root')
+	const parent = nodePath.join(homeDirectory, 'late', 'parents')
+	const child = nodePath.join(parent, 'child.txt')
+	await fse.ensureDir(parent)
+	await writeFile(child, '1234567')
+	await index.reconcilePath(child)
+	await expect(index.getEntryByVirtualPath('/Home/late')).resolves.toBeUndefined()
+	await expect(index.directorySizes(['/Home', '/Home/late', '/Home/late/parents'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+	])
+	await index.reconcilePath(child)
+	await index.reconcilePath(parent)
+	await index.reconcileRoot('/Home', 'late-parent-events')
+	await expect(index.directorySizes(['/Home', '/Home/late', '/Home/late/parents'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Home/late', size: 7},
+		{virtualPath: '/Home/late/parents', size: 7},
+	])
+})
+
+test('crawls children before directories and preserves totals across folder moves and Trash', async () => {
+	const childFirst: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (...args) {
+		const directories = []
+		for await (const entry of walkFileTree(...args)) {
+			if (entry.stats.isDirectory()) directories.push(entry)
+			else yield entry
+		}
+		for (const entry of directories.reverse()) yield entry
+	}
+	const {index, homeDirectory, trashDirectory} = await fixture(childFirst, {includeTrash: true, batchSize: 1})
+	const old = nodePath.join(homeDirectory, 'old')
+	const moved = nodePath.join(homeDirectory, 'moved')
+	await fse.ensureDir(nodePath.join(old, 'nested'))
+	await writeFile(nodePath.join(old, 'nested', 'file.txt'), '1234567')
+	await link(nodePath.join(old, 'nested', 'file.txt'), nodePath.join(homeDirectory, 'alias.txt'))
+	await index.reconcileRoot('/Home', 'child-first')
+	await expect(index.directorySizes(['/Home', '/Home/old', '/Home/old/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Home/old', size: 7},
+		{virtualPath: '/Home/old/nested', size: 7},
+	])
+	await fse.move(old, moved)
+	await index.movePath(old, moved)
+	await expect(index.directorySizes(['/Home', '/Home/old', '/Home/moved/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Home/moved/nested', size: 7},
+	])
+	const trashed = nodePath.join(trashDirectory, 'moved')
+	await fse.move(moved, trashed)
+	await index.movePath(moved, trashed)
+	await index.reconcileRoot('/Trash', 'trash-ready')
+	await expect(index.directorySizes(['/Home', '/Trash', '/Trash/moved/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Trash', size: 7},
+		{virtualPath: '/Trash/moved/nested', size: 7},
+	])
+	await fse.move(trashed, moved)
+	await index.movePath(trashed, moved)
+	await expect(index.directorySizes(['/Home', '/Trash', '/Home/moved/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Trash', size: 0},
+		{virtualPath: '/Home/moved/nested', size: 7},
+	])
+	await fse.remove(moved)
+	await index.removePath(moved)
+	await fse.remove(nodePath.join(homeDirectory, 'alias.txt'))
+	await index.removePath(nodePath.join(homeDirectory, 'alias.txt'))
+	await expect(index.directorySizes(['/Home', '/Trash', '/Home/moved'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 0},
+		{virtualPath: '/Trash', size: 0},
 	])
 })
 
