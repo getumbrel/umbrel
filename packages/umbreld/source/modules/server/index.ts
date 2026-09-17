@@ -26,6 +26,7 @@ import createAppAuthRouter from './app-auth.js'
 import {authorizeHttpRequest} from '../auth/http-request.js'
 import {getSystemDiskUsage} from '../system/system.js'
 import UploadDiskPreflight from './upload-disk-preflight.js'
+import createErrorHandler from './error-handler.js'
 
 import fileApi from '../files/api.js'
 import photosApi from '../photos/api.js'
@@ -343,13 +344,7 @@ class Server {
 
 		// All errors should be handled by their own middleware but if they aren't we'll catch
 		// them here and log them.
-		this.app.use(
-			(error: Error, request: express.Request, response: express.Response, next: express.NextFunction): void => {
-				this.logger.error(`${request.method} ${request.path}`, error)
-				if (response.headersSent) return
-				response.status(500).json({error: true})
-			},
-		)
+		this.app.use(createErrorHandler(this.logger))
 
 		// Wrap all request handlers with a safe async handler
 		// TODO: We can remove this if we move to express 5
