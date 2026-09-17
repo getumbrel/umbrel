@@ -55,6 +55,9 @@ describe('built-in Machines catalog', () => {
 				variantName: undefined,
 				version: 'Android 13 · Waydroid',
 			},
+			...(arch === 'amd64'
+				? [{id: 'omarchy-4.0.4-amd64', familyId: 'omarchy', variantName: undefined, version: 'Omarchy 4.0.4'}]
+				: []),
 		])
 		expect(images.every((image) => image.requiresCredentials)).toBe(true)
 		expect(images.every((image) => image.platformProfile === (arch === 'amd64' ? 'modern-x86' : 'modern-arm64'))).toBe(
@@ -71,13 +74,25 @@ describe('built-in Machines catalog', () => {
 		)
 	})
 
+	test('ships the official Omarchy ISO only on amd64 with credentials for unattended setup', () => {
+		const images = builtinMachinesCatalog.images.filter(({familyId}) => familyId === 'omarchy')
+		expect(images).toHaveLength(1)
+		expect(images[0]).toMatchObject({
+			name: 'Omarchy',
+			arch: 'amd64',
+			platformProfile: 'modern-x86',
+			requiresCredentials: true,
+			estimatedInstalledSizeMb: 6_800,
+			url: 'https://iso.omarchy.org/omarchy-4.0.4.iso',
+		})
+		expect(images[0].cloudInit).toBeUndefined()
+	})
+
 	test('ships Android as a graphical native image on both architectures', () => {
 		const images = builtinMachinesCatalog.images.filter((image) => image.familyId === 'android')
 		expect(images.map(({arch}) => arch)).toEqual(['amd64', 'arm64'])
 		expect(images.every(({cloudInit}) => cloudInit?.graphical)).toBe(true)
-		expect(images.every(({cloudInit}) => cloudInit?.commands?.[0]?.[2]?.includes('waydroid init -s VANILLA'))).toBe(
-			true,
-		)
+		expect(images.every(({cloudInit}) => cloudInit?.commands?.[0]?.[2]?.includes('waydroid init -s GAPPS'))).toBe(true)
 	})
 
 	test('ships internal Windows templates with explicit hardware and unattended-install profiles', () => {
@@ -208,6 +223,7 @@ describe('built-in Machines catalog', () => {
 				'download.fedoraproject.org',
 				'cloud.debian.org',
 				'dl-cdn.alpinelinux.org',
+				'iso.omarchy.org',
 				'archive.org',
 			]).toContain(url.hostname)
 			expect(image.url).not.toMatch(/\/(current|latest|daily)\//)

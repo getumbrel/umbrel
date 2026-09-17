@@ -180,7 +180,17 @@ type _app = Expect<
 	ServerProvides<
 		Pick<
 			InstalledApp,
-			'id' | 'name' | 'version' | 'icon' | 'state' | 'port' | 'path' | 'torOnly' | 'requiresHttps' | 'credentials'
+			| 'id'
+			| 'name'
+			| 'version'
+			| 'icon'
+			| 'state'
+			| 'progress'
+			| 'port'
+			| 'path'
+			| 'torOnly'
+			| 'requiresHttps'
+			| 'credentials'
 		>,
 		{
 			id: string
@@ -188,6 +198,7 @@ type _app = Expect<
 			version: string
 			icon: string
 			state: string
+			progress: number
 			port: number
 			path?: string
 			torOnly?: boolean

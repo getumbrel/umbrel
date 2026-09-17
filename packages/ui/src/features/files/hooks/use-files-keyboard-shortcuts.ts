@@ -169,6 +169,7 @@ export function useFilesKeyboardShortcuts({
 					return
 				e.preventDefault()
 				const item = selectedItemsRef.current[0]
+				if (item.isDisconnected) return
 				// Allow preview for all items including directories (info card fallback for filetypes without viewers)
 				if (item.type) {
 					setViewerItem(item, 'preview')
@@ -196,6 +197,7 @@ export function useFilesKeyboardShortcuts({
 
 					// Build the list of items navigable in preview
 					const previewable = items.filter((file) => {
+						if (file.isDisconnected) return false
 						if (typeof file.type !== 'string') return false
 						if (mode === 'preview') return true
 						return Boolean(getFileViewer(file))

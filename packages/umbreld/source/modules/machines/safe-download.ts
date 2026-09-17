@@ -58,23 +58,20 @@ export function isPrivateAddress(address: string) {
 	)
 }
 
-async function resolvePublicAddress(hostname: string) {
+async function resolvePublicAddresses(hostname: string) {
 	const addresses = await lookup(hostname, {all: true, verbatim: true})
 	if (addresses.length === 0 || addresses.some(({address}) => isPrivateAddress(address))) {
 		throw new Error('[machine-image-url-private-address]')
 	}
-	return addresses[0]
+	return addresses
 }
 
-// Node enables autoSelectFamily for HTTP clients by default. In that mode it
-// calls custom DNS lookups with `all: true` and expects an array, even when the
-// caller has deliberately pinned the request to one previously validated IP.
-// Returning the legacy scalar shape there causes internalConnectMultiple to
-// receive an undefined address on Node 20+.
-export function createPinnedLookup(pinned: {address: string; family: number}): LookupFunction {
+// Keep connections pinned to the validated DNS answers while letting Node's
+// autoSelectFamily try another address when the first one is unreachable.
+export function createPinnedLookup(pinned: {address: string; family: number}[]): LookupFunction {
 	return (_hostname, options, callback) => {
-		if (options.all) return callback(null, [pinned])
-		callback(null, pinned.address, pinned.family)
+		if (options.all) return callback(null, pinned)
+		callback(null, pinned[0].address, pinned[0].family)
 	}
 }
 
@@ -103,7 +100,7 @@ export async function safeDownload({
 		}
 		if (redirects > MAX_REDIRECTS) throw new Error('[machine-image-too-many-redirects]')
 
-		const pinned = await resolvePublicAddress(currentUrl.hostname)
+		const pinned = await resolvePublicAddresses(currentUrl.hostname)
 		const transport = currentUrl.protocol === 'https:' ? https : http
 		return new Promise((resolve, reject) => {
 			const request = transport.get(

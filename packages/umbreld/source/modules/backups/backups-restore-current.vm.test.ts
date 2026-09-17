@@ -44,6 +44,8 @@ describe.sequential('Backup restore on current install', () => {
 		appStore: false,
 		files: [] as string[],
 		manageSystem: false,
+		machines: [],
+		createMachines: false,
 	}
 
 	beforeAll(async () => {

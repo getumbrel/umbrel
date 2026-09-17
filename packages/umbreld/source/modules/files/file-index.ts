@@ -610,6 +610,7 @@ export default class FileIndex {
 		if (!this.#workerReady) {
 			return {
 				available: false,
+				readers: {threadIds: [] as number[], active: 0, queued: 0},
 				schemaVersion: 0,
 				entryCount: 0,
 				enrichment: {
@@ -628,6 +629,7 @@ export default class FileIndex {
 		const status = await this.#request<{
 			available: boolean
 			schemaVersion: number
+			readers: {threadIds: number[]; active: number; queued: number}
 			entryCount: number
 			enrichment: {
 				eligibleEntries: number

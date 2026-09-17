@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import {QueryClient, QueryObserver} from '@tanstack/react-query'
 import {act} from 'react'
 import {createRoot, type Root} from 'react-dom/client'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 	invalidateAlbums: vi.fn(),
 	invalidateItem: vi.fn(),
 	invalidateQueries: vi.fn(),
+	findQueries: vi.fn<(...args: unknown[]) => unknown[]>(() => []),
 }))
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
@@ -29,7 +31,7 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 		...original,
 		useQueryClient: () => ({
 			invalidateQueries: mocks.invalidateQueries,
-			getQueryCache: () => ({findAll: () => []}),
+			getQueryCache: () => ({findAll: mocks.findQueries}),
 		}),
 	}
 })
@@ -153,4 +155,129 @@ it('does not refresh cold data when the initial indexing seed is already ready',
 	expect(mocks.setStatus).toHaveBeenCalledWith(undefined, ready)
 	expect(mocks.invalidateSummary).not.toHaveBeenCalled()
 	expect(mocks.invalidateQueries).not.toHaveBeenCalled()
+})
+
+it('ignores ongoing app file activity while Photos is open', async () => {
+	await act(async () => {
+		for (let second = 0; second < 30; second++) {
+			mocks.subscriptions.get('files:watcher:change')?.onData({path: '/Apps/bitcoin/data/chainstate', type: 'change'})
+			await vi.advanceTimersByTimeAsync(1000)
+		}
+	})
+
+	expect(mocks.invalidateSummary).not.toHaveBeenCalled()
+	expect(mocks.invalidateSources).not.toHaveBeenCalled()
+	expect(mocks.invalidateAlbums).not.toHaveBeenCalled()
+	expect(mocks.invalidateItem).not.toHaveBeenCalled()
+	expect(mocks.invalidateQueries).not.toHaveBeenCalled()
+})
+
+it('finishes a slow refresh before refreshing changes that arrived during it', async () => {
+	let finishSummary!: () => void
+	mocks.invalidateSummary.mockImplementationOnce(() => new Promise<void>((resolve) => (finishSummary = resolve)))
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+		for (let second = 0; second < 10; second++) {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			await vi.advanceTimersByTimeAsync(1000)
+		}
+	})
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
+	expect(mocks.invalidateSources).toHaveBeenCalledOnce()
+	expect(mocks.invalidateItem).toHaveBeenCalledOnce()
+
+	await act(async () => {
+		finishSummary()
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.invalidateSummary).toHaveBeenCalledTimes(2)
+	await act(async () => vi.advanceTimersByTimeAsync(10_000))
+	expect(mocks.invalidateSummary).toHaveBeenCalledTimes(2)
+})
+
+it('continues refreshing after a failed refresh', async () => {
+	mocks.invalidateSummary.mockRejectedValueOnce(new Error('Connection interrupted'))
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.invalidateSummary).toHaveBeenCalledTimes(2)
+})
+
+it('waits for an older read before requesting data for a new change', async () => {
+	let finishOlderRead!: () => void
+	const promise = new Promise<void>((resolve) => (finishOlderRead = resolve))
+	mocks.findQueries.mockReturnValueOnce([{state: {fetchStatus: 'fetching'}, promise}])
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.invalidateSummary).not.toHaveBeenCalled()
+	await act(async () => finishOlderRead())
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
+	expect(mocks.invalidateSummary).toHaveBeenCalledWith(undefined, undefined, {cancelRefetch: false})
+})
+
+it('refreshes a newly selected filter when a change arrives while waiting for an older read', async () => {
+	const client = new QueryClient({defaultOptions: {queries: {retry: false, gcTime: Infinity}}})
+	let finishOlderRead!: () => void
+	let finishFilterRead!: (data: {pages: string[]}) => void
+	const olderRead = new Promise<void>((resolve) => (finishOlderRead = resolve))
+	const filterRead = new Promise<{pages: string[]}>((resolve) => (finishFilterRead = resolve))
+	const queryFn = vi
+		.fn()
+		.mockReturnValueOnce(filterRead)
+		.mockResolvedValue({pages: ['new data']})
+	const observer = new QueryObserver(client, {queryKey: [['photos', 'items', 'list'], {filter: 'new'}], queryFn})
+	let unsubscribe = () => {}
+	try {
+		mocks.findQueries.mockReturnValueOnce([{state: {fetchStatus: 'fetching'}, promise: olderRead}])
+		await act(async () => {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			await vi.advanceTimersByTimeAsync(1000)
+		})
+		expect(mocks.invalidateSummary).not.toHaveBeenCalled()
+
+		// Switching filters starts B after the refresh took its snapshot of A.
+		unsubscribe = observer.subscribe(() => {})
+		const filterQuery = client.getQueryCache().getAll()[0]!
+		mocks.findQueries.mockReturnValueOnce([filterQuery]).mockReturnValueOnce([]).mockReturnValueOnce([filterQuery])
+		await act(async () => {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			finishOlderRead()
+		})
+		expect(queryFn).toHaveBeenCalledOnce()
+
+		// cancelRefetch: false reuses B, whose response predates the second change.
+		await act(async () => finishFilterRead({pages: ['old data']}))
+		expect(observer.getCurrentResult().data).toEqual({pages: ['old data']})
+		await act(async () => vi.advanceTimersByTimeAsync(1000))
+		expect(queryFn).toHaveBeenCalledTimes(2)
+		expect(observer.getCurrentResult().data).toEqual({pages: ['new data']})
+		await act(async () => vi.advanceTimersByTimeAsync(10_000))
+		expect(queryFn).toHaveBeenCalledTimes(2)
+	} finally {
+		unsubscribe()
+		client.clear()
+		mocks.findQueries.mockReset().mockReturnValue([])
+	}
+})
+
+it('discards queued changes when Photos is closed during a refresh', async () => {
+	let finishSummary!: () => void
+	mocks.invalidateSummary.mockImplementationOnce(() => new Promise<void>((resolve) => (finishSummary = resolve)))
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		root.render(null)
+	})
+	await act(async () => {
+		finishSummary()
+		await vi.advanceTimersByTimeAsync(10_000)
+	})
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
 })

@@ -66,12 +66,15 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 	// QEMU's VNC resize extension can diverge from Linux fbcon's scanout
 	// geometry. Keep built-in text consoles at their native framebuffer size;
 	// graphical guests can still follow the browser at native resolution.
+	// Android is fixed too: Cage keeps the mode it booted with and Waydroid
+	// cannot resize Android's display afterwards.
 	const isTextConsole = machine.osVariant === 'Server' || machine.osId === 'alpine'
+	const followsBrowserSize = !isTextConsole && machine.osId !== 'android'
 	const setupDelayed = machine.installationState === 'setup-delayed'
 
 	return (
 		<>
-			<MachineConsole machineId={machine.id} resizeSession={!isTextConsole} />
+			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} />
 			{machine.state === 'running' && machine.firstBootSetup && !showSetupConsole && (
 				<FirstBootSetupOverlay
 					osName={machine.osName}

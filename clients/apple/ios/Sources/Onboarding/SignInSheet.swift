@@ -8,6 +8,11 @@ import UmbrelKit
 struct SignInSheet: View {
 	@Environment(OnboardingModel.self) private var model
 	@State private var claimedDeviceId: String?
+	var onCancel: (() -> Void)?
+
+	init(onCancel: (() -> Void)? = nil) {
+		self.onCancel = onCancel
+	}
 
 	var body: some View {
 		let device = model.selectedDevice
@@ -28,7 +33,13 @@ struct SignInSheet: View {
 				try await Umbreld.claimLocalHTTPSIdentity(device)
 				claimedDeviceId = device.id
 			},
-			onCancel: { model.advance(to: .deviceFound) },
+			onCancel: {
+				if let onCancel {
+					onCancel()
+				} else {
+					model.advance(to: .deviceFound)
+				}
+			},
 			onRemove: nil
 		) { account, userId, password, totpToken in
 			guard model.selectedDevice != nil else { return }

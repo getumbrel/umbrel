@@ -101,7 +101,10 @@ export default class NetworkStorage {
 						if (await this.#isMounted(share)) {
 							this.mountedShares.add(share.mountPath)
 						} else {
-							this.mountedShares.delete(share.mountPath)
+							// Announce the disconnect so clients stop treating the share as usable
+							if (this.mountedShares.delete(share.mountPath)) {
+								this.#umbreld.eventBus.emit('files:network-storage:change')
+							}
 							await this.#mountShare(share)
 						}
 					} catch (error) {}

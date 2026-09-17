@@ -1,0 +1,41 @@
+name: Translation checks
+
+on:
+  push:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: translation-checks-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Locale validation
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # These checks use only Node built-ins, without npm install or API calls.
+      - run: node --test packages/ui/scripts/test-translations.mjs
+      - run: bash .github/scripts/prepare-translations.test.sh
+      - run: node packages/ui/update-translations.js --validate
+
+  release-freshness:
+    name: Translations up to date
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      # Validate GitHub's prospective merge result, including master-side changes.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node packages/ui/update-translations.js --check

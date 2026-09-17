@@ -59,7 +59,9 @@ export async function pullAll(images: string[], updateProgress: (progress: numbe
 	for (const image of images) {
 		imageProgress[image] = 0
 	}
-	await Promise.all(
+	// Do not release lifecycle coordination while another pull is still writing
+	// to Docker after one of its siblings failed.
+	const results = await Promise.allSettled(
 		images.map(async (image) =>
 			pull(
 				image,
@@ -85,6 +87,8 @@ export async function pullAll(images: string[], updateProgress: (progress: numbe
 			),
 		),
 	)
+	const failed = results.find((result) => result.status === 'rejected')
+	if (failed?.status === 'rejected') throw failed.reason
 
 	return true
 }

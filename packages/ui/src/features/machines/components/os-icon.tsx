@@ -12,6 +12,7 @@ const machineIconSets: Record<string, string> = {
 	debian: 'machine-debian',
 	alpine: 'machine-alpine',
 	android: 'machine-android',
+	omarchy: 'machine-omarchy',
 	'windows-11': 'machine-windows-11',
 	'windows-server': 'machine-windows-server',
 	'windows-7': 'machine-windows-7',

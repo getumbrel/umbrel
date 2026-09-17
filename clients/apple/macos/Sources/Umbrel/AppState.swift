@@ -22,6 +22,11 @@ import UserNotifications
 @MainActor
 @Observable
 final class AppState {
+	enum AddressConnectionResult {
+		case device(String)
+		case updateRequired(host: String)
+	}
+
 	enum LaunchAtLoginStatus {
 		case disabled
 		case enabled
@@ -62,7 +67,8 @@ final class AppState {
 
 	// Sources merged into the snapshot
 	private var config: Config
-	private var identifiedCandidates: [IdentifiedDevice] = []
+	private var mdnsIdentifiedCandidates: [IdentifiedDevice] = []
+	private var manuallyIdentifiedCandidates: [String: IdentifiedDevice] = [:]
 	private var fallbackUpdateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 	private var fallbackDiscoveryGeneration = 0
 	private var pendingNativeHosts: Set<String> = []
@@ -114,6 +120,16 @@ final class AppState {
 	private let probeFreshness: TimeInterval = 150
 	// Don't re-probe the same host more often than this
 	private let probeCooldown: TimeInterval = 30
+
+	private var identifiedCandidates: [IdentifiedDevice] {
+		var byId = Dictionary(uniqueKeysWithValues: mdnsIdentifiedCandidates.map { ($0.id, $0) })
+		// Prefer an explicitly checked endpoint when both sources identify the same
+		// Umbrel; it may be the Tailscale route the user needs right now.
+		for (id, device) in manuallyIdentifiedCandidates {
+			byId[id] = device
+		}
+		return byId.values.sorted { $0.host < $1.host }
+	}
 
 	init() {
 		let loaded: Config.LoadResult
@@ -316,7 +332,7 @@ final class AppState {
 		pendingNativeHosts = Set(list.map { normalizedDiscoveryHost($0.host) })
 		if list.isEmpty {
 			candidateIdentificationTask = nil
-			identifiedCandidates = []
+			mdnsIdentifiedCandidates = []
 			if initialDiscoveryWindowElapsed {
 				initialDiscoveryInProgress = false
 			}
@@ -346,7 +362,7 @@ final class AppState {
 			guard !Task.isCancelled else { return }
 			candidateIdentificationTask = nil
 			pendingNativeHosts = []
-			identifiedCandidates = identified
+			mdnsIdentifiedCandidates = identified
 			initialDiscoveryInProgress = false
 			publishUpdateRequiredDevices()
 
@@ -394,8 +410,12 @@ final class AppState {
 			return
 		}
 		let previouslyVisible = Set(updateRequiredDevices.map { normalizedDiscoveryHost($0.host) })
+		// Keep every verified route when suppressing legacy update hints. The rendered
+		// candidate prefers a manually entered endpoint for the same device id, but that
+		// must not make its verified Bonjour hostname look like a second, older Umbrel.
+		let allIdentifiedCandidates = mdnsIdentifiedCandidates + Array(manuallyIdentifiedCandidates.values)
 		let verifiedHosts = Set((
-			identifiedCandidates.flatMap { [$0.host, $0.discoveryHost] + $0.addresses }
+			allIdentifiedCandidates.flatMap { [$0.host, $0.discoveryHost] + $0.addresses }
 				+ probes.flatMap { deviceId, probe -> [String] in
 					guard probe.identity != nil,
 						isFresh(probe),
@@ -407,10 +427,14 @@ final class AppState {
 		fallbackUpdateRequiredDevices.removeAll {
 			verifiedHosts.contains(normalizedDiscoveryHost($0.host))
 		}
-		updateRequiredDevices = fallbackUpdateRequiredDevices.filter {
+		let updatesByHost = Dictionary(
+			fallbackUpdateRequiredDevices.map { (normalizedDiscoveryHost($0.host), $0) },
+			uniquingKeysWith: { first, _ in first }
+		)
+		updateRequiredDevices = updatesByHost.values.filter {
 			let host = normalizedDiscoveryHost($0.host)
 			return !pendingNativeHosts.contains(host) || previouslyVisible.contains(host)
-		}
+		}.sorted { $0.host < $1.host }
 	}
 
 	// Saved hosts need periodic liveness probes when no identified mDNS candidate
@@ -436,6 +460,68 @@ final class AppState {
 		_ = await (fallback, savedDeviceProbes)
 		scanning = false
 		publishUpdateRequiredDevices()
+	}
+
+	// Connect-by-address is a navigation flow, not another discovery source. A verified
+	// device may drive sign-in and later become a saved card; a legacy endpoint stays on
+	// the address screen as an update message and never enters the device list.
+	func connectByAddress(_ address: String) async throws -> AddressConnectionResult {
+		let knownDeviceIds = Set(config.savedDevices.keys).union(explicitlyClaimedDeviceIds)
+		let result = try await Umbreld.discoverManually(
+			at: address,
+			knownDeviceIds: knownDeviceIds
+		)
+		try Task.checkCancellation()
+		switch result {
+		case .device(let device):
+			if var saved = config.savedDevices[device.id] {
+				// Manual entry proves this route works, but it is not a complete discovery
+				// snapshot. Preserve the saved name, primary host, and Bonjour addresses.
+				saved.rememberConnectionCandidates([device.host] + device.addresses)
+				do {
+					try config.save(saved)
+				} catch {
+					reportConfigStorageIssue(error)
+					throw error
+				}
+				manuallyIdentifiedCandidates[device.id] = nil
+				probeCompleted(
+					deviceId: device.id,
+					host: device.host,
+					identity: device.discoveryInfo
+				)
+			} else {
+				// Keep the candidate only while it is needed to drive first sign-in.
+				manuallyIdentifiedCandidates[device.id] = device
+				connectionHosts[device.id] = device.host
+				publishUpdateRequiredDevices()
+				rebuild()
+			}
+			return .device(device.id)
+		case .updateRequired(let device):
+			return .updateRequired(host: device.host)
+		}
+	}
+
+	// A device reached only through explicit address entry exists long enough to drive
+	// sign-in, but it is not a list result. Cards represent Umbrels the app discovered
+	// automatically or that the user successfully connected and saved.
+	func isUnsavedManualOnlyDevice(_ deviceId: String) -> Bool {
+		config.savedDevices[deviceId] == nil
+			&& manuallyIdentifiedCandidates[deviceId] != nil
+			&& !mdnsIdentifiedCandidates.contains(where: { $0.id == deviceId })
+	}
+
+	func discardUnsavedManualDevice(_ deviceId: String) {
+		guard isUnsavedManualOnlyDevice(deviceId) else { return }
+		manuallyIdentifiedCandidates[deviceId] = nil
+		connectionHosts[deviceId] = nil
+		let discardedClaim = explicitlyClaimedDeviceIds.remove(deviceId) != nil
+		publishUpdateRequiredDevices()
+		rebuild()
+		if discardedClaim {
+			Task { await Umbreld.forgetLocalHTTPSIdentity(deviceId: deviceId) }
+		}
 	}
 
 	// force skips the cooldown for explicit user refreshes; in-flight probes still dedupe
@@ -572,6 +658,14 @@ final class AppState {
 			try? await Umbreld.logout(target: target, session: session)
 			throw error
 		}
+		// Once the device is saved, normal reachability probes own its online state.
+		if let manualDevice = manuallyIdentifiedCandidates.removeValue(forKey: deviceId) {
+			probeCompleted(
+				deviceId: deviceId,
+				host: connectionHosts[deviceId] ?? manualDevice.host,
+				identity: manualDevice.discoveryInfo
+			)
+		}
 
 		// Post-login work is best-effort and shouldn't hold up the "Connected" state
 		syncAccountProfile(deviceId: deviceId, target: target, session: session)
@@ -604,6 +698,7 @@ final class AppState {
 		try await disconnect(deviceId: deviceId)
 		await Umbreld.forgetLocalHTTPSIdentity(deviceId: deviceId)
 		explicitlyClaimedDeviceIds.remove(deviceId)
+		manuallyIdentifiedCandidates[deviceId] = nil
 		connectionHosts[deviceId] = nil
 		try config.remove(id: deviceId)
 		rebuild()

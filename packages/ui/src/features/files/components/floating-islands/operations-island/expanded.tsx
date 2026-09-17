@@ -8,23 +8,24 @@ import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {ProgressRing, ProgressRingBadge} from '@/modules/floating-island/progress-ring'
 import {useApps} from '@/providers/apps'
-import {useGlobalFiles, type OperationsInProgress} from '@/providers/global-files'
+import type {OperationsInProgress} from '@/providers/global-files'
 import {formatNumberI18n} from '@/utils/number'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
 export function ExpandedContent({
+	operations,
 	progress,
 	count,
 	speed,
 	isPreparing,
 }: {
+	operations: OperationsInProgress
 	progress: number
 	count: number
 	speed: number
 	isPreparing: boolean
 }) {
 	const {t, i18n} = useTranslation()
-	const {operations} = useGlobalFiles()
 	const {userAppsKeyed} = useApps()
 
 	// Sort operations so that items with higher progress appear first

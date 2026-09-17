@@ -34,6 +34,19 @@ final class AppSummaryTests: XCTestCase {
 		XCTAssertEqual(app.webURL(host: "umbrel.local")?.absoluteString, "http://umbrel.local:3000")
 	}
 
+	func testLifecycleProgressDecodesAndSurvivesCacheCopy() throws {
+		let data = try XCTUnwrap(
+			"""
+			{"id":"files","state":"updating","progress":42.5}
+			""".data(using: .utf8)
+		)
+
+		let app = try JSONDecoder().decode(Umbreld.AppSummary.self, from: data)
+
+		XCTAssertEqual(app.progress, 42.5)
+		XCTAssertEqual(app.withoutCredentials.progress, 42.5)
+	}
+
 	func testRelativeAppPathIsNormalized() throws {
 		let data = try XCTUnwrap(
 			"""

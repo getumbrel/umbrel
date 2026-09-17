@@ -17,6 +17,7 @@ function isMovable(item: FileSystemItem) {
 export function useDragAndDrop() {
 	const isReadOnly = useIsFilesReadOnly()
 	const selectedItems = useFilesStore((s: FilesStore) => s.selectedItems)
+	const draggedItems = useFilesStore((s: FilesStore) => s.draggedItems)
 	const setSelectedItems = useFilesStore((s: FilesStore) => s.setSelectedItems)
 	const setDraggedItems = useFilesStore((s: FilesStore) => s.setDraggedItems)
 	const clearDraggedItems = useFilesStore((s: FilesStore) => s.clearDraggedItems)
@@ -41,7 +42,7 @@ export function useDragAndDrop() {
 
 	const handleDragEnd = async (event: DragEndEvent) => {
 		if (isReadOnly) return
-		const {over, active} = event
+		const {over} = event
 		const targetPath = over?.data.current?.path as string
 		if (!targetPath) {
 			clearDraggedItems()
@@ -60,10 +61,9 @@ export function useDragAndDrop() {
 			await trashDraggedItems()
 			clearDraggedItems()
 		} else {
-			// Skip if the item is already in the target directory (e.g. dropped on
-			// the listing background or on a sibling file instead of a folder)
-			const draggedItem = active.data.current as FileSystemItem | undefined
-			if (draggedItem && draggedItem.path.substring(0, draggedItem.path.lastIndexOf('/')) === targetPath) {
+			// Hover navigation can unmount the source row and empty active.data.current.
+			// Use the stored drag items, and skip only if all are already at the destination.
+			if (draggedItems.every((item) => item.path.substring(0, item.path.lastIndexOf('/')) === targetPath)) {
 				clearDraggedItems()
 				return
 			}

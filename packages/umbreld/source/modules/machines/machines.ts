@@ -1,4 +1,5 @@
 import {createHash, randomBytes, randomUUID, timingSafeEqual} from 'node:crypto'
+import {readFileSync} from 'node:fs'
 import fsp from 'node:fs/promises'
 import dgram from 'node:dgram'
 import net from 'node:net'
@@ -19,6 +20,7 @@ import {
 	defaultMachineType,
 	defaultPlatformProfile,
 	hostArchitecture,
+	isLegacyPlatformProfile,
 	machineDiskTarget,
 	resolveAcceleration,
 	type MachineArchitecture,
@@ -32,11 +34,52 @@ import {MACHINE_GUEST_HOST_ADDRESS, machineIpAddressSchema, nextMachineIpAddress
 import MachineStore from './machine-store.js'
 import {safeDownload} from './safe-download.js'
 import {prepareWindowsInstallMedia, type WindowsInstaller} from './windows-image.js'
+import {prepareOmarchySeed, probeOmarchySetup, removeOmarchySetupCredentials} from './omarchy-install.js'
 import MachineGuestApi from './guest-api.js'
+import {encodeScreenshot, performInputAction, type MachineInputAction, type PointerTarget} from './machine-control.js'
+import type {InputFeedback, PointerMotion} from './input-motion.js'
+import RfbClient from './rfb-client.js'
 import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.js'
 
 export const FIRST_BOOT_SETUP_TIMEOUT_MS = 60 * 60 * 1_000
 export const WINDOWS_ARM_FIRST_BOOT_SETUP_TIMEOUT_MS = 4 * FIRST_BOOT_SETUP_TIMEOUT_MS
+// Guests need a moment to react before the screenshot that follows an input
+// action, otherwise the caller sees the screen from before it acted
+export const MACHINE_INPUT_SETTLE_MS = 1_000
+// A machine counts as driven by an agent for this long after its last input.
+// The console shows who is at the controls and asks before letting a person
+// interfere, then hands control back once the agent has gone quiet.
+export const AGENT_CONTROL_TIMEOUT_MS = 60_000
+const agentControlTimeoutMs = () =>
+	Number(process.env.UMBREL_MACHINE_AGENT_CONTROL_TIMEOUT_MS) || AGENT_CONTROL_TIMEOUT_MS
+
+// Who is behind an MCP credential, as far as the console needs to say so
+export type MachineAgent = {
+	tokenId: string
+	label: string
+	agentType?: string
+	clientName?: string
+}
+
+export type MachineAgentControl = {
+	agent: MachineAgent
+	lastInputAt: number
+	// Snapshot age is expressed in the server's clock so clients need not
+	// assume that the browser and Umbrel agree about wall-clock time.
+	observedAt: number
+	sequence: number
+	feedback?: InputFeedback & {startedAt: number}
+	// The agent's pointer in guest pixels together with the framebuffer size it
+	// was placed on, so a viewer can scale it onto whatever the console shows.
+	// While the pointer is travelling this is its destination, announced as it
+	// sets off with how long the journey takes, so a viewer can move in step.
+	pointer?: PointerTarget & {width: number; height: number; motion?: PointerMotion}
+}
+
+export type MachineAgentControlEvent = {
+	machineId: string
+	control: MachineAgentControl | null
+}
 
 export type MachineState =
 	| 'installing'
@@ -251,6 +294,10 @@ systemctl enable NetworkManager.service gdm3.service`
 // Ubuntu cloud image, then boot directly into Waydroid's native-architecture
 // LineageOS image through a minimal Cage session. The Linux layer remains
 // available over SSH for recovery, but is not exposed in the graphical flow.
+// Runs inside the Android guest after Waydroid's first boot; kept as a file so
+// it stays readable and free of template-literal escaping.
+const WAYDROID_DOCK_SCRIPT = readFileSync(new URL('./waydroid-dock.py', import.meta.url), 'utf8').trimEnd()
+
 const ANDROID_INSTALL = `set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 android_user="$(getent passwd 1000 | cut -d: -f1)"
@@ -266,7 +313,7 @@ apt-get install -y cage greetd dbus-user-session pipewire-pulse waydroid
 printf 'options binder_linux devices=binder,hwbinder,vndbinder\n' > /etc/modprobe.d/waydroid.conf
 printf 'binder_linux\n' > /etc/modules-load.d/waydroid.conf
 modprobe binder_linux
-waydroid init -s VANILLA
+waydroid init -s GAPPS
 
 # QEMU virgl gives Waydroid native Mesa rendering. On hosts without a render
 # node, fall back to software in both the compositor and Android rather than
@@ -274,6 +321,55 @@ waydroid init -s VANILLA
 if ! find /dev/dri -maxdepth 1 -name 'renderD*' -print -quit 2>/dev/null | grep -q .; then
 	sed -i '/^\\[properties\\]$/a ro.hardware.gralloc=default' /var/lib/waydroid/waydroid.cfg
 	sed -i '/^\\[properties\\]$/a ro.hardware.egl=swiftshader' /var/lib/waydroid/waydroid.cfg
+fi
+# Match the phone-shaped 720x1560 scanout the host gives Android machines.
+sed -i '/^\\[properties\\]$/a ro.sf.lcd_density=320' /var/lib/waydroid/waydroid.cfg
+# Waydroid only folds [properties] into waydroid_base.prop during init or an
+# upgrade, so regenerate it offline now that the overrides are in place.
+waydroid upgrade -o
+
+# Most Play apps that ship native code ship it for ARM only, because Play has
+# never required an x86 build, so on an x86_64 host those apps refuse to
+# install. A translation layer fixes that on both Intel and AMD; ARM hosts run
+# the same apps natively and need nothing. Treat it as a bonus rather than
+# part of the machine: an upstream change, a slow mirror or a dead URL must
+# never be the reason someone's Android machine fails to install, so the
+# attempt is time-boxed and its failure is logged and ignored.
+if [ "$(uname -m)" = x86_64 ]; then
+	cat > /usr/local/bin/umbrel-waydroid-arm-translation <<'EOF'
+#!/bin/bash
+set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive
+apt-get install -y --no-install-recommends git lzip python3-venv
+rm -rf /opt/waydroid-script
+git clone --no-checkout https://github.com/casualsnek/waydroid_script /opt/waydroid-script
+git -C /opt/waydroid-script checkout d5289cfd8929e86e7f0dc89ecadcef8b66930eec
+python3 -m venv /opt/waydroid-script/venv
+/opt/waydroid-script/venv/bin/pip install --disable-pip-version-check -r /opt/waydroid-script/requirements.txt
+# Some ARM apps, including Grab, fail to load native methods with libndk on
+# Intel. Use libhoudini there, keeping libndk for other x86 hosts.
+translation=libndk
+if grep -q '^vendor_id[[:space:]]*:[[:space:]]*GenuineIntel' /proc/cpuinfo; then
+	translation=libhoudini
+fi
+/opt/waydroid-script/venv/bin/python3 - -a 13 install "$translation" <<'PY'
+import sys
+sys.path.insert(0, "/opt/waydroid-script")
+from main import main
+from stuff.houdini import Houdini
+
+# The pinned helper's Android 13 default is an HPE 14 build with date-triggered
+# freezes. Use the Android 13 translator from ChromeOS Octopus R144 instead.
+Houdini.dl_links["13"] = [
+    "https://github.com/supremegamers/vendor_intel_proprietary_houdini/archive/120fe811684c938de9d123a1423b7f9f8f572f7d.zip",
+    "b9b0206bb1c84b1588ee6757d11a89a9",
+]
+main()
+PY
+EOF
+	chmod 0755 /usr/local/bin/umbrel-waydroid-arm-translation
+	timeout 900 /usr/local/bin/umbrel-waydroid-arm-translation ||
+		echo 'umbrel: ARM app translation unavailable, continuing without it' >&2
 fi
 
 cat > /usr/local/bin/umbrel-waydroid-session <<'EOF'
@@ -303,7 +399,27 @@ command = "/usr/local/bin/umbrel-waydroid-session"
 user = "$android_user"
 EOF
 
-systemctl enable greetd.service waydroid-container.service
+# Trebuchet's phone layout leaves Waydroid's dock with a hole and a duplicate
+# (see the script). Tidy it once, on first boot, and only if it is untouched.
+cat > /usr/local/bin/umbrel-waydroid-dock <<'EOF'
+${WAYDROID_DOCK_SCRIPT}
+EOF
+chmod 0755 /usr/local/bin/umbrel-waydroid-dock
+cat > /etc/systemd/system/umbrel-waydroid-dock.service <<EOF
+[Unit]
+Description=Tidy the Waydroid first-boot dock
+After=waydroid-container.service greetd.service
+ConditionPathExists=!/var/lib/waydroid/.umbrel-dock
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/umbrel-waydroid-dock
+
+[Install]
+WantedBy=graphical.target
+EOF
+
+systemctl enable greetd.service waydroid-container.service umbrel-waydroid-dock.service
 systemctl set-default graphical.target`
 
 // Shipped with umbrelOS so the catalog works without runtime configuration or
@@ -566,6 +682,20 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			platformProfile: 'modern-arm64',
 			cloudInit: {commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
 		},
+		{
+			id: 'omarchy-4.0.4-amd64',
+			familyId: 'omarchy',
+			name: 'Omarchy',
+			version: 'Omarchy 4.0.4',
+			sizeMb: 6_186,
+			estimatedInstalledSizeMb: 6_800,
+			arch: 'amd64',
+			platform: 'linux',
+			requiresCredentials: true,
+			url: 'https://iso.omarchy.org/omarchy-4.0.4.iso',
+			sha256: 'ddeded2758c48318d201dfdac905ecb28f570441883f0c052ea3cd5d05acf92d',
+			platformProfile: 'modern-x86',
+		},
 		// Mirrors are checksum-pinned so media cannot change underneath an
 		// install. Legacy XP/98 media requires a user-supplied product key.
 		{
@@ -824,6 +954,7 @@ export default class Machines {
 	#lastFirstBootSetupStates = new Map<string, boolean>()
 	#pollTimer?: NodeJS.Timeout
 	#polling = false
+	#omarchySetupProbes = new Map<string, Promise<void>>()
 	#libvirtActivated = false
 	#libvirtActivation?: Promise<void>
 	#nextLibvirtProbeAt = 0
@@ -845,6 +976,17 @@ export default class Machines {
 	#runtimeUsageInFlight?: Promise<{cpu: MachineResourceUsage[]; memory: MachineResourceUsage[]}>
 	#previousCpuSample?: {at: bigint; times: Map<string, number>}
 	logger: Umbreld['logger']
+
+	// Agent control bookkeeping is memory-only: it describes what is happening
+	// at the console right now, not anything worth keeping across restarts
+	#agentControls = new Map<string, MachineAgentControl>()
+	#agentControlTimers = new Map<string, NodeJS.Timeout>()
+	#agentPointers = new Map<string, PointerTarget>()
+	// Guests whose first press after boot has already been spent
+	#primedMachines = new Set<string>()
+	#inputQueues = new Map<string, PQueue>()
+	#activeInputs = new Set<string>()
+	#inputSequence = 0
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -913,6 +1055,8 @@ export default class Machines {
 
 	async stop() {
 		if (this.#pollTimer) clearInterval(this.#pollTimer)
+		this.#pollTimer = undefined
+		await Promise.allSettled(this.#omarchySetupProbes.values())
 		for (const job of this.#installJobs.values()) job.controller.abort(new Error('[machine-install-cancelled]'))
 		await Promise.allSettled([...this.#installJobs.values()].map(({promise}) => promise))
 		for (const job of this.#imageDownloads.values())
@@ -963,19 +1107,43 @@ export default class Machines {
 			const definitions = await this.#store.list()
 			if (this.#libvirtActivated) await this.#libvirt.ensureFirewall(definitions)
 			const states = await Promise.all(
-				definitions.map(async (definition) => ({
-					id: definition.id,
-					state: await this.#state(definition),
-					firstBootSetup: isFirstBootSetupActive(
-						definition.firstBootSetup,
-						Date.now(),
-						firstBootSetupTimeoutMs(definition),
-					),
-				})),
+				definitions.map(async (definition) => {
+					const state = await this.#state(definition)
+					if (
+						this.#pollTimer &&
+						definition.osId === 'omarchy' &&
+						definition.firstBootSetup &&
+						state === 'running' &&
+						!this.#omarchySetupProbes.has(definition.id)
+					) {
+						// A guest's SSH timeout must not delay state updates for other machines.
+						const probe = probeOmarchySetup(
+							this.#store.directory(definition.id),
+							definition.username!,
+							definition.ipAddress!,
+						)
+							.catch((error) => this.logger.error(`Failed probing Omarchy setup for ${definition.id}`, error))
+							.finally(() => this.#omarchySetupProbes.delete(definition.id))
+						this.#omarchySetupProbes.set(definition.id, probe)
+					}
+					return {
+						id: definition.id,
+						state,
+						firstBootSetup: isFirstBootSetupActive(
+							definition.firstBootSetup,
+							Date.now(),
+							firstBootSetupTimeoutMs(definition),
+						),
+					}
+				}),
 			)
 			let changed = states.length !== this.#lastStates.size
 			for (const machine of states) {
-				if (this.#lastStates.get(machine.id) !== machine.state) changed = true
+				if (this.#lastStates.get(machine.id) !== machine.state) {
+					changed = true
+					// A guest that stopped on its own boots afresh next time
+					if (machine.state !== 'running') this.#forgetMachineInput(machine.id)
+				}
 				if (this.#lastFirstBootSetupStates.get(machine.id) !== machine.firstBootSetup) changed = true
 				this.#lastStates.set(machine.id, machine.state)
 				this.#lastFirstBootSetupStates.set(machine.id, machine.firstBootSetup)
@@ -1341,7 +1509,7 @@ export default class Machines {
 
 	async #view(definition: MachineDefinition): Promise<Machine> {
 		const acceleration = resolveAcceleration(definition.arch, this.#libvirt.kvmAvailable)
-		const {firstBootSetup, installSource, installMedia, bootMedia, ...publicDefinition} = definition
+		const {firstBootSetup, installSource, installMedia, seedMedia, bootMedia, ...publicDefinition} = definition
 		const externalDiskAvailable = await this.#externalDiskAvailable(definition)
 		const state = externalDiskAvailable ? await this.#state(definition) : 'error'
 		const firstBootSetupActive = isFirstBootSetupActive(firstBootSetup, Date.now(), firstBootSetupTimeoutMs(definition))
@@ -1477,6 +1645,147 @@ export default class Machines {
 		const socket = this.#libvirt.displaySocket(id)
 		if (!(await fse.pathExists(socket))) throw new Error('[machine-console-unavailable]')
 		return socket
+	}
+
+	async #withDisplay<T>(id: string, operation: (client: RfbClient) => Promise<T>) {
+		const client = await RfbClient.connect(await this.consoleSocket(id))
+		try {
+			return await operation(client)
+		} finally {
+			client.close()
+		}
+	}
+
+	async screenshot(id: string, {agent}: {agent?: MachineAgent} = {}) {
+		const screenshot = await this.#withDisplay(id, async (client) =>
+			encodeScreenshot(await client.captureFramebuffer()),
+		)
+		// Looking keeps an agent's turn at the console alive, but does not begin one
+		if (agent && this.#agentControls.get(id)?.agent.tokenId === agent.tokenId) this.#touchAgentControl(id, agent)
+		return screenshot
+	}
+
+	// Performs one keyboard or pointer action at the console and returns the
+	// screen afterwards, the way a person acts and then looks
+	async control(id: string, action: MachineInputAction, {agent}: {agent?: MachineAgent} = {}) {
+		// Interleaved pointer/keyboard calls cannot have a truthful visual
+		// sequence (and can leave modifiers held). Serialize each machine only.
+		let queue = this.#inputQueues.get(id)
+		if (!queue) {
+			queue = new PQueue({concurrency: 1})
+			this.#inputQueues.set(id, queue)
+			const current = queue
+			queue.on('idle', () => {
+				if (this.#inputQueues.get(id) === current) this.#inputQueues.delete(id)
+			})
+		}
+		return queue.add(() => this.#control(id, action, agent))
+	}
+
+	async #control(id: string, action: MachineInputAction, agent?: MachineAgent) {
+		const definition = await this.#definition(id)
+		const pointerSupported = !isLegacyPlatformProfile(definition.platformProfile)
+		return this.#withDisplay(id, async (client) => {
+			this.#activeInputs.add(id)
+			clearTimeout(this.#agentControlTimers.get(id))
+			try {
+				const {pointer, primed} = await performInputAction(client, action, {
+					pointerSupported,
+					pointer: this.#agentPointers.get(id),
+					primeFirstPress: definition.osId === 'android' && !this.#primedMachines.has(id),
+					onPosition: (point) => this.#agentPointers.set(id, point),
+					onUpdate: ({pointer, motion, feedback}) => {
+						if (agent)
+							this.#touchAgentControl(
+								id,
+								agent,
+								pointer && {...pointer, width: client.width, height: client.height, motion},
+								feedback,
+							)
+					},
+				})
+				if (primed) this.#primedMachines.add(id)
+				if (pointer) this.#agentPointers.set(id, pointer)
+				if (action.action !== 'wait') await new Promise((resolve) => setTimeout(resolve, MACHINE_INPUT_SETTLE_MS))
+				const screenshot = await encodeScreenshot(await client.captureFramebuffer())
+				if (agent && this.#agentControls.get(id)?.agent.tokenId === agent.tokenId) this.#touchAgentControl(id, agent)
+				return screenshot
+			} catch (error) {
+				const current = this.#agentControls.get(id)
+				if (
+					agent &&
+					current?.agent.tokenId === agent.tokenId &&
+					current.feedback?.phase !== 'released' &&
+					current.feedback?.phase !== 'complete'
+				) {
+					const pointer = this.#agentPointers.get(id)
+					this.#touchAgentControl(id, agent, pointer && {...pointer, width: client.width, height: client.height}, {
+						action: action.action,
+						phase: 'complete',
+					})
+				}
+				throw error
+			} finally {
+				this.#activeInputs.delete(id)
+				this.#scheduleAgentControlExpiry(id)
+			}
+		})
+	}
+
+	agentControls(): Record<string, MachineAgentControl> {
+		return Object.fromEntries(
+			[...this.#agentControls].map(([id, control]) => [id, {...control, observedAt: Date.now()}]),
+		)
+	}
+
+	#touchAgentControl(
+		id: string,
+		agent: MachineAgent,
+		pointer?: MachineAgentControl['pointer'],
+		feedback?: InputFeedback,
+	) {
+		const previous = this.#agentControls.get(id)
+		const control: MachineAgentControl = {
+			agent,
+			lastInputAt: Date.now(),
+			observedAt: Date.now(),
+			sequence: feedback ? ++this.#inputSequence : (previous?.sequence ?? ++this.#inputSequence),
+			feedback: feedback ? {...feedback, startedAt: Date.now()} : previous?.feedback,
+			pointer: pointer ?? previous?.pointer,
+		}
+		this.#agentControls.set(id, control)
+		this.#scheduleAgentControlExpiry(id)
+		// Heartbeats only renew server-side expiry; they do not change the visual state.
+		if (feedback || pointer || !previous || previous.agent.tokenId !== agent.tokenId)
+			this.#umbreld.eventBus.emit('machines:agent-control', {machineId: id, control})
+	}
+
+	#scheduleAgentControlExpiry(id: string) {
+		clearTimeout(this.#agentControlTimers.get(id))
+		this.#agentControlTimers.delete(id)
+		const control = this.#agentControls.get(id)
+		if (!control || this.#activeInputs.has(id)) return
+		// Restore the remaining idle time without counting unrelated or rejected
+		// requests as fresh activity by the current agent.
+		const remainingMs = Math.max(0, control.lastInputAt + agentControlTimeoutMs() - Date.now())
+		const timer = setTimeout(() => this.#clearAgentControl(id), remainingMs)
+		timer.unref()
+		this.#agentControlTimers.set(id, timer)
+	}
+
+	#clearAgentControl(id: string) {
+		clearTimeout(this.#agentControlTimers.get(id))
+		this.#agentControlTimers.delete(id)
+		if (!this.#agentControls.delete(id)) return
+		this.#umbreld.eventBus.emit('machines:agent-control', {machineId: id, control: null})
+	}
+
+	// The remembered pointer outlives an agent's turn: the guest's pointer is
+	// still where it was left. It is only wrong once the guest has gone away.
+	#forgetMachineInput(id: string) {
+		this.#agentPointers.delete(id)
+		this.#primedMachines.delete(id)
+		this.#clearAgentControl(id)
 	}
 
 	async audioCaptureSource(id: string) {
@@ -1691,7 +2000,19 @@ export default class Machines {
 			}
 			if (signal.aborted) throw signal.reason
 
-			if (unattended && !sourceImage?.windows) {
+			if (sourceImage?.familyId === 'omarchy') {
+				await prepareOmarchySeed(
+					stagingDirectory,
+					{
+						hostname: slugifyHostname(definition.name),
+						diskSizeGb: definition.diskSizeGb,
+						username: credentials.username!,
+						password: credentials.password!,
+						completionUrl: completionUrl!,
+					},
+					signal,
+				)
+			} else if (unattended && !sourceImage?.windows) {
 				await this.#createCloudInitSeed(
 					stagingDirectory,
 					definition,
@@ -1906,6 +2227,7 @@ export default class Machines {
 					? 'media/seed.iso'
 					: undefined,
 			bootMedia: sourceImage?.windows?.installer === 'windows-98' ? 'media/boot.img' : undefined,
+			seedMedia: sourceImage?.familyId === 'omarchy' ? 'media/seed.iso' : undefined,
 			portForwards: [],
 		}
 
@@ -1998,8 +2320,13 @@ export default class Machines {
 					await fse.remove(nodePath.join(this.#store.directory(id), definition.bootMedia))
 					delete definition.bootMedia
 				}
+				if (definition.seedMedia) {
+					await fse.remove(nodePath.join(this.#store.directory(id), definition.seedMedia))
+					delete definition.seedMedia
+				}
 			}
 			await this.#store.write(definition)
+			if (definition.osId === 'omarchy') await removeOmarchySetupCredentials(this.#store.directory(id))
 			await this.#emitMachines()
 			return true
 		})
@@ -2039,6 +2366,7 @@ export default class Machines {
 	}
 
 	async stopMachine(id: string) {
+		this.#forgetMachineInput(id)
 		return this.#withMachineLock(id, async () => {
 			this.#assertBackupIdle(id)
 			const definition = await this.#definition(id)
@@ -2076,6 +2404,7 @@ export default class Machines {
 	}
 
 	async forceStopMachine(id: string) {
+		this.#forgetMachineInput(id)
 		this.#assertBackupIdle(id)
 		// Cancellation happens before the lifecycle lock because the detached
 		// install may be waiting to acquire that same lock before auto-starting.
@@ -2120,6 +2449,11 @@ export default class Machines {
 			this.#installProgress.delete(id)
 			this.#installationStates.delete(id)
 			await this.#store.remove(id)
+			this.#forgetMachineInput(id)
+			// MCP bookkeeping is best effort, a failure here must never abort the uninstall
+			await this.#umbreld.mcp
+				.removeMachineGrant(id)
+				.catch((error) => this.logger.error(`Failed to remove MCP grant for machine ${id}`, error))
 			if (externalDisk) await fse.remove(externalDisk)
 			await this.#libvirt.cleanupRuntime(id)
 			await this.#libvirt.reconcileNetwork(await this.#store.list())
@@ -2255,7 +2589,7 @@ export default class Machines {
 			if (definition.firstBootSetup) throw new Error('[machine-first-boot-setup-in-progress]')
 			if ((await this.#libvirt.state(id)) !== 'stopped') await this.#libvirt.ejectInstallMedia(definition)
 
-			const mediaPaths = [definition.installMedia, definition.bootMedia]
+			const mediaPaths = [definition.installMedia, definition.seedMedia, definition.bootMedia]
 				.filter((path): path is string => !!path)
 				.map((path) => nodePath.join(this.#store.directory(id), path))
 			if (definition.installMedia) {
@@ -2264,6 +2598,7 @@ export default class Machines {
 			if (definition.bootMedia) {
 				delete definition.bootMedia
 			}
+			delete definition.seedMedia
 			await this.#store.write(definition)
 			await Promise.all(mediaPaths.map((path) => fse.remove(path)))
 			await this.#emitMachines()

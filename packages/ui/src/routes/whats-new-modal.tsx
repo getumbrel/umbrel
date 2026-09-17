@@ -57,16 +57,16 @@ const FEATURES: Feature[] = [
 		descriptionTKey: 'whats-new-umbrelos-2-0.machines-description',
 	},
 	{
-		id: 'multi-user',
-		image: '/assets/whats-new/multi-user.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.multi-user-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.multi-user-description',
-	},
-	{
 		id: 'ai-agents',
 		image: '/assets/whats-new/ai-agents.webp',
 		titleTKey: 'whats-new-umbrelos-2-0.ai-agents-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.ai-agents-description',
+	},
+	{
+		id: 'multi-user',
+		image: '/assets/whats-new/multi-user.webp',
+		titleTKey: 'whats-new-umbrelos-2-0.multi-user-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-0.multi-user-description',
 	},
 	{
 		id: 'storage-manager',
@@ -197,7 +197,16 @@ export function WhatsNewModal() {
 		<ImmersiveDialog {...dialogProps}>
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
-				<ImmersiveDialogContent size='sm' onInteractOutside={(e) => e.preventDefault()}>
+				<ImmersiveDialogContent
+					size='sm'
+					onOpenAutoFocus={(e) => {
+						// The dialog opens on its own, so move focus into it (rather than
+						// leaving it behind the overlay) without ringing the first button.
+						e.preventDefault()
+						;(e.currentTarget as HTMLElement).focus()
+					}}
+					onInteractOutside={(e) => e.preventDefault()}
+				>
 					<DialogTitle className='sr-only'>{t('whats-new.title', {version: WHATS_NEW_VERSION_NAME})}</DialogTitle>
 
 					{/* Carousel Container: bleeds to the dialog's edges, the media curving with its top corners */}

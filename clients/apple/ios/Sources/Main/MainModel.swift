@@ -868,12 +868,15 @@ final class MainModel {
 			}
 		}
 		do {
-			guard try presentationLedger.recordObservedChanges(
-				inserted: candidates(changes.inserted),
-				contentChanged: candidates(changes.contentChanged),
-				metadataChanged: candidates(changes.metadataChanged),
-				deviceId: configuration.source.id
-			) else { return }
+			let backupChanged = try BackgroundTaskAssertion.perform("Record photo library changes") {
+				try presentationLedger.recordObservedChanges(
+					inserted: candidates(changes.inserted),
+					contentChanged: candidates(changes.contentChanged),
+					metadataChanged: candidates(changes.metadataChanged),
+					deviceId: configuration.source.id
+				)
+			}
+			guard backupChanged else { return }
 			// No network action happens here. A pending revision stays durable while
 			// offline and the PhotoKit extension uploads it whenever its normal
 			// scheduling and transport requirements are satisfied.
@@ -1193,7 +1196,9 @@ final class MainModel {
 				)
 			}
 			guard !confirmed.isEmpty else { return }
-			try presentationLedger.recordConfirmedResources(confirmed)
+			try BackgroundTaskAssertion.perform("Record confirmed photo backup resources") {
+				try presentationLedger.recordConfirmedResources(confirmed)
+			}
 			Self.logger.notice(
 				"Confirmed \(confirmed.count, privacy: .public) photo backup resources from Umbrel"
 			)
@@ -2013,11 +2018,13 @@ final class MainModel {
 			let storagePaused = previousSnapshot.sourceId == configuration.source.id
 				&& previousSnapshot.issue == .insufficientStorage
 			if previousConfiguration != configuration, !storagePaused {
-				try ledger.requeueFailedAssets(
-					deviceId: source.id,
-					includePhotos: includePhotos,
-					includeVideos: includeVideos
-				)
+				try BackgroundTaskAssertion.perform("Requeue failed photo backup assets") {
+					try ledger.requeueFailedAssets(
+						deviceId: source.id,
+						includePhotos: includePhotos,
+						includeVideos: includeVideos
+					)
+				}
 			}
 			guard backupSetupIsCurrent(
 				revision: revision,

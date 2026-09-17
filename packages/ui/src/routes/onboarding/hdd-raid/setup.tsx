@@ -14,6 +14,7 @@ import {useAuth} from '@/modules/auth/use-auth'
 import {Progress} from '@/modules/bare/progress'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {AccountCredentials} from '@/routes/onboarding/create-account'
+import {isTransportError} from '@/trpc/is-transport-error'
 import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
 
@@ -34,7 +35,7 @@ export default function HddRaidSetup() {
 	const {suppressErrors, shutdown} = useGlobalSystemState()
 
 	// Poll for RAID setup completion after reboot: true (complete), false (in progress),
-	// or throws (failed). Network errors are expected while the device reboots.
+	// or throws (failed). Transport errors are expected while the device reboots.
 	const raidStatusQ = trpcReact.hardware.raid.checkInitialRaidSetupStatus.useQuery(undefined, {
 		enabled: phase === 'restarting',
 		refetchInterval: phase === 'restarting' ? 2000 : false,
@@ -44,11 +45,8 @@ export default function HddRaidSetup() {
 	useEffect(() => {
 		if (phase !== 'restarting') return
 		if (raidStatusQ.data === true) setPhase('complete')
-		if (raidStatusQ.isError) {
-			const errorMessage = raidStatusQ.error?.message ?? ''
-			const isNetworkError = errorMessage.includes('fetch failed') || errorMessage.includes('Failed to fetch')
-			if (!isNetworkError) setPhase('error')
-		}
+		// Only an error the server answered with means setup failed - keep polling through the reboot
+		if (raidStatusQ.isError && !isTransportError(raidStatusQ.error)) setPhase('error')
 	}, [phase, raidStatusQ.data, raidStatusQ.isError, raidStatusQ.error])
 
 	const loginMut = trpcReact.user.login.useMutation({

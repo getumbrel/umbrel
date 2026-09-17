@@ -20,6 +20,58 @@ USER_FILE="${UMBREL_ROOT}/db/user.json"
 
 CURRENT_SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
 
+# Each shell owns its temporary files, including compose subshells used for
+# bounded logs. An exports subshell must not remove its parent's source file.
+_umbrel_runtime_temp_owner="${BASHPID}"
+_umbrel_runtime_temp_files=()
+
+_umbrel_runtime_cleanup_temp_files() {
+  local -r status=$?
+  if [[ "${BASHPID}" == "${_umbrel_runtime_temp_owner}" ]] && (( ${#_umbrel_runtime_temp_files[@]} > 0 )); then
+    rm -f -- "${_umbrel_runtime_temp_files[@]}" || true
+  fi
+  return "${status}"
+}
+
+_umbrel_runtime_wrap_cleanup_trap() {
+  local -r handler="${1}"
+  local -r signal="${2}"
+  if [[ -z "${handler}" && "${signal}" != EXIT ]]; then
+    # Keep ignored signals ignored; the shell may still be sourcing a temp file.
+    trap '' "${signal}"
+  elif [[ "${handler}" == *'_umbrel_runtime_cleanup_temp_files'* ]]; then
+    trap "${handler}" "${signal}"
+  else
+    # Evaluate the shell-quoted handler separately so empty actions, comments,
+    # and trailing semicolons cannot break the surrounding cleanup wrapper.
+    local quoted_handler
+    printf -v quoted_handler '%q' "${handler}"
+    # The if/else avoids errexit on a nonzero cleanup return while preserving
+    # the original $? for the handler, including the legacy update handlers.
+    trap 'if _umbrel_runtime_cleanup_temp_files; then eval '"${quoted_handler}"'; else eval '"${quoted_handler}"'; fi' "${signal}"
+  fi
+}
+
+_umbrel_runtime_track_temp_file() {
+  if [[ "${BASHPID}" != "${_umbrel_runtime_temp_owner}" ]]; then
+    _umbrel_runtime_temp_owner="${BASHPID}"
+    _umbrel_runtime_temp_files=()
+  fi
+  _umbrel_runtime_temp_files+=("${1}")
+  local signal existing_trap
+  for signal in EXIT INT TERM; do
+    existing_trap="$(trap -p "${signal}")"
+    if [[ -n "${existing_trap}" ]]; then
+      # trap -p supplies shell-quoted arguments; forward them to our wrapper.
+      eval "${existing_trap/#trap -- /_umbrel_runtime_wrap_cleanup_trap }"
+    elif [[ "${signal}" == EXIT ]]; then
+      _umbrel_runtime_wrap_cleanup_trap ':' EXIT
+    else
+      _umbrel_runtime_wrap_cleanup_trap "trap - ${signal}; kill -s ${signal} \"\${BASHPID}\"" "${signal}"
+    fi
+  done
+}
+
 APP_PROXY_SERVICE_NAME="app_proxy"
 # We'll pass this in from umbreld
 # REMOTE_TOR_ACCESS="false"
@@ -35,7 +87,7 @@ Usage: app <command> <app> [<arguments>]
 
 Commands:
     install                     Pulls down images for an app and starts it
-    uninstall                   Removes images and destroys all data for an app
+    uninstall                   Removes containers and destroys all data for an app
     reinstall                   Calls 'uninstall', followed by 'install' for an app
     start                       Starts an installed app
     stop                        Stops an installed app
@@ -202,15 +254,25 @@ source_app() {
     EXPORTS_APP_DATA_DIR="$(printf '%s' "${_umbrel_runtime_data_roots}" | jq --exit-status --raw-output --arg app "${EXPORTS_APP_ID}" '.[$app]')"
 
     if [[ -f "${EXPORTS_APP_FILE}" ]]; then
-      # We replace the literal text "${UMBREL_ROOT}/scripts/app" within the exports.sh file with the path to this script
-      sed -i 's|"${UMBREL_ROOT}/scripts/app"|'"${CURRENT_SCRIPT_PATH}"'|g' "${EXPORTS_APP_FILE}"
-
-      # We replace the literal text "${UMBREL_ROOT}/db/user.json" within the exports.sh file with the path to the umbrel.yaml file
-      # This specifically handles the Tailscale app
-      sed -i 's|"${UMBREL_ROOT}/db/user.json"|"${UMBREL_ROOT}/umbrel.yaml"|g' "${EXPORTS_APP_FILE}"
-
-      # Source the modified temporary exports file
-      . "${EXPORTS_APP_FILE}"
+      # Apply the legacy path rewrites to a temporary copy and source that, so
+      # sourcing never writes to the installed exports.sh. Every dependent
+      # sources a dependency's exports on start/stop/update, and rewriting the
+      # file in place there raced the dependency's own update replacing it,
+      # leaving an empty or truncated exports.sh behind. The copy lives next
+      # to the original so exports that resolve paths relative to BASH_SOURCE
+      # (e.g. peerswap, invoice-ninja) still see their own app directory.
+      #
+      # "${UMBREL_ROOT}/scripts/app" is rewritten to the path of this script and
+      # "${UMBREL_ROOT}/db/user.json" to the umbrel.yaml file (for Tailscale).
+      local exports_app_temp_file
+      exports_app_temp_file="$(mktemp "${EXPORTS_APP_FILE}.tmp.XXXXXX")"
+      _umbrel_runtime_track_temp_file "${exports_app_temp_file}"
+      sed \
+        -e 's|"${UMBREL_ROOT}/scripts/app"|'"${CURRENT_SCRIPT_PATH}"'|g' \
+        -e 's|"${UMBREL_ROOT}/db/user.json"|"${UMBREL_ROOT}/umbrel.yaml"|g' \
+        "${EXPORTS_APP_FILE}" > "${exports_app_temp_file}"
+      . "${exports_app_temp_file}"
+      rm -f "${exports_app_temp_file}"
     fi
   done
 
@@ -340,7 +402,12 @@ compose() {
   shift
 
   # Source env.
-  source_app "${app}"
+  if [[ "${command}" == "images" ]]; then
+    # Keep exports' diagnostic output out of the machine-readable image list.
+    source_app "${app}" >&2
+  else
+    source_app "${app}"
+  fi
 
   # Define support compose files
   local -r app_gateway_compose_file="${SCRIPT_DOCKER_FRAGMENTS}/docker-compose.app_gateway.yml"
@@ -359,38 +426,47 @@ compose() {
   has_app_proxy_service=$(cat "${app_compose_file}" | yq ".services | has(\"${APP_PROXY_SERVICE_NAME}\")")
 
   if [[ "${has_app_proxy_service}" == "true" ]]; then
-    # Render app_proxy configuration with the exact environment Docker Compose
-    # uses for the app. Umbreld consumes this file for its in-process gateway;
-    # the app_proxy service itself is still removed from the runtime compose.
-    local app_gateway_config_file="${app_data_dir}/app-gateway.json"
-    local app_gateway_config_temp_file="${app_gateway_config_file}.tmp.$$"
-    if ! docker compose \
-      --project-name "${app}" \
-      --file "${app_gateway_compose_file}" \
-      --file "${app_compose_file}" \
-      config --format json \
-      | jq '(.services.app_proxy.environment // {}) | {
-          APP_HOST: .APP_HOST,
-          APP_PORT: .APP_PORT,
-          APP_PROTOCOL: .APP_PROTOCOL,
-          PROXY_AUTH_ADD: .PROXY_AUTH_ADD,
-          PROXY_AUTH_WHITELIST: .PROXY_AUTH_WHITELIST,
-          PROXY_AUTH_BLACKLIST: .PROXY_AUTH_BLACKLIST,
-          PROXY_TRUST_UPSTREAM: .PROXY_TRUST_UPSTREAM,
-          PROXY_TIMEOUT: .PROXY_TIMEOUT
-        } | with_entries(select(.value != null))' > "${app_gateway_config_temp_file}"
-    then
-      rm -f "${app_gateway_config_temp_file}"
-      return 1
-    fi
-    mv "${app_gateway_config_temp_file}" "${app_gateway_config_file}"
-    chmod 600 "${app_gateway_config_file}"
+    if [[ "${command}" == "images" ]]; then
+      # Resolve the installed config without rewriting the running app's gateway
+      # or runtime files. Keep the temporary file beside the original so relative
+      # Compose paths retain their meaning.
+      app_runtime_compose_file="$(mktemp "${app_data_dir}/docker-compose.images.XXXXXX")"
+      _umbrel_runtime_track_temp_file "${app_runtime_compose_file}"
+      yq 'del(.services.app_proxy)' "${app_compose_file}" > "${app_runtime_compose_file}"
+    else
+      # Render app_proxy configuration with the exact environment Docker Compose
+      # uses for the app. Umbreld consumes this file for its in-process gateway;
+      # the app_proxy service itself is still removed from the runtime compose.
+      local app_gateway_config_file="${app_data_dir}/app-gateway.json"
+      local app_gateway_config_temp_file="${app_gateway_config_file}.tmp.$$"
+      if ! docker compose \
+        --project-name "${app}" \
+        --file "${app_gateway_compose_file}" \
+        --file "${app_compose_file}" \
+        config --format json \
+        | jq '(.services.app_proxy.environment // {}) | {
+            APP_HOST: .APP_HOST,
+            APP_PORT: .APP_PORT,
+            APP_PROTOCOL: .APP_PROTOCOL,
+            PROXY_AUTH_ADD: .PROXY_AUTH_ADD,
+            PROXY_AUTH_WHITELIST: .PROXY_AUTH_WHITELIST,
+            PROXY_AUTH_BLACKLIST: .PROXY_AUTH_BLACKLIST,
+            PROXY_TRUST_UPSTREAM: .PROXY_TRUST_UPSTREAM,
+            PROXY_TIMEOUT: .PROXY_TIMEOUT
+          } | with_entries(select(.value != null))' > "${app_gateway_config_temp_file}"
+      then
+        rm -f "${app_gateway_config_temp_file}"
+        return 1
+      fi
+      mv "${app_gateway_config_temp_file}" "${app_gateway_config_file}"
+      chmod 600 "${app_gateway_config_file}"
 
-    # app_proxy is now implemented in umbreld. Keep its declaration in the
-    # installed compose file as gateway configuration, but never create a sidecar.
-    app_runtime_compose_file="${app_data_dir}/docker-compose.umbreld.yml"
-    yq 'del(.services.app_proxy)' "${app_compose_file}" > "${app_runtime_compose_file}"
-  else
+      # app_proxy is now implemented in umbreld. Keep its declaration in the
+      # installed compose file as gateway configuration, but never create a sidecar.
+      app_runtime_compose_file="${app_data_dir}/docker-compose.umbreld.yml"
+      yq 'del(.services.app_proxy)' "${app_compose_file}" > "${app_runtime_compose_file}"
+    fi
+  elif [[ "${command}" != "images" ]]; then
     rm -f "${app_data_dir}/app-gateway.json"
   fi
 
@@ -473,7 +549,24 @@ copy_app_files() {
     APP_FILES="${app_repo_dir}/${filename}"
 
     for app_file in $APP_FILES; do
-      if [[ -f "${app_file}" ]] || [[ -d "${app_file}" ]]; then
+      if [[ -f "${app_file}" ]]; then
+        # Copy to a temporary file and rename it into place so a dependent
+        # sourcing this app's exports.sh (or umbreld reading its compose file
+        # and manifest) only ever sees the complete old or new file, never the
+        # truncated file an in-place copy leaves while it writes.
+        local app_file_destination="${app_data_dir}/$(basename "${app_file}")"
+        local app_file_temp_file
+        app_file_temp_file="$(mktemp "${app_file_destination}.tmp.XXXXXX")"
+        _umbrel_runtime_track_temp_file "${app_file_temp_file}"
+        if $cp --archive "${app_file}" "${app_file_temp_file}" && mv -f "${app_file_temp_file}" "${app_file_destination}"; then
+          continue
+        else
+          local copy_status=$?
+          # Clean up failed copies even when already running inside an EXIT trap.
+          rm -f "${app_file_temp_file}" || true
+          return "${copy_status}"
+        fi
+      elif [[ -d "${app_file}" ]]; then
         $cp --archive "${app_file}" "${app_data_dir}"
       fi
     done
@@ -628,8 +721,8 @@ if [[ "$command" = "uninstall" ]]; then
     post_uninstall_app_hook=""
   fi
 
-  echo "Removing images for app ${app}..."
-  compose "${app}" down --rmi all --remove-orphans
+  echo "Removing containers for app ${app}..."
+  compose "${app}" down --remove-orphans
 
   echo "Deleting app data for app ${app}..."
   if [[ -d "${app_data_dir}" ]]; then
@@ -665,7 +758,8 @@ if [[ "$command" = "stop" ]]; then
 fi
 
 # Removes app containers without running hooks. This is reserved for recovery
-# when the app's configured storage is unavailable and its hooks cannot run.
+# when storage is unavailable, and for the final teardown during uninstall.
+# Image removal belongs to umbreld's sweep, which protects stopped apps too.
 if [[ "$command" = "force-stop" ]]; then
   compose "${app}" down --remove-orphans
   exit
@@ -726,9 +820,6 @@ if [[ "$command" = "update" ]]; then
   fi
 
   echo "Updating '${app}' from: ${app_repo_dir}"
-  # Save current images to clean up later
-  app_compose_file="${app_data_dir}/docker-compose.yml"
-  app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
 
   if [[ "$*" != *"--skip-stop"* ]]; then
     "${0}" "stop" "${app}"
@@ -739,15 +830,10 @@ if [[ "$command" = "update" ]]; then
   # App updates will only copy files from this whitelist:
   UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh torrc hooks"
 
-  # We copy umbrel-app.yml after the app has started
-  # That way the frontend knows the update has finished
-  # And the app is running again
+  # Keep the previous manifest if exports, templates, or image pulls fail.
   UPDATE_FILES_WHITELIST_POST="umbrel-app.yml"
 
   copy_app_files "${UPDATE_FILES_WHITELIST_PRE}"
-
-  # Ensure remaining files are copied in case of unexpected exit
-  trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
 
   # Source env. after new exports.sh is copied (done above via 'copy_app_files')
   source_app "${app}"
@@ -758,13 +844,11 @@ if [[ "$command" = "update" ]]; then
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
 
-  # Copy remaining files to mark update as complete
+  # Publish the new manifest after package preparation succeeds.
   copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
 
   if [[ "$*" != *"--skip-start"* ]]; then
     "${0}" "start" "${app}"
-    # Remove any old images we don't need anymore
-    docker rmi $app_old_images || true
   fi
 
   execute_hook "${app}" "post-update"
@@ -785,9 +869,6 @@ if [[ "$command" = "pre-patch-update" ]]; then
   fi
 
   echo "Updating '${app}' from: ${app_repo_dir}"
-  # Save current images to clean up later
-  app_compose_file="${app_data_dir}/docker-compose.yml"
-  app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
 
   if [[ "$*" != *"--skip-stop"* ]]; then
     "${0}" "stop" "${app}"
@@ -798,15 +879,11 @@ if [[ "$command" = "pre-patch-update" ]]; then
   # App updates will only copy files from this whitelist:
   UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh torrc hooks"
 
-  # We copy umbrel-app.yml after the app has started
-  # That way the frontend knows the update has finished
-  # And the app is running again
+  # Keep the previous manifest if loading exports or rendering templates fails.
+  # Umbreld needs the new metadata once this file phase succeeds.
   UPDATE_FILES_WHITELIST_POST="umbrel-app.yml"
 
   copy_app_files "${UPDATE_FILES_WHITELIST_PRE}"
-
-  # Ensure remaining files are copied in case of unexpected exit
-  trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
 
   # Source env. after new exports.sh is copied (done above via 'copy_app_files')
   source_app "${app}"
@@ -814,7 +891,7 @@ if [[ "$command" = "pre-patch-update" ]]; then
   # Now apply templates
   template_app "${app}"
 
-  # Copy remaining files to mark update as complete
+  # Publish the new manifest for umbreld's compose patching and startup phases.
   copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
 
   exit
@@ -830,9 +907,8 @@ if [[ "$command" = "post-patch-update" ]]; then
   exit
 fi
 
-# Nuke app images
-if [[ "$command" = "nuke-images" ]]; then
-  compose "${app}" down --rmi all --remove-orphans
+if [[ "$command" = "images" ]]; then
+  compose "${app}" --profile '*' config --images
   exit
 fi
 

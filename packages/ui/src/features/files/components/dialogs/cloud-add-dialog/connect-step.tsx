@@ -210,7 +210,11 @@ function OAuthConnect({
 						disabled={!code.trim() || oauth.isCompleting}
 						onClick={() => oauth.complete(code)}
 					>
-						{oauth.isCompleting ? <Loader2 className='size-4 animate-spin' /> : t('files-cloud.oauth-finish')}
+						{/* The label stays in the layout under the spinner so the button keeps its width */}
+						<span className='relative inline-flex items-center justify-center'>
+							<span className={oauth.isCompleting ? 'opacity-0' : undefined}>{t('files-cloud.oauth-finish')}</span>
+							{oauth.isCompleting && <Loader2 className='absolute size-4 animate-spin' />}
+						</span>
 					</Button>
 				</DialogFooter>
 			</div>

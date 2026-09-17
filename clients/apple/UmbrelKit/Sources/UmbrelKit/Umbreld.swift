@@ -165,6 +165,37 @@ public enum Umbreld {
 		public let host: String
 	}
 
+	public enum ManualDiscoveryResult: Equatable, Sendable {
+		case device(IdentifiedDevice)
+		case updateRequired(UpdateRequiredDevice)
+	}
+
+	public enum ManualDiscoveryError: Swift.Error, LocalizedError, Equatable, Sendable {
+		case invalidAddress
+		case noDeviceFound
+
+		public var errorDescription: String? {
+			switch self {
+			case .invalidAddress:
+				"Enter a local or Tailscale IP address, .local hostname, or Tailscale MagicDNS name."
+			case .noDeviceFound:
+				"Couldn\u{2019}t find an Umbrel at this address. Make sure it\u{2019}s online and reachable."
+			}
+		}
+	}
+
+	enum ManualDiscoveryHost: Equatable, Sendable {
+		case direct(String)
+		case unqualifiedHostname(String)
+		case tailscaleDNS(String)
+
+		var value: String {
+			switch self {
+			case .direct(let host), .unqualifiedHostname(let host), .tailscaleDNS(let host): host
+			}
+		}
+	}
+
 	struct LocalHTTPSIdentity: Decodable {
 		let id: String
 		let caCertificate: String
@@ -441,16 +472,23 @@ public enum Umbreld {
 		_ candidate: Candidate,
 		knownDeviceIds: Set<String>,
 		requiredDeviceId: String? = nil,
+		allowsTailscaleHost: Bool = false,
 		probe: IdentityProbe? = nil
 	) async -> IdentifiedDevice? {
-		guard let candidate = localDiscoveryCandidate(candidate) else { return nil }
+		let acceptedCandidate: Candidate
+		if allowsTailscaleHost {
+			acceptedCandidate = candidate
+		} else {
+			guard let localCandidate = localDiscoveryCandidate(candidate) else { return nil }
+			acceptedCandidate = localCandidate
+		}
 		let probe = probe ?? { host, expectedDeviceId in
 			try? await verifiedLocalHTTPSIdentity(host: host, expectedDeviceId: expectedDeviceId)
 		}
 		let hintedDeviceId = requiredDeviceId
-			?? candidate.id.flatMap { knownDeviceIds.contains($0) ? $0 : nil }
+			?? acceptedCandidate.id.flatMap { knownDeviceIds.contains($0) ? $0 : nil }
 		var attemptedHosts = Set<String>()
-		for host in [candidate.host] + candidate.addresses where attemptedHosts.insert(host).inserted {
+		for host in [acceptedCandidate.host] + acceptedCandidate.addresses where attemptedHosts.insert(host).inserted {
 			guard !Task.isCancelled else { return nil }
 			guard var verified = await probe(host, hintedDeviceId) else { continue }
 			var identity = verified.discoveryInfo
@@ -467,9 +505,9 @@ public enum Umbreld {
 			}
 			return IdentifiedDevice(
 				host: host,
-				discoveryHost: candidate.host,
-				addresses: candidate.addresses,
-				name: candidate.name,
+				discoveryHost: acceptedCandidate.host,
+				addresses: acceptedCandidate.addresses,
+				name: acceptedCandidate.name,
 				id: identity.id,
 				model: identity.device,
 				onboarded: identity.onboarded,
@@ -516,6 +554,128 @@ public enum Umbreld {
 			byId[device.id] = device
 		}
 		return byId.values.sorted { $0.host < $1.host }
+	}
+
+	// Manual discovery is an explicit user action, so unlike passive Bonjour it may
+	// probe a Tailscale endpoint. A plain HTTP(S) root URL is normalized to its host.
+	// Short hostnames may resolve to a safe LAN or Tailscale address, while full MagicDNS
+	// names resolve only to a literal Tailscale address because Umbrel's pinned certificate
+	// covers its interface IP, not a user-controlled tailnet name. The address still supplies
+	// no identity authority: the bootstrap CA must prove the same discovery id over HTTPS,
+	// and a saved device is revalidated against its existing pin before it is returned.
+	public static func discoverManually(
+		at input: String,
+		knownDeviceIds: Set<String> = []
+	) async throws -> ManualDiscoveryResult {
+		guard let parsedHost = manualDiscoveryHostKind(from: input) else {
+			throw ManualDiscoveryError.invalidAddress
+		}
+		let candidate: Candidate
+		switch parsedHost {
+		case .direct:
+			guard let direct = manualDiscoveryCandidate(from: input) else {
+				throw ManualDiscoveryError.invalidAddress
+			}
+			candidate = direct
+		case .unqualifiedHostname(let hostname), .tailscaleDNS(let hostname):
+			let addresses = try await IPv4HostResolver.resolve(hostname)
+			try Task.checkCancellation()
+			guard !addresses.isEmpty else {
+				throw ManualDiscoveryError.noDeviceFound
+			}
+			guard let resolved = manualDiscoveryCandidate(
+				from: input,
+				resolvedIPv4Addresses: addresses
+			) else {
+				throw ManualDiscoveryError.noDeviceFound
+			}
+			candidate = resolved
+		}
+		if let device = await identifyCandidate(
+			candidate,
+			knownDeviceIds: knownDeviceIds,
+			allowsTailscaleHost: true
+		) {
+			return .device(device)
+		}
+		try Task.checkCancellation()
+		if let updateRequired = await probeFallbackHost(candidate.host) {
+			return .updateRequired(updateRequired)
+		}
+		try Task.checkCancellation()
+		throw ManualDiscoveryError.noDeviceFound
+	}
+
+	static func manualDiscoveryCandidate(
+		from input: String,
+		resolvedIPv4Addresses: [String] = []
+	) -> Candidate? {
+		guard let parsedHost = manualDiscoveryHostKind(from: input) else { return nil }
+		switch parsedHost {
+		case .direct(let host):
+			return Candidate(host: host, name: host)
+		case .unqualifiedHostname(let hostname):
+			return resolvedManualDiscoveryCandidate(
+				hostname: hostname,
+				addresses: resolvedIPv4Addresses,
+				accepts: SavedDevice.isSupportedManualIPv4Address
+			)
+		case .tailscaleDNS(let hostname):
+			return resolvedManualDiscoveryCandidate(
+				hostname: hostname,
+				addresses: resolvedIPv4Addresses,
+				accepts: SavedDevice.isTailscaleAddress
+			)
+		}
+	}
+
+	private static func resolvedManualDiscoveryCandidate(
+		hostname: String,
+		addresses: [String],
+		accepts: (String) -> Bool
+	) -> Candidate? {
+		var seen = Set<String>()
+		let accepted = addresses.filter { accepts($0) && seen.insert($0).inserted }
+		guard let host = accepted.first else { return nil }
+		return Candidate(host: host, addresses: Array(accepted.dropFirst()), name: hostname)
+	}
+
+	static func manualDiscoveryHost(from input: String) -> String? {
+		manualDiscoveryHostKind(from: input)?.value
+	}
+
+	static func manualDiscoveryHostKind(from input: String) -> ManualDiscoveryHost? {
+		guard var host = normalizedManualDiscoveryHost(from: input) else { return nil }
+		if host.hasSuffix(".") { host.removeLast() }
+		guard !host.isEmpty else { return nil }
+		if SavedDevice.isIPv4Address(host) {
+			guard SavedDevice.isSupportedManualIPv4Address(host) else { return nil }
+			return .direct(host)
+		}
+		if SavedDevice.isBonjourHostname(host) { return .direct(host) }
+		guard SavedDevice.isDNSHostname(host) else { return nil }
+		let labels = host.split(separator: ".", omittingEmptySubsequences: false)
+		if labels.count == 1 { return .unqualifiedHostname(host) }
+		return host.hasSuffix(".ts.net") ? .tailscaleDNS(host) : nil
+	}
+
+	private static func normalizedManualDiscoveryHost(from input: String) -> String? {
+		let value = input.trimmingCharacters(in: .whitespacesAndNewlines)
+		let lowercased = value.lowercased()
+		guard lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://") else {
+			return lowercased
+		}
+		guard let components = URLComponents(string: value),
+			components.scheme?.lowercased() == "http" || components.scheme?.lowercased() == "https",
+			let host = components.host,
+			components.user == nil,
+			components.password == nil,
+			components.port == nil,
+			components.path.isEmpty || components.path == "/",
+			components.query == nil,
+			components.fragment == nil
+		else { return nil }
+		return host.lowercased()
 	}
 
 	// Older umbrelOS releases predate the _umbrel._tcp advertisement, so Bonjour has
@@ -1010,6 +1170,7 @@ public enum Umbreld {
 		public let version: String?
 		public let icon: String? // fully-qualified URL (manifest icon or gallery SVG)
 		public let state: String? // e.g. "ready", "updating"; drives progress overlays
+		public let progress: Double? // 0...100 while installing or updating
 		public let port: Int?
 		public let path: String? // optional URL path the app serves under, e.g. "/web"
 
@@ -1041,6 +1202,7 @@ public enum Umbreld {
 				version: version,
 				icon: icon,
 				state: state,
+				progress: progress,
 				port: port,
 				path: path,
 				torOnly: torOnly,

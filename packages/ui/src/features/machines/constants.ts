@@ -54,6 +54,8 @@ export const coreOptions = (threads: number | undefined) =>
 //                   wiki.alpinelinux.org/wiki/Requirements
 //   Android 13      Waydroid publishes nothing; these cover the Ubuntu host plus
 //                   the ~16 GB Android system/vendor images
+//   Omarchy 4       Conservative VM budgets for the full desktop; upstream does
+//                   not publish installation minimums (omarchy.org).
 //   Windows 11      2 vCPU / 4 GB / 64 GB, incl. an explicit VM section. We
 //                   default to 96 GB because a feature update on a 64 GB disk
 //                   runs out of servicing headroom
@@ -109,6 +111,7 @@ const machineSpecProfiles: Record<string, MachineSpecProfile> = {
 	'debian:Server': specProfile(2, 2, 15, 1, 1, 4),
 	alpine: specProfile(2, 1, 8, 1, 1, 2),
 	android: specProfile(4, 8, 40, 2, 4, 25),
+	omarchy: specProfile(4, 8, 40, 2, 4, 25),
 	'windows-11': specProfile(4, 8, 96, 2, 4, 64),
 	'windows-server': specProfile(4, 8, 80, 2, 4, 32),
 	'windows-7': specProfile(2, 2, 40, 1, 2, 20),
@@ -153,6 +156,7 @@ export const osVisuals: Record<string, OsVisuals> = {
 	debian: {color: '#D70A53'},
 	alpine: {color: '#0D597F'},
 	android: {color: '#3DDC84'},
+	omarchy: {color: '#9ECE6A'},
 	'windows-11': {color: '#0078D4'},
 	'windows-server': {color: '#0078D4'},
 	'windows-7': {color: '#00ADEF'},

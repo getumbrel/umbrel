@@ -1,17 +1,17 @@
-import {Activity, ShieldCheck, SlidersHorizontal, Sparkles, type LucideIcon} from 'lucide-react'
+import {Activity, MonitorSmartphone, SlidersHorizontal, Sparkles, type LucideIcon} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {Bubble, BubbleContent, BubbleReactions} from '@/components/ui/bubble'
 import {cn} from '@/lib/utils'
-import {MCP_AGENTS, type McpAgent} from '@/routes/settings/mcp/agents'
+import {MCP_AGENTS, type McpAgent, type McpAgentId} from '@/routes/settings/mcp/agents'
 import {AgentLogoPlate} from '@/routes/settings/mcp/constellation'
 
 // The pitch as a replay: instead of cards telling what agents can do, a small
 // chat stage shows it. Four scripted exchanges play out in speech bubbles —
-// install an app, troubleshoot, hit a permission wall, delete safely — while a
-// single caption beneath morphs to name the promise each one demonstrates. A
+// install an app, put a machine to work, troubleshoot, hit a permission wall —
+// while a single caption beneath morphs to name the promise each one demonstrates. A
 // story-style progress bar keeps the rhythm legible and doubles as a scrubber.
 // Each scenario is answered by a different registry agent, so the same faces
 // orbiting the constellation above are the ones seen doing the work — and the
@@ -38,6 +38,10 @@ const HOLD_MS = 1400 // linger on the finished exchange before it slides away
 const clampMs = (ms: number, min: number, max: number) => Math.min(max, Math.max(min, ms))
 const readMs = (text: string) => clampMs(600 + text.length * 26, 1000, 3200)
 const typeMs = (text: string) => clampMs(500 + text.length * 7, 800, 1500)
+
+// Scenarios cast their agent by id, so the on-screen order is the pitch's own
+// rather than a side effect of the registry's display order
+const agentById = (id: McpAgentId) => MCP_AGENTS.find((agent) => agent.id === id)!
 
 type TimelineEvent = {at: number; shown: number; typing: boolean}
 
@@ -79,17 +83,29 @@ export function PitchReplay() {
 				icon: Sparkles,
 				title: t('mcp-intro-point-ask-title'),
 				description: t('mcp-intro-demo-ask-card'),
-				agent: MCP_AGENTS[0],
+				agent: agentById('openclaw'),
 				script: [
 					{from: 'user', text: t('mcp-intro-demo-ask-user')},
 					{from: 'agent', text: t('mcp-intro-demo-ask-agent')},
 				],
 			},
 			{
+				icon: MonitorSmartphone,
+				title: t('mcp-intro-demo-machines-title'),
+				description: t('mcp-intro-demo-machines-card'),
+				agent: agentById('hermes'),
+				script: [
+					{from: 'user', text: t('mcp-intro-demo-machines-user-invoices')},
+					{from: 'agent', text: t('mcp-intro-demo-machines-agent-sent')},
+					{from: 'user', text: t('mcp-intro-demo-machines-user-ride')},
+					{from: 'agent', text: t('mcp-intro-demo-machines-agent-booked')},
+				],
+			},
+			{
 				icon: Activity,
 				title: t('mcp-intro-demo-troubleshoot-title'),
 				description: t('mcp-intro-demo-troubleshoot-card'),
-				agent: MCP_AGENTS[1],
+				agent: agentById('claude-code'),
 				script: [
 					{from: 'user', text: t('mcp-intro-demo-troubleshoot-user')},
 					{from: 'agent', text: t('mcp-intro-demo-troubleshoot-agent')},
@@ -99,22 +115,12 @@ export function PitchReplay() {
 				icon: SlidersHorizontal,
 				title: t('mcp-intro-point-control-title'),
 				description: t('mcp-intro-demo-access-card'),
-				agent: MCP_AGENTS[2],
+				agent: agentById('codex'),
 				script: [
 					{from: 'user', text: t('mcp-intro-demo-access-user-organize')},
 					{from: 'agent', text: t('mcp-intro-demo-access-agent-blocked')},
 					{from: 'user', text: t('mcp-intro-demo-access-user-done')},
 					{from: 'agent', text: t('mcp-intro-demo-access-agent-organized')},
-				],
-			},
-			{
-				icon: ShieldCheck,
-				title: t('mcp-intro-point-safe-title'),
-				description: t('mcp-intro-demo-safe-card'),
-				agent: MCP_AGENTS[3],
-				script: [
-					{from: 'user', text: t('mcp-intro-demo-safe-user')},
-					{from: 'agent', text: t('mcp-intro-demo-safe-agent')},
 				],
 			},
 		],

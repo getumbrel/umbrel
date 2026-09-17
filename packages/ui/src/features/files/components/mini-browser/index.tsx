@@ -331,7 +331,8 @@ function useBrowserListing(path: string, listDirectory?: (path: string) => Promi
 		}
 	}
 	return {
-		items: (local.listing?.items as FileSystemItem[]) ?? [],
+		// Disconnected configurations are manageable in Files, but cannot be picked as storage.
+		items: (local.listing?.items ?? []).filter((item) => !item.isDisconnected),
 		isLoading: local.isLoading,
 		hasMore: local.listing?.hasMore ?? false,
 		fetchMoreItems: local.fetchMoreItems,

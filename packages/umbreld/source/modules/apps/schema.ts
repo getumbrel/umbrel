@@ -1,6 +1,8 @@
 import {z} from 'zod'
 import semver from 'semver'
 
+import {NativeTlsHostnameSuffixesSchema} from './native-tls.js'
+
 // TODO: this is used outside of the apps module, move it somewhere more appropriate
 export type ProgressStatus = {
 	running: boolean
@@ -115,6 +117,7 @@ export const AppManifestSchema = z.object({
 	optimizedForUmbrelHome: z.boolean().optional(),
 	torOnly: z.boolean().optional(),
 	requiresHttps: z.boolean().optional(),
+	nativeTlsHostnameSuffixes: NativeTlsHostnameSuffixesSchema.optional(),
 	// In bytes
 	installSize: z.number().int().optional(),
 	// TODO: Define this type

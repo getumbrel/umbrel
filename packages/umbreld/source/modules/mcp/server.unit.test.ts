@@ -22,6 +22,8 @@ const noPermissions: McpPermissions = {
 	appStore: false,
 	files: [],
 	manageSystem: false,
+	machines: [],
+	createMachines: false,
 }
 let enabled = true
 let uploadRoot = ''
@@ -48,11 +50,15 @@ const umbreld = {
 	},
 	version: '1.2.3',
 	versionName: 'umbrelOS 1.2.3',
+	machines: {control: vi.fn(), screenshot: vi.fn()},
 	mcp: {
 		normalizeFilePath: vi.fn(normalizePath),
 		assertFileAccess: vi.fn(async (path: string) => ({path})),
 		assertFileWriteAccess: vi.fn(async (path: string) => ({path})),
 		authenticateToken: vi.fn(async (candidate: string) => (enabled && candidate === token ? {tokenId} : null)),
+		describeAgent: vi.fn(async (candidate: string) =>
+			candidate === token ? {tokenId, label: 'Claude Code', agentType: 'claude-code'} : undefined,
+		),
 		getPermissions: vi.fn(async () => permissions),
 		logger,
 		recordRequest: vi.fn(),
@@ -313,7 +319,7 @@ test('the same endpoint serves the default legacy client statelessly', async () 
 })
 
 test('instructions are regenerated from the current grants', async () => {
-	permissions = {apps: ['plex'], appStore: true, files: ['/Home/Shared'], manageSystem: false}
+	permissions = {...noPermissions, apps: ['plex'], appStore: true, files: ['/Home/Shared']}
 	const client = new Client(
 		{name: 'umbreld-instructions-test', version: '1.0.0'},
 		{versionNegotiation: {mode: {pin: '2026-07-28'}}},
@@ -338,7 +344,7 @@ test('instructions are regenerated from the current grants', async () => {
 })
 
 test('transfer URLs honor the forwarded scheme and host from ingress', async () => {
-	permissions = {apps: [], appStore: false, files: ['/Home/Shared'], manageSystem: false}
+	permissions = {...noPermissions, files: ['/Home/Shared']}
 	const client = new Client({name: 'umbreld-forwarded-test', version: '1.0.0'})
 	// TLS terminates at lan-ingress, which stamps these headers onto every
 	// proxied request — the raw request the adapter sees is always http
@@ -377,7 +383,7 @@ test('file search is advertised only for full Home access', async () => {
 })
 
 test('system management tools are registered with the system grant', async () => {
-	permissions = {apps: [], appStore: false, files: [], manageSystem: true}
+	permissions = {...noPermissions, manageSystem: true}
 	const client = new Client(
 		{name: 'umbreld-system-tools-test', version: '1.0.0'},
 		{versionNegotiation: {mode: {pin: '2026-07-28'}}},

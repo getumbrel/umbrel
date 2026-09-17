@@ -11,6 +11,8 @@ import {Input} from '@/components/ui/input'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
+import {MachineAppIcon} from '@/features/machines/components/machine-app-icon'
+import type {Machine} from '@/features/machines/types'
 import {cn} from '@/lib/utils'
 import {
 	AnimatedRow,
@@ -164,6 +166,154 @@ export function AppAccessDetail({
 											label={t('mcp-remove-app', {name: appById.get(appId)?.name ?? appId})}
 											disabled={busy}
 											onClick={() => onUpdate({apps: grantedAppIds.filter((id) => id !== appId)})}
+										/>
+									</div>
+								</AnimatedRow>
+							))}
+						</AnimatePresence>
+					</div>
+				)}
+			</section>
+		</div>
+	)
+}
+
+// ─── Machine access drill-in ────────────────────────────────────────
+// The same shape as app access: a machine grant hands the agent the whole
+// machine, screen and input included.
+
+export function MachineAccessDetail({
+	permissions,
+	machines,
+	busy,
+	onUpdate,
+	onBack,
+}: {
+	permissions: McpPermissions
+	machines: Machine[]
+	busy: boolean
+	onUpdate: (patch: Partial<McpPermissions>) => void
+	onBack: () => void
+}) {
+	const {t} = useTranslation()
+
+	const [machinePickerOpen, setMachinePickerOpen] = useState(false)
+	const [machineQuery, setMachineQuery] = useState('')
+	const machineQueryInputRef = useRef<HTMLInputElement>(null)
+
+	useEffect(() => {
+		if (!machinePickerOpen) return
+		const timer = window.setTimeout(() => {
+			machineQueryInputRef.current?.focus()
+			machineQueryInputRef.current?.select()
+		}, 0)
+		return () => window.clearTimeout(timer)
+	}, [machinePickerOpen])
+
+	const allMachines = permissions.machines === 'all'
+	const grantedMachineIds = permissions.machines === 'all' ? [] : permissions.machines
+	const machineById = new Map(machines.map((machine) => [machine.id, machine]))
+	const availableMachines = machines.filter((machine) => !grantedMachineIds.includes(machine.id))
+
+	const addMachineMenu = (
+		<DropdownMenu
+			open={machinePickerOpen}
+			onOpenChange={(open) => {
+				setMachinePickerOpen(open)
+				if (!open) setMachineQuery('')
+			}}
+		>
+			<DropdownMenuTrigger asChild>
+				<Button size='sm' aria-label={t('mcp-add-machine')} disabled={availableMachines.length === 0 || busy}>
+					{t('mcp-add')}
+					<PlusCircle className='h-3 w-3' />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align='end' className='flex max-h-72 min-w-64 flex-col gap-3'>
+				<Input
+					value={machineQuery}
+					className='shrink-0'
+					onChange={(e) => setMachineQuery(e.target.value)}
+					onKeyDown={(e) => {
+						e.stopPropagation()
+						if (e.key === 'Escape') setMachinePickerOpen(false)
+					}}
+					sizeVariant={'short-square'}
+					placeholder={t('app-picker.search')}
+					ref={machineQueryInputRef}
+				/>
+				{(() => {
+					const results = matchSorter(availableMachines, machineQuery, {
+						keys: ['name', 'id'],
+						threshold: matchSorter.rankings.WORD_STARTS_WITH,
+					})
+					if (results.length === 0) {
+						return <div className='px-2 text-14 text-white/50'>{t('no-results-found')}</div>
+					}
+					return (
+						<ScrollArea className='relative -mx-1 flex h-full flex-col px-1'>
+							{results.map((machine) => (
+								<DropdownMenuItem
+									key={machine.id}
+									onSelect={() => {
+										onUpdate({machines: [...grantedMachineIds, machine.id]})
+										setMachinePickerOpen(false)
+									}}
+									className='flex items-center gap-2'
+								>
+									<MachineAppIcon osId={machine.osId} state={machine.state} className='size-5' />
+									<span className='truncate'>{machine.name}</span>
+								</DropdownMenuItem>
+							))}
+						</ScrollArea>
+					)
+				})()}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	)
+
+	return (
+		<div className='flex flex-col gap-y-5'>
+			<BackButton onClick={onBack}>{t('mcp')}</BackButton>
+
+			<section className='flex flex-col gap-2'>
+				<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
+					<div className='text-15 font-semibold -tracking-2'>{t('mcp-machines')}</div>
+					<div className='flex items-center gap-3'>
+						<ShareAllToggle
+							label={t('mcp-all-machines')}
+							tooltip={t('mcp-all-machines-description')}
+							checked={allMachines}
+							disabled={busy}
+							className={cn(busy && 'umbrel-pulse')}
+							onCheckedChange={(checked) => onUpdate({machines: checked ? 'all' : []})}
+						/>
+						{!allMachines && addMachineMenu}
+					</div>
+				</div>
+				<p className='text-12 leading-tight text-white/35'>{t('mcp-machine-access-description')}</p>
+				{allMachines ? (
+					<EmptyCard>{t('mcp-all-machines-active')}</EmptyCard>
+				) : grantedMachineIds.length === 0 ? (
+					<EmptyCard>{t('mcp-no-machines')}</EmptyCard>
+				) : (
+					<div className={shareListClass()}>
+						<AnimatePresence initial={false}>
+							{grantedMachineIds.map((machineId) => (
+								<AnimatedRow key={machineId}>
+									<div className='flex items-center gap-3 p-3'>
+										<MachineAppIcon
+											osId={machineById.get(machineId)?.osId ?? 'custom'}
+											state={machineById.get(machineId)?.state}
+											className='size-8'
+										/>
+										<span className='min-w-0 flex-1 truncate text-13 font-medium -tracking-2 text-white/90'>
+											{machineById.get(machineId)?.name ?? machineId}
+										</span>
+										<RowRemoveButton
+											label={t('mcp-remove-machine', {name: machineById.get(machineId)?.name ?? machineId})}
+											disabled={busy}
+											onClick={() => onUpdate({machines: grantedMachineIds.filter((id) => id !== machineId)})}
 										/>
 									</div>
 								</AnimatedRow>

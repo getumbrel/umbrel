@@ -12,6 +12,7 @@ import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
 import {OWNER_ACCOUNT_ID} from '../auth/auth.js'
 import runGitServer from '../test-utilities/run-git-server.js'
+import App from './app.js'
 import type {AppManifest} from './schema.js'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
@@ -1515,47 +1516,62 @@ test.sequential('setSettings() saves dependencies with other settings in one res
 	const manifest = yaml.load(await fse.readFile(manifestPath, 'utf8')) as AppManifest
 	manifest.dependencies = ['bitcoin']
 	await fse.writeFile(manifestPath, yaml.dump(manifest))
-
-	// A dependency change combined with another setting saves in one call with
-	// one restart. Two sequential mutations would fail here: the first save's
-	// restart puts the app in a transient state that rejects the second.
+	// Dependency settings only accept installed providers. This stopped fixture
+	// supplies the provider metadata without needing another running container.
+	const provider = new App(umbreld.instance, 'bitcoin-knots')
+	await fse.ensureDir(provider.dataDirectory)
+	await fse.writeFile(
+		path.join(provider.dataDirectory, 'umbrel-app.yml'),
+		yaml.dump({manifestVersion: '1.0.0', name: 'Bitcoin Knots', implements: ['bitcoin']}),
+	)
+	await provider.writeCompose({services: {}})
+	provider.state = 'stopped'
+	umbreld.instance.apps.instances.push(provider)
 	const app = umbreld.instance.apps.getApp(appId)
 	const restartSpy = vi.spyOn(app, 'restart')
-	await expect(
-		umbreld.client.apps.setSettings.mutate({
-			appId,
-			dependencies: {bitcoin: 'bitcoin-knots'},
-			customEnvironment: [{serviceName: 'server', name: 'UMBREL_TEST_COMBINED_SAVE', value: 'together'}],
-		}),
-	).resolves.toStrictEqual(true)
-	expect(restartSpy).toHaveBeenCalledTimes(1)
+	try {
+		// A dependency change combined with another setting saves in one call with
+		// one restart. Two sequential mutations would fail here: the first save's
+		// restart puts the app in a transient state that rejects the second.
+		await expect(
+			umbreld.client.apps.setSettings.mutate({
+				appId,
+				dependencies: {bitcoin: 'bitcoin-knots'},
+				customEnvironment: [{serviceName: 'server', name: 'UMBREL_TEST_COMBINED_SAVE', value: 'together'}],
+			}),
+		).resolves.toStrictEqual(true)
+		expect(restartSpy).toHaveBeenCalledTimes(1)
 
-	// Both fields persisted in the one write
-	const settings = yaml.load(await fse.readFile(settingsPath, 'utf8')) as Record<string, unknown>
-	expect(settings.dependencies).toStrictEqual({bitcoin: 'bitcoin-knots'})
-	expect(settings.customEnvironment).toStrictEqual([
-		{serviceName: 'server', name: 'UMBREL_TEST_COMBINED_SAVE', value: 'together'},
-	])
+		// Both fields persisted in the one write
+		const settings = yaml.load(await fse.readFile(settingsPath, 'utf8')) as Record<string, unknown>
+		expect(settings.dependencies).toStrictEqual({bitcoin: 'bitcoin-knots'})
+		expect(settings.customEnvironment).toStrictEqual([
+			{serviceName: 'server', name: 'UMBREL_TEST_COMBINED_SAVE', value: 'together'},
+		])
 
-	await waitForReady('saving dependencies with other settings')
+		await waitForReady('saving dependencies with other settings')
 
-	// list() reflects the selection
-	const listedApp = (await umbreld.client.apps.list.query()).find((app) => app.id === appId)
-	if (!listedApp || 'error' in listedApp) throw new Error(`Failed to read installed app ${appId}`)
-	expect(listedApp.selectedDependencies).toStrictEqual({bitcoin: 'bitcoin-knots'})
+		// list() reflects the selection
+		const listedApp = (await umbreld.client.apps.list.query()).find((app) => app.id === appId)
+		if (!listedApp || 'error' in listedApp) throw new Error(`Failed to read installed app ${appId}`)
+		expect(listedApp.selectedDependencies).toStrictEqual({bitcoin: 'bitcoin-knots'})
 
-	// Re-saving the same selections skips the restart
-	await expect(
-		umbreld.client.apps.setSettings.mutate({appId, dependencies: {bitcoin: 'bitcoin-knots'}}),
-	).resolves.toStrictEqual(true)
-	expect(restartSpy).toHaveBeenCalledTimes(1)
-	restartSpy.mockRestore()
+		// Re-saving the same selections skips the restart
+		await expect(
+			umbreld.client.apps.setSettings.mutate({appId, dependencies: {bitcoin: 'bitcoin-knots'}}),
+		).resolves.toStrictEqual(true)
+		expect(restartSpy).toHaveBeenCalledTimes(1)
 
-	// Restore the manifest and clear the settings for the following tests
-	manifest.dependencies = []
-	await fse.writeFile(manifestPath, yaml.dump(manifest))
-	await expect(umbreld.client.apps.setSettings.mutate({appId, customEnvironment: []})).resolves.toStrictEqual(true)
-	await waitForReady('resetting dependencies and environment')
+		// Restore the manifest and clear the settings for the following tests
+		manifest.dependencies = []
+		await fse.writeFile(manifestPath, yaml.dump(manifest))
+		await expect(umbreld.client.apps.setSettings.mutate({appId, customEnvironment: []})).resolves.toStrictEqual(true)
+		await waitForReady('resetting dependencies and environment')
+	} finally {
+		restartSpy.mockRestore()
+		umbreld.instance.apps.instances = umbreld.instance.apps.instances.filter((app) => app !== provider)
+		await fse.remove(provider.dataDirectory)
+	}
 })
 
 test.sequential('getBackupIgnoredPaths() returns sanitised absolute paths for installed app', async () => {

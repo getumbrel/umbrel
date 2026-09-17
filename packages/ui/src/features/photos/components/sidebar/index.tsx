@@ -12,7 +12,8 @@ import {
 	Video,
 	type LucideIcon,
 } from 'lucide-react'
-import type {ComponentProps} from 'react'
+import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
+import {useState, type ComponentProps} from 'react'
 import {useTranslation} from 'react-i18next'
 import {IoLogoAndroid, IoLogoApple} from 'react-icons/io5'
 import {useLocation, useNavigate} from 'react-router-dom'
@@ -32,7 +33,7 @@ import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {useRemoveSource} from '@/features/photos/components/sources/use-remove-source'
 import {BASE_ROUTE_PATH, sectionPath, sourcePath, type PhotosSection} from '@/features/photos/constants'
 import {useAlbums} from '@/features/photos/hooks/use-library'
-import {usePhotoSources, type PhotoSource} from '@/features/photos/hooks/use-photo-sources'
+import {usePhoneSourceConnected, usePhotoSources, type PhotoSource} from '@/features/photos/hooks/use-photo-sources'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
 
@@ -121,11 +122,9 @@ export function Sidebar({className}: {className?: string}) {
 						</ContextMenu>
 					))}
 				</SidebarSection>
-
-				<div className='h-4' />
 				<PhoneBackupCard />
 
-				<div className='h-4' />
+				<SidebarDivider />
 				<SidebarSection label={t('photos-sidebar.utilities')}>{utilityItems.map(renderItem)}</SidebarSection>
 
 				<SidebarDivider />
@@ -138,48 +137,79 @@ export function Sidebar({className}: {className?: string}) {
 	)
 }
 
-// Promo for the native app's automatic phone backup. Static for now.
+// Promo for the native app's automatic phone backup. It stays until a phone is
+// backing up, then dissolves and closes its gap. A card under the pointer waits
+// for the pointer to leave, so it never vanishes mid-read.
 function PhoneBackupCard() {
 	const {t} = useTranslation()
+	const connected = usePhoneSourceConnected()
+	const [hovering, setHovering] = useState(false)
+	const reducedMotion = useReducedMotion()
+
+	// The presence mounts once the answer is known: the first paint is a state,
+	// not a transition, and only changes after that animate
+	if (connected === undefined) return null
+
+	const spring = {type: 'spring', duration: 0.35, bounce: 0} as const
 	return (
-		<div className='mr-4 flex flex-col gap-3 rounded-20 bg-white/5 p-4'>
-			{/* Served from public/ so Vite never inlines it as a data URI (blocked by the CSP) */}
-			{/* Full-width phone, fading out so only its top half reads */}
-			<div
-				className='max-h-[200px] overflow-hidden'
-				style={{
-					maskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)',
-					WebkitMaskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)',
-				}}
-			>
-				<img src='/assets/photos/phone-backup.webp' alt='' className='w-full' draggable={false} />
-			</div>
-			<div className='flex flex-col gap-1'>
-				<div className='text-15 leading-tight font-semibold text-white/90'>
-					{t('photos-phone-backup.title')}{' '}
-					<img
-						src='/assets/photos/magic-sparkles.webp'
-						alt=''
-						className='inline-block h-auto w-4 align-[-0.125em]'
-						draggable={false}
-					/>
-				</div>
-				<div className='text-12 leading-snug text-white/50'>{t('photos-phone-backup.description')}</div>
-			</div>
-			<div className='flex flex-wrap gap-2'>
-				<Button asChild variant='primary' size='sm'>
-					<a href='https://link.umbrel.com/ios-app' target='_blank' rel='noopener noreferrer'>
-						<IoLogoApple className='size-3.5' />
-						{t('photos-phone-backup.ios')}
-					</a>
-				</Button>
-				{/* Android app isn't out yet */}
-				<Button size='sm' disabled>
-					<IoLogoAndroid className='size-3.5' />
-					{t('photos-phone-backup.android-coming-soon')}
-				</Button>
-			</div>
-		</div>
+		<AnimatePresence initial={false}>
+			{(!connected || hovering) && (
+				<motion.div
+					key='phone-backup'
+					onPointerEnter={() => setHovering(true)}
+					onPointerLeave={() => setHovering(false)}
+					initial={{opacity: 0, height: 0}}
+					animate={{opacity: 1, height: 'auto'}}
+					// Coming back: make room, then fade in. Leaving: fade out, then close the gap.
+					transition={reducedMotion ? {duration: 0} : {height: spring, opacity: {duration: 0.25, delay: 0.1}}}
+					exit={{
+						opacity: 0,
+						height: 0,
+						transition: reducedMotion ? {duration: 0} : {opacity: {duration: 0.2}, height: {...spring, delay: 0.15}},
+					}}
+					className='overflow-hidden'
+				>
+					<div className='mt-4 mr-4 flex flex-col gap-3 rounded-20 bg-white/5 p-4'>
+						{/* Served from public/ so Vite never inlines it as a data URI (blocked by the CSP) */}
+						{/* Full-width phone, fading out so only its top half reads */}
+						<div
+							className='max-h-[200px] overflow-hidden'
+							style={{
+								maskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)',
+								WebkitMaskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)',
+							}}
+						>
+							<img src='/assets/photos/phone-backup.webp' alt='' className='w-full' draggable={false} />
+						</div>
+						<div className='flex flex-col gap-1'>
+							<div className='text-15 leading-tight font-semibold text-white/90'>
+								{t('photos-phone-backup.title')}{' '}
+								<img
+									src='/assets/photos/magic-sparkles.webp'
+									alt=''
+									className='inline-block h-auto w-4 align-[-0.125em]'
+									draggable={false}
+								/>
+							</div>
+							<div className='text-12 leading-snug text-white/50'>{t('photos-phone-backup.description')}</div>
+						</div>
+						<div className='flex flex-wrap gap-2'>
+							<Button asChild variant='primary' size='sm'>
+								<a href='https://link.umbrel.com/ios-app' target='_blank' rel='noopener noreferrer'>
+									<IoLogoApple className='size-3.5' />
+									{t('photos-phone-backup.ios')}
+								</a>
+							</Button>
+							{/* Android app isn't out yet */}
+							<Button size='sm' disabled>
+								<IoLogoAndroid className='size-3.5' />
+								{t('photos-phone-backup.android-coming-soon')}
+							</Button>
+						</div>
+					</div>
+				</motion.div>
+			)}
+		</AnimatePresence>
 	)
 }
 

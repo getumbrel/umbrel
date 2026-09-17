@@ -1,4 +1,4 @@
-[![umbrelOS](https://github.com/user-attachments/assets/cabf8af7-51ce-45df-ad3a-a664cc91c610)](https://umbrel.com/umbrelos)
+[![umbrelOS](https://github.com/user-attachments/assets/0d7874d9-36a6-4405-81cd-789b72d7dea0)](https://umbrel.com/umbrelos)
 
 <p align="center">
   <h1 align="center">umbrelOS</h1>
@@ -8,7 +8,7 @@
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
     <br />
     <br />
-       Get an <a href="https://umbrel.com/umbrel-pro">Umbrel Pro</a> or <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> for the full experience, or install umbrelOS on a <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5">Raspberry Pi 5</a> or <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">any x86 system</a> for free.
+       Get an <a href="https://umbrel.com/umbrel-pro">Umbrel Pro</a> or <a href="https://umbrel.com/umbrel-home">Umbrel Home</a>, or <a href="https://umbrel.com/downloads">download umbrelOS</a> for free on an Intel or AMD machine, Raspberry Pi 5, or a virtual machine.
     <br />
     <br />
     <a href="https://x.com/umbrel">
@@ -33,32 +33,40 @@ At Umbrel, we believe that everyone should be able to enjoy the convenience and 
 </p>
 
 <p align="center">
-To achieve our vision, we're building a new kind of a home server OS. Instead of paying ransoms for storing your data on someone else's computer while they auction it off to advertisers — you can now easily spin up a server and self-host your data and services at home.
-</p>
-
-<p align="center">
-Just like the cloud, but one that you own and control.
+To achieve our vision, we're building a new kind of a home server OS. Just like the cloud, but one that you own and control.
 </p>
 
 <br />
 
+<p align="center">
+  <h1 align="center">umbrelOS 2.0</h1>
+  <img width="3840" height="2880" alt="bento 2 0" src="https://github.com/user-attachments/assets/a183106e-7d8a-4b84-bd7b-4cd06c9ff148" />
+</p>
+
+umbrelOS 2.0 is currently in beta, with the stable release planned for **September 22, 2026**. Try it out today:
+
+- **Fresh install:** download the 2.0 beta from [umbrel.com/downloads](https://umbrel.com/downloads).
+- **Already on umbrelOS:** update to umbrelOS 1.7.4 or later, then go to **Settings > Advanced settings** and turn on **umbrelOS beta program** to receive the 2.0 beta.
+
+
 ## Installing umbrelOS
 
-umbrelOS is designed for the [Umbrel Pro](https://umbrel.com/umbrel-pro) and [Umbrel Home](https://umbrel.com/umbrel-home), where it includes first-class support for all features. On other devices (like Raspberry Pi or x86 systems), it’s freely available with core functionality, but support and feature availability are best-effort due to hardware differences.
+umbrelOS is free and complete on any hardware. The image you install on your own device is the same umbrelOS that ships on [Umbrel Home](https://umbrel.com/umbrel-home) and [Umbrel Pro](https://umbrel.com/umbrel-pro), with the same features and the same updates.
 
-For a detailed feature breakdown, see our [comparison guide](https://github.com/getumbrel/umbrel/wiki/umbrelOS-on-Umbrel-Home-vs.-DIY).
+### Supported devices
 
-### Installation guides
-- [Install umbrelOS on a Raspberry Pi 5](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5)
-- [Install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-Systems)
-- [Install umbrelOS in a VM](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Linux-VM)
+- **Intel and AMD devices:** umbrelOS supports most 64-bit mini PCs, laptops, desktops, NAS boxes, and servers. Minimum requirements: Dual-core CPU, 4 GB RAM (8 GB+ recommended), and a 32 GB drive for umbrelOS. umbrelOS boots from one drive and uses the rest for apps and data.
+- **Raspberry Pi 5:** boot from an NVMe or USB drive rather than a microSD card.
+- **Virtual machines:** Proxmox, VirtualBox, VMware, or anything else that supports EFI boot.
 
-[![umbrelOS use cases](https://github.com/user-attachments/assets/284feee7-15a1-48f2-a694-c968f1cc702f)](https://umbrel.com/umbrelos)
-[![Umbrel App Store](https://github.com/user-attachments/assets/3d7846c7-d896-48f5-8a30-3578554702fa)](https://apps.umbrel.com)
-[![Files on umbrelOS](https://github.com/user-attachments/assets/6c501256-47a0-4ce1-89ad-4ba02f4c9f2d)](https://umbrel.com/umbrelos)
-[![umbrelOS Features](https://github.com/user-attachments/assets/6828da74-2b64-4b56-a7b7-5db603d023c8)](https://umbrel.com/umbrelos)
-[![Backups in umbrelOS](https://github.com/user-attachments/assets/39778824-ed18-4f6f-a865-1d77bbfce833)](https://umbrel.com/umbrelos)
-[![External Storage & NAS in umbrelOS](https://github.com/user-attachments/assets/4841c2dc-4ba4-4d47-bf0a-0e342bf60166)](https://umbrel.com/umbrelos)
+A few features depend on your hardware. Storage Manager and FailSafe need two or more internal NVMe or SATA drives, and GPU acceleration needs an NVIDIA, AMD, or Intel GPU on an Intel or AMD machine.
+
+### Download and install
+
+Head to **[umbrel.com/downloads](https://umbrel.com/downloads)** for the latest umbrelOS ISO and images, along with step-by-step installation guides for each platform.
+
+> [!NOTE]
+> umbrelOS is a standalone operating system that installs directly onto your device. It can't be installed on top of an existing Linux distribution.
 
 ## Building apps for umbrelOS
 

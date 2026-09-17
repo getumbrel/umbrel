@@ -15,6 +15,7 @@ final class OnboardingModel {
 		case finding
 		case noDevice
 		case deviceFound
+		case manualAddress
 		case signIn
 		case connected
 
@@ -93,6 +94,7 @@ final class OnboardingModel {
 	private var mdnsDevices: [IdentifiedDevice] = []
 	private var fallbackUpdateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 	private var pendingNativeHosts: Set<String> = []
+	private var manualAddressReturnStep: Step = .noDevice
 
 	// ── Local Network permission ──
 	// iOS exposes no query or request API for this permission: the dialog fires as a
@@ -280,7 +282,7 @@ final class OnboardingModel {
 	}
 
 	private func publishDiscoveryResults() {
-		devices = mdnsDevices
+		devices = mdnsDevices.sorted { $0.host < $1.host }
 		let previouslyVisible = Set(updateRequiredDevices.map { normalizedDiscoveryHost($0.host) })
 		let verifiedLocations = Set(
 			devices.flatMap { [$0.host, $0.discoveryHost] + $0.addresses }.map(normalizedDiscoveryHost)
@@ -290,12 +292,51 @@ final class OnboardingModel {
 		fallbackUpdateRequiredDevices.removeAll {
 			verifiedLocations.contains(normalizedDiscoveryHost($0.host))
 		}
-		updateRequiredDevices = fallbackUpdateRequiredDevices.filter {
+		let updatesByHost = Dictionary(
+			fallbackUpdateRequiredDevices.map { (normalizedDiscoveryHost($0.host), $0) },
+			uniquingKeysWith: { first, _ in first }
+		)
+		updateRequiredDevices = updatesByHost.values.filter {
 			let host = normalizedDiscoveryHost($0.host)
 			// Hide a newly found fallback while its Bonjour candidate is being verified,
 			// but keep an already-visible update card through the post-update handoff.
 			return !pendingNativeHosts.contains(host)
 				|| (step == .deviceFound && previouslyVisible.contains(host))
+		}.sorted { $0.host < $1.host }
+	}
+
+	// Keep an explicitly checked address out of scan results. The dedicated route
+	// proceeds straight to sign-in and persistence still happens only after login.
+	func discoverManually(at address: String) async throws -> DiscoveryResult {
+		let result = try await Umbreld.discoverManually(at: address, knownDeviceIds: savedIds)
+		try Task.checkCancellation()
+		return switch result {
+		case .device(let device): .device(device)
+		case .updateRequired(let device): .updateRequired(device)
+		}
+	}
+
+	func showManualAddress() {
+		manualAddressReturnStep = step
+		advance(to: .manualAddress)
+	}
+
+	func leaveManualAddress() {
+		let destination = Self.manualAddressReturnDestination(
+			from: manualAddressReturnStep,
+			hasDiscoveryResults: !discoveryResults.isEmpty
+		)
+		advance(to: destination)
+	}
+
+	static func manualAddressReturnDestination(
+		from origin: Step,
+		hasDiscoveryResults: Bool
+	) -> Step {
+		switch (origin, hasDiscoveryResults) {
+		case (.noDevice, true): .deviceFound
+		case (.deviceFound, false): .noDevice
+		default: origin
 		}
 	}
 

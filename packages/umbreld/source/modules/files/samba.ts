@@ -11,6 +11,7 @@ import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from './watcher.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 import AsyncBurstCache from '../utilities/async-burst-cache.js'
+import AppDirectoryMonitor from './app-directory-monitor.js'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 const OWNER_SAMBA_USERNAME = 'umbrel'
@@ -95,6 +96,7 @@ export default class Samba {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	#removeFileChangeListener?: () => void
+	#appDirectories: AppDirectoryMonitor
 	#removeExternalStorageChangeListener?: () => void
 	#watcherShares: AsyncBurstCache<SambaShare[]>
 	#credentialQueue = new PQueue({concurrency: 1})
@@ -105,6 +107,12 @@ export default class Samba {
 		this.#watcherShares = new AsyncBurstCache(() => this.#get(), WATCHER_SNAPSHOT_TTL_MS)
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
+		this.#appDirectories = new AppDirectoryMonitor({
+			listPaths: async () => (await this.#get()).map(({path}) => path),
+			systemPath: (path) => umbreld.files.virtualToSystemPathUnsafe(path),
+			onDelete: (path) => this.removeSharesWithin(path),
+			logger: this.logger,
+		})
 	}
 
 	async start() {
@@ -128,11 +136,13 @@ export default class Samba {
 		this.#removeExternalStorageChangeListener = this.#umbreld.eventBus.on('files:external-storage:change', () => {
 			this.applyShares().catch((error) => this.logger.error('Failed to reapply shares', error))
 		})
+		await this.#appDirectories.start()
 	}
 
 	async stop() {
 		this.logger.log('Stopping samba')
 		this.#removeFileChangeListener?.()
+		await this.#appDirectories.stop()
 		this.#removeExternalStorageChangeListener?.()
 		await $`systemctl stop smbd`.catch((error) => this.logger.error('Failed to stop samba', error))
 		await $`systemctl stop wsdd2`.catch((error) => this.logger.error('Failed to stop wsdd2', error))
@@ -642,6 +652,8 @@ export default class Samba {
 		})
 		this.#watcherShares.clear()
 		await this.applyShares()
+		this.#appDirectories.forget(virtualPath)
+		await this.#appDirectories.refresh()
 		return virtualPath
 	}
 

@@ -1,8 +1,8 @@
 import SwiftUI
 
 // Onboarding step 5. The red error state: header, red radar rings
-// with a crossed-out umbrella at the center, and a "Scan again" button that restarts
-// the search. (The red background tint is applied by OnboardingFlow.)
+// with a crossed-out umbrella at the center, plus the retry and alternate-address
+// routes. (The red background tint is applied by OnboardingFlow.)
 struct NoDeviceView: View {
 	@Environment(OnboardingModel.self) private var model
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -15,10 +15,13 @@ struct NoDeviceView: View {
 
 	var body: some View {
 		VStack(spacing: 0) {
-			OnboardingHeader(
-				title: "No device found",
-				subtitle: "Make sure your phone and Umbrel are on the same Wi-Fi network."
-			)
+			VStack(spacing: 10) {
+				OnboardingHeader(
+					title: "No device found",
+					subtitle: "Make sure your phone and Umbrel are on the same Wi-Fi network."
+				)
+				ManualAddressPrompt()
+			}
 			.padding(.top, 90)
 
 			Spacer()
@@ -39,7 +42,7 @@ struct NoDeviceView: View {
 			Spacer()
 			Spacer()
 
-			OnboardingButton(title: "Scan again", tint: Palette.error) {
+			OnboardingButton(title: "Scan again", style: .prominent, tint: Palette.error) {
 				model.scanAgain()
 			}
 			.padding(.horizontal, 31)

@@ -98,7 +98,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 	const {memberShares, shareForPath} = useMemberShares()
 	const hasMembers = useHasMembers()
 	const {isPathFavorite, addFavorite, removeFavorite, isAddingFavorite, isRemovingFavorite} = useFavorites()
-	const {removeHostOrShare, isRemovingShare: isRemovingNetworkShare, doesHostHaveMountedShares} = useNetworkStorage()
+	const {removeHostOrShare, isRemovingShare: isRemovingNetworkShare} = useNetworkStorage()
 	const isTouchDevice = useIsTouchDevice()
 	const {data: clouds} = useCloudSyncs()
 	const {pauseSync, resumeSync, runNow, removeSync} = useCloudActions()
@@ -144,14 +144,17 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 			// if the item is not in the trash or recents
 			const hasOneSelectedItem = selectedItems.length === 1
 
-			// allow/disallow actions based on backend operations
-			const isUnmountedNetworkHost = isDirectoryANetworkDevice(item.path) && !doesHostHaveMountedShares(item.path)
-			const canOpen = hasOneSelectedItem && !isUnmountedNetworkHost && !isDirectoryAnUmbrelBackup(item.name)
+			// allow/disallow actions based on backend operations. Disconnected
+			// network entries carry no operations, so the checks below reject them.
+			const canOpen =
+				hasOneSelectedItem &&
+				!(item.isDisconnected && isDirectoryANetworkShare(item.path)) &&
+				!isDirectoryAnUmbrelBackup(item.name)
 			const canRename =
 				hasOneSelectedItem && canPerformFileOperation(item, 'rename') && !isDirectoryAnUmbrelBackup(item.name)
-			const canDownload = !isUnmountedNetworkHost // disable for unmounted network hosts
+			const canDownload = selectedItems.every((selected) => !selected.isDisconnected)
 			const canCut = selectedItems.every((item) => canPerformFileOperation(item, 'move'))
-			const canCopy = selectedItems.every((item) => canPerformFileOperation(item, 'copy')) && !isUnmountedNetworkHost
+			const canCopy = selectedItems.every((item) => canPerformFileOperation(item, 'copy'))
 			const canPaste =
 				hasItemsInClipboard() &&
 				hasOneSelectedItem &&

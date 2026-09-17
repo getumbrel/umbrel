@@ -32,7 +32,7 @@ export function ReleaseTimeline({
 	if (!entries.length) return null
 
 	return (
-		<section>
+		<section className='@container'>
 			<p className={cn(appPageSectionLabelClass, 'mb-4')}>{t('app-page.section.release-notes.title')}</p>
 			<div
 				className={cn(
@@ -90,7 +90,12 @@ function TimelineRelease({
 			/>
 			<button
 				className={cn(
-					'flex min-h-[30px] w-full items-center justify-between gap-4 rounded-8 text-left outline-hidden focus-visible:ring-2 focus-visible:ring-white/20',
+					'min-h-[30px] w-full items-center justify-between rounded-8 text-left outline-hidden focus-visible:ring-2 focus-visible:ring-white/20',
+					// Only the update badge moves below on narrow release columns.
+					// Keep the date on the right and the toggle beside the version.
+					highlight
+						? 'grid grid-cols-[minmax(0,max-content)_auto_minmax(max-content,1fr)] gap-x-2 gap-y-1 pb-0.5 @min-[440px]:flex @min-[440px]:gap-4 @min-[440px]:pb-0'
+						: 'flex gap-4',
 					!hasNotes && 'pointer-events-none',
 				)}
 				onClick={onToggle}
@@ -99,20 +104,31 @@ function TimelineRelease({
 			>
 				<span
 					className={cn(
-						'inline-flex min-w-0 items-center gap-2 text-15 font-semibold transition-colors',
+						'min-w-0 items-center gap-2 text-15 font-semibold transition-colors',
+						highlight ? 'contents @min-[440px]:inline-flex' : 'inline-flex',
 						hasNotes && 'group-hover:text-brand-lightest',
 					)}
 				>
-					<span className='truncate'>{t('app-page.section.release-notes.version', {version: entry.version})}</span>
+					<span
+						className={cn(
+							'min-w-0 [overflow-wrap:anywhere]',
+							highlight && 'col-start-1 row-start-1 min-h-[30px] pt-1 @min-[440px]:min-h-0 @min-[440px]:pt-0',
+						)}
+					>
+						{t('app-page.section.release-notes.version', {version: entry.version})}
+					</span>
 					{highlight && (
-						<span className='rounded-full bg-brand/20 px-2 py-0.5 text-11 leading-tight font-medium whitespace-nowrap text-brand-lightest'>
+						<span className='col-span-3 col-start-1 row-start-2 shrink-0 justify-self-start rounded-full bg-brand/20 px-2 py-0.5 text-11 leading-tight font-medium whitespace-nowrap text-brand-lightest'>
 							{t('app-store.status.update-available')}
 						</span>
 					)}
 					{hasNotes && (
 						// A plus built from two strokes: the vertical one rotates flat
 						// when the entry opens, so + becomes − in place
-						<span aria-hidden className='relative grid h-[15px] w-[15px] shrink-0 place-items-center text-white/40'>
+						<span
+							aria-hidden
+							className='relative col-start-2 row-start-1 grid h-[15px] w-[15px] shrink-0 place-items-center text-white/40'
+						>
 							<span className='absolute h-px w-[9px] rounded-full bg-current' />
 							<motion.span
 								initial={false}
@@ -123,7 +139,10 @@ function TimelineRelease({
 						</span>
 					)}
 				</span>
-				<ReleaseDate date={entry.date} />
+				<ReleaseDate
+					date={entry.date}
+					className={highlight ? 'col-start-3 row-start-1 justify-self-end pl-2 @min-[440px]:pl-0' : undefined}
+				/>
 			</button>
 			{hasNotes ? (
 				// Notes stay mounted; the reveal animates height on the sheet's
@@ -158,7 +177,7 @@ function ReleaseDate({date, className}: {date?: number; className?: string}) {
 		<time
 			dateTime={new Date(date).toISOString()}
 			title={format(date, 'PP', {locale})}
-			className={cn('text-12 whitespace-nowrap text-white/35', className)}
+			className={cn('shrink-0 text-12 whitespace-nowrap text-white/35', className)}
 		>
 			{formatDistanceToNowStrict(date, {addSuffix: true, locale})}
 		</time>

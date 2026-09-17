@@ -8,6 +8,8 @@ const permissions = z
 		appStore: z.boolean(),
 		files: z.union([z.literal('all'), z.array(z.string())]),
 		manageSystem: z.boolean(),
+		machines: z.union([z.literal('all'), z.array(z.string())]),
+		createMachines: z.boolean(),
 	})
 	.strict()
 

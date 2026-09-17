@@ -59,6 +59,7 @@ COPY packages/ui/ .
 # We copy the target file to the expected path for the build to succeed.
 COPY packages/umbreld/source/modules/server/trpc/common.ts /umbreld/source/modules/server/trpc/common.ts
 COPY packages/umbreld/source/modules/user/wallpapers.ts /umbreld/source/modules/user/wallpapers.ts
+COPY packages/umbreld/source/modules/machines/input-motion.ts /umbreld/source/modules/machines/input-motion.ts
 
 # Install the dependencies
 RUN rm -rf node_modules || true
@@ -109,13 +110,14 @@ RUN apt-get install --yes \
     linux-image-${TARGETARCH} \
     firmware-linux
 
-# Install amd64-specific microcode and firmware
+# Install amd64-specific microcode, firmware, and network drivers
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ]; then \
     apt-get install --yes \
         intel-microcode \
         amd64-microcode \
         firmware-realtek \
+        r8125-dkms \
         firmware-iwlwifi \
         firmware-atheros; \
     fi

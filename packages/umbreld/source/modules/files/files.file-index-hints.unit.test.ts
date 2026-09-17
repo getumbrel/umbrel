@@ -71,6 +71,24 @@ test('an index failure never changes a successful filesystem result', async () =
 	)
 })
 
+test('deleting app data clears Samba shares and favorites without waiting for a watcher', async () => {
+	const directory = await temporary.create()
+	const systemPath = nodePath.join(directory, 'shared')
+	await fse.ensureDir(systemPath)
+	const {files, memberShares} = filesFixture(systemPath)
+	const removeSharesWithin = vi.fn(async () => true)
+	const removeWithin = vi.fn(async () => {})
+	Object.assign(files, {
+		fileIndex: {removePath: vi.fn(async () => {})},
+		samba: {removeSharesWithin},
+		favorites: {removeWithin},
+	})
+	await expect(files.delete('/Apps/example/shared')).resolves.toBe(true)
+	expect(removeSharesWithin).toHaveBeenCalledWith('/Apps/example/shared')
+	expect(removeWithin).toHaveBeenCalledWith('/Apps/example/shared')
+	expect(memberShares.removeWithin).toHaveBeenCalledWith('/Apps/example/shared')
+})
+
 test('revision-checked deletion never removes a replacement at the indexed path', async () => {
 	const directory = await temporary.create()
 	const systemPath = nodePath.join(directory, 'replacement.jpg')

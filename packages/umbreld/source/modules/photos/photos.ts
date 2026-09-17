@@ -207,6 +207,7 @@ export default class Photos {
 		)
 		if (pendingRemoval) await this.#completeBackupSourceRemoval(pendingRemoval)
 		let source!: PhotoBackupSource
+		let created = false
 
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			const sources = (await get('photos.backupSources')) ?? []
@@ -236,6 +237,7 @@ export default class Photos {
 				createdAt: Date.now(),
 			}
 			await set('photos.backupSources', [...sources, source])
+			created = true
 		})
 
 		await this.#ensureBackupSourceDirectory(source!)
@@ -253,6 +255,9 @@ export default class Photos {
 				)
 			})
 		}
+		// A new phone in the sources list is a library change the UI should hear
+		// about right away; re-registrations (re-auth, startup replay) change nothing
+		if (created) this.#changed(accountId)
 		return source
 	}
 
@@ -793,6 +798,41 @@ export default class Photos {
 
 	listSources(accountId: string) {
 		return this.#umbreld.files.fileIndex.photosListSources(accountId)
+	}
+
+	async renameSource(accountId: string, id: string, name: string) {
+		accountId = validateAccountId(accountId)
+		name = normalizeBackupSourceName(name)
+		const sources = (await this.#umbreld.store.get('photos.backupSources')) ?? []
+		const source = sources.find(
+			(candidate) => candidate.accountId === accountId && backupLibrarySourceId(accountId, candidate.id) === id,
+		)
+		if (!source) return false
+
+		return this.#withBackupSourceLock(accountId, source.id, async () => {
+			let renamed: PhotoBackupSource | undefined
+			await this.#umbreld.store.getWriteLock(async ({get, set}) => {
+				const sources = (await get('photos.backupSources')) ?? []
+				const current = sources.find((candidate) => candidate.accountId === accountId && candidate.id === source.id)
+				const removals = (await get('photos.backupSourceRemovals')) ?? []
+				if (!current || removals.some((removal) => removal.accountId === accountId && removal.sourceId === source.id)) {
+					return
+				}
+
+				// Persist the display name first so reconnects and restarts retain it.
+				// The folder and source identity stay unchanged, including for queued uploads.
+				const updated = {...current, name}
+				await set(
+					'photos.backupSources',
+					sources.map((candidate) => (candidate === current ? updated : candidate)),
+				)
+				renamed = updated
+			})
+			if (!renamed) return false
+			await this.#upsertBackupSource(renamed)
+			this.#changed(accountId)
+			return true
+		})
 	}
 
 	async updateSource(accountId: string, id: string, scope?: {mode: PhotoScopeMode; paths: string[]}) {

@@ -51,12 +51,17 @@ export const IconsViewFileItem = ({
 			{/* Do not use animated icon for touch devices where hover doesn't make sense */}
 			{/* We pass in isActive so that the trigger for hovering can be on a parent div */}
 			{/* TODO: set isHovered to true when the item's context menu is open */}
-			<div className='flex justify-center'>
+			<div
+				className={cn(
+					'flex justify-center',
+					item.isDisconnected && !isDirectoryANetworkDevice(item.path) && 'opacity-50',
+				)}
+			>
 				<FileItemIcon
 					item={item}
 					machine={machine ?? null}
 					className='h-14 w-14'
-					useAnimatedIcon={!isTouchDevice}
+					useAnimatedIcon={!isTouchDevice && !item.isDisconnected}
 					isHovered={isHovered}
 				/>
 			</div>
@@ -75,19 +80,24 @@ export const IconsViewFileItem = ({
 					/>
 				)}
 				<span className='w-full truncate text-center text-12 text-white/40'>
-					{isUploading
-						? uploadingProgress === 0
-							? t('files-state.waiting')
-							: `${uploadingProgress}%`
-						: item.type === 'directory'
-							? isDirectoryAnExternalDrivePartition(item.path)
-								? t('files-type.external-drive')
-								: isDirectoryANetworkDevice(item.path)
-									? t('files-type.network-drive')
-									: isDirectoryAnUmbrelBackup(item.name)
-										? t('files-type.umbrel-backup')
-										: t('files-type.directory')
-							: formatFilesystemSize(item.size)}
+					{item.isDisconnected
+						? t('files-network-storage.disconnected')
+						: isUploading
+							? uploadingProgress === 0
+								? t('files-state.waiting')
+								: `${uploadingProgress}%`
+							: item.type === 'directory'
+								? isDirectoryAnExternalDrivePartition(item.path)
+									? t('files-type.external-drive')
+									: isDirectoryANetworkDevice(item.path)
+										? t('files-type.network-drive')
+										: isDirectoryAnUmbrelBackup(item.name)
+											? t('files-type.umbrel-backup')
+											: // Folder sizes come from the index, so one that isn't indexed yet falls back to the label
+												item.size != null
+												? formatFilesystemSize(item.size)
+												: t('files-type.directory')
+								: formatFilesystemSize(item.size)}
 				</span>
 			</div>
 

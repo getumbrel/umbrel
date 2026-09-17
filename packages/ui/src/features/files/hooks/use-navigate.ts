@@ -15,6 +15,7 @@ import {useFilesCapabilities} from '@/features/files/providers/files-capabilitie
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {getFileViewer} from '@/features/files/utils/get-file-viewer'
+import {isDirectoryANetworkShare} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {uiToVirtualPath, virtualToUiPath} from '@/features/files/utils/path-alias'
 
 export function toFsPath(urlPath: string): string {
@@ -76,6 +77,7 @@ export const useNavigate = () => {
 	}
 
 	const navigateToItem = (item: FileSystemItem) => {
+		if (item.isDisconnected && isDirectoryANetworkShare(item.path)) return
 		// if the item is a directory, navigate to it
 		if (item.type === 'directory') {
 			return navigateToDirectory(item.path)

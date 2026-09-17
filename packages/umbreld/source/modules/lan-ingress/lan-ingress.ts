@@ -4,6 +4,7 @@ import net from 'node:net'
 import {X509Certificate} from 'node:crypto'
 import {lookup} from 'node:dns/promises'
 import {rename} from 'node:fs/promises'
+import {setTimeout as delay} from 'node:timers/promises'
 
 import {$} from 'execa'
 import fse from 'fs-extra'
@@ -14,6 +15,9 @@ import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
 import {getHostname, getIpAddresses} from '../system/system.js'
 import runEvery from '../utilities/run-every.js'
+import {forwardTcp} from './forward-tcp.js'
+import {readNativeTlsPrelude} from './native-tls-preread.js'
+import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.js'
 import AppGateway, {readAppGatewayConfig, type AppGatewayConfig} from '../app-gateway/app-gateway.js'
 
 const NFT_BIN = '/usr/sbin/nft'
@@ -34,6 +38,7 @@ type AppIngressRoute = {
 	publicPort: number
 	hiddenPort: number
 	gateway?: AppGatewayConfig
+	nativeTls?: NativeTlsPolicy
 }
 
 type IngressPortMapping = {
@@ -52,6 +57,7 @@ type AppMuxServer = {
 	server: net.Server
 	httpsProxyServer?: https.Server
 	gatewayServer?: http.Server
+	loopbackServer?: net.Server
 }
 
 type ComposeFile = {
@@ -117,6 +123,7 @@ export default class LanIngress {
 	#appAuthHttpProxyServer?: http.Server
 	#appAuthHttpsProxyServer?: https.Server
 	#appMuxServers = new Map<string, AppMuxServer>()
+	#appGatewayWaits = new Map<string, {target: string; controller: AbortController; ready: boolean}>()
 	// Track sockets at the TCP layer because Node's HTTP force-close helper does not cover
 	// upgraded/raw sockets, and the mux servers are plain net.Server instances.
 	#activeSocketsByServer = new WeakMap<net.Server | http.Server, Set<net.Socket>>()
@@ -243,6 +250,55 @@ export default class LanIngress {
 		return fse.readFile(this.caCertificatePath, 'utf8')
 	}
 
+	// The old app_proxy container waited for its upstream TCP port before
+	// listening. Wait per app, outside the shared ingress refresh, so a slow
+	// upstream cannot hold up the dashboard or other apps.
+	async waitForAppGateway(appId: string, config: AppGatewayConfig, compose: ComposeFile, signal: AbortSignal) {
+		while (true) {
+			signal.throwIfAborted()
+			// Resolve again on each attempt: a starting/recreated container may
+			// not have an address yet, or may acquire a different one.
+			const host = await this.resolveAppTarget(appId, config.targetHost, compose)
+			signal.throwIfAborted()
+			if (host) {
+				const listening = await new Promise<boolean>((resolve) => {
+					const socket = net.createConnection({host, port: config.targetPort, signal})
+					const finish = (listening: boolean) => {
+						socket.destroy()
+						resolve(listening)
+					}
+					socket.once('connect', () => finish(true))
+					socket.once('error', () => finish(false))
+					socket.setTimeout(1000, () => finish(false))
+				})
+				signal.throwIfAborted()
+				if (listening) return
+			}
+			await delay(1000, undefined, {signal})
+		}
+	}
+
+	private appGatewayCanListen(appId: string, config: AppGatewayConfig, compose: ComposeFile) {
+		const target = JSON.stringify([config.targetHost, config.targetPort])
+		const previous = this.#appGatewayWaits.get(appId)
+		if (previous?.target === target) return previous.ready
+		previous?.controller.abort()
+		const wait = {target, controller: new AbortController(), ready: false}
+		this.#appGatewayWaits.set(appId, wait)
+		this.waitForAppGateway(appId, config, compose, wait.controller.signal)
+			.then(async () => {
+				if (wait.controller.signal.aborted) return
+				wait.ready = true
+				await this.refresh()
+			})
+			.catch((error) => {
+				if (wait.controller.signal.aborted) return
+				this.#appGatewayWaits.delete(appId)
+				this.logger.error(`Failed waiting for app gateway ${appId}`, error)
+			})
+		return false
+	}
+
 	// Queue a refresh of LAN ingress state; callers share the running refresh promise.
 	async refresh() {
 		if (this.#isStopped) return
@@ -276,9 +332,10 @@ export default class LanIngress {
 	// Rebuild certs, routes, nftables rules, and listeners from current state.
 	private async applyCurrentState() {
 		await fse.ensureDir(this.directory)
-		await this.ensureServerCertificate()
+		const sans = await this.getServerSans()
+		await this.ensureServerCertificate(sans)
 
-		const nextAppRoutes = this.removeConflictingAppRoutes(await this.getAppRoutes())
+		const nextAppRoutes = this.removeConflictingAppRoutes(await this.getAppRoutes(sans.dns))
 		const currentAppRoutes = [...this.#appMuxServers.values()].map((entry) => entry.route)
 		const guardedPortMappings = this.mergePortMappingsByHiddenPort(currentAppRoutes, nextAppRoutes)
 		// Hidden Node listeners bind on wildcard addresses so nftables can redirect LAN
@@ -335,10 +392,8 @@ export default class LanIngress {
 		await fse.chmod(this.caCertificatePath, 0o644)
 	}
 
-	private async ensureServerCertificate() {
+	private async ensureServerCertificate(sans: Awaited<ReturnType<LanIngress['getServerSans']>>) {
 		await this.ensureCa()
-
-		const sans = await this.getServerSans()
 		const previousSans = await fse.readJson(this.serverSansPath).catch(() => null)
 		const serverCertificateExists =
 			(await fse.pathExists(this.serverCertificatePath)) && (await fse.pathExists(this.serverKeyPath))
@@ -406,8 +461,8 @@ export default class LanIngress {
 
 	// Read app manifests/compose files once, returning app routes plus every
 	// app-published port we must not use for hidden ingress listeners.
-	private async getAppIngressCandidates(): Promise<{
-		routes: Array<Pick<AppIngressRoute, 'id' | 'publicPort'>>
+	private async getAppIngressCandidates(reservedHostnames: string[]): Promise<{
+		routes: Array<Omit<AppIngressRoute, 'hiddenPort'>>
 		reservedPorts: number[]
 	}> {
 		const appDataDirectory = `${this.#umbreld.dataDirectory}/app-data`
@@ -416,6 +471,7 @@ export default class LanIngress {
 		// Include installed apps from the store and in-flight app instances. Ignore orphaned
 		// app-data directories so failed installs do not leave stale routes behind.
 		const appIds = [...new Set([...installedAppIds, ...activeAppIds])]
+		const gatewayIds = new Set<string>()
 		const results = await Promise.all(
 			appIds.map(async (appId) => {
 				// A single app with corrupt on-disk YAML (e.g. a partial write during power loss)
@@ -425,7 +481,12 @@ export default class LanIngress {
 					const manifestPath = `${appDataDirectory}/${appId}/umbrel-app.yml`
 					const manifest = await fse.readFile(manifestPath, 'utf8').catch(() => '')
 					if (!manifest) return null
-					const parsed = yaml.load(manifest) as {port?: unknown; name?: unknown; icon?: unknown} | null
+					const parsed = yaml.load(manifest) as {
+						port?: unknown
+						name?: unknown
+						icon?: unknown
+						nativeTlsHostnameSuffixes?: unknown
+					} | null
 					const publicPort = Number(parsed?.port)
 					if (!Number.isInteger(publicPort) || publicPort <= 0 || publicPort > 65_535) return null
 
@@ -447,6 +508,13 @@ export default class LanIngress {
 							})
 						: null
 					if (gateway) {
+						// Forget the old sidecar's wait after its containers are removed.
+						// Starting/ready UI state must not gate listening: hooks may need
+						// the proxy before the lifecycle command has completed.
+						if (app?.appGatewayEnabled === false) return {reservedPorts, route: null}
+						gatewayIds.add(appId)
+						if (!this.appGatewayCanListen(appId, gateway, compose!)) return {reservedPorts, route: null}
+
 						// The user can override the app's default gateway authentication in
 						// app settings. Applied here so an auth change takes effect on the
 						// next ingress refresh without restarting the app.
@@ -474,6 +542,7 @@ export default class LanIngress {
 						route: {
 							id: appId,
 							publicPort,
+							nativeTls: getNativeTlsPolicy(parsed?.nativeTlsHostnameSuffixes, compose?.services, reservedHostnames),
 						},
 					}
 				} catch (error) {
@@ -482,14 +551,19 @@ export default class LanIngress {
 				}
 			}),
 		)
+		for (const [appId, wait] of this.#appGatewayWaits) {
+			if (gatewayIds.has(appId)) continue
+			wait.controller.abort()
+			this.#appGatewayWaits.delete(appId)
+		}
 		return {
 			routes: results.flatMap((result) => (result?.route ? [result.route] : [])),
 			reservedPorts: results.flatMap((result) => result?.reservedPorts ?? []),
 		}
 	}
 
-	private async getAppRoutes(): Promise<AppIngressRoute[]> {
-		const {routes, reservedPorts} = await this.getAppIngressCandidates()
+	private async getAppRoutes(reservedHostnames: string[]): Promise<AppIngressRoute[]> {
+		const {routes, reservedPorts} = await this.getAppIngressCandidates(reservedHostnames)
 		const allocations = this.allocateAppIngressPorts(routes, reservedPorts)
 		return routes.map((route) => ({...route, hiddenPort: allocations[route.id].hiddenPort}))
 	}
@@ -771,11 +845,13 @@ export default class LanIngress {
 	private async updateAppMuxServers(appRoutes: AppIngressRoute[]) {
 		for (const [id, entry] of this.#appMuxServers) {
 			const nextRoute = appRoutes.find((route) => route.id === id)
+			// Policy changes must close existing connections as well as affect new ones.
 			if (
 				nextRoute &&
 				nextRoute.publicPort === entry.route.publicPort &&
 				nextRoute.hiddenPort === entry.route.hiddenPort &&
-				JSON.stringify(nextRoute.gateway) === JSON.stringify(entry.route.gateway)
+				JSON.stringify(nextRoute.gateway) === JSON.stringify(entry.route.gateway) &&
+				JSON.stringify(nextRoute.nativeTls) === JSON.stringify(entry.route.nativeTls)
 			) {
 				continue
 			}
@@ -783,6 +859,7 @@ export default class LanIngress {
 				this.closeServer(entry.server),
 				this.closeServer(entry.httpsProxyServer),
 				this.closeServer(entry.gatewayServer),
+				this.closeServer(entry.loopbackServer),
 			])
 			this.#appMuxServers.delete(id)
 		}
@@ -799,16 +876,42 @@ export default class LanIngress {
 				upstreamPort = this.serverPort(gatewayServer)
 			}
 			const httpsProxyServer = await this.createHttpsProxyServer(upstreamPort, {includeForwardedFor: false})
-			// The public app port still belongs to the app. nftables redirects LAN
-			// traffic to the mux, and TLS requests go to this loopback HTTPS proxy.
+			// The app owns its public port; nftables sends LAN traffic through this mux.
 			await this.listen(httpsProxyServer, 0, '127.0.0.1')
 			const server = this.createMuxServer({
 				listenPort: route.hiddenPort,
 				httpPort: upstreamPort,
 				getHttpsProxyServer: () => httpsProxyServer,
+				nativeTls: route.gateway ? undefined : route.nativeTls,
 			})
 			await this.listen(server, route.hiddenPort)
 			this.#appMuxServers.set(route.id, {route, server, httpsProxyServer, gatewayServer})
+		}
+
+		// PREROUTING only handles incoming traffic. Host network forwarders such
+		// as Tailscale Serve also need the app's advertised port on loopback.
+		// Retry missing listeners on refresh so a temporary port conflict heals.
+		for (const entry of this.#appMuxServers.values()) await this.ensureAppLoopbackServer(entry)
+	}
+
+	private async ensureAppLoopbackServer(entry: AppMuxServer) {
+		// Directly published and host-network apps already own their listeners.
+		if (!entry.gatewayServer || entry.loopbackServer) return
+		const server = this.createMuxServer({
+			listenPort: entry.route.publicPort,
+			httpPort: this.serverPort(entry.gatewayServer),
+			getHttpsProxyServer: () => entry.httpsProxyServer,
+		})
+		try {
+			// A wildcard bind would compete with a forwarder listening on its own
+			// interface at the same port. Keep the gateway on IPv4 loopback only.
+			await this.listen(server, entry.route.publicPort, '127.0.0.1')
+			entry.loopbackServer = server
+		} catch (error) {
+			await this.closeServer(server)
+			// A local service may already own this address. Preserve the working
+			// LAN route and dashboard while leaving that service's socket intact.
+			this.logger.error(`Failed to listen on loopback port ${entry.route.publicPort} for ${entry.route.id}`, error)
 		}
 	}
 
@@ -817,68 +920,54 @@ export default class LanIngress {
 		listenPort,
 		httpPort,
 		getHttpsProxyServer,
+		nativeTls,
 	}: {
 		listenPort: number
 		httpPort: number
 		getHttpsProxyServer: () => https.Server | undefined
+		nativeTls?: NativeTlsPolicy
 	}) {
 		const server = net.createServer((socket) => {
+			const forward = (chunks: Buffer[], tls: boolean, hostname?: string, release = () => {}) => {
+				if (socket.destroyed) return release()
+				let port = httpPort
+				if (tls && !(nativeTls && matchesNativeTlsHostname(hostname, nativeTls))) {
+					const address = getHttpsProxyServer()?.address()
+					if (!address || typeof address === 'string') {
+						release()
+						socket.destroy()
+						return
+					}
+					port = address.port
+				}
+				forwardTcp(socket, chunks, port, release)
+			}
+			// Only opted-in apps need SNI; ordinary apps keep their existing fast path.
+			if (nativeTls) {
+				socket.on('error', () => {})
+				void readNativeTlsPrelude(socket)
+					.then(({chunks, tls, hostname, release}) => forward(chunks, tls, hostname, release))
+					.catch(() => socket.destroy())
+				return
+			}
 			const chunks: Buffer[] = []
 			let length = 0
 			const classify = (chunk: Buffer) => {
 				chunks.push(chunk)
 				length += chunk.length
-				// A TLS record header needs three bytes to distinguish it from HTTP.
-				// TCP is a byte stream, so even these first bytes may be fragmented.
+				// Even the TLS record prefix can arrive across several TCP reads.
 				if (length < 3) return
 				socket.off('data', classify)
-				// Pause immediately after peeking. Request bodies can arrive in
-				// later chunks, and those bytes must wait until the upstream pipe
-				// exists or POST requests can hang waiting for a body we already lost.
+				// Preserve later request bytes until the upstream pipe is ready.
 				socket.pause()
 				const firstChunk = Buffer.concat(chunks, length)
-				if (this.isTlsClientHello(firstChunk)) {
-					this.handleTlsSocket(socket, firstChunk, getHttpsProxyServer())
-					return
-				}
-				this.forwardTcp(socket, firstChunk, httpPort)
+				forward([firstChunk], this.isTlsClientHello(firstChunk))
 			}
 			socket.on('data', classify)
 			socket.setTimeout(5000, () => socket.destroy())
 			socket.on('error', (error) => this.logger.verbose(`LAN ingress mux socket error on ${listenPort}: ${error}`))
 		})
 		return server
-	}
-
-	private handleTlsSocket(socket: net.Socket, firstChunk: Buffer, httpsProxyServer?: https.Server) {
-		if (!httpsProxyServer) {
-			socket.destroy()
-			return
-		}
-		const address = httpsProxyServer.address()
-		if (typeof address === 'string' || address === null) {
-			socket.destroy()
-			return
-		}
-		this.forwardTcp(socket, firstChunk, address.port)
-	}
-
-	// Forward the peeked first chunk, then pipe the rest after both sockets are ready.
-	private forwardTcp(clientSocket: net.Socket, firstChunk: Buffer, upstreamPort: number) {
-		clientSocket.setTimeout(0)
-		const upstreamSocket = net.createConnection({host: '127.0.0.1', port: upstreamPort}, () => {
-			upstreamSocket.write(firstChunk)
-			clientSocket.pipe(upstreamSocket)
-			upstreamSocket.pipe(clientSocket)
-			// Resume only after both pipes exist so buffered bytes flow upstream.
-			clientSocket.resume()
-		})
-		const destroyBoth = () => {
-			clientSocket.destroy()
-			upstreamSocket.destroy()
-		}
-		clientSocket.on('error', destroyBoth)
-		upstreamSocket.on('error', destroyBoth)
 	}
 
 	private isTlsClientHello(chunk: Buffer) {
@@ -1130,6 +1219,8 @@ export default class LanIngress {
 	}
 
 	private async closeAllServers() {
+		for (const wait of this.#appGatewayWaits.values()) wait.controller.abort()
+		this.#appGatewayWaits.clear()
 		await Promise.all([
 			this.closeServer(this.#dashboardHttpServer, {drainActiveResponses: true}).then(
 				() => (this.#dashboardHttpServer = undefined),
@@ -1144,6 +1235,7 @@ export default class LanIngress {
 				this.closeServer(entry.server),
 				this.closeServer(entry.httpsProxyServer),
 				this.closeServer(entry.gatewayServer),
+				this.closeServer(entry.loopbackServer),
 			]),
 		])
 		this.#appAuthHttpProxyServer = undefined

@@ -115,6 +115,29 @@ final class LocalHTTPSTests: XCTestCase {
 		])
 	}
 
+	func testExplicitManualCandidateMayUseTailscaleHost() async throws {
+		let recorder = IdentityProbeRecorder()
+		let candidate = Candidate(host: "100.90.0.1", name: "100.90.0.1")
+
+		let result = await Umbreld.identifyCandidate(
+			candidate,
+			knownDeviceIds: [],
+			allowsTailscaleHost: true,
+			probe: { host, expectedDeviceId in
+				await recorder.record(host: host, expectedDeviceId: expectedDeviceId)
+				return Umbreld.IdentityProbeResult(
+					discoveryInfo: .init(id: "remote-device", device: "Umbrel Home", onboarded: true),
+					candidateCertificate: Data("candidate-ca".utf8)
+				)
+			}
+		)
+		let calls = await recorder.recordedCalls()
+
+		XCTAssertEqual(result?.id, "remote-device")
+		XCTAssertEqual(result?.host, "100.90.0.1")
+		XCTAssertEqual(calls, [.init(host: "100.90.0.1", expectedDeviceId: nil)])
+	}
+
 	func testLivePassiveIdentificationDoesNotEnrollUntilExplicitClaim() async throws {
 		guard let host = ProcessInfo.processInfo.environment["UMBRELKIT_HTTPS_TEST_HOST"] else {
 			throw XCTSkip("Set UMBRELKIT_HTTPS_TEST_HOST to run against an Umbrel")
@@ -136,6 +159,16 @@ final class LocalHTTPSTests: XCTestCase {
 		guard case .found = stored else {
 			return XCTFail("Explicit claim did not persist the CA")
 		}
+	}
+
+	func testLiveCandidateTrustWorksWithBoundedResponseStreaming() async throws {
+		guard let host = ProcessInfo.processInfo.environment["UMBRELKIT_HTTPS_TEST_HOST"] else {
+			throw XCTSkip("Set UMBRELKIT_HTTPS_TEST_HOST to run against an Umbrel")
+		}
+
+		let device = await Umbreld.identify(candidate: Candidate(host: host, name: "Live test"))
+
+		XCTAssertNotNil(device)
 	}
 
 	func testPEMCertificateIsParsedAndCanonicalized() throws {

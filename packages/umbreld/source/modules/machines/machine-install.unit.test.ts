@@ -17,9 +17,17 @@ const downloadControls = vi.hoisted(
 		}>,
 )
 const preparedWindowsOptions = vi.hoisted(() => [] as Array<{licenseKey?: string}>)
+const preparedOmarchyOptions = vi.hoisted(() => [] as Array<{completionUrl: string}>)
+const omarchyProbes = vi.hoisted(() => [] as string[])
+const omarchyProbeControls = vi.hoisted(() => ({barrier: undefined as Promise<void> | undefined}))
 const cloudInitUserData = vi.hoisted(() => [] as string[])
 const downloadHooks = vi.hoisted(() => ({onStart: undefined as (() => void) | undefined}))
 const guestApiControls = vi.hoisted(() => ({starts: 0, stops: 0}))
+const displayControls = vi.hoisted(() => ({
+	socketPath: '',
+	failNextPointer: false,
+	pointerEvents: [] as Array<[number, number, number]>,
+}))
 const libvirtControls = vi.hoisted(() => ({
 	startCalls: [] as string[],
 	stopCalls: [] as Array<{id: string; force: boolean}>,
@@ -106,6 +114,63 @@ vi.mock('./guest-api.js', () => ({
 	},
 }))
 
+vi.mock('./omarchy-install.js', async () => {
+	const fsp = await import('node:fs/promises')
+	const path = await import('node:path')
+	return {
+		prepareOmarchySeed: async (directory: string, options: {completionUrl: string}) => {
+			preparedOmarchyOptions.push(options)
+			await fsp.writeFile(path.join(directory, 'media/seed.iso'), 'omarchy seed')
+			await fsp.writeFile(path.join(directory, 'media/omarchy-setup-key'), 'private key', {mode: 0o600})
+			await fsp.writeFile(path.join(directory, 'media/omarchy-setup-password'), 'temporary password', {mode: 0o600})
+		},
+		probeOmarchySetup: async (directory: string) => {
+			omarchyProbes.push(directory)
+			await omarchyProbeControls.barrier
+		},
+		removeOmarchySetupCredentials: async (directory: string) => {
+			await fsp.rm(path.join(directory, 'media/omarchy-setup-key'), {force: true})
+			await fsp.rm(path.join(directory, 'media/omarchy-setup-password'), {force: true})
+		},
+	}
+})
+
+vi.mock('./rfb-client.js', async () => ({
+	...(await vi.importActual<typeof import('./rfb-client.js')>('./rfb-client.js')),
+	default: class FakeRfbClient {
+		width = 1280
+		height = 800
+		static async connect() {
+			return new FakeRfbClient()
+		}
+		async keyEvent() {}
+		async pointerEvent(x: number, y: number, buttonMask: number) {
+			if (displayControls.failNextPointer) {
+				displayControls.failNextPointer = false
+				throw new Error('display interrupted')
+			}
+			displayControls.pointerEvents.push([x, y, buttonMask])
+		}
+		async captureFramebuffer() {
+			return {width: this.width, height: this.height, rgb: Buffer.alloc(this.width * this.height * 3)}
+		}
+		close() {}
+	},
+}))
+
+vi.mock('./machine-control.js', async () => {
+	const actual = await vi.importActual<typeof import('./machine-control.js')>('./machine-control.js')
+	return {
+		...actual,
+		encodeScreenshot: async (frame: {width: number; height: number}) => ({
+			width: frame.width,
+			height: frame.height,
+			mimeType: 'image/jpeg',
+			data: '',
+		}),
+	}
+})
+
 vi.mock('./libvirt.js', async () => {
 	const fsp = await import('node:fs/promises')
 	const nodePath = await import('node:path')
@@ -146,6 +211,10 @@ vi.mock('./libvirt.js', async () => {
 
 			async diskUsage() {
 				return 0
+			}
+
+			displaySocket() {
+				return displayControls.socketPath
 			}
 
 			async diskUsageBytes() {
@@ -231,6 +300,7 @@ vi.mock('./libvirt.js', async () => {
 })
 
 import Machines from './machines.js'
+import * as machineDomain from './domain.js'
 
 const roots: string[] = []
 const instances: Machines[] = []
@@ -239,6 +309,9 @@ afterEach(async () => {
 	await Promise.all(instances.splice(0).map((machines) => machines.stop()))
 	downloadControls.splice(0)
 	preparedWindowsOptions.splice(0)
+	preparedOmarchyOptions.splice(0)
+	omarchyProbes.splice(0)
+	vi.restoreAllMocks()
 	cloudInitUserData.splice(0)
 	downloadHooks.onStart = undefined
 	guestApiControls.starts = 0
@@ -259,9 +332,9 @@ afterEach(async () => {
 	await Promise.all(roots.splice(0).map((root) => fse.remove(root)))
 })
 
-async function createMachines() {
-	const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-install-'))
-	roots.push(root)
+async function createMachines(existingRoot?: string) {
+	const root = existingRoot ?? (await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-install-')))
+	if (!existingRoot) roots.push(root)
 	const filesRoot = nodePath.join(root, 'files')
 	await Promise.all([
 		fse.ensureDir(nodePath.join(filesRoot, 'External')),
@@ -282,6 +355,7 @@ async function createMachines() {
 		eventBus,
 		files: {virtualToSystemPath, getAllowedOperations: async () => ['writable']},
 		apps: {instances: []},
+		mcp: {removeMachineGrant: vi.fn(async () => true)},
 	} as unknown as Umbreld)
 	instances.push(machines)
 	await machines.start()
@@ -291,6 +365,78 @@ async function createMachines() {
 describe('background machine installation', () => {
 	const catalogOsId = process.arch === 'arm64' ? 'ubuntu-26.04-server-arm64' : 'ubuntu-26.04-server-amd64'
 	const catalogCreate = {osId: catalogOsId, username: 'umbrel', password: 'password'}
+
+	test('installs Omarchy with separate seed media and cleans up only after authenticated completion', async () => {
+		vi.spyOn(machineDomain, 'hostArchitecture').mockReturnValue('amd64')
+		const {machines, root, eventBus} = await createMachines()
+		const machine = await machines.create({
+			name: 'Omarchy',
+			osId: 'omarchy-4.0.4-amd64',
+			username: 'umbrel',
+			password: 'password',
+			diskSizeGb: 4,
+			cores: 2,
+			memoryGb: 4,
+		})
+		await pWaitFor(() => downloadControls.length === 1)
+		await downloadControls[0].resolve()
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+		const directory = nodePath.join(root, 'machines', machine.id)
+		const readDefinition = async () => yaml.load(await fsp.readFile(nodePath.join(directory, 'machine.yaml'), 'utf8'))
+		expect(await readDefinition()).toMatchObject({
+			osName: 'Omarchy',
+			installMedia: 'media/install.iso',
+			seedMedia: 'media/seed.iso',
+			firstBootSetup: expect.any(Object),
+		})
+		expect(cloudInitUserData).toHaveLength(0)
+		expect((await machines.list())[0]).not.toHaveProperty('seedMedia')
+		await expect(machines.completeFirstBootSetup(machine.id, '00'.repeat(32))).rejects.toThrow(
+			'[machine-first-boot-token-invalid]',
+		)
+		await expect(machines.ejectInstallMedia(machine.id)).rejects.toThrow('[machine-first-boot-setup-in-progress]')
+		await expect(fse.pathExists(nodePath.join(directory, 'media/seed.iso'))).resolves.toBe(true)
+		await pWaitFor(() => omarchyProbes.includes(directory))
+
+		// State updates continue while an SSH connection is waiting to time out.
+		let releaseProbe!: () => void
+		omarchyProbeControls.barrier = new Promise<void>((resolve) => (releaseProbe = resolve))
+		omarchyProbes.splice(0)
+		try {
+			await pWaitFor(() => omarchyProbes.includes(directory), {timeout: 5_000})
+			libvirtControls.suspendedIds.add(machine.id)
+			await pWaitFor(
+				() =>
+					eventBus.emit.mock.calls.some(
+						([event, payload]) =>
+							event === 'machines:updated' &&
+							payload.some(({id, state}: {id: string; state: string}) => id === machine.id && state === 'suspended'),
+					),
+				{timeout: 5_000},
+			)
+		} finally {
+			releaseProbe()
+			omarchyProbeControls.barrier = undefined
+			libvirtControls.suspendedIds.delete(machine.id)
+		}
+
+		// A host restart during setup must resume detection using the saved key,
+		// without needing the user's password again.
+		await machines.stop()
+		omarchyProbes.splice(0)
+		const {machines: resumed} = await createMachines(root)
+		await pWaitFor(() => omarchyProbes.includes(directory))
+		expect(preparedOmarchyOptions).toHaveLength(1)
+		await expect(fse.pathExists(nodePath.join(directory, 'media/omarchy-setup-key'))).resolves.toBe(true)
+		const token = new URL(preparedOmarchyOptions[0].completionUrl).pathname.split('/').at(-1)!
+		await resumed.completeFirstBootSetup(machine.id, token)
+		expect(libvirtControls.ejectCalls).toContain(machine.id)
+		expect((await resumed.list())[0]).toMatchObject({firstBootSetup: false, installationState: undefined})
+		for (const field of ['firstBootSetup', 'installMedia', 'seedMedia'])
+			expect(await readDefinition()).not.toHaveProperty(field)
+		for (const file of ['install.iso', 'seed.iso', 'omarchy-setup-key', 'omarchy-setup-password'])
+			await expect(fse.pathExists(nodePath.join(directory, 'media', file))).resolves.toBe(false)
+	})
 
 	test('keeps umbreld startup alive when transient machine networking cannot be reconciled', async () => {
 		libvirtControls.reconcileNetworkFailures = 1
@@ -1037,4 +1183,138 @@ describe('background machine installation', () => {
 			expect(await fsp.readFile(nodePath.join(machineDirectory, 'media', 'install.iso'), 'utf8')).toContain(licenseKey)
 		},
 	)
+})
+
+test('an agent at the console is announced with its pointer, kept alive by looking, and released when quiet', async () => {
+	process.env.UMBREL_MACHINE_AGENT_CONTROL_TIMEOUT_MS = '2500'
+	try {
+		const {machines, filesRoot, eventBus} = await createMachines()
+		displayControls.socketPath = nodePath.join(filesRoot, 'display.sock')
+		await fsp.writeFile(displayControls.socketPath, '')
+		displayControls.pointerEvents.length = 0
+		const imports = nodePath.join(filesRoot, 'External', 'imports')
+		await fse.ensureDir(imports)
+		await fsp.writeFile(nodePath.join(imports, 'installer.iso'), 'installer')
+		const machine = await machines.create({
+			name: 'Agent driven',
+			imagePath: '/External/imports/installer.iso',
+			diskSizeGb: 1,
+			cores: 1,
+			memoryGb: 1,
+		})
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+		const agent = {tokenId: 'a'.repeat(32), label: 'Claude Code', agentType: 'claude-code'}
+		const controlEvents = () =>
+			eventBus.emit.mock.calls.filter(([event]) => event === 'machines:agent-control').map(([, payload]) => payload)
+
+		// A person's screenshot never claims the console, an agent's action does
+		await machines.screenshot(machine.id)
+		expect(machines.agentControls()).toStrictEqual({})
+		await machines.control(machine.id, {action: 'left_click', coordinate: [640, 400]}, {agent})
+		expect(machines.agentControls()[machine.id]).toMatchObject({
+			agent,
+			pointer: {x: 640, y: 400, width: 1280, height: 800},
+		})
+		expect(controlEvents().at(-1)).toMatchObject({machineId: machine.id, control: {agent, pointer: {x: 640, y: 400}}})
+
+		// The next pointer action travels from where the last one ended
+		displayControls.pointerEvents.length = 0
+		await machines.control(machine.id, {action: 'mouse_move', coordinate: [680, 400]}, {agent})
+		expect(displayControls.pointerEvents.length).toBeGreaterThan(1)
+		expect(displayControls.pointerEvents.at(-1)).toStrictEqual([680, 400, 0])
+
+		// Looking keeps the turn alive without moving the pointer: the last input
+		// was over 2.5 s ago by the time this check runs, so only the screenshot
+		// can explain the turn still being active
+		await new Promise((resolve) => setTimeout(resolve, 1_000))
+		await machines.screenshot(machine.id, {agent})
+		await new Promise((resolve) => setTimeout(resolve, 1_600))
+		expect(machines.agentControls()[machine.id]).toMatchObject({pointer: {x: 680, y: 400}})
+
+		// Silence hands the console back, but the pointer is still where it was
+		// left: the next action travels from there rather than starting over
+		await pWaitFor(() => !(machine.id in machines.agentControls()), {interval: 50, timeout: 5_000})
+		expect(controlEvents().at(-1)).toStrictEqual({machineId: machine.id, control: null})
+		displayControls.pointerEvents.length = 0
+		await machines.control(machine.id, {action: 'mouse_move', coordinate: [520, 400]}, {agent})
+		expect(displayControls.pointerEvents.length).toBeGreaterThan(1)
+		expect(displayControls.pointerEvents.at(-1)).toStrictEqual([520, 400, 0])
+
+		// Stopping the machine is what forgets it
+		await machines.stopMachine(machine.id)
+		await machines.startMachine(machine.id)
+		displayControls.pointerEvents.length = 0
+		await machines.control(machine.id, {action: 'mouse_move', coordinate: [100, 100]}, {agent})
+		expect(displayControls.pointerEvents).toStrictEqual([[100, 100, 0]])
+	} finally {
+		delete process.env.UMBREL_MACHINE_AGENT_CONTROL_TIMEOUT_MS
+	}
+}, 20_000)
+
+test('agent input is serialized per machine, retains a held action, and snapshots do not replay it', async () => {
+	process.env.UMBREL_MACHINE_AGENT_CONTROL_TIMEOUT_MS = '100'
+	try {
+		const {machines, filesRoot, eventBus} = await createMachines()
+		displayControls.socketPath = nodePath.join(filesRoot, 'display.sock')
+		await fsp.writeFile(displayControls.socketPath, '')
+		await fse.ensureDir(nodePath.join(filesRoot, 'External', 'imports'))
+		await fsp.writeFile(nodePath.join(filesRoot, 'External', 'imports', 'installer.iso'), 'installer')
+		const machine = await machines.create({
+			name: 'Input ordering',
+			imagePath: '/External/imports/installer.iso',
+			diskSizeGb: 1,
+			cores: 1,
+			memoryGb: 1,
+		})
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+		const agent = {tokenId: 'a'.repeat(32), label: 'Claude Code'}
+		const other = {tokenId: 'b'.repeat(32), label: 'Codex'}
+		const first = machines.control(machine.id, {action: 'long_press', coordinate: [200, 300], duration: 0.4}, {agent})
+		await pWaitFor(() => machines.agentControls()[machine.id]?.feedback?.phase === 'pressed', {
+			interval: 10,
+			timeout: 1_000,
+		})
+		const second = machines.control(machine.id, {action: 'left_click', coordinate: [700, 300]}, {agent: other})
+		const held = machines.agentControls()[machine.id]
+		await new Promise((resolve) => setTimeout(resolve, 200))
+		const snapshot = machines.agentControls()[machine.id]
+		expect(snapshot.agent).toEqual(agent)
+		expect(snapshot.sequence).toBe(held.sequence)
+		expect(snapshot.observedAt).toBeGreaterThan(held.observedAt)
+		expect(snapshot.feedback).toEqual(held.feedback)
+		// Another agent looking does not take over the identity of the operator.
+		await machines.screenshot(machine.id, {agent: other})
+		expect(machines.agentControls()[machine.id].agent).toEqual(agent)
+		await Promise.all([first, second])
+		const events = eventBus.emit.mock.calls.filter(
+			([event, payload]) => event === 'machines:agent-control' && payload.control?.feedback,
+		)
+		const phases = events.map(([, {control}]) => ({
+			sequence: control.sequence,
+			agent: control.agent.label,
+			phase: control.feedback.phase,
+		}))
+		const unique = phases.filter((event, index) => index === 0 || event.sequence !== phases[index - 1].sequence)
+		expect(phases).toEqual(unique) // No extra broadcasts for ownership heartbeats.
+		expect(unique.map(({agent, phase}) => `${agent}:${phase}`)).toEqual([
+			'Claude Code:moving',
+			'Claude Code:pressed',
+			'Claude Code:released',
+			'Codex:moving',
+			'Codex:pressed',
+			'Codex:released',
+		])
+		for (let i = 1; i < unique.length; i++) expect(unique[i].sequence).toBeGreaterThan(unique[i - 1].sequence)
+		displayControls.failNextPointer = true
+		await expect(
+			machines.control(machine.id, {action: 'mouse_move', coordinate: [900, 500]}, {agent: other}),
+		).rejects.toThrow('display interrupted')
+		expect(machines.agentControls()[machine.id]).toMatchObject({
+			feedback: {action: 'mouse_move', phase: 'complete'},
+			pointer: {x: 700, y: 300},
+		})
+		expect(machines.agentControls()[machine.id].pointer?.motion).toBeUndefined()
+	} finally {
+		delete process.env.UMBREL_MACHINE_AGENT_CONTROL_TIMEOUT_MS
+	}
 })

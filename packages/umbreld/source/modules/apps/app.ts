@@ -11,6 +11,8 @@ import {$} from 'execa'
 import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
 import pRetry from 'p-retry'
+
+import getDirectorySize from '../utilities/get-directory-size.js'
 import {
 	applyGpuAccelerationToService,
 	getGpuAcceleration,
@@ -116,6 +118,7 @@ type ResolvedFolderAccess = AppFolderAccessSelection & {
 // the auth override so the app follows its default
 export type AppSettingsUpdate = {
 	appProxyAuthEnabled?: boolean | null
+	hideCredentialsBeforeOpen?: boolean
 	customMounts?: AppCustomMount[]
 	folderAccess?: AppFolderAccessSelection[]
 	environment?: AppEnvironmentVariable[]
@@ -257,7 +260,7 @@ function disableAppDataRootHostPathCreation<T>(volume: T): T {
 	} as T
 }
 
-function normalizeContainerPath(path: string) {
+export function normalizeAppMountTargetPath(path: string) {
 	if (!nodePath.posix.isAbsolute(path))
 		throw new Error(`[apps-settings-invalid-container-path] Container path '${path}' must be absolute`)
 
@@ -314,8 +317,10 @@ function isAllowedCustomMountSourcePath(path: string) {
 	return false
 }
 
-function normalizeAllowedSourcePath(path: string) {
-	const normalizedPath = normalizeVirtualPath(path.trim())
+export function normalizeAppStorageSourcePath(path: string) {
+	// Whitespace belongs to the folder name. Repeated normalization must not
+	// change the path between a permission check and mounting it.
+	const normalizedPath = normalizeVirtualPath(path).replace(/\/+$/, '')
 	if (!isAllowedCustomMountSourcePath(normalizedPath)) {
 		throw new Error(
 			`[apps-settings-source-not-allowed] Source path '${normalizedPath}' must be in /Home, /External, or a /Network share`,
@@ -357,7 +362,7 @@ function getComposeMounts(compose: Compose): ParsedComposeMount[] {
 
 			let targetPath: string
 			try {
-				targetPath = normalizeContainerPath(parsedVolume.target)
+				targetPath = normalizeAppMountTargetPath(parsedVolume.target)
 			} catch {
 				continue
 			}
@@ -394,7 +399,7 @@ export function getFolderAccessSlots(
 			source.replace(/^\$\{UMBREL_ROOT\}/, umbreld.dataDirectory).replace(/^\$UMBREL_ROOT/, umbreld.dataDirectory),
 		)
 		try {
-			return normalizeAllowedSourcePath(umbreld.files.systemToVirtualPath(expandedSource))
+			return normalizeAppStorageSourcePath(umbreld.files.systemToVirtualPath(expandedSource))
 		} catch {
 			return null
 		}
@@ -411,7 +416,7 @@ export function getFolderAccessSlots(
 		let sourcePath: string | null = null
 		if (savedFolder) {
 			try {
-				sourcePath = normalizeAllowedSourcePath(savedFolder.sourcePath)
+				sourcePath = normalizeAppStorageSourcePath(savedFolder.sourcePath)
 			} catch {
 				// Ignore malformed saved settings so app updates can drop stale folder access safely.
 			}
@@ -438,7 +443,7 @@ export function getFolderAccessSlots(
 
 			let targetPath: string
 			try {
-				targetPath = normalizeContainerPath(declaredMount.targetPath.trim())
+				targetPath = normalizeAppMountTargetPath(declaredMount.targetPath.trim())
 			} catch {
 				invalid = true
 				break
@@ -537,6 +542,9 @@ export default class App {
 	dataDirectory: string
 	userSettingsComposePath: string
 	#state: AppState = 'unknown'
+	// Proxy lifetime follows container teardown/startup, independently of UI state
+	// and hooks that may still be running after the upstream starts listening.
+	appGatewayEnabled = true
 	stateProgress = 0
 	store: FileStore<AppSettings>
 	// Set while setSettings() validates, persists, and applies a settings change
@@ -666,7 +674,7 @@ export default class App {
 		// Hook-free container teardown and logs do not need bind sources. Keep those
 		// recovery actions available when a drive/share is offline; commands that run
 		// app hooks or may start/mutate an app must resolve the real storage first.
-		const requireAvailable = !['force-stop', 'logs', 'nuke-images'].includes(command)
+		const requireAvailable = !['force-stop', 'logs', 'images'].includes(command)
 		const {dataRoots, storagePaths} = await this.#umbreld.apps.getRuntimeDataRootContext(this.id, {
 			requireAvailable,
 			fallbackToInternal,
@@ -680,11 +688,25 @@ export default class App {
 		try {
 			if (['install', 'initialize-data-root', 'start', 'restart', 'reinstall', 'update'].includes(command)) {
 				await this.#ensureAppDataRootBindSources(dataRoots[this.id])
+				this.appGatewayEnabled = true
+				await this.refreshLanIngress()
 			}
-			return await appScript(this.#umbreld, command, this.id, inheritStdio, {maxOutputBytes, dataRoots})
+			const result = await appScript(this.#umbreld, command, this.id, inheritStdio, {maxOutputBytes, dataRoots})
+			if (['stop', 'force-stop', 'pre-patch-update', 'nuke-images'].includes(command)) {
+				this.appGatewayEnabled = false
+				await this.refreshLanIngress()
+			}
+			return result
 		} finally {
 			releaseStorage()
 		}
+	}
+
+	// Resolve installed Compose, exports, system fragments and user overrides even
+	// when the app is stopped or its external data storage is disconnected.
+	async getExpectedImages() {
+		const {stdout} = await this.#runAppScript('images', false)
+		return stdout.split('\n').filter(Boolean)
 	}
 
 	async #readDataRootMove() {
@@ -880,7 +902,11 @@ export default class App {
 		}
 	}
 
-	async moveDataRoot(destinationParentPath: string | null) {
+	async moveDataRoot(destinationParentPath: string | null): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#moveDataRoot(destinationParentPath))
+	}
+
+	async #moveDataRoot(destinationParentPath: string | null) {
 		const moveLock = this.#acquireDataRootMoveLock()
 		const shouldRestart = moveLock.shouldRestart
 		const dependentLocks: Array<{app: App; shouldRestart: boolean; release: () => void}> = []
@@ -1087,7 +1113,11 @@ export default class App {
 		}
 	}
 
-	async resetDataRoot() {
+	async resetDataRoot(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#resetDataRoot())
+	}
+
+	async #resetDataRoot() {
 		const moveLock = this.#acquireDataRootMoveLock()
 		const shouldRemainRunning = moveLock.shouldRestart
 		const dependentLocks: Array<{app: App; shouldRestart: boolean; release: () => void}> = []
@@ -1391,8 +1421,8 @@ export default class App {
 			let targetPath: string
 			let sourcePath: string
 			try {
-				targetPath = normalizeContainerPath(mount.targetPath.trim())
-				sourcePath = normalizeAllowedSourcePath(mount.sourcePath)
+				targetPath = normalizeAppMountTargetPath(mount.targetPath)
+				sourcePath = normalizeAppStorageSourcePath(mount.sourcePath)
 			} catch (error) {
 				if (strict) throw error
 				continue
@@ -1490,7 +1520,7 @@ export default class App {
 
 			let sourcePath: string
 			try {
-				sourcePath = normalizeAllowedSourcePath(folder.sourcePath)
+				sourcePath = normalizeAppStorageSourcePath(folder.sourcePath)
 			} catch (error) {
 				if (strict) throw error
 				continue
@@ -1658,7 +1688,7 @@ export default class App {
 		const [customMounts, folderAccess] = await Promise.all([this.getCustomMounts(), this.getFolderAccess()])
 		const paths = [...customMounts, ...folderAccess].flatMap((entry) => {
 			try {
-				return [normalizeAllowedSourcePath(entry.sourcePath)]
+				return [normalizeAppStorageSourcePath(entry.sourcePath)]
 			} catch {
 				return []
 			}
@@ -1681,7 +1711,7 @@ export default class App {
 			const parsedMount = AppCustomMountSchema.safeParse(customMount)
 			if (!parsedMount.success) continue
 			try {
-				paths.add(normalizeAllowedSourcePath(parsedMount.data.sourcePath))
+				paths.add(normalizeAppStorageSourcePath(parsedMount.data.sourcePath))
 			} catch {
 				// Strict settings validation reports malformed paths below. They cannot
 				// reference real storage, so there is nothing to reserve first.
@@ -2040,8 +2070,13 @@ export default class App {
 	// untouched (and never re-validated, so e.g. storage settings staled by an
 	// app update don't block an unrelated auth change). For the auth override,
 	// null clears it so the app follows its default.
-	async setSettings({
+	async setSettings(settings: AppSettingsUpdate): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#setSettings(settings))
+	}
+
+	async #setSettings({
 		appProxyAuthEnabled,
+		hideCredentialsBeforeOpen,
 		customMounts,
 		folderAccess,
 		environment,
@@ -2089,6 +2124,33 @@ export default class App {
 			])
 			const resolvedDependencies =
 				dependencies !== undefined ? fillSelectedDependencies(manifest.dependencies, dependencies) : undefined
+			if (dependencies !== undefined) {
+				const declaredDependencies = new Set(manifest.dependencies ?? [])
+				for (const dependencyId of Object.keys(dependencies)) {
+					if (!declaredDependencies.has(dependencyId)) {
+						throw new Error(
+							`[apps-settings-dependency-unsupported] App '${this.id}' does not declare '${dependencyId}'`,
+						)
+					}
+				}
+				const previousSelections = fillSelectedDependencies(manifest.dependencies, previousDependencies)
+				for (const [dependencyId, providerId] of Object.entries(resolvedDependencies!)) {
+					// Existing selections can outlive a provider or its implementation.
+					// Only validate changes so those stale choices remain repairable.
+					if (providerId === previousSelections[dependencyId]) continue
+					const provider = this.#umbreld.apps.instances.find((app) => app.id === providerId)
+					if (!provider || provider.state === 'installing' || provider.state === 'uninstalling') {
+						throw new Error(
+							`[apps-settings-dependency-not-installed] Dependency provider '${providerId}' is not installed`,
+						)
+					}
+					if (providerId !== dependencyId && !(await provider.readManifest()).implements?.includes(dependencyId)) {
+						throw new Error(
+							`[apps-settings-dependency-incompatible] App '${providerId}' does not implement '${dependencyId}'`,
+						)
+					}
+				}
+			}
 			const dependencyDataRootPaths = resolvedDependencies
 				? await this.#umbreld.apps.getDataRootPathsForApps(Object.values(resolvedDependencies))
 				: []
@@ -2187,6 +2249,7 @@ export default class App {
 
 			// One write for every provided field
 			const success = await this.store.update((settings) => {
+				if (hideCredentialsBeforeOpen !== undefined) settings.hideCredentialsBeforeOpen = hideCredentialsBeforeOpen
 				if (appProxyAuthEnabled !== undefined) {
 					if (appProxyAuthEnabled === null) delete settings.appProxyAuthEnabled
 					else settings.appProxyAuthEnabled = appProxyAuthEnabled
@@ -2216,7 +2279,11 @@ export default class App {
 				await this.#umbreld.notifications.clear(`app-storage-settings-changed:${this.id}`).catch(() => {})
 			}
 
-			await this.regenerateUserSettingsCompose()
+			// Auth and the credential prompt do not affect Compose. Applying them
+			// must not depend on an existing storage source being available.
+			if (storageProvided || environmentProvided || dependencies !== undefined) {
+				await this.regenerateUserSettingsCompose()
+			}
 
 			// The settings and generated compose are in place so lifecycle operations
 			// can proceed again.
@@ -2273,7 +2340,14 @@ export default class App {
 		})
 	}
 
-	async install({
+	async install(options: {
+		dependencies: Record<string, string>
+		folderAccess?: AppFolderAccessSelection[]
+	}): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#install(options), {cleanupAfter: true})
+	}
+
+	async #install({
 		dependencies,
 		folderAccess = [],
 	}: {
@@ -2334,7 +2408,11 @@ export default class App {
 		}
 	}
 
-	async update() {
+	async update(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#update(), {cleanupAfter: true})
+	}
+
+	async #update() {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
 		this.state = 'updating'
@@ -2348,12 +2426,6 @@ export default class App {
 		try {
 			await this.#recoverDataRootMove()
 
-			// Get a reference to the old images
-			const compose = await this.readCompose()
-			const oldImages = Object.values(compose.services!)
-				.map((service) => service.image)
-				.filter(Boolean) as string[]
-
 			// Update the app, patching the compose file half way through
 			await this.#runAppScript('pre-patch-update')
 			await this.patchComposeFile()
@@ -2365,12 +2437,6 @@ export default class App {
 			await this.refreshLanIngress()
 			await this.#runStartOrDataRootInitialization()
 			await this.#runAppScript('post-patch-update')
-
-			// Delete the old images if we can. Silently fail on error cos docker
-			// will return an error even if only one image is still needed.
-			try {
-				await $({stdio: 'inherit'})`docker rmi ${oldImages}`
-			} catch {}
 
 			this.state = 'ready'
 			this.stateProgress = 0
@@ -2434,8 +2500,10 @@ export default class App {
 	}
 
 	async start() {
-		this.#assertNoSettingsInProgress()
-		return this.#start()
+		return this.#umbreld.apps.imageCleanup.runOperation(() => {
+			this.#assertNoSettingsInProgress()
+			return this.#start()
+		})
 	}
 
 	async #stop({persistState = false}: {persistState?: boolean} = {}) {
@@ -2476,11 +2544,17 @@ export default class App {
 	}
 
 	async stop(options: {persistState?: boolean} = {}) {
-		this.#assertNoSettingsInProgress()
-		return this.#stop(options)
+		return this.#umbreld.apps.imageCleanup.runOperation(() => {
+			this.#assertNoSettingsInProgress()
+			return this.#stop(options)
+		})
 	}
 
 	async restart(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#restart())
+	}
+
+	async #restart(): Promise<boolean> {
 		this.#assertNoSettingsInProgress()
 		try {
 			await this.#runStateTransition('restarting', async () => {
@@ -2505,7 +2579,11 @@ export default class App {
 		}
 	}
 
-	async uninstall() {
+	async uninstall(): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#uninstall(), {cleanupAfter: true})
+	}
+
+	async #uninstall() {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
 		this.state = 'uninstalling'
@@ -2527,10 +2605,13 @@ export default class App {
 				retries: 2,
 			}).catch((error) => {
 				// A malformed storage record must not make local container teardown and
-				// uninstall impossible. nuke-images below performs the hook-free force path.
+				// uninstall impossible. force-stop below performs the hook-free teardown.
 				this.logger.error(`Could not run stop hooks while uninstalling ${this.id}; forcing container teardown`, error)
 			})
-			await this.#runAppScript('nuke-images', true, {fallbackToInternal: true})
+			await this.#runAppScript('force-stop', true, {fallbackToInternal: true})
+			// Revoke references before deleting app data so a later reinstall cannot
+			// inherit favorites or access granted to the previous installation.
+			await this.#umbreld.files.removeReferencesWithin(`/Apps/${this.id}`)
 			const dataRootLocation = await this.getDataRootLocation().catch((error) => {
 				this.logger.error(`Could not read app storage while uninstalling ${this.id}; leaving it behind`, error)
 				return null
@@ -2640,12 +2721,17 @@ export default class App {
 		// Resolve each location independently so unavailable external app data does
 		// not hide the usage that remains available on internal storage.
 		const sizes = await Promise.all(
-			paths.map((path) =>
-				this.#umbreld.files.getDirectorySize(path).catch((error) => {
+			paths.map(async (path) => {
+				try {
+					const systemPath = await this.#umbreld.files.virtualToSystemPath(path, OWNER_USER_ID)
+					// Files can move while du is walking an active app's data. Keep the
+					// original retry behavior for these transient measurement failures.
+					return await pRetry(() => getDirectorySize(systemPath), {retries: 2})
+				} catch (error) {
 					this.logger.error(`Failed to get disk usage for app ${this.id}`, error)
 					return 0
-				}),
-			),
+				}
+			}),
 		)
 		return sizes.reduce((total, size) => total + size, 0)
 	}
@@ -2772,7 +2858,11 @@ export default class App {
 	}
 
 	// Set the app's selected dependencies
-	async setSelectedDependencies(selectedDependencies: Record<string, string>) {
+	async setSelectedDependencies(selectedDependencies: Record<string, string>): Promise<boolean> {
+		return this.#umbreld.apps.imageCleanup.runOperation(() => this.#setSelectedDependencies(selectedDependencies))
+	}
+
+	async #setSelectedDependencies(selectedDependencies: Record<string, string>) {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
 		const {dependencies} = await this.readManifest()

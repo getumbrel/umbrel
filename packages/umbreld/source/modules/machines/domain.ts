@@ -59,6 +59,7 @@ export type MachineDefinition = {
 	secureBoot?: boolean
 	tpm?: boolean
 	installMedia?: string
+	seedMedia?: string
 	bootMedia?: string
 	portForwards: PortForward[]
 }
@@ -101,6 +102,12 @@ export function defaultMachineType(profile: PlatformProfile) {
 	}
 }
 
+// Legacy profiles carry PS/2 devices only. Everything else gets a USB tablet,
+// which is what makes absolute pointer input from the console possible.
+export function isLegacyPlatformProfile(profile: PlatformProfile) {
+	return profile === 'legacy-x86' || profile === 'windows-98-x86'
+}
+
 export function architectureForProfile(profile: PlatformProfile): MachineArchitecture {
 	return profile === 'modern-arm64' ? 'arm64' : 'amd64'
 }
@@ -140,7 +147,7 @@ export function buildDomainXml({
 	if (!definition.ipAddress) throw new Error('[machine-ip-address-invalid]')
 	const windows7 = definition.platformProfile === 'windows-7-x86'
 	const windows98 = definition.platformProfile === 'windows-98-x86'
-	const legacy = definition.platformProfile === 'legacy-x86' || windows98
+	const legacy = isLegacyPlatformProfile(definition.platformProfile)
 	const modern = !legacy
 	const arm = definition.arch === 'arm64'
 	const windowsArm = arm && definition.osId === 'windows-11'
@@ -189,11 +196,15 @@ export function buildDomainXml({
 	const acceleratedGraphics = graphicsRenderNode
 		? `<graphics type='egl-headless'><gl rendernode='${escapeXml(graphicsRenderNode)}'/></graphics>`
 		: ''
+	// Waydroid sizes Android's display once, from the output Cage finds at boot,
+	// and Cage never switches modes afterwards, so give Android machines a
+	// phone-shaped scanout up front instead of QEMU's 1280x800 default.
+	const resolution = definition.osId === 'android' ? "<resolution x='720' y='1560'/>" : ''
 	const video = windowsArm
 		? "<video><model type='none'/></video>"
 		: graphicsRenderNode
-			? `<video><model type='virtio' heads='1' primary='yes'><acceleration accel3d='yes'/></model></video>`
-			: `<video><model type='${videoModel}' primary='yes'/></video>`
+			? `<video><model type='virtio' heads='1' primary='yes'><acceleration accel3d='yes'/>${resolution}</model></video>`
+			: `<video><model type='${videoModel}' primary='yes'>${resolution}</model></video>`
 	// Keep HDA separate from libvirt's VNC audiodev. When they share one
 	// backend QEMU lets VNC suspend it, leaving snd-aloop in PREPARED forever.
 	// qemu:commandline also exposes ALSA's try-poll switch, which snd-aloop does
@@ -248,6 +259,7 @@ export function buildDomainXml({
       <boot order='${definition.bootMedia ? '2' : '1'}'/>
     </disk>
     ${cdrom}
+    ${definition.seedMedia ? `<disk type='file' device='cdrom'><driver name='qemu' type='raw'/><source file='${escapeXml(nodePath.join(machineDirectory, definition.seedMedia))}' startupPolicy='optional'/><target dev='sdb' bus='sata'/><readonly/></disk>` : ''}
     ${bootFloppy}
 		<interface type='network'>
 			<mac address='${escapeXml(definition.macAddress)}'/>

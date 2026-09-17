@@ -8,7 +8,9 @@ import {Button} from '@/components/ui/button'
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {Progress} from '@/components/ui/progress'
-import {toast} from '@/components/ui/toast'
+import {transfers} from '@/features/files/transfers/transfers'
+import {isTerminalTransferState} from '@/features/files/transfers/types'
+import {useTransferItem} from '@/features/files/transfers/use-transfers'
 import type {FileSystemItem} from '@/features/files/types'
 import {CatalogIntro} from '@/features/machines/components/os-catalog-intro'
 import {OsIcon, OsIconGlow} from '@/features/machines/components/os-icon'
@@ -111,7 +113,7 @@ export default function OsCatalog({intro: introRequested = false}: {intro?: bool
 		// Desktop shows the whole catalog on the wall; phones keep only a curated
 		// recognizable spread (hidden via CSS below md) so the pile stays a
 		// single-glance composition there.
-		const MOBILE_WALL_IDS = ['ubuntu', 'debian', 'android', 'windows-11', 'custom', 'alpine', 'windows-xp']
+		const MOBILE_WALL_IDS = ['ubuntu', 'debian', 'android', 'omarchy', 'windows-11', 'custom', 'alpine', 'windows-xp']
 		const entries = [
 			...[...popularFamilies, ...moreFamilies].map((family) => ({
 				id: family.familyId,
@@ -461,71 +463,33 @@ function OsCardAction({family}: {family: OsFamily}) {
 // already in Files.
 function CustomMachineCard({index, introMorph}: {index: number; introMorph?: boolean}) {
 	const navigate = useNavigate()
-	const {startUpload, uploadingItems, cancelUpload, uploadCompletions} = useGlobalFiles()
+	const {startUpload} = useGlobalFiles()
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [browserOpen, setBrowserOpen] = useState(false)
-	const [upload, setUpload] = useState<{path: string; name: string; startedAt: number} | null>(null)
-	// Track that the item has shown up in the uploading list, so its later
-	// disappearance can be told apart from it never having been registered
-	const hasAppearedRef = useRef(false)
-	// Cancel clicked before the uploader registered the item: remember the path
-	// and deliver the cancel as soon as it shows up in the list
-	const pendingCancelPathRef = useRef<string | null>(null)
-
-	const item = upload ? uploadingItems.find((entry) => entry.path === upload.path) : undefined
-
-	// Deliver a cancel that raced the item's appearance in the uploading list
-	useEffect(() => {
-		if (!pendingCancelPathRef.current) return
-		const entry = uploadingItems.find((entry) => entry.path === pendingCancelPathRef.current)
-		if (entry?.tempId) {
-			pendingCancelPathRef.current = null
-			cancelUpload(entry.tempId)
-		}
-	}, [uploadingItems, cancelUpload])
+	// The queued upload this card follows, by its stable id
+	const [uploadId, setUploadId] = useState<string | null>(null)
+	const upload = useTransferItem(uploadId)
 
 	useEffect(() => {
-		if (!upload) return
-		// A completion record is the only reliable success signal — on success,
-		// cancel and collision-skip alike, the item just leaves `uploadingItems`
-		const completion = uploadCompletions.find(
-			(entry) => entry.path === upload.path && entry.completedAt >= upload.startedAt,
-		)
-		if (completion) {
-			hasAppearedRef.current = false
-			setUpload(null)
-			if (completion.collisionStrategy === 'keep-both') {
-				// A file with this name already existed and the user kept both: the
-				// upload landed under a deduplicated name we don't know, so we can't
-				// deep-link the create form — point them at Browse instead
-				toast.success(t('machines.upload-complete-keep-both'), {area: 'machines'})
-			} else {
-				navigate(`${MACHINES_CONFIGURE_PATH}?iso=${encodeURIComponent(upload.path)}`)
-			}
+		if (!uploadId) return
+		// Gone from the queue (its batch retired, or the session ended): nothing to follow
+		if (!upload) return setUploadId(null)
+		if (upload.state === 'completed') {
+			setUploadId(null)
+			// The stored path, which a "Keep both" resolution renames
+			navigate(`${MACHINES_CONFIGURE_PATH}?iso=${encodeURIComponent(upload.resultPath ?? upload.path)}`)
 			return
 		}
-		if (item) {
-			hasAppearedRef.current = true
-			// The provider surfaces its own error toast — reset so the user can retry
-			if (item.status === 'error') {
-				hasAppearedRef.current = false
-				setUpload(null)
-			}
-			return
-		}
-		// Item left the list with no completion record → cancelled (possibly from
-		// the global uploads island) or collision-skipped: just reset the card
-		if (hasAppearedRef.current) {
-			hasAppearedRef.current = false
-			setUpload(null)
-		}
-	}, [upload, item, uploadCompletions, navigate])
+		// Cancelled, skipped or failed (the transfers island explains): reset the card
+		if (isTerminalTransferState(upload.state)) setUploadId(null)
+	}, [upload, uploadId, navigate])
 
+	// Only a queued or streaming upload can be cancelled; once every byte has
+	// left the browser the queue refuses, and the card keeps following the
+	// upload to its actual end
+	const cancellable = uploadId !== null && transfers.isCancellable(uploadId)
 	const handleCancel = () => {
-		hasAppearedRef.current = false
-		if (item?.tempId) cancelUpload(item.tempId)
-		else if (upload) pendingCancelPathRef.current = upload.path
-		setUpload(null)
+		if (uploadId && transfers.cancel(uploadId)) setUploadId(null)
 	}
 
 	return (
@@ -539,16 +503,18 @@ function CustomMachineCard({index, introMorph}: {index: number; introMorph?: boo
 				upload ? (
 					<div className='flex h-[30px] w-full items-center gap-2 text-13 font-medium -tracking-2 text-white/75'>
 						<span className='max-w-[40%] truncate'>{upload.name}</span>
-						<Progress value={item?.progress ?? 0} className='flex-1' />
-						<DarkTooltip label={t('cancel')}>
-							<button
-								className='shrink-0 opacity-50 transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-90'
-								onClick={handleCancel}
-								aria-label={t('cancel')}
-							>
-								<RiCloseCircleFill className='size-4' />
-							</button>
-						</DarkTooltip>
+						<Progress value={upload.progress} className='flex-1' />
+						{cancellable && (
+							<DarkTooltip label={t('cancel')}>
+								<button
+									className='shrink-0 opacity-50 transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-90'
+									onClick={handleCancel}
+									aria-label={t('cancel')}
+								>
+									<RiCloseCircleFill className='size-4' />
+								</button>
+							</DarkTooltip>
+						)}
 					</div>
 				) : (
 					<DropdownMenu>
@@ -577,10 +543,8 @@ function CustomMachineCard({index, introMorph}: {index: number; introMorph?: boo
 					const selected = e.target.files?.[0]
 					e.target.value = ''
 					if (!selected) return
-					hasAppearedRef.current = false
-					pendingCancelPathRef.current = null
-					setUpload({path: `/Home/${selected.name}`, name: selected.name, startedAt: Date.now()})
-					startUpload([selected], '/Home')
+					const [id] = startUpload([selected], '/Home')
+					setUploadId(id ?? null)
 				}}
 			/>
 			{browserOpen && (

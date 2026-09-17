@@ -1,5 +1,5 @@
-import {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react'
-import {useLocation} from 'react-router-dom'
+import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react'
+import {useLocation, useSearchParams} from 'react-router-dom'
 
 import {clampTileSize, DEFAULT_TILE_SIZE} from '@/features/photos/components/listing/timeline-rows'
 import type {PhotoSubKind} from '@/features/photos/constants'
@@ -46,6 +46,10 @@ export type GridHandle = {
 	// the lightbox, closed on an item stepped far from where it opened, leaves
 	// the timeline at that item with a tile for the picture to fly back to
 	revealTile: (id: string) => void
+	// The lightbox has this item's picture in the air — flying out of the grid,
+	// up on the stage, flying home — so its tile is empty until it lands
+	// (undefined). Takes effect at once, in either renderer, without a render.
+	liftTile: (id: string | undefined) => void
 }
 
 // How many items a list asks for at a time. A screenful at a 14px tile is
@@ -138,10 +142,14 @@ function readTileSize() {
 const TEXT_APPLY_MS = 250
 
 function useSearchState(): PhotosSearch {
-	const [text, setText] = useState('')
+	// A search handed over in the URL (Cmd+K's "Open in Photos") starts the
+	// view already narrowed to it
+	const [searchParams, setSearchParams] = useSearchParams()
+	const handedText = searchParams.get('q') ?? ''
+	const [text, setText] = useState(handedText)
 	const [tokens, setTokens] = useState<SearchToken[]>([])
 	const [open, setOpen] = useState(false)
-	const [appliedText, setAppliedText] = useState('')
+	const [appliedText, setAppliedText] = useState(handedText.trim())
 	useEffect(() => {
 		const trimmed = text.trim()
 		if (trimmed === appliedText) return
@@ -155,12 +163,32 @@ function useSearchState(): PhotosSearch {
 
 	// Every view starts whole: navigating away drops the search
 	const {pathname} = useLocation()
+	const lastPathname = useRef(pathname)
 	useEffect(() => {
+		if (lastPathname.current === pathname) return
+		lastPathname.current = pathname
 		setText('')
 		setAppliedText('')
 		setTokens([])
 		setOpen(false)
 	}, [pathname])
+
+	// … and one handed over while already here replaces it. Either way the
+	// text leaves the address bar once taken, so Back and a reload don't
+	// re-apply it.
+	useEffect(() => {
+		const handed = searchParams.get('q')
+		if (handed === null) return
+		// A fresh search: whatever was narrowing the view before (a date, a
+		// source, videos only) would hide results the palette just showed
+		setText(handed)
+		setAppliedText(handed.trim())
+		setTokens([])
+		setOpen(false)
+		const next = new URLSearchParams(searchParams)
+		next.delete('q')
+		setSearchParams(next, {replace: true})
+	}, [searchParams, setSearchParams])
 
 	const addToken = useCallback((token: SearchToken) => {
 		setTokens((current) => {

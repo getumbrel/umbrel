@@ -1,6 +1,7 @@
 import fse from 'fs-extra'
 import {z} from 'zod'
 import yaml from 'js-yaml'
+import semver from 'semver'
 
 import type Umbreld from '../../index.js'
 
@@ -244,6 +245,13 @@ class Migration {
 		// Add notification if version changed
 		if (previousVersion && previousVersion !== this.umbreld.version) {
 			await this.umbreld.notifications.add('umbrelos-updated').catch(() => {})
+
+			// Include 2.0 prereleases when welcoming users upgrading without any installed apps.
+			const upgradingToUmbrelos2 = semver.major(previousVersion) < 2 && semver.major(this.umbreld.version) >= 2
+			const installedApps = (await this.umbreld.store.get('apps')) || []
+			if (upgradingToUmbrelos2 && installedApps.length === 0) {
+				await this.umbreld.notifications.add('onboarding-complete').catch(() => {})
+			}
 		}
 
 		this.logger.log('Migrations complete')

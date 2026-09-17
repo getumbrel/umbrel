@@ -1,9 +1,19 @@
+import {useMutationState} from '@tanstack/react-query'
+import {getMutationKey} from '@trpc/react-query'
 import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
-import {trpcReact} from '@/trpc/trpc'
+import {RouterInput, trpcReact} from '@/trpc/trpc'
 
 import {beginAppAction, finishAppAction} from './app-action-guard'
+
+/** Pending updates take precedence over early polls that still report ready. */
+export function usePendingAppUpdateIds() {
+	return useMutationState({
+		filters: {mutationKey: getMutationKey(trpcReact.apps.update), status: 'pending'},
+		select: (mutation) => (mutation.state.variables as RouterInput['apps']['update'] | undefined)?.appId,
+	})
+}
 
 /**
  * The one `apps.update` mutation every update surface shares — the app page

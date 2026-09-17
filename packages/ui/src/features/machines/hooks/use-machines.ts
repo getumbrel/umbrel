@@ -4,7 +4,7 @@ import {useNavigate} from 'react-router-dom'
 import {toast} from '@/components/ui/toast'
 import {machineIconSrc} from '@/features/machines/components/os-icon'
 import {machinePath} from '@/features/machines/constants'
-import type {Machine, OsImage} from '@/features/machines/types'
+import type {Machine, MachineAgentControl, OsImage} from '@/features/machines/types'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -73,6 +73,43 @@ export function useOsImages() {
 		isError: osImagesQ.isError,
 		refetch: osImagesQ.refetch,
 	}
+}
+
+// Which machines an MCP agent is driving right now, kept live from the
+// agent-control events so the console can show who is at the controls and
+// follow their pointer. Mounted by the console itself, so at most a couple of
+// subscriptions exist at once.
+export function useMachineAgentControls({
+	enabled = true,
+	onArrival,
+}: {enabled?: boolean; onArrival?: (machineId: string, tokenId: string) => void} = {}) {
+	const utils = trpcReact.useUtils()
+	const query = trpcReact.machines.agentControls.useQuery(undefined, {enabled, staleTime: 5_000, retry: false})
+
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'machines:agent-control'},
+		{
+			enabled,
+			onStarted: () => utils.machines.agentControls.invalidate(),
+			onData: (data) => {
+				const event = data as {machineId: string; control: MachineAgentControl | null}
+				// An older in-flight snapshot must not overwrite a press/release event.
+				const previous = utils.machines.agentControls.getData()
+				if (previous && !previous[event.machineId] && event.control && !document.hidden)
+					onArrival?.(event.machineId, event.control.agent.tokenId)
+				void utils.machines.agentControls.cancel()
+				utils.machines.agentControls.setData(undefined, (current) => {
+					const next = {...(current ?? {})}
+					if (event.control) next[event.machineId] = event.control
+					else delete next[event.machineId]
+					return next
+				})
+			},
+			onError: (error) => console.error('machines:agent-control subscription error', error),
+		},
+	)
+
+	return query.data ?? {}
 }
 
 export function useMachineCapabilities() {

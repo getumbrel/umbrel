@@ -1,3 +1,5 @@
+import os from 'node:os'
+
 import {describe, expect, test, vi} from 'vitest'
 
 import type Umbreld from '../../index.js'
@@ -25,7 +27,11 @@ function createBackups() {
 
 	vi.spyOn(backups, 'getRepository').mockResolvedValue({id: 'repository', path: '/External/Backup'} as never)
 	vi.spyOn(backups, 'getRepositories').mockResolvedValue([{id: 'repository', path: '/External/Backup'}] as never)
-	vi.spyOn(backups, 'repository').mockResolvedValue({stdout: '', stderr: '', exitCode: 0} as never)
+	vi.spyOn(backups, 'repository').mockImplementation(async (_repositoryId, flags = []) => {
+		const isMaintenanceInfo = flags[0] === 'maintenance' && flags[1] === 'info'
+		const stdout = isMaintenanceInfo ? JSON.stringify({owner: `${os.userInfo().username}@umbrel`}) : ''
+		return {stdout, stderr: '', exitCode: 0} as never
+	})
 	vi.spyOn(backups, 'createIgnoreFile').mockResolvedValue()
 	vi.spyOn(backups, 'prepareUmbrelDatabaseBackup').mockImplementation(prepareUmbrelDatabaseBackup)
 	vi.spyOn(backups, 'releaseUmbrelDatabaseBackup').mockImplementation(releaseUmbrelDatabaseBackup)

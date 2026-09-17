@@ -10,8 +10,9 @@ import {AudioIsland} from '@/features/files/components/floating-islands/audio-is
 import {CloudIsland} from '@/features/files/components/floating-islands/cloud-island'
 import {FormattingIsland} from '@/features/files/components/floating-islands/formatting-island'
 import {OperationsIsland} from '@/features/files/components/floating-islands/operations-island'
-import {UploadingIsland} from '@/features/files/components/floating-islands/uploading-island'
+import {TransfersIsland} from '@/features/files/components/floating-islands/transfers-island'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
+import {useTransfersView} from '@/features/files/transfers/use-transfers'
 import {MachinesInstallIsland} from '@/features/machines/components/floating-island'
 import {
 	useInstallingMachines,
@@ -40,8 +41,10 @@ export function FloatingIslandContainer() {
 	// When any ImmersiveDialog is open, bump z-index so islands appear above it
 	const isImmersiveDialogOpen = useImmersiveDialogOpen()
 
-	// Grab global audio and uploading items state
-	const {audio, uploadingItems, operations} = useGlobalFiles()
+	// Grab global audio state and the server's operation progress
+	const {audio, operations} = useGlobalFiles()
+	// Files transfers (uploads, copies, moves) with the server's progress laid over
+	const transfersView = useTransfersView(operations)
 	// Backups progress
 	const backupProgressQ = useBackupProgress(1000)
 	// External storage
@@ -63,16 +66,18 @@ export function FloatingIslandContainer() {
 	// Show audio island if there's an audio file playing
 	const showAudio = audio.path && audio.name
 
-	// Show uploading island if there are any uploads in progress
-	const showUploading = uploadingItems.length > 0
+	// Show the transfers island while any batch is on screen
+	const showTransfers = transfersView.batches.length > 0
 	// Photos uploads: the queue lives outside the /photos tree so it (and this
 	// island) survive route changes; failure toasts + cache staleness too
 	const photosUploadsStatus = usePhotosUploadsStatus()
 	usePhotosUploadsFeedback()
 	const showPhotosUploads = photosUploadsStatus !== 'idle'
 
-	// Show operations island if there are any operations in progress
-	const showOperations = operations.length > 0
+	// Show operations island for progress the transfers island doesn't own:
+	// app storage moves, Rewind restores, copies from another tab or a reload
+	const managedOperations = transfersView.managedOperations
+	const showOperations = managedOperations.length > 0
 	// Show backups island if any backups are running
 	const showBackups = (backupProgressQ.data?.length || 0) > 0
 	// Show formatting island if any devices are being formatted
@@ -131,9 +136,9 @@ export function FloatingIslandContainer() {
 			className={`pointer-events-none fixed bottom-[76px] left-1/2 flex w-full -translate-x-1/2 transform-gpu flex-col items-center justify-center gap-1 will-change-transform md:bottom-[90px] md:flex-row md:items-baseline md:gap-2 ${isImmersiveDialogOpen ? 'z-[60]' : 'z-50'}`}
 		>
 			<AnimatePresence>
-				{showUploading && (
-					<motion.div key='upload-island' layout {...commonProps}>
-						<UploadingIsland />
+				{showTransfers && (
+					<motion.div key='transfers-island' layout {...commonProps}>
+						<TransfersIsland view={transfersView} />
 					</motion.div>
 				)}
 				{showPhotosUploads && (
@@ -143,7 +148,7 @@ export function FloatingIslandContainer() {
 				)}
 				{showOperations && (
 					<motion.div key='operations-island' layout {...commonProps}>
-						<OperationsIsland />
+						<OperationsIsland operations={managedOperations} />
 					</motion.div>
 				)}
 				{showFormatting && (

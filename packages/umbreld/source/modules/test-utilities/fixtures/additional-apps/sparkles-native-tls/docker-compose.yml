@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  server:
+    image: getumbrel/community-app-store-hello-world:latest
+    network_mode: host
+    restart: on-failure
+    user: '1000:1000'
+    init: true
+    command: [node, /fixture/server.cjs]
+    volumes:
+      - ${APP_DATA_DIR}/server.cjs:/fixture/server.cjs:ro
+      - ${APP_DATA_DIR}/cert.pem:/fixture/cert.pem:ro
+      - ${APP_DATA_DIR}/key.pem:/fixture/key.pem:ro

@@ -155,12 +155,32 @@ describe('Machines cloud-init seed', () => {
 		}
 		const script = config.runcmd[0]?.[2]
 
-		expect(script).toContain('waydroid init -s VANILLA')
+		expect(script).toContain('waydroid init -s GAPPS')
 		expect(script).toContain('cage -s -- waydroid show-full-ui')
 		expect(script).toContain('export WLR_NO_HARDWARE_CURSORS=1')
 		expect(script).toContain('ro.hardware.egl=swiftshader')
+		// Waydroid only folds [properties] into waydroid_base.prop during init or
+		// an upgrade, so every override has to land between init and the offline
+		// upgrade, and the upgrade has to precede the session that boots Android.
+		const upgrade = script.indexOf('waydroid upgrade -o')
+		expect(upgrade).toBeGreaterThan(script.indexOf('waydroid init -s GAPPS'))
+		expect(upgrade).toBeGreaterThan(script.indexOf('ro.hardware.gralloc=default'))
+		expect(upgrade).toBeGreaterThan(script.indexOf('ro.sf.lcd_density=320'))
+		expect(upgrade).toBeLessThan(script.indexOf('systemctl enable greetd.service'))
+		// The dock tidy-up ships as a first-boot one-shot that disables itself
+		expect(script).toContain("cat > /usr/local/bin/umbrel-waydroid-dock <<'EOF'\n#!/usr/bin/env python3")
+		expect(script).toContain('ConditionPathExists=!/var/lib/waydroid/.umbrel-dock')
+		expect(script).toContain('systemctl enable greetd.service waydroid-container.service umbrel-waydroid-dock.service')
+		expect(script).not.toContain('${')
 		expect(script).toContain('vt = 7')
 		expect(script).toContain('user = "$android_user"')
+		// ARM translation is a bonus for x86 hosts, and a failed attempt must not
+		// take the install with it
+		expect(script).toContain('translation=libndk')
+		expect(script).toContain('translation=libhoudini')
+		expect(script).toContain('install "$translation"')
+		expect(script).toContain('if [ "$(uname -m)" = x86_64 ]; then')
+		expect(script).toMatch(/timeout 900 \/usr\/local\/bin\/umbrel-waydroid-arm-translation \|\|/)
 		expect(config.runcmd.at(-1)).toEqual(['systemctl', 'set-default', 'graphical.target'])
 		expect(config.power_state.mode).toBe('reboot')
 	})

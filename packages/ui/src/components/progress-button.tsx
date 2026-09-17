@@ -28,7 +28,7 @@ const WIDTH_SLIDE_MS = 300
 /**
  * An app action button (Install / Open / Update…) whose background can fill
  * with live progress during a transition. Deliberately a plain, intrinsically
- * sized button: the label crossfades via CSS and progress is a custom property,
+ * sized button: the label stays visible and progress is a CSS custom property,
  * so grids can render many instances without layout measurement observers.
  * When the label changes width with the state, the button slides between the
  * two intrinsic widths (see useSlideWidthOnStateChange).
@@ -48,7 +48,6 @@ export function ProgressButton({variant, size, progress, state, children, classN
 	}, [state, progressing])
 
 	const progressingStyle: CSSProperties = {
-		transition: '--progress-button-progress 0.3s',
 		['--progress-button-progress' as string]: `${Math.round(progress ?? 0)}%`,
 		backgroundImage:
 			'linear-gradient(to right, var(--progress-button-bg) var(--progress-button-progress), transparent var(--progress-button-progress))',
@@ -62,7 +61,7 @@ export function ProgressButton({variant, size, progress, state, children, classN
 			data-progressing={progressing}
 			className={cn(
 				buttonVariants({size, variant}),
-				'overflow-hidden whitespace-nowrap transition-[background-color,opacity] duration-300 ease-out disabled:opacity-60',
+				'overflow-hidden whitespace-nowrap transition-[background-color,opacity,--progress-button-progress] duration-300 ease-out disabled:opacity-60',
 				state === 'loading' && '!bg-white/10',
 				// Disable transition right when installing done for a sec to prevent flicker
 				state === 'ready' && !progressingDone && 'transition-none',
@@ -75,12 +74,7 @@ export function ProgressButton({variant, size, progress, state, children, classN
 			{...buttonProps}
 			disabled={isProgressButtonDisabled(state, buttonProps.disabled)}
 		>
-			{/* Stable intrinsic wrapper; the keyed child re-fades when state changes */}
-			<span className='flex w-max items-center'>
-				<span key={state} className='flex animate-in items-center duration-200 fade-in'>
-					{children}
-				</span>
-			</span>
+			<span className='flex w-max items-center'>{children}</span>
 		</button>
 	)
 }

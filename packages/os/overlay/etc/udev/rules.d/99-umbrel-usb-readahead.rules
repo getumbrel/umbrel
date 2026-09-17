@@ -1,0 +1,6 @@
+# Some USB bridges incorrectly report 65535 * 512 bytes as the disk's optimal
+# I/O size. Linux can accept this bogus hint and derive almost 64 MiB of
+# readahead, starving competing disk reads. Restore the 128 KiB default.
+# https://github.com/getumbrel/umbrel/issues/2222
+ACTION=="add|change", SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", SUBSYSTEMS=="usb", \
+  ATTR{queue/optimal_io_size}=="33553920", ATTR{queue/read_ahead_kb}="128"

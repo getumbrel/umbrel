@@ -32,6 +32,14 @@
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>100.64.0.0/10</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<key>NSBonjourServices</key>
 	<array>
@@ -47,9 +55,8 @@
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
-	<!-- RELEASE BLOCKER: Replace with the final stable macOS appcast URL before distribution. -->
 	<key>SUFeedURL</key>
-	<string>https://updates.invalid/umbrel-macos/appcast.xml</string>
+	<string>https://download.umbrel.com/macos/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>6WS1H6oCszBQj8boE9u4jM3RPTyKjWLfWeqUIYfSwuA=</string>
 	<key>SURequireSignedFeed</key>

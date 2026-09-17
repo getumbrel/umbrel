@@ -2,11 +2,10 @@ import {SUPPORTED_ARCHIVE_EXTRACT_EXTENSIONS} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
-import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {FileSystemItem} from '@/features/files/types'
-import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
+import {isDirectoryANetworkShare} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 
 export const useItemClick = () => {
@@ -14,17 +13,9 @@ export const useItemClick = () => {
 	const {selectedItems, setSelectedItems, isSelectingOnMobile, setViewerItem} = useFilesStore()
 	const {extractSelectedItems} = useFilesOperations()
 	const {navigateToDirectory} = useNavigate()
-	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const isTouchDevice = useIsTouchDevice()
 
-	const isNetworkHostAccessible = (item: FileSystemItem) => {
-		const isNetworkHost = isDirectoryANetworkDevice(item.path)
-		return isNetworkHost ? doesHostHaveMountedShares(item.path) : true
-	}
-
 	const handleClick = (e: React.MouseEvent, item: FileSystemItem, items: FileSystemItem[]) => {
-		// Don't handle clicks on inaccessible network hosts
-		if (!isNetworkHostAccessible(item)) return
 		if (isTouchDevice) {
 			return handleClickOnMobile(item)
 		}
@@ -93,8 +84,8 @@ export const useItemClick = () => {
 	}
 
 	const handleDoubleClick = (item: FileSystemItem) => {
-		// Don't handle double clicks on inaccessible network hosts
-		if (!isNetworkHostAccessible(item)) return
+		// Hosts open their configured shares even when disconnected.
+		if (item.isDisconnected && isDirectoryANetworkShare(item.path)) return
 
 		// Don't open Umbrel Backup directory
 		if (isDirectoryAnUmbrelBackup(item.name)) return

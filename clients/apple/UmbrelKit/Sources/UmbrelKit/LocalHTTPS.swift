@@ -78,10 +78,15 @@ enum LocalHTTPSTransport {
 	static func boundedData(
 		for request: URLRequest,
 		session: URLSession,
-		maximumBytes: Int
+		maximumBytes: Int,
+		taskDelegate: URLSessionTaskDelegate? = nil
 	) async throws -> (Data, URLResponse) {
 		precondition(maximumBytes >= 0)
-		let (bytes, response) = try await session.bytes(for: request)
+		let (bytes, response) = if let taskDelegate {
+			try await session.bytes(for: request, delegate: taskDelegate)
+		} else {
+			try await session.bytes(for: request)
+		}
 		defer { bytes.task.cancel() }
 		guard response.expectedContentLength <= Int64(maximumBytes) else {
 			throw URLError(.dataLengthExceedsMaximum)
@@ -114,10 +119,13 @@ enum LocalHTTPSTransport {
 		configuration.timeoutIntervalForResource = request.timeoutInterval
 		let session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
 		defer { session.finishTasksAndInvalidate() }
+		// The async byte-stream task needs the delegate explicitly to deliver the
+		// custom server-trust challenge while enforcing the response-size limit.
 		return try await boundedData(
 			for: request,
 			session: session,
-			maximumBytes: candidateResponseMaximumBytes
+			maximumBytes: candidateResponseMaximumBytes,
+			taskDelegate: delegate
 		)
 	}
 

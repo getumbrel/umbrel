@@ -96,6 +96,19 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		ipv4Octets(address) != nil
 	}
 
+	// Manual connections intentionally cover ordinary LANs, IPv4 link-local, and
+	// Tailscale. Other literal ranges are not reachable through the app's narrowly
+	// scoped plaintext bootstrap policy and should fail validation immediately.
+	static func isSupportedManualIPv4Address(_ address: String) -> Bool {
+		guard let octets = ipv4Octets(address) else { return false }
+		switch (octets[0], octets[1]) {
+		case (10, _), (172, 16...31), (192, 168), (169, 254), (100, 64...127):
+			return true
+		default:
+			return false
+		}
+	}
+
 	private static func ipv4Octets(_ address: String) -> [Int]? {
 		let parts = address.split(separator: ".", omittingEmptySubsequences: false)
 		guard parts.count == 4 else { return nil }
@@ -112,9 +125,14 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 	}
 
 	public static func isBonjourHostname(_ host: String) -> Bool {
-		guard host.utf8.count <= 253 else { return false }
+		guard isDNSHostname(host) else { return false }
 		let labels = host.split(separator: ".", omittingEmptySubsequences: false)
-		guard labels.count >= 2, labels.last?.lowercased() == "local" else { return false }
+		return labels.count >= 2 && labels.last?.lowercased() == "local"
+	}
+
+	static func isDNSHostname(_ host: String) -> Bool {
+		guard !host.isEmpty, host.utf8.count <= 253 else { return false }
+		let labels = host.split(separator: ".", omittingEmptySubsequences: false)
 		return labels.allSatisfy { label in
 			guard (1...63).contains(label.utf8.count),
 				let first = label.utf8.first,

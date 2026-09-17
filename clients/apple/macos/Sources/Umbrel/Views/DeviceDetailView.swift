@@ -76,7 +76,7 @@ struct DeviceDetailView: View {
 				.padding(.top, 14)
 				.padding(.bottom, 4)
 
-			StatusLine(status: statusInfo(for: device), route: connectionRouteLabel(for: device))
+			StatusLine(status: statusInfo(for: device), secondaryLabel: connectionRouteLabel(for: device))
 		}
 	}
 

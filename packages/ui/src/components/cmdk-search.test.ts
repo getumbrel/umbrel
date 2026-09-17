@@ -1,6 +1,14 @@
 import {describe, expect, it} from 'vitest'
 
-import {normalizeSearchText, rankCmdkEntries, type CmdkEntry} from './cmdk-search'
+import {
+	CMDK_MATCH,
+	createCmdkMatcher,
+	normalizeSearchText,
+	orderSectionsByMatch,
+	rankCmdkEntries,
+	sortByMatch,
+	type CmdkEntry,
+} from './cmdk-search'
 
 const noop = () => {}
 
@@ -76,5 +84,41 @@ describe('rankCmdkEntries', () => {
 describe('normalizeSearchText', () => {
 	it('lowercases, trims, and strips accents', () => {
 		expect(normalizeSearchText('  Nom d’hôte Sécurisé ')).toBe('nom d’hote securise')
+	})
+})
+
+describe('createCmdkMatcher', () => {
+	it('grades one title on the shared scale', () => {
+		const match = createCmdkMatcher('download')!
+		expect(match('Downloads')).toBe(CMDK_MATCH.prefix)
+		expect(match('Just. Download.')).toBe(CMDK_MATCH.wordPrefix)
+		expect(match('Advanced settings', ['Change download folder'])).toBe(CMDK_MATCH.keywordWordPrefix)
+		expect(match('Bazarr', ['Fetches undownloaded subtitles'])).toBe(CMDK_MATCH.keywordSubstring)
+		expect(match('Troubleshoot')).toBe(CMDK_MATCH.none)
+		expect(createCmdkMatcher('downloads')!('Downloads')).toBe(CMDK_MATCH.exact)
+	})
+
+	it('is null for an empty query', () => {
+		expect(createCmdkMatcher('  ')).toBeNull()
+	})
+})
+
+describe('sortByMatch', () => {
+	it('puts the best match first and keeps source order between equals', () => {
+		const match = createCmdkMatcher('down')!
+		const names = ['Downtify', 'MeTube', 'Downloads', 'SABnzbd']
+		expect(sortByMatch(names, (name) => match(name))).toEqual(['Downtify', 'Downloads', 'MeTube', 'SABnzbd'])
+	})
+})
+
+describe('orderSectionsByMatch', () => {
+	it('leads with the source holding the best match, then by priority', () => {
+		const sections = [
+			{id: 'hits', bestMatch: CMDK_MATCH.keywordWordPrefix, priority: 0},
+			{id: 'apps', bestMatch: CMDK_MATCH.wordPrefix, priority: 2},
+			{id: 'files', bestMatch: CMDK_MATCH.prefix, priority: 1},
+			{id: 'photos', bestMatch: CMDK_MATCH.wordPrefix, priority: 3},
+		]
+		expect(orderSectionsByMatch(sections).map(({id}) => id)).toEqual(['files', 'apps', 'photos', 'hits'])
 	})
 })

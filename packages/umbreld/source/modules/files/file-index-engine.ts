@@ -4,13 +4,16 @@ import {opendir, lstat} from 'node:fs/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
 import type DatabaseTypes from 'better-sqlite3'
-import {fuzzy} from 'fast-fuzzy'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
 import {migratePhotos} from '../photos/migrations.js'
 import PhotosRepository from '../photos/repository.js'
-import type {PhotoFilter, PhotoIndexingProgress, PhotoScopeMode} from '../photos/types.js'
+import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index/reader-pool.js'
+import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.js'
+import {readDatabase, type ReadSql} from './file-index/read-database.js'
+import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.js'
+import {supportsPhotos, type PhotoFilter, type PhotoIndexingProgress, type PhotoScopeMode} from '../photos/types.js'
 import FileIndexEnrichment, {
 	BACKGROUND_QUIET_PERIOD_MS,
 	assertPublishedRevision,
@@ -18,7 +21,15 @@ import FileIndexEnrichment, {
 	type PublishedFileRevision,
 	type ThumbnailReference,
 } from './file-index-enrichment.js'
+import {
+	hasReservedMemberTrashPath,
+	isReservedMemberTrashPath,
+	relativePathWithin,
+	relativeVirtualPath,
+	joinVirtualPath,
+} from './file-index/paths.js'
 import {FILE_INDEX_SCHEMA_VERSION, foldSearchName, migrateFileIndex} from './file-index/migrations.js'
+import DirectorySizes from './file-index/directory-sizes.js'
 import {
 	FILES_THUMBNAIL_VARIANT,
 	PHOTOS_THUMBNAIL_VARIANTS,
@@ -37,15 +48,6 @@ const TRANSIENT_OBSERVATION_REFRESH_MS = 24 * 60 * 60 * 1000
 export const DEFAULT_WATCHER_BULK_THRESHOLD = 250
 const DEFAULT_BATCH_SIZE = 256
 const MAX_LIVE_WORK_PER_SCAN_BATCH = 100
-const SEARCH_MATCH_THRESHOLD = 0.66
-const MAX_MATCHES_DURING_SEARCH = 10_000
-const MIN_TRIGRAM_QUERY_LENGTH = 3
-const MIN_FUZZY_TRIGRAM_QUERY_LENGTH = 6
-const MIN_FTS_CANDIDATES = 1_000
-const MAX_SHORT_QUERY_CANDIDATES = 1_000
-const FTS_CANDIDATES_PER_RESULT = 4
-const MAX_FTS_CANDIDATES = 10_000
-const MAX_RARE_TRIGRAMS = 6
 const PHOTOS_ONLY_THUMBNAIL_VARIANT_SET = new Set<ThumbnailVariant>(
 	PHOTOS_THUMBNAIL_VARIANTS.filter((variant) => variant !== FILES_THUMBNAIL_VARIANT),
 )
@@ -156,8 +158,6 @@ type PendingLiveWork = {
 	resolve: () => void
 	reject: (error: unknown) => void
 }
-type SearchRow = {id: number; name: string; relative_path: string}
-type FtsVocabularyRow = {term: string; doc: number}
 
 export type FileIndexEngineOptions = {
 	dataDirectory: string
@@ -172,6 +172,7 @@ export type FileIndexEngineOptions = {
 	batchSize?: number
 	walkTree?: WalkTree
 	enrichmentRuntime?: FileIndexEnrichmentRuntime
+	readerPoolOptions?: FileIndexReaderPoolOptions
 }
 
 type RootRow = {
@@ -290,6 +291,7 @@ export default class FileIndexEngine {
 	readonly logger: FileIndexLogger
 
 	#database?: Database
+	#directorySizes?: DirectorySizes
 	#schemaVersion = 0
 	#available = false
 	#started = false
@@ -312,6 +314,8 @@ export default class FileIndexEngine {
 	#photosRecoveryAttempt?: Promise<void>
 	#photosRecoveryAttempts = 0
 	#photos = new PhotosRepository()
+	#readers?: FileIndexReaderPool
+	#readerPoolOptions?: FileIndexReaderPoolOptions
 
 	#isHidden: (name: string) => boolean
 	#onAvailabilityChange?: (available: boolean) => void
@@ -341,6 +345,7 @@ export default class FileIndexEngine {
 		batchSize = DEFAULT_BATCH_SIZE,
 		walkTree = walkFileTree,
 		enrichmentRuntime,
+		readerPoolOptions,
 	}: FileIndexEngineOptions) {
 		this.databasePath = nodePath.join(dataDirectory, 'file-index', 'index.db')
 		this.umbrelDatabasePath = nodePath.join(dataDirectory, 'umbrel.db')
@@ -354,11 +359,13 @@ export default class FileIndexEngine {
 		this.#watcherBulkThreshold = watcherBulkThreshold
 		this.#batchSize = batchSize
 		this.#walkTree = walkTree
+		this.#readerPoolOptions = readerPoolOptions
 		this.#enrichment = new FileIndexEnrichment(
 			{
 				dataDirectory,
 				logger,
 				withDatabase: (operation, priority) => this.#mutate(operation, priority),
+				readSql: (query, priority, lane) => this.#readSql(query, priority, lane),
 				photosAvailable: () => this.#photosAvailable,
 				onStalePath: (systemPath) => this.reconcilePath(systemPath),
 				onContentAttached: async (entryId, hash) => {
@@ -374,14 +381,19 @@ export default class FileIndexEngine {
 					const accountIds = this.#photos.refreshContentEffectiveTakenAt(database, contentId)
 					return () => this.#notifyPhotosChanged(accountIds)
 				},
-				onThumbnailReady: async (contentId) => {
-					if (!this.#photosAvailable) return
-					const accountIds = await this.#mutate((database) => this.#photos.accountIdsForContent(database, contentId))
-					this.#notifyPhotosChanged(accountIds)
+				onThumbnailReady: (contentId) => {
+					if (!this.#photosAvailable || this.#stopping) return
+					// Publication notifications are fire-and-forget. Reader shutdown or
+					// failure must not leave a rejected promise after the artifact is ready.
+					void this.#readFiles('accountIdsForContent', [contentId])
+						.then((accountIds) => this.#notifyPhotosChanged(accountIds))
+						.catch((error) => {
+							if (!this.#stopping) this.logger.error('Failed to report thumbnail availability', error)
+						})
 				},
 				onHashFailure: async (entryId) => {
 					if (!this.#photosAvailable) return
-					const accountIds = await this.#mutate((database) => this.#photos.accountIdsForEntry(database, entryId))
+					const accountIds = await this.#readFiles('accountIdsForEntry', [entryId])
 					this.#notifyPhotosChanged(accountIds)
 				},
 				onContentFailure: async (contentId) => {
@@ -413,7 +425,7 @@ export default class FileIndexEngine {
 	}
 
 	async #handleOpenFailure(error: unknown) {
-		this.#closeDatabase()
+		await this.#closeDatabase()
 		this.#database = undefined
 		this.#setAvailable(false)
 		this.logger.error('File index is unavailable', error)
@@ -452,13 +464,19 @@ export default class FileIndexEngine {
 		} catch (error) {
 			const quarantineReason = databaseQuarantineReason(error)
 			if (!quarantineReason) throw error
-			this.#closeDatabase()
+			await this.#closeDatabase()
 			this.#database = undefined
 			await this.#quarantineDatabase(quarantineReason)
 			this.#artifactRecoveryBarrierRequired = true
 			await this.#openAndMigrate()
 		}
 
+		if (this.#stopping) return
+		this.#readers = new FileIndexReaderPool(
+			{databasePath: this.databasePath, umbrelDatabasePath: this.umbrelDatabasePath},
+			this.#readerPoolOptions,
+		)
+		await this.#readers.start()
 		this.#setAvailable(true)
 		this.logger.log(`Opened file index schema v${this.#schemaVersion}`)
 		if (this.#roots.size > 0) await this.#syncRoots()
@@ -470,12 +488,18 @@ export default class FileIndexEngine {
 		this.#database.pragma('journal_mode = WAL')
 		this.#database.pragma('foreign_keys = ON')
 		this.#database.function('file_index_now_ms', () => Date.now())
+		const migrationStartedAt = performance.now()
 		this.#schemaVersion = await migrateFileIndex(this.#database)
+		this.logger.log(
+			`File index migrations completed in ${Math.round(performance.now() - migrationStartedAt)}ms (schema v${this.#schemaVersion})`,
+		)
 		if (this.#schemaVersion !== FILE_INDEX_SCHEMA_VERSION) {
 			throw new UnsupportedFileIndexSchemaError(
 				`Unsupported file index schema v${this.#schemaVersion}; expected v${FILE_INDEX_SCHEMA_VERSION}`,
 			)
 		}
+		this.#directorySizes = new DirectorySizes(this.#database)
+		this.#directorySizes.sync()
 		this.#photosAvailable = false
 		await this.#openUmbrelDatabase().catch((error) => {
 			this.logger.error('Umbrel database is unavailable; file indexing will continue without Photos', error)
@@ -581,10 +605,11 @@ export default class FileIndexEngine {
 		this.#photosRecoveryAttempts++
 		this.#photosRecoveryTimer = setTimeout(() => {
 			this.#photosRecoveryTimer = undefined
-			const recovery = this.#mutate(async () => {
-				if (this.#photosAvailable || this.#stopping) return
-				await this.#openUmbrelDatabase()
-			})
+			const recovery = this.#mutationQueue
+				.add(async () => {
+					if (this.#photosAvailable || this.#stopping) return
+					await this.#openUmbrelDatabase()
+				})
 				.then(async () => {
 					if (!this.#photosAvailable || this.#stopping) return
 					await this.#enrichment.enableThumbnailVariants(PHOTOS_THUMBNAIL_VARIANTS)
@@ -604,7 +629,9 @@ export default class FileIndexEngine {
 		}, delay)
 	}
 
-	#closeDatabase() {
+	async #closeDatabase() {
+		await this.#readers?.stop()
+		this.#readers = undefined
 		try {
 			this.#database?.close()
 		} catch {}
@@ -896,6 +923,9 @@ export default class FileIndexEngine {
 		const unreadablePaths = new Map<string, unknown>()
 		this.logger.log(`Reconciling '${root.virtualPath}' (${reason})`)
 
+		// Scan writes yield to Photos preparation and user mutations. Lower the
+		// scan priority instead of raising reads above earlier favorite/album edits.
+		// Each batch is still awaited before the scan submits its next operation.
 		try {
 			await this.#mutate((database) => {
 				this.#throwIfRootScanCancelled(root)
@@ -911,14 +941,14 @@ export default class FileIndexEngine {
 					Date.now(),
 					root.id,
 				)
-			})
+			}, SCAN_DATABASE_PRIORITY)
 			root.scanGeneration = generation
 			if (root.kind === 'home' && root.lastSuccessfulScanAt === undefined) this.#notifyPhotosChanged([root.ownerId])
 
 			// Root scans are serialized, so this table contains only the current
 			// snapshot. An unqualified delete lets SQLite clear it efficiently after
 			// a failed scan without walking every temporary row.
-			await this.#mutate((database) => run(database, 'DELETE FROM reconciliation_seen'))
+			await this.#mutate((database) => run(database, 'DELETE FROM reconciliation_seen'), SCAN_DATABASE_PRIORITY)
 			let batch: EntryWrite[] = []
 			for await (const entry of this.#walkTree(
 				root.systemPath,
@@ -932,19 +962,19 @@ export default class FileIndexEngine {
 				indexedEntries++
 				if (batch.length >= this.#batchSize) {
 					this.#throwIfRootScanCancelled(root)
-					await this.#writeEntries(batch, 0, true)
+					await this.#writeEntries(batch, SCAN_DATABASE_PRIORITY, true)
 					batch = []
 					await new Promise<void>((resolve) => setImmediate(resolve))
 					await this.#drainPendingLiveWork(MAX_LIVE_WORK_PER_SCAN_BATCH)
 				}
 			}
 			this.#throwIfRootScanCancelled(root)
-			if (batch.length > 0) await this.#writeEntries(batch, 0, true)
+			if (batch.length > 0) await this.#writeEntries(batch, SCAN_DATABASE_PRIORITY, true)
 			await new Promise<void>((resolve) => setImmediate(resolve))
 			await this.#drainPendingLiveWork(Number.POSITIVE_INFINITY)
 			this.#throwIfRootScanCancelled(root)
 			if (activeSnapshot.rerunRequested) {
-				await this.#mutate((database) => run(database, 'DELETE FROM reconciliation_seen'))
+				await this.#mutate((database) => run(database, 'DELETE FROM reconciliation_seen'), SCAN_DATABASE_PRIORITY)
 				this.logger.log(`Superseded reconciliation for '${root.virtualPath}'; scheduling a fresh snapshot`)
 				return
 			}
@@ -988,7 +1018,7 @@ export default class FileIndexEngine {
 					)
 				})
 				finishScan.immediate()
-			})
+			}, SCAN_DATABASE_PRIORITY)
 
 			if (partialError) {
 				root.state = 'degraded'
@@ -1046,7 +1076,7 @@ export default class FileIndexEngine {
 				}
 			})
 			markProtected.immediate(relativePaths)
-		})
+		}, SCAN_DATABASE_PRIORITY)
 	}
 
 	#scheduleLiveWork(operation: () => Promise<void>, priority: number, cost = 1) {
@@ -1270,6 +1300,16 @@ export default class FileIndexEngine {
 					})
 					move.immediate()
 				})
+				// A watcher may already have removed the source (including a hidden
+				// Trash claim), leaving no row for reuseMovedContent. Resolve the live
+				// destination's identity before acknowledging a Photos move. Existing
+				// hashes/metadata are reused, or rebuilt if orphan cleanup removed them.
+				if (this.#photosAvailable && supportsPhotos(nodePath.basename(destinationSystemPath))) {
+					const entry = await this.getEntryBySystemPath(destinationSystemPath)
+					if (entry?.type === 'file' && !entry.hidden && entry.thumbnailIdentityKind === 'content') {
+						await this.#enrichment.ensureMediaMetadata(entry.id)
+					}
+				}
 			}
 		} finally {
 			await this.removePath(sourceSystemPath)
@@ -1375,7 +1415,8 @@ export default class FileIndexEngine {
 
 	#applyPathMutation(database: Database, mutation: PathMutation) {
 		const photosChangedAccountIds = new Set<string>()
-		const apply = database.transaction((mutation: PathMutation) => {
+		// #mutate owns the transaction, including size maintenance.
+		const apply = (mutation: PathMutation) => {
 			if (mutation.type === 'delete') {
 				const detached = this.#photosAvailable
 					? this.#photos.detachPath(database, mutation.rootId, mutation.relativePath)
@@ -1594,8 +1635,8 @@ export default class FileIndexEngine {
 				}
 				if (detached.length > 0) this.#photos.refreshEffectiveTakenAt(database, detached)
 			}
-		})
-		apply.immediate(mutation)
+		}
+		apply(mutation)
 		this.#notifyPhotosChanged(photosChangedAccountIds)
 	}
 
@@ -1604,13 +1645,10 @@ export default class FileIndexEngine {
 		if (!root?.id || !this.#available) return undefined
 		const relativePath = relativeVirtualPath(root.virtualPath, virtualPath)
 		if (relativePath === '' || isReservedMemberTrashPath(root, relativePath)) return undefined
-		const row = get(
-			this.#requireDatabase(),
-			`${entrySelectSql()} WHERE entries.root_id = ? AND entries.relative_path = ?`,
-			root.id,
-			relativePath,
-		) as EntryRow | undefined
-		return row ? indexedEntry(row) : undefined
+		const row = (await readDatabase(this.#readSql, ON_DEMAND_DATABASE_PRIORITY)
+			.prepare(`${entrySelectSql()} WHERE entries.root_id = ? AND entries.relative_path = ?`)
+			.get(root.id, relativePath)) as EntryRow | undefined
+		return row && this.#roots.get(root.virtualPath) === root ? indexedEntry(row) : undefined
 	}
 
 	async getEntryBySystemPath(systemPath: string): Promise<IndexedEntry | undefined> {
@@ -1618,13 +1656,10 @@ export default class FileIndexEngine {
 		if (!root?.id || !this.#available) return undefined
 		const relativePath = relativePathWithin(root.systemPath, systemPath)
 		if (relativePath === '' || isReservedMemberTrashPath(root, relativePath)) return undefined
-		const row = get(
-			this.#requireDatabase(),
-			`${entrySelectSql()} WHERE entries.root_id = ? AND entries.relative_path = ?`,
-			root.id,
-			relativePath,
-		) as EntryRow | undefined
-		return row ? indexedEntry(row) : undefined
+		const row = (await readDatabase(this.#readSql, ON_DEMAND_DATABASE_PRIORITY)
+			.prepare(`${entrySelectSql()} WHERE entries.root_id = ? AND entries.relative_path = ?`)
+			.get(root.id, relativePath)) as EntryRow | undefined
+		return row && this.#roots.get(root.virtualPath) === root ? indexedEntry(row) : undefined
 	}
 
 	async ensureThumbnail(systemPath: string, variant?: ThumbnailVariant): Promise<ThumbnailReference> {
@@ -1822,26 +1857,62 @@ export default class FileIndexEngine {
 		return result
 	}
 
+	#readerPool() {
+		this.#requireDatabase()
+		if (this.#stopping) throw new Error('File index readers are stopped')
+		if (!this.#readers) throw new Error('File index readers are unavailable')
+		return this.#readers
+	}
+
+	#readSql: ReadSql = async (query, priority, lane) =>
+		this.#readerPool().read('sql', [query], (begin) => begin(), {priority, lane})
+
+	async #readFiles<M extends Exclude<FileIndexReadMethod, PhotosReadMethod>>(method: M, args: FileIndexReadArgs<M>) {
+		return this.#readerPool().read(method, args, (begin) => begin())
+	}
+
+	async #readPhotos<M extends PhotosReadMethod>(method: M, args: FileIndexReadArgs<M>) {
+		this.#requirePhotos()
+		const readers = this.#readerPool()
+		for (let attempt = 0; ; attempt++) {
+			try {
+				// Stay FIFO with user mutations; scan writes have background priority.
+				// This limits idle reader reservations without letting fresh reads
+				// repeatedly overtake a queued favorite/album edit.
+				return await readers.read(method, args, (begin) =>
+					this.#mutationQueue.add(async () => {
+						this.#requirePhotos()
+						if (this.#stopping) throw new Error('Photos readers are stopped')
+						// Commit Photos maintenance before pinning the reader snapshot.
+						// Hold the writer queue, but never a SQLite transaction, across await.
+						this.#photos.prepareRead(this.#requireDatabase(), args[0] as string, method === 'indexingState')
+						await begin()
+					}),
+				)
+			} catch (error) {
+				if (attempt >= 2 || (error as NodeJS.ErrnoException).code !== 'PHOTOS_READ_RETRY') throw error
+			}
+		}
+	}
+
 	async photosSummary(accountId: string) {
-		return this.#mutate((database) => this.#photos.summary(this.#photosDatabase(database), accountId))
+		return this.#readPhotos('summary', [accountId])
 	}
 
 	async photosIndexingState(accountId: string) {
-		return this.#mutate((database) => this.#photos.indexingState(this.#photosDatabase(database), accountId))
+		return this.#readPhotos('indexingState', [accountId])
 	}
 
 	async photosListItems(accountId: string, filter: PhotoFilter, cursor: string | undefined, limit: number) {
-		return this.#mutate((database) =>
-			this.#photos.listItems(this.#photosDatabase(database), accountId, filter, cursor, limit),
-		)
+		return this.#readPhotos('listItems', [accountId, filter, cursor, limit])
 	}
 
 	async photosGetItem(accountId: string, id: string, deleted = false) {
-		return this.#mutate((database) => this.#photos.getItem(this.#photosDatabase(database), accountId, id, deleted))
+		return this.#readPhotos('getItem', [accountId, id, deleted])
 	}
 
 	async photosNeighbors(accountId: string, id: string, filter: PhotoFilter) {
-		return this.#mutate((database) => this.#photos.neighbors(this.#photosDatabase(database), accountId, id, filter))
+		return this.#readPhotos('neighbors', [accountId, id, filter])
 	}
 
 	async photosSetFavorite(accountId: string, ids: string[], favorite: boolean) {
@@ -1851,21 +1922,19 @@ export default class FileIndexEngine {
 	}
 
 	async photosResolveItems(accountId: string, ids: string[]) {
-		return this.#mutate((database) => this.#photos.resolveItems(this.#photosDatabase(database), accountId, ids))
+		return this.#readPhotos('resolveItems', [accountId, ids])
 	}
 
 	async photosResolveItemFiles(accountId: string, ids: string[] | undefined, rootKind: 'home' | 'trash') {
-		return this.#mutate((database) =>
-			this.#photos.resolveItemFiles(this.#photosDatabase(database), accountId, ids, rootKind),
-		)
+		return this.#readPhotos('resolveItemFiles', [accountId, ids, rootKind])
 	}
 
 	async photosResolveLiveCompanion(accountId: string, id: string) {
-		return this.#mutate((database) => this.#photos.resolveLiveCompanion(this.#photosDatabase(database), accountId, id))
+		return this.#readPhotos('resolveLiveCompanion', [accountId, id])
 	}
 
 	async photosListAlbums(accountId: string) {
-		return this.#mutate((database) => this.#photos.listAlbums(this.#photosDatabase(database), accountId))
+		return this.#readPhotos('listAlbums', [accountId])
 	}
 
 	async photosCreateAlbum(accountId: string, name: string, ids?: string[]) {
@@ -1893,7 +1962,7 @@ export default class FileIndexEngine {
 	}
 
 	async photosListSources(accountId: string) {
-		return this.#mutate((database) => this.#photos.listSources(this.#photosDatabase(database), accountId))
+		return this.#readPhotos('listSources', [accountId])
 	}
 
 	async photosUpdateSource(accountId: string, id: string, scope?: {mode: PhotoScopeMode; paths: string[]}) {
@@ -1989,39 +2058,10 @@ export default class FileIndexEngine {
 		if (!root?.id || !root.searchEnabled || !this.#available) {
 			throw new Error(`File index root '${virtualRoot}' is unavailable`)
 		}
-		const rootId = root.id
-
-		return (await this.#mutationQueue.add(() => {
-			const foldedQuery = foldSearchName(query)
-			let matches = new Map<number, SearchCandidate & {exact: boolean; score: number}>()
-			const bestMatches = () =>
-				[...matches.values()]
-					.sort((a, b) => Number(b.exact) - Number(a.exact) || b.score - a.score || a.id - b.id)
-					.slice(0, maxResults)
-
-			for (const rows of searchRowPhases(this.#requireDatabase(), rootId, query, maxResults)) {
-				for (const row of rows) {
-					if (isReservedMemberTrashPath(root, row.relative_path)) continue
-					const exact = foldSearchName(row.name) === foldedQuery
-					const score = exact ? 1 : fuzzy(query, row.name)
-					if (!exact && score <= SEARCH_MATCH_THRESHOLD) continue
-					const id = Number(row.id)
-					const existing = matches.get(id)
-					if (existing && (existing.exact || (!exact && existing.score >= score))) continue
-					matches.set(id, {
-						id,
-						name: row.name,
-						virtualPath: joinVirtualPath(root.virtualPath, row.relative_path),
-						exact,
-						score,
-					})
-					if (matches.size >= MAX_MATCHES_DURING_SEARCH) {
-						matches = new Map(bestMatches().map((match) => [match.id, match]))
-					}
-				}
-			}
-			return bestMatches().map(({id, name, virtualPath}) => ({id, name, virtualPath}))
-		})) as SearchCandidate[]
+		const results = await this.#readFiles('searchCandidates', [root, query, maxResults])
+		if (this.#roots.get(root.virtualPath) !== root)
+			throw new Error(`File index root '${virtualRoot}' changed during search`)
+		return results
 	}
 
 	async recentCandidates(
@@ -2045,32 +2085,30 @@ export default class FileIndexEngine {
 		}
 		const rootId = root.id
 
-		return (await this.#mutationQueue.add(() => {
-			const reservedTrashExclusion = hasReservedMemberTrashPath(root)
-				? `AND entries.relative_path != 'Trash' AND entries.relative_path NOT GLOB 'Trash/*'`
-				: ''
-			const exclusions = excludedDirectoryNames
-				.map(() => `AND instr('/' || entries.relative_path, '/' || ? || '/') = 0`)
-				.join('\n')
-			const rows = all(
-				this.#requireDatabase(),
+		const reservedTrashExclusion = hasReservedMemberTrashPath(root)
+			? `AND entries.relative_path != 'Trash' AND entries.relative_path NOT GLOB 'Trash/*'`
+			: ''
+		const exclusions = excludedDirectoryNames
+			.map(() => `AND instr('/' || entries.relative_path, '/' || ? || '/') = 0`)
+			.join('\n')
+		const rows = (await readDatabase(this.#readSql)
+			.prepare(
 				`SELECT id, name, relative_path
-				FROM entries
-				WHERE root_id = ? AND type = 'file' AND hidden = 0
-				${reservedTrashExclusion}
-				${exclusions}
-				ORDER BY modified_ms DESC, id DESC
-				LIMIT ?`,
-				rootId,
-				...excludedDirectoryNames,
-				maxResults,
-			) as Array<{id: number; name: string; relative_path: string}>
-			return rows.map((row) => ({
-				id: Number(row.id),
-				name: row.name,
-				virtualPath: joinVirtualPath(root.virtualPath, row.relative_path),
-			}))
-		})) as SearchCandidate[]
+			FROM entries
+			WHERE root_id = ? AND type = 'file' AND hidden = 0
+			${reservedTrashExclusion}
+			${exclusions}
+			ORDER BY modified_ms DESC, id DESC
+			LIMIT ?`,
+			)
+			.all(rootId, ...excludedDirectoryNames, maxResults)) as Array<{id: number; name: string; relative_path: string}>
+		if (this.#roots.get(root.virtualPath) !== root)
+			throw new Error(`File index root '${virtualRoot}' changed during recents lookup`)
+		return rows.map((row) => ({
+			id: Number(row.id),
+			name: row.name,
+			virtualPath: joinVirtualPath(root.virtualPath, row.relative_path),
+		}))
 	}
 
 	async directorySizes(virtualPaths: readonly string[]): Promise<IndexedDirectorySize[]> {
@@ -2082,56 +2120,19 @@ export default class FileIndexEngine {
 		})
 		if (!this.#available || requestedPaths.length === 0) return []
 
-		return (await this.#mutationQueue.add(() => {
-			const database = this.#requireDatabase()
-			const directory = database.prepare(`SELECT type FROM entries WHERE root_id = ? AND relative_path = ?`)
-			const rootSize = database.prepare(
-				`SELECT COALESCE(SUM(size), 0) AS size
-				FROM (
-					SELECT MAX(size) AS size
-					FROM entries
-					WHERE root_id = ? AND type = 'file'
-						AND (? = 0 OR (relative_path != 'Trash' AND relative_path NOT GLOB 'Trash/*'))
-					GROUP BY CASE
-						WHEN device = '' OR inode = '' THEN 'entry:' || id
-						ELSE 'inode:' || device || ':' || inode
-					END
-				)`,
-			)
-			const subtreeSize = database.prepare(
-				`SELECT COALESCE(SUM(size), 0) AS size
-				FROM (
-					SELECT MAX(size) AS size
-					FROM entries
-					WHERE root_id = ? AND type = 'file'
-						AND relative_path >= ? AND relative_path < ?
-					GROUP BY CASE
-						WHEN device = '' OR inode = '' THEN 'entry:' || id
-						ELSE 'inode:' || device || ':' || inode
-					END
-				)`,
-			)
-
-			const sizes: IndexedDirectorySize[] = []
-			for (const virtualPath of requestedPaths) {
-				const root = this.#rootForVirtualPath(virtualPath)
-				if (!root?.id || root.scanEnabled === false || root.state !== 'ready') continue
-				const relativePath = relativeVirtualPath(root.virtualPath, virtualPath)
-				if (relativePath && isReservedMemberTrashPath(root, relativePath)) continue
-				if (relativePath) {
-					const row = directory.get(root.id, relativePath) as {type: EntryType} | undefined
-					if (row?.type !== 'directory') continue
-				}
-
-				const row = (
-					relativePath
-						? subtreeSize.get(root.id, `${relativePath}/`, `${relativePath}0`)
-						: rootSize.get(root.id, Number(hasReservedMemberTrashPath(root)))
-				) as {size: number}
-				sizes.push({virtualPath, size: Number(row.size)})
-			}
-			return sizes
-		})) as IndexedDirectorySize[]
+		const roots = new Map(this.#roots)
+		const requests = requestedPaths.flatMap((virtualPath) => {
+			const root = this.#rootForVirtualPath(virtualPath)
+			if (!root?.id || root.scanEnabled === false || root.state !== 'ready') return []
+			const relativePath = relativeVirtualPath(root.virtualPath, virtualPath)
+			if (relativePath && isReservedMemberTrashPath(root, relativePath)) return []
+			return [{virtualPath, rootId: root.id, relativePath}]
+		})
+		const results = await this.#readFiles('directorySizes', [requests])
+		return results.filter(({virtualPath}) => {
+			const root = this.#rootForVirtualPath(virtualPath)
+			return root && roots.get(root.virtualPath) === root
+		})
 	}
 
 	async status() {
@@ -2148,7 +2149,9 @@ export default class FileIndexEngine {
 			mediaFailures: 0,
 		}
 		if (this.#available) {
-			const row = get(this.#requireDatabase(), 'SELECT COUNT(*) AS count FROM entries') as {count: number}
+			const row = (await readDatabase(this.#readSql, 0, 'bulk')
+				.prepare('SELECT COUNT(*) AS count FROM entries')
+				.get()) as {count: number}
 			entryCount = Number(row.count)
 			enrichment = await this.#enrichment.status()
 		}
@@ -2156,6 +2159,7 @@ export default class FileIndexEngine {
 		return {
 			available: this.#available,
 			photosAvailable: this.#photosAvailable,
+			readers: this.#readers?.status() ?? {threadIds: [], active: 0, queued: 0},
 			schemaVersion: this.#schemaVersion,
 			entryCount,
 			enrichment,
@@ -2200,8 +2204,25 @@ export default class FileIndexEngine {
 			.sort((a, b) => b.virtualPath.length - a.virtualPath.length)[0]
 	}
 
-	async #mutate<T>(operation: (database: Database) => T | Promise<T>, priority = 0): Promise<T> {
-		return (await this.#mutationQueue.add(() => operation(this.#requireDatabase()), {priority})) as T
+	async #mutate<T>(operation: (database: Database) => T, priority = 0): Promise<T> {
+		return (await this.#mutationQueue.add(
+			() => {
+				const database = this.#requireDatabase()
+				// Entry changes and their folder totals share one commit. Nested
+				// transactions become savepoints; any maintenance failure rolls back
+				// the entries too. WAL readers keep seeing the previous complete state
+				// until commit, so size reads never need to recalculate a subtree.
+				// Callbacks must be synchronous; reader handshakes use the queue directly.
+				return database
+					.transaction(() => {
+						const result = operation(database)
+						this.#directorySizes?.sync()
+						return result
+					})
+					.immediate()
+			},
+			{priority},
+		)) as T
 	}
 
 	#requireDatabase() {
@@ -2245,10 +2266,10 @@ export default class FileIndexEngine {
 				this.#photosIndexingProgressTimer = undefined
 				const accountIds = [...this.#photosIndexingProgressAccountIds]
 				this.#photosIndexingProgressAccountIds.clear()
-				void this.#mutate((database) =>
-					accountIds.map((accountId) => ({
+				void Promise.all(
+					accountIds.map(async (accountId) => ({
 						accountId,
-						state: this.#photos.indexingState(this.#photosDatabase(database), accountId),
+						state: await this.photosIndexingState(accountId),
 					})),
 				)
 					.then((progress) => {
@@ -2262,6 +2283,8 @@ export default class FileIndexEngine {
 	async stop() {
 		if (!this.#started) return
 		this.#stopping = true
+		await this.#readers?.stop()
+		this.#readers = undefined
 		if (this.#reconciliationTimer) clearTimeout(this.#reconciliationTimer)
 		if (this.#recoveryTimer) clearTimeout(this.#recoveryTimer)
 		if (this.#photosRecoveryTimer) clearTimeout(this.#photosRecoveryTimer)
@@ -2335,182 +2358,6 @@ function reuseMovedContent(
 		)
 }
 
-function queryTrigrams(query: string) {
-	const characters = Array.from(query)
-	// FTS5's trigram tokenizer cannot index shorter terms.
-	if (characters.length < MIN_TRIGRAM_QUERY_LENGTH) return
-
-	// Quote grams individually so punctuation is always treated as indexed text.
-	// Search phases decide how strictly those terms are combined.
-	const trigrams = new Set<string>()
-	for (let index = 0; index <= characters.length - 3; index++) {
-		trigrams.add(characters.slice(index, index + 3).join(''))
-	}
-	return [...trigrams]
-}
-
-function quoteFtsTerm(term: string) {
-	return `"${term.replaceAll('"', '""')}"`
-}
-
-function ftsConjunction(terms: string[]) {
-	return terms.map(quoteFtsTerm).join(' AND ')
-}
-
-function relaxedFtsExpression(terms: string[], omittedCount: number) {
-	const expressions: string[] = []
-	const omitted: number[] = []
-	const chooseOmitted = (start: number) => {
-		if (omitted.length === omittedCount) {
-			const omittedSet = new Set(omitted)
-			expressions.push(`(${ftsConjunction(terms.filter((_, index) => !omittedSet.has(index)))})`)
-			return
-		}
-		for (let index = start; index < terms.length; index++) {
-			omitted.push(index)
-			chooseOmitted(index + 1)
-			omitted.pop()
-		}
-	}
-	chooseOmitted(0)
-	return expressions.join(' OR ')
-}
-
-function rareTrigrams(database: Database, trigrams: string[]) {
-	return trigrams
-		.map((term, index) => {
-			const variants = [...new Set([term, term.toLowerCase(), term.toUpperCase()])].filter(
-				(variant) => Array.from(variant).length === MIN_TRIGRAM_QUERY_LENGTH,
-			)
-			const placeholders = variants.map(() => '?').join(', ')
-			const row = database
-				.prepare(
-					`SELECT term, doc FROM entry_names_fts_vocab
-					WHERE term IN (${placeholders})
-					ORDER BY doc, term
-					LIMIT 1`,
-				)
-				.get(...variants) as FtsVocabularyRow | undefined
-			return {index, row}
-		})
-		.filter((candidate): candidate is {index: number; row: FtsVocabularyRow} => candidate.row !== undefined)
-		.sort((left, right) => left.row.doc - right.row.doc || left.index - right.index)
-		.slice(0, MAX_RARE_TRIGRAMS)
-		.map(({row}) => row.term)
-}
-
-function ftsRows(database: Database, rootId: number, expression: string, limit: number) {
-	return database
-		.prepare(
-			`SELECT entries.id, entries.name, entries.relative_path
-			FROM entry_names_fts
-			JOIN entries ON entries.id = entry_names_fts.rowid
-			WHERE entry_names_fts MATCH ?
-				AND entries.root_id = ?
-				AND entries.hidden = 0
-			LIMIT ?`,
-		)
-		.iterate(expression, rootId, limit) as Iterable<SearchRow>
-}
-
-function ftsSubstringRows(database: Database, rootId: number, query: string, limit: number) {
-	return database
-		.prepare(
-			`SELECT entries.id, entries.name, entries.relative_path
-			FROM entry_names_fts
-			JOIN entries ON entries.id = entry_names_fts.rowid
-			WHERE entry_names_fts.search_name LIKE ?
-				AND entries.root_id = ?
-				AND entries.hidden = 0
-			LIMIT ?`,
-		)
-		.iterate(`%${query}%`, rootId, limit) as Iterable<SearchRow>
-}
-
-function shortSubstringRows(database: Database, rootId: number, foldedQuery: string) {
-	return database
-		.prepare(
-			`SELECT id, name, relative_path
-			FROM entries
-			WHERE root_id = ?
-				AND hidden = 0
-				AND instr(search_name_folded, ?) > 0
-			LIMIT ?`,
-		)
-		.iterate(rootId, foldedQuery, MAX_SHORT_QUERY_CANDIDATES) as Iterable<SearchRow>
-}
-
-function exactNameRows(database: Database, rootId: number, foldedQuery: string, limit: number) {
-	return database
-		.prepare(
-			`SELECT id, name, relative_path
-			FROM entries
-			WHERE root_id = ?
-				AND hidden = 0
-				AND search_name_folded = ?
-			LIMIT ?`,
-		)
-		.iterate(rootId, foldedQuery, limit) as Iterable<SearchRow>
-}
-
-function* searchRowPhases(
-	database: Database,
-	rootId: number,
-	query: string,
-	maxResults: number,
-): Generator<Iterable<SearchRow>> {
-	const normalizedQuery = query.normalize('NFC')
-	const foldedQuery = foldSearchName(query)
-	if (!foldedQuery) return
-	const candidateLimit = Math.min(
-		MAX_FTS_CANDIDATES,
-		Math.max(MIN_FTS_CANDIDATES, maxResults * FTS_CANDIDATES_PER_RESULT),
-	)
-	// Exact whole-name matches use a separate B-tree lookup so they cannot be
-	// displaced by an FTS candidate limit or by equally scored substrings.
-	yield exactNameRows(database, rootId, foldedQuery, candidateLimit)
-
-	const trigrams = queryTrigrams(normalizedQuery)
-	// FTS5 cannot represent one- and two-character terms. Keep those searches
-	// useful with a bounded literal substring scan over the folded filename.
-	if (!trigrams) {
-		yield shortSubstringRows(database, rootId, foldedQuery)
-		return
-	}
-
-	// FTS5's trigram tokenizer accelerates LIKE and verifies that the complete
-	// query is contiguous before LIMIT is applied. This prevents non-contiguous
-	// trigram decoys from displacing a stronger substring candidate. LIKE's two
-	// wildcard characters are intentionally left to the MATCH phases below.
-	if (!normalizedQuery.includes('%') && !normalizedQuery.includes('_')) {
-		yield ftsSubstringRows(database, rootId, normalizedQuery, candidateLimit)
-	}
-
-	// The full conjunction is a cheap exact-substring-like path and avoids
-	// ranking large posting-list unions for ordinary searches.
-	yield ftsRows(database, rootId, ftsConjunction(trigrams), candidateLimit)
-	// One edit can replace every trigram in a five-character query. Keep these
-	// searches fast and exact instead of pretending the index can provide
-	// reliable typo recall or falling back to a million-row scan.
-	if (Array.from(normalizedQuery).length < MIN_FUZZY_TRIGRAM_QUERY_LENGTH) return
-
-	// If the strict query produced no fuzzy matches, progressively relax a
-	// small set of the rarest surviving grams. This keeps typo lookup narrow
-	// while allowing locally damaged trigrams to be omitted.
-	const anchors = rareTrigrams(database, trigrams)
-	if (anchors.length === 0) return
-	yield ftsRows(database, rootId, ftsConjunction(anchors), candidateLimit)
-
-	const omittedCounts = new Set<number>()
-	if (anchors.length >= 3) omittedCounts.add(1)
-	if (anchors.length >= 4) omittedCounts.add(2)
-	if (anchors.length >= 5) omittedCounts.add(anchors.length - 2)
-	if (trigrams.length <= 5 && anchors.length >= 2) omittedCounts.add(anchors.length - 1)
-	for (const omittedCount of omittedCounts) {
-		yield ftsRows(database, rootId, relaxedFtsExpression(anchors, omittedCount), candidateLimit)
-	}
-}
-
 function databaseQuarantineReason(error: unknown) {
 	if (error instanceof UnsupportedFileIndexSchemaError) return 'unsupported-schema'
 	const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
@@ -2545,49 +2392,6 @@ function sameRootDefinition(left: FileIndexRoot, right: FileIndexRoot) {
 
 function isPhotosRootKind(kind: string): kind is 'home' | 'trash' {
 	return kind === 'home' || kind === 'trash'
-}
-
-function hasReservedMemberTrashPath(root: FileIndexRoot) {
-	return root.kind === 'home' && root.virtualPath === `/Users/${root.ownerId}`
-}
-
-function isReservedMemberTrashPath(root: FileIndexRoot, relativePath: string) {
-	return hasReservedMemberTrashPath(root) && (relativePath === 'Trash' || relativePath.startsWith('Trash/'))
-}
-
-function relativePathWithin(rootSystemPath: string, systemPath: string) {
-	const relative = nodePath.relative(nodePath.resolve(rootSystemPath), nodePath.resolve(systemPath))
-	if (relative === '') return ''
-	if (relative === '..' || relative.startsWith(`..${nodePath.sep}`) || nodePath.isAbsolute(relative)) {
-		throw new Error(`Path '${systemPath}' is outside index root '${rootSystemPath}'`)
-	}
-	return relative.split(nodePath.sep).join('/')
-}
-
-function relativeVirtualPath(rootVirtualPath: string, virtualPath: string) {
-	const root = nodePath.posix.normalize(rootVirtualPath)
-	const candidate = nodePath.posix.normalize(virtualPath)
-	if (candidate === root) return ''
-	if (!candidate.startsWith(`${root}/`))
-		throw new Error(`Path '${virtualPath}' is outside index root '${rootVirtualPath}'`)
-	const relative = candidate.slice(root.length + 1)
-	if (!relative || relative.startsWith('../') || relative.includes('\0'))
-		throw new Error(`Invalid indexed path '${virtualPath}'`)
-	return relative
-}
-
-function joinVirtualPath(rootVirtualPath: string, relativePath: string) {
-	if (
-		!relativePath ||
-		nodePath.posix.isAbsolute(relativePath) ||
-		relativePath === '..' ||
-		relativePath.startsWith('../') ||
-		relativePath.includes('/../') ||
-		relativePath.includes('\0')
-	) {
-		throw new Error(`Invalid relative path in file index: '${relativePath}'`)
-	}
-	return nodePath.posix.join(rootVirtualPath, relativePath)
 }
 
 function entryType(stats: FileStats): EntryType {
@@ -2676,10 +2480,6 @@ function indexedEntry(row: EntryRow): IndexedEntry {
 
 function run(database: Database, sql: string, ...parameters: unknown[]) {
 	return database.prepare(sql).run(...parameters)
-}
-
-function get(database: Database, sql: string, ...parameters: unknown[]) {
-	return database.prepare(sql).get(...parameters)
 }
 
 function all(database: Database, sql: string, ...parameters: unknown[]) {

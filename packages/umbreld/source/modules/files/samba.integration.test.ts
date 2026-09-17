@@ -1,4 +1,4 @@
-import {expect, beforeEach, afterEach, describe, test} from 'vitest'
+import {expect, beforeEach, afterEach, describe, test, vi} from 'vitest'
 
 import fse from 'fs-extra'
 import {delay} from 'es-toolkit'
@@ -99,15 +99,17 @@ describe('#handleFileChange()', () => {
 		// Delete one directory
 		await fse.remove(testDirectoryToDelete)
 
-		// Wait for watcher to process the deletion
-		await delay(100)
-
-		// Verify deleted directory is removed from the store
-		// but the kept directory remains
-		const storedShares = await umbreld.instance.store.get('files.shares')
-		const storedPaths = storedShares.map((share) => share.path)
-		expect(storedPaths).not.toContain('/Home/samba-auto-remove-test')
-		expect(storedPaths).toContain('/Home/samba-keep-test')
+		// Watchman/Parcel batch events and store writes are asynchronous. Wait for
+		// persisted cleanup instead of assuming both finish within 100 ms.
+		await vi.waitFor(
+			async () => {
+				const storedShares = await umbreld.instance.store.get('files.shares')
+				const storedPaths = storedShares.map((share) => share.path)
+				expect(storedPaths).not.toContain('/Home/samba-auto-remove-test')
+				expect(storedPaths).toContain('/Home/samba-keep-test')
+			},
+			{timeout: 5000},
+		)
 	})
 
 	test('automatically removes shares when directory is renamed', async () => {
@@ -130,13 +132,14 @@ describe('#handleFileChange()', () => {
 		// Rename the directory (this causes a delete event for the original path)
 		await fse.rename(originalDirectory, renamedDirectory)
 
-		// Wait for watcher to process the events
-		await delay(100)
-
 		// Verify original path is removed from the store
-		const storedShares = await umbreld.instance.store.get('files.shares')
-		const storedPaths = storedShares ? storedShares.map((share) => share.path) : []
-		expect(storedPaths).not.toContain('/Home/original-directory')
+		await vi.waitFor(
+			async () => {
+				const storedShares = await umbreld.instance.store.get('files.shares')
+				expect(storedShares.map((share) => share.path)).not.toContain('/Home/original-directory')
+			},
+			{timeout: 5000},
+		)
 	})
 
 	test('automatically removes child shares when parent directory is deleted', async () => {
@@ -160,13 +163,14 @@ describe('#handleFileChange()', () => {
 		// Delete parent directory (which also removes the child)
 		await fse.remove(parentDirectory)
 
-		// Wait for watcher to process the deletion
-		await delay(100)
-
 		// Verify deleted directory is removed from the store
-		const storedShares = await umbreld.instance.store.get('files.shares')
-		const storedPaths = storedShares ? storedShares.map((share) => share.path) : []
-		expect(storedPaths).not.toContain('/Home/parent-directory/child-directory')
+		await vi.waitFor(
+			async () => {
+				const storedShares = await umbreld.instance.store.get('files.shares')
+				expect(storedShares.map((share) => share.path)).not.toContain('/Home/parent-directory/child-directory')
+			},
+			{timeout: 5000},
+		)
 	})
 })
 

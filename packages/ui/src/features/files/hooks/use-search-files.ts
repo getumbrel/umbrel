@@ -13,6 +13,8 @@ import {trpcReact} from '@/trpc/trpc'
 export interface UseSearchFilesReturn {
 	results: FileSystemItem[]
 	isLoading: boolean
+	// The typed query hasn't reached the server yet
+	isDebouncing: boolean
 	isError: boolean
 	error: unknown
 }
@@ -21,12 +23,17 @@ export function useSearchFiles({
 	query,
 	maxResults = USE_LIST_DIRECTORY_LOAD_ITEMS.INITIAL,
 	keepPreviousResults = false,
+	staleTime,
 }: {
 	query: string
 	maxResults?: number
 	// Keep showing the last results while the next query is in flight instead of
 	// clearing them, so a list doesn't flicker as the user types
 	keepPreviousResults?: boolean
+	// How long a result set stays fresh (the app's default is a minute); a
+	// surface that comes and goes, like the command palette, asks for 0 so
+	// each visit fetches again
+	staleTime?: number
 }): UseSearchFilesReturn {
 	const trimmedQuery = query.trim()
 	const [debouncedQuery, setDebouncedQuery] = useState(trimmedQuery)
@@ -48,6 +55,9 @@ export function useSearchFiles({
 			enabled: debouncedQuery.length > 0,
 			// keep the data in the cache for a minute
 			gcTime: 60 * 1000,
+			// Spread, not `staleTime,`: an explicit undefined would override the
+			// client's default rather than fall back to it
+			...(staleTime !== undefined && {staleTime}),
 			placeholderData: keepPreviousResults
 				? (previousResults, previousQuery) => {
 						// Only while the user keeps typing the same query: results for "photo"
@@ -63,6 +73,7 @@ export function useSearchFiles({
 	return {
 		results: (data ?? []) as FileSystemItem[],
 		isLoading,
+		isDebouncing: trimmedQuery !== debouncedQuery,
 		isError,
 		error,
 	}

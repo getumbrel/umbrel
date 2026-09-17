@@ -34,9 +34,12 @@ struct DeviceFoundView: View {
 		VStack(spacing: 0) {
 			Spacer()
 
-			Text("Found 1 device")
-				.font(.callout.weight(.semibold))
-				.foregroundStyle(Palette.textMuted)
+			VStack(spacing: 2) {
+				Text("Found 1 device")
+					.font(.callout.weight(.semibold))
+					.foregroundStyle(Palette.textMuted)
+				ManualAddressPrompt()
+			}
 
 			Spacer().frame(height: 60)
 
@@ -48,9 +51,7 @@ struct DeviceFoundView: View {
 			Spacer()
 			Spacer()
 
-			Group {
-				resultAction(model.discoveryResults.first, fullWidth: true)
-			}
+			resultAction(model.discoveryResults.first, fullWidth: true)
 			.padding(.horizontal, 31)
 			.padding(.bottom, 8)
 			.entrance()
@@ -63,10 +64,13 @@ struct DeviceFoundView: View {
 		// The carousel sits a fixed 24pt below the title rather than floating
 		// in the leftover space.
 		VStack(alignment: .leading, spacing: 24) {
-			Text("Found \(model.discoveryResults.count) devices")
-				.font(.title3.weight(.semibold))
-				.foregroundStyle(Palette.textMuted)
-				.padding(.leading, 33)
+			VStack(alignment: .leading, spacing: 2) {
+				Text("Found \(model.discoveryResults.count) devices")
+					.font(.title3.weight(.semibold))
+					.foregroundStyle(Palette.textMuted)
+				ManualAddressPrompt(isLeading: true)
+			}
+				.padding(.horizontal, 33)
 				.padding(.top, 120)
 
 			ScrollView(.horizontal) {

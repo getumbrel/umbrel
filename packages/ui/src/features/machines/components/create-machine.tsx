@@ -208,6 +208,9 @@ export default function CreateMachine() {
 
 	const handleCreate = async () => {
 		if (!canCreate) return
+		// The suggestion becomes this machine's name. Pin it so the live machines
+		// list (which gains our own machine mid-create) can't bump the title to "2".
+		setName(nameValue)
 		setIsCreating(true)
 		try {
 			const machine = await create({

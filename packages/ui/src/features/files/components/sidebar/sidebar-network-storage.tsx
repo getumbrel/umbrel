@@ -18,19 +18,16 @@ import {tw} from '@/utils/tw'
 
 export function SidebarNetworkStorage() {
 	const {t} = useTranslation()
-	const {shares, isLoadingShares, removeHostOrShare, isRemovingShare} = useNetworkStorage()
+	const {shares, isLoadingShares, removeHostOrShare, isRemovingShare} = useNetworkStorage({pollShares: true})
 
-	// Group the mounted shares by host so that we render single network device items even when there are multiple shares for the same host.
+	// Group the configured shares by host so that we render single network device items even when there are multiple shares for the same host.
 	const hosts = useMemo(() => {
 		if (!shares) return []
-		const map = new Map<string, {host: string; hostPath: string}>()
+		const map = new Map<string, {host: string; hostPath: string; isMounted: boolean}>()
 		for (const s of shares) {
-			// only render hosts with mounted shares in the sidebar
-			if (!s.isMounted) continue
 			const hostPath = s.mountPath.split('/').slice(0, -1).join('/') // /Network/<host>
-			if (!map.has(s.host)) {
-				map.set(s.host, {host: s.host, hostPath})
-			}
+			const previous = map.get(hostPath)
+			map.set(hostPath, {host: s.host, hostPath, isMounted: !!previous?.isMounted || s.isMounted})
 		}
 		return Array.from(map.values())
 	}, [shares])
@@ -40,12 +37,12 @@ export function SidebarNetworkStorage() {
 			{/* Permanent /Network root item with "Add Network Share" button */}
 			<NetworkRootItem />
 
-			{/* Mounted network devices (if any) */}
+			{/* Configured network devices (including disconnected hosts) */}
 			{!isLoadingShares && hosts.length > 0 && (
 				<AnimatePresence initial={false}>
-					{hosts.map(({host, hostPath}) => (
+					{hosts.map(({host, hostPath, isMounted}) => (
 						<motion.div
-							key={`sidebar-network-${host}`}
+							key={`sidebar-network-${hostPath}`}
 							initial={{opacity: 0, height: 0}}
 							animate={{opacity: 1, height: 'auto'}}
 							exit={{opacity: 0, height: 0}}
@@ -57,6 +54,7 @@ export function SidebarNetworkStorage() {
 										<SidebarNetworkShareItem
 											host={host}
 											rootPath={hostPath}
+											isMounted={isMounted}
 											onEject={() => removeHostOrShare(hostPath)}
 											disabled={isRemovingShare}
 										/>

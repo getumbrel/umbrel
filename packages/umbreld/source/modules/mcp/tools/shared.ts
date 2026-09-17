@@ -1,5 +1,7 @@
 import type {CallToolResult} from '@modelcontextprotocol/server'
 
+import type Machines from '../../machines/machines.js'
+import type {MachineAgent} from '../../machines/machines.js'
 import type {InternalTrpcCaller} from '../../server/trpc/index.js'
 import type Mcp from '../mcp.js'
 
@@ -7,6 +9,10 @@ export type McpToolContext = {
 	rpc: InternalTrpcCaller
 	mcp: Mcp
 	dataDirectory: string
+	// Console control goes to the module directly so the agent behind the
+	// request can be named at the console; every other tool goes through routes
+	machines: Pick<Machines, 'control' | 'screenshot'>
+	agent?: MachineAgent
 }
 
 // Matches the visible settings row label so agents can point the user at it verbatim
@@ -18,16 +24,26 @@ export function toolResult(value: unknown): CallToolResult {
 	}
 }
 
-export async function runTool(
+export function runTool(
 	context: McpToolContext,
 	name: string,
 	input: unknown,
 	operation: () => Promise<unknown>,
 ): Promise<CallToolResult> {
+	return runToolResult(context, name, input, async () => toolResult(await operation()))
+}
+
+// For tools whose result is more than JSON text, such as a screenshot
+export async function runToolResult(
+	context: McpToolContext,
+	name: string,
+	input: unknown,
+	operation: () => Promise<CallToolResult>,
+): Promise<CallToolResult> {
 	const fields = input && typeof input === 'object' ? Object.keys(input).join(', ') : ''
 	context.mcp.logger.log(`Calling tool '${name}'${fields ? ` with fields: ${fields}` : ''}`)
 	try {
-		return toolResult(await operation())
+		return await operation()
 	} catch (error) {
 		context.mcp.logger.error(`Tool '${name}' failed`, error)
 		const message = error instanceof Error ? error.message : String(error)

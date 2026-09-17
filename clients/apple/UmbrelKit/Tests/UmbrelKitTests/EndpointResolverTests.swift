@@ -226,7 +226,7 @@ final class EndpointResolverTests: XCTestCase {
 	func testRememberingConnectionCandidatesDoesNotEraseKnownRoutes() {
 		var device = SavedDevice(
 			id: "device",
-			name: "Umbrel",
+			name: "Kitchen Umbrel",
 			host: "umbrel.local",
 			addresses: ["192.168.1.20"]
 		)
@@ -234,6 +234,8 @@ final class EndpointResolverTests: XCTestCase {
 		device.rememberConnectionCandidates(["100.64.0.1", "192.168.1.20"])
 
 		XCTAssertEqual(device.addresses, ["192.168.1.20", "100.64.0.1"])
+		XCTAssertEqual(device.name, "Kitchen Umbrel")
+		XCTAssertEqual(device.host, "umbrel.local")
 	}
 
 	func testResolverPreservesCancellation() async {

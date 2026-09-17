@@ -19,6 +19,7 @@ import {useWatcherRefetch} from '@/features/files/hooks/use-watcher-refetch'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {HttpUrlAuthorizerProvider} from '@/modules/auth/http-url-authorizer'
 import {trpcReact} from '@/trpc/trpc'
 
 const ShareInfoDialog = lazy(() => import('@/features/files/components/dialogs/share-info-dialog'))
@@ -50,9 +51,9 @@ export default function FilesLayout() {
 	useEffect(() => {
 		// TODO: Find a better place to do this
 		// clear selected items when navigating to a different path
-		// NOTE: when we remove/change this, we need to update
-		// packages/ui/src/features/files/cmdk-search-provider.tsx
-		// to set the selected item correctly
+		// NOTE: when we remove/change this, we need to update the Files results
+		// in packages/ui/src/components/cmdk-sources.tsx to set the selected item
+		// correctly
 		setSelectedItems([])
 
 		// Close any open file viewer (text editor, image viewer, etc.)
@@ -67,74 +68,78 @@ export default function FilesLayout() {
 
 	return (
 		<MachineFoldersProvider enabled={user?.role === 'owner'}>
-			<FilesDndWrapper>
-				<RewindOverlayProvider>
-					<SheetHeader className='flex flex-col gap-4 md:flex-row md:items-center md:gap-0'>
-						<div className='flex items-center gap-4'>
-							{isMobile ? (
-								<HiMenuAlt2
-									role='button'
-									className='h-5 w-5 text-white/90'
-									onClick={() => setIsMobileSidebarOpen(true)}
-								/>
-							) : null}
-							<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36'>{t('files')}</SheetTitle>
-						</div>
-					</SheetHeader>
-					<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
-						{/* FileViewer renders the viewerItem from the store */}
-						<FileViewer />
-
-						<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_1fr]'>
-							{/* Sidebar */}
-							{isMobile ? (
-								<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
-									<Sidebar className='h-[calc(100svh-140px)]' />
-								</MobileSidebarWrapper>
-							) : (
-								<Sidebar className='h-[calc(100vh-176px)]' />
-							)}
-
-							<div className='flex flex-col gap-3 lg:gap-5'>
-								<ActionsBarProvider>
-									<ActionsBar />
-									{/* Renders either DirectoryListing, AppsListing, RecentsListing, or TrashListing */}
-									<Outlet />
-								</ActionsBarProvider>
+			{/* Thumbnails carry the API token; one provider serves every icon in
+			    the listing, the sidebar and the dialogs (see FileItemIcon) */}
+			<HttpUrlAuthorizerProvider>
+				<FilesDndWrapper>
+					<RewindOverlayProvider>
+						<SheetHeader className='flex flex-col gap-4 md:flex-row md:items-center md:gap-0'>
+							<div className='flex items-center gap-4'>
+								{isMobile ? (
+									<HiMenuAlt2
+										role='button'
+										className='h-5 w-5 text-white/90'
+										onClick={() => setIsMobileSidebarOpen(true)}
+									/>
+								) : null}
+								<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36'>{t('files')}</SheetTitle>
 							</div>
-						</div>
+						</SheetHeader>
+						<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+							{/* FileViewer renders the viewerItem from the store */}
+							<FileViewer />
 
-						{/* Rewind overlay rendered at root so that it doesn't disappear on Files re-render if user changes screensize*/}
-						<RewindOverlay />
-
-						{/* Lazy loaded dialogs on non-read-only mode */}
-						{!isReadOnly ? (
-							<>
-								{canManageSambaShares && (
-									<Suspense>
-										<ShareInfoDialog />
-									</Suspense>
+							<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_1fr]'>
+								{/* Sidebar */}
+								{isMobile ? (
+									<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
+										<Sidebar className='h-[calc(100svh-140px)]' />
+									</MobileSidebarWrapper>
+								) : (
+									<Sidebar className='h-[calc(100vh-176px)]' />
 								)}
-								<Suspense>
-									<ShareUsersDialog />
-								</Suspense>
-								<Suspense>
-									<PermanentlyDeleteConfirmationDialog />
-								</Suspense>
-								<Suspense>
-									<AddNetworkShareDialog />
-								</Suspense>
-								<Suspense>
-									<FormatDriveDialog />
-								</Suspense>
-								<Suspense>
-									<CloudAddDialog />
-								</Suspense>
-							</>
-						) : null}
-					</ErrorBoundary>
-				</RewindOverlayProvider>
-			</FilesDndWrapper>
+
+								<div className='flex flex-col gap-3 lg:gap-5'>
+									<ActionsBarProvider>
+										<ActionsBar />
+										{/* Renders either DirectoryListing, AppsListing, RecentsListing, or TrashListing */}
+										<Outlet />
+									</ActionsBarProvider>
+								</div>
+							</div>
+
+							{/* Rewind overlay rendered at root so that it doesn't disappear on Files re-render if user changes screensize*/}
+							<RewindOverlay />
+
+							{/* Lazy loaded dialogs on non-read-only mode */}
+							{!isReadOnly ? (
+								<>
+									{canManageSambaShares && (
+										<Suspense>
+											<ShareInfoDialog />
+										</Suspense>
+									)}
+									<Suspense>
+										<ShareUsersDialog />
+									</Suspense>
+									<Suspense>
+										<PermanentlyDeleteConfirmationDialog />
+									</Suspense>
+									<Suspense>
+										<AddNetworkShareDialog />
+									</Suspense>
+									<Suspense>
+										<FormatDriveDialog />
+									</Suspense>
+									<Suspense>
+										<CloudAddDialog />
+									</Suspense>
+								</>
+							) : null}
+						</ErrorBoundary>
+					</RewindOverlayProvider>
+				</FilesDndWrapper>
+			</HttpUrlAuthorizerProvider>
 		</MachineFoldersProvider>
 	)
 }

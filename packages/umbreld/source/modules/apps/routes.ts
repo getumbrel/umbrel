@@ -107,7 +107,8 @@ export const apps = router({
 						defaultPassword = await app.deriveDeterministicPassword()
 					}
 					const hasCredentials = !!defaultUsername || !!defaultPassword
-					const showCredentialsBeforeOpen = hasCredentials && !(await app.store.get('hideCredentialsBeforeOpen'))
+					const hideCredentialsBeforeOpen = (await app.store.get('hideCredentialsBeforeOpen')) ?? false
+					const showCredentialsBeforeOpen = hasCredentials && !hideCredentialsBeforeOpen
 					return {
 						id: app.id,
 						name,
@@ -121,6 +122,7 @@ export const apps = router({
 						credentials: {
 							defaultUsername,
 							defaultPassword,
+							hideBeforeOpen: hideCredentialsBeforeOpen,
 							showBeforeOpen: showCredentialsBeforeOpen,
 						},
 						hiddenService,
@@ -343,6 +345,7 @@ export const apps = router({
 			z.object({
 				appId: z.string(),
 				appProxyAuthEnabled: z.boolean().nullable().optional(),
+				hideCredentialsBeforeOpen: z.boolean().optional(),
 				customMounts: z.array(AppCustomMountSchema).optional(),
 				folderAccess: z.array(AppFolderAccessSelectionSchema).optional(),
 				environment: z.array(AppEnvironmentVariableSchema).optional(),

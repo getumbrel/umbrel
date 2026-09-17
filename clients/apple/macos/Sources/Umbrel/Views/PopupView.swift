@@ -4,29 +4,42 @@ import SwiftUI
 struct PopupView: View {
 	@Environment(AppState.self) private var state
 	@State private var selectedId: String?
+	@State private var showingAddressConnection = false
 	@State private var autoSelected = false
 
 	// Everything worth showing: saved devices (even offline) and discovered ones
-	private var visibleDevices: [Device] {
-		state.devices.filter { $0.saved || $0.online }
+	private var listedDevices: [Device] {
+		state.devices.filter {
+			($0.saved || $0.online) && !state.isUnsavedManualOnlyDevice($0.id)
+		}
 	}
 
 	private var savedIds: [String] {
-		visibleDevices.filter(\.saved).map(\.id)
+		listedDevices.filter(\.saved).map(\.id)
 	}
 
 	var body: some View {
 		Group {
-			if let selectedId, visibleDevices.contains(where: { $0.id == selectedId }) {
+			if let selectedId, state.devices.contains(where: { $0.id == selectedId }) {
 				DeviceDetailView(deviceId: selectedId) {
 					self.selectedId = nil
+					state.discardUnsavedManualDevice(selectedId)
+				}
+			} else if showingAddressConnection {
+				AddressConnectionView {
+					showingAddressConnection = false
+				} onSelect: { deviceId in
+					showingAddressConnection = false
+					selectedId = deviceId
 				}
 			} else {
 				DeviceListView(
-					devices: visibleDevices,
+					devices: listedDevices,
 					updateRequiredDevices: state.updateRequiredDevices
 				) { deviceId in
 					selectedId = deviceId
+				} onConnectByAddress: {
+					showingAddressConnection = true
 				}
 			}
 		}

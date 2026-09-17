@@ -22,6 +22,9 @@ import {
 	migrateFileIndex,
 	type FileIndexMigration,
 } from './file-index/migrations.js'
+import FileIndexReaderPool from './file-index/reader-pool.js'
+import DirectorySizes from './file-index/directory-sizes.js'
+import type {SqlRead} from './file-index/read-database.js'
 import {THUMBNAIL_GENERATION_TIMEOUT_MS} from './file-index-enrichment.js'
 import {
 	PHOTOS_THUMBNAIL_VARIANTS,
@@ -2437,6 +2440,59 @@ test('selects one canonical shared Live Photo companion and moves it only with e
 	await expect(index.photosResolveItemFiles('owner', [secondId], 'trash')).resolves.toMatchObject([{id: secondId}])
 })
 
+test('publishes a moved photo when the watcher removed its old entry before the move hint', async () => {
+	let releaseHash!: () => void
+	const hashReleased = new Promise<void>((resolve) => (releaseHash = resolve))
+	let pauseHashing = false
+	const hashFile = vi.fn(async () => {
+		if (pauseHashing) await hashReleased
+		return Buffer.alloc(32, 0x75)
+	})
+	const {index, homeDirectory, trashDirectory} = await fixture(undefined, {
+		includeTrash: true,
+		enrichmentRuntime: {
+			hashFile,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const source = nodePath.join(homeDirectory, 'watched-move.jpg')
+	const destination = nodePath.join(trashDirectory, 'watched-move.jpg')
+	await writeFile(source, 'photo')
+	await index.reconcileRoot('/Home', 'move-race')
+	await index.initializePhotos()
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const id = Buffer.alloc(32, 0x75).toString('hex')
+	await expect(index.photosGetItem('owner', id)).resolves.toMatchObject({path: '/Home/watched-move.jpg'})
+	await index.photosSetFavorite('owner', [id], true)
+	const album = await index.photosCreateAlbum('owner', 'Keep after move', [id])
+	try {
+		pauseHashing = true
+		await fse.move(source, destination)
+		// The watcher can see the atomic Trash claim before Files sends its move hint.
+		await index.removePath(source)
+		let completed = false
+		const moved = index.movePath(source, destination).then(() => (completed = true))
+		await vi.waitFor(() => expect(completed || hashFile.mock.calls.length === 2).toBe(true))
+		expect(completed).toBe(false)
+		releaseHash()
+		await moved
+
+		await expect(index.photosGetItem('owner', id, true)).resolves.toMatchObject({
+			path: '/Trash/watched-move.jpg',
+			isFavorite: true,
+			albums: [{id: album.id, name: 'Keep after move'}],
+		})
+		await expect(index.photosGetItem('owner', id)).resolves.toBeUndefined()
+	} finally {
+		releaseHash()
+	}
+})
+
 test('derives Deleted from enriched Trash media and preserves state across moves', async () => {
 	const {index, homeDirectory, trashDirectory} = await fixture(undefined, {
 		includeTrash: true,
@@ -3413,51 +3469,55 @@ test('rejects unsupported thumbnail sources without reconciling their root', asy
 	expect(walkTree).not.toHaveBeenCalled()
 })
 
-test('indexes transient storage files on demand without hashing or crawling the storage root', async () => {
-	const hashFile = vi.fn(async () => Buffer.alloc(32, 0xac))
-	const generateThumbnail = vi.fn(async (_source: string, destination: string) => {
-		await fse.outputFile(destination, 'thumbnail')
-	})
-	const {index, rootDirectory, dataDirectory} = await fixture(undefined, {
-		enrichmentRuntime: {hashFile, generateThumbnail},
-	})
-	const externalDirectory = nodePath.join(rootDirectory, 'external')
-	const image = nodePath.join(externalDirectory, 'camera', 'photo.png')
-	await fse.outputFile(image, 'external image')
-	await index.addRoot({
-		virtualPath: '/External',
-		systemPath: externalDirectory,
-		ownerId: 'owner',
-		kind: 'apps',
-		searchEnabled: false,
-		scanEnabled: false,
-	})
+test.each(['/External', '/Apps'])(
+	'indexes %s thumbnails on demand without hashing or crawling the root',
+	async (virtualPath) => {
+		const hashFile = vi.fn(async () => Buffer.alloc(32, 0xac))
+		const generateThumbnail = vi.fn(async (_source: string, destination: string) => {
+			await fse.outputFile(destination, 'thumbnail')
+		})
+		const {index, rootDirectory, dataDirectory} = await fixture(undefined, {
+			enrichmentRuntime: {hashFile, generateThumbnail},
+		})
+		const externalDirectory = nodePath.join(rootDirectory, 'external')
+		const image = nodePath.join(externalDirectory, 'camera', 'photo.png')
+		await fse.outputFile(image, 'external image')
+		await index.addRoot({
+			virtualPath,
+			systemPath: externalDirectory,
+			ownerId: 'owner',
+			kind: 'apps',
+			searchEnabled: false,
+			scanEnabled: false,
+		})
 
-	await index.reconcileAll('must-not-crawl-transient-storage')
-	await expect(index.getEntryBySystemPath(image)).resolves.toBeUndefined()
-	const reference = await index.ensureThumbnail(image)
-	expect(reference).toMatchObject({
-		kind: 'transient',
-		key: expect.stringMatching(/^[a-f0-9]{64}$/),
-		variant: THUMBNAIL_VARIANT,
-		format: 'webp',
-	})
-	await expect(index.getEntryBySystemPath(image)).resolves.toMatchObject({name: 'photo.png'})
-	expect(hashFile).not.toHaveBeenCalled()
-	expect(generateThumbnail).toHaveBeenCalledOnce()
-	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
-	expect(database.prepare('SELECT COUNT(*) AS count FROM contents').get()).toStrictEqual({count: 0})
-	expect(
-		database
-			.prepare('SELECT thumbnail_identity_kind, content_id FROM entries WHERE relative_path = ?')
-			.get('camera/photo.png'),
-	).toStrictEqual({thumbnail_identity_kind: 'transient', content_id: null})
-	expect(database.prepare('SELECT artifact_key, state FROM transient_thumbnail_variants').get()).toStrictEqual({
-		artifact_key: reference.key,
-		state: 'ready',
-	})
-	database.close()
-})
+		await index.reconcileAll('must-not-crawl-transient-storage')
+		await expect(index.directorySizes([virtualPath])).resolves.toEqual([])
+		await expect(index.getEntryBySystemPath(image)).resolves.toBeUndefined()
+		const reference = await index.ensureThumbnail(image)
+		expect(reference).toMatchObject({
+			kind: 'transient',
+			key: expect.stringMatching(/^[a-f0-9]{64}$/),
+			variant: THUMBNAIL_VARIANT,
+			format: 'webp',
+		})
+		await expect(index.getEntryBySystemPath(image)).resolves.toMatchObject({name: 'photo.png'})
+		expect(hashFile).not.toHaveBeenCalled()
+		expect(generateThumbnail).toHaveBeenCalledOnce()
+		const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+		expect(database.prepare('SELECT COUNT(*) AS count FROM contents').get()).toStrictEqual({count: 0})
+		expect(
+			database
+				.prepare('SELECT thumbnail_identity_kind, content_id FROM entries WHERE relative_path = ?')
+				.get('camera/photo.png'),
+		).toStrictEqual({thumbnail_identity_kind: 'transient', content_id: null})
+		expect(database.prepare('SELECT artifact_key, state FROM transient_thumbnail_variants').get()).toStrictEqual({
+			artifact_key: reference.key,
+			state: 'ready',
+		})
+		database.close()
+	},
+)
 
 test('publishes a transient thumbnail only for a stable filesystem fingerprint', async () => {
 	let mutateSource = true
@@ -4577,7 +4637,7 @@ test('runs artifact maintenance while an unreadable file is waiting for its hash
 	expect(hashFile).toHaveBeenCalledOnce()
 })
 
-test('settles queued thumbnail requests when the index stops', async () => {
+test('settles pending thumbnail requests when the index stops', async () => {
 	let releaseGeneration!: () => void
 	let signalGeneration!: () => void
 	const generationStarted = new Promise<void>((resolve) => (signalGeneration = resolve))
@@ -4606,7 +4666,9 @@ test('settles queued thumbnail requests when the index stops', async () => {
 	releaseGeneration()
 
 	await expect(active).resolves.toMatchObject({kind: 'content', key: '78'.repeat(32)})
-	await expect(queuedResult).resolves.toBe('File enrichment is unavailable')
+	// Shutdown may catch the pending request in its reader lookup or after it
+	// reaches enrichment. Both stages must reject instead of leaving it pending.
+	expect(['File enrichment is unavailable', 'File index readers are stopped']).toContain(await queuedResult)
 	await expect(stopping).resolves.toBeUndefined()
 })
 
@@ -4749,21 +4811,21 @@ test('does not poll the retry scheduler while due hash work is already in flight
 	database.prepare('UPDATE entries SET hash_retry_at = 0').run()
 	database.close()
 
-	const prepare = vi.spyOn(BetterSqlite3.prototype, 'prepare')
+	const read = vi.spyOn(FileIndexReaderPool.prototype, 'read')
+	const schedulerQueries = () =>
+		read.mock.calls.filter(
+			([method, args]) => method === 'sql' && (args[0] as SqlRead).sql.includes('SELECT MIN(attempt_at) AS attempt_at'),
+		)
 	index.startBackgroundReconciliation()
 	try {
 		await hashStarted
+		await vi.waitFor(() => expect(schedulerQueries().length).toBeGreaterThan(0))
 		await new Promise((resolve) => setTimeout(resolve, 50))
-		const settledQueryCount = prepare.mock.calls.filter(([sql]) =>
-			String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-		).length
+		const settledQueryCount = schedulerQueries().length
 		await new Promise((resolve) => setTimeout(resolve, 100))
-		const schedulerQueries = prepare.mock.calls.filter(([sql]) =>
-			String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-		)
-		expect(schedulerQueries).toHaveLength(settledQueryCount)
+		expect(schedulerQueries()).toHaveLength(settledQueryCount)
 	} finally {
-		prepare.mockRestore()
+		read.mockRestore()
 		releaseHash()
 	}
 
@@ -4794,20 +4856,18 @@ test('ignores orphaned failed variants when scheduling the next retry wake', asy
 		.run(orphan.id, THUMBNAIL_VARIANT, Date.now())
 	database.close()
 
-	const prepare = vi.spyOn(BetterSqlite3.prototype, 'prepare')
+	const read = vi.spyOn(FileIndexReaderPool.prototype, 'read')
+	const schedulerQueries = () =>
+		read.mock.calls.filter(
+			([method, args]) => method === 'sql' && (args[0] as SqlRead).sql.includes('SELECT MIN(attempt_at) AS attempt_at'),
+		)
 	index.startBackgroundReconciliation()
-	await vi.waitFor(() =>
-		expect(prepare.mock.calls.some(([sql]) => String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'))).toBe(true),
-	)
+	await vi.waitFor(() => expect(schedulerQueries().length).toBeGreaterThan(0))
 	await new Promise((resolve) => setTimeout(resolve, 50))
-	const settledQueryCount = prepare.mock.calls.filter(([sql]) =>
-		String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-	).length
+	const settledQueryCount = schedulerQueries().length
 	await new Promise((resolve) => setTimeout(resolve, 100))
-	const schedulerQueries = prepare.mock.calls.filter(([sql]) =>
-		String(sql).includes('SELECT MIN(attempt_at) AS attempt_at'),
-	)
-	expect(schedulerQueries).toHaveLength(settledQueryCount)
+	expect(schedulerQueries()).toHaveLength(settledQueryCount)
+	read.mockRestore()
 })
 
 test('discards stale hash and thumbnail work when the source changes during generation', async () => {
@@ -5062,6 +5122,163 @@ test('updates indexed directory aggregates after writes, copies, moves, and dele
 	await index.removePath(destinationPath)
 	await expect(index.directorySizes(['/Home/destination'])).resolves.toStrictEqual([
 		{virtualPath: '/Home/destination', size: 0},
+	])
+})
+
+test('commits indexed entries and totals together while readers retain complete snapshots', async () => {
+	const {index, homeDirectory} = await fixture()
+	const path = nodePath.join(homeDirectory, 'file.txt')
+	await writeFile(path, 'before')
+	await index.reconcileRoot('/Home', 'atomic-sizes')
+	const reader = new BetterSqlite3(index.databasePath, {readonly: true})
+	const snapshot = new BetterSqlite3(index.databasePath, {readonly: true})
+	const assertVisible = (database: BetterSqlite3.Database, size: number) => {
+		expect(database.prepare("SELECT size FROM entries WHERE relative_path='file.txt'").get()).toEqual({size})
+		expect(database.prepare("SELECT size FROM directory_sizes WHERE relative_path=''").get()).toEqual({size})
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toEqual([])
+	}
+	snapshot.exec('BEGIN')
+	assertVisible(snapshot, 6)
+	const sync = DirectorySizes.prototype.sync
+	const maintenance = vi.spyOn(DirectorySizes.prototype, 'sync').mockImplementation(function (this: DirectorySizes) {
+		// Separate read-only connections must see the old entry AND total even
+		// after entry changes finish, and after totals are updated.
+		assertVisible(reader, 6)
+		sync.call(this)
+		assertVisible(reader, 6)
+	})
+	try {
+		await writeFile(path, 'after change')
+		await index.reconcilePath(path)
+		expect(maintenance).toHaveBeenCalled()
+		assertVisible(reader, 12)
+		assertVisible(snapshot, 6)
+		snapshot.exec('COMMIT')
+		assertVisible(snapshot, 12)
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([{virtualPath: '/Home', size: 12}])
+	} finally {
+		maintenance.mockRestore()
+		reader.close()
+		snapshot.close()
+	}
+})
+
+test('a totals maintenance failure rolls back the engine entry change and can be retried', async () => {
+	const {index, homeDirectory} = await fixture()
+	const path = nodePath.join(homeDirectory, 'file.txt')
+	await writeFile(path, 'before')
+	await index.reconcileRoot('/Home', 'atomic-size-failure')
+	const database = new BetterSqlite3(index.databasePath)
+	try {
+		database.exec(`CREATE TRIGGER fail_totals BEFORE UPDATE ON directory_sizes
+			BEGIN SELECT RAISE(ABORT,'injected totals failure'); END;`)
+		await writeFile(path, 'after change')
+		await expect(index.reconcilePath(path)).rejects.toThrow('injected totals failure')
+		expect(database.prepare("SELECT size FROM entries WHERE relative_path='file.txt'").get()).toEqual({size: 6})
+		expect(database.prepare("SELECT size FROM directory_sizes WHERE relative_path=''").get()).toEqual({size: 6})
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toEqual([])
+		// The failed path operation degrades the root until reconciliation succeeds.
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([])
+		database.exec('DROP TRIGGER fail_totals')
+		await index.reconcileRoot('/Home', 'retry-size-maintenance')
+		await expect(index.getEntryByVirtualPath('/Home/file.txt')).resolves.toMatchObject({size: 12})
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([{virtualPath: '/Home', size: 12}])
+	} finally {
+		database.close()
+	}
+})
+
+test('drains legacy size journals on startup before making readers available', async () => {
+	const {index, homeDirectory} = await fixture()
+	const path = nodePath.join(homeDirectory, 'file.txt')
+	await writeFile(path, 'before')
+	await index.reconcileRoot('/Home', 'legacy-sizes')
+	await index.stop()
+	const database = new BetterSqlite3(index.databasePath)
+	try {
+		// Simulate the earlier build committing an entry before totals maintenance.
+		database.exec("UPDATE entries SET size=12 WHERE relative_path='file.txt'")
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toHaveLength(1)
+		await index.start()
+		await expect(index.directorySizes(['/Home'])).resolves.toEqual([{virtualPath: '/Home', size: 12}])
+		expect(database.prepare('SELECT * FROM directory_sizes_dirty_entries').all()).toEqual([])
+	} finally {
+		database.close()
+	}
+})
+
+test('keeps totals when a live file arrives before its parent directory events', async () => {
+	const {index, homeDirectory} = await fixture()
+	await index.reconcileRoot('/Home', 'empty-ready-root')
+	const parent = nodePath.join(homeDirectory, 'late', 'parents')
+	const child = nodePath.join(parent, 'child.txt')
+	await fse.ensureDir(parent)
+	await writeFile(child, '1234567')
+	await index.reconcilePath(child)
+	await expect(index.getEntryByVirtualPath('/Home/late')).resolves.toBeUndefined()
+	await expect(index.directorySizes(['/Home', '/Home/late', '/Home/late/parents'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+	])
+	await index.reconcilePath(child)
+	await index.reconcilePath(parent)
+	await index.reconcileRoot('/Home', 'late-parent-events')
+	await expect(index.directorySizes(['/Home', '/Home/late', '/Home/late/parents'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Home/late', size: 7},
+		{virtualPath: '/Home/late/parents', size: 7},
+	])
+})
+
+test('crawls children before directories and preserves totals across folder moves and Trash', async () => {
+	const childFirst: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (...args) {
+		const directories = []
+		for await (const entry of walkFileTree(...args)) {
+			if (entry.stats.isDirectory()) directories.push(entry)
+			else yield entry
+		}
+		for (const entry of directories.reverse()) yield entry
+	}
+	const {index, homeDirectory, trashDirectory} = await fixture(childFirst, {includeTrash: true, batchSize: 1})
+	const old = nodePath.join(homeDirectory, 'old')
+	const moved = nodePath.join(homeDirectory, 'moved')
+	await fse.ensureDir(nodePath.join(old, 'nested'))
+	await writeFile(nodePath.join(old, 'nested', 'file.txt'), '1234567')
+	await link(nodePath.join(old, 'nested', 'file.txt'), nodePath.join(homeDirectory, 'alias.txt'))
+	await index.reconcileRoot('/Home', 'child-first')
+	await expect(index.directorySizes(['/Home', '/Home/old', '/Home/old/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Home/old', size: 7},
+		{virtualPath: '/Home/old/nested', size: 7},
+	])
+	await fse.move(old, moved)
+	await index.movePath(old, moved)
+	await expect(index.directorySizes(['/Home', '/Home/old', '/Home/moved/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Home/moved/nested', size: 7},
+	])
+	const trashed = nodePath.join(trashDirectory, 'moved')
+	await fse.move(moved, trashed)
+	await index.movePath(moved, trashed)
+	await index.reconcileRoot('/Trash', 'trash-ready')
+	await expect(index.directorySizes(['/Home', '/Trash', '/Trash/moved/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Trash', size: 7},
+		{virtualPath: '/Trash/moved/nested', size: 7},
+	])
+	await fse.move(trashed, moved)
+	await index.movePath(trashed, moved)
+	await expect(index.directorySizes(['/Home', '/Trash', '/Home/moved/nested'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 7},
+		{virtualPath: '/Trash', size: 0},
+		{virtualPath: '/Home/moved/nested', size: 7},
+	])
+	await fse.remove(moved)
+	await index.removePath(moved)
+	await fse.remove(nodePath.join(homeDirectory, 'alias.txt'))
+	await index.removePath(nodePath.join(homeDirectory, 'alias.txt'))
+	await expect(index.directorySizes(['/Home', '/Trash', '/Home/moved'])).resolves.toEqual([
+		{virtualPath: '/Home', size: 0},
+		{virtualPath: '/Trash', size: 0},
 	])
 })
 
@@ -6095,13 +6312,15 @@ test('recovers from a non-corruption open failure without restarting', async () 
 	await expect(index.status()).resolves.toMatchObject({available: false})
 	await fse.remove(blockingPath)
 
-	await pRetry(
-		async () => expect(await index.status()).toMatchObject({available: true, schemaVersion: FILE_INDEX_SCHEMA_VERSION}),
-		{
-			retries: 20,
-			minTimeout: 10,
-			maxTimeout: 10,
+	// Recovery now boots both real reader workers before becoming available.
+	// Wait for readiness without imposing a 200 ms worker-startup budget on CI.
+	await vi.waitFor(
+		async () => {
+			const status = await index.status()
+			expect(status).toMatchObject({available: true, schemaVersion: FILE_INDEX_SCHEMA_VERSION})
+			expect(status.readers.threadIds).toHaveLength(2)
 		},
+		{timeout: 10_000, interval: 25},
 	)
 	expect(logger.log).toHaveBeenCalledWith('Recovered file index database')
 })

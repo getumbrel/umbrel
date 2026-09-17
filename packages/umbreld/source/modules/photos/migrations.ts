@@ -1,6 +1,8 @@
 import type BetterSqlite3 from 'better-sqlite3'
 
-export const PHOTOS_SCHEMA_VERSION = 7
+import {photosReadModelDirtySchema, photosReadModelDurableTriggers} from './read-model-schema.js'
+
+export const PHOTOS_SCHEMA_VERSION = 9
 export const PHOTOS_MIGRATION_MODULE = 'photos'
 
 export class UnsupportedPhotosSchemaError extends Error {}
@@ -204,6 +206,21 @@ export function migratePhotos(database: BetterSqlite3.Database) {
 			`)
 			database
 				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 7, ?)')
+				.run(PHOTOS_MIGRATION_MODULE, Date.now())
+		}
+		if (version < 8) {
+			database.exec(photosReadModelDirtySchema + photosReadModelDurableTriggers())
+			database
+				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 8, ?)')
+				.run(PHOTOS_MIGRATION_MODULE, Date.now())
+		}
+		if (version < 9) {
+			// Source names are read from their authoritative row by item details.
+			// Renaming a device does not change library membership or Live Photo pairs.
+			database.exec('DROP TRIGGER IF EXISTS photos_read_model_photos_sources_update')
+			database.exec(photosReadModelDurableTriggers())
+			database
+				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 9, ?)')
 				.run(PHOTOS_MIGRATION_MODULE, Date.now())
 		}
 	})

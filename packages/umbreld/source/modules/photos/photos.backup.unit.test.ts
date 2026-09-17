@@ -72,6 +72,16 @@ describe('Photos backup storage', () => {
 		expect((await fse.stat(`${dataDirectory}/home/Photos/Pixel 9/ab`)).mode & 0o777).toBe(0o755)
 	})
 
+	test('announces a new backup source, but not a re-registration', async () => {
+		const emit = vi.spyOn(umbreld.eventBus, 'emit')
+		await umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'Pixel 9'})
+		expect(emit).toHaveBeenCalledWith('photos:change', {accountIds: ['0']})
+
+		emit.mockClear()
+		await umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'Pixel 9'})
+		expect(emit).not.toHaveBeenCalledWith('photos:change', expect.anything())
+	})
+
 	test('serializes concurrent creation of the same backup shard', async () => {
 		const source = await umbreld.photos.registerBackupSource({
 			accountId: '0',

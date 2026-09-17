@@ -30,6 +30,13 @@ beforeEach(() => {
 	vi.mocked(getLiveDirectorySize).mockReset()
 })
 
+test('does not recursively watch Apps and retires the previous app root', () => {
+	const {files} = fixture()
+	expect(files.watcher.pathsToWatch.has('/Apps')).toBe(false)
+	expect(files.watcher.pathsToWatch.has('/Home')).toBe(true)
+	expect(files.watcher.pathsToWatch.has('/Trash')).toBe(true)
+})
+
 test('reports indexed sizes from status while leaving unindexed directories undefined', async () => {
 	const dataDirectory = await temporary.create()
 	const indexedDirectory = nodePath.join(dataDirectory, 'home', 'indexed')
@@ -133,29 +140,6 @@ test('does not disclose unshared directory sizes through member share ancestors'
 	expect(listing.files.find(({path}) => path === '/Home/Direct')?.size).toBe(200)
 	expect(directorySizes).toHaveBeenCalledTimes(1)
 	expect(directorySizes).toHaveBeenCalledWith(['/Home/Direct'])
-})
-
-test('uses a ready indexed aggregate for an internal directory walk', async () => {
-	const {files} = fixture()
-	const directorySizes = vi.fn(async () => [{virtualPath: '/Apps/example', size: 456}])
-	Object.assign(files, {fileIndex: {directorySizes}})
-
-	await expect(files.getDirectorySize('/Apps/example')).resolves.toBe(456)
-	expect(directorySizes).toHaveBeenCalledWith(['/Apps/example'])
-	expect(getLiveDirectorySize).not.toHaveBeenCalled()
-})
-
-test('falls back to a live directory walk when the index does not cover the path', async () => {
-	const {files} = fixture()
-	const directorySizes = vi.fn(async () => [])
-	const virtualToSystemPath = vi.fn(async () => '/mnt/external/folder')
-	Object.assign(files, {fileIndex: {directorySizes}, virtualToSystemPath})
-	vi.mocked(getLiveDirectorySize).mockResolvedValue(789)
-
-	await expect(files.getDirectorySize('/External/drive/folder')).resolves.toBe(789)
-	expect(directorySizes).toHaveBeenCalledWith(['/External/drive/folder'])
-	expect(virtualToSystemPath).toHaveBeenCalledWith('/External/drive/folder', '0')
-	expect(getLiveDirectorySize).toHaveBeenCalledWith('/mnt/external/folder')
 })
 
 test('counts owner and member Home and Trash roots, falling back per unavailable aggregate', async () => {

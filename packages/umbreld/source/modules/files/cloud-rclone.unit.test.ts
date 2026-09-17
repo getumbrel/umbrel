@@ -39,13 +39,14 @@ if (args[0] !== 'rcd') {
 const socketPath = flag('--rc-addr').slice('unix://'.length)
 try { fs.unlinkSync(socketPath) } catch {}
 const server = http.createServer((request) => request.resume())
-server.listen(socketPath)
 const stop = (signal) => {
 	fs.writeFileSync(configPath + '.signal', signal)
 	server.close(() => process.exit(0))
 }
 process.on('SIGINT', () => stop('SIGINT'))
 process.on('SIGTERM', () => stop('SIGTERM'))
+// The socket signals readiness, so install handlers before exposing it.
+server.listen(socketPath)
 `
 
 describe('CloudRclone', () => {

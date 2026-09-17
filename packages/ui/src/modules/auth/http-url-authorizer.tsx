@@ -22,6 +22,18 @@ export function HttpUrlAuthorizerProvider({children}: {children: ReactNode}) {
 	return <HttpUrlAuthorizerContext value={authorize}>{children}</HttpUrlAuthorizerContext>
 }
 
+// The provider above if there is one, its own otherwise — for a component
+// that draws authorized URLs wherever it is dropped (a Files icon: listings
+// of hundreds, and one-off dialogs alike). Surfaces that mount many of them
+// put one provider above the lot; the stragglers still work.
+export function EnsureHttpUrlAuthorizer({children}: {children: ReactNode}) {
+	return useContext(HttpUrlAuthorizerContext) ? (
+		children
+	) : (
+		<HttpUrlAuthorizerProvider>{children}</HttpUrlAuthorizerProvider>
+	)
+}
+
 // The authorizer itself, for callers holding many URLs at once — the Photos
 // canvas asks for thousands and cannot mount a hook per tile
 export function useHttpUrlAuthorizer() {

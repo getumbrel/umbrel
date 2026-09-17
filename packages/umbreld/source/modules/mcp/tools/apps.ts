@@ -1,6 +1,8 @@
 import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
+import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../apps/app.js'
+import {fillSelectedDependencies} from '../../utilities/dependencies.js'
 import type {McpPermissions} from '../mcp.js'
 import {MAX_LOG_BYTES, newestLogs, runTool, type McpToolContext} from './shared.js'
 
@@ -30,6 +32,31 @@ async function registryApps(context: McpToolContext) {
 
 async function installedAppIds(context: McpToolContext) {
 	return new Set((await context.rpc.apps.list()).map(({id}) => id))
+}
+
+type InstalledApp = Awaited<ReturnType<McpToolContext['rpc']['apps']['list']>>[number]
+
+function appSettings(app: InstalledApp, installed: InstalledApp[]) {
+	if ('error' in app) throw new Error(app.error)
+	return {
+		appProxyAuth: app.appProxyAuth,
+		hideCredentialsBeforeOpen: app.credentials.hideBeforeOpen,
+		storage: app.storage,
+		environment: app.environment,
+		dependencies: app.dependencies ?? [],
+		selectedDependencies: app.selectedDependencies,
+		dependencyChoices: (app.dependencies ?? []).map((dependencyId) => ({
+			dependencyId,
+			apps: installed.flatMap((candidate) =>
+				!('error' in candidate) &&
+				candidate.state !== 'installing' &&
+				candidate.state !== 'uninstalling' &&
+				(candidate.id === dependencyId || candidate.implements?.includes(dependencyId))
+					? [{id: candidate.id, name: candidate.name}]
+					: [],
+			),
+		})),
+	}
 }
 
 async function runAppOperation(
@@ -86,7 +113,7 @@ export default function registerAppTools(server: McpServer, context: McpToolCont
 		{
 			title: 'Get app status',
 			description:
-				'Get an app installation or lifecycle state, progress, and its most recent background-operation failure.',
+				'Get an app state, progress, active background operation, and its most recent operation failure. After moving or resetting app data, poll until activeOperation is null and check lastOperationFailure.',
 			inputSchema: appInput,
 			annotations: {
 				readOnlyHint: true,
@@ -97,9 +124,14 @@ export default function registerAppTools(server: McpServer, context: McpToolCont
 		},
 		(input) =>
 			runTool(context, 'get_app_status', input, async () => {
-				const failure = context.mcp.getAppOperationFailure(input.appId)
 				const {state, progress} = await context.rpc.apps.state({appId: input.appId})
-				return {appId: input.appId, state, progress, lastOperationFailure: failure}
+				return {
+					appId: input.appId,
+					state,
+					progress,
+					activeOperation: context.mcp.getAppOperation(input.appId),
+					lastOperationFailure: context.mcp.getAppOperationFailure(input.appId),
+				}
 			}),
 	)
 
@@ -113,7 +145,7 @@ export default function registerAppTools(server: McpServer, context: McpToolCont
 			{
 				title: 'Get app details',
 				description:
-					'Get details, launch URL, credentials, app-data path, resource usage, and installed dependents for a granted app.',
+					'Get details, launch URL, credentials, resource usage, dependents, and umbrelOS app settings for a granted app. Settings include authentication, folder slots, custom mounts, app-data location, environment variables with defaults and options, dependency choices, and the credentials display preference. Change ordinary settings with set_app_settings; use move_app_data or reset_app_data for app-data operations.',
 				inputSchema: appInput,
 				annotations: {
 					readOnlyHint: true,
@@ -129,10 +161,12 @@ export default function registerAppTools(server: McpServer, context: McpToolCont
 					// calculation only after it can no longer distort those readings.
 					const memoryUsage = await context.rpc.system.memoryUsage()
 					const cpuUsage = await context.rpc.system.cpuUsage()
-					const [details, hostname] = await Promise.all([
+					const [details, hostname, installed] = await Promise.all([
 						context.rpc.apps.details({appId: input.appId}),
 						context.rpc.system.getHostname(),
+						context.rpc.apps.list(),
 					])
+					const installedApp = installed.find((app) => app.id === details.id)
 					const protocol = details.requiresHttps ? 'https' : 'http'
 					const port = details.port ? `:${details.port}` : ''
 					const path = details.path ? `/${details.path.replace(/^\/+/, '')}` : ''
@@ -153,6 +187,7 @@ export default function registerAppTools(server: McpServer, context: McpToolCont
 							memory: memoryUsage.apps.find(({id}) => id === details.id)?.used ?? 0,
 							disk: details.diskUsage,
 						},
+						settings: installedApp ? appSettings(installedApp, installed) : undefined,
 					}
 				}),
 		)
@@ -233,6 +268,168 @@ export default function registerAppTools(server: McpServer, context: McpToolCont
 						}
 					})
 					return {accepted: true, appId: input.appId, operation: 'uninstall'}
+				}),
+		)
+
+		server.registerTool(
+			'set_app_settings',
+			{
+				title: 'Set app settings',
+				description:
+					'Change any combination of umbrelOS settings for a granted app. Read get_app_details.settings first for current values, folder slots, service names, environment options, and dependency choices. Omitted fields stay unchanged. Each supplied list replaces the current editable settings of that kind; include entries you want to retain, or use [] to reset them. appProxyAuthEnabled=null restores the app default. A dependencies object replaces selections, with omitted dependencies reverting to their default app; changed providers require their own app grant. New or changed folder selections and custom mounts require file access to their source paths; unchanged entries may be retained without additional grants. Storage, environment, and dependency changes can restart the app; authentication and credentials-display changes do not. Settings changes are rejected during app lifecycle operations; wait for the operation to finish before retrying. Success means settings were saved, not that the app is ready; check get_app_status.',
+				inputSchema: appInput.extend({
+					appProxyAuthEnabled: z
+						.boolean()
+						.nullable()
+						.optional()
+						.describe('Enable Umbrel login, disable it, or use null to restore the app default.'),
+					hideCredentialsBeforeOpen: z
+						.boolean()
+						.optional()
+						.describe('Whether to hide the default-credentials dialog when opening the app.'),
+					folderAccess: z
+						.array(
+							z.object({
+								id: z.string().describe('Folder slot id from get_app_details.settings.storage.folderAccess.'),
+								sourcePath: z.string().describe('Files path to use for this slot.'),
+							}),
+						)
+						.optional(),
+					customMounts: z
+						.array(
+							z.object({
+								serviceName: z.string().describe('Service name from get_app_details.settings.storage.services.'),
+								targetPath: z.string().describe('Absolute path inside the service, for example /media/movies.'),
+								sourcePath: z.string().describe('Files path to mount there.'),
+								readOnly: z.boolean().default(false),
+							}),
+						)
+						.optional(),
+					environment: z
+						.array(z.object({name: z.string(), value: z.string()}))
+						.optional()
+						.describe(
+							'Declared environment overrides; see settings.environment.exposed for names, defaults, and allowed values.',
+						),
+					customEnvironment: z
+						.array(z.object({serviceName: z.string(), name: z.string(), value: z.string()}))
+						.optional()
+						.describe('Custom environment overrides for the app services.'),
+					dependencies: z
+						.record(z.string(), z.string())
+						.optional()
+						.describe(
+							'Declared dependency IDs mapped to installed app IDs; omitted dependency IDs use their default app.',
+						),
+				}),
+				annotations: {
+					readOnlyHint: false,
+					destructiveHint: false,
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+			},
+			(input) =>
+				runTool(context, 'set_app_settings', input, async () => {
+					await context.mcp.assertAppAccess(input.appId)
+					const {appId, ...settings} = input
+					if (!Object.values(settings).some((value) => value !== undefined)) {
+						throw new Error('Provide at least one app setting')
+					}
+					// Read current settings only when retaining existing access matters.
+					// An unrelated auth or environment edit must not depend on storage reads.
+					if (settings.folderAccess?.length || settings.customMounts?.length || settings.dependencies !== undefined) {
+						const app = (await context.rpc.apps.list()).find((candidate) => candidate.id === appId)
+						if (!app) throw new Error(`[app-not-installed] App '${appId}' is not installed`)
+						if ('error' in app) throw new Error(app.error)
+
+						if (settings.folderAccess) {
+							settings.folderAccess = settings.folderAccess.map((folder) => ({
+								id: folder.id.trim(),
+								sourcePath: normalizeAppStorageSourcePath(folder.sourcePath),
+							}))
+							for (const folder of settings.folderAccess) {
+								const unchanged = app.storage?.folderAccess.some(
+									(current) => current.id === folder.id && current.sourcePath === folder.sourcePath,
+								)
+								if (!unchanged) await context.mcp.assertFileAccess(folder.sourcePath)
+							}
+						}
+						if (settings.customMounts) {
+							settings.customMounts = settings.customMounts.map((mount) => ({
+								...mount,
+								serviceName: mount.serviceName.trim(),
+								targetPath: normalizeAppMountTargetPath(mount.targetPath),
+								sourcePath: normalizeAppStorageSourcePath(mount.sourcePath),
+							}))
+							for (const mount of settings.customMounts) {
+								const unchanged = app.storage?.customMounts.some(
+									(current) =>
+										current.serviceName === mount.serviceName &&
+										current.targetPath === mount.targetPath &&
+										current.sourcePath === mount.sourcePath &&
+										current.readOnly === mount.readOnly,
+								)
+								if (!unchanged) await context.mcp.assertFileAccess(mount.sourcePath)
+							}
+						}
+						if (settings.dependencies !== undefined) {
+							const selected = fillSelectedDependencies(app.dependencies, settings.dependencies)
+							for (const [dependencyId, provider] of Object.entries(selected)) {
+								if (provider !== app.selectedDependencies[dependencyId]) await context.mcp.assertAppAccess(provider)
+							}
+						}
+					}
+					await context.rpc.apps.setSettings({appId, ...settings})
+					const {state, progress} = await context.rpc.apps.state({appId})
+					return {saved: true, appId, state, progress}
+				}),
+		)
+
+		server.registerTool(
+			'move_app_data',
+			{
+				title: 'Move app data',
+				description:
+					"Move a granted app's managed data to a folder on an available ext4 external drive, or back to internal storage with destinationParentPath=null. External destinations require file write access. The app and its dependents may stop and restart. Returns immediately; poll get_app_status until activeOperation is null and check lastOperationFailure.",
+				inputSchema: appInput.extend({
+					destinationParentPath: z
+						.string()
+						.nullable()
+						.describe('Files path to an external-drive folder, or null for internal storage.'),
+				}),
+				annotations: {readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false},
+			},
+			(input) =>
+				runTool(context, 'move_app_data', input, async () => {
+					await context.mcp.assertAppAccess(input.appId)
+					const destinationParentPath =
+						input.destinationParentPath === null
+							? null
+							: (await context.mcp.assertFileWriteAccess(input.destinationParentPath)).path
+					context.mcp.startAppOperation(input.appId, 'move-data', async () => {
+						await context.rpc.apps.moveDataRoot({appId: input.appId, destinationParentPath})
+					})
+					return {accepted: true, appId: input.appId, operation: 'move-data'}
+				}),
+		)
+
+		server.registerTool(
+			'reset_app_data',
+			{
+				title: 'Reset unavailable app data',
+				description:
+					"Abandon a granted app's unavailable external data and initialize fresh data on internal storage. Existing internal app data is removed; unavailable external data is left behind and will no longer be used. Only available when the current external app-data location is unavailable. The app and its dependents may stop and restart. Returns immediately; poll get_app_status until activeOperation is null and check lastOperationFailure.",
+				inputSchema: appInput,
+				annotations: {readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false},
+			},
+			(input) =>
+				runTool(context, 'reset_app_data', input, async () => {
+					await context.mcp.assertAppAccess(input.appId)
+					context.mcp.startAppOperation(input.appId, 'reset-data', async () => {
+						await context.rpc.apps.resetDataRoot({appId: input.appId})
+					})
+					return {accepted: true, appId: input.appId, operation: 'reset-data'}
 				}),
 		)
 	}

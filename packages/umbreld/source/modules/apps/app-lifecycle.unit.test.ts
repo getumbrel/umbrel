@@ -8,6 +8,7 @@ import {afterEach, describe, expect, test, vi} from 'vitest'
 
 import type Umbreld from '../../index.js'
 import App from './app.js'
+import ImageCleanup from './image-cleanup.js'
 import appScript from './legacy-compat/app-script.js'
 
 vi.mock('./legacy-compat/app-script.js', () => ({
@@ -66,6 +67,7 @@ async function createApp({
 		},
 		eventBus: {emit: vi.fn(async () => undefined)},
 		apps: {
+			imageCleanup: new ImageCleanup(async () => {}, {log: vi.fn(), error: vi.fn()}),
 			getRuntimeDataRootContext: vi.fn(async () => ({
 				dataRoots: {[appId]: path.join(appDataDirectory, 'data')},
 				storagePaths: [],
@@ -80,6 +82,7 @@ async function createApp({
 			...apps,
 		},
 		files: {
+			removeReferencesWithin: vi.fn(async () => {}),
 			virtualToSystemPath: vi.fn(async (virtualPath: string) => path.join(dataDirectory, virtualPath)),
 			normalizeVirtualPath: vi.fn((virtualPath: string) => virtualPath),
 			getExternalStorageFilesystemType: vi.fn(async () => 'ext4'),
@@ -94,6 +97,52 @@ async function createApp({
 	app.state = 'ready'
 	return app
 }
+
+describe('app lifecycle state with a pending proxy', () => {
+	test.each(['restart', 'update'] as const)(
+		'%s repeats the TCP wait after teardown, before startup hooks',
+		async (action) => {
+			const app = await createApp()
+			const proxyPhases: boolean[] = []
+			vi.spyOn(app, 'refreshLanIngress').mockImplementation(async () => {
+				proxyPhases.push(app.appGatewayEnabled)
+			})
+			vi.mocked(appScript).mockImplementation(async (_umbreld, command) => {
+				if (command === 'stop' || command === 'pre-patch-update') {
+					// Pre-stop hooks can still use the existing proxy.
+					expect(app.appGatewayEnabled).toBe(true)
+				}
+				if (command === 'start') {
+					expect(proxyPhases).toContain(false)
+					expect(proxyPhases.at(-1)).toBe(true)
+					// Post-start hooks run before the app changes to ready.
+					expect(app.state).toBe(action === 'restart' ? 'restarting' : 'updating')
+				}
+				return {stdout: ''} as any
+			})
+			await expect(app[action]()).resolves.toBe(true)
+			expect(app.state).toBe('ready')
+		},
+	)
+
+	test.each(['start', 'restart', 'update', 'install'] as const)(
+		'%s still reports ready when the container command completes',
+		async (action) => {
+			const app = await createApp({apps: {getDataRootPathsForApps: vi.fn(async () => [])}})
+			await app.writeCompose({
+				services: {
+					server: {image: 'example/test'},
+					app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: 1}},
+				},
+			})
+			if (action === 'install') app.state = 'installing'
+			// Gateway readiness belongs to ingress. App lifecycle commands retain
+			// their former state timing even when that upstream is not listening.
+			await expect(action === 'install' ? app.install({dependencies: {}}) : app[action]()).resolves.toBe(true)
+			expect(app.state).toBe('ready')
+		},
+	)
+})
 
 function pauseMoveRecovery(app: App) {
 	const originalGet = app.store.get.bind(app.store) as (property?: string) => Promise<unknown>
@@ -116,6 +165,32 @@ function pauseMoveRecovery(app: App) {
 }
 
 describe('app lifecycle serialization', () => {
+	test('uninstall revokes app directory references before deleting its data', async () => {
+		const removeReferencesWithin = vi.fn(async () => {
+			await expect(fse.pathExists(app.dataDirectory)).resolves.toBe(true)
+		})
+		const app = await createApp({files: {removeReferencesWithin}})
+
+		await expect(app.uninstall()).resolves.toBe(true)
+		expect(removeReferencesWithin).toHaveBeenCalledOnce()
+		expect(removeReferencesWithin).toHaveBeenCalledWith('/Apps/test-app')
+		await expect(fse.pathExists(app.dataDirectory)).resolves.toBe(false)
+	})
+
+	test('uninstall keeps app data when reference cleanup fails', async () => {
+		const sweep = vi.fn(async () => {})
+		const imageCleanup = new ImageCleanup(sweep, {log: vi.fn(), error: vi.fn()})
+		const removeReferencesWithin = vi.fn(async () => {
+			throw new Error('share cleanup failed')
+		})
+		const app = await createApp({apps: {imageCleanup}, files: {removeReferencesWithin}})
+
+		await expect(app.uninstall()).rejects.toThrow('share cleanup failed')
+		await imageCleanup.runOperation(async () => {})
+		expect(sweep).toHaveBeenCalledOnce()
+		await expect(fse.pathExists(app.dataDirectory)).resolves.toBe(true)
+	})
+
 	test('keeps app data writable while lifecycle scripts reserve its storage', async () => {
 		const beginStorageOperation = vi.fn(() => vi.fn())
 		const app = await createApp({apps: {beginStorageOperation}})
@@ -160,6 +235,23 @@ describe('app lifecycle serialization', () => {
 			release()
 			await expect(uninstall).resolves.toBe(true)
 		}
+	})
+})
+
+describe('app update failures', () => {
+	test('stops after a failed file phase and clears the updating state', async () => {
+		const app = await createApp()
+		const patchCompose = vi.spyOn(app, 'patchComposeFile')
+		const pull = vi.spyOn(app, 'pull')
+		vi.mocked(appScript).mockRejectedValueOnce(new Error('exports failed'))
+
+		await expect(app.update()).rejects.toThrow('exports failed')
+
+		expect(patchCompose).not.toHaveBeenCalled()
+		expect(pull).not.toHaveBeenCalled()
+		expect(appScript).toHaveBeenCalledTimes(1)
+		expect(app.state).toBe('unknown')
+		expect(app.stateProgress).toBe(0)
 	})
 })
 

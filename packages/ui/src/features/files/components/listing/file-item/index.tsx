@@ -9,7 +9,6 @@ import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {canPerformFileOperation} from '@/features/files/utils/file-capabilities'
-import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import type {Machine} from '@/features/machines/types'
 import {cn} from '@/lib/utils'
@@ -31,7 +30,7 @@ export const FileItem = (props: FileItemProps) => (
 )
 
 const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machine | undefined}) => {
-	const {handleClick, handleDoubleClick, doesHostHaveMountedShares, view} = useFileItemContext()
+	const {handleClick, handleDoubleClick, view} = useFileItemContext()
 	const isItemSelected = useFilesStore((state) => state.isItemSelected)
 	const selectedItems = useFilesStore((state) => state.selectedItems)
 	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
@@ -56,9 +55,8 @@ const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machi
 	const isReadOnly = useIsFilesReadOnly()
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 
-	// If the item is a network device that isn't actually mounted then we disable and fade the text content but not the icon.
-	const isNetworkHost = isDirectoryANetworkDevice(item.path)
-	const isItemInteractive = isNetworkHost ? doesHostHaveMountedShares(item.path) : true
+	// Disconnected entries stay selectable for removal, but cannot transfer files.
+	const isItemInteractive = !item.isDisconnected
 
 	// Long press detection to select the item on mobile
 	// since onContextMenu isn't triggered on mobile

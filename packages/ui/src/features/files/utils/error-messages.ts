@@ -15,6 +15,7 @@ export function getFilesErrorMessage(message: string): string {
 	if (message.includes('[parent-not-directory]')) return t('files-backend-error.parent-not-directory')
 	if (message.includes('[mkdir-failed]')) return t('files-backend-error.mkdir-failed')
 	if (message.includes('[move-failed]')) return t('files-backend-error.move-failed')
+	if (message.includes('[network-share-disconnected]')) return t('files-backend-error.network-share-disconnected')
 	if (message.includes('[trash-meta-not-exists]')) return t('files-backend-error.trash-meta-not-exists')
 	if (message.includes('[unique-name-index-exceeded]')) return t('files-backend-error.unique-name-index-exceeded')
 	if (message.includes('[path-not-absolute]')) return t('files-backend-error.path-not-absolute')

@@ -5,6 +5,7 @@ import {toast} from '@/components/ui/toast'
 import {TRASH_PATH} from '@/features/files/constants'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
+import {transfers} from '@/features/files/transfers/transfers'
 import type {FileSystemItem} from '@/features/files/types'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {canPerformFileOperation} from '@/features/files/utils/file-capabilities'
@@ -254,17 +255,10 @@ export function useFilesOperations() {
 
 	// File movement operations
 	// -----------------------
-
-	// Move item mutation hook
-	const moveItemMutation = trpcReact.files.move.useMutation({
-		onSettled: () => {
-			utils.files.list.invalidate()
-			utils.files.recents.invalidate()
-			utils.files.favorites.invalidate()
-			utils.files.shares.invalidate()
-			utils.files.search.invalidate()
-		},
-	}).mutateAsync
+	// Copies and moves are batches in the Files transfer queue: one server
+	// mutation at a time per lane, collisions resolved from the queue, progress
+	// and cancellation in the transfers island. Sources keep their place in the
+	// listing until the server has actually moved them.
 
 	const moveItems = async ({sourceItems, toDirectory}: {sourceItems: FileSystemItem[]; toDirectory: string}) => {
 		if (
@@ -280,31 +274,7 @@ export function useFilesOperations() {
 		const itemsToMove = sourceItems.filter((item) => item.path.substring(0, item.path.lastIndexOf('/')) !== toDirectory)
 		if (itemsToMove.length === 0) return false
 
-		const fromPaths = itemsToMove.map((item) => item.path)
-		addPendingPaths(fromPaths, 'removing')
-
-		// Show items at the destination immediately
-		const incoming = itemsToMove.map((item) => ({
-			...item,
-			path: `${toDirectory}/${item.name}`,
-		}))
-		addIncomingItems(incoming)
-
-		await _executeBatchOperationWithCollisionHandling({
-			paths: fromPaths,
-			operationAsyncFn: moveItemMutation,
-			operationType: 'move',
-			getOperationArgsFn: (path) => ({path, toDirectory}),
-			targetDirectory: toDirectory,
-			onErrorToastFn: (message) =>
-				toast.error(t('files-error.move', {message: getFilesErrorMessage(message)}), {area: 'files'}),
-			onSuccessAll: () => {},
-			onItemError: (sourcePath) => {
-				removePendingPaths([sourcePath])
-				const name = sourcePath.split('/').pop() || ''
-				removeIncomingItems([`${toDirectory}/${name}`])
-			},
-		})
+		transfers.enqueueServer('move', itemsToMove, toDirectory)
 		return true
 	}
 
@@ -328,18 +298,6 @@ export function useFilesOperations() {
 		return moved
 	}
 
-	// Copy item mutation hook
-	const copyItemMutation = trpcReact.files.copy.useMutation({
-		onSettled: () => {
-			utils.files.list.invalidate()
-			utils.files.recents.invalidate()
-			utils.files.search.invalidate()
-		},
-	}).mutateAsync
-
-	// Copy does not use optimistic incoming items because large copies show progress
-	// via the operations island (WebSocket). Adding placeholders would conflict with
-	// the island by showing the file as "already there" while progress is still updating.
 	const copyItems = async ({sourceItems, toDirectory}: {sourceItems: FileSystemItem[]; toDirectory: string}) => {
 		if (
 			!(await isCommandAllowed({
@@ -349,16 +307,7 @@ export function useFilesOperations() {
 			}))
 		)
 			return false
-		await _executeBatchOperationWithCollisionHandling({
-			paths: sourceItems.map(({path}) => path),
-			operationAsyncFn: copyItemMutation,
-			operationType: 'copy',
-			getOperationArgsFn: (path) => ({path, toDirectory}),
-			targetDirectory: toDirectory,
-			onErrorToastFn: (message) =>
-				toast.error(t('files-error.copy', {message: getFilesErrorMessage(message)}), {area: 'files'}),
-			onSuccessAll: () => {},
-		})
+		transfers.enqueueServer('copy', sourceItems, toDirectory)
 		return true
 	}
 
