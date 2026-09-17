@@ -118,6 +118,7 @@ type ResolvedFolderAccess = AppFolderAccessSelection & {
 // the auth override so the app follows its default
 export type AppSettingsUpdate = {
 	appProxyAuthEnabled?: boolean | null
+	hideCredentialsBeforeOpen?: boolean
 	customMounts?: AppCustomMount[]
 	folderAccess?: AppFolderAccessSelection[]
 	environment?: AppEnvironmentVariable[]
@@ -259,7 +260,7 @@ function disableAppDataRootHostPathCreation<T>(volume: T): T {
 	} as T
 }
 
-function normalizeContainerPath(path: string) {
+export function normalizeAppMountTargetPath(path: string) {
 	if (!nodePath.posix.isAbsolute(path))
 		throw new Error(`[apps-settings-invalid-container-path] Container path '${path}' must be absolute`)
 
@@ -316,8 +317,10 @@ function isAllowedCustomMountSourcePath(path: string) {
 	return false
 }
 
-function normalizeAllowedSourcePath(path: string) {
-	const normalizedPath = normalizeVirtualPath(path.trim())
+export function normalizeAppStorageSourcePath(path: string) {
+	// Whitespace belongs to the folder name. Repeated normalization must not
+	// change the path between a permission check and mounting it.
+	const normalizedPath = normalizeVirtualPath(path).replace(/\/+$/, '')
 	if (!isAllowedCustomMountSourcePath(normalizedPath)) {
 		throw new Error(
 			`[apps-settings-source-not-allowed] Source path '${normalizedPath}' must be in /Home, /External, or a /Network share`,
@@ -359,7 +362,7 @@ function getComposeMounts(compose: Compose): ParsedComposeMount[] {
 
 			let targetPath: string
 			try {
-				targetPath = normalizeContainerPath(parsedVolume.target)
+				targetPath = normalizeAppMountTargetPath(parsedVolume.target)
 			} catch {
 				continue
 			}
@@ -396,7 +399,7 @@ export function getFolderAccessSlots(
 			source.replace(/^\$\{UMBREL_ROOT\}/, umbreld.dataDirectory).replace(/^\$UMBREL_ROOT/, umbreld.dataDirectory),
 		)
 		try {
-			return normalizeAllowedSourcePath(umbreld.files.systemToVirtualPath(expandedSource))
+			return normalizeAppStorageSourcePath(umbreld.files.systemToVirtualPath(expandedSource))
 		} catch {
 			return null
 		}
@@ -413,7 +416,7 @@ export function getFolderAccessSlots(
 		let sourcePath: string | null = null
 		if (savedFolder) {
 			try {
-				sourcePath = normalizeAllowedSourcePath(savedFolder.sourcePath)
+				sourcePath = normalizeAppStorageSourcePath(savedFolder.sourcePath)
 			} catch {
 				// Ignore malformed saved settings so app updates can drop stale folder access safely.
 			}
@@ -440,7 +443,7 @@ export function getFolderAccessSlots(
 
 			let targetPath: string
 			try {
-				targetPath = normalizeContainerPath(declaredMount.targetPath.trim())
+				targetPath = normalizeAppMountTargetPath(declaredMount.targetPath.trim())
 			} catch {
 				invalid = true
 				break
@@ -1418,8 +1421,8 @@ export default class App {
 			let targetPath: string
 			let sourcePath: string
 			try {
-				targetPath = normalizeContainerPath(mount.targetPath.trim())
-				sourcePath = normalizeAllowedSourcePath(mount.sourcePath)
+				targetPath = normalizeAppMountTargetPath(mount.targetPath)
+				sourcePath = normalizeAppStorageSourcePath(mount.sourcePath)
 			} catch (error) {
 				if (strict) throw error
 				continue
@@ -1517,7 +1520,7 @@ export default class App {
 
 			let sourcePath: string
 			try {
-				sourcePath = normalizeAllowedSourcePath(folder.sourcePath)
+				sourcePath = normalizeAppStorageSourcePath(folder.sourcePath)
 			} catch (error) {
 				if (strict) throw error
 				continue
@@ -1685,7 +1688,7 @@ export default class App {
 		const [customMounts, folderAccess] = await Promise.all([this.getCustomMounts(), this.getFolderAccess()])
 		const paths = [...customMounts, ...folderAccess].flatMap((entry) => {
 			try {
-				return [normalizeAllowedSourcePath(entry.sourcePath)]
+				return [normalizeAppStorageSourcePath(entry.sourcePath)]
 			} catch {
 				return []
 			}
@@ -1708,7 +1711,7 @@ export default class App {
 			const parsedMount = AppCustomMountSchema.safeParse(customMount)
 			if (!parsedMount.success) continue
 			try {
-				paths.add(normalizeAllowedSourcePath(parsedMount.data.sourcePath))
+				paths.add(normalizeAppStorageSourcePath(parsedMount.data.sourcePath))
 			} catch {
 				// Strict settings validation reports malformed paths below. They cannot
 				// reference real storage, so there is nothing to reserve first.
@@ -2073,6 +2076,7 @@ export default class App {
 
 	async #setSettings({
 		appProxyAuthEnabled,
+		hideCredentialsBeforeOpen,
 		customMounts,
 		folderAccess,
 		environment,
@@ -2120,6 +2124,33 @@ export default class App {
 			])
 			const resolvedDependencies =
 				dependencies !== undefined ? fillSelectedDependencies(manifest.dependencies, dependencies) : undefined
+			if (dependencies !== undefined) {
+				const declaredDependencies = new Set(manifest.dependencies ?? [])
+				for (const dependencyId of Object.keys(dependencies)) {
+					if (!declaredDependencies.has(dependencyId)) {
+						throw new Error(
+							`[apps-settings-dependency-unsupported] App '${this.id}' does not declare '${dependencyId}'`,
+						)
+					}
+				}
+				const previousSelections = fillSelectedDependencies(manifest.dependencies, previousDependencies)
+				for (const [dependencyId, providerId] of Object.entries(resolvedDependencies!)) {
+					// Existing selections can outlive a provider or its implementation.
+					// Only validate changes so those stale choices remain repairable.
+					if (providerId === previousSelections[dependencyId]) continue
+					const provider = this.#umbreld.apps.instances.find((app) => app.id === providerId)
+					if (!provider || provider.state === 'installing' || provider.state === 'uninstalling') {
+						throw new Error(
+							`[apps-settings-dependency-not-installed] Dependency provider '${providerId}' is not installed`,
+						)
+					}
+					if (providerId !== dependencyId && !(await provider.readManifest()).implements?.includes(dependencyId)) {
+						throw new Error(
+							`[apps-settings-dependency-incompatible] App '${providerId}' does not implement '${dependencyId}'`,
+						)
+					}
+				}
+			}
 			const dependencyDataRootPaths = resolvedDependencies
 				? await this.#umbreld.apps.getDataRootPathsForApps(Object.values(resolvedDependencies))
 				: []
@@ -2218,6 +2249,7 @@ export default class App {
 
 			// One write for every provided field
 			const success = await this.store.update((settings) => {
+				if (hideCredentialsBeforeOpen !== undefined) settings.hideCredentialsBeforeOpen = hideCredentialsBeforeOpen
 				if (appProxyAuthEnabled !== undefined) {
 					if (appProxyAuthEnabled === null) delete settings.appProxyAuthEnabled
 					else settings.appProxyAuthEnabled = appProxyAuthEnabled
@@ -2247,7 +2279,11 @@ export default class App {
 				await this.#umbreld.notifications.clear(`app-storage-settings-changed:${this.id}`).catch(() => {})
 			}
 
-			await this.regenerateUserSettingsCompose()
+			// Auth and the credential prompt do not affect Compose. Applying them
+			// must not depend on an existing storage source being available.
+			if (storageProvided || environmentProvided || dependencies !== undefined) {
+				await this.regenerateUserSettingsCompose()
+			}
 
 			// The settings and generated compose are in place so lifecycle operations
 			// can proceed again.

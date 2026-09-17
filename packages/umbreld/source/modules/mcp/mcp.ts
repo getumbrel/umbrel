@@ -103,7 +103,7 @@ export default class Mcp {
 	#removeFileChangeListener?: () => void
 	#watcherPermissions: AsyncBurstCache<McpPermissions>
 	#appOperationFailures = new Map<string, AppOperationFailure>()
-	#appOperationTickets = new Map<string, symbol>()
+	#appOperationTickets = new Map<string, {operation: string}>()
 	// Activity is intentionally memory-only. Each credential has an independent
 	// connection history so revoking one agent does not disturb the others.
 	#tokenActivity = new Map<string, {lastRequestAt: number; clients: Map<string, McpClient>}>()
@@ -656,7 +656,11 @@ export default class Mcp {
 	}
 
 	startAppOperation(appId: string, operation: string, task: () => Promise<void>) {
-		const ticket = Symbol(operation)
+		const activeOperation = this.getAppOperation(appId)
+		if (activeOperation === 'move-data' || activeOperation === 'reset-data') {
+			throw new Error(`[app-operation-in-progress] App '${appId}' is already performing '${activeOperation}'`)
+		}
+		const ticket = {operation}
 		this.#appOperationTickets.set(appId, ticket)
 		this.#appOperationFailures.delete(appId)
 		void Promise.resolve()
@@ -677,6 +681,10 @@ export default class Mcp {
 			.finally(() => {
 				if (this.#appOperationTickets.get(appId) === ticket) this.#appOperationTickets.delete(appId)
 			})
+	}
+
+	getAppOperation(appId: string) {
+		return this.#appOperationTickets.get(appId)?.operation ?? null
 	}
 
 	getAppOperationFailure(appId: string) {

@@ -686,12 +686,56 @@ test('startup keeps saved credentials inactive while MCP is disabled', async () 
 	await mcp.stop()
 })
 
+test('background app operations stay visible until completion and older work cannot clear newer work', async () => {
+	const {mcp} = await createMcp()
+	let finishStart!: () => void
+	let finishRestart!: () => void
+	const start = new Promise<void>((resolve) => (finishStart = resolve))
+	const restart = new Promise<void>((resolve) => (finishRestart = resolve))
+
+	expect(mcp.getAppOperation('plex')).toBeNull()
+	mcp.startAppOperation('plex', 'start', () => start)
+	expect(mcp.getAppOperation('plex')).toBe('start')
+	mcp.startAppOperation('plex', 'restart', () => restart)
+
+	finishStart()
+	await new Promise<void>((resolve) => setImmediate(resolve))
+	expect(mcp.getAppOperation('plex')).toBe('restart')
+
+	finishRestart()
+	await vi.waitFor(() => expect(mcp.getAppOperation('plex')).toBeNull())
+})
+
+test.each(['move-data', 'reset-data'])(
+	'another operation cannot hide an active %s or its failure',
+	async (operation) => {
+		const {mcp} = await createMcp()
+		let fail!: (error: Error) => void
+		const pending = new Promise<void>((_resolve, reject) => (fail = reject))
+		mcp.startAppOperation('plex', operation, () => pending)
+		const restart = vi.fn(async () => {})
+
+		expect(() => mcp.startAppOperation('plex', 'restart', restart)).toThrow('[app-operation-in-progress]')
+		expect(mcp.getAppOperation('plex')).toBe(operation)
+		expect(restart).not.toHaveBeenCalled()
+
+		fail(new Error('storage unavailable'))
+		await vi.waitFor(() => {
+			expect(mcp.getAppOperation('plex')).toBeNull()
+			expect(mcp.getAppOperationFailure('plex')).toMatchObject({operation, message: 'storage unavailable'})
+		})
+		mcp.startAppOperation('plex', 'restart', restart)
+		await vi.waitFor(() => expect(restart).toHaveBeenCalledOnce())
+	},
+)
+
 test('background app failures are recorded, cleared by newer work, and bounded', async () => {
 	const {mcp} = await createMcp()
 	mcp.startAppOperation('plex', 'start', async () => {
 		throw new Error('container failed')
 	})
 	await vi.waitFor(() => {
+		expect(mcp.getAppOperation('plex')).toBeNull()
 		expect(mcp.getAppOperationFailure('plex')).toMatchObject({
 			operation: 'start',
 			message: 'container failed',
