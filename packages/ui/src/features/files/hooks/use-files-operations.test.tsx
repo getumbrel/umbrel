@@ -166,6 +166,18 @@ describe('Files command capabilities', () => {
 		expect(mocks.emptyTrash).not.toHaveBeenCalled()
 	})
 
+	it('moves only items outside the destination in a mixed-directory drag', async () => {
+		const alreadyThere = item(['move'])
+		const otherSource = {...alreadyThere, name: 'other.txt', path: '/Home/Other/other.txt'}
+		act(() => useFilesStore.setState({draggedItems: [alreadyThere, otherSource]}))
+
+		await act(() => actions.moveDraggedItems({toDirectory: '/Home'}))
+
+		expect(mocks.enqueueServer).toHaveBeenCalledWith('move', [otherSource], '/Home')
+		expect(mocks.toastError).not.toHaveBeenCalled()
+		expect(useFilesStore.getState().draggedItems).toEqual([])
+	})
+
 	it('permanently deletes the selection in one batch', async () => {
 		const secondItem = {...item(['delete']), name: 'notes.txt', path: '/Trash/notes.txt'}
 		act(() =>
