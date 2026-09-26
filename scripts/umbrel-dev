@@ -231,7 +231,7 @@ get_instance_ip() {
   then
     hostname -I | awk '{print $1}'
   else
-    docker inspect --format '{{ .NetworkSettings.IPAddress }}' "${INSTANCE_ID}"
+    docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${INSTANCE_ID}"
   fi
 }
 
