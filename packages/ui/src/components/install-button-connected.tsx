@@ -67,7 +67,7 @@ export function InstallButtonConnectedController({
 	// Members browse the app store read-only, only the owner can install
 	const userQ = trpcReact.user.get.useQuery()
 	const isMember = userQ.data?.role === 'member'
-	const {apps, ambiguousAppIds} = useAllAvailableApps()
+	const {apps, ambiguousAppIds, resolvedAppsKeyed} = useAllAvailableApps()
 	const actions = useStoreActions()
 	const installReviewQ = trpcReact.apps.installReview.useQuery(
 		{appId: app.id},
@@ -80,7 +80,7 @@ export function InstallButtonConnectedController({
 	const updateApp = useUpdateApp(app.id)
 	const [highlightDependency, setHighlightDependency] = useState<string | undefined>(undefined)
 
-	const ready = !isLoading && Boolean(userQ.data && userAppsKeyed && apps && ambiguousAppIds)
+	const ready = !isLoading && Boolean(userQ.data && userAppsKeyed && apps && ambiguousAppIds && resolvedAppsKeyed)
 	const isAppIdAmbiguous = Boolean(ambiguousAppIds?.has(app.id))
 	const dependencies =
 		ready && apps && userAppsKeyed && ambiguousAppIds
@@ -123,15 +123,12 @@ export function InstallButtonConnectedController({
 	// Open remains the primary installed-app action. Updates are offered
 	// separately so an incompatible update never blocks launching the app.
 	const userApp = userAppsKeyed?.[app.id]
-	const updateAvailable = !isMember && !!userApp && isAppUpdateAvailable(userApp.version, app)
+	const resolvedApp = resolvedAppsKeyed?.[app.id] ?? app
+	const updateAvailable = !isMember && !!userApp && isAppUpdateAvailable(userApp.version, resolvedApp)
 	const canOfferUpdate = ready && updateAvailable && canPresentUpdateAction(appInstall.state)
 	const update = () => {
-		if (isAppIdAmbiguous) {
-			toast(t('app-store.app-id-conflict'), {area: 'app-store'})
-			return
-		}
 		if (!canPresentUpdateAction(appInstall.state)) return
-		if (!app.compatible) {
+		if (!resolvedApp.compatible) {
 			setShowOSUpdateRequiredDialog(true)
 			return
 		}
@@ -216,7 +213,7 @@ export function InstallButtonConnectedView() {
 					<Button
 						size='lg'
 						onClick={controller.update}
-						disabled={controller.isAppIdAmbiguous || controller.updatePending}
+						disabled={controller.updatePending}
 						className='max-sm:h-[30px] max-sm:w-full max-sm:text-13'
 					>
 						{t('app-updates.update')}

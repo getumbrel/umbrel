@@ -23,7 +23,7 @@ import {StoreActionsProvider} from '@/features/app-store/providers/store-actions
 import {cn} from '@/lib/utils'
 import {isAppUpdateAvailable} from '@/modules/app-store/update-availability'
 import {useApps} from '@/providers/apps'
-import {useAvailableApp, useAvailableApps} from '@/providers/available-apps'
+import {useAllAvailableApps, useAvailableApp, useAvailableApps} from '@/providers/available-apps'
 import {useLinkToDialog} from '@/utils/dialog'
 
 import {AppPageHero} from './app-page/app-hero'
@@ -38,6 +38,7 @@ export default function AppPage() {
 	const navigate = useNavigate()
 
 	const {apps, isLoading: isLoadingApps} = useAvailableApps()
+	const {resolvedAppsKeyed, isLoading: isLoadingResolvedApps} = useAllAvailableApps()
 	const {userAppsKeyed, isLoading: isLoadingUserApps} = useApps()
 	const statuses = useAppStatusMap()
 
@@ -46,13 +47,14 @@ export default function AppPage() {
 
 	const installButtonRef = useRef<InstallButtonConnectedHandle>(null)
 
-	if (isLoading || isLoadingApps || isLoadingUserApps) return <Loading />
+	if (isLoading || isLoadingApps || isLoadingUserApps || isLoadingResolvedApps) return <Loading />
 	if (!app) throw new Error('App not found')
 
 	const userApp = userAppsKeyed?.[app.id]
 	const relatedApps = getRelatedApps(apps ?? [], app.id, 6)
-	const releaseTimeline = reconcileReleases(app, releasesQ.data)
-	const highlightLatestRelease = Boolean(userApp && isAppUpdateAvailable(userApp.version, app))
+	const resolvedApp = resolvedAppsKeyed?.[app.id] ?? app
+	const releaseTimeline = reconcileReleases(userApp ? resolvedApp : app, releasesQ.data)
+	const highlightLatestRelease = Boolean(userApp && isAppUpdateAvailable(userApp.version, resolvedApp))
 
 	const showDependencies = (dependencyId?: string) => {
 		if (userApp) {

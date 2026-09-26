@@ -49,7 +49,12 @@ vi.mock('@/providers/apps', () => ({
 	useApps: () => ({isLoading: false, userAppsKeyed: {[fixtures.userApp.id]: fixtures.userApp}}),
 }))
 vi.mock('@/providers/available-apps', () => ({
-	useAllAvailableApps: () => ({apps: [fixtures.app], ambiguousAppIds: new Set(), isLoading: false}),
+	useAllAvailableApps: () => ({
+		apps: [fixtures.app],
+		ambiguousAppIds: new Set(),
+		resolvedAppsKeyed: {[fixtures.app.id]: fixtures.app},
+		isLoading: false,
+	}),
 }))
 vi.mock('@/modules/app-store/install-review-dialog', () => ({
 	InstallReviewDialog: (props: unknown) => {

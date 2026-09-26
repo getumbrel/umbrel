@@ -81,6 +81,10 @@ describe('AvailableAppsProvider', () => {
 		const value = observe.mock.calls.at(-1)?.[0]
 		expect(value.allApps.apps).toEqual([fixtures.officialOnly])
 		expect(value.allApps.appsKeyed).toEqual({'official-only': fixtures.officialOnly})
+		expect(value.allApps.resolvedAppsKeyed).toEqual({
+			'official-only': fixtures.officialOnly,
+			conflict: fixtures.officialConflict,
+		})
 		expect(value.allApps.ambiguousAppIds).toEqual(new Set(['conflict']))
 		expect(value.officialApps.appsKeyed.conflict).toBe(fixtures.officialConflict)
 		expect(value.communityApps.appsKeyed.conflict).toBe(fixtures.communityConflict)

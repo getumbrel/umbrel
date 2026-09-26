@@ -3,7 +3,7 @@ import {describe, expect, test} from 'vitest'
 import {appPathForIdentity, registryAppPath, UMBREL_APP_STORE_ID} from '@/constants/app-store'
 import type {RegistryApp} from '@/trpc/trpc'
 
-import {indexRegistryApps, resolveDependencyRegistryApp} from './app-store-registry'
+import {indexRegistryApps, resolveDependencyRegistryApp, resolveRegistryAppsFirstWins} from './app-store-registry'
 
 const registryApp = (registryId: string, id: string): RegistryApp =>
 	({appStoreId: registryId, id, name: `${registryId}:${id}`}) as RegistryApp
@@ -38,6 +38,18 @@ describe('indexRegistryApps', () => {
 				{meta: {id: 'community-store'}, apps: [duplicateCommunityApp]},
 			]),
 		).toEqual({appsKeyed: {}, ambiguousAppIds: new Set(['bitcoin'])})
+	})
+})
+
+describe('resolveRegistryAppsFirstWins', () => {
+	test('keeps the first repository that lists an app ID', () => {
+		const duplicateCommunityApp = registryApp('community-store', 'bitcoin')
+		expect(
+			resolveRegistryAppsFirstWins([
+				{meta: {id: UMBREL_APP_STORE_ID}, apps: [officialDependency]},
+				{meta: {id: 'community-store'}, apps: [duplicateCommunityApp]},
+			]),
+		).toEqual({bitcoin: officialDependency})
 	})
 })
 
