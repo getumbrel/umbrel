@@ -16,7 +16,8 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - id: check
+      - name: Detect UI-only changes
+        id: check
         run: |
           set -euo pipefail
 
@@ -229,7 +230,8 @@ jobs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
       - uses: actions/checkout@v3
-      - id: find
+      - name: Discover VM test files
+        id: find
         run: |
           tests=$(
             find packages/umbreld/source -name "*.vm.test.ts" ! -name "*.pi.vm.test.ts" |
@@ -375,7 +377,8 @@ jobs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
       - uses: actions/checkout@v3
-      - id: find
+      - name: Discover integration test files
+        id: find
         run: |
           tests=$(find packages/umbreld/source -name "*.integration.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.integration\\.test\\.ts$"; ""))})')
           echo "tests=$tests" >> $GITHUB_OUTPUT
