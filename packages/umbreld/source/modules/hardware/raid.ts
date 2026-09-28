@@ -1094,15 +1094,19 @@ export default class Raid {
 		} finally {
 			this.#isStartingScrub = false
 		}
-		await this.#scheduleNextScrub().catch((error) =>
-			this.logger.error('Failed to persist the next RAID scrub deadline', error),
-		)
 
+		// Report the start before awaiting anything else. The pool monitor keeps
+		// polling while we wait, and a start event emitted after it has already
+		// reported real progress would make progress go backwards.
 		const scrub: ScrubStatus = {state: 'scrubbing', progress: 0, errors: 0}
 		this.#lastScrubProgress = 0
 		this.#lastEmittedScrub = scrub
 		this.#hasObservedScrub = true
 		this.#umbreld.eventBus.emit('raid:scrub-progress', scrub)
+
+		await this.#scheduleNextScrub().catch((error) =>
+			this.logger.error('Failed to persist the next RAID scrub deadline', error),
+		)
 		return true
 	}
 
