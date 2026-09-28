@@ -243,6 +243,29 @@ describe('Watchman recovery', () => {
 		expect(mocks.shutdown).toHaveBeenCalledOnce()
 	})
 
+	test('retries roots whose first subscription after a restart used the retired daemon connection', async () => {
+		const f = await fixture(['/Home', '/Trash'])
+		await f.watcher.start()
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledOnce())
+		const poison = new Error('A non-recoverable condition has triggered. All requests will continue to fail')
+		for (const subscription of f.subscriptions) subscription.unsubscribe.mockRejectedValue(poison)
+		// Parcel keeps its connection to the poisoned daemon after unsubscribing
+		// fails, so the first request after the restart fails on that connection.
+		mocks.shutdown.mockImplementationOnce(async () => {
+			mocks.subscribe.mockRejectedValueOnce(new Error('Socket ended unexpectedly'))
+			return mocks.shutdownResult
+		})
+		f.subscriptions[1].callback(poison, [])
+		await vi.advanceTimersToNextTimerAsync()
+		await vi.waitFor(() => expect(f.watcher.subscriptions.size).toBe(2))
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.onRestart).toHaveBeenCalledOnce())
+		expect(mocks.shutdown).toHaveBeenCalledOnce()
+	})
+
 	test('silent replacement subscriptions do not trigger scans and can recover on a later check', async () => {
 		const f = await fixture()
 		await f.watcher.start()

@@ -258,6 +258,12 @@ export default class Watcher {
 					this.#watchmanPoisoned = false
 					if (!this.#started) return
 					await this.#setupListeners()
+					// Unsubscribing from a poisoned daemon fails, and @parcel/watcher then
+					// keeps its cached connection to that daemon. The first subscription
+					// after the restart can land on the dead connection; Parcel discards it
+					// once that request fails, so retry roots that failed on it.
+					if (!this.#started) return
+					if (!this.#hasAllSubscriptions()) await this.#setupListeners()
 				} finally {
 					this.#recovering = false
 				}
