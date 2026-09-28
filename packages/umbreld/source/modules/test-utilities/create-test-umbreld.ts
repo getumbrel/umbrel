@@ -49,13 +49,18 @@ function createTestHelpers(port: number | (() => number)) {
 	// Node's fetch doesn't retry when a kept-alive connection is closed by the
 	// server between requests (e.g. umbreld's HTTP keep-alive timeout racing
 	// the query after a startup poll), which intermittently fails tests with
-	// 'SocketError: other side closed'. Retry once — the dead socket is
-	// discarded and the retry opens a fresh connection.
+	// 'SocketError: other side closed' (or ECONNRESET, depending on whether the
+	// close or the reset arrives first). Retry once — the dead socket is
+	// discarded and the retry opens a fresh connection. Don't retry timeouts:
+	// umbreld may still be processing that request, and replaying a mutation
+	// would hide the hang behind a misleading error like 'already exists'.
 	const fetchWithRetry = (async (input: string | URL, init?: RequestInit) => {
 		const url = withCurrentPort(input)
 		try {
 			return await fetch(url, init)
-		} catch {
+		} catch (error) {
+			const code = (error as {cause?: {code?: string}}).cause?.code
+			if (code === 'UND_ERR_HEADERS_TIMEOUT' || code === 'UND_ERR_BODY_TIMEOUT') throw error
 			return fetch(url, init)
 		}
 	}) as typeof fetch
