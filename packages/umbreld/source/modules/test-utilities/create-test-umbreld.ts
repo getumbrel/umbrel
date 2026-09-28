@@ -588,8 +588,9 @@ export async function createTestVm({
 				await unauthenticatedClient.system.shutdown.mutate().catch(() => {})
 			}
 
-			// Wait up to 30 seconds for graceful shutdown
-			await pWaitFor(() => !isRunning(), {interval: 100, timeout: 30_000})
+			// Wait up to a minute for graceful shutdown. A shutdown that lands while
+			// umbreld is still starting (e.g. right after a restart) can take over 30s.
+			await pWaitFor(() => !isRunning(), {interval: 100, timeout: 60_000})
 			vmProcessPid = undefined
 			return
 		} catch {
@@ -716,7 +717,7 @@ export async function createTestVm({
 	}
 
 	async function waitForShutdown() {
-		await pWaitFor(() => !isRunning(), {interval: 100, timeout: 30_000})
+		await pWaitFor(() => !isRunning(), {interval: 100, timeout: 60_000})
 		vmProcessPid = undefined
 	}
 
