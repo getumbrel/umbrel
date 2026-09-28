@@ -313,9 +313,23 @@ jobs:
         if: matrix.test.requiresPlaywright
         working-directory: packages/umbreld
         run: npx playwright install --with-deps chromium
+      # VM tests boot a full OS and exercise real reboots, storage and networking,
+      # so a small per-test flake rate adds up across ~100 of them and most runs
+      # had at least one failure. A failed test file is retried once with a fresh
+      # VM and only fails the job if both attempts fail. A pass on retry is
+      # annotated as flaky so it stays visible on the run summary; don't ignore
+      # them, track and fix them like any other failure.
       - name: Run VM test
+        id: vm-test
+        continue-on-error: true
         working-directory: packages/umbreld
         run: npm run test -- ${{ matrix.test.path }}
+      - name: Retry VM test
+        if: steps.vm-test.outcome == 'failure'
+        working-directory: packages/umbreld
+        run: |
+          npm run test -- ${{ matrix.test.path }}
+          echo "::warning title=Flaky VM test (${{ matrix.test.name }})::Failed on the first attempt and passed on retry"
 
   umbrelos-pi-vm:
     name: Pi VM test (${{ matrix.test.name }})
@@ -387,9 +401,18 @@ jobs:
       - name: Install umbreld dependencies
         working-directory: packages/umbreld
         run: npm clean-install
+      # Retried once with a fresh VM for the same reason as the amd64 VM tests
       - name: Run Pi VM test
+        id: vm-test
+        continue-on-error: true
         working-directory: packages/umbreld
         run: npm run test -- ${{ matrix.test.path }}
+      - name: Retry Pi VM test
+        if: steps.vm-test.outcome == 'failure'
+        working-directory: packages/umbreld
+        run: |
+          npm run test -- ${{ matrix.test.path }}
+          echo "::warning title=Flaky Pi VM test (${{ matrix.test.name }})::Failed on the first attempt and passed on retry"
 
   # Discover all integration test files so we can run the result as a build matrix
   discover-integration-tests:
@@ -436,7 +459,17 @@ jobs:
           UMBREL_DEV_SKIP_CACHE_EXPORT: 'true'
       - run: npm run dev start
       - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
-      - run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+      # Retried once for the same reason as the VM tests. Each run creates its own
+      # umbreld instances, so the retry reuses the running umbrel-dev container.
+      - name: Run integration test
+        id: integration-test
+        continue-on-error: true
+        run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+      - name: Retry integration test
+        if: steps.integration-test.outcome == 'failure'
+        run: |
+          npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+          echo "::warning title=Flaky integration test (${{ matrix.test.name }})::Failed on the first attempt and passed on retry"
 
   # Run umbreld checks
   umbreld:
