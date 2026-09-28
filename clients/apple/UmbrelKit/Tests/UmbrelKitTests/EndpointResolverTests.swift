@@ -43,7 +43,7 @@ final class EndpointResolverTests: XCTestCase {
 				"100.64.0.1": (true, 10_000_000),
 			]
 		)
-		let resolver = NativeEndpointResolver(tailscalePreferenceWindow: .milliseconds(50))
+		let resolver = NativeEndpointResolver(tailscalePreferenceWindow: .seconds(10))
 
 		let host = try? await resolver.resolve(
 			Umbreld.Target(deviceId: "device", hosts: ["umbrel.local", "100.64.0.1"])
