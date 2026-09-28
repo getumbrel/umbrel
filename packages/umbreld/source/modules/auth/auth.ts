@@ -200,6 +200,9 @@ export default class Auth {
 		this.#appSockets.clear()
 		for (const timeout of this.#sessionExpiryTimers.values()) clearTimeout(timeout)
 		this.#sessionExpiryTimers.clear()
+		// Wait for queued session writes, such as an expiry timer's cleanup, so
+		// nothing is still writing to the auth directory once stop resolves.
+		await this.#store.getWriteLock(async () => {})
 		this.#sessions = []
 		this.#webSocketTickets.clear()
 		this.#appHandoffs.clear()

@@ -14,6 +14,7 @@ const downloadControls = vi.hoisted(
 		[] as Array<{
 			resolve: () => Promise<void>
 			reject: (error: Error) => void
+			progress: (percent: number) => void
 		}>,
 )
 const preparedWindowsOptions = vi.hoisted(() => [] as Array<{licenseKey?: string}>)
@@ -68,6 +69,7 @@ vi.mock('./safe-download.js', async () => {
 							resolve({size: 1024, sha256: 'ab'.repeat(32)})
 						},
 						reject,
+						progress: (percent) => onProgress?.({downloadedBytes: 512, totalBytes: 1024, percent}),
 					})
 					const onStart = downloadHooks.onStart
 					downloadHooks.onStart = undefined
@@ -692,6 +694,10 @@ describe('background machine installation', () => {
 			memoryGb: 1,
 		})
 		await pWaitFor(() => downloadControls.length === 1)
+		// Both installs must have joined the shared download before one leaves.
+		// Consumers adopt its progress, while an install still preparing has none.
+		downloadControls[0].progress(50)
+		await pWaitFor(async () => (await machines.list()).every(({installProgress}) => installProgress === 35))
 
 		await machines.uninstall(first.id)
 		expect(downloadControls).toHaveLength(1)

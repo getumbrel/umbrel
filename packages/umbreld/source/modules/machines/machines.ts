@@ -1287,9 +1287,16 @@ export default class Machines {
 		void this.#emitMachines().catch((error) => this.logger.error('Failed emitting machine install progress', error))
 	}
 
-	async #startImageDownload(image: InternalOsImage) {
+	async #startImageDownload(image: InternalOsImage): Promise<ImageDownloadJob> {
 		const existing = this.#imageDownloads.get(image.id)
-		if (existing) return existing
+		if (existing && !existing.controller.signal.aborted) return existing
+		if (existing) {
+			// A job whose last consumer just left is still cleaning up. Joining it
+			// would fail this consumer, so let it settle (which removes it) and look
+			// again, joining a fresh download another consumer may have started.
+			await existing.promise.catch(() => {})
+			return this.#startImageDownload(image)
+		}
 		if (!image.sourceUrl) throw new Error('[os-image-source-unavailable]')
 
 		const extension = nodePath.extname(new URL(image.sourceUrl).pathname).toLowerCase()

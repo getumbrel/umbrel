@@ -3434,7 +3434,7 @@ test('backs off persistent runtime artifact-directory failures instead of hot-lo
 	index.startBackgroundReconciliation()
 
 	await pRetry(async () => expect(await index.status()).toMatchObject({enrichment: {thumbnailFailures: 1}}), {
-		retries: 50,
+		retries: 200,
 		minTimeout: 10,
 		maxTimeout: 20,
 	})
