@@ -861,6 +861,7 @@ const storedImageSchema = z.object({
 // parent locators, or other references into the host filesystem.
 const CUSTOM_IMAGE_EXTENSIONS = /\.(iso|img)$/i
 const CATALOG_IMAGE_EXTENSIONS = /\.(iso|qcow2|img|vmdk|vdi|vhdx|vhd)$/i
+// Reserved from ephemeral port assignment in packages/os/overlay/etc/sysctl.d/99-umbrel-machines-ports.conf
 const MACHINES_PORT_MIN = 40_000
 const MACHINES_PORT_MAX = 49_999
 
