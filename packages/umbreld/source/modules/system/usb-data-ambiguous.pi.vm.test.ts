@@ -51,6 +51,9 @@ describe('Pi with two legacy USB data installations', () => {
 				filesystem: 'ext4',
 				label: 'PI-SECOND',
 			})
+			// Files mounts the formatted disk once its startup reaches external
+			// storage, after the file index, watcher and Samba. Under TCG that is
+			// several minutes after the API first answers following the reboot above.
 			await pWaitFor(
 				async () => {
 					const current = await umbreld.client.files.externalDevices.query()
@@ -60,7 +63,7 @@ describe('Pi with two legacy USB data installations', () => {
 							?.partitions.some((partition) => partition.mountpoints.includes('/External/PI-SECOND')) ?? false
 					)
 				},
-				{interval: 1000, timeout: 120_000},
+				{interval: 1000, timeout: 600_000},
 			)
 
 			// There is no product API for creating the retired .umbrel marker.
@@ -87,7 +90,9 @@ describe('Pi with two legacy USB data installations', () => {
 				set -eu
 				sync
 				umount /dev/${secondDeviceId}1
-				systemctl stop umbrel.service docker.service
+				# Stop docker.socket too, otherwise any Docker API call re-activates
+				# the daemon and keeps /var/lib/docker busy.
+				systemctl stop umbrel.service docker.socket docker.service
 				swapoff /swap/swapfile || true
 				umount /home/umbrel/umbrel /var/lib/docker /swap /sd-root /mnt/data
 				set +e

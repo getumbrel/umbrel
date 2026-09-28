@@ -33,6 +33,8 @@ describe('Pi legacy USB data installation with an additional USB disk', () => {
 		await umbreld.vm.sshAsRoot('systemctl restart umbrel.service')
 		await umbreld.waitForStartup()
 		await umbreld.login()
+		// Files mounts attached disks as it starts, after the file index, watcher
+		// and Samba. Under TCG that is several minutes after the API first answers.
 		await pWaitFor(
 			async () => {
 				try {
@@ -42,7 +44,7 @@ describe('Pi legacy USB data installation with an additional USB disk', () => {
 					return false
 				}
 			},
-			{interval: 1000, timeout: 120_000},
+			{interval: 1000, timeout: 600_000},
 		)
 	}
 

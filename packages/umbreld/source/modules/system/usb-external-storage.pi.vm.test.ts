@@ -18,22 +18,16 @@ describe('Pi SD installation with ordinary USB storage', () => {
 
 	afterAll(async () => await umbreld?.cleanup())
 
-	async function ensureUmbreldSawUsbDisks() {
+	async function waitForStartupAutomount() {
 		await waitForUsbDisks(umbreld, 2)
 		// The two identical QEMU disks can swap /dev/sdX names across boots.
 		// Follow the formatted filesystem's stable identity instead.
 		dataDeviceId = await waitForUsbPartitionByUuid(umbreld, dataUuid)
 		await umbreld.login()
-		const devices = await umbreld.client.files.externalDevices.query()
-		const isAlreadyMounted =
-			devices
-				.find((device) => device.id === dataDeviceId)
-				?.partitions.some((partition) => partition.mountpoints.includes('/External/PI-DATA')) ?? false
-		if (isAlreadyMounted) return
-
-		await umbreld.vm.sshAsRoot('systemctl restart umbrel.service')
-		await umbreld.waitForStartup()
-		await umbreld.login()
+		// Files mounts attached disks as it starts, after the file index, watcher
+		// and Samba. Under TCG that is several minutes after the API first answers.
+		// Restarting Umbreld here would only throw that startup away.
+		await waitForExternalMount()
 	}
 
 	async function waitForExternalMount() {
@@ -47,7 +41,7 @@ describe('Pi SD installation with ordinary USB storage', () => {
 							?.partitions.some((partition) => partition.mountpoints.includes('/External/PI-DATA')) ?? false
 					)
 				},
-				{interval: 1000, timeout: 120_000},
+				{interval: 1000, timeout: 600_000},
 			)
 		} catch (error) {
 			const devices = await umbreld.client.files.externalDevices.query().catch((queryError) => ({queryError}))
@@ -114,8 +108,7 @@ describe('Pi SD installation with ordinary USB storage', () => {
 			await umbreld.client.files.unmountExternalDevice.mutate({deviceId: dataDeviceId})
 			await umbreld.vm.powerOff()
 			await umbreld.vm.powerOn()
-			await ensureUmbreldSawUsbDisks()
-			await waitForExternalMount()
+			await waitForStartupAutomount()
 
 			await umbreld.client.files.createDirectory.mutate({path: '/External/PI-DATA/external-marker'})
 		},
@@ -131,7 +124,7 @@ describe('Pi SD installation with ordinary USB storage', () => {
 			await umbreld.client.files.unmountExternalDevice.mutate({deviceId: dataDeviceId})
 			await umbreld.vm.powerOff()
 			await umbreld.vm.powerOn()
-			await ensureUmbreldSawUsbDisks()
+			await waitForStartupAutomount()
 			await pWaitFor(
 				async () => {
 					try {
