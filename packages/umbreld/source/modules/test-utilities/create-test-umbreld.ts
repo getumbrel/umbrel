@@ -94,6 +94,12 @@ function createTestHelpers(port: number | (() => number)) {
 			return `ws://127.0.0.1:${currentPort()}/trpc?ticket=${ticket}`
 		},
 		retryDelayMs: () => 100,
+		// Like the UI, don't open the socket until the first subscription. Minting a
+		// ticket fails until the test logs in, so an eager client sits in tRPC's
+		// reconnect loop, and a subscription made while that loop is backing off
+		// has its fresh socket closed by the next reconnect attempt, failing with
+		// "Active connection is not open".
+		lazy: {enabled: true, closeMs: 30_000},
 	})
 
 	const client = createTRPCProxyClient<AppRouter>({
