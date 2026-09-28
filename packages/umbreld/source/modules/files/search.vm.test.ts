@@ -39,21 +39,26 @@ describe('files.search()', () => {
 			uploadFile('/Home/search-find-test/unrelated.txt', 'nothing to see here'),
 		])
 
-		// Perform the search
-		const results = await umbreld.client.files.search.query({query: 'hello-world'})
+		// Uploads are indexed asynchronously, so wait for the search to see them
+		await pRetry(
+			async () => {
+				const results = await umbreld.client.files.search.query({query: 'hello-world'})
 
-		// Expect the specific file to be returned
-		expect(results).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({
-					name: 'hello-world.txt',
-					path: '/Home/search-find-test/hello-world.txt',
-				}),
-			]),
+				// Expect the specific file to be returned
+				expect(results).toEqual(
+					expect.arrayContaining([
+						expect.objectContaining({
+							name: 'hello-world.txt',
+							path: '/Home/search-find-test/hello-world.txt',
+						}),
+					]),
+				)
+
+				// Ensure unrelated file is not returned
+				expect(results.some((file) => file.name === 'unrelated.txt')).toBe(false)
+			},
+			{retries: 20, minTimeout: 100, maxTimeout: 500},
 		)
-
-		// Ensure unrelated file is not returned
-		expect(results.some((file) => file.name === 'unrelated.txt')).toBe(false)
 	})
 
 	test('matches separators and spelling mistakes against filenames', async () => {
@@ -63,14 +68,19 @@ describe('files.search()', () => {
 
 		// Both a separator mismatch and a transposition should find the file.
 		for (const query of ['bit corn', 'bitocin']) {
-			const results = await umbreld.client.files.search.query({query})
-			expect(results).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						name: 'bitcoin.pdf',
-						path: '/Home/search-fuzzy-test/bitcoin.pdf',
-					}),
-				]),
+			await pRetry(
+				async () => {
+					const results = await umbreld.client.files.search.query({query})
+					expect(results).toEqual(
+						expect.arrayContaining([
+							expect.objectContaining({
+								name: 'bitcoin.pdf',
+								path: '/Home/search-fuzzy-test/bitcoin.pdf',
+							}),
+						]),
+					)
+				},
+				{retries: 20, minTimeout: 100, maxTimeout: 500},
 			)
 		}
 	})
