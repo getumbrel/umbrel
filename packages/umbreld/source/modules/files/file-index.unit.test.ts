@@ -25,6 +25,7 @@ import {
 import FileIndexReaderPool from './file-index/reader-pool.js'
 import DirectorySizes from './file-index/directory-sizes.js'
 import type {SqlRead} from './file-index/read-database.js'
+import {Blake3Hasher} from './blake3.js'
 import {THUMBNAIL_GENERATION_TIMEOUT_MS} from './file-index-enrichment.js'
 import {
 	PHOTOS_THUMBNAIL_VARIANTS,
@@ -1987,6 +1988,30 @@ test('preflights Photos upload duplicates without publishing or rereading the fi
 		content_hash: first.itemId,
 	})
 	photos.close()
+})
+
+test('registers Photos uploads while indexing their move attaches the same content', async () => {
+	const {index, homeDirectory} = await fixture()
+	await index.initializePhotos('owner')
+
+	// Uploads publish a temporary file and index the move without awaiting it.
+	// Resolving the moved Photos entry hashes it while the upload attaches its
+	// known hash, so either can attach the identical content first.
+	for (let upload = 0; upload < 20; upload++) {
+		const systemPath = nodePath.join(homeDirectory, `upload-${upload}.jpg`)
+		const temporaryPath = nodePath.join(homeDirectory, `.upload-${upload}.jpg.umbrel-upload`)
+		const bytes = Buffer.from(`upload ${upload}`)
+		await writeFile(temporaryPath, bytes)
+		await link(temporaryPath, systemPath)
+		await fse.remove(temporaryPath)
+		const hasher = new Blake3Hasher()
+		hasher.update(bytes)
+		const move = index.movePath(temporaryPath, systemPath)
+		await expect(
+			index.photosRegisterUpload('owner', systemPath, hasher.digestBuffer(), await contentRevision(systemPath)),
+		).resolves.toMatchObject({status: 'imported'})
+		await move
+	}
 })
 
 test('does not deduplicate uploads against missing or invalidated durable Photos rows', async () => {

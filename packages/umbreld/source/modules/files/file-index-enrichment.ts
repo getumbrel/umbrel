@@ -1176,18 +1176,22 @@ export default class FileIndexEnrichment {
 						ON CONFLICT(content_id) DO NOTHING`,
 						)
 						.run(content.id, kind, Date.now())
+				// Another hash of this revision (for example, an upload's move being
+				// indexed) may have attached the same content concurrently. Only
+				// different content means the file changed.
 				const result = database
 					.prepare(
 						`UPDATE entries SET
 							content_id = ?,
 							hash_failure_count = 0, hash_retry_at = NULL, hash_error = NULL
-						WHERE id = ? AND thumbnail_identity_kind = 'content' AND content_id IS NULL
+						WHERE id = ? AND thumbnail_identity_kind = 'content' AND (content_id IS NULL OR content_id = ?)
 							AND inode = ? AND size = ? AND modified_ns = ?
 							${expectedRevision ? 'AND ctime_ns = ?' : ''}`,
 					)
 					.run(
 						content.id,
 						candidate.id,
+						content.id,
 						candidate.inode,
 						candidate.size,
 						candidate.modifiedNs,
