@@ -45,6 +45,10 @@ export default class Apps {
 	#storageBlocks = new Map<symbol, string[]>()
 	#storageOperations = new Map<symbol, {appId: string; paths: string[]; protectAsDataRoot: boolean}>()
 	#installsInProgress = new Set<string>()
+	// Settles once start() has brought the app environment up. Lifecycle
+	// operations wait for it so they don't run their own `docker compose up`
+	// concurrently with boot's (which can also clean Docker state and retry).
+	#environmentStarted: Promise<void> = Promise.resolve()
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -97,16 +101,19 @@ export default class Apps {
 
 	async start() {
 		return this.imageCleanup.runOperation(async () => {
+			let environmentStarted!: () => void
+			this.#environmentStarted = new Promise((resolve) => (environmentStarted = resolve))
 			try {
-				await this.#start()
+				await this.#start(environmentStarted)
 			} finally {
+				environmentStarted()
 				// Let startup and initial user activity finish before low-priority cleanup.
 				this.imageCleanup.schedule(10 * 60 * 1000)
 			}
 		})
 	}
 
-	async #start() {
+	async #start(environmentStarted: () => void) {
 		this.imageCleanup.enabled = true
 		// Set apps to empty array on first start
 		if ((await this.#umbreld.store.get('apps')) === undefined) {
@@ -255,6 +262,7 @@ export default class Apps {
 		} catch (error) {
 			this.logger.error(`Failed to set permissions for Tor data directory`, error)
 		}
+		environmentStarted()
 
 		this.logger.log('Starting apps')
 		// Snapshot of currently installed apps (minus apps missing their data directories that will be reinstalled)
@@ -940,6 +948,7 @@ export default class Apps {
 	}
 
 	async #install(appId: string, {alternatives, folderAccess}: InstallOptions) {
+		await this.#environmentStarted
 		if (await this.isInstalled(appId)) throw new Error(`App ${appId} is already installed`)
 
 		this.logger.log(`Installing app ${appId}`)
@@ -1056,6 +1065,7 @@ export default class Apps {
 	}
 
 	async #startApp(appId: string) {
+		await this.#environmentStarted
 		const app = this.getApp(appId)
 
 		// We quickly try to start the app env before starting the app. In most normal cases
@@ -1070,6 +1080,7 @@ export default class Apps {
 	}
 
 	async #restart(appId: string) {
+		await this.#environmentStarted
 		const app = this.getApp(appId)
 
 		// We quickly try to start the app env before restarting the app. In most normal cases
