@@ -285,7 +285,20 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+      # The cache service intermittently answers the lookup with HTTP 500,
+      # which restore treats as a miss. Wait briefly and retry once before
+      # failing the job.
       - name: Restore OS image from cache
+        id: restore-os-image
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: umbrelos-amd64-image-${{ github.run_id }}
+      - name: Wait before retrying OS image restore
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Retry restoring OS image from cache
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
         uses: actions/cache/restore@v4
         with:
           path: packages/os/build/umbrelos-amd64.img
@@ -326,7 +339,20 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+      # The cache service intermittently answers the lookup with HTTP 500,
+      # which restore treats as a miss. Wait briefly and retry once before
+      # failing the job.
       - name: Restore OS image from cache
+        id: restore-os-image
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/os/build/umbrelos-pi.img
+          key: umbrelos-pi-image-${{ github.run_id }}
+      - name: Wait before retrying OS image restore
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Retry restoring OS image from cache
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
         uses: actions/cache/restore@v4
         with:
           path: packages/os/build/umbrelos-pi.img
