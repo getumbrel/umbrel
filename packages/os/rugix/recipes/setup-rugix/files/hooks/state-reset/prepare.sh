@@ -4,10 +4,12 @@
 #
 # Rugix calls this before a normal state reset so RAID config does not survive on the
 # config partition. umbreld also calls this directly for factory resets while the
-# active data mount is a RAID dataset. In that case Rugix must not reset state,
-# because that would move/reset the RAID-backed install we need onboarding recovery
-# to find. Calling only this hook clears the boot/config state and wipes the boot
-# disk data partition while leaving the RAID pool untouched.
+# active data mount is a RAID dataset, or when the data mount failed at boot and Rugix
+# state only lives in the RAM-backed /run. In those cases Rugix must not reset state:
+# it would move/reset the RAID-backed install we need onboarding recovery to find, or
+# write its reset flag to RAM where it is discarded on reboot. Calling only this hook
+# clears the boot/config state and wipes the boot disk data partition while leaving
+# the RAID pool untouched.
 
 set -euo pipefail
 
