@@ -164,6 +164,21 @@ describe('RAID mount failure detection', () => {
 		expect(failure).toBe(true)
 	})
 
+	test('does not start apps or load Docker images in recovery mode', async () => {
+		// Docker's data directory is RAM-backed in recovery mode, so Apps must not load
+		// images or start the app environment there
+		await pWaitFor(
+			() =>
+				umbreld.vm.sshAsRoot("journalctl -b -u umbrel --no-pager | grep -q 'skipping app startup'").then(
+					() => true,
+					() => false,
+				),
+			{interval: 1000, timeout: 60_000},
+		)
+		expect((await umbreld.vm.sshAsRoot('docker image ls --quiet')).trim()).toBe('')
+		expect((await umbreld.vm.sshAsRoot('docker ps --all --quiet')).trim()).toBe('')
+	})
+
 	test('can shutdown from recovery mode', async () => {
 		await triggerRebootingAction(umbreld.unauthenticatedClient.system.shutdown.mutate(), ['poweroff'])
 		await umbreld.vm.waitForShutdown()

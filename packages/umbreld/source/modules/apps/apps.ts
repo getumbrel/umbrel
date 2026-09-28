@@ -114,6 +114,15 @@ export default class Apps {
 	}
 
 	async #start(environmentStarted: () => void) {
+		// In recovery mode the data partition failed to mount, so installed apps and
+		// their data are unreachable and Docker's data directory lives in the RAM-backed
+		// /run. Loading images and starting the app environment there only fills RAM,
+		// so leave apps stopped until the data mount is fixed.
+		if (await this.#umbreld.hardware.raid.checkRaidMountFailure().catch(() => false)) {
+			this.logger.log('Data mount failed at boot, skipping app startup')
+			return
+		}
+
 		this.imageCleanup.enabled = true
 		// Set apps to empty array on first start
 		if ((await this.#umbreld.store.get('apps')) === undefined) {
