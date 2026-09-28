@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto'
 import {constants as fsConstants} from 'node:fs'
 import {open, statfs} from 'node:fs/promises'
 import http from 'node:http'
+import net from 'node:net'
 import os from 'node:os'
 import nodePath from 'node:path'
 import readline from 'node:readline'
@@ -846,13 +847,19 @@ export default class CloudRclone {
 						await logs.finished
 						throw new RcloneProcessError('rcd', exit, logs.records)
 					}
-					try {
-						const stats = await fse.lstat(socketPath)
-						return stats.isSocket()
-					} catch (error) {
-						if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-						return false
-					}
+					// rcd creates the socket file when it binds, just before it listens.
+					// Only an accepted connection proves the RC API is ready for calls.
+					return await new Promise<boolean>((resolve, reject) => {
+						const probe = net.createConnection(socketPath)
+						probe.once('connect', () => {
+							probe.destroy()
+							resolve(true)
+						})
+						probe.once('error', (error: NodeJS.ErrnoException) => {
+							if (error.code === 'ENOENT' || error.code === 'ECONNREFUSED') resolve(false)
+							else reject(error)
+						})
+					})
 				},
 				{
 					interval: 20,
