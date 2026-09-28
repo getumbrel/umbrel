@@ -95,7 +95,9 @@ describe.sequential('Cloud home lifecycle', () => {
 				mode: 'auto',
 			}),
 		]
-		for (const call of calls) await expect(call).rejects.toThrow('Invalid token')
+		// Attach every expectation up front. The queries and mutations go out as separate
+		// batches, so awaiting them one at a time leaves later rejections unhandled.
+		await Promise.all(calls.map((call) => expect(call).rejects.toThrow('Invalid token')))
 	})
 
 	test('requires explicit opt-in for a self-signed WebDAV certificate', async () => {
@@ -421,6 +423,8 @@ chown -R umbrel:umbrel '${orphanDirectory}'
 		await umbreld.vm.powerOff()
 		await umbreld.vm.powerOn()
 		await startVmCloudWebDav(umbreld)
+		// The API is reachable before Files finishes starting Cloud
+		await waitForSync(umbreld.client, syncId, () => true)
 		await umbreld.client.files.cloud.run.mutate({syncId})
 		await pRetry(
 			() => umbreld.vm.sshAsRoot(`test "$(stat -c %s '${destinationSystemPath}/interrupted.bin')" -eq 4194304`),
