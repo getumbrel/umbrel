@@ -13,7 +13,7 @@ jobs:
       apple-changed: ${{ steps.check.outputs.apple-changed }}
       run-pi-tests: ${{ steps.pi.outputs.run-pi-tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - id: check
@@ -120,9 +120,9 @@ jobs:
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-ubuntu-2404
     steps:
-      - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build amd64 Docker image
         working-directory: packages/os
         run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
@@ -132,9 +132,9 @@ jobs:
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-arm-ubuntu-2404
     steps:
-      - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build arm64 Docker image
         working-directory: packages/os
         run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
@@ -144,9 +144,9 @@ jobs:
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-arm-ubuntu-2404
     steps:
-      - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build Pi Docker image
         working-directory: packages/os
         run: docker buildx build --platform linux/arm64 --build-arg BASE_VARIANT=-pi --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-pi --cache-to type=gha,mode=max,scope=umbrelos-pi ../../
@@ -160,17 +160,17 @@ jobs:
     runs-on: ubicloud-standard-4-ubuntu-2404
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build OS image
         working-directory: packages/os
         # SKIP_CACHE_EXPORT: the umbrelos-amd64-cache job (a dependency of this
@@ -182,7 +182,7 @@ jobs:
       # Hack to pass the image to the next job. We used to use upload-artifact but network performance
       # is terrible between GitHub <> Ubicloud. Just abuse the cache for now which is local and fast.
       - name: Cache OS image
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
           key: umbrelos-amd64-image-${{ github.run_id }}
@@ -194,17 +194,17 @@ jobs:
     runs-on: ubicloud-standard-4-ubuntu-2404
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build OS image
         working-directory: packages/os
         # SKIP_CACHE_EXPORT: the umbrelos-pi-cache job (a dependency of this job)
@@ -214,7 +214,7 @@ jobs:
         # image; the --cache-from import keeps the build fast regardless.
         run: SKIP_CACHE_EXPORT=true npm run build:pi5
       - name: Cache OS image
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: packages/os/build/umbrelos-pi.img
           key: umbrelos-pi-image-${{ github.run_id }}
@@ -228,7 +228,7 @@ jobs:
     outputs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - id: find
         run: |
           tests=$(
@@ -260,7 +260,7 @@ jobs:
     outputs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - id: find
         run: |
           tests=$(find packages/umbreld/source -name "*.pi.vm.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.pi\\.vm\\.test\\.ts$"; ""))})')
@@ -278,11 +278,11 @@ jobs:
         test: ${{ fromJSON(needs.discover-vm-tests.outputs.tests) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 22
       # The cache service intermittently answers the lookup with HTTP 500,
@@ -290,7 +290,7 @@ jobs:
       # failing the job.
       - name: Restore OS image from cache
         id: restore-os-image
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
           key: umbrelos-amd64-image-${{ github.run_id }}
@@ -299,7 +299,7 @@ jobs:
         run: sleep 10
       - name: Retry restoring OS image from cache
         if: steps.restore-os-image.outputs.cache-hit != 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
           key: umbrelos-amd64-image-${{ github.run_id }}
@@ -332,11 +332,11 @@ jobs:
         test: ${{ fromJSON(needs.discover-pi-vm-tests.outputs.tests) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 22
       # The cache service intermittently answers the lookup with HTTP 500,
@@ -344,7 +344,7 @@ jobs:
       # failing the job.
       - name: Restore OS image from cache
         id: restore-os-image
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-pi.img
           key: umbrelos-pi-image-${{ github.run_id }}
@@ -353,7 +353,7 @@ jobs:
         run: sleep 10
       - name: Retry restoring OS image from cache
         if: steps.restore-os-image.outputs.cache-hit != 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-pi.img
           key: umbrelos-pi-image-${{ github.run_id }}
@@ -362,7 +362,7 @@ jobs:
         run: sudo mkdir -p /nix && sudo chown "$(id -un)" /nix
       - name: Cache QEMU from nixpkgs
         id: nix-qemu-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /nix
           key: nix-qemu-${{ runner.os }}-${{ env.NIXPKGS_REV }}
@@ -400,7 +400,7 @@ jobs:
     outputs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - id: find
         run: |
           tests=$(find packages/umbreld/source -name "*.integration.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.integration\\.test\\.ts$"; ""))})')
@@ -418,15 +418,15 @@ jobs:
         test: ${{ fromJSON(needs.discover-integration-tests.outputs.tests) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 18
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - run: npm run dev rebuild
         env:
           # The umbrelos-amd64-cache job has already exported these layers to the
@@ -454,9 +454,9 @@ jobs:
           - test:unit -- --coverage
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 18
       - name: Install dependencies
@@ -472,7 +472,7 @@ jobs:
     runs-on: macos-26
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Test UmbrelKit
@@ -525,9 +525,9 @@ jobs:
           - test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Install Umbreld dependencies
@@ -547,11 +547,11 @@ jobs:
       run:
         working-directory: packages/os
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       # We need this to namespace Docker images on forks
       - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
@@ -562,7 +562,7 @@ jobs:
         run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push --cache-from type=gha,scope=umbrelos-amd64 --cache-from type=gha,scope=umbrelos-arm64 ../../
       - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
       # Build OS images
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v5
         with:
           node-version: 18
       - name: Build OS images
@@ -609,7 +609,7 @@ jobs:
       - name: Nuke uncompressed images (we just wanted them covered by the SHASUMs)
         run: rm -rf release/*.img
       - name: Upload to R2
-        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # v1.5
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
           r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -618,7 +618,7 @@ jobs:
           source-dir: packages/os/release
           destination-dir: ./${{ env.VERSION }}
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           draft: true
           name: umbrelOS ${{ github.ref_name }}

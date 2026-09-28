@@ -19,8 +19,8 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       # These checks use only Node built-ins, without npm install or API calls.
@@ -34,8 +34,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       # Validate GitHub's prospective merge result, including master-side changes.
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - run: node packages/ui/update-translations.js --check

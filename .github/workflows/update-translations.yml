@@ -41,14 +41,14 @@ jobs:
             echo 'Choose a source branch, not a translation PR branch.' >&2
             exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: refs/heads/${{ inputs.target_branch }}
           fetch-depth: 0
       - name: Reuse the open translation PR
         id: prepare
         run: bash .github/scripts/prepare-translations.sh
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Show pending translations
