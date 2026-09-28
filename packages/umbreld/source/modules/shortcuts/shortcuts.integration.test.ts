@@ -129,5 +129,5 @@ test.sequential('shortcuts.list() shows the added shortcuts', async () => {
 
 test.sequential('shortcuts.remove() removes the shortcut', async () => {
 	await expect(umbreld.client.shortcuts.remove.mutate({url: webServerShortcut.url})).resolves.toBe(true)
-	await expect(umbreld.client.shortcuts.list.query()).not.toContain([umbrelPortShortcut])
+	await expect(umbreld.client.shortcuts.list.query()).resolves.toStrictEqual([umbrelPortShortcut])
 })
