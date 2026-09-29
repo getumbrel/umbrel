@@ -217,8 +217,12 @@ export default class Backups {
 		flags: string[] = [],
 		{onOutput, bypassQueue = true}: {onOutput?: (output: string) => void; bypassQueue?: boolean} = {},
 	) {
-		// Refuse to spawn new kopia processes if we're shutting down
-		if (!this.running) throw new Error('[shutting-down] Refusing to spawn new kopia processes')
+		// Refuse to spawn new kopia processes until backups has started (it starts last
+		// during boot, after the API is already up) and once we're shutting down
+		if (!this.running) {
+			if (this.startedAt === undefined) throw new Error('[backups-starting] Backups are still starting')
+			throw new Error('[shutting-down] Refusing to spawn new kopia processes')
+		}
 
 		const spawnKopiaProcess = async () => {
 			// Spawn process

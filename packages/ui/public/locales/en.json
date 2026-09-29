@@ -352,6 +352,7 @@
   "backups-error.not-found": "The backup or backup location could not be found.",
   "backups-error.repository-exists": "A backup location already exists at this folder.",
   "backups-error.repository-not-found": "The backup location could not be found.",
+  "backups-error.starting": "Backups are still starting. Try again in a moment.",
   "backups-exclusions.add": "Add",
   "backups-exclusions.app-paths-explanation": "Usually non-essential items like caches and logs, or state that could cause conflicts if restored. These can't be changed.",
   "backups-exclusions.exclude-entire-app": "Exclude entire app",
