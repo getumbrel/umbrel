@@ -31,6 +31,7 @@ import type {CloudStore} from './modules/files/cloud-types.js'
 import {
 	commitOsPartition,
 	setupPiCpuGovernor,
+	enlargeRunInRecoveryMode,
 	restoreHostname,
 	restoreWiFi,
 	restoreStaticIp,
@@ -229,6 +230,9 @@ export default class Umbreld {
 
 		// If we've successfully booted then commit to the current OS partition
 		await commitOsPartition(this)
+
+		// Give Rugix's RAM-backed state more room if the data mount failed at boot (non-blocking)
+		enlargeRunInRecoveryMode(this)
 
 		// Set ondemand cpu governor for Raspberry Pi (non-blocking)
 		setupPiCpuGovernor(this)

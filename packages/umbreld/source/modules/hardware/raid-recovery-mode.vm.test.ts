@@ -44,6 +44,14 @@ describe('RAID mount failure detection', () => {
 		if (failed) skip()
 	})
 
+	// /run's tmpfs size as a whole percentage of the VM's RAM
+	const runSizePercent = async () =>
+		Number(
+			await umbreld.vm.sshAsRoot(
+				`echo $(( $(df --output=size -k /run | tail -1) * 100 / $(awk '/MemTotal/ {print $2}' /proc/meminfo) ))`,
+			),
+		)
+
 	test('adds two NVMe devices and boots VM', async () => {
 		await umbreld.vm.addNvme({slot: 1})
 		await umbreld.vm.addNvme({slot: 2})
@@ -151,6 +159,10 @@ describe('RAID mount failure detection', () => {
 		expect(status.devices).toHaveLength(2)
 	})
 
+	test('leaves /run at its default size when the data mount succeeds', async () => {
+		expect(await runSizePercent()).toBeLessThan(15)
+	})
+
 	// Test recovery mode operations
 	test('powers off and disconnects one SSD to enter recovery mode', async () => {
 		await umbreld.vm.powerOff()
@@ -189,6 +201,11 @@ describe('RAID mount failure detection', () => {
 		await umbreld.waitForStartup({waitForUser: false})
 		const failure = await umbreld.unauthenticatedClient.hardware.raid.checkRaidMountFailure.query()
 		expect(failure).toBe(true)
+	})
+
+	test('enlarges /run in recovery mode', async () => {
+		// Rugix keeps its state in the RAM-backed /run when the data mount fails
+		expect(await runSizePercent()).toBeGreaterThanOrEqual(20)
 	})
 
 	test('can restart from recovery mode', async () => {

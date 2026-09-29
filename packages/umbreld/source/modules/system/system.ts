@@ -608,6 +608,21 @@ export async function setupPiCpuGovernor(umbreld: Umbreld): Promise<void> {
 	}
 }
 
+// When the data partition fails to mount at boot (recovery mode), Rugix keeps its
+// state, including /data, /var/log and the root overlay, in the RAM-backed /run
+// tmpfs, which is only sized at 10% of RAM. Give it more room so recovery mode
+// doesn't run out of space. A tmpfs only uses memory for what is actually written,
+// so the larger limit doesn't reserve any RAM.
+export async function enlargeRunInRecoveryMode(umbreld: Umbreld): Promise<void> {
+	try {
+		if (!(await umbreld.hardware.raid.checkRaidMountFailure())) return
+		await $`mount -o remount,size=25% /run`
+		umbreld.logger.log(`Data mount failed at boot, enlarged /run to 25% of RAM`)
+	} catch (error) {
+		umbreld.logger.error(`Failed to enlarge /run in recovery mode`, error)
+	}
+}
+
 export async function hasWifi() {
 	const {stdout} = await $`nmcli --terse --fields TYPE device status`
 	const networkDevices = stdout.split('\n')
