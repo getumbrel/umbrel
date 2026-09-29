@@ -387,6 +387,12 @@ export async function createTestVm({
 	stateDirectoryName?: string
 } = {}) {
 	const vmScript = path.resolve(currentDirectory, '../../../../os/vm.sh')
+	// A shutdown that lands while umbreld is still starting (e.g. right after a
+	// restart) can take over 30s. The emulated Pi measured 42-125s across 20 clean
+	// shutdowns in CI, and some shutdowns with legacy USB installs attached took
+	// longer than 3 minutes. Running out of time force-kills the VM, leaving its
+	// filesystems dirty.
+	const cleanShutdownTimeout = device === 'pi' ? 300_000 : 60_000
 
 	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
 	await directory.createRoot()
@@ -588,9 +594,8 @@ export async function createTestVm({
 				await unauthenticatedClient.system.shutdown.mutate().catch(() => {})
 			}
 
-			// Wait up to a minute for graceful shutdown. A shutdown that lands while
-			// umbreld is still starting (e.g. right after a restart) can take over 30s.
-			await pWaitFor(() => !isRunning(), {interval: 100, timeout: 60_000})
+			// Wait for graceful shutdown
+			await pWaitFor(() => !isRunning(), {interval: 100, timeout: cleanShutdownTimeout})
 			vmProcessPid = undefined
 			return
 		} catch {
@@ -717,7 +722,7 @@ export async function createTestVm({
 	}
 
 	async function waitForShutdown() {
-		await pWaitFor(() => !isRunning(), {interval: 100, timeout: 60_000})
+		await pWaitFor(() => !isRunning(), {interval: 100, timeout: cleanShutdownTimeout})
 		vmProcessPid = undefined
 	}
 
