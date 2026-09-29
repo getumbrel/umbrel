@@ -386,6 +386,10 @@ export default class Files {
 				ownerId: OWNER_USER_ID,
 				kind: 'machines',
 				searchEnabled: false,
+				// Running machines rewrite their large disk images continuously, so
+				// watching this root only generates churn. Machines reports its own
+				// storage usage, so keep only on-demand thumbnail entries, as for /Apps.
+				scanEnabled: false,
 			},
 			{
 				virtualPath: '/External',
