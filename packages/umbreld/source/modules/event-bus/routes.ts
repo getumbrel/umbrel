@@ -1,6 +1,5 @@
 import z from 'zod'
 import {TRPCError} from '@trpc/server'
-import {cloneDeep} from 'es-toolkit'
 
 import {router, privateProcedureWithMembers} from '../server/trpc/trpc.js'
 import {OWNER_USER_ID} from '../user/constants.js'
@@ -84,11 +83,11 @@ export default router({
 						}
 						// Reformat the files:watcher:change event so it's suitable to be consumed by the client
 						if (input.event === 'files:watcher:change') {
-							// Clone event to avoid mutating the original event object
-							event = cloneDeep(event) as EventTypes['files:watcher:change']
-
-							// Convert the system path to a virtual path
-							event.path = ctx.umbreld.files.systemToVirtualPath(event.path)
+							// Copy the event rather than mutating the one every subscriber shares,
+							// converting the system path to a virtual path. It's flat, so a
+							// shallow copy is enough and cheaper than a deep clone for every event.
+							const change = event as EventTypes['files:watcher:change']
+							event = {...change, path: ctx.umbreld.files.systemToVirtualPath(change.path)}
 
 							// Members only receive changes to paths their account owns or
 							// paths the owner shared with them

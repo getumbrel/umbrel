@@ -59,6 +59,23 @@ type Connection = {client: watchman.Client; closed: boolean}
 // command helper can't satisfy
 type Command = (args: unknown[], callback: (error: Error | null, response: any) => void) => void
 
+// Code units from U+D800 up, where UTF-16 and UTF-8 order can differ
+const HIGH_CODE_UNIT = /[\uD800-\uFFFF]/
+
+// @parcel/watcher delivers each batch sorted by path bytes. Comparing strings
+// compares UTF-16 code units, which gives the same order as UTF-8 bytes as long
+// as no code unit is U+D800 or above. That covers almost every path and is much
+// cheaper, so compare bytes only when a batch needs it.
+function sortByPathBytes(events: FileChangeEvent[]) {
+	if (!events.some(({path}) => HIGH_CODE_UNIT.test(path))) {
+		return events.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+	}
+	return events
+		.map((event) => ({key: Buffer.from(event.path), event}))
+		.sort((a, b) => Buffer.compare(a.key, b.key))
+		.map(({event}) => event)
+}
+
 export default class Watchman {
 	#connection?: Connection
 	#subscriptions = new Map<string, Subscription>()
@@ -249,19 +266,14 @@ export default class Watchman {
 	#flush(subscription: Subscription) {
 		subscription.flushTimer = undefined
 		subscription.lastFlushAt = Date.now()
-		const events: {key: Buffer; event: FileChangeEvent}[] = []
+		const events: FileChangeEvent[] = []
 		for (const [path, {created, deleted}] of subscription.events) {
 			// Created and deleted within the same batch
 			if (created && deleted) continue
-			events.push({key: Buffer.from(path), event: {path, type: created ? 'create' : deleted ? 'delete' : 'update'}})
+			events.push({path, type: created ? 'create' : deleted ? 'delete' : 'update'})
 		}
 		subscription.events.clear()
 		if (events.length === 0 || !this.#subscriptions.has(subscription.name)) return
-		// @parcel/watcher delivers each batch sorted by path bytes
-		events.sort((a, b) => Buffer.compare(a.key, b.key))
-		subscription.callback(
-			null,
-			events.map(({event}) => event),
-		)
+		subscription.callback(null, sortByPathBytes(events))
 	}
 }

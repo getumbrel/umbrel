@@ -249,6 +249,64 @@ describe('events', () => {
 		])
 	})
 
+	test('sorts by path bytes where string order differs', async () => {
+		const watchman = new Watchman()
+		const {client, name, callback} = await subscribed(watchman)
+
+		// U+1F600 is stored as the surrogates U+D83D U+DE00, which sort before
+		// U+E000 as strings but after it as UTF-8 bytes
+		notify(client, {
+			subscription: name,
+			files: [file('😀', {isNew: true}), file('\uE000', {isNew: true}), file('z', {isNew: true})],
+		})
+
+		expect(callback.mock.calls[0][1].map(({path}) => path)).toEqual([
+			'/data/home/z',
+			'/data/home/\uE000',
+			'/data/home/😀',
+		])
+	})
+
+	test('sorts random batches the same as comparing bytes', async () => {
+		const watchman = new Watchman()
+		const {client, name, callback} = await subscribed(watchman)
+		const characters = [
+			'a',
+			'B',
+			'z',
+			'.',
+			'-',
+			' ',
+			'é',
+			'ß',
+			'中',
+			'\u07FF',
+			'\u0800',
+			'\uD7FF',
+			'\uE000',
+			'\uFFFD',
+			'😀',
+			'𝄞',
+		]
+		const randomName = (pool: string[]) =>
+			Array.from({length: 1 + Math.floor(Math.random() * 6)}, () => pool[Math.floor(Math.random() * pool.length)]).join(
+				'',
+			)
+		// Batches without code units from U+D800 up take the string comparison
+		const lowCharacters = characters.filter((character) => !/[\uD800-\uFFFF]/.test(character))
+
+		for (const pool of [characters, lowCharacters, characters, lowCharacters]) {
+			callback.mockClear()
+			const names = [...new Set(Array.from({length: 2000}, () => randomName(pool)))]
+			notify(client, {subscription: name, files: names.map((fileName) => file(fileName, {isNew: true}))})
+			await vi.advanceTimersByTimeAsync(600)
+
+			const paths = callback.mock.calls[0][1].map(({path}) => path)
+			const expected = [...paths].sort((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)))
+			expect(paths).toEqual(expected)
+		}
+	})
+
 	test('delivers the first change straight away, then batches until changes pause', async () => {
 		const watchman = new Watchman()
 		const {client, name, callback} = await subscribed(watchman)

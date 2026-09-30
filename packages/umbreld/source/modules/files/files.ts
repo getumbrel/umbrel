@@ -2284,12 +2284,12 @@ export default class Files {
 			if (kind === 'home') return normalizePath(`/Users/${slug}/${rest}`)
 		}
 
-		// Owner base directories
+		// Owner base directories. The path is normalized, so a prefix check is
+		// enough. This runs for every file event, where path.relative() was the
+		// main cost of a large burst.
 		for (const [baseDirectory, basePath] of this.baseDirectories) {
-			if (isPathInsideOrEqual(basePath, systemPath)) {
-				const relativePath = nodePath.relative(basePath, systemPath).split(nodePath.sep).join('/')
-				return normalizePath(nodePath.posix.join(baseDirectory, relativePath))
-			}
+			if (systemPath === basePath) return baseDirectory
+			if (systemPath.startsWith(`${basePath}/`)) return `${baseDirectory}${systemPath.slice(basePath.length)}`
 		}
 
 		throw new Error(`[invalid-path] Path '${systemPath}' is not within any base directory`)
@@ -2369,7 +2369,13 @@ async function isExternalFilesystemMountedAt(filesystemUuid: string, systemMount
 	return result.exitCode === 0 && result.stdout.trim() === filesystemUuid
 }
 
+// Matches `//`, and `.` or `..` path segments
+const NON_CANONICAL_PATH = /\/\/|(^|\/)\.{1,2}(\/|$)/
+
 export function normalizePath(path: string) {
+	// Most paths, such as every file event's, are already canonical
+	if (path.length > 1 && !path.endsWith('/') && !NON_CANONICAL_PATH.test(path)) return path
+
 	// Reduce `.`, `..` and multiple slashes to their canonical form
 	const normalized = nodePath.posix.normalize(path)
 

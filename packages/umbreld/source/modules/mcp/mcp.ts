@@ -129,10 +129,7 @@ export default class Mcp {
 
 	#listenForFileChanges() {
 		if (this.#removeFileChangeListener) return
-		this.#removeFileChangeListener = this.#umbreld.eventBus.on(
-			'files:watcher:change',
-			this.#handleFileChange.bind(this),
-		)
+		this.#removeFileChangeListener = this.#umbreld.eventBus.onFileChanges(this.#handleFileChanges.bind(this))
 	}
 
 	#stopListeningForFileChanges() {
@@ -713,13 +710,30 @@ export default class Mcp {
 		})
 	}
 
-	async #handleFileChange(event: FileChangeEvent) {
-		if (event.type !== 'delete') return
-		const path = this.#umbreld.files.systemToVirtualPath(event.path)
-		if (path !== '/Home' && !path.startsWith('/Home/')) return
-		const {files} = await this.#watcherPermissions.get()
-		if (files === 'all' || !files.some((grant) => grant === path || grant.startsWith(`${path}/`))) return
-		await this.removeFileGrantsWithin(path)
+	async #handleFileChanges(events: readonly FileChangeEvent[]) {
+		let grants: McpPermissions['files'] | undefined
+		const removals: string[] = []
+		for (const event of events) {
+			if (event.type !== 'delete') continue
+			try {
+				const path = this.#umbreld.files.systemToVirtualPath(event.path)
+				if (path !== '/Home' && !path.startsWith('/Home/')) continue
+				grants ??= (await this.#watcherPermissions.get()).files
+				if (grants === 'all' || grants.length === 0) return
+				if (grants.some((grant) => grant === path || grant.startsWith(`${path}/`))) removals.push(path)
+			} catch (error) {
+				this.logger.error(`Failed to handle the deletion of '${event.path}'`, error)
+			}
+		}
+		// Remove them independently, so one that stalls (in its listeners, say)
+		// can't hold up the others
+		await Promise.all(
+			removals.map((path) =>
+				this.removeFileGrantsWithin(path).catch((error) =>
+					this.logger.error(`Failed to remove file grants within '${path}'`, error),
+				),
+			),
+		)
 	}
 
 	async #removeStaleFileGrants() {
