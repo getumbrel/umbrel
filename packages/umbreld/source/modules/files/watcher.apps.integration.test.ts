@@ -18,7 +18,7 @@ test.runIf(process.platform === 'linux')(
 		const binDirectory = nodePath.join(directory, 'bin')
 		await mkdir(binDirectory)
 		const wrapper = nodePath.join(binDirectory, 'watchman')
-		// Parcel discovers Watchman through PATH. Give this test its own daemon,
+		// The client discovers Watchman through PATH. Give this test its own daemon,
 		// socket, log and state file so it cannot touch an existing system daemon.
 		await writeFile(
 			wrapper,
@@ -62,7 +62,7 @@ test.runIf(process.platform === 'linux')(
 			expect(roots).not.toContain(apps)
 			expect(watcher.subscriptions.has('/Apps')).toBe(false)
 
-			// A Home event must still flow through the real Parcel/Watchman pipeline.
+			// A Home event must still flow through the real Watchman pipeline.
 			const before = nodePath.join(home, 'before.txt')
 			await writeFile(before, 'visible')
 			await vi.waitFor(() => expect(changes).toContain(before), {timeout: 40_000, interval: 100})

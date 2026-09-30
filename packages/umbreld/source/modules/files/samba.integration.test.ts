@@ -99,7 +99,7 @@ describe('#handleFileChange()', () => {
 		// Delete one directory
 		await fse.remove(testDirectoryToDelete)
 
-		// Watchman/Parcel batch events and store writes are asynchronous. Wait for
+		// Watchman batch events and store writes are asynchronous. Wait for
 		// persisted cleanup instead of assuming both finish within 100 ms.
 		await vi.waitFor(
 			async () => {

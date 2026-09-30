@@ -5595,7 +5595,7 @@ test('sweeps readable paths while preserving an unreadable subtree', async () =>
 	})
 })
 
-test('processes a Parcel watcher batch after an active full scan', async () => {
+test('processes a watcher batch after an active full scan', async () => {
 	let releaseWalk!: () => void
 	let signalPaused!: () => void
 	const paused = new Promise<void>((resolve) => (signalPaused = resolve))
@@ -5627,7 +5627,7 @@ test('processes a Parcel watcher batch after an active full scan', async () => {
 	const latePath = nodePath.join(homeDirectory, 'late.txt')
 	await writeFile(latePath, 'late')
 	// Watchman may report the watched root itself for a subtree change. The
-	// already-coalesced Parcel batch waits behind the active scan without
+	// already-coalesced watcher batch waits behind the active scan without
 	// overlapping it, then processes both events in order.
 	noteWatcherChanges(index, [latePath, homeDirectory])
 	releaseWalk()
@@ -5726,7 +5726,7 @@ test('reruns an active snapshot after watcher recovery requests a full reconcili
 	await expect(index.getEntryBySystemPath(recoveredPath)).resolves.toMatchObject({name: 'found-after-recovery.txt'})
 })
 
-test('collapses large Parcel batches during a scan into one follow-up snapshot', async () => {
+test('collapses large watcher batches during a scan into one follow-up snapshot', async () => {
 	let releaseFirstWalk!: () => void
 	let signalFirstWalk!: () => void
 	const firstWalkPaused = new Promise<void>((resolve) => (signalFirstWalk = resolve))
@@ -5776,7 +5776,7 @@ test('collapses large Parcel batches during a scan into one follow-up snapshot',
 	await expect(index.getEntryBySystemPath(removedDuringRetry)).resolves.toBeUndefined()
 })
 
-test('processes already-coalesced Parcel batches for creates and deletes', async () => {
+test('processes already-coalesced watcher batches for creates and deletes', async () => {
 	const {index, homeDirectory} = await fixture()
 	await index.reconcileRoot('/Home', 'initial')
 	const directory = nodePath.join(homeDirectory, 'new-directory')

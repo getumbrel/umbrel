@@ -193,15 +193,12 @@ COPY packages/os/overlay-pi /
 # watchman build stage (amd64 and arm64)
 #########################################################################
 
-# Nasty hack to work around a Parcel watcher bug:
-# https://github.com/getumbrel/umbrel/issues/2158
+# umbreld watches files through Watchman, which avoids bugs in inotify-based
+# watching: https://github.com/getumbrel/umbrel/issues/2158
 #
 # We install Watchman through Homebrew because it gives us prebuilt bottles
 # for both arm64 and amd64. Building Watchman from source takes ages, and
 # upstream only provides prebuilt binaries for amd64.
-#
-# This can be removed if Parcel fixes the watcher bug or if we move away from
-# Parcel's watcher.
 FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS watchman-build
 
 ARG APT_SNAPSHOT_DATE

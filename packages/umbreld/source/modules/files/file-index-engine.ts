@@ -1134,8 +1134,8 @@ export default class FileIndexEngine {
 		const root = this.#roots.get(nodePath.posix.normalize(virtualPath))
 		if (!root) return
 
-		// Parcel has already debounced and coalesced this callback to at most one
-		// event per path. Large native batches are cheaper to cover with one root
+		// The watcher has already batched and coalesced this callback to at most one
+		// event per path. Large batches are cheaper to cover with one root
 		// snapshot; small batches can be processed directly without rebuilding a
 		// second JavaScript debounce/deduplication layer.
 		if (events.length >= this.#watcherBulkThreshold) {
@@ -1159,7 +1159,7 @@ export default class FileIndexEngine {
 						// A newly visible directory may already contain files (for example,
 						// an atomic move into the watched root). Use the existing coalesced
 						// root snapshot rather than maintaining a second subtree crawler.
-						// Directory updates only describe the directory inode; Parcel reports
+						// Directory updates only describe the directory inode; Watchman reports
 						// child changes separately. Re-scanning the whole root for each one
 						// turns modest directory churn into repeated million-entry walks.
 						const directoryReconciliation = type === 'create' ? 'root' : 'entry'
