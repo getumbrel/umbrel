@@ -57,8 +57,12 @@ printf '%s  %s\n' "$SPARKLE_CHECKSUM" "$SPARKLE_ARCHIVE" \
 	| /usr/bin/shasum -a 256 -c -
 /usr/bin/unzip -q "$SPARKLE_ARCHIVE" -d "$TEMP_DIR"
 
+# A Markdown file next to a DMG with the same name (Umbrel-<version>-<build>.md) holds
+# that release's notes. They're embedded so the update window can show them without
+# a second download.
 "$TEMP_DIR/bin/generate_appcast" \
 	--account "$SPARKLE_KEY_ACCOUNT" \
+	--embed-release-notes \
 	--download-url-prefix "$DOWNLOAD_URL_PREFIX" \
 	"$UPDATES_DIR"
 
