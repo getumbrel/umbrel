@@ -101,10 +101,9 @@ final class AppState {
 
 	private var mountsInProgress: Set<String> = [] // per-device lock: connect flow vs health check
 	private var foregroundMounts: Set<String> = [] // user-initiated mounts (excludes silent health checks)
-	// Exact paths returned by successful NetFS calls in this process. Unlike paths
-	// recovered after launch, these retain enough provenance to manage safely when
-	// their old network route is temporarily unreachable.
-	private var processCreatedMountPaths: [String: Set<String>] = [:]
+	// Mounts this process created or gave a share row, with the host and share each
+	// holds (see isKnownMount).
+	private var knownMounts: [String: [Mounter.MountedShare]] = [:]
 	private var notifiedExpired: Set<String> = []
 	private var healthCheckRunning = false
 	private let discovery = Discovery()
@@ -817,12 +816,18 @@ final class AppState {
 	// A server-reported address is only a candidate. Before treating a Finder
 	// volume as this Umbrel's, its SMB remount host must prove the same pinned
 	// device identity or already be the endpoint verified during this process.
+	// Known mounts count too, even while their route is down.
 	private func verifiedMountedShares(
 		for deviceId: String,
 		additionallyTrusting additionalHosts: Set<String> = []
 	) async throws -> [Mounter.MountedShare] {
 		try Task.checkCancellation()
-		let candidates = await Mounter.mountedShares(hosts: knownHosts(for: deviceId))
+		// Known mounts are included whatever their host: the Umbrel's name or address can
+		// change while they stay mounted from the old one.
+		let searchedHosts = Set(knownHosts(for: deviceId).map(Self.mountHostKey))
+		let candidates = await Mounter.mountedShares().filter {
+			searchedHosts.contains(Self.mountHostKey($0.host)) || isKnownMount($0, deviceId: deviceId)
+		}
 		try Task.checkCancellation()
 		guard !candidates.isEmpty else { return [] }
 
@@ -836,8 +841,10 @@ final class AppState {
 					? Self.mountHostKey(share.host) : nil
 			}
 		)
+		// Known mounts need no check, so an old host that no longer answers isn't waited on.
 		let hostsToVerify = Dictionary(
-			candidates.map { (Self.mountHostKey($0.host), $0.host) },
+			candidates.filter { !isKnownMount($0, deviceId: deviceId) }
+				.map { (Self.mountHostKey($0.host), $0.host) },
 			uniquingKeysWith: { first, _ in first }
 		).filter { !verifiedHostKeys.contains($0.key) }
 
@@ -858,8 +865,27 @@ final class AppState {
 		return Mounter.shares(
 			candidates,
 			ownedByHosts: verifiedHostKeys,
-			orCreatedPaths: processCreatedMountPaths[deviceId] ?? []
+			orKnown: knownMounts[deviceId] ?? []
 		)
+	}
+
+	// A mount this process created, or one it gave a share row after its host proved
+	// this Umbrel's identity. Either stays its own while its route is down: the dead
+	// volume stays in the mount table until macOS drops it, and Disconnect or a route
+	// change must still be able to release it. The host and share must match as well as
+	// the path, because macOS reuses /Volumes names.
+	private func isKnownMount(_ share: Mounter.MountedShare, deviceId: String) -> Bool {
+		(knownMounts[deviceId] ?? []).contains { Mounter.isSameMount($0, share) }
+	}
+
+	private func remember(_ mount: Mounter.MountedShare, deviceId: String) {
+		if !isKnownMount(mount, deviceId: deviceId) {
+			knownMounts[deviceId, default: []].append(mount)
+		}
+	}
+
+	private func forgetMount(at path: String, deviceId: String) {
+		knownMounts[deviceId]?.removeAll { $0.path == path }
 	}
 
 	private nonisolated static func mountHostKey(_ host: String) -> String {
@@ -902,7 +928,7 @@ final class AppState {
 			do {
 				try await Mounter.unmount(path: path)
 				if !Mounter.isMounted(at: path) {
-					processCreatedMountPaths[deviceId]?.remove(path)
+					forgetMount(at: path, deviceId: deviceId)
 				}
 			} catch {
 				// The system call is synchronous, but verify the kernel mount table before
@@ -1167,7 +1193,7 @@ final class AppState {
 			do {
 				try await Mounter.unmount(path: share.path)
 				if !Mounter.isMounted(at: share.path) {
-					processCreatedMountPaths[deviceId]?.remove(share.path)
+					forgetMount(at: share.path, deviceId: deviceId)
 				}
 			} catch {
 				let nsError = error as NSError
@@ -1180,28 +1206,28 @@ final class AppState {
 		mountedShares.removeAll { !Mounter.isMounted(at: $0.path) }
 
 		// A route change may make a mount's original host unverifiable even though the
-		// Umbrel is now reachable elsewhere. Only mounts created by this process retain
-		// enough provenance to release in that state; inherited Finder mounts remain
-		// untouched unless their host can still prove the pinned device identity.
-		let createdPaths = processCreatedMountPaths[deviceId] ?? []
-		let alternateCreatedHosts = Set(
+		// Umbrel is now reachable elsewhere. A known mount is released here and mounted
+		// again below on the verified route, rather than waiting for macOS to drop the
+		// dead volume. Other Finder mounts stay unless their host still proves the pinned
+		// device identity.
+		let alternateHosts = Set(
 			mountedShares.compactMap { share in
-				createdPaths.contains(share.path)
+				isKnownMount(share, deviceId: deviceId)
 					&& !Mounter.hostsMatch(share.host, connectionHost) ? share.host : nil
 			}
 		)
-		var unavailableCreatedHosts = Set<String>()
-		for host in alternateCreatedHosts {
+		var unavailableHosts = Set<String>()
+		for host in alternateHosts {
 			let available = await Umbreld.isKnownEndpointAvailable(host: host, deviceId: deviceId)
 			guard isCurrentSession(session, deviceId: deviceId) else { return }
-			if !available { unavailableCreatedHosts.insert(host) }
+			if !available { unavailableHosts.insert(host) }
 		}
-		for share in mountedShares where createdPaths.contains(share.path)
-			&& unavailableCreatedHosts.contains(share.host) {
+		for share in mountedShares where isKnownMount(share, deviceId: deviceId)
+			&& unavailableHosts.contains(share.host) {
 			do {
 				try await Mounter.unmount(path: share.path)
 				if !Mounter.isMounted(at: share.path) {
-					processCreatedMountPaths[deviceId]?.remove(share.path)
+					forgetMount(at: share.path, deviceId: deviceId)
 				}
 			} catch {
 				if Mounter.isMounted(at: share.path) {
@@ -1241,13 +1267,16 @@ final class AppState {
 					forceNewSession: needsFreshSession,
 					silent: silent
 				)
-				processCreatedMountPaths[deviceId, default: []].insert(path)
+				remember(
+					Mounter.MountedShare(host: connectionHost, sharename: share.sharename, path: path),
+					deviceId: deviceId
+				)
 				needsFreshSession = false
 				guard isCurrentSession(session, deviceId: deviceId) else {
 					// This mount completed for an account that is no longer active.
 					try? await Mounter.unmount(path: path)
 					if !Mounter.isMounted(at: path) {
-						processCreatedMountPaths[deviceId]?.remove(path)
+						forgetMount(at: path, deviceId: deviceId)
 					}
 					return
 				}
@@ -1281,9 +1310,11 @@ final class AppState {
 		await Mounter.primeNetworkVolumeAccess(path: path)
 	}
 
-	// Map API shares into Share state, preserving known mount paths. The kernel mount
-	// table is authoritative: never carry an old `.unmounted` status forward once its
-	// volume is present.
+	// Map API shares into Share state from the verified mounts, keeping a row's path
+	// while it still holds that share. The SMB remount URL gives the exact share: a
+	// path alone can belong to an unrelated volume with the same Finder name. The kernel
+	// mount table is authoritative: never carry an old `.unmounted` status forward once
+	// its volume is present.
 	private func mergeShares(
 		_ deviceId: String,
 		_ apiShares: [Umbreld.Share],
@@ -1291,19 +1322,10 @@ final class AppState {
 	) {
 		let existing = deviceShares[deviceId] ?? []
 		deviceShares[deviceId] = apiShares.map { api in
-			let old = existing.first { $0.sharename == api.sharename }
-			if let old, let path = old.mountPath, Mounter.isMounted(at: path) {
-				return Share(
-					name: api.name,
-					path: api.path,
-					sharename: api.sharename,
-					mountPath: old.mountPath,
-					status: .mounted
-				)
-			}
-			// Recover the exact path from the SMB remount URL. A path-only check can
-			// mistake an unrelated volume with the same Finder name for this Umbrel.
-			if let mounted = mountedShares.first(where: { $0.sharename == api.sharename }) {
+			let oldPath = existing.first { $0.sharename == api.sharename }?.mountPath
+			let mounts = mountedShares.filter { $0.sharename == api.sharename }
+			if let mounted = mounts.first(where: { $0.path == oldPath }) ?? mounts.first {
+				remember(mounted, deviceId: deviceId)
 				return Share(
 					name: api.name,
 					path: api.path,
