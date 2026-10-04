@@ -92,8 +92,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.umbrel.mac
         PRODUCT_NAME: Umbrel
-        MARKETING_VERSION: "0.1.1"
-        CURRENT_PROJECT_VERSION: "25"
+        MARKETING_VERSION: "0.1.3"
+        CURRENT_PROJECT_VERSION: "27"
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: Umbrel.entitlements
