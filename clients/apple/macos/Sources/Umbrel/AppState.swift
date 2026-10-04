@@ -543,7 +543,12 @@ final class AppState {
 
 		await withTaskGroup(of: (String, String?, Umbreld.DiscoveryInfo?).self) { group in
 			for deviceId in due {
-				guard let saved = config.savedDevices[deviceId] else { continue }
+				// A device forgotten after it was scheduled gets no probe, so clear it here;
+				// otherwise it would count as in flight for the rest of the run.
+				guard let saved = config.savedDevices[deviceId] else {
+					probesInFlight.remove(deviceId)
+					continue
+				}
 				group.addTask {
 					let result = await Self.firstReachableEndpoint(for: saved)
 					return (deviceId, result?.host, result?.identity)
