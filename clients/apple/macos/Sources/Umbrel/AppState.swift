@@ -235,7 +235,10 @@ final class AppState {
 				addresses: saved.addresses,
 				model: saved.model,
 				userName: saved.userName,
-				reachability: probes[id] != nil || completedInitialReachabilityCheck
+				// Opening the panel at launch can start the first probe before the initial
+				// sweep, which then skips it as in flight. Until it answers, nothing is known.
+				reachability: probes[id] != nil
+					|| (completedInitialReachabilityCheck && !probesInFlight.contains(id))
 					? .offline : .unverified,
 				saved: true,
 				connection: connectionState(id: id),
