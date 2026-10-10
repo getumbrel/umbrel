@@ -189,6 +189,7 @@ export default function UsersDialog() {
 	const [shareAllFolders, setShareAllFolders] = useState(false)
 	const [allowExternalStorage, setAllowExternalStorage] = useState(false)
 	const [allowNetworkStorage, setAllowNetworkStorage] = useState(false)
+	const [allowRaidStorage, setAllowRaidStorage] = useState(false)
 	const [allowSambaAccess, setAllowSambaAccess] = useState(false)
 	const [isCreating, setIsCreating] = useState(false)
 	const [isResettingPassword, setIsResettingPassword] = useState(false)
@@ -214,6 +215,8 @@ export default function UsersDialog() {
 	const editingMember = view.view === 'edit' ? members.find((member) => member.userId === view.userId) : undefined
 	const shouldLoadMemberData = view.view !== 'owner'
 	const sambaAccessQ = trpcReact.files.memberSambaAccess.useQuery(undefined, {enabled: shouldLoadMemberData})
+	// Only offer the RAID storage grant on hosts that actually support mdadm.
+	const mdadmSupportedQ = trpcReact.hardware.mdadm.isSupported.useQuery(undefined, {retry: false})
 
 	const {
 		folderShares,
@@ -265,6 +268,7 @@ export default function UsersDialog() {
 		setShareAllFolders(defaults.shareHome)
 		setAllowExternalStorage(false)
 		setAllowNetworkStorage(false)
+		setAllowRaidStorage(false)
 		setAllowSambaAccess(false)
 		setLocalView({
 			view: 'add',
@@ -338,6 +342,7 @@ export default function UsersDialog() {
 				shareHome: shareAllFolders,
 				allowExternalStorage,
 				allowNetworkStorage,
+				allowRaidStorage,
 			})
 			const shareUpdates = Promise.all([
 				...accessChanges.appIdsToAdd.map((appId) => addAppForUser(appId, account.userId)),
@@ -481,6 +486,7 @@ export default function UsersDialog() {
 	const shareAllFoldersOn = view.view === 'add' ? shareAllFolders : !!homeFolderShare
 	const externalStorageShare = folderShares.find((share) => share.path === '/External')
 	const networkStorageShare = folderShares.find((share) => share.path === '/Network')
+	const raidStorageShare = folderShares.find((share) => share.path === '/Raid')
 	const externalStorageOn =
 		view.view === 'add'
 			? allowExternalStorage
@@ -493,6 +499,10 @@ export default function UsersDialog() {
 			: !!editingMember &&
 				!!networkStorageShare &&
 				shareCoversUser(networkStorageShare.sharedWith, editingMember.userId)
+	const raidStorageOn =
+		view.view === 'add'
+			? allowRaidStorage
+			: !!editingMember && !!raidStorageShare && shareCoversUser(raidStorageShare.sharedWith, editingMember.userId)
 	const editingSambaAccess = editingMember
 		? sambaAccessQ.data?.find((access) => access.userId === editingMember.userId)
 		: undefined
@@ -522,6 +532,13 @@ export default function UsersDialog() {
 		if (!editingMember) return
 		if (checked) await addFolderForUser('/Network', editingMember.userId)
 		else await removeFolderForUser('/Network', editingMember.userId)
+	}
+
+	const handleToggleRaidStorage = async (checked: boolean) => {
+		if (view.view === 'add') return setAllowRaidStorage(checked)
+		if (!editingMember) return
+		if (checked) await addFolderForUser('/Raid', editingMember.userId)
+		else await removeFolderForUser('/Raid', editingMember.userId)
 	}
 
 	const handleToggleSambaAccess = async (checked: boolean) => {
@@ -702,9 +719,12 @@ export default function UsersDialog() {
 			<StorageAccessSection
 				externalStorage={externalStorageOn}
 				networkStorage={networkStorageOn}
+				raidStorage={raidStorageOn}
+				showRaidStorage={mdadmSupportedQ.data === true}
 				disabled={isAddingUser ? undefined : shareControlsDisabled}
 				onExternalStorageChange={handleToggleExternalStorage}
 				onNetworkStorageChange={handleToggleNetworkStorage}
+				onRaidStorageChange={handleToggleRaidStorage}
 			/>
 
 			<Separator />
@@ -1236,15 +1256,21 @@ function ShareSection({
 function StorageAccessSection({
 	externalStorage,
 	networkStorage,
+	raidStorage,
+	showRaidStorage,
 	disabled,
 	onExternalStorageChange,
 	onNetworkStorageChange,
+	onRaidStorageChange,
 }: {
 	externalStorage: boolean
 	networkStorage: boolean
+	raidStorage: boolean
+	showRaidStorage: boolean
 	disabled?: boolean
 	onExternalStorageChange: (checked: boolean) => void
 	onNetworkStorageChange: (checked: boolean) => void
+	onRaidStorageChange: (checked: boolean) => void
 }) {
 	const {t} = useTranslation()
 
@@ -1268,6 +1294,16 @@ function StorageAccessSection({
 					disabled={disabled}
 					onCheckedChange={onNetworkStorageChange}
 				/>
+				{showRaidStorage && (
+					<ShareEveryoneRow
+						className='border-t border-white/6 p-3'
+						title={t('users.raid-storage')}
+						description={t('users.raid-storage-description')}
+						checked={raidStorage}
+						disabled={disabled}
+						onCheckedChange={onRaidStorageChange}
+					/>
+				)}
 			</div>
 		</section>
 	)

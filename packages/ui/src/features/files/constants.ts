@@ -32,6 +32,7 @@ export const APPS_PATH = '/Apps' as const
 export const MACHINES_PATH = '/Machines' as const
 export const EXTERNAL_STORAGE_PATH = '/External' as const
 export const NETWORK_STORAGE_PATH = '/Network' as const
+export const RAID_STORAGE_PATH = '/Raid' as const
 export const BACKUPS_PATH = '/Backups' as const
 
 // Roots whose direct children are created by umbrelOS itself (app data

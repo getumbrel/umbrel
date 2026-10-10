@@ -14,7 +14,12 @@ import {
 } from '@/components/ui/drawer'
 import {toast} from '@/components/ui/toast'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
-import {CLOUD_PROVIDER_LOGOS, EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
+import {
+	CLOUD_PROVIDER_LOGOS,
+	EXTERNAL_STORAGE_PATH,
+	NETWORK_STORAGE_PATH,
+	RAID_STORAGE_PATH,
+} from '@/features/files/constants'
 import {
 	useCloudAccounts,
 	useCloudConnect,
@@ -63,6 +68,9 @@ export default function CloudAddDialog() {
 	const homePath = useHomePath()
 	const isMember = useIsMember()
 	const {sharedWithMe} = useMemberShares()
+	// Each mounted RAID array is a destination root in its own right, like a drive.
+	const raidMountsQ = trpcReact.files.raidMounts.useQuery(undefined, {retry: false})
+	const canUseRaid = !isMember || (sharedWithMe?.shares.some(({path}) => path === RAID_STORAGE_PATH) ?? false)
 	const destinationRootPaths = [
 		homePath,
 		...(!isMember || sharedWithMe?.shares.some(({path}) => path === EXTERNAL_STORAGE_PATH)
@@ -71,6 +79,8 @@ export default function CloudAddDialog() {
 		...(!isMember || sharedWithMe?.shares.some(({path}) => path === NETWORK_STORAGE_PATH)
 			? [NETWORK_STORAGE_PATH]
 			: []),
+		// Each mounted array is a destination root in its own right, like a drive.
+		...(canUseRaid ? (raidMountsQ.data ?? []).map((mount) => mount.path) : []),
 	]
 
 	const {data: providers, isLoading: isLoadingProviders} = useCloudProviders({enabled: dialogProps.open})

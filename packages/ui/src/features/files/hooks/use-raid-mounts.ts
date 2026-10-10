@@ -1,5 +1,4 @@
 import {useTranslation} from 'react-i18next'
-import {FaEject} from 'react-icons/fa6'
 
 import {toast} from '@/components/ui/toast'
 import {getActiveAppsUsingStoragePaths, showStorageInUseDialog} from '@/features/files/components/storage-in-use'

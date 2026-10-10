@@ -117,4 +117,38 @@ describe('new user access', () => {
 		expect(removeUserFromSharedWith('all', 'new-member', ['member-1', 'member-2'])).toEqual(['member-1', 'member-2'])
 		expect(removeUserFromSharedWith('all', 'new-member', [])).toEqual([])
 	})
+
+	test('treats RAID as a storage category like external and network', () => {
+		expect(isStorageCategoryPath('/Raid')).toBe(true)
+		expect(isStorageCategoryPath('/Raid/umbrel-md')).toBe(false)
+
+		// Granting RAID storage adds the category root, and revoking removes it
+		expect(
+			planNewUserAccessChanges({
+				inheritedAppIds: [],
+				inheritedFolderPaths: ['/Raid'],
+				pickedAppIds: [],
+				pickedFolderPaths: [],
+				shareAllApps: false,
+				shareHome: false,
+				allowExternalStorage: false,
+				allowNetworkStorage: false,
+				allowRaidStorage: true,
+			}),
+		).toMatchObject({folderPathsToAdd: ['/Raid'], folderPathsToRemove: []})
+
+		expect(
+			planNewUserAccessChanges({
+				inheritedAppIds: [],
+				inheritedFolderPaths: ['/Raid'],
+				pickedAppIds: [],
+				pickedFolderPaths: [],
+				shareAllApps: false,
+				shareHome: false,
+				allowExternalStorage: false,
+				allowNetworkStorage: false,
+				allowRaidStorage: false,
+			}),
+		).toMatchObject({folderPathsToAdd: [], folderPathsToRemove: ['/Raid']})
+	})
 })

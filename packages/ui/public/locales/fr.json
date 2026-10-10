@@ -2728,6 +2728,8 @@
   "users.owner": "Propriétaire",
   "users.password-helper": "Cette personne l’utilisera pour se connecter et pourra le modifier plus tard dans les réglages de son compte.",
   "users.password-placeholder": "Mot de passe",
+  "users.raid-storage": "Stockage RAID",
+  "users.raid-storage-description": "Accédez à toutes les grappes RAID de votre Umbrel, y compris celles créées à l’avenir",
   "users.remove-app": "Retirer {{name}}",
   "users.remove-folder": "Retirer {{name}}",
   "users.reset-password": "Réinitialiser le mot de passe",

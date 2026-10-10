@@ -10,7 +10,7 @@ export function isCoveredByHomeShare(path: string) {
 }
 
 export function isStorageCategoryPath(path: string) {
-	return path === '/External' || path === '/Network'
+	return path === '/External' || path === '/Network' || path === '/Raid'
 }
 
 export function removeUserFromSharedWith(sharedWith: SharedWith, userId: string, memberIds: string[]) {
@@ -43,6 +43,7 @@ export function planNewUserAccessChanges({
 	shareHome,
 	allowExternalStorage,
 	allowNetworkStorage,
+	allowRaidStorage,
 }: {
 	inheritedAppIds: string[]
 	inheritedFolderPaths: string[]
@@ -52,12 +53,14 @@ export function planNewUserAccessChanges({
 	shareHome: boolean
 	allowExternalStorage: boolean
 	allowNetworkStorage: boolean
+	allowRaidStorage?: boolean
 }) {
 	const pickedApps = new Set(pickedAppIds)
 	const pickedFolders = new Set([
 		...pickedFolderPaths,
 		...(allowExternalStorage ? ['/External'] : []),
 		...(allowNetworkStorage ? ['/Network'] : []),
+		...(allowRaidStorage ? ['/Raid'] : []),
 	])
 
 	return {
@@ -73,6 +76,7 @@ export function planNewUserAccessChanges({
 			...pickedFolderPaths.filter((path) => !shareHome || !isCoveredByHomeShare(path)),
 			...(allowExternalStorage ? ['/External'] : []),
 			...(allowNetworkStorage ? ['/Network'] : []),
+			...(allowRaidStorage ? ['/Raid'] : []),
 		]),
 		folderPathsToRemove: unique(
 			inheritedFolderPaths.filter((path) => {

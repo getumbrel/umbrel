@@ -117,7 +117,10 @@ vi.mock('@/trpc/trpc', () => ({
 				},
 			},
 		}),
-		files: {createDirectory: {useMutation: () => ({mutateAsync: vi.fn()})}},
+		files: {
+			createDirectory: {useMutation: () => ({mutateAsync: vi.fn()})},
+			raidMounts: {useQuery: () => ({data: []})},
+		},
 	},
 }))
 vi.mock('@/utils/dialog', () => ({

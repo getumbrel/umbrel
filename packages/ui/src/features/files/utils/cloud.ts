@@ -1,4 +1,4 @@
-import {EXTERNAL_STORAGE_PATH, HOME_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
+import {EXTERNAL_STORAGE_PATH, HOME_PATH, NETWORK_STORAGE_PATH, RAID_STORAGE_PATH} from '@/features/files/constants'
 import type {CloudAccount, CloudProvider, CloudSync} from '@/features/files/hooks/use-cloud'
 
 // The webdav provider presented as the servers people actually run.
@@ -68,13 +68,14 @@ export function buildWebDavFlavorUrl(server: string, username: string): string {
 
 // Valid parents for an auto-created cloud destination folder, per the
 // backend's destination grammar: /Home/**, /External/<volume>/**,
-// /Network/<host>/<share>/**. The base roots and mount roots themselves cannot
-// contain a destination's parent below these depths.
+// /Network/<host>/<share>/**, /Raid/<array>/**. The base roots and mount roots
+// themselves cannot contain a destination's parent below these depths.
 export function isValidCloudDestinationParent(path: string, homePath: string = HOME_PATH) {
 	if (path === homePath || path.startsWith(`${homePath}/`)) return true
 	const componentCount = path.split('/').filter(Boolean).length
 	if (path.startsWith(`${EXTERNAL_STORAGE_PATH}/`)) return componentCount >= 2
 	if (path.startsWith(`${NETWORK_STORAGE_PATH}/`)) return componentCount >= 3
+	if (path.startsWith(`${RAID_STORAGE_PATH}/`)) return componentCount >= 2
 	return false
 }
 

@@ -30,14 +30,20 @@ export function SidebarOwnersUmbrel({name}: {name: string}) {
 
 // Category-wide storage grants. The root entries automatically include devices
 // and network shares connected after the permission was granted.
-export function SidebarSharedStorage({external, network}: {external: boolean; network: boolean}) {
+export function SidebarSharedStorage({external, network, raid}: {external: boolean; network: boolean; raid?: boolean}) {
 	const {t} = useTranslation()
 	const {navigateToDirectory, currentPath} = useNavigate()
 
+	type SharedStorageCategory = {
+		path: string
+		name: string
+		type: 'external-storage' | 'network-root' | 'directory'
+	}
 	const categories = [
-		external && {path: '/External', name: t('files-sidebar.external-storage'), type: 'external-storage' as const},
-		network && {path: '/Network', name: t('files-sidebar.network'), type: 'network-root' as const},
-	].filter((category) => category !== false)
+		external ? {path: '/External', name: t('files-sidebar.external-storage'), type: 'external-storage' as const} : null,
+		network ? {path: '/Network', name: t('files-sidebar.network'), type: 'network-root' as const} : null,
+		raid ? {path: '/Raid', name: t('files-sidebar.raid-storage'), type: 'directory' as const} : null,
+	].filter((category): category is SharedStorageCategory => category !== null)
 
 	return (
 		<>

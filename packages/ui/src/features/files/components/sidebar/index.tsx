@@ -14,9 +14,9 @@ import {SidebarFavorites} from '@/features/files/components/sidebar/sidebar-favo
 import {SidebarHome} from '@/features/files/components/sidebar/sidebar-home'
 import {SidebarMachines} from '@/features/files/components/sidebar/sidebar-machines'
 import {SidebarNetworkStorage} from '@/features/files/components/sidebar/sidebar-network-storage'
+import {SidebarRaidStorage} from '@/features/files/components/sidebar/sidebar-raid-storage'
 import {SidebarRecents} from '@/features/files/components/sidebar/sidebar-recents'
 import {SidebarOwnersUmbrel, SidebarSharedStorage} from '@/features/files/components/sidebar/sidebar-shared-with-me'
-import {SidebarRaidStorage} from '@/features/files/components/sidebar/sidebar-raid-storage'
 import {SidebarShares} from '@/features/files/components/sidebar/sidebar-shares'
 import {SidebarTrash} from '@/features/files/components/sidebar/sidebar-trash'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
@@ -50,6 +50,7 @@ export function Sidebar({className}: {className?: string}) {
 	const homeShares = sharedWithMe?.shares.filter((share) => share.base === 'home') ?? []
 	const hasExternalStorage = sharedWithMe?.shares.some((share) => share.path === '/External') ?? false
 	const hasNetworkStorage = sharedWithMe?.shares.some((share) => share.path === '/Network') ?? false
+	const hasRaidStorage = sharedWithMe?.shares.some((share) => share.path === '/Raid') ?? false
 	const hasSharedApps = sharedWithMe?.shares.some((share) => share.base === 'apps') ?? false
 	const sharedWithMeLabel = sharedWithMe?.ownerName
 		? t('files-sidebar.owners-umbrel', {name: firstNameFromFullName(sharedWithMe.ownerName)})
@@ -68,6 +69,9 @@ export function Sidebar({className}: {className?: string}) {
 	const showRewind = !hidden.rewind && !isMember
 	const showCloud = !hidden.cloud
 	const showMachines = !hidden.machines && !isMember
+	// The owner browses arrays as individual rows; a member with RAID shared sees
+	// the single /Raid category row in SidebarSharedStorage instead, mirroring how
+	// /External and /Network are surfaced to members.
 	const showRaid = !hidden.raid && !isMember && !raidMountsQ.isLoading && (raidMountsQ.data?.length ?? 0) > 0
 
 	return (
@@ -108,11 +112,11 @@ export function Sidebar({className}: {className?: string}) {
 				</AnimatePresence>
 
 				{/* Storage categories shared with this member */}
-				{isMember && (hasExternalStorage || hasNetworkStorage) && (
+				{isMember && (hasExternalStorage || hasNetworkStorage || hasRaidStorage) && (
 					<>
 						<SidebarDivider />
 						<SidebarSection label={t('files-sidebar.devices')}>
-							<SidebarSharedStorage external={hasExternalStorage} network={hasNetworkStorage} />
+							<SidebarSharedStorage external={hasExternalStorage} network={hasNetworkStorage} raid={hasRaidStorage} />
 						</SidebarSection>
 					</>
 				)}
@@ -160,29 +164,28 @@ export function Sidebar({className}: {className?: string}) {
 					)}
 				</AnimatePresence>
 
-			{/* Cloud */}
-			{/* Always rendered for owners and members (unless hidden): this account-private
+				{/* Cloud */}
+				{/* Always rendered for owners and members (unless hidden): this account-private
 			    permanent root row is the feature's ambient entry point. No section label since
 			    the root row itself carries the feature name. */}
-			{showCloud ? (
-				<>
-					<SidebarDivider />
-					<SidebarSection>
-						<SidebarCloud />
-					</SidebarSection>
-				</>
-			) : null}
+				{showCloud ? (
+					<>
+						<SidebarDivider />
+						<SidebarSection>
+							<SidebarCloud />
+						</SidebarSection>
+					</>
+				) : null}
 
-			{/* Linux RAID (mdadm) arrays */}
-			{showRaid && (
-				<>
-					<SidebarDivider />
-					<SidebarSection label={t('files-sidebar.raid-storage')}>
-						<SidebarRaidStorage />
-					</SidebarSection>
-				</>
-			)}
-
+				{/* Linux RAID (mdadm) arrays */}
+				{showRaid && (
+					<>
+						<SidebarDivider />
+						<SidebarSection label={t('files-sidebar.raid-storage')}>
+							<SidebarRaidStorage />
+						</SidebarSection>
+					</>
+				)}
 
 				{/* Spacer */}
 				<div className='h-6' />

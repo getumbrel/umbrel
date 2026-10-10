@@ -55,7 +55,7 @@ export function EmbeddedFiles({
 				// item would show the live directory inside the snapshot browser
 				hiddenSidebarItems:
 					mode === 'read-only'
-						? {network: true, external: true, trash: true, rewind: true, cloud: true, machines: true}
+						? {network: true, external: true, raid: true, trash: true, rewind: true, cloud: true, machines: true}
 						: undefined,
 			}}
 		>

@@ -2690,6 +2690,8 @@
   "users.owner": "Owner",
   "users.password-helper": "They'll use this to log in, and can change it later in their account settings.",
   "users.password-placeholder": "Password",
+  "users.raid-storage": "RAID storage",
+  "users.raid-storage-description": "Access all RAID arrays on your Umbrel, including arrays created in the future",
   "users.remove-app": "Remove {{name}}",
   "users.remove-folder": "Remove {{name}}",
   "users.reset-password": "Reset password",

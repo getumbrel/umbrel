@@ -1,9 +1,8 @@
-import {useTranslation} from 'react-i18next'
 import {FaEject} from 'react-icons/fa6'
 import {RiHardDrive2Fill} from 'react-icons/ri'
 
-import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {SharedFolderBadge} from '@/features/files/assets/shared-folder-badge'
+import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {useRaidMounts} from '@/features/files/hooks/use-raid-mounts'
 import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
