@@ -46,6 +46,26 @@ export const MDADM_MIN_DEVICES: Record<MdadmLevel, number> = {
 	'10': 4,
 }
 
+export const MDADM_MAX_DEVICE_INDEX = 31
+
+export function isValidMdDevice(device: string): boolean {
+	return /^\/dev\/md\d+$/.test(device)
+}
+
+export function mdDeviceIndex(device: string): number {
+	const m = device.match(/^\/dev\/md(\d+)$/)
+	return m ? parseInt(m[1], 10) : -1
+}
+
+/** Find the first free /dev/mdN given a list of taken device paths. */
+export function allocateNextMdDevice(taken: string[]): string {
+	const takenIndexes = new Set(taken.map(mdDeviceIndex).filter((i) => i >= 0))
+	for (let i = 0; i <= MDADM_MAX_DEVICE_INDEX; i++) {
+		if (!takenIndexes.has(i)) return `/dev/md${i}`
+	}
+	throw new Error(`No free /dev/mdX slot (0-${MDADM_MAX_DEVICE_INDEX} all taken)`)
+}
+
 export function parseMdstat(mdstat: string): Array<{
 	device: string
 	state: MdadmArrayState
@@ -164,6 +184,16 @@ export default class Mdadm {
 
 	async start() {
 		this.logger.log('Starting mdadm monitor')
+		// Best-effort auto-assemble on every (re)start so arrays defined by
+		// superblocks / mdadm.conf come back after reboot, reflash or power loss.
+		// The dedicated systemd unit (umbrel-mdadm-assemble) already runs before
+		// umbreld, this is a second chance inside containers / dev envs.
+		try {
+			const output = await this.assembleScan({run: true})
+			if (output.trim()) this.logger.log(`mdadm auto-assemble: ${output.trim()}`)
+		} catch (error) {
+			this.logger.error('mdadm auto-assemble at start failed (non-fatal)', error)
+		}
 	}
 
 	async stop() {
@@ -244,9 +274,33 @@ export default class Mdadm {
 	}
 
 	async detail(device: string): Promise<string> {
-		if (!/^\/dev\/md\d+$/.test(device)) throw new Error(`Invalid md device: ${device}`)
+		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
 		const {stdout} = await $`mdadm --detail ${device}`
 		return stdout
+	}
+
+	/** List taken /dev/mdN from /proc/mdstat + /dev nodes. */
+	async listTakenDevices(): Promise<string[]> {
+		const taken = new Set<string>()
+		try {
+			const mdstat = await fse.readFile('/proc/mdstat', 'utf8')
+			for (const entry of parseMdstat(mdstat)) taken.add(entry.device)
+		} catch {
+			// No mdstat (no arrays or unsupported kernel) — fall through to /dev scan
+		}
+		for (let i = 0; i <= MDADM_MAX_DEVICE_INDEX; i++) {
+			const candidate = `/dev/md${i}`
+			try {
+				if (await fse.pathExists(candidate)) taken.add(candidate)
+			} catch {
+				// ignore
+			}
+		}
+		return [...taken]
+	}
+
+	async allocateDevice(): Promise<string> {
+		return allocateNextMdDevice(await this.listTakenDevices())
 	}
 
 	async create({
@@ -255,32 +309,45 @@ export default class Mdadm {
 		name = 'umbrel-md',
 		chunk,
 		assumeClean = false,
+		device,
 	}: {
 		level: MdadmLevel
 		devices: string[]
 		name?: string
 		chunk?: number
 		assumeClean?: boolean
-	}): Promise<string> {
+		/** Target array node. Defaults to the first free /dev/mdN (multi-array support). */
+		device?: string
+	}): Promise<{device: string; output: string}> {
 		if (!(await this.isSupported())) throw new Error('mdadm is not installed on this system')
 		const minDevices = MDADM_MIN_DEVICES[level]
 		if (devices.length < minDevices)
 			throw new Error(`RAID level ${level} requires at least ${minDevices} devices (${devices.length} given)`)
 		if (level === '10' && devices.length % 2 !== 0)
 			throw new Error('RAID level 10 requires an even number of devices')
-		for (const device of devices) {
-			if (!/^\/dev\/(sd[a-z]+\d*|nvme\d+n\d+(p\d+)?|hd[a-z]+\d*|vd[a-z]+\d*)$/.test(device))
-				throw new Error(`Refusing to use suspicious device path: ${device}`)
-			if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
+		for (const member of devices) {
+			if (!/^\/dev\/(sd[a-z]+\d*|nvme\d+n\d+(p\d+)?|hd[a-z]+\d*|vd[a-z]+\d*)$/.test(member))
+				throw new Error(`Refusing to use suspicious device path: ${member}`)
+			if (!(await fse.pathExists(member))) throw new Error(`Device not found: ${member}`)
 		}
 		// Guard against clobbering ZFS-managed or mounted devices
-		for (const device of devices) {
+		for (const member of devices) {
 			try {
-				const {stdout} = await $`lsblk --noheadings --output MOUNTPOINT ${device}`
-				if (stdout.trim()) throw new Error(`Device ${device} is mounted (${stdout.trim()})`)
+				const {stdout} = await $`lsblk --noheadings --output MOUNTPOINT ${member}`
+				if (stdout.trim()) throw new Error(`Device ${member} is mounted (${stdout.trim()})`)
 			} catch (error) {
 				if (error instanceof Error && error.message.includes('is mounted')) throw error
 			}
+		}
+
+		// Resolve target node: explicit /dev/mdN or first free slot (multi-array).
+		let target = device
+		if (target) {
+			if (!isValidMdDevice(target)) throw new Error(`Invalid md device: ${target}`)
+			const taken = await this.listTakenDevices()
+			if (taken.includes(target)) throw new Error(`Array device already in use: ${target}`)
+		} else {
+			target = await this.allocateDevice()
 		}
 
 		const args = [
@@ -292,43 +359,104 @@ export default class Mdadm {
 			`--name=${name}`,
 			...(chunk ? [`--chunk=${chunk}`] : []),
 			...(assumeClean ? ['--assume-clean'] : []),
-			'/dev/md0',
+			target,
 			...devices,
 		]
-		this.logger.log(`Creating mdadm RAID${level} (${name}) with: ${devices.join(' ')}`)
+		this.logger.log(`Creating mdadm RAID${level} (${name}) on ${target} with: ${devices.join(' ')}`)
 		// --run forces creation without interactive confirmation, --metadata=1.2 keeps
 		// 4K alignment friendly superblocks readable by modern installers.
 		const {stdout} = await $({input: 'y'})`mdadm ${args}`
 		await this.saveConfig()
-		return stdout
+		return {device: target, output: stdout}
 	}
 
 	async add(arrayDevice: string, newDevice: string): Promise<void> {
-		if (!/^\/dev\/md\d+$/.test(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
+		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
 		if (!(await fse.pathExists(newDevice))) throw new Error(`Device not found: ${newDevice}`)
 		await $`mdadm --add ${arrayDevice} ${newDevice}`
 		await this.saveConfig()
 	}
 
 	async remove(arrayDevice: string, memberDevice: string): Promise<void> {
-		if (!/^\/dev\/md\d+$/.test(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
+		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
 		await $`mdadm --remove ${arrayDevice} ${memberDevice}`
 		await this.saveConfig()
 	}
 
 	async fail(arrayDevice: string, memberDevice: string): Promise<void> {
-		if (!/^\/dev\/md\d+$/.test(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
+		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
 		await $`mdadm --fail ${arrayDevice} ${memberDevice}`
 	}
 
 	async stop(arrayDevice: string): Promise<void> {
-		if (!/^\/dev\/md\d+$/.test(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
+		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
 		await $`mdadm --stop ${arrayDevice}`
 	}
 
-	async assembleScan(): Promise<string> {
-		const {stdout} = await $`mdadm --assemble --scan`
+	async assembleScan({run = false} = {}): Promise<string> {
+		const args = ['--assemble', '--scan', ...(run ? ['--run'] : [])]
+		const {stdout} = await $`mdadm ${args}`
 		return stdout
+	}
+
+	/**
+	 * Grow / reshape an array.
+	 * - RAID5/6 expansion: add spares first (via add()), then grow --raid-devices to the
+	 *   new total. mdadm reshapes in place; progress shows up as `reshape` in /proc/mdstat.
+	 * - Level migration: e.g. RAID1 -> RAID5, RAID5 -> RAID6 (requires mdadm >= 3.x, may
+	 *   need --backup-file for safety).
+	 * - `--size=max` reuses the full capacity after replacing members with larger disks.
+	 */
+	async grow(
+		arrayDevice: string,
+		{
+			raidDevices,
+			level,
+			backupFile,
+			sizeMax = false,
+		}: {raidDevices?: number; level?: MdadmLevel; backupFile?: string; sizeMax?: boolean},
+	): Promise<string> {
+		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
+		if (raidDevices !== undefined && (!Number.isInteger(raidDevices) || raidDevices < 1))
+			throw new Error(`Invalid raidDevices count: ${raidDevices}`)
+		if (raidDevices === undefined && !level && !sizeMax)
+			throw new Error('grow requires at least one of: raidDevices, level, sizeMax')
+		const args = [
+			'--grow',
+			arrayDevice,
+			...(raidDevices !== undefined ? [`--raid-devices=${raidDevices}`] : []),
+			...(level ? [`--level=${level}`] : []),
+			...(backupFile ? [`--backup-file=${backupFile}`] : []),
+			...(sizeMax ? ['--size=max'] : []),
+		]
+		this.logger.log(`Growing ${arrayDevice}: ${args.join(' ')}`)
+		const {stdout} = await $`mdadm ${args}`
+		await this.saveConfig()
+		return stdout
+	}
+
+	/**
+	 * Convenience: hot-add new devices as spares then expand RAID5/6 to include them.
+	 * newTotal = current raidDevices + newDevices.length. Reshape progress is visible
+	 * via getStatus() (syncAction=reshape, syncProgress 0-100).
+	 */
+	async growAddAndExpand(arrayDevice: string, newDevices: string[]): Promise<string> {
+		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
+		if (newDevices.length === 0) throw new Error('At least one new device is required')
+		for (const device of newDevices) {
+			if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
+			await $`mdadm --add ${arrayDevice} ${device}`
+		}
+		const status = await this.getStatus()
+		const array = status.arrays.find((a) => a.device === arrayDevice)
+		if (!array) throw new Error(`Array not found after adding spares: ${arrayDevice}`)
+		const newTotal = array.raidDevices + newDevices.length
+		return this.grow(arrayDevice, {raidDevices: newTotal})
+	}
+
+	/** After replacing members with larger disks, grow the array to use the full capacity. */
+	async growToMaxSize(arrayDevice: string): Promise<string> {
+		return this.grow(arrayDevice, {sizeMax: true})
 	}
 
 	async saveConfig(): Promise<void> {

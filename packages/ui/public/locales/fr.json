@@ -2837,5 +2837,15 @@
   "storage-manager.mdadm.member-faulty": "en panne",
   "storage-manager.mdadm.member-removed": "retiré",
   "storage-manager.mdadm.member-sync": "synchronisation",
-  "storage-manager.mdadm.member-unknown": "inconnu"
+  "storage-manager.mdadm.member-unknown": "inconnu",
+  "storage-manager.mdadm.next-device": "Prochain array : {device} (auto)",
+  "storage-manager.mdadm.grow": "Étendre / convertir",
+  "storage-manager.mdadm.grow-title": "Étendre {device}",
+  "storage-manager.mdadm.grow-description": "Ajoutez des disques pour étendre un RAID 5/6, migrez de niveau, ou récupérez la capacité après remplacement par des disques plus grands. La progression apparaît en % reshape/resync.",
+  "storage-manager.mdadm.grow-choose": "Nouveaux disques à ajouter puis absorber :",
+  "storage-manager.mdadm.grow-unsupported-level": "L'extension en ligne concerne RAID 5/6. Les autres niveaux supportent migration et taille max ci-dessous.",
+  "storage-manager.mdadm.grow-level-optional": "Migration de niveau (optionnel)",
+  "storage-manager.mdadm.grow-keep-level": "Garder le niveau actuel",
+  "storage-manager.mdadm.grow-max": "Utiliser taille max",
+  "storage-manager.mdadm.grow-confirm": "Lancer l'extension"
 }

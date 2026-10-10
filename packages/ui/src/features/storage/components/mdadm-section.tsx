@@ -25,10 +25,117 @@ function memberStateColor(state: string): string {
 	}
 }
 
+function GrowDialog({array, open, onOpenChange}: {array: MdadmArray; open: boolean; onOpenChange: (v: boolean) => void}) {
+	const {t} = useTranslation()
+	const mdadm = useMdadm()
+	const devicesQ = trpcReact.hardware.internalStorage.getDevices.useQuery()
+	const [selected, setSelected] = useState<string[]>([])
+	const [targetLevel, setTargetLevel] = useState<string>('')
+
+	const available = (devicesQ.data ?? []).filter((d) => !d.isSystemDrive && d.device)
+	const canExpand = array.level === '5' || array.level === '6'
+	const toggle = (dev: string) =>
+		setSelected((prev) => (prev.includes(dev) ? prev.filter((d) => d !== dev) : [...prev, dev]))
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>{t('storage-manager.mdadm.grow-title', {device: array.device})}</DialogTitle>
+				</DialogHeader>
+				<div className='flex flex-col gap-3'>
+					<p className='text-13 text-white/60'>{t('storage-manager.mdadm.grow-description')}</p>
+					{canExpand ? (
+						<div className='flex flex-col gap-1.5'>
+							<span className='text-13 text-white/70'>{t('storage-manager.mdadm.grow-choose')}</span>
+							{available.map((d) => {
+								const devPath = `/dev/${d.device}`
+								const checked = selected.includes(devPath)
+								return (
+									<label
+										key={d.device}
+										className={cn(
+											'flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 text-13',
+											checked ? 'border-brand bg-brand/10 text-white' : 'border-white/10 text-white/70',
+										)}
+									>
+										<input type='checkbox' checked={checked} onChange={() => toggle(devPath)} className='accent-current' />
+										<span className='font-mono'>{devPath}</span>
+										<span className='text-white/50'>
+											{d.name} · {formatStorageSize(d.size)}
+										</span>
+									</label>
+								)
+							})}
+							{available.length === 0 && (
+								<p className='text-13 text-white/40'>{t('storage-manager.mdadm.no-devices')}</p>
+							)}
+						</div>
+					) : (
+						<p className='text-13 text-white/50'>{t('storage-manager.mdadm.grow-unsupported-level')}</p>
+					)}
+					<label className='flex flex-col gap-1 text-13 text-white/70'>
+						{t('storage-manager.mdadm.grow-level-optional')}
+						<select
+							value={targetLevel}
+							onChange={(e) => setTargetLevel(e.target.value)}
+							className='rounded-md border border-white/15 bg-black/40 px-2 py-1.5 text-white'
+						>
+							<option value=''>{t('storage-manager.mdadm.grow-keep-level')}</option>
+							{['0', '1', '5', '6', '10'].map((lv) => (
+								<option key={lv} value={lv}>
+									RAID {lv}
+								</option>
+							))}
+						</select>
+					</label>
+					{(mdadm.growError || (mdadm as {growExpandError?: {message?: string}}).growExpandError) && (
+						<p className='text-13 text-destructive2'>
+							{String(mdadm.growError?.message ?? '')}
+						</p>
+					)}
+				</div>
+				<DialogFooter>
+					<Button variant='default' onClick={() => onOpenChange(false)}>
+						{t('cancel')}
+					</Button>
+					<Button
+						variant='default'
+						disabled={mdadm.isGrowMax}
+						onClick={async () => {
+							await mdadm.growMaxAsync({arrayDevice: array.device})
+							onOpenChange(false)
+						}}
+					>
+						{t('storage-manager.mdadm.grow-max')}
+					</Button>
+					<Button
+						variant='primary'
+						disabled={(!canExpand || selected.length === 0) && !targetLevel}
+						onClick={async () => {
+							if (selected.length > 0) {
+								await mdadm.growExpandAsync({arrayDevice: array.device, devices: selected})
+							} else if (targetLevel) {
+								await mdadm.growAsync({arrayDevice: array.device, level: targetLevel as MdadmLevel})
+							}
+							onOpenChange(false)
+							setSelected([])
+							setTargetLevel('')
+						}}
+					>
+						{t('storage-manager.mdadm.grow-confirm')}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+}
+
 function ArrayCard({array}: {array: MdadmArray}) {
 	const {t} = useTranslation()
 	const {removeAsync, failAsync, stopAsync} = useMdadm()
 	const [busy, setBusy] = useState<string | null>(null)
+	const [growOpen, setGrowOpen] = useState(false)
 
 	const run = async (key: string, fn: () => Promise<unknown>) => {
 		setBusy(key)
@@ -68,6 +175,7 @@ function ArrayCard({array}: {array: MdadmArray}) {
 					spare: array.spareDevices,
 				})}
 				{array.uuid && <> · {array.uuid.slice(0, 8)}</>}
+				{` · ${array.raidDevices} raid-devices`}
 			</div>
 
 			{array.syncProgress !== undefined && (
@@ -121,7 +229,15 @@ function ArrayCard({array}: {array: MdadmArray}) {
 				)}
 			</div>
 
-			<div className='mt-3 flex gap-2'>
+			<div className='mt-3 flex flex-wrap gap-2'>
+				<button
+					type='button'
+					disabled={busy !== null}
+					onClick={() => setGrowOpen(true)}
+					className='rounded-md border border-white/15 px-2.5 py-1 text-12 font-medium text-white/70 hover:bg-white/10 hover:text-white'
+				>
+					{t('storage-manager.mdadm.grow')}
+				</button>
 				<button
 					type='button'
 					disabled={busy !== null}
@@ -131,6 +247,7 @@ function ArrayCard({array}: {array: MdadmArray}) {
 					{busy === 'stop' ? t('storage-manager.mdadm.stopping') : t('storage-manager.mdadm.stop')}
 				</button>
 			</div>
+			<GrowDialog array={array} open={growOpen} onOpenChange={setGrowOpen} />
 		</div>
 	)
 }
@@ -164,7 +281,7 @@ export function MdadmSection() {
 			<div className='flex items-center gap-2'>
 				<h3 className='text-15 font-semibold text-white'>{t('storage-manager.mdadm.title')}</h3>
 				<span className='rounded-full bg-white/10 px-2 py-0.5 text-12 text-white/60'>
-					{t('storage-manager.mdadm.classic-raid')}
+					{t('storage-manager.mdadm.classic-raid')} · {mdadm.arrays.length}
 				</span>
 				<span className='ml-auto flex gap-2'>
 					<button
@@ -179,7 +296,7 @@ export function MdadmSection() {
 					</button>
 					<button
 						type='button'
-						onClick={() => mdadm.assembleAsync()}
+						onClick={() => mdadm.assembleAsync({run: true})}
 						className='flex items-center gap-1 rounded-md border border-white/15 px-2 py-1 text-12 text-white/60 hover:bg-white/10 hover:text-white'
 					>
 						{t('storage-manager.mdadm.assemble')}
@@ -195,11 +312,14 @@ export function MdadmSection() {
 			</div>
 
 			<p className='text-13 leading-relaxed text-white/50'>{t('storage-manager.mdadm.description')}</p>
+			{mdadm.nextDevice && (
+				<p className='font-mono text-12 text-white/40'>
+					{t('storage-manager.mdadm.next-device', {device: mdadm.nextDevice})}
+				</p>
+			)}
 
 			{mdadm.isLoading && <p className='text-13 text-white/40'>{t('storage-manager.mdadm.loading')}</p>}
-			{mdadm.error && (
-				<p className='text-13 text-destructive2'>{t('storage-manager.mdadm.load-error')}</p>
-			)}
+			{mdadm.error && <p className='text-13 text-destructive2'>{t('storage-manager.mdadm.load-error')}</p>}
 			{!mdadm.isLoading && mdadm.arrays.length === 0 && (
 				<p className='text-13 text-white/40'>{t('storage-manager.mdadm.empty')}</p>
 			)}
@@ -213,6 +333,9 @@ export function MdadmSection() {
 						<DialogTitle>{t('storage-manager.mdadm.create-title')}</DialogTitle>
 					</DialogHeader>
 					<div className='flex flex-col gap-3'>
+						<p className='font-mono text-12 text-white/40'>
+							{t('storage-manager.mdadm.next-device', {device: mdadm.nextDevice ?? '/dev/md?'})}
+						</p>
 						<label className='flex flex-col gap-1 text-13 text-white/70'>
 							{t('storage-manager.mdadm.level')}
 							<select

@@ -157,7 +157,7 @@ const mdadm = router({
 		.input(z.object({device: z.string().regex(/^\/dev\/md\d+$/)}))
 		.query(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.detail(input.device)),
 
-	// Create a new array on /dev/md0. Devices must be full /dev paths.
+	// Create a new array. Without `device`, the first free /dev/mdN is allocated (multi-array).
 	create: privateProcedure
 		.input(
 			z.object({
@@ -166,6 +166,7 @@ const mdadm = router({
 				name: z.string().min(1).max(32).optional(),
 				chunk: z.number().int().positive().optional(),
 				assumeClean: z.boolean().optional(),
+				device: z.string().regex(/^\/dev\/md\d+$/).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.create(input)),
@@ -191,7 +192,49 @@ const mdadm = router({
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.stop(input.arrayDevice)),
 
 	// Assemble all arrays found in mdadm.conf / superblocks
-	assembleScan: privateProcedure.mutation(async ({ctx}) => ctx.umbreld.hardware.mdadm.assembleScan()),
+	assembleScan: privateProcedure
+		.input(z.object({run: z.boolean().optional()}).optional())
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.assembleScan({run: input?.run ?? false})),
+
+	// Next free /dev/mdN for the create dialog
+	allocateDevice: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.mdadm.allocateDevice()),
+
+	// Grow / reshape: expand RAID5/6, migrate level, or use max size after disk replacement
+	grow: privateProcedure
+		.input(
+			z.object({
+				arrayDevice: z.string().regex(/^\/dev\/md\d+$/),
+				raidDevices: z.number().int().positive().optional(),
+				level: z.enum(['0', '1', '5', '6', '10']).optional(),
+				backupFile: z.string().optional(),
+				sizeMax: z.boolean().optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) =>
+			ctx.umbreld.hardware.mdadm.grow(input.arrayDevice, {
+				raidDevices: input.raidDevices,
+				level: input.level,
+				backupFile: input.backupFile,
+				sizeMax: input.sizeMax,
+			}),
+		),
+
+	// Hot-add spares then expand the array in one call (RAID5/6 growth)
+	growAddAndExpand: privateProcedure
+		.input(
+			z.object({
+				arrayDevice: z.string().regex(/^\/dev\/md\d+$/),
+				devices: z.array(z.string()).min(1).max(8),
+			}),
+		)
+		.mutation(async ({ctx, input}) =>
+			ctx.umbreld.hardware.mdadm.growAddAndExpand(input.arrayDevice, input.devices),
+		),
+
+	// Use full capacity after replacing members with larger disks
+	growToMaxSize: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.growToMaxSize(input.arrayDevice)),
 })
 
 export default router({

@@ -1,0 +1,20 @@
+[Unit]
+Description=Assemble mdadm Linux RAID arrays before Umbrel starts
+Documentation=man:mdadm(8)
+DefaultDependencies=no
+After=local-fs.target
+Before=umbrel.service umbrel-custom-pre-start.service
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Assemble arrays from superblocks / mdadm.conf without blocking boot when
+# no array exists (mdadm exits non-zero in that case).
+ExecStart=/bin/sh -c 'mdadm --assemble --scan --run || true'
+# Refresh initramfs view of arrays for the next boot (best effort).
+ExecStart=/bin/sh -c 'mdadm --detail --scan > /etc/mdadm/mdadm.conf || true'
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

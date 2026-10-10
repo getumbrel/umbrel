@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {parseMdstat, parseMdadmDetail, MDADM_MIN_DEVICES} from './mdadm.js'
+import {parseMdstat, parseMdadmDetail, MDADM_MIN_DEVICES, allocateNextMdDevice, isValidMdDevice} from './mdadm.js'
 
 describe('mdadm mdstat parser', () => {
 	test('parses clean active array', () => {
@@ -72,5 +72,44 @@ describe('mdadm level requirements', () => {
 		expect(MDADM_MIN_DEVICES['5']).toBe(3)
 		expect(MDADM_MIN_DEVICES['6']).toBe(4)
 		expect(MDADM_MIN_DEVICES['10']).toBe(4)
+	})
+})
+
+describe('mdadm multi-array allocation', () => {
+	test('validates md device paths', () => {
+		expect(isValidMdDevice('/dev/md0')).toBe(true)
+		expect(isValidMdDevice('/dev/md31')).toBe(true)
+		expect(isValidMdDevice('/dev/mdA')).toBe(false)
+		expect(isValidMdDevice('/dev/sda1')).toBe(false)
+	})
+
+	test('allocates first free slot', () => {
+		expect(allocateNextMdDevice([])).toBe('/dev/md0')
+		expect(allocateNextMdDevice(['/dev/md0'])).toBe('/dev/md1')
+		expect(allocateNextMdDevice(['/dev/md0', '/dev/md1', '/dev/md3'])).toBe('/dev/md2')
+	})
+
+	test('parses multiple arrays', () => {
+		const mdstat = `Personalities : [raid1] [raid5]
+md0 : active raid1 sda1[0] sdb1[1]
+      976630272 blocks super 1.2 [2/2] [UU]
+md1 : active raid5 sdc1[0] sdd1[1] sde1[2]
+      1953260544 blocks super 1.2 level 5, 512k chunk, algorithm 2 [3/3] [UUU]
+`
+		const arrays = parseMdstat(mdstat)
+		expect(arrays).toHaveLength(2)
+		expect(arrays.map((a) => a.device)).toEqual(['/dev/md0', '/dev/md1'])
+	})
+
+	test('parses reshape progress', () => {
+		const mdstat = `Personalities : [raid6]
+md1 : active raid6 sdc1[0] sdd1[1] sde1[2] sdf1[3]
+      1953260544 blocks super 1.2 level 6 [4/4] [UUUU]
+      [====>................]  reshape = 22.5% (219888128/976630272) finish=45.2min speed=279123K/sec
+`
+		const arrays = parseMdstat(mdstat)
+		expect(arrays[0].syncAction).toBe('reshape')
+		expect(arrays[0].syncProgress).toBeCloseTo(22.5)
+		expect(arrays[0].state).toBe('resync')
 	})
 })

@@ -37,6 +37,16 @@ export function useMdadm() {
 	const assembleMut = trpcReact.hardware.mdadm.assembleScan.useMutation({
 		onSuccess: () => statusQ.refetch(),
 	})
+	const allocateQ = trpcReact.hardware.mdadm.allocateDevice.useQuery(undefined, {retry: false})
+	const growMut = trpcReact.hardware.mdadm.grow.useMutation({
+		onSuccess: () => statusQ.refetch(),
+	})
+	const growExpandMut = trpcReact.hardware.mdadm.growAddAndExpand.useMutation({
+		onSuccess: () => statusQ.refetch(),
+	})
+	const growMaxMut = trpcReact.hardware.mdadm.growToMaxSize.useMutation({
+		onSuccess: () => statusQ.refetch(),
+	})
 
 	return {
 		status: statusQ.data,
@@ -59,5 +69,13 @@ export function useMdadm() {
 		isStopping: stopMut.isPending,
 		assembleAsync: assembleMut.mutateAsync,
 		isAssembling: assembleMut.isPending,
+		nextDevice: allocateQ.data,
+		growAsync: growMut.mutateAsync,
+		isGrowing: growMut.isPending,
+		growError: growMut.error,
+		growExpandAsync: growExpandMut.mutateAsync,
+		isGrowExpanding: growExpandMut.isPending,
+		growMaxAsync: growMaxMut.mutateAsync,
+		isGrowMax: growMaxMut.isPending,
 	}
 }

@@ -2837,5 +2837,15 @@
   "storage-manager.mdadm.member-faulty": "faulty",
   "storage-manager.mdadm.member-removed": "removed",
   "storage-manager.mdadm.member-sync": "syncing",
-  "storage-manager.mdadm.member-unknown": "unknown"
+  "storage-manager.mdadm.member-unknown": "unknown",
+  "storage-manager.mdadm.next-device": "Next array: {device} (auto-allocated)",
+  "storage-manager.mdadm.grow": "Grow / reshape",
+  "storage-manager.mdadm.grow-title": "Grow {device}",
+  "storage-manager.mdadm.grow-description": "Add disks to expand RAID 5/6, migrate level, or reclaim capacity after replacing disks with larger ones. Reshape progress appears as reshape/resync %.",
+  "storage-manager.mdadm.grow-choose": "New disks to add as spares then absorb:",
+  "storage-manager.mdadm.grow-unsupported-level": "Online expansion is supported on RAID 5/6. Other levels support level migration and max-size grow below.",
+  "storage-manager.mdadm.grow-level-optional": "Level migration (optional)",
+  "storage-manager.mdadm.grow-keep-level": "Keep current level",
+  "storage-manager.mdadm.grow-max": "Use max size",
+  "storage-manager.mdadm.grow-confirm": "Start grow"
 }
