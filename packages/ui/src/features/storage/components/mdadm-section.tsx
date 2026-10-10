@@ -7,9 +7,8 @@ import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/
 import {trpcReact} from '@/trpc/trpc'
 import {cn} from '@/lib/utils'
 
-import {MDADM_LEVELS, useMdadm, type MdadmArray, type MdadmLevel} from '../hooks/use-mdadm'
+import {MDADM_LEVELS, useMdadm, type MdadmArray, type MdadmFilesystem, type MdadmLevel} from '../hooks/use-mdadm'
 import {formatStorageSize} from '../utils'
-
 function memberStateColor(state: string): string {
 	switch (state) {
 		case 'active':
@@ -89,9 +88,9 @@ function GrowDialog({array, open, onOpenChange}: {array: MdadmArray; open: boole
 							))}
 						</select>
 					</label>
-					{(mdadm.growError || (mdadm as {growExpandError?: {message?: string}}).growExpandError) && (
+					{(mdadm.growError || mdadm.growExpandError) && (
 						<p className='text-13 text-destructive2'>
-							{String(mdadm.growError?.message ?? '')}
+							{String(mdadm.growExpandError?.message ?? mdadm.growError?.message ?? '')}
 						</p>
 					)}
 				</div>
@@ -133,9 +132,10 @@ function GrowDialog({array, open, onOpenChange}: {array: MdadmArray; open: boole
 
 function ArrayCard({array}: {array: MdadmArray}) {
 	const {t} = useTranslation()
-	const {removeAsync, failAsync, stopAsync} = useMdadm()
+	const {removeAsync, failAsync, stopAsync, formatAsync, isFormatting, mountAsync, unmountAsync} = useMdadm()
 	const [busy, setBusy] = useState<string | null>(null)
 	const [growOpen, setGrowOpen] = useState(false)
+	const [formatOpen, setFormatOpen] = useState(false)
 
 	const run = async (key: string, fn: () => Promise<unknown>) => {
 		setBusy(key)
@@ -176,6 +176,14 @@ function ArrayCard({array}: {array: MdadmArray}) {
 				})}
 				{array.uuid && <> · {array.uuid.slice(0, 8)}</>}
 				{` · ${array.raidDevices} raid-devices`}
+				{array.filesystem && (
+					<span className='text-white/70'>
+						{' · '}
+						{array.filesystem.label}
+						{array.filesystem.native ? '' : ` (${t('storage-manager.mdadm.synthetic')})`}
+					</span>
+				)}
+				{array.mountpoint && <span className='ml-1 text-white/40'>· {array.mountpoint}</span>}
 			</div>
 
 			{array.syncProgress !== undefined && (
@@ -230,6 +238,35 @@ function ArrayCard({array}: {array: MdadmArray}) {
 			</div>
 
 			<div className='mt-3 flex flex-wrap gap-2'>
+				{array.filesystem ? (
+					array.mountpoint ? (
+						<button
+							type='button'
+							disabled={busy !== null}
+							onClick={() => run('unmount', () => unmountAsync({arrayDevice: array.device}))}
+							className='rounded-md border border-white/15 px-2.5 py-1 text-12 font-medium text-white/70 hover:bg-white/10 hover:text-white'
+						>
+							{t('storage-manager.mdadm.unmount')}
+						</button>
+					) : (
+						<button
+							type='button'
+							disabled={busy !== null}
+							onClick={() => run('mount', () => mountAsync({arrayDevice: array.device}))}
+							className='rounded-md border border-white/15 px-2.5 py-1 text-12 font-medium text-white/70 hover:bg-white/10 hover:text-white'
+						>
+							{t('storage-manager.mdadm.mount')}
+						</button>
+					)
+				) : (
+					<button
+						type='button'
+						onClick={() => setFormatOpen(true)}
+						className='rounded-md border border-brand/50 px-2.5 py-1 text-12 font-medium text-brand hover:bg-brand/10'
+					>
+						{t('storage-manager.mdadm.format')}
+					</button>
+				)}
 				<button
 					type='button'
 					disabled={busy !== null}
@@ -248,7 +285,74 @@ function ArrayCard({array}: {array: MdadmArray}) {
 				</button>
 			</div>
 			<GrowDialog array={array} open={growOpen} onOpenChange={setGrowOpen} />
+			<FormatDialog array={array} open={formatOpen} onOpenChange={setFormatOpen} />
 		</div>
+	)
+}
+
+function FormatDialog({array, open, onOpenChange}: {array: MdadmArray; open: boolean; onOpenChange: (v: boolean) => void}) {
+	const {t} = useTranslation()
+	const {filesystems, formatAsync, isFormatting, mountAsync, isMounting} = useMdadm()
+	const [filesystem, setFilesystem] = useState<MdadmFilesystem>('ext4')
+	const [label, setLabel] = useState('umbrel-md')
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>{t('storage-manager.mdadm.format-title', {device: array.device})}</DialogTitle>
+				</DialogHeader>
+				<div className='flex flex-col gap-3'>
+					<label className='flex flex-col gap-1 text-13 text-white/70'>
+						{t('storage-manager.mdadm.filesystem')}
+						<select
+							value={filesystem}
+							onChange={(e) => setFilesystem(e.target.value as MdadmFilesystem)}
+							className='rounded-md border border-white/15 bg-black/40 px-2 py-1.5 text-white'
+						>
+							{filesystems.map((fs) => (
+								<option key={fs.value} value={fs.value}>
+									{fs.label}
+									{fs.native ? '' : ` — ${t('storage-manager.mdadm.synthetic')}`}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className='flex flex-col gap-1 text-13 text-white/70'>
+						{t('storage-manager.mdadm.label')}
+						<input
+							value={label}
+							onChange={(e) => setLabel(e.target.value)}
+							maxLength={16}
+							className='rounded-md border border-white/15 bg-black/40 px-2 py-1.5 font-mono text-white'
+						/>
+					</label>
+					{!filesystems.find((f) => f.value === filesystem)?.native && (
+						<p className='rounded-xl bg-[#F5A623]/10 p-3 text-13 text-[#F5A623]'>
+							{t('storage-manager.mdadm.synthetic-warning')}
+						</p>
+					)}
+				</div>
+				<DialogFooter>
+					<Button variant='default' onClick={() => onOpenChange(false)}>
+						{t('cancel')}
+					</Button>
+					<Button
+						variant='primary'
+						disabled={isFormatting || isMounting}
+						onClick={async () => {
+							await formatAsync({arrayDevice: array.device, filesystem, label: label || undefined})
+							await mountAsync({arrayDevice: array.device})
+							onOpenChange(false)
+						}}
+					>
+						{isFormatting || isMounting
+							? t('storage-manager.mdadm.formatting')
+							: t('storage-manager.mdadm.format-confirm', {fs: filesystem})}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }
 
@@ -258,6 +362,7 @@ export function MdadmSection() {
 	const devicesQ = trpcReact.hardware.internalStorage.getDevices.useQuery()
 	const [createOpen, setCreateOpen] = useState(false)
 	const [level, setLevel] = useState<MdadmLevel>('1')
+	const [createFilesystem, setCreateFilesystem] = useState<MdadmFilesystem>('ext4')
 	const [selected, setSelected] = useState<string[]>([])
 	const [name, setName] = useState('umbrel-md')
 
@@ -353,15 +458,30 @@ export function MdadmSection() {
 								))}
 							</select>
 						</label>
-						<label className='flex flex-col gap-1 text-13 text-white/70'>
-							{t('storage-manager.mdadm.array-name')}
-							<input
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								maxLength={32}
-								className='rounded-md border border-white/15 bg-black/40 px-2 py-1.5 font-mono text-white'
-							/>
-						</label>
+					<label className='flex flex-col gap-1 text-13 text-white/70'>
+						{t('storage-manager.mdadm.filesystem')}
+						<select
+							value={createFilesystem}
+							onChange={(e) => setCreateFilesystem(e.target.value as MdadmFilesystem)}
+							className='rounded-md border border-white/15 bg-black/40 px-2 py-1.5 text-white'
+						>
+							{mdadm.filesystems.map((fs) => (
+								<option key={fs.value} value={fs.value}>
+									{fs.label}
+									{fs.native ? '' : ` — ${t('storage-manager.mdadm.synthetic')}`}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className='flex flex-col gap-1 text-13 text-white/70'>
+						{t('storage-manager.mdadm.array-name')}
+						<input
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							maxLength={32}
+							className='rounded-md border border-white/15 bg-black/40 px-2 py-1.5 font-mono text-white'
+						/>
+					</label>
 						<div className='flex flex-col gap-1.5'>
 							<span className='text-13 text-white/70'>
 								{t('storage-manager.mdadm.choose-devices', {min: minDevices})}
@@ -403,19 +523,28 @@ export function MdadmSection() {
 						<Button variant='default' onClick={() => setCreateOpen(false)}>
 							{t('cancel')}
 						</Button>
-						<Button
-							variant='primary'
-							disabled={!canCreate}
-							onClick={async () => {
-								await mdadm.createAsync({level, devices: selected, name: name || undefined})
-								setCreateOpen(false)
-								setSelected([])
-							}}
-						>
-							{mdadm.isCreating
-								? t('storage-manager.mdadm.creating')
-								: t('storage-manager.mdadm.create-confirm', {count: selected.length})}
-						</Button>
+					<Button
+						variant='primary'
+						disabled={!canCreate}
+						onClick={async () => {
+							// createAsync resolves with the allocated /dev/mdN
+							const {device} = await mdadm.createAsync({level, devices: selected, name: name || undefined})
+							// One-shot: format with the chosen filesystem then mount so the
+							// array is immediately usable. Failures surface as errors below.
+							await mdadm
+								.formatAsync({arrayDevice: device, filesystem: createFilesystem, label: name || undefined})
+								.then(() => mdadm.mountAsync({arrayDevice: device}))
+								.catch(() => {
+									// Array was created; formatting is a separate manual step
+								})
+							setCreateOpen(false)
+							setSelected([])
+						}}
+					>
+						{mdadm.isCreating || mdadm.isFormatting
+							? t('storage-manager.mdadm.creating')
+							: t('storage-manager.mdadm.create-confirm', {count: selected.length})}
+					</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>

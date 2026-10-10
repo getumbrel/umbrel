@@ -1,6 +1,14 @@
 import {describe, expect, test} from 'vitest'
 
-import {parseMdstat, parseMdadmDetail, MDADM_MIN_DEVICES, allocateNextMdDevice, isValidMdDevice} from './mdadm.js'
+import {
+	parseMdstat,
+	parseMdadmDetail,
+	MDADM_MIN_DEVICES,
+	MDADM_FILESYSTEMS,
+	allocateNextMdDevice,
+	isValidMdDevice,
+	isMdadmFilesystem,
+} from './mdadm.js'
 
 describe('mdadm mdstat parser', () => {
 	test('parses clean active array', () => {
@@ -111,5 +119,31 @@ md1 : active raid6 sdc1[0] sdd1[1] sde1[2] sdf1[3]
 		expect(arrays[0].syncAction).toBe('reshape')
 		expect(arrays[0].syncProgress).toBeCloseTo(22.5)
 		expect(arrays[0].state).toBe('resync')
+	})
+})
+
+describe('mdadm filesystems', () => {
+	test('catalogues every supported filesystem', () => {
+		const values = Object.keys(MDADM_FILESYSTEMS)
+		expect(values).toEqual(['ext4', 'btrfs', 'xfs', 'exfat', 'vfat', 'ntfs'])
+		expect(MDADM_FILESYSTEMS.ext4.native).toBe(true)
+		expect(MDADM_FILESYSTEMS.btrfs.native).toBe(true)
+		expect(MDADM_FILESYSTEMS.xfs.native).toBe(true)
+		// Synthetic-ownership filesystems cannot store Linux permissions
+		expect(MDADM_FILESYSTEMS.exfat.native).toBe(false)
+		expect(MDADM_FILESYSTEMS.vfat.native).toBe(false)
+		expect(MDADM_FILESYSTEMS.ntfs.native).toBe(false)
+	})
+
+	test('rejects unsupported filesystems', () => {
+		expect(isMdadmFilesystem('ext4')).toBe(true)
+		expect(isMdadmFilesystem('zfs')).toBe(false)
+		expect(isMdadmFilesystem('cramfs')).toBe(false)
+	})
+
+	test('every filesystem has an mkfs tool', () => {
+		for (const [value, meta] of Object.entries(MDADM_FILESYSTEMS)) {
+			expect(meta.tool.startsWith(`mkfs.`), `${value} -> ${meta.tool}`).toBe(true)
+		}
 	})
 })

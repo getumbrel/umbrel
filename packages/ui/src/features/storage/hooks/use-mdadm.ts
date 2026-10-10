@@ -3,6 +3,7 @@ import {RouterOutput, trpcReact} from '@/trpc/trpc'
 export type MdadmStatus = RouterOutput['hardware']['mdadm']['getStatus']
 export type MdadmArray = MdadmStatus['arrays'][number]
 export type MdadmLevel = '0' | '1' | '5' | '6' | '10'
+export type MdadmFilesystem = RouterOutput['hardware']['mdadm']['filesystems'][number]['value']
 
 export const MDADM_LEVELS: Array<{value: MdadmLevel; minDevices: number; descriptionKey: string}> = [
 	{value: '0', minDevices: 2, descriptionKey: 'storage-manager.mdadm.level-0-description'},
@@ -47,6 +48,16 @@ export function useMdadm() {
 	const growMaxMut = trpcReact.hardware.mdadm.growToMaxSize.useMutation({
 		onSuccess: () => statusQ.refetch(),
 	})
+	const filesystemsQ = trpcReact.hardware.mdadm.filesystems.useQuery(undefined, {retry: false})
+	const formatMut = trpcReact.hardware.mdadm.format.useMutation({
+		onSuccess: () => statusQ.refetch(),
+	})
+	const mountMut = trpcReact.hardware.mdadm.mount.useMutation({
+		onSuccess: () => statusQ.refetch(),
+	})
+	const unmountMut = trpcReact.hardware.mdadm.unmount.useMutation({
+		onSuccess: () => statusQ.refetch(),
+	})
 
 	return {
 		status: statusQ.data,
@@ -75,7 +86,16 @@ export function useMdadm() {
 		growError: growMut.error,
 		growExpandAsync: growExpandMut.mutateAsync,
 		isGrowExpanding: growExpandMut.isPending,
+		growExpandError: growExpandMut.error,
 		growMaxAsync: growMaxMut.mutateAsync,
 		isGrowMax: growMaxMut.isPending,
+		filesystems: filesystemsQ.data ?? [],
+		formatAsync: formatMut.mutateAsync,
+		isFormatting: formatMut.isPending,
+		formatError: formatMut.error,
+		mountAsync: mountMut.mutateAsync,
+		isMounting: mountMut.isPending,
+		unmountAsync: unmountMut.mutateAsync,
+		isUnmounting: unmountMut.isPending,
 	}
 }

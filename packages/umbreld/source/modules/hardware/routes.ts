@@ -235,6 +235,64 @@ const mdadm = router({
 	growToMaxSize: privateProcedure
 		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.growToMaxSize(input.arrayDevice)),
+
+	// Filesystems supported on arrays (label + native/synthetic ownership flag)
+	filesystems: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.mdadm.listFilesystems()),
+
+	// Create a filesystem on an array (ext4, btrfs, xfs, exfat, vfat, ntfs)
+	format: privateProcedure
+		.input(
+			z.object({
+				arrayDevice: z.string().regex(/^\/dev\/md\d+$/),
+				filesystem: z.enum(['ext4', 'btrfs', 'xfs', 'exfat', 'vfat', 'ntfs']),
+				label: z.string().min(1).max(16).optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) =>
+			ctx.umbreld.hardware.mdadm.format(input.arrayDevice, input.filesystem, {label: input.label}),
+		),
+
+	// Filesystem type of an array, or null when unformatted
+	getFilesystemType: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
+		.query(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.getFilesystemType(input.arrayDevice)),
+
+	// Mount an array (returns mountpoint)
+	mount: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)})).mutation(async ({ctx, input}) =>
+			ctx.umbreld.hardware.mdadm.mount(input.arrayDevice),
+		),
+
+	// Unmount an array
+	unmount: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)})).mutation(async ({ctx, input}) =>
+			ctx.umbreld.hardware.mdadm.unmount(input.arrayDevice),
+		),
+
+	// Current mountpoint of an array, or null
+	getMountpoint: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
+		.query(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.getMountpoint(input.arrayDevice)),
+
+	// Create an array and immediately format+mount it (one-shot onboarding path)
+	createFormatted: privateProcedure
+		.input(
+			z.object({
+				level: z.enum(['0', '1', '5', '6', '10']),
+				devices: z.array(z.string()).min(2).max(32),
+				filesystem: z.enum(['ext4', 'btrfs', 'xfs', 'exfat', 'vfat', 'ntfs']),
+				name: z.string().min(1).max(32).optional(),
+				chunk: z.number().int().positive().optional(),
+				assumeClean: z.boolean().optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			const {level, filesystem, ...createInput} = input
+			const {device} = await ctx.umbreld.hardware.mdadm.create({level, ...createInput})
+			await ctx.umbreld.hardware.mdadm.format(device, filesystem, {label: input.name})
+			const mountpoint = await ctx.umbreld.hardware.mdadm.mount(device)
+			return {device, mountpoint}
+		}),
 })
 
 export default router({

@@ -7,6 +7,31 @@ export type MdadmLevel = '0' | '1' | '5' | '6' | '10'
 export type MdadmArrayState = 'clean' | 'active' | 'degraded' | 'recovering' | 'resync' | 'inactive' | 'unknown'
 export type MdadmMemberState = 'active' | 'spare' | 'faulty' | 'removed' | 'sync' | 'unknown'
 
+// Filesystems the umbrelOS image can create on an mdadm array.
+// - `native` filesystems store real Linux ownership/permissions (ext4, btrfs, xfs).
+// - `synthetic` filesystems cannot (exfat, vfat, ntfs): mounts synthesize uid/gid.
+export type MdadmFilesystem = 'ext4' | 'btrfs' | 'xfs' | 'exfat' | 'vfat' | 'ntfs'
+
+export const MDADM_FILESYSTEMS: Record<MdadmFilesystem, {label: string; tool: string; native: boolean}> = {
+	ext4: {label: 'ext4', tool: 'mkfs.ext4', native: true},
+	btrfs: {label: 'btrfs', tool: 'mkfs.btrfs', native: true},
+	xfs: {label: 'xfs', tool: 'mkfs.xfs', native: true},
+	exfat: {label: 'exFAT', tool: 'mkfs.exfat', native: false},
+	vfat: {label: 'FAT32', tool: 'mkfs.vfat', native: false},
+	ntfs: {label: 'NTFS', tool: 'mkfs.ntfs', native: false},
+}
+
+export function isMdadmFilesystem(value: string): value is MdadmFilesystem {
+	return Object.prototype.hasOwnProperty.call(MDADM_FILESYSTEMS, value)
+}
+
+export type MdadmFilesystemInfo = {
+	value: MdadmFilesystem
+	label: string
+	tool: string
+	native: boolean
+}
+
 export type MdadmMember = {
 	device: string
 	state: MdadmMemberState
@@ -30,6 +55,10 @@ export type MdadmArray = {
 	size?: number
 	members: MdadmMember[]
 	rawDetail?: string
+	/** Filesystem detected on the array, or null when unformatted. */
+	filesystem?: MdadmFilesystemInfo | null
+	/** Mountpoint when mounted, else null. */
+	mountpoint?: string | null
 }
 
 export type MdadmStatus = {
@@ -173,6 +202,9 @@ function parseMdadmDetailMembers(detail: string): MdadmMember[] {
 }
 
 export default class Mdadm {
+	/** Parent directory for array mounts (/dev/md0 -> /run/mdadm/md0). */
+	static readonly MOUNT_ROOT = '/run/mdadm'
+
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 
@@ -225,6 +257,16 @@ export default class Mdadm {
 
 		const arrays: MdadmArray[] = []
 		for (const entry of mdstatArrays) {
+			const [filesystem, mountpoint] = await Promise.all([
+				this.#getFilesystemType(entry.device),
+				this.getMountpoint(entry.device),
+			])
+			const base = {
+				filesystem: filesystem
+					? {value: filesystem, ...MDADM_FILESYSTEMS[filesystem]}
+					: null,
+				mountpoint,
+			}
 			let detail = ''
 			try {
 				const {stdout} = await $`mdadm --detail ${entry.device}`
@@ -246,6 +288,7 @@ export default class Mdadm {
 					syncAction: entry.syncAction,
 					members: [],
 					rawDetail: detail,
+					...base,
 				})
 				continue
 			}
@@ -267,6 +310,7 @@ export default class Mdadm {
 				syncAction: entry.syncAction,
 				members,
 				rawDetail: detail,
+				...base,
 			})
 		}
 
@@ -457,6 +501,101 @@ export default class Mdadm {
 	/** After replacing members with larger disks, grow the array to use the full capacity. */
 	async growToMaxSize(arrayDevice: string): Promise<string> {
 		return this.grow(arrayDevice, {sizeMax: true})
+	}
+
+	/** Mountpoint of an array device (e.g. /dev/md0 -> /run/mdadm/md0). */
+	mountpointFor(device: string): string {
+		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
+		return `${Mdadm.MOUNT_ROOT}/${device.replace('/dev/', '}`
+	}
+
+	/** Current mount of an array device, or null when unmounted. */
+	async getMountpoint(device: string): Promise<string | null> {
+		const {stdout} = await $({reject: false})`lsblk --noheadings --output MOUNTPOINT ${device}`
+		const mountpoint = stdout.trim().split('\n').map((l) => l.trim()).filter(Boolean).pop()
+		return mountpoint ?? null
+	}
+
+	// Args for each supported filesystem's mkfs tool.
+	static readonly MKFS_ARGS: Record<MdadmFilesystem, (label: string) => string[]> = {
+		ext4: (label) => ['mkfs.ext4', '-F', '-L', label],
+		btrfs: (label) => ['mkfs.btrfs', '-f', '-L', label],
+		xfs: (label) => ['mkfs.xfs', '-f', '-L', label],
+		exfat: (label) => ['mkfs.exfat', '-n', label],
+		vfat: (label) => ['mkfs.vfat', '-F', '32', '-n', label],
+		ntfs: (label) => ['mkfs.ntfs', '-f', '-L', label],
+	}
+
+	// Filesystems whose mkfs prompts before overwriting an existing partition.
+	private static readonly MKFS_NEEDS_CONFIRMATION: ReadonlySet<MdadmFilesystem> = new Set(['btrfs', 'xfs', 'ntfs'])
+
+	/**
+	 * Create a filesystem on an array device. Every filesystem present in the
+	 * umbrelOS image is supported: ext4, btrfs, xfs, exFAT, FAT32, NTFS.
+	 * exFAT/FAT32/NTFS are synthetic-ownership filesystems: they cannot store
+	 * Linux ownership so mounts must pass uid/gid (see mount()).
+	 */
+	async format(device: string, filesystem: MdadmFilesystem, {label = 'umbrel-md'}: {label?: string} = {}): Promise<string> {
+		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
+		if (!isMdadmFilesystem(filesystem)) throw new Error(`Unsupported filesystem: ${filesystem}`)
+		// Fail fast when the mkfs binary is missing from the image.
+		await $`command -v ${MDADM_FILESYSTEMS[filesystem].tool}`
+		if (await this.getMountpoint(device)) throw new Error(`Device ${device} is mounted, unmount it before formatting`)
+
+		const args = Mdadm.MKFS_ARGS[filesystem](label)
+		const {stdout} = Mdadm.MKFS_NEEDS_CONFIRMATION.has(filesystem)
+			? await $({input: 'y'})`${args} ${device}`
+			: await $`${args} ${device}`
+		return stdout
+	}
+
+	/**
+	 * Mount an array. Returns the mountpoint (under MOUNT_ROOT, survives umbreld restarts).
+	 * Synthetic-ownership filesystems get uid/gid from the umbrel user so files stay writable.
+	 */
+	async mount(device: string, {uid = 1000, gid = 1000}: {uid?: number; gid?: number} = {}): Promise<string> {
+		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
+		const existing = await this.getMountpoint(device)
+		if (existing) return existing
+
+		const fstype = await this.#getFilesystemType(device)
+		if (!fstype) throw new Error(`No supported filesystem found on ${device}`)
+		const mountpoint = this.mountpointFor(device)
+		await fse.ensureDir(mountpoint)
+		if (!MDADM_FILESYSTEMS[fstype].native) {
+			await $`mount -t ${fstype} -o uid=${uid},gid=${gid},umask=007 ${device} ${mountpoint}`
+		} else {
+			await $`mount -t ${fstype} ${device} ${mountpoint}`
+		}
+		return mountpoint
+	}
+
+	async unmount(device: string): Promise<void> {
+		const mountpoint = (await this.getMountpoint(device)) ?? this.mountpointFor(device)
+		await $({reject: false})`umount ${mountpoint}`
+	}
+
+	async #getFilesystemType(device: string): Promise<MdadmFilesystem | null> {
+		const {stdout, exitCode} = await $({reject: false})`lsblk --noheadings --output FSTYPE ${device}`
+		if (exitCode !== 0) return null
+		const fstype = stdout.trim()
+		return isMdadmFilesystem(fstype) ? fstype : null
+	}
+
+	/** Public form of the filesystem lookup so routes can report a formatted/unformatted array. */
+	async getFilesystemType(device: string): Promise<MdadmFilesystem | null> {
+		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
+		return this.#getFilesystemType(device)
+	}
+
+	/** Filesystem catalogue for the UI (label, mkfs tool, native ownership flag). */
+	listFilesystems(): MdadmFilesystemInfo[] {
+		return Object.entries(MDADM_FILESYSTEMS).map(([value, meta]) => ({
+			value: value as MdadmFilesystem,
+			label: meta.label,
+			tool: meta.tool,
+			native: meta.native,
+		}))
 	}
 
 	async saveConfig(): Promise<void> {

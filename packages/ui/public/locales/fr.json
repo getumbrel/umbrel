@@ -2847,5 +2847,15 @@
   "storage-manager.mdadm.grow-level-optional": "Migration de niveau (optionnel)",
   "storage-manager.mdadm.grow-keep-level": "Garder le niveau actuel",
   "storage-manager.mdadm.grow-max": "Utiliser taille max",
-  "storage-manager.mdadm.grow-confirm": "Lancer l'extension"
+  "storage-manager.mdadm.grow-confirm": "Lancer l'extension",
+  "storage-manager.mdadm.filesystem": "Système de fichiers",
+  "storage-manager.mdadm.label": "Étiquette",
+  "storage-manager.mdadm.format": "Formater",
+  "storage-manager.mdadm.format-title": "Formater {device}",
+  "storage-manager.mdadm.format-confirm": "Formater en {fs} et monter",
+  "storage-manager.mdadm.formatting": "Formatage…",
+  "storage-manager.mdadm.mount": "Monter",
+  "storage-manager.mdadm.unmount": "Démonter",
+  "storage-manager.mdadm.synthetic": "sans permissions Linux",
+  "storage-manager.mdadm.synthetic-warning": "Ce système de fichiers ne stocke pas les permissions Linux. À réserver aux fichiers généraux, pas aux données d'applications."
 }

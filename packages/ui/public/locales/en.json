@@ -2847,5 +2847,15 @@
   "storage-manager.mdadm.grow-level-optional": "Level migration (optional)",
   "storage-manager.mdadm.grow-keep-level": "Keep current level",
   "storage-manager.mdadm.grow-max": "Use max size",
-  "storage-manager.mdadm.grow-confirm": "Start grow"
+  "storage-manager.mdadm.grow-confirm": "Start grow",
+  "storage-manager.mdadm.filesystem": "Filesystem",
+  "storage-manager.mdadm.label": "Label",
+  "storage-manager.mdadm.format": "Format",
+  "storage-manager.mdadm.format-title": "Format {device}",
+  "storage-manager.mdadm.format-confirm": "Format as {fs} & mount",
+  "storage-manager.mdadm.formatting": "Formatting…",
+  "storage-manager.mdadm.mount": "Mount",
+  "storage-manager.mdadm.unmount": "Unmount",
+  "storage-manager.mdadm.synthetic": "no Linux ownership",
+  "storage-manager.mdadm.synthetic-warning": "This filesystem cannot store Linux file ownership. Use it for general files only, not for app data."
 }
