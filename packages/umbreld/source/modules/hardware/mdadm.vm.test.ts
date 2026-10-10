@@ -96,7 +96,7 @@ describe('mdadm Linux RAID arrays', () => {
 		expect(output).toContain('ext4')
 
 		const mountpoint = await umbreld.client.hardware.mdadm.mount.mutate({arrayDevice: '/dev/md0'})
-		expect(mountpoint).toBe('/run/mdadm/md0')
+		expect(mountpoint).toBe('/run/mdadm/umbrel-raid')
 	})
 
 	test('exposes the mounted array to Files under /Raid', async () => {
@@ -116,7 +116,7 @@ describe('mdadm Linux RAID arrays', () => {
 
 	test('persists an fstab entry for the array', async () => {
 		const fstab = await umbreld.vm.sshAsRoot('cat /etc/fstab')
-		expect(fstab).toContain('/run/mdadm/md0')
+		expect(fstab).toContain('/run/mdadm/umbrel-raid')
 		expect(fstab).toContain('ext4')
 		// A missing array must never block boot
 		expect(fstab).toContain('nofail')
@@ -171,7 +171,7 @@ describe('mdadm Linux RAID arrays', () => {
 		expect(mountpoint).toBeNull()
 
 		const fstab = await umbreld.vm.sshAsRoot('cat /etc/fstab')
-		expect(fstab).not.toContain('/run/mdadm/md0')
+		expect(fstab).not.toContain('/run/mdadm/umbrel-raid')
 	})
 
 	test('stopping the array removes it from the inventory', async () => {

@@ -1,7 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {
-	Mdadm,
+import Mdadm, {
 	parseMdstat,
 	parseMdadmDetail,
 	MDADM_MIN_DEVICES,
@@ -9,6 +8,7 @@ import {
 	allocateNextMdDevice,
 	isValidMdDevice,
 	isMdadmFilesystem,
+	mdadmMountName,
 } from './mdadm.js'
 
 describe('mdadm mdstat parser', () => {
@@ -47,6 +47,36 @@ md0 : active raid1 sdb1[1] sda1[0]
 	test('returns empty when no arrays', () => {
 		expect(parseMdstat('Personalities : [raid1]\nunused devices: <none>\n')).toHaveLength(0)
 	})
+
+	test('flags a failed member as degraded even without active counts', () => {
+		const mdstat = `Personalities : [raid1]
+md0 : active raid1 sda1[0](F) sdb1[1]
+      976630272 blocks super 1.2
+`
+		const arrays = parseMdstat(mdstat)
+		expect(arrays[0].state).toBe('degraded')
+	})
+})
+
+describe('mdadm array mount names', () => {
+	test('prefers the array name over the device node', () => {
+		expect(mdadmMountName('/dev/md0', 'umbrel-md')).toBe('umbrel-md')
+	})
+
+	test('falls back to the device node when the name is blank', () => {
+		expect(mdadmMountName('/dev/md2')).toBe('md2')
+		expect(mdadmMountName('/dev/md2', '')).toBe('md2')
+		expect(mdadmMountName('/dev/md2', '   ')).toBe('md2')
+	})
+
+	test('strips a homehost prefix from metadata 1.2 names', () => {
+		expect(mdadmMountName('/dev/md0', 'umbrel:media')).toBe('media')
+	})
+
+	test('sanitises characters that are unsafe in a path segment', () => {
+		expect(mdadmMountName('/dev/md0', 'my raid/array')).toBe('my_raid_array')
+		expect(mdadmMountName('/dev/md0', '..hidden')).toBe('hidden')
+	})
 })
 
 describe('mdadm detail parser', () => {
@@ -71,6 +101,16 @@ describe('mdadm detail parser', () => {
 		expect(parsed.raidDevices).toBe(2)
 		expect(parsed.state).toBe('clean')
 		expect(parsed.name).toBe('umbrel-md')
+	})
+
+	test('classifies "clean, degraded" as degraded, not clean', () => {
+		const detail = `/dev/md0:
+     Raid Level : raid1
+   Raid Devices : 2
+            State : clean, degraded
+             Name : umbrel-md
+`
+		expect(parseMdadmDetail(detail).state).toBe('degraded')
 	})
 })
 
@@ -146,6 +186,16 @@ describe('mdadm filesystems', () => {
 		for (const [value, meta] of Object.entries(MDADM_FILESYSTEMS)) {
 			expect(meta.tool.startsWith(`mkfs.`), `${value} -> ${meta.tool}`).toBe(true)
 		}
+	})
+
+	test('every filesystem declares a label limit', () => {
+		for (const [value, meta] of Object.entries(MDADM_FILESYSTEMS)) {
+			expect(Number.isInteger(meta.labelMax), value).toBe(true)
+			expect(meta.labelMax, value).toBeGreaterThan(0)
+		}
+		// FAT-family labels are the tight ones (11 chars, the 8.3 volume label)
+		expect(MDADM_FILESYSTEMS.vfat.labelMax).toBe(11)
+		expect(MDADM_FILESYSTEMS.exfat.labelMax).toBe(11)
 	})
 
 	test('mkfs args match each tool contract', () => {

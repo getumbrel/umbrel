@@ -1,5 +1,6 @@
 import fse from 'fs-extra'
 import {$} from 'execa'
+import pRetry from 'p-retry'
 
 import type Umbreld from '../../index.js'
 import runEvery from '../utilities/run-every.js'
@@ -15,13 +16,19 @@ export type MdadmMemberState = 'active' | 'spare' | 'faulty' | 'removed' | 'sync
 // - `synthetic` filesystems cannot (exfat, vfat, ntfs): mounts synthesize uid/gid.
 export type MdadmFilesystem = 'ext4' | 'btrfs' | 'xfs' | 'exfat' | 'vfat' | 'ntfs'
 
-export const MDADM_FILESYSTEMS: Record<MdadmFilesystem, {label: string; tool: string; native: boolean}> = {
-	ext4: {label: 'ext4', tool: 'mkfs.ext4', native: true},
-	btrfs: {label: 'btrfs', tool: 'mkfs.btrfs', native: true},
-	xfs: {label: 'xfs', tool: 'mkfs.xfs', native: true},
-	exfat: {label: 'exFAT', tool: 'mkfs.exfat', native: false},
-	vfat: {label: 'FAT32', tool: 'mkfs.vfat', native: false},
-	ntfs: {label: 'NTFS', tool: 'mkfs.ntfs', native: false},
+// `labelMax` mirrors each mkfs tool's own limit: passing a longer label makes
+// mkfs.vfat/mkfs.exfat silently drop the label (exit 0), so it must be enforced
+// before the call rather than trusted to fail loudly.
+export const MDADM_FILESYSTEMS: Record<
+	MdadmFilesystem,
+	{label: string; tool: string; native: boolean; labelMax: number}
+> = {
+	ext4: {label: 'ext4', tool: 'mkfs.ext4', native: true, labelMax: 16},
+	btrfs: {label: 'btrfs', tool: 'mkfs.btrfs', native: true, labelMax: 255},
+	xfs: {label: 'xfs', tool: 'mkfs.xfs', native: true, labelMax: 12},
+	exfat: {label: 'exFAT', tool: 'mkfs.exfat', native: false, labelMax: 11},
+	vfat: {label: 'FAT32', tool: 'mkfs.vfat', native: false, labelMax: 11},
+	ntfs: {label: 'NTFS', tool: 'mkfs.ntfs', native: false, labelMax: 32},
 }
 
 export function isMdadmFilesystem(value: string): value is MdadmFilesystem {
@@ -33,6 +40,20 @@ export type MdadmFilesystemInfo = {
 	label: string
 	tool: string
 	native: boolean
+	labelMax: number
+}
+
+// Directory name for an array's mount under MOUNT_ROOT. Prefers the mdadm array
+// name, which lives in the superblock and therefore survives the array being
+// reassembled onto a different /dev/mdN, and falls back to the device node name.
+// Sanitized because mdadm names may carry a `hostname:name` homehost prefix.
+export function mdadmMountName(device: string, name?: string): string {
+	const fallback = device.replace('/dev/', '')
+	// metadata 1.2 may report a `homehost:name` pair; the array name is the part
+	// after the colon and never contains one itself.
+	const raw = (name ?? '').trim().split(':').pop() ?? ''
+	const safe = raw.replace(/[^a-zA-Z0-9_.-]/g, '_').replace(/^[_.-]+/, '')
+	return safe || fallback
 }
 
 export type MdadmMember = {
@@ -121,9 +142,19 @@ export function parseMdstat(mdstat: string): Array<{
 		const [, md, statusWord, rest] = header
 		let state: MdadmArrayState = 'unknown'
 		if (statusWord === 'active') {
-			if (/degraded/.test(rest)) state = 'degraded'
-			else state = 'active'
-			if (/\(clean\)/.test(lines[i + 1] ?? '') || /\(clean\)/.test(rest)) state = 'clean'
+			// mdstat never prints the word "degraded". A short array shows up as
+			// `[N/M]` (M active of N configured) on the following detail line, or a
+			// failed member marked `(F)` on the header line.
+			const detailLine = lines[i + 1] ?? ''
+			const counts = (detailLine.match(/\[(\d+)\/(\d+)\]/) ?? rest.match(/\[(\d+)\/(\d+)\]/)) as RegExpMatchArray | null
+			const configured = counts ? parseInt(counts[1], 10) : undefined
+			const active = counts ? parseInt(counts[2], 10) : undefined
+			const hasFailedMember = /\(\w*F\w*\)/.test(rest) || /\(\w*F\w*\)/.test(detailLine)
+			state = 'active'
+			if ((configured !== undefined && active !== undefined && active < configured) || hasFailedMember) {
+				state = 'degraded'
+			}
+			if (/\(clean\)/.test(detailLine) || /\(clean\)/.test(rest)) state = 'clean'
 		} else if (statusWord === 'inactive') {
 			state = 'inactive'
 		}
@@ -157,8 +188,9 @@ export function parseMdadmDetail(detail: string): Partial<MdadmArray> {
 	const spareDevices = parseInt(get(/Spare Devices\s*:\s*(\d+)/) ?? '0', 10)
 	const stateRaw = (get(/State\s*:\s*([^\n]+)/) ?? '').toLowerCase()
 	let state: MdadmArrayState = 'unknown'
-	if (stateRaw.includes('clean')) state = 'clean'
-	else if (stateRaw.includes('degraded')) state = 'degraded'
+	// A degraded array reports "clean, degraded", so test degraded before clean.
+	if (stateRaw.includes('degraded')) state = 'degraded'
+	else if (stateRaw.includes('clean')) state = 'clean'
 	else if (stateRaw.includes('active')) state = 'active'
 	const uuid = get(/UUID\s*:\s*([^\n]+)/)
 	const name = get(/Name\s*:\s*([^\n]+)/)
@@ -241,6 +273,9 @@ export default class Mdadm {
 		})
 	}
 
+	// Lifecycle hook called by hardware.stop(). Distinct from stopArray(), which
+	// stops an individual /dev/mdN — hence the name: an overloaded `stop` would
+	// both collide at the type level and silently shadow the other at run time.
 	async stop() {
 		this.logger.log('Stopping mdadm monitor')
 		this.#stopStatusRefresh?.()
@@ -282,9 +317,7 @@ export default class Mdadm {
 				this.getMountpoint(entry.device),
 			])
 			const base = {
-				filesystem: filesystem
-					? {value: filesystem, ...MDADM_FILESYSTEMS[filesystem]}
-					: null,
+				filesystem: filesystem ? {value: filesystem, ...MDADM_FILESYSTEMS[filesystem]} : null,
 				mountpoint,
 			}
 			let detail = ''
@@ -295,7 +328,8 @@ export default class Mdadm {
 				this.logger.error(`Failed to get mdadm detail for ${entry.device}`, error)
 				arrays.push({
 					device: entry.device,
-					name: entry.device,
+					// Empty name lets mountpointFor()/Files fall back to the device node.
+					name: '',
 					level: entry.level ?? 'unknown',
 					raidDevices: 0,
 					totalDevices: 0,
@@ -316,7 +350,7 @@ export default class Mdadm {
 			const members = parseMdadmDetailMembers(detail)
 			arrays.push({
 				device: entry.device,
-				name: parsed.name ?? entry.device,
+				name: parsed.name ?? '',
 				uuid: parsed.uuid,
 				level: parsed.level ?? entry.level ?? 'unknown',
 				raidDevices: parsed.raidDevices ?? 0,
@@ -325,7 +359,15 @@ export default class Mdadm {
 				workingDevices: parsed.workingDevices ?? 0,
 				failedDevices: parsed.failedDevices ?? 0,
 				spareDevices: parsed.spareDevices ?? 0,
-				state: entry.syncProgress !== undefined ? entry.state : (parsed.state ?? entry.state),
+				// Prefer the more specific of the two sources: mdstat carries live
+				// resync/degraded state, --detail carries clean/degraded. Fall back to
+				// mdstat when the detail parser could not classify the State line.
+				state:
+					entry.syncProgress !== undefined
+						? entry.state
+						: parsed.state && parsed.state !== 'unknown'
+							? parsed.state
+							: entry.state,
 				syncProgress: entry.syncProgress,
 				syncAction: entry.syncAction,
 				members,
@@ -389,8 +431,7 @@ export default class Mdadm {
 		const minDevices = MDADM_MIN_DEVICES[level]
 		if (devices.length < minDevices)
 			throw new Error(`RAID level ${level} requires at least ${minDevices} devices (${devices.length} given)`)
-		if (level === '10' && devices.length % 2 !== 0)
-			throw new Error('RAID level 10 requires an even number of devices')
+		if (level === '10' && devices.length % 2 !== 0) throw new Error('RAID level 10 requires an even number of devices')
 		for (const member of devices) {
 			if (!/^\/dev\/(sd[a-z]+\d*|nvme\d+n\d+(p\d+)?|hd[a-z]+\d*|vd[a-z]+\d*)$/.test(member))
 				throw new Error(`Refusing to use suspicious device path: ${member}`)
@@ -404,6 +445,14 @@ export default class Mdadm {
 			} catch (error) {
 				if (error instanceof Error && error.message.includes('is mounted')) throw error
 			}
+		}
+
+		// Clear stale md superblocks so a drive reused from a previous array can be
+		// claimed again; without this mdadm --create refuses members that still
+		// carry a superblock ("appears to be part of an md array"). Best effort:
+		// a member with no superblock reports an error we deliberately ignore.
+		for (const member of devices) {
+			await $({reject: false})`mdadm --zero-superblock ${member}`
 		}
 
 		// Resolve target node: explicit /dev/mdN or first free slot (multi-array).
@@ -432,7 +481,9 @@ export default class Mdadm {
 		// --run forces creation without interactive confirmation, --metadata=1.2 keeps
 		// 4K alignment friendly superblocks readable by modern installers.
 		const {stdout} = await $({input: 'y'})`mdadm ${args}`
-		await this.saveConfig()
+		// A new array adds a UUID to mdadm.conf, so the initramfs must be refreshed
+		// for it to assemble in early boot.
+		await this.saveConfig({updateInitramfs: true})
 		return {device: target, output: stdout}
 	}
 
@@ -454,7 +505,8 @@ export default class Mdadm {
 		await $`mdadm --fail ${arrayDevice} ${memberDevice}`
 	}
 
-	async stop(arrayDevice: string): Promise<void> {
+	/** Stop a running array (`mdadm --stop`). Lifecycle stop() stops the monitor. */
+	async stopArray(arrayDevice: string): Promise<void> {
 		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
 		await $`mdadm --stop ${arrayDevice}`
 	}
@@ -485,6 +537,9 @@ export default class Mdadm {
 		if (!isValidMdDevice(arrayDevice)) throw new Error(`Invalid md device: ${arrayDevice}`)
 		if (raidDevices !== undefined && (!Number.isInteger(raidDevices) || raidDevices < 1))
 			throw new Error(`Invalid raidDevices count: ${raidDevices}`)
+		// Migrating down to RAID0 is never a supported target: it silently drops all
+		// redundancy and needs at least two members. Refuse rather than reshape.
+		if (level === '0') throw new Error('Migrating an array to RAID0 is not supported')
 		if (raidDevices === undefined && !level && !sizeMax)
 			throw new Error('grow requires at least one of: raidDevices, level, sizeMax')
 		const args = [
@@ -525,17 +580,41 @@ export default class Mdadm {
 		return this.grow(arrayDevice, {sizeMax: true})
 	}
 
-	/** Mountpoint of an array device (e.g. /dev/md0 -> /run/mdadm/md0). */
-	mountpointFor(device: string): string {
-		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
-		return `${Mdadm.MOUNT_ROOT}/${device.replace('/dev/', '')}`
+	/**
+	 * Directory name an array is mounted under. Prefers the mdadm array name
+	 * (stored in the superblock, so it survives reassembly onto another /dev/mdN)
+	 * and falls back to the device node name. This is also the name Files exposes
+	 * as /Raid/<name>, so the two must agree.
+	 */
+	async mountNameFor(device: string, name?: string): Promise<string> {
+		return mdadmMountName(device, name ?? (await this.#resolveArrayName(device)))
 	}
 
-	/** Current mount of an array device, or null when unmounted. */
+	/** Mountpoint of an array device (e.g. /dev/md0 -> /run/mdadm/umbrel-md). */
+	async mountpointFor(device: string, name?: string): Promise<string> {
+		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
+		return `${Mdadm.MOUNT_ROOT}/${await this.mountNameFor(device, name)}`
+	}
+
+	// Array name from the cached inventory, falling back to a direct `--detail`
+	// read so a just-created array (cache not refreshed yet) still resolves.
+	async #resolveArrayName(device: string): Promise<string | undefined> {
+		const cached = this.#cachedStatus?.arrays.find((array) => array.device === device)?.name
+		if (cached) return cached
+		const {stdout, exitCode} = await $({reject: false})`mdadm --detail ${device}`
+		if (exitCode !== 0) return undefined
+		return parseMdadmDetail(stdout).name
+	}
+
+	/**
+	 * Current mount of an array device, or null when unmounted. Uses findmnt so
+	 * only the array's own mount is reported (lsblk would also list child
+	 * filesystems of a partitioned array).
+	 */
 	async getMountpoint(device: string): Promise<string | null> {
-		const {stdout} = await $({reject: false})`lsblk --noheadings --output MOUNTPOINT ${device}`
-		const mountpoint = stdout.trim().split('\n').map((l) => l.trim()).filter(Boolean).pop()
-		return mountpoint ?? null
+		const {stdout, exitCode} = await $({reject: false})`findmnt --noheadings --output TARGET --source ${device}`
+		if (exitCode === 0 && stdout.trim()) return stdout.trim().split('\n')[0].trim()
+		return null
 	}
 
 	// Args for each supported filesystem's mkfs tool.
@@ -557,11 +636,19 @@ export default class Mdadm {
 	 * exFAT/FAT32/NTFS are synthetic-ownership filesystems: they cannot store
 	 * Linux ownership so mounts must pass uid/gid (see mount()).
 	 */
-	async format(device: string, filesystem: MdadmFilesystem, {label = 'umbrel-md'}: {label?: string} = {}): Promise<string> {
+	async format(
+		device: string,
+		filesystem: MdadmFilesystem,
+		{label = 'umbrel-md'}: {label?: string} = {},
+	): Promise<string> {
 		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
 		if (!isMdadmFilesystem(filesystem)) throw new Error(`Unsupported filesystem: ${filesystem}`)
-		// Fail fast when the mkfs binary is missing from the image.
-		await $`command -v ${MDADM_FILESYSTEMS[filesystem].tool}`
+		const {tool, labelMax} = MDADM_FILESYSTEMS[filesystem]
+		// Fail fast when the mkfs binary is missing from the image. `command` is a
+		// shell builtin and execa spawns without a shell, so use `which`.
+		const {exitCode} = await $({reject: false})`which ${tool}`
+		if (exitCode !== 0) throw new Error(`mkfs tool not available: ${tool}`)
+		if (label.length > labelMax) throw new Error(`Label too long for ${filesystem} (max ${labelMax} characters)`)
 		if (await this.getMountpoint(device)) throw new Error(`Device ${device} is mounted, unmount it before formatting`)
 
 		const args = Mdadm.MKFS_ARGS[filesystem](label)
@@ -583,10 +670,14 @@ export default class Mdadm {
 
 		const fstype = await this.#getFilesystemType(device)
 		if (!fstype) throw new Error(`No supported filesystem found on ${device}`)
-		const mountpoint = this.mountpointFor(device)
-		const options = MDADM_FILESYSTEMS[fstype].native
-			? ['nofail']
-			: [`nofail`, `uid=${uid}`, `gid=${gid}`, `umask=007`]
+		const mountpoint = await this.mountpointFor(device)
+		// x-mount.mkdir lets the boot-time `mount -a` recreate the mountpoint on
+		// the tmpfs /run/mdadm (nothing persists there across a reboot).
+		const options = [
+			'nofail',
+			'x-mount.mkdir=0755',
+			...(MDADM_FILESYSTEMS[fstype].native ? [] : [`uid=${uid}`, `gid=${gid}`, `umask=007`]),
+		]
 		await fse.ensureDir(mountpoint)
 		await $`mount -t ${fstype} -o ${options.join(',')} ${device} ${mountpoint}`
 		await this.#persistMount(device, fstype, mountpoint, options)
@@ -594,9 +685,22 @@ export default class Mdadm {
 	}
 
 	async unmount(device: string): Promise<void> {
-		const mountpoint = (await this.getMountpoint(device)) ?? this.mountpointFor(device)
-		await $({reject: false})`umount ${mountpoint}`
-		await this.#removePersistedMount(device)
+		const mountpoint = (await this.getMountpoint(device)) ?? (await this.mountpointFor(device))
+		// Retry like external storage: Samba/indexers may hold handles briefly.
+		await pRetry(() => $`umount ${mountpoint}`, {
+			retries: 5,
+			minTimeout: 500,
+			factor: 1,
+			onFailedAttempt: (error) => {
+				this.logger.log(
+					`Unmount attempt ${error.attemptNumber} for ${device} failed, ${error.retriesLeft} retries left`,
+				)
+			},
+		}).catch((error) => {
+			this.logger.error(`Failed to unmount ${device} from ${mountpoint}`, error)
+			throw error
+		})
+		await this.#removePersistedMount(device, mountpoint)
 	}
 
 	/**
@@ -607,11 +711,15 @@ export default class Mdadm {
 	async #persistMount(device: string, fstype: MdadmFilesystem, mountpoint: string, options: string[]) {
 		try {
 			const mountSpec = (await this.#getFilesystemUuid(device)) ?? device
-			const entry = `UUID=${mountSpec} ${mountpoint} ${fstype} ${options.join(',')} 0 0\n`
+			// x-mount.mkdir lets the boot-time `mount -a` recreate the mountpoint on
+			// the tmpfs /run/mdadm, which is empty after every reboot. mount() already
+			// includes it in the live options, so dedupe before writing fstab.
+			const fstabOptions = [...new Set([...options, 'x-mount.mkdir=0755'])].join(',')
+			const entry = `UUID=${mountSpec} ${mountpoint} ${fstype} ${fstabOptions} 0 0\n`
 			const existing = await fse.readFile(FSTAB_PATH, 'utf8').catch(() => '')
 			const lines = existing.split('\n').filter((line) => {
 				if (!line.trim() || line.trim().startsWith('#')) return true
-				return !line.includes(` ${mountpoint} `)
+				return !this.#isRaidFstabLine(line, mountpoint)
 			})
 			lines.push(entry.trim())
 			const next = `${lines.join('\n').trim()}\n`
@@ -625,13 +733,13 @@ export default class Mdadm {
 		}
 	}
 
-	async #removePersistedMount(device: string) {
+	async #removePersistedMount(device: string, mountpoint?: string) {
 		try {
-			const mountpoint = this.mountpointFor(device)
+			const target = mountpoint ?? (await this.mountpointFor(device))
 			const existing = await fse.readFile(FSTAB_PATH, 'utf8').catch(() => '')
 			const next = existing
 				.split('\n')
-				.filter((line) => !(line.trim() && line.includes(` ${mountpoint} `)))
+				.filter((line) => !(line.trim() && this.#isRaidFstabLine(line, target)))
 				.join('\n')
 			if (next !== existing) {
 				await fse.writeFile(FSTAB_PATH, next)
@@ -642,6 +750,18 @@ export default class Mdadm {
 		}
 	}
 
+	// True when an fstab line is an mdadm array mount under MOUNT_ROOT. Matching on
+	// the mountpoint keeps entries findable and removable even after the array's
+	// /dev/mdN node changes, since the mountpoint derives from the array name.
+	#isRaidFstabLine(line: string, mountpoint?: string): boolean {
+		if (line.trim().startsWith('#')) return false
+		const [spec, target] = line.trim().split(/\s+/)
+		if (!spec || !target) return false
+		if (!target.startsWith(`${Mdadm.MOUNT_ROOT}/`)) return false
+		if (mountpoint) return target === mountpoint
+		return true
+	}
+
 	async #getFilesystemUuid(device: string): Promise<string | null> {
 		const {stdout, exitCode} = await $({reject: false})`blkid -s UUID -o value ${device}`
 		if (exitCode !== 0) return null
@@ -650,7 +770,7 @@ export default class Mdadm {
 	}
 
 	async #getFilesystemType(device: string): Promise<MdadmFilesystem | null> {
-		const {stdout, exitCode} = await $({reject: false})`lsblk --noheadings --output FSTYPE ${device}`
+		const {stdout, exitCode} = await $({reject: false})`lsblk --noheadings --nodeps --output FSTYPE ${device}`
 		if (exitCode !== 0) return null
 		const fstype = stdout.trim()
 		return isMdadmFilesystem(fstype) ? fstype : null
@@ -669,18 +789,23 @@ export default class Mdadm {
 			label: meta.label,
 			tool: meta.tool,
 			native: meta.native,
+			labelMax: meta.labelMax,
 		}))
 	}
 
-	async saveConfig(): Promise<void> {
+	async saveConfig({updateInitramfs = false}: {updateInitramfs?: boolean} = {}): Promise<void> {
 		try {
 			const {stdout} = await $`mdadm --detail --scan`
 			await fse.ensureFile('/etc/mdadm/mdadm.conf')
 			await fse.writeFile('/etc/mdadm/mdadm.conf', `${stdout}\n`)
-			try {
-				await $`update-initramfs -u -k all`
-			} catch {
-				// Best effort: initramfs refresh may fail in containers/CI
+			// Refreshing the initramfs is expensive (rebuilds every kernel image), so
+			// only do it when the set of arrays changes, not on every reshape.
+			if (updateInitramfs) {
+				try {
+					await $`update-initramfs -u -k all`
+				} catch {
+					// Best effort: initramfs refresh may fail in containers/CI
+				}
 			}
 		} catch (error) {
 			this.logger.error('Failed to save mdadm config', error)

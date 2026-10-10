@@ -166,7 +166,10 @@ const mdadm = router({
 				name: z.string().min(1).max(32).optional(),
 				chunk: z.number().int().positive().optional(),
 				assumeClean: z.boolean().optional(),
-				device: z.string().regex(/^\/dev\/md\d+$/).optional(),
+				device: z
+					.string()
+					.regex(/^\/dev\/md\d+$/)
+					.optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.create(input)),
@@ -189,7 +192,7 @@ const mdadm = router({
 	// Stop an array
 	stop: privateProcedure
 		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
-		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.stop(input.arrayDevice)),
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.stopArray(input.arrayDevice)),
 
 	// Assemble all arrays found in mdadm.conf / superblocks
 	assembleScan: privateProcedure
@@ -227,9 +230,7 @@ const mdadm = router({
 				devices: z.array(z.string()).min(1).max(8),
 			}),
 		)
-		.mutation(async ({ctx, input}) =>
-			ctx.umbreld.hardware.mdadm.growAddAndExpand(input.arrayDevice, input.devices),
-		),
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.growAddAndExpand(input.arrayDevice, input.devices)),
 
 	// Use full capacity after replacing members with larger disks
 	growToMaxSize: privateProcedure
@@ -245,7 +246,9 @@ const mdadm = router({
 			z.object({
 				arrayDevice: z.string().regex(/^\/dev\/md\d+$/),
 				filesystem: z.enum(['ext4', 'btrfs', 'xfs', 'exfat', 'vfat', 'ntfs']),
-				label: z.string().min(1).max(16).optional(),
+				// Per-filesystem limits are enforced by mdadm.format() (e.g. 11 for
+				// vfat/exfat), so the schema only bounds the overall length here.
+				label: z.string().min(1).max(255).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) =>
@@ -259,15 +262,13 @@ const mdadm = router({
 
 	// Mount an array (returns mountpoint)
 	mount: privateProcedure
-		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)})).mutation(async ({ctx, input}) =>
-			ctx.umbreld.hardware.mdadm.mount(input.arrayDevice),
-		),
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.mount(input.arrayDevice)),
 
 	// Unmount an array
 	unmount: privateProcedure
-		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)})).mutation(async ({ctx, input}) =>
-			ctx.umbreld.hardware.mdadm.unmount(input.arrayDevice),
-		),
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.unmount(input.arrayDevice)),
 
 	// Current mountpoint of an array, or null
 	getMountpoint: privateProcedure
