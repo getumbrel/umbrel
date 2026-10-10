@@ -2,6 +2,9 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 
 import type Umbreld from '../../index.js'
+import runEvery from '../utilities/run-every.js'
+
+const STATUS_REFRESH_INTERVAL = '10 seconds'
 
 export type MdadmLevel = '0' | '1' | '5' | '6' | '10'
 export type MdadmArrayState = 'clean' | 'active' | 'degraded' | 'recovering' | 'resync' | 'inactive' | 'unknown'
@@ -76,6 +79,8 @@ export const MDADM_MIN_DEVICES: Record<MdadmLevel, number> = {
 }
 
 export const MDADM_MAX_DEVICE_INDEX = 31
+
+const FSTAB_PATH = '/etc/fstab'
 
 export function isValidMdDevice(device: string): boolean {
 	return /^\/dev\/md\d+$/.test(device)
@@ -207,6 +212,8 @@ export default class Mdadm {
 
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
+	#cachedStatus: MdadmStatus | null = null
+	#stopStatusRefresh: (() => void) | null = null
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -226,10 +233,23 @@ export default class Mdadm {
 		} catch (error) {
 			this.logger.error('mdadm auto-assemble at start failed (non-fatal)', error)
 		}
+		// Keep the cached inventory warm so Files can list /Raid mounts without
+		// shelling out per request.
+		void this.getStatus().catch(() => {})
+		this.#stopStatusRefresh = runEvery(STATUS_REFRESH_INTERVAL, async () => {
+			await this.getStatus().catch(() => {})
+		})
 	}
 
 	async stop() {
 		this.logger.log('Stopping mdadm monitor')
+		this.#stopStatusRefresh?.()
+		this.#stopStatusRefresh = null
+	}
+
+	/** Latest inventory snapshot, or null before the first refresh. */
+	getCachedStatus(): MdadmStatus | null {
+		return this.#cachedStatus
 	}
 
 	async isSupported(): Promise<boolean> {
@@ -314,7 +334,9 @@ export default class Mdadm {
 			})
 		}
 
-		return {supported: true, exists: arrays.length > 0, arrays}
+		const status: MdadmStatus = {supported: true, exists: arrays.length > 0, arrays}
+		this.#cachedStatus = status
+		return status
 	}
 
 	async detail(device: string): Promise<string> {
@@ -506,7 +528,7 @@ export default class Mdadm {
 	/** Mountpoint of an array device (e.g. /dev/md0 -> /run/mdadm/md0). */
 	mountpointFor(device: string): string {
 		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
-		return `${Mdadm.MOUNT_ROOT}/${device.replace('/dev/', '}`
+		return `${Mdadm.MOUNT_ROOT}/${device.replace('/dev/', '')}`
 	}
 
 	/** Current mount of an array device, or null when unmounted. */
@@ -552,6 +574,7 @@ export default class Mdadm {
 	/**
 	 * Mount an array. Returns the mountpoint (under MOUNT_ROOT, survives umbreld restarts).
 	 * Synthetic-ownership filesystems get uid/gid from the umbrel user so files stay writable.
+	 * Persists an /etc/fstab entry so the array is remounted on every boot.
 	 */
 	async mount(device: string, {uid = 1000, gid = 1000}: {uid?: number; gid?: number} = {}): Promise<string> {
 		if (!isValidMdDevice(device)) throw new Error(`Invalid md device: ${device}`)
@@ -561,18 +584,69 @@ export default class Mdadm {
 		const fstype = await this.#getFilesystemType(device)
 		if (!fstype) throw new Error(`No supported filesystem found on ${device}`)
 		const mountpoint = this.mountpointFor(device)
+		const options = MDADM_FILESYSTEMS[fstype].native
+			? ['nofail']
+			: [`nofail`, `uid=${uid}`, `gid=${gid}`, `umask=007`]
 		await fse.ensureDir(mountpoint)
-		if (!MDADM_FILESYSTEMS[fstype].native) {
-			await $`mount -t ${fstype} -o uid=${uid},gid=${gid},umask=007 ${device} ${mountpoint}`
-		} else {
-			await $`mount -t ${fstype} ${device} ${mountpoint}`
-		}
+		await $`mount -t ${fstype} -o ${options.join(',')} ${device} ${mountpoint}`
+		await this.#persistMount(device, fstype, mountpoint, options)
 		return mountpoint
 	}
 
 	async unmount(device: string): Promise<void> {
 		const mountpoint = (await this.getMountpoint(device)) ?? this.mountpointFor(device)
 		await $({reject: false})`umount ${mountpoint}`
+		await this.#removePersistedMount(device)
+	}
+
+	/**
+	 * Persist a mount to /etc/fstab, keyed by filesystem UUID so the entry keeps
+	 * working when the array lands on a different /dev/mdN after reassembly.
+	 * The umbrel-mdadm-mount.service unit replays this list with `mount -a` at boot.
+	 */
+	async #persistMount(device: string, fstype: MdadmFilesystem, mountpoint: string, options: string[]) {
+		try {
+			const mountSpec = (await this.#getFilesystemUuid(device)) ?? device
+			const entry = `UUID=${mountSpec} ${mountpoint} ${fstype} ${options.join(',')} 0 0\n`
+			const existing = await fse.readFile(FSTAB_PATH, 'utf8').catch(() => '')
+			const lines = existing.split('\n').filter((line) => {
+				if (!line.trim() || line.trim().startsWith('#')) return true
+				return !line.includes(` ${mountpoint} `)
+			})
+			lines.push(entry.trim())
+			const next = `${lines.join('\n').trim()}\n`
+			if (next !== existing) {
+				await fse.ensureFile(FSTAB_PATH)
+				await fse.writeFile(FSTAB_PATH, next)
+				this.logger.log(`Persisted mount '${device}' -> ${mountpoint} to fstab`)
+			}
+		} catch (error) {
+			this.logger.error(`Failed to persist fstab entry for ${device}`, error)
+		}
+	}
+
+	async #removePersistedMount(device: string) {
+		try {
+			const mountpoint = this.mountpointFor(device)
+			const existing = await fse.readFile(FSTAB_PATH, 'utf8').catch(() => '')
+			const next = existing
+				.split('\n')
+				.filter((line) => !(line.trim() && line.includes(` ${mountpoint} `)))
+				.join('\n')
+			if (next !== existing) {
+				await fse.writeFile(FSTAB_PATH, next)
+				this.logger.log(`Removed persisted mount '${device}' from fstab`)
+			}
+		} catch (error) {
+			this.logger.error(`Failed to remove fstab entry for ${device}`, error)
+		}
+	}
+
+	async #getFilesystemUuid(device: string): Promise<string | null> {
+		const {stdout, exitCode} = await $({reject: false})`blkid -s UUID -o value ${device}`
+		if (exitCode !== 0) return null
+		const uuid = stdout.trim()
+		return uuid || null
 	}
 
 	async #getFilesystemType(device: string): Promise<MdadmFilesystem | null> {

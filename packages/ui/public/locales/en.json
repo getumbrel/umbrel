@@ -2857,5 +2857,7 @@
   "storage-manager.mdadm.mount": "Mount",
   "storage-manager.mdadm.unmount": "Unmount",
   "storage-manager.mdadm.synthetic": "no Linux ownership",
-  "storage-manager.mdadm.synthetic-warning": "This filesystem cannot store Linux file ownership. Use it for general files only, not for app data."
+  "storage-manager.mdadm.synthetic-warning": "This filesystem cannot store Linux file ownership. Use it for general files only, not for app data.",
+  "files-sidebar.raid-storage": "RAID",
+  "files-raid.no-ownership": "no ownership"
 }

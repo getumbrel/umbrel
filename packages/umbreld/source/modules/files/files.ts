@@ -51,6 +51,7 @@ import {CLOUD_DESTINATION_MISSING_ERROR, isOsJunkBasename, type DestinationRef} 
 import FileIndex, {type FileIndexRoot} from './file-index.js'
 import type {PublishedFileRevision} from './file-index-enrichment.js'
 import {lookupMimeType} from './mime.js'
+import Mdadm from '../hardware/mdadm.js'
 
 import type Umbreld from '../../index.js'
 import {OWNER_USER_ID} from '../user/constants.js'
@@ -118,7 +119,7 @@ const TRASH_CLAIM_SUFFIX = '.umbrel-trash'
 const TRASH_CLAIM_MANIFEST_SUFFIX = `.json${TRASH_CLAIM_SUFFIX}`
 const MAX_TRASH_CLAIM_MANIFEST_BYTES = 16 * 1024
 
-type BaseDirectory = '/Home' | '/Trash' | '/Apps' | '/Machines' | '/External' | '/Backups' | '/Network'
+type BaseDirectory = '/Home' | '/Trash' | '/Apps' | '/Machines' | '/External' | '/Backups' | '/Network' | '/Raid'
 
 export type ViewPreferences = {
 	view: 'icons' | 'list'
@@ -191,6 +192,10 @@ export default class Files {
 			['/External', `${umbreld.dataDirectory}/external`],
 			['/Backups', `${umbreld.dataDirectory}/backups`],
 			['/Network', `${umbreld.dataDirectory}/network`],
+			// Linux RAID (mdadm) arrays are mounted here by the mdadm module.
+			// This is tmpfs: the umbrel-mdadm-mount.service unit recreates the
+			// mounts from /etc/fstab on every boot.
+			['/Raid', Mdadm.MOUNT_ROOT],
 		])
 
 		this.fileIndex = new FileIndex({
@@ -411,6 +416,16 @@ export default class Files {
 				searchEnabled: false,
 				scanEnabled: false,
 			},
+			{
+				virtualPath: '/Raid',
+				systemPath: this.getBaseDirectory('/Raid'),
+				ownerId: OWNER_USER_ID,
+				kind: 'apps',
+				searchEnabled: false,
+				// Arrays can be large and are managed by the mdadm module, so the
+				// index only covers on-demand entries, as for external storage.
+				scanEnabled: false,
+			},
 		]
 	}
 
@@ -438,6 +453,28 @@ export default class Files {
 		const path = this.baseDirectories.get(virtualPath)
 		if (!path) throw new Error(`[base-directory-not-found] ${virtualPath}`)
 		return path
+	}
+
+	// Linux RAID (mdadm) arrays surfaced in the Files app. Arrays are mounted by the
+	// mdadm hardware module under /Raid, so listing them is just reading live state.
+	getRaidMounts(): {name: string; path: string; device: string; filesystem: string; native: boolean}[] {
+		const status = this.#umbreld.hardware.mdadm?.getCachedStatus()
+		if (!status?.exists) return []
+		return status.arrays
+			.filter((array) => array.mountpoint)
+			.map((array) => ({
+				name: this.#raidMountName(array),
+				path: `/Raid/${this.#raidMountName(array)}`,
+				device: array.device,
+				filesystem: array.filesystem?.value ?? 'unknown',
+				native: array.filesystem?.native ?? false,
+			}))
+	}
+
+	// Stable mount name for an array. Prefer the mdadm array name (user visible),
+	// falling back to the device node name when the name is blank.
+	#raidMountName(array: {device: string; name: string}): string {
+		return array.name || array.device.replace('/dev/', '')
 	}
 
 	isCloudPathOverlap(virtualPath: string) {
@@ -502,6 +539,19 @@ export default class Files {
 					host: share.host,
 					share: share.share,
 				}
+				cloudDestinationPath(destination, userId)
+				return destination
+			}
+		}
+
+		// Linux RAID arrays live under /Raid and are identity-stable by device,
+		// so they can back a Cloud destination like external/network storage.
+		if (path.startsWith('/Raid/')) {
+			const raidMount = this.getRaidMounts().find(
+				(candidate) => path === candidate.path || path.startsWith(`${candidate.path}/`),
+			)
+			if (raidMount) {
+				const destination = {path}
 				cloudDestinationPath(destination, userId)
 				return destination
 			}

@@ -1234,7 +1234,8 @@ export default class CloudManager {
 			),
 		)
 		const plausible = [...new Set(virtualPaths.map(normalizePath))].flatMap((path) => {
-			if (!path.startsWith('/External/') && !path.startsWith('/Network/')) return []
+			if (!path.startsWith('/External/') && !path.startsWith('/Network/') && !path.startsWith('/Raid/'))
+				return []
 			const runtime = destinations.get(path)
 			return runtime && runtime.userId !== OWNER_USER_ID ? [{path, runtime}] : []
 		})

@@ -448,6 +448,9 @@ export default router({
 			ctx.umbreld.files.externalStorage.unmountExternalDevice(input.deviceId, {remove: true}),
 		),
 
+	// Get Linux RAID (mdadm) array mounts surfaced under /Raid
+	raidMounts: publicProcedureWhenNoUserExists.query(async ({ctx}) => ctx.umbreld.files.getRaidMounts()),
+
 	// Search for a file
 	// Members are confined to their current account's home directory
 	search: privateProcedureWithMembers

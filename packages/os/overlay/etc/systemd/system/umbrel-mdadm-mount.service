@@ -1,0 +1,22 @@
+[Unit]
+Description=Mount mdadm Linux RAID arrays before Umbrel starts
+Documentation=man:mdadm(8) man:mount(8)
+DefaultDependencies=no
+After=umbrel-mdadm-assemble.service local-fs.target
+Before=umbrel.service umbrel-custom-pre-start.service
+Wants=local-fs.target umbrel-mdadm-assemble.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Desired mounts are written to /etc/fstab by the umbreld mdadm module whenever
+# an array is formatted/mounted. Entries carry `nofail` so a missing or degraded
+# array never blocks boot, and the array device is referenced by filesystem UUID
+# so it survives md device renumbering. `mount -a` is idempotent.
+ExecStart=/bin/sh -c 'mdadm --detail --scan > /etc/mdadm/mdadm.conf 2>/dev/null || true'
+ExecStart=/usr/bin/mount -a -t ext4,ext3,ext2,btrfs,xfs,exfat,vfat,ntfs,ntfs3,fuseblk
+ExecStart=/usr/bin/mdadm --monitor --scan --daemonise --pid-file=/run/mdadm/monitor.pid || true
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

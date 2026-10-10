@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'vitest'
 
 import {
+	Mdadm,
 	parseMdstat,
 	parseMdadmDetail,
 	MDADM_MIN_DEVICES,
@@ -144,6 +145,21 @@ describe('mdadm filesystems', () => {
 	test('every filesystem has an mkfs tool', () => {
 		for (const [value, meta] of Object.entries(MDADM_FILESYSTEMS)) {
 			expect(meta.tool.startsWith(`mkfs.`), `${value} -> ${meta.tool}`).toBe(true)
+		}
+	})
+
+	test('mkfs args match each tool contract', () => {
+		// ext4/btrfs/xfs/ntfs take a label via -L, exfat via -n, vfat via -n and -F
+		expect(Mdadm.MKFS_ARGS.ext4('data')[0]).toBe('mkfs.ext4')
+		expect(Mdadm.MKFS_ARGS.ext4('data')).toContain('-L')
+		expect(Mdadm.MKFS_ARGS.btrfs('data')).toContain('-f')
+		expect(Mdadm.MKFS_ARGS.xfs('data')).toContain('-f')
+		expect(Mdadm.MKFS_ARGS.exfat('data')).toContain('-n')
+		expect(Mdadm.MKFS_ARGS.vfat('data')).toContain('-F')
+		expect(Mdadm.MKFS_ARGS.ntfs('data')).toContain('-f')
+		// Every variant ends with the label
+		for (const [value, build] of Object.entries(Mdadm.MKFS_ARGS)) {
+			expect(build('data').at(-1), value).toBe('data')
 		}
 	})
 })

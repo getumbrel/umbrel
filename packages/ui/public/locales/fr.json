@@ -2857,5 +2857,7 @@
   "storage-manager.mdadm.mount": "Monter",
   "storage-manager.mdadm.unmount": "Démonter",
   "storage-manager.mdadm.synthetic": "sans permissions Linux",
-  "storage-manager.mdadm.synthetic-warning": "Ce système de fichiers ne stocke pas les permissions Linux. À réserver aux fichiers généraux, pas aux données d'applications."
+  "storage-manager.mdadm.synthetic-warning": "Ce système de fichiers ne stocke pas les permissions Linux. À réserver aux fichiers généraux, pas aux données d'applications.",
+  "files-sidebar.raid-storage": "RAID",
+  "files-raid.no-ownership": "sans permissions"
 }

@@ -16,6 +16,7 @@ import {SidebarMachines} from '@/features/files/components/sidebar/sidebar-machi
 import {SidebarNetworkStorage} from '@/features/files/components/sidebar/sidebar-network-storage'
 import {SidebarRecents} from '@/features/files/components/sidebar/sidebar-recents'
 import {SidebarOwnersUmbrel, SidebarSharedStorage} from '@/features/files/components/sidebar/sidebar-shared-with-me'
+import {SidebarRaidStorage} from '@/features/files/components/sidebar/sidebar-raid-storage'
 import {SidebarShares} from '@/features/files/components/sidebar/sidebar-shares'
 import {SidebarTrash} from '@/features/files/components/sidebar/sidebar-trash'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
@@ -25,6 +26,7 @@ import {useMemberShares} from '@/features/files/hooks/use-member-shares'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useFilesCapabilities} from '@/features/files/providers/files-capabilities-context'
 import {cn} from '@/lib/utils'
+import {trpcReact} from '@/trpc/trpc'
 import {firstNameFromFullName} from '@/utils/misc'
 
 export function Sidebar({className}: {className?: string}) {
@@ -33,6 +35,7 @@ export function Sidebar({className}: {className?: string}) {
 	const {shares, isLoadingShares, canManageShares} = useShares()
 	const {favorites, isLoadingFavorites} = useFavorites()
 	const {disks, isLoadingExternalStorage, isExternalStorageSupported} = useExternalStorage()
+	const raidMountsQ = trpcReact.files.raidMounts.useQuery(undefined, {retry: false})
 	const homePath = useHomePath()
 
 	const displayShares = shares?.filter((share) => share && share.path !== homePath)
@@ -65,6 +68,7 @@ export function Sidebar({className}: {className?: string}) {
 	const showRewind = !hidden.rewind && !isMember
 	const showCloud = !hidden.cloud
 	const showMachines = !hidden.machines && !isMember
+	const showRaid = !hidden.raid && !isMember && !raidMountsQ.isLoading && (raidMountsQ.data?.length ?? 0) > 0
 
 	return (
 		<nav className={cn('flex flex-col', className)} aria-label={t('files-sidebar.navigation')}>
@@ -156,18 +160,29 @@ export function Sidebar({className}: {className?: string}) {
 					)}
 				</AnimatePresence>
 
-				{/* Cloud */}
-				{/* Always rendered for owners and members (unless hidden): this account-private
-				    permanent root row is the feature's ambient entry point. No section label since
-				    the root row itself carries the feature name. */}
-				{showCloud ? (
-					<>
-						<SidebarDivider />
-						<SidebarSection>
-							<SidebarCloud />
-						</SidebarSection>
-					</>
-				) : null}
+			{/* Cloud */}
+			{/* Always rendered for owners and members (unless hidden): this account-private
+			    permanent root row is the feature's ambient entry point. No section label since
+			    the root row itself carries the feature name. */}
+			{showCloud ? (
+				<>
+					<SidebarDivider />
+					<SidebarSection>
+						<SidebarCloud />
+					</SidebarSection>
+				</>
+			) : null}
+
+			{/* Linux RAID (mdadm) arrays */}
+			{showRaid && (
+				<>
+					<SidebarDivider />
+					<SidebarSection label={t('files-sidebar.raid-storage')}>
+						<SidebarRaidStorage />
+					</SidebarSection>
+				</>
+			)}
+
 
 				{/* Spacer */}
 				<div className='h-6' />
