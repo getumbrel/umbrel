@@ -2859,5 +2859,8 @@
   "storage-manager.mdadm.synthetic": "sans permissions Linux",
   "storage-manager.mdadm.synthetic-warning": "Ce système de fichiers ne stocke pas les permissions Linux. À réserver aux fichiers généraux, pas aux données d'applications.",
   "files-sidebar.raid-storage": "RAID",
-  "files-raid.no-ownership": "sans permissions"
+  "files-raid.no-ownership": "sans permissions",
+  "files-raid.title": "RAID",
+  "files-raid.eject-blocked-title": "Impossible de démonter l'array",
+  "files-raid.eject-blocked-description": "Des applications utilisent encore ce RAID. Arrêtez-les puis réessayez."
 }

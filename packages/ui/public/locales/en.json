@@ -2859,5 +2859,8 @@
   "storage-manager.mdadm.synthetic": "no Linux ownership",
   "storage-manager.mdadm.synthetic-warning": "This filesystem cannot store Linux file ownership. Use it for general files only, not for app data.",
   "files-sidebar.raid-storage": "RAID",
-  "files-raid.no-ownership": "no ownership"
+  "files-raid.no-ownership": "no ownership",
+  "files-raid.title": "RAID",
+  "files-raid.eject-blocked-title": "Can't unmount array",
+  "files-raid.eject-blocked-description": "Apps are still using this RAID array. Stop them and try again."
 }

@@ -14,6 +14,7 @@ RemainAfterExit=yes
 # array never blocks boot, and the array device is referenced by filesystem UUID
 # so it survives md device renumbering. `mount -a` is idempotent.
 ExecStart=/bin/sh -c 'mdadm --detail --scan > /etc/mdadm/mdadm.conf 2>/dev/null || true'
+ExecStart=/bin/sh -c 'mkdir -p /run/mdadm'
 ExecStart=/usr/bin/mount -a -t ext4,ext3,ext2,btrfs,xfs,exfat,vfat,ntfs,ntfs3,fuseblk
 ExecStart=/usr/bin/mdadm --monitor --scan --daemonise --pid-file=/run/mdadm/monitor.pid || true
 TimeoutStartSec=120

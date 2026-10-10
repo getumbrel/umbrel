@@ -51,7 +51,7 @@ import {CLOUD_DESTINATION_MISSING_ERROR, isOsJunkBasename, type DestinationRef} 
 import FileIndex, {type FileIndexRoot} from './file-index.js'
 import type {PublishedFileRevision} from './file-index-enrichment.js'
 import {lookupMimeType} from './mime.js'
-import Mdadm from '../hardware/mdadm.js'
+import Mdadm, {isValidMdDevice} from '../hardware/mdadm.js'
 
 import type Umbreld from '../../index.js'
 import {OWNER_USER_ID} from '../user/constants.js'
@@ -458,7 +458,7 @@ export default class Files {
 	// Linux RAID (mdadm) arrays surfaced in the Files app. Arrays are mounted by the
 	// mdadm hardware module under /Raid, so listing them is just reading live state.
 	getRaidMounts(): {name: string; path: string; device: string; filesystem: string; native: boolean}[] {
-		const status = this.#umbreld.hardware.mdadm?.getCachedStatus()
+		const status = this.#umbreld.hardware?.mdadm?.getCachedStatus?.()
 		if (!status?.exists) return []
 		return status.arrays
 			.filter((array) => array.mountpoint)
@@ -475,6 +475,57 @@ export default class Files {
 	// falling back to the device node name when the name is blank.
 	#raidMountName(array: {device: string; name: string}): string {
 		return array.name || array.device.replace('/dev/', '')
+	}
+
+	/**
+	 * Safely unmount a RAID array and drop its persisted fstab entry.
+	 * Coordinates the same blocks as ejecting external storage so a data-root
+	 * move can't start after the in-use check and race the unmount.
+	 */
+	async unmountRaidMount(device: string): Promise<void> {
+		const mdadm = this.#umbreld.hardware?.mdadm
+		if (!mdadm) throw new Error('[raid-not-supported]')
+		if (!isValidMdDevice(device)) throw new Error('[invalid-raid-device]')
+
+		const mount = this.getRaidMounts().find((candidate) => candidate.device === device)
+		if (!mount) throw new Error('[raid-not-mounted]')
+
+		const virtualMountPaths = [mount.path]
+		const md = this.#umbreld.hardware.mdadm!
+
+		const releaseApps = await this.#umbreld.apps.blockStoragePaths(virtualMountPaths)
+		let releaseMachines = () => {}
+		let releaseClouds = () => {}
+		try {
+			releaseMachines = await this.#umbreld.machines.blockStoragePaths(virtualMountPaths)
+			// Cloud syncs target the array, so pause the ones rooted inside it
+			// before detaching. Without a filesystem UUID we still block by path.
+			releaseClouds = await this.cloud.blockExternalStorage([
+				{filesystemUuid: await this.#raidFilesystemUuid(device), mountPaths: virtualMountPaths},
+			])
+			// Samba keeps busy directories alive, so exclude the share first
+			await this.samba.applyShares({excludePaths: virtualMountPaths})
+
+			await mdadm.unmount(device)
+			this.logger.log(`Unmounted RAID array ${device} from ${mount.path}`)
+		} finally {
+			releaseApps()
+			releaseMachines()
+			releaseClouds()
+			// Re-apply remaining shares so the unmount doesn't leave Samba missing them
+			await this.samba.applyShares().catch((error) =>
+				this.logger.error('Failed to re-apply shares after RAID unmount', error),
+			)
+		}
+	}
+
+	async #raidFilesystemUuid(device: string): Promise<string | undefined> {
+		try {
+			const {stdout, exitCode} = await $({reject: false})`blkid -s UUID -o value ${device}`
+			return exitCode === 0 ? stdout.trim() || undefined : undefined
+		} catch {
+			return undefined
+		}
 	}
 
 	isCloudPathOverlap(virtualPath: string) {

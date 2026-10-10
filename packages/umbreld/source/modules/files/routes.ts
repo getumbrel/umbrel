@@ -451,6 +451,11 @@ export default router({
 	// Get Linux RAID (mdadm) array mounts surfaced under /Raid
 	raidMounts: publicProcedureWhenNoUserExists.query(async ({ctx}) => ctx.umbreld.files.getRaidMounts()),
 
+	// Unmount a RAID array and drop its persisted fstab entry
+	unmountRaidMount: privateProcedure
+		.input(z.object({device: z.string().regex(/^\/dev\/md\d+$/)}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.files.unmountRaidMount(input.device)),
+
 	// Search for a file
 	// Members are confined to their current account's home directory
 	search: privateProcedureWithMembers
