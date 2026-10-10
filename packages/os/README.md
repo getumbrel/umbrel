@@ -78,12 +78,17 @@ The inventory is then polled every 10 seconds into a cache, which is what
 rather than the device node:
 
 ```
-UUID=<fs-uuid> /run/mdadm/md0 ext4 nofail 0 0
-UUID=<fs-uuid> /run/mdadm/md1 exfat nofail,uid=1000,gid=1000,umask=007 0 0
+UUID=<fs-uuid> /run/mdadm/umbrel-md ext4 nofail,x-mount.mkdir=0755 0 0
+UUID=<fs-uuid> /run/mdadm/media exfat nofail,x-mount.mkdir=0755,uid=1000,gid=1000,umask=007 0 0
 ```
 
 - `nofail` means an absent or degraded array is a warning, not a boot failure.
 - UUID survives the array being reassembled onto a different `/dev/mdN`.
+- The mountpoint directory is the **array name** from the superblock (sanitised,
+  falling back to the device node name), so `/Raid/<name>` and the on-disk mount
+  path agree and both survive md device renumbering.
+- `x-mount.mkdir=0755` lets the boot-time `mount -a` recreate the mountpoint
+  directory, since `/run/mdadm` is tmpfs and is empty after every reboot.
 - Native filesystems (ext4/btrfs/xfs) mount bare; synthetic-ownership
   filesystems (exFAT/FAT32/NTFS) carry `uid`/`gid`/`umask` so files stay writable
   by the `umbrel` user, matching `isSyntheticOwnershipFilesystem()` semantics.
