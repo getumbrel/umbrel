@@ -188,21 +188,21 @@ export default class MemberShares {
 		const path = this.#umbreld.files.normalizeVirtualPath(virtualPath)
 
 		// Only paths in the owner's namespace can be shared: their home, app data
-		// (at least a specific app, not the /Apps root), or the complete external
-		// or network storage category. Category-wide storage grants deliberately
-		// cover current and future devices; individual devices and directories
-		// below them are not independently shareable.
+		// (at least a specific app, not the /Apps root), or the complete external,
+		// network or RAID storage category. Category-wide storage grants
+		// deliberately cover current and future devices; individual devices and
+		// directories below them are not independently shareable.
 		const segments = path.split('/').filter(Boolean)
 		const base = segments[0]
 		if (base === 'Home') {
 			// '/Home' itself or anything below it is fine
 		} else if (base === 'Apps') {
 			if (segments.length < 2) throw new Error('[invalid-base] Share an app or a directory inside it')
-		} else if (base === 'External' || base === 'Network') {
+		} else if (base === 'External' || base === 'Network' || base === 'Raid') {
 			if (segments.length !== 1) throw new Error('[invalid-base] Share all storage in this category')
 			if (sharedWith === 'all') throw new Error('[invalid-users] Storage access must target specific users')
 		} else {
-			throw new Error('[invalid-base] Only Home, Apps, External and Network paths can be shared')
+			throw new Error('[invalid-base] Only Home, Apps, External, Network and Raid paths can be shared')
 		}
 
 		// The path must exist and be a directory. Resolved as the owner so the

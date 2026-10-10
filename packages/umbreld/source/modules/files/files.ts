@@ -51,7 +51,7 @@ import {CLOUD_DESTINATION_MISSING_ERROR, isOsJunkBasename, type DestinationRef} 
 import FileIndex, {type FileIndexRoot} from './file-index.js'
 import type {PublishedFileRevision} from './file-index-enrichment.js'
 import {lookupMimeType} from './mime.js'
-import Mdadm, {isValidMdDevice} from '../hardware/mdadm.js'
+import Mdadm, {isValidMdDevice, mdadmMountName} from '../hardware/mdadm.js'
 
 import type Umbreld from '../../index.js'
 import {OWNER_USER_ID} from '../user/constants.js'
@@ -458,8 +458,9 @@ export default class Files {
 	// Linux RAID (mdadm) arrays surfaced in the Files app. Arrays are mounted by the
 	// mdadm hardware module under /Raid, so listing them is just reading live state.
 	getRaidMounts(): {name: string; path: string; device: string; filesystem: string; native: boolean}[] {
-		const status = this.#umbreld.hardware?.mdadm?.getCachedStatus?.()
-		if (!status?.exists) return []
+		const mdadm = this.#umbreld.hardware?.mdadm
+		const status = mdadm?.getCachedStatus?.()
+		if (!status?.exists || !mdadm) return []
 		return status.arrays
 			.filter((array) => array.mountpoint)
 			.map((array) => ({
@@ -471,10 +472,10 @@ export default class Files {
 			}))
 	}
 
-	// Stable mount name for an array. Prefer the mdadm array name (user visible),
-	// falling back to the device node name when the name is blank.
+	// Stable mount name for an array. Must match Mdadm.mountpointFor(), which is
+	// where the array is actually mounted, so /Raid/<name> resolves to a real path.
 	#raidMountName(array: {device: string; name: string}): string {
-		return array.name || array.device.replace('/dev/', '')
+		return mdadmMountName(array.device, array.name)
 	}
 
 	/**
@@ -491,7 +492,6 @@ export default class Files {
 		if (!mount) throw new Error('[raid-not-mounted]')
 
 		const virtualMountPaths = [mount.path]
-		const md = this.#umbreld.hardware.mdadm!
 
 		const releaseApps = await this.#umbreld.apps.blockStoragePaths(virtualMountPaths)
 		let releaseMachines = () => {}
@@ -500,9 +500,10 @@ export default class Files {
 			releaseMachines = await this.#umbreld.machines.blockStoragePaths(virtualMountPaths)
 			// Cloud syncs target the array, so pause the ones rooted inside it
 			// before detaching. Without a filesystem UUID we still block by path.
-			releaseClouds = await this.cloud.blockExternalStorage([
-				{filesystemUuid: await this.#raidFilesystemUuid(device), mountPaths: virtualMountPaths},
-			])
+			releaseClouds = await this.cloud.blockRaidStorage({
+				filesystemUuid: await this.#raidFilesystemUuid(device),
+				mountPaths: virtualMountPaths,
+			})
 			// Samba keeps busy directories alive, so exclude the share first
 			await this.samba.applyShares({excludePaths: virtualMountPaths})
 
@@ -513,9 +514,9 @@ export default class Files {
 			releaseMachines()
 			releaseClouds()
 			// Re-apply remaining shares so the unmount doesn't leave Samba missing them
-			await this.samba.applyShares().catch((error) =>
-				this.logger.error('Failed to re-apply shares after RAID unmount', error),
-			)
+			await this.samba
+				.applyShares()
+				.catch((error) => this.logger.error('Failed to re-apply shares after RAID unmount', error))
 		}
 	}
 
@@ -595,16 +596,19 @@ export default class Files {
 			}
 		}
 
-		// Linux RAID arrays live under /Raid and are identity-stable by device,
-		// so they can back a Cloud destination like external/network storage.
+		// Linux RAID arrays live under /Raid and are identity-stable by filesystem
+		// UUID, so they can back a Cloud destination like external/network storage.
 		if (path.startsWith('/Raid/')) {
 			const raidMount = this.getRaidMounts().find(
 				(candidate) => path === candidate.path || path.startsWith(`${candidate.path}/`),
 			)
 			if (raidMount) {
-				const destination = {path}
-				cloudDestinationPath(destination, userId)
-				return destination
+				const filesystemUuid = await this.#raidFilesystemUuid(raidMount.device)
+				if (filesystemUuid) {
+					const destination = {path, filesystemUuid}
+					cloudDestinationPath(destination, userId)
+					return destination
+				}
 			}
 		}
 
@@ -635,7 +639,7 @@ export default class Files {
 		const virtualPath = details.path
 		let virtualMountPath: string | undefined
 
-		if (details.kind === 'external') {
+		if (details.kind === 'external' || details.kind === 'raid') {
 			virtualMountPath = details.mountPath
 			const systemMountPath = this.virtualToSystemPathUnsafe(virtualMountPath)
 			if (!(await isExternalFilesystemMountedAt(details.filesystemUuid, systemMountPath))) {
@@ -2242,16 +2246,16 @@ export default class Files {
 		return normalizePath(virtualPath)
 	}
 
-	// External and network paths write to their own mounted filesystems. Every
-	// other valid Files path consumes internal storage and must share the system
-	// disk upload reserve. Defaulting new base directories to internal keeps
-	// upload admission fail-safe as the Files namespace grows.
+	// External, network and RAID paths write to their own mounted filesystems.
+	// Every other valid Files path consumes internal storage and must share the
+	// system disk upload reserve. Defaulting new base directories to internal
+	// keeps upload admission fail-safe as the Files namespace grows.
 	isInternalStorageVirtualPath(virtualPath: string) {
 		const normalizedPath = normalizePath(virtualPath)
 		this.virtualToSystemPathUnsafe(normalizedPath)
 
 		const [base] = normalizedPath.split('/').filter(Boolean)
-		return base !== 'External' && base !== 'Network'
+		return base !== 'External' && base !== 'Network' && base !== 'Raid'
 	}
 
 	// Map a virtual path onto the owner namespace so the same operation rules

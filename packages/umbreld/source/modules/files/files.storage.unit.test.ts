@@ -22,7 +22,7 @@ describe('Files storage classification', () => {
 		expect(files.isInternalStorageVirtualPath(virtualPath)).toBe(true)
 	})
 
-	test.each(['/External/USB/file.txt', '/Network/nas/share/file.txt'])(
+	test.each(['/External/USB/file.txt', '/Network/nas/share/file.txt', '/Raid/umbrel-md/file.txt'])(
 		'classifies %s as mounted storage',
 		(virtualPath) => {
 			expect(files.isInternalStorageVirtualPath(virtualPath)).toBe(false)

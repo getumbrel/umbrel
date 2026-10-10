@@ -38,6 +38,7 @@ async function createMemberSharesWithFilesystem() {
 	await fse.ensureDir(nodePath.join(root, 'app-data', 'sparkles-hello-world', 'subdir'))
 	await fse.ensureDir(nodePath.join(root, 'external'))
 	await fse.ensureDir(nodePath.join(root, 'network'))
+	await fse.ensureDir(nodePath.join(root, 'raid'))
 
 	let fileShares: MemberShare[] = []
 	const get = vi.fn(async (key: string) => {
@@ -56,6 +57,7 @@ async function createMemberSharesWithFilesystem() {
 		if (segments[0] === 'Apps') return nodePath.join(root, 'app-data', ...segments.slice(1))
 		if (segments[0] === 'External') return nodePath.join(root, 'external', ...segments.slice(1))
 		if (segments[0] === 'Network') return nodePath.join(root, 'network', ...segments.slice(1))
+		if (segments[0] === 'Raid') return nodePath.join(root, 'raid', ...segments.slice(1))
 		throw new Error(`[invalid-base] ${virtualPath}`)
 	})
 
@@ -174,6 +176,30 @@ test('storage shares accept only category roots and cover devices added later', 
 		])
 		expect(virtualToSystemPath).not.toHaveBeenCalledWith('/External/photos', '0')
 		expect(virtualToSystemPath).not.toHaveBeenCalledWith('/Network/nas/media', '0')
+	} finally {
+		await cleanup()
+	}
+})
+
+test('RAID storage shares behave like the other storage categories', async () => {
+	const {cleanup, memberShares, root} = await createMemberSharesWithFilesystem()
+	try {
+		await expect(memberShares.add('/Raid', ['member-1'])).resolves.toMatchObject({
+			path: '/Raid',
+			sharedWith: ['member-1'],
+		})
+
+		// RAID storage must target specific users, never everyone
+		await expect(memberShares.add('/Raid', 'all')).rejects.toThrow('invalid-users')
+		// Only the category root is shareable, not an individual array
+		await expect(memberShares.add('/Raid/umbrel-md', ['member-1'])).rejects.toThrow('invalid-base')
+
+		// The grant covers arrays created after it was made
+		await fse.ensureDir(nodePath.join(root, 'raid', 'future-array'))
+		await expect(memberShares.shareGrantFor('/Raid/future-array/file.txt', 'member-1')).resolves.toMatchObject({
+			path: '/Raid',
+		})
+		await expect(memberShares.shareGrantFor('/Raid/future-array/file.txt', 'member-2')).resolves.toBeUndefined()
 	} finally {
 		await cleanup()
 	}

@@ -232,6 +232,14 @@ describe.sequential('CloudManager', () => {
 			kind: 'home',
 			path: `/Users/${MEMBER_ID}/Imports/Photos`,
 		})
+		expect(
+			cloudDestinationDetails({path: '/Raid/umbrel-md/Imports/Photos', filesystemUuid: 'filesystem-uuid'}, USER_ID),
+		).toEqual({
+			kind: 'raid',
+			path: '/Raid/umbrel-md/Imports/Photos',
+			mountPath: '/Raid/umbrel-md',
+			filesystemUuid: 'filesystem-uuid',
+		})
 	})
 
 	test('rejects ambiguous paths and replicated destination state', () => {
@@ -243,6 +251,7 @@ describe.sequential('CloudManager', () => {
 			{path: '/External/Archive/Imports'},
 			{path: '/Network/nas.local/Media/Imports', host: 'nas.local'},
 			{path: '/Network/nas.local/Media/Imports', host: 'nas.local', share: 'Media', mountPath: '/Network/other'},
+			{path: '/Raid/umbrel-md/Imports'},
 			{path: '/Home/Imports', kind: 'home'},
 		] as unknown as DestinationRef[]
 

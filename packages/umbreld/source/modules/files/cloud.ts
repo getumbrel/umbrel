@@ -347,6 +347,7 @@ export type CloudDestinationDetails =
 	| {kind: 'home'; path: string}
 	| {kind: 'external'; path: string; mountPath: string; filesystemUuid: string}
 	| {kind: 'network'; path: string; mountPath: string; host: string; share: string}
+	| {kind: 'raid'; path: string; mountPath: string; filesystemUuid: string}
 
 export type ExternalStorageLocation = {
 	filesystemUuid?: string
@@ -399,6 +400,21 @@ export const cloudDestinationDetails = (destination: DestinationRef, userId: str
 			mountPath: `/${components.slice(0, 3).join('/')}`,
 			host: destination.host!,
 			share: destination.share!,
+		}
+	}
+
+	// A mounted Linux RAID array (/Raid/<name>/<dir>). The filesystem UUID is the
+	// stable identity, mirroring external storage: it survives the array landing
+	// on a different /dev/mdN or being renamed.
+	if (components[0] === 'Raid' && components.length >= 3) {
+		if (!hasExactlyKeys(destination, ['filesystemUuid', 'path']) || !validStorageIdentity(destination.filesystemUuid)) {
+			throw new Error('[cloud-invalid-destination]')
+		}
+		return {
+			kind: 'raid',
+			path,
+			mountPath: `/${components.slice(0, 2).join('/')}`,
+			filesystemUuid: destination.filesystemUuid!,
 		}
 	}
 
@@ -1234,8 +1250,7 @@ export default class CloudManager {
 			),
 		)
 		const plausible = [...new Set(virtualPaths.map(normalizePath))].flatMap((path) => {
-			if (!path.startsWith('/External/') && !path.startsWith('/Network/') && !path.startsWith('/Raid/'))
-				return []
+			if (!path.startsWith('/External/') && !path.startsWith('/Network/') && !path.startsWith('/Raid/')) return []
 			const runtime = destinations.get(path)
 			return runtime && runtime.userId !== OWNER_USER_ID ? [{path, runtime}] : []
 		})
@@ -1374,6 +1389,22 @@ export default class CloudManager {
 		)
 	}
 
+	async blockRaidStorage({filesystemUuid, mountPaths}: ExternalStorageLocation) {
+		const mountPathSet = new Set(mountPaths.map(normalizePath))
+		const storageKeys = [
+			...(filesystemUuid ? [this.raidStorageKey(filesystemUuid)] : []),
+			...[...mountPathSet].map((mountPath) => this.mountPathStorageKey(mountPath)),
+		]
+		return this.blockForDestination(
+			(destination) =>
+				(destination.filesystemUuid !== undefined && destination.filesystemUuid === filesystemUuid) ||
+				[...mountPathSet].some(
+					(mountPath) => destination.path === mountPath || destination.path.startsWith(`${mountPath}/`),
+				),
+			storageKeys,
+		)
+	}
+
 	private async blockForDestination(predicate: (destination: DestinationRef) => boolean, storageKeys: string[]) {
 		const initialStore = await this.readStore()
 		for (const sync of initialStore.syncs) {
@@ -1420,11 +1451,18 @@ export default class CloudManager {
 		if (details.kind === 'external') {
 			return [this.externalStorageKey(details.filesystemUuid), this.mountPathStorageKey(details.mountPath)]
 		}
+		if (details.kind === 'raid') {
+			return [this.raidStorageKey(details.filesystemUuid), this.mountPathStorageKey(details.mountPath)]
+		}
 		return [this.networkStorageKey(details.host, details.share), this.mountPathStorageKey(details.mountPath)]
 	}
 
 	private externalStorageKey(filesystemUuid: string) {
 		return JSON.stringify(['external', filesystemUuid])
+	}
+
+	private raidStorageKey(filesystemUuid: string) {
+		return JSON.stringify(['raid', filesystemUuid])
 	}
 
 	private networkStorageKey(host: string, share: string) {
