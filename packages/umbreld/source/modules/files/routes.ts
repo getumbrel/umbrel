@@ -363,20 +363,22 @@ export default router({
 			ownerName: owner?.name ?? '',
 			...(owner?.avatarHash ? {ownerAvatarUrl: accountAvatarUrl(OWNER_USER_ID, owner.avatarHash)} : {}),
 			shares: shares.map((share) => {
-				const segments = share.path.split('/').filter(Boolean)
-				const base =
-					segments[0] === 'External'
-						? 'external'
-						: segments[0] === 'Network'
-							? 'network'
+			const segments = share.path.split('/').filter(Boolean)
+			const base =
+				segments[0] === 'External'
+					? 'external'
+					: segments[0] === 'Network'
+						? 'network'
+						: segments[0] === 'Raid'
+							? 'raid'
 							: segments[0] === 'Apps'
 								? 'apps'
 								: 'home'
-				return {
-					path: share.path,
-					name: share.path === '/Home' ? 'Home' : segments[segments.length - 1],
-					base: base as 'home' | 'external' | 'network' | 'apps',
-				}
+			return {
+				path: share.path,
+				name: share.path === '/Home' ? 'Home' : segments[segments.length - 1],
+				base: base as 'home' | 'external' | 'network' | 'raid' | 'apps',
+			}
 			}),
 		}
 	}),
