@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/immersive-dialog'
 import {Spinner} from '@/components/ui/loading'
 import {StorageOperationError} from '@/features/storage/components/storage-operation-error'
+import {MdadmSection} from '@/features/storage/components/mdadm-section'
 
 import {RaidDeviceStatus, StorageDevice, useStorage} from '../../hooks/use-storage'
 import {formatStorageSize, planFailsafeTransition, planMirrorAdditions} from '../../utils'
@@ -552,6 +553,7 @@ export function ListStorageManager() {
 									</div>
 								)}
 								<UsbDrives />
+								<MdadmSection />
 							</div>
 
 							{/* Right: donut chart and stats, aligned to the top of the drive column */}

@@ -33,6 +33,7 @@ import {StorageDeviceCard} from './components/storage-device-card'
 import {StorageDonutChart} from './components/storage-donut-chart'
 import {StorageModeDisplay} from './components/storage-mode-display'
 import {StorageNotice} from './components/storage-page'
+import {MdadmSection} from './components/mdadm-section'
 import {StorageStats} from './components/storage-stats'
 import {StorageUnavailable} from './components/storage-unavailable'
 import {UsbDrives} from './components/usb-drives'
@@ -668,6 +669,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 									/>
 								)}
 								<UsbDrives />
+								<MdadmSection />
 							</div>
 							{/* Right: Storage info, top-aligned except for Umbrel Pro's centered summary.
 							    On slotless trays the column keeps a fixed width so the SSD tray gets the room. */}

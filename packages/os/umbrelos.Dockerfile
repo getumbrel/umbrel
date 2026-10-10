@@ -484,7 +484,7 @@ RUN set -e; \
 RUN systemctl disable smbd wsdd2
 
 # Filessystem support
-RUN apt-get install --yes gdisk parted e2fsprogs exfatprogs
+RUN apt-get install --yes gdisk parted e2fsprogs exfatprogs mdadm
 # For some reason this always fails on arm64 but it's ok since we
 # don't support external storage on Pi anyway.
 RUN [ "${TARGETARCH}" = "amd64" ] && apt-get install --yes ntfs-3g || true

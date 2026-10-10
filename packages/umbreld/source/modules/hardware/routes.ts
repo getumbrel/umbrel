@@ -145,10 +145,60 @@ const umbrelPro = router({
 	clearResetBootFlag: privateProcedure.mutation(async ({ctx}) => ctx.umbreld.hardware.umbrelPro.clearResetBootFlag()),
 })
 
+const mdadm = router({
+	// Whether the mdadm binary is available on this host
+	isSupported: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.mdadm.isSupported()),
+
+	// Full mdadm array inventory (parsed from /proc/mdstat + mdadm --detail)
+	getStatus: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.mdadm.getStatus()),
+
+	// Raw `mdadm --detail` output for one array
+	detail: privateProcedure
+		.input(z.object({device: z.string().regex(/^\/dev\/md\d+$/)}))
+		.query(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.detail(input.device)),
+
+	// Create a new array on /dev/md0. Devices must be full /dev paths.
+	create: privateProcedure
+		.input(
+			z.object({
+				level: z.enum(['0', '1', '5', '6', '10']),
+				devices: z.array(z.string()).min(2).max(32),
+				name: z.string().min(1).max(32).optional(),
+				chunk: z.number().int().positive().optional(),
+				assumeClean: z.boolean().optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.create(input)),
+
+	// Hot-add a spare/device to an array
+	addDevice: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/), device: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.add(input.arrayDevice, input.device)),
+
+	// Remove a member (must be failed or spare)
+	removeDevice: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/), device: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.remove(input.arrayDevice, input.device)),
+
+	// Mark a member faulty
+	failDevice: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/), device: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.fail(input.arrayDevice, input.device)),
+
+	// Stop an array
+	stop: privateProcedure
+		.input(z.object({arrayDevice: z.string().regex(/^\/dev\/md\d+$/)}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.mdadm.stop(input.arrayDevice)),
+
+	// Assemble all arrays found in mdadm.conf / superblocks
+	assembleScan: privateProcedure.mutation(async ({ctx}) => ctx.umbreld.hardware.mdadm.assembleScan()),
+})
+
 export default router({
 	internalStorage,
 	gpu,
 	thunderbolt,
 	raid,
+	mdadm,
 	umbrelPro,
 })
