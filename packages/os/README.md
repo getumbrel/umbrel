@@ -28,6 +28,114 @@ use the in-tree `nouveau` driver with containerized Mesa/NVK instead. NVK cannot
 drive a GPU while that GPU is bound to the NVIDIA kernel driver.
 
 
+## Linux RAID (mdadm)
+
+Alongside ZFS, the image ships classic Linux software RAID via `mdadm`. Arrays
+are managed by the `hardware.mdadm` module in `packages/umbreld`, created from
+**Settings > Storage Manager**, and surfaced in Files under `/Raid`.
+
+### Packages
+
+Added to `umbrelos.Dockerfile` in the *Filessystem support* layer:
+
+| Package | Provides |
+| --- | --- |
+| `mdadm` | `/dev/mdX` arrays, superblock metadata, `mdadm --monitor` |
+| `btrfs-progs` | `mkfs.btrfs` |
+| `xfsprogs` | `mkfs.xfs` |
+
+The image already had `e2fsprogs` (ext4), `exfatprogs` (exFAT), `dosfstools`
+(FAT32) and `ntfs-3g` (NTFS, amd64 only), which completes the set of filesystems
+an array can be formatted with.
+
+The final `update-initramfs -u -k all` in the image picks up mdadm's initramfs
+hook, so arrays that are part of the boot path are available in early boot.
+
+### Boot ordering
+
+```mermaid
+graph LR
+    A[umbrel-mdadm-assemble.service] --> B[umbrel-mdadm-mount.service] --> C[umbrel.service]
+```
+
+Both units are `oneshot`, enabled through `multi-user.target.wants`, and declare
+us as ordering only (`After`/`Before`), never as a hard requirement — a host
+without arrays boots exactly as before.
+
+1. **assemble** — `mdadm --assemble --scan --run` brings every array defined by a
+   superblock or `mdadm.conf` back online, then refreshes `/etc/mdadm/mdadm.conf`.
+2. **mount** — `mount -a` replays the desired mounts from `/etc/fstab`, then starts
+   `mdadm --monitor --scan --daemonise` for ongoing event monitoring.
+
+`Mdadm.start()` in umbreld also runs a best-effort `assemble --scan --run`, so
+arrays come back in containers and dev environments where the units never ran.
+The inventory is then polled every 10 seconds into a cache, which is what
+`Files` reads to populate `/Raid` — no shell-out per Files request.
+
+### Mount persistence
+
+`mount()` writes one `/etc/fstab` entry per array, keyed by **filesystem UUID**
+rather than the device node:
+
+```
+UUID=<fs-uuid> /run/mdadm/md0 ext4 nofail 0 0
+UUID=<fs-uuid> /run/mdadm/md1 exfat nofail,uid=1000,gid=1000,umask=007 0 0
+```
+
+- `nofail` means an absent or degraded array is a warning, not a boot failure.
+- UUID survives the array being reassembled onto a different `/dev/mdN`.
+- Native filesystems (ext4/btrfs/xfs) mount bare; synthetic-ownership
+  filesystems (exFAT/FAT32/NTFS) carry `uid`/`gid`/`umask` so files stay writable
+  by the `umbrel` user, matching `isSyntheticOwnershipFilesystem()` semantics.
+
+`unmount()` removes the entry again. `format()` refuses a mounted device, so an
+array that is fstab-backed cannot be reformatted underneath a live mount.
+
+`/run/mdadm` is tmpfs and is recreated by the mount unit; the array mounts
+themselves only survive a reboot because `/etc/fstab` does.
+
+### Files integration
+
+`/Raid` is a `BaseDirectory` backed by `Mdadm.MOUNT_ROOT`, indexed like
+`/External` (`scanEnabled: false`, on-demand entries only). It participates in:
+
+- `getStorageDestination()` — `/Raid` paths are valid Cloud destinations, the same
+  way `/External` and `/Network` are.
+- `cloud.ts` shared-destination deletes — a sync rooted inside an array is
+  recognised as valid.
+- Member share categorisation — `/Raid/...` shares report base `raid` instead of
+  falling back to `home`.
+- `files.unmountRaidMount()` — blocks apps, machines and Cloud paths, excludes the
+  path from Samba shares, then detaches and drops the fstab entry.
+
+### Supported configurations
+
+| RAID level | Min devices | Online growth |
+| --- | --- | --- |
+| 0 | 2 | no |
+| 1 | 2 | no |
+| 5 | 3 | yes (`growAddAndExpand`) |
+| 6 | 4 | yes (`growAddAndExpand`) |
+| 10 | 4 | no (even count required) |
+
+Level migration (`grow({level})`) and post-replacement capacity reclamation
+(`grow({sizeMax: true})`) are available for all levels. Reshape and resync
+progress is parsed from `/proc/mdstat` and reported as `syncAction`/`syncProgress`.
+
+### Testing
+
+- `packages/umbreld/source/modules/hardware/mdadm.unit.test.ts` — parsers for
+  `/proc/mdstat` and `mdadm --detail`, device allocation, filesystem catalogue.
+- `packages/umbreld/source/modules/hardware/mdadm.vm.test.ts` — full lifecycle on
+  a real VM: create RAID1, format, mount, verify `/Raid`, **reboot**, confirm data
+  survives and the array stays healthy, unmount, stop.
+
+```sh
+npm --prefix packages/umbreld run test -- mdadm.unit.test
+npm --prefix packages/umbreld run test:vm -- mdadm.vm.test.ts
+```
+
+
 ## Build Process
 
 The following diagram visualizes the build process and possible build artifacts:

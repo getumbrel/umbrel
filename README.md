@@ -59,7 +59,28 @@ umbrelOS is free and complete on any hardware. The image you install on your own
 - **Raspberry Pi 5:** boot from an NVMe or USB drive rather than a microSD card.
 - **Virtual machines:** Proxmox, VirtualBox, VMware, or anything else that supports EFI boot.
 
-A few features depend on your hardware. Storage Manager and FailSafe need two or more internal NVMe or SATA drives, and GPU acceleration needs an NVIDIA, AMD, or Intel GPU on an Intel or AMD machine.
+A few features depend on your hardware. Storage Manager and FailSafe need two or more internal NVMe or SATA drives, and GPU acceleration needs an NVIDIA, AMD, or Intel GPU on an Intel or AMD machine. Classic Linux RAID arrays (see below) need two or more internal drives per array.
+
+## Linux RAID (mdadm)
+
+This fork adds classic Linux software RAID alongside ZFS. You can create RAID `0`, `1`, `5`, `6` and `10` arrays from internal drives in **Settings > Storage Manager**, format them as **ext4**, **btrfs**, **xfs**, **exFAT**, **FAT32** or **NTFS**, and browse them in Files under **/Raid**.
+
+- **Boot safety:** arrays are assembled before `umbreld` starts and remounted from `/etc/fstab` at every boot. Entries are keyed by filesystem UUID (so they survive `/dev/mdN` renumbering) and carry `nofail`, meaning a missing or degraded array never blocks boot. You can unmount an array from Files at any time, which also drops its fstab entry.
+- **Choosing a filesystem:** `ext4`, `btrfs` and `xfs` store real Linux ownership and permissions, so they are the right choice for anything that apps or Samba shares need to write. `exFAT`, `FAT32` and `NTFS` cannot store Linux ownership — use them for general files only, not for app data. Umbrel flags these as *no ownership* in the UI.
+- **Growing an array:** add a disk to a RAID 5/6 array to expand it online (the reshape progress is shown in Storage Manager). After replacing members with larger disks, use **Use max size** to reclaim the extra capacity.
+
+<details>
+<summary><strong>Services and files</strong></summary>
+
+| Component | Purpose |
+| --- | --- |
+| `umbrel-mdadm-assemble.service` | `mdadm --assemble --scan --run` before umbreld; refreshes `/etc/mdadm/mdadm.conf` |
+| `umbrel-mdadm-mount.service` | `mount -a` from `/etc/fstab` and starts an `mdadm --monitor` daemon |
+| `/etc/fstab` | One entry per mounted array, keyed by filesystem UUID, with `nofail` |
+| `/run/mdadm/mdN` | Kernel-level mountpoint of each array (tmpfs, recreated at boot) |
+| `/Raid` | Files virtual root exposing every mounted array |
+
+</details>
 
 ### Download and install
 
