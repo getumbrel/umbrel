@@ -10,6 +10,7 @@ import type {Compose} from 'compose-spec-schema'
 import {createProxyMiddleware} from 'http-proxy-middleware'
 
 import type Umbreld from '../../index.js'
+import proxyStreamCleanup from '../utilities/proxy-stream-cleanup.js'
 import {
 	appGatewayTokenFromCookieHeader,
 	appGatewayTokenFromRequest,
@@ -198,6 +199,7 @@ export default class AppGateway {
 			proxyTimeout: this.#config.timeout,
 			followRedirects: false,
 			onProxyReq: (proxyRequest, request, response) => {
+				proxyStreamCleanup(proxyRequest, response)
 				if (request.socket.remoteAddress === undefined) return response.end()
 				if (!this.#config.trustUpstream) {
 					proxyRequest.setHeader('x-forwarded-proto', request.protocol)
