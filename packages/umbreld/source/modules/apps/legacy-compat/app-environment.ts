@@ -31,6 +31,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 			TOR_HASHED_PASSWORD: '16:158FBE422B1A9D996073BE2B9EC38852C70CE12362CA016F8F6859C426',
 			UMBREL_LEGACY_COMPAT_DIR: currentDirname,
 			UMBREL_TORRC: torEnabled ? `${currentDirname}/tor-server-torrc` : `${currentDirname}/tor-proxy-torrc`,
+			...(umbreld.registries?.dockerConfigDirectory ? {DOCKER_CONFIG: umbreld.registries.dockerConfigDirectory} : {}),
 		},
 	}
 	if (command === 'up') {
