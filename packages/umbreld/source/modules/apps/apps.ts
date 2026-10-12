@@ -21,6 +21,7 @@ import {fillSelectedDependencies} from '../utilities/dependencies.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 import {assertManifestVersionCompatible} from './manifest-compatibility.js'
 import ImageCleanup, {removeUnusedImages} from './image-cleanup.js'
+import {normalizeRegistryHost, parseImageRegistry} from './docker-registries.js'
 
 export type AppDataRootStatus = 'available' | 'storage-unavailable' | 'data-missing'
 
@@ -919,9 +920,28 @@ export default class Apps {
 					: [],
 		)
 
+		const rawImages = Object.values(compose.services ?? {})
+			.map((s: any) => s.image)
+			.filter(Boolean) as string[]
+		const registryHosts = new Set<string>()
+		if (manifest.registry) registryHosts.add(normalizeRegistryHost(manifest.registry))
+		if (manifest.registries) {
+			for (const r of manifest.registries) registryHosts.add(normalizeRegistryHost(r))
+		}
+		for (const img of rawImages) {
+			const host = parseImageRegistry(img)
+			if (host !== 'docker.io') registryHosts.add(host)
+		}
+		const existingCredentials = (await this.#umbreld.registries?.getCredentials()) ?? []
+		const registries = [...registryHosts].map((host) => ({
+			host,
+			configured: existingCredentials.some((cred) => normalizeRegistryHost(cred.url) === host),
+		}))
+
 		return {
 			requiredFolders,
 			gpuAccess: manifest.permissions?.includes('GPU') ?? false,
+			registries,
 		}
 	}
 

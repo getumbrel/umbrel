@@ -9,7 +9,7 @@ import system from '../../system/routes.js'
 import systemNg from '../../system-ng/routes.js'
 import wifi from '../../system/wifi-routes.js'
 import user from '../../user/routes.js'
-import {appStore, apps} from '../../apps/routes.js'
+import {appStore, apps, registries} from '../../apps/routes.js'
 import widget from '../../widgets/routes.js'
 import files from '../../files/routes.js'
 import hardware from '../../hardware/routes.js'
@@ -33,6 +33,7 @@ const appRouter = router({
 	user,
 	appStore,
 	apps,
+	registries,
 	widget,
 	files,
 	hardware,

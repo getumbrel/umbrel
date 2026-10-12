@@ -5,13 +5,18 @@ const docker = new Dockerode()
 const DOWNLOADING_PERCENT = 0.75
 const EXTRACTING_PERCENT = 0.25
 
+export type AuthResolver = (
+	image: string,
+) => Dockerode.AuthConfig | undefined | Promise<Dockerode.AuthConfig | undefined>
+
 export async function pull(
 	image: string,
 	updateProgress: (progress: number) => void,
 	handleAlreadyDownloaded: () => void,
+	authconfig?: Dockerode.AuthConfig,
 ) {
 	return new Promise((resolve, reject) => {
-		docker.pull(image, (error: Error, stream: NodeJS.ReadableStream) => {
+		const callback = (error: Error, stream: NodeJS.ReadableStream) => {
 			if (error) return reject(error)
 
 			const layerProgress: Record<string, number> = {}
@@ -48,11 +53,17 @@ export async function pull(
 			}
 
 			docker.modem.followProgress(stream, onFinished, onProgress)
-		})
+		}
+
+		if (authconfig) {
+			docker.pull(image, {authconfig}, callback, authconfig)
+		} else {
+			docker.pull(image, callback)
+		}
 	})
 }
 
-export async function pullAll(images: string[], updateProgress: (progress: number) => void) {
+export async function pullAll(images: string[], updateProgress: (progress: number) => void, getAuth?: AuthResolver) {
 	let lastTotalProgress = 0
 	const imageProgress: Record<string, number> = {}
 	const alreadyDownloadedImages: string[] = []
@@ -62,8 +73,9 @@ export async function pullAll(images: string[], updateProgress: (progress: numbe
 	// Do not release lifecycle coordination while another pull is still writing
 	// to Docker after one of its siblings failed.
 	const results = await Promise.allSettled(
-		images.map(async (image) =>
-			pull(
+		images.map(async (image) => {
+			const authconfig = getAuth ? await getAuth(image) : undefined
+			return pull(
 				image,
 				(progress) => {
 					if (alreadyDownloadedImages.includes(image)) return
@@ -84,8 +96,9 @@ export async function pullAll(images: string[], updateProgress: (progress: numbe
 					delete imageProgress[image]
 					alreadyDownloadedImages.push(image)
 				},
-			),
-		),
+				authconfig,
+			)
+		}),
 	)
 	const failed = results.find((result) => result.status === 'rejected')
 	if (failed?.status === 'rejected') throw failed.reason
