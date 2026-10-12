@@ -1,2 +1,6 @@
 SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL}"
+SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ENV{ID_SERIAL}!="?*", ENV{ID_WWN}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_WWN}"
+SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ENV{ID_SERIAL}!="?*", ENV{ID_WWN}!="?*", ENV{ID_SERIAL_SHORT}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL_SHORT}"
 SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", IMPORT{parent}="ID_SERIAL", ENV{ID_SERIAL}=="?*", ENV{PARTN}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL}-part$env{PARTN}"
+SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", IMPORT{parent}="ID_WWN", ENV{ID_SERIAL}!="?*", ENV{ID_WWN}=="?*", ENV{PARTN}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_WWN}-part$env{PARTN}"
+SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", IMPORT{parent}="ID_SERIAL_SHORT", ENV{ID_SERIAL}!="?*", ENV{ID_WWN}!="?*", ENV{ID_SERIAL_SHORT}=="?*", ENV{PARTN}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL_SHORT}-part$env{PARTN}"
