@@ -30,6 +30,7 @@ struct LibraryView: View {
 					}
 					if model.photoLibrary.canReadLibrary {
 						statTiles
+						ViewAllInPhotosButton()
 						photoGrid(gridWidth: max(geometry.size.width - (Theme.contentInset * 2) - 16, 0))
 					} else {
 						setupCard
@@ -40,8 +41,7 @@ struct LibraryView: View {
 				.padding(.top, 56)
 				.padding(.bottom, 32)
 			}
-			.background { WallpaperBackground(image: model.wallpaperImage) }
-			.overlay(alignment: .top) { WallpaperTopGradient() }
+			.background { SeeThroughTab() }
 			.environment(\.frostWallpaper, model.blurredWallpaper)
 		}
 		.fullScreenCover(item: $viewerSelection) { selection in

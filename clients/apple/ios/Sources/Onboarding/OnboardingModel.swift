@@ -129,6 +129,7 @@ final class OnboardingModel {
 		if let issue = loaded.issue {
 			Keychain.deleteSession(deviceId: id)
 			try? await Umbreld.logout(target: target, session: session)
+			await BrowserContext.signOut(target: target, accountId: session.accountId)
 			throw issue
 		}
 		var config = loaded.config
@@ -155,6 +156,7 @@ final class OnboardingModel {
 		} catch {
 			Keychain.deleteSession(deviceId: id)
 			try? await Umbreld.logout(target: target, session: session)
+			await BrowserContext.signOut(target: target, accountId: session.accountId)
 			throw error
 		}
 		connectedDeviceId = id

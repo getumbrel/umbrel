@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Security
 
 enum LocalHTTPSTransportError: LocalizedError, Equatable {
@@ -159,6 +160,31 @@ enum LocalHTTPSTransport {
 		return result
 	}
 
+	static func credential(for challenge: URLAuthenticationChallenge, deviceId: String) -> URLCredential? {
+		let space = challenge.protectionSpace
+		guard space.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+			let trust = space.serverTrust,
+			case .found(let certificate) = Keychain.readLocalHTTPSCA(deviceId: deviceId),
+			let anchor = SecCertificateCreateWithData(nil, certificate as CFData),
+			evaluateServerTrust(trust, host: normalizedHost(space.host), anchor: anchor)
+		else { return nil }
+		return URLCredential(trust: trust)
+	}
+
+	// For a server the pinned CA refused: whether its certificate wasn't issued by this
+	// Umbrel's CA at all, which is what a reset certificate or a reset Umbrel looks like,
+	// as opposed to the right certificate reached at an address it doesn't name. Ask it
+	// after credential(for:) refused the same challenge: that evaluation against the pin
+	// is what puts this Umbrel's CA into the chain of a certificate it issued.
+	static func identityDiffers(for challenge: URLAuthenticationChallenge, deviceId: String) -> Bool {
+		guard let trust = challenge.protectionSpace.serverTrust,
+			let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], !chain.isEmpty,
+			case .found(let certificate) = Keychain.readLocalHTTPSCA(deviceId: deviceId),
+			let anchor = SecCertificateCreateWithData(nil, certificate as CFData)
+		else { return false }
+		return !isIssued(by: anchor, chain: chain)
+	}
+
 	static func forget(deviceId: String) async {
 		Keychain.deleteLocalHTTPSCA(deviceId: deviceId)
 		await sessions.remove(deviceId: deviceId)
@@ -195,7 +221,14 @@ private actor LocalHTTPSSessionPool {
 		guard let host = request.url?.host else { throw LocalHTTPSTransportError.trustFailed }
 		let key = Key(deviceId: deviceId, host: normalizedHost(host))
 		let entry = try entry(for: key)
-		return try await entry.session.data(for: request)
+		let started = ContinuousClock.now
+		do {
+			return try await entry.session.data(for: request)
+		} catch let error as URLError where error.code == .cancelled {
+			// URLSession reports a refused handshake only as a cancelled request. Say why
+			// it was refused when that happened during this request.
+			throw entry.delegate.refusal(since: started) ?? error
+		}
 	}
 
 	func remove(deviceId: String) {
@@ -248,6 +281,8 @@ private final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate {
 private final class LocalHTTPSSessionDelegate: NSObject, URLSessionDelegate, URLSessionTaskDelegate {
 	private let expectedHost: String
 	private let anchor: SecCertificate
+	private let lastRefusal = OSAllocatedUnfairLock<(error: LocalHTTPSTransportError, at: ContinuousClock.Instant)?>(
+		initialState: nil)
 
 	init(expectedHost: String, anchor: SecCertificate) {
 		self.expectedHost = normalizedHost(expectedHost)
@@ -268,10 +303,24 @@ private final class LocalHTTPSSessionDelegate: NSObject, URLSessionDelegate, URL
 			let trust = protectionSpace.serverTrust,
 			evaluateServerTrust(trust, host: expectedHost, anchor: anchor)
 		else {
+			// A certificate this Umbrel's CA didn't issue is a different identity, as after
+			// the Umbrel or its certificate is reset. Anything else is a failed check.
+			let chain = protectionSpace.serverTrust.flatMap { SecTrustCopyCertificateChain($0) as? [SecCertificate] }
+			let error: LocalHTTPSTransportError = chain.map { !$0.isEmpty && !isIssued(by: anchor, chain: $0) } == true
+				? .identityChanged : .trustFailed
+			lastRefusal.withLock { $0 = (error, .now) }
 			completionHandler(.cancelAuthenticationChallenge, nil)
 			return
 		}
+		lastRefusal.withLock { $0 = nil }
 		completionHandler(.useCredential, URLCredential(trust: trust))
+	}
+
+	func refusal(since start: ContinuousClock.Instant) -> LocalHTTPSTransportError? {
+		lastRefusal.withLock { refusal in
+			guard let refusal, refusal.at >= start else { return nil }
+			return refusal.error
+		}
 	}
 
 	func urlSession(
@@ -289,6 +338,27 @@ private final class LocalHTTPSSessionDelegate: NSObject, URLSessionDelegate, URL
 
 private func normalizedHost(_ host: String) -> String {
 	host.hasSuffix(".") ? String(host.dropLast()).lowercased() : host.lowercased()
+}
+
+// Whether a refused server's certificate came from this anchor, however else it failed:
+// the wrong address, or dates a wrong clock disagrees with. `chain` is the one the trust
+// evaluation built, which ends at the anchor whenever the anchor issued the certificate.
+func isIssued(by anchor: SecCertificate, chain: [SecCertificate]) -> Bool {
+	let anchorData = SecCertificateCopyData(anchor) as Data
+	return chain.contains { SecCertificateCopyData($0) as Data == anchorData }
+		|| chainsToAnchor(chain, anchor: anchor)
+}
+
+// Whether the certificates were issued by the anchor, whatever host they name.
+func chainsToAnchor(_ certificates: [SecCertificate], anchor: SecCertificate) -> Bool {
+	var trust: SecTrust?
+	guard SecTrustCreateWithCertificates(certificates as CFArray, SecPolicyCreateBasicX509(), &trust) == errSecSuccess,
+		let trust,
+		SecTrustSetAnchorCertificates(trust, [anchor] as CFArray) == errSecSuccess,
+		SecTrustSetAnchorCertificatesOnly(trust, true) == errSecSuccess
+	else { return false }
+	var error: CFError?
+	return SecTrustEvaluateWithError(trust, &error)
 }
 
 private func evaluateServerTrust(_ trust: SecTrust, host: String, anchor: SecCertificate) -> Bool {

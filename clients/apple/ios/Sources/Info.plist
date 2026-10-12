@@ -39,8 +39,12 @@
 	<array>
 		<string>_umbrel._tcp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Apps on your Umbrel can use the camera when you ask them to, such as for scanning a code.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Umbrel finds your Umbrel devices on your local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Apps on your Umbrel can use the microphone when you ask them to, such as for voice chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose Allow Full Access to automatically back up the photos and videos in your library to your Umbrel.</string>
 	<key>UILaunchScreen</key>

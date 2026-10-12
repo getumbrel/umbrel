@@ -12,8 +12,6 @@ import UmbrelKit
 @MainActor
 @Observable
 final class MainModel {
-	typealias BrowserConnection = BrowserConnectionPreference
-
 	private struct BrowserEndpoint {
 		enum Kind {
 			case tailscaleDNS
@@ -224,6 +222,10 @@ final class MainModel {
 	// establishes the initial state; later refreshes keep the last confirmed result so
 	// normal polling never flashes a transient status.
 	private(set) var connectionState: ConnectionState = .unverified
+	// The Umbrel answered with a different identity than the one this iPhone paired
+	// with, as it does after the Umbrel or its certificate is reset. Only set while
+	// connectionState is .unavailable: the user has to remove it and add it again.
+	private(set) var identityChanged = false
 	private(set) var connectionRoute: ConnectionRoute?
 	private(set) var tailscaleAvailableOnThisPhone: Bool?
 	private(set) var tailscaleAvailabilityCheckInProgress = false
@@ -265,6 +267,9 @@ final class MainModel {
 	var onBack: () -> Void = {}
 	// Sign-out clears this device's session, then returns to the all-devices list.
 	var onLogOut: () -> Void = {}
+	// Removes this Umbrel and goes straight to adding it again (set by MainView), for
+	// when the app no longer recognizes it.
+	var onReconnect: () async -> Void = {}
 	// Switch the tab bar to another tab (set by MainView); used by the Home section
 	// headers and the library preview card.
 	var openLibrary: () -> Void = {}
@@ -368,6 +373,9 @@ final class MainModel {
 		if connectionState != state {
 			connectionState = state
 		}
+		if state == .connected, identityChanged {
+			identityChanged = false
+		}
 		if state != .connected, connectionRoute != nil {
 			connectionRoute = nil
 		}
@@ -427,10 +435,6 @@ final class MainModel {
 
 	var host: String? { device?.host }
 	var nativeTarget: Umbreld.Target? { device?.nativeTarget }
-	var dashboardUsesHTTPS: Bool { device?.dashboardUsesHTTPS == true }
-	var suppressHTTPSRequiredAppWarning: Bool { device?.suppressHTTPSRequiredAppWarning == true }
-	var browserConnectionSelection: BrowserConnection { device?.browserConnection ?? .automatic }
-	var hasLocalBrowserAddress: Bool { !localBrowserNames.isEmpty || !localBrowserIPs.isEmpty }
 	var hasTailscaleBrowserAddress: Bool { !tailscaleBrowserIPs.isEmpty }
 
 	private var browserAddressOptions: [String] {
@@ -448,12 +452,7 @@ final class MainModel {
 			return nil
 		}
 		var components = URLComponents()
-		// Named routes use their normal browser scheme. A literal IP is the last-resort
-		// route and always uses Umbrel's IP-valid local certificate: Safari can let the
-		// user continue past an untrusted-CA warning, while its HTTP-only mode may block
-		// an app-opened IP with no recovery action at all.
-		components.scheme = endpoint.isLiteralIP
-			|| (dashboardUsesHTTPS && !endpoint.isTailscale) ? "https" : "http"
+		components.scheme = await safariUsesHTTPS(endpoint) ? "https" : "http"
 		components.host = endpoint.host
 		components.path = path
 		components.queryItems = queryItems.isEmpty ? nil : queryItems
@@ -468,13 +467,63 @@ final class MainModel {
 			// certificate-covered endpoint.
 			allowsTailscaleDNS: !requiresHTTPS
 		) else { return nil }
-		// requiresHttps is about the browser's secure-context rules, so it must win
-		// even on Tailscale. The dashboard preference, by contrast, only changes local
-		// browser links because Tailscale already encrypts their transport.
-		let useHTTPS = requiresHTTPS
-			|| endpoint.isLiteralIP
-			|| (dashboardUsesHTTPS && !endpoint.isTailscale)
+		// requiresHttps is about the browser's secure-context rules, so it wins
+		// everywhere, Tailscale included.
+		let useHTTPS = if requiresHTTPS { true } else { await safariUsesHTTPS(endpoint) }
 		return app.webURL(host: endpoint.host, scheme: useHTTPS ? "https" : "http")
+	}
+
+	// A local name uses HTTPS when this iPhone trusts the Umbrel's certificate, as it
+	// does once it's installed and trusted in Settings, so Safari opens it without a
+	// warning. A Tailscale name stays on HTTP: Tailscale already encrypts it, and the
+	// certificate doesn't cover it. A literal IP is the last-resort route and always
+	// uses Umbrel's IP-valid local certificate: Safari can let the user continue past
+	// an untrusted-CA warning, while its HTTP-only mode may block an app-opened IP with
+	// no recovery action at all.
+	private func safariUsesHTTPS(_ endpoint: BrowserEndpoint) async -> Bool {
+		switch endpoint.kind {
+		case .localIP, .tailscaleIP:
+			return true
+		case .tailscaleDNS:
+			return false
+		case .localDNS:
+			guard let deviceId = device?.id else { return false }
+			return await Umbreld.isBrowserEndpoint(
+				host: endpoint.host,
+				expectedDeviceId: deviceId,
+				secure: true,
+				timeout: Self.tailscalePreferenceTimeout)
+		}
+	}
+
+	// ── In-app browser ──
+	//
+	// Inside the app nobody sees or types an address, so the browser goes wherever the
+	// native connection already is: an endpoint that has just proved the Umbrel's
+	// pinned HTTPS identity. Every page is therefore a secure context with no
+	// certificate warning, and apps that need HTTPS simply work.
+
+	var browserHosts: [String] { browserAddressOptions }
+
+	func browserURL(path: String = "", queryItems: [URLQueryItem] = []) async -> URL? {
+		guard let host = await browserHostForOpening() else { return nil }
+		var components = URLComponents()
+		components.scheme = "https"
+		components.host = host
+		components.path = path
+		components.queryItems = queryItems.isEmpty ? nil : queryItems
+		return components.url
+	}
+
+	func browserURL(for app: Umbreld.AppSummary) async -> URL? {
+		guard let host = await browserHostForOpening() else { return nil }
+		return app.webURL(host: host, scheme: "https")
+	}
+
+	// umbrelOS and its apps use the same connection as the rest of the app.
+	private func browserHostForOpening() async -> String? {
+		guard let target = nativeTarget else { return nil }
+		return try? await Umbreld.resolvedHost(for: target)
 	}
 
 	// Cached app tiles deliberately omit default credentials. Resolve the live app on
@@ -504,28 +553,6 @@ final class MainModel {
 		} catch {
 			return nil
 		}
-	}
-
-	func setDashboardUsesHTTPS(_ enabled: Bool) {
-		guard let id = device?.id, dashboardUsesHTTPS != enabled else { return }
-		guard persistConfig({ try $0.update(id: id) { $0.dashboardUsesHTTPS = enabled } })
-		else { return }
-		device?.dashboardUsesHTTPS = enabled
-	}
-
-	func setSuppressHTTPSRequiredAppWarning(_ suppress: Bool) {
-		guard let id = device?.id, suppressHTTPSRequiredAppWarning != suppress else { return }
-		guard persistConfig({
-			try $0.update(id: id) { $0.suppressHTTPSRequiredAppWarning = suppress }
-		}) else { return }
-		device?.suppressHTTPSRequiredAppWarning = suppress
-	}
-
-	func setBrowserConnection(_ connection: BrowserConnection) {
-		guard let id = device?.id, device?.browserConnection != connection else { return }
-		guard persistConfig({ try $0.update(id: id) { $0.browserConnection = connection } })
-		else { return }
-		device?.browserConnection = connection
 	}
 
 	func dismissConfigStorageIssue() {
@@ -1016,8 +1043,6 @@ final class MainModel {
 		lastFavoritesRefresh = refreshedAt
 		lastUpdatesRefresh = refreshedAt
 
-		// Nothing answered at all: distinguish "your Umbrel is off" from "Local Network
-		// access was revoked in Settings", which otherwise look identical.
 		if info != nil || list != nil || newUsage != nil || newFavorites != nil
 			|| newAddresses != nil || newUpdates != nil
 		{
@@ -1027,9 +1052,7 @@ final class MainModel {
 				rememberReachableBrowserAddress(resolvedHost, at: refreshedAt)
 			}
 		} else {
-			confirmConnectionState(
-				await LocalNetworkProbe.isDenied() ? .localNetworkDenied : .unavailable
-			)
+			await confirmNoResponse(target: target)
 		}
 
 		// Persist the snapshot (only when the main fetch succeeded, so a flaky refresh
@@ -1123,9 +1146,7 @@ final class MainModel {
 				rememberReachableBrowserAddress(resolvedHost)
 			}
 		} else if refreshIdentity {
-			confirmConnectionState(
-				await LocalNetworkProbe.isDenied() ? .localNetworkDenied : .unavailable
-			)
+			await confirmNoResponse(target: target)
 		}
 		if refreshPhotoReceipts {
 			await reconcilePhotoBackupServerReceipts(target: target, session: session)
@@ -1142,6 +1163,28 @@ final class MainModel {
 		case .unavailable:
 			break
 		}
+	}
+
+	// Nothing answered at all. "Your Umbrel is off", "its identity changed" and "Local
+	// Network access was revoked in Settings" otherwise look identical, and each needs
+	// something different from the user.
+	private func confirmNoResponse(target: Umbreld.Target) async {
+		async let changed = Umbreld.identityChanged(for: target)
+		async let denied = LocalNetworkProbe.isDenied()
+		let (identityChanged, isDenied) = await (changed, denied)
+		if self.identityChanged != identityChanged { self.identityChanged = identityChanged }
+		confirmConnectionState(!identityChanged && isDenied ? .localNetworkDenied : .unavailable)
+	}
+
+	// What to say when the Umbrel can't be opened.
+	var unreachableTitle: String {
+		identityChanged ? "Umbrel Not Recognized" : "Can’t Reach Umbrel"
+	}
+
+	var unreachableMessage: String {
+		identityChanged
+			? "This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app."
+			: "Check your connection and try again."
 	}
 
 	// PhotoKit can finish transferring a resource but defer its terminal callback until
@@ -1226,9 +1269,7 @@ final class MainModel {
 	}
 
 	private func browserEndpointForOpening(allowsTailscaleDNS: Bool) async -> BrowserEndpoint? {
-		let tailscaleHostname = browserConnectionSelection != .localNetwork && allowsTailscaleDNS
-			? await tailscaleBrowserHostnameForOpening()
-			: nil
+		let tailscaleHostname = allowsTailscaleDNS ? await tailscaleBrowserHostnameForOpening() : nil
 		let tailscaleHostnameEndpoint = tailscaleHostname.map {
 			BrowserEndpoint(host: $0, kind: .tailscaleDNS)
 		}
@@ -1236,19 +1277,10 @@ final class MainModel {
 		let tailscaleIPs = tailscaleBrowserIPs.map { BrowserEndpoint(host: $0, kind: .tailscaleIP) }
 		let localIPs = localBrowserIPs.map { BrowserEndpoint(host: $0, kind: .localIP) }
 
-		let candidates: [BrowserEndpoint]
-		switch browserConnectionSelection {
-		case .automatic:
-			// Prefer stable names across network changes. Literal addresses remain useful
-			// on networks without mDNS or tailnets with MagicDNS disabled, but are the
-			// browser fallback rather than racing and randomly winning.
-			candidates = [tailscaleHostnameEndpoint].compactMap { $0 }
-				+ localNames + tailscaleIPs + localIPs
-		case .localNetwork:
-			candidates = localNames + localIPs
-		case .tailscale:
-			candidates = [tailscaleHostnameEndpoint].compactMap { $0 } + tailscaleIPs
-		}
+		// Prefer stable names across network changes. Literal addresses remain useful on
+		// networks without mDNS or tailnets with MagicDNS disabled, but are the browser
+		// fallback rather than racing and randomly winning.
+		let candidates = [tailscaleHostnameEndpoint].compactMap { $0 } + localNames + tailscaleIPs + localIPs
 
 		return await firstReachableBrowserEndpoint(in: candidates)
 	}
@@ -2203,6 +2235,10 @@ final class MainModel {
 		}
 		onLogOut()
 
+		if let targetToRevoke {
+			let accountId = sessionToRevoke?.accountId
+			Task { await BrowserContext.signOut(target: targetToRevoke, accountId: accountId) }
+		}
 		guard let targetToRevoke, let sessionToRevoke else { return }
 		// Local sign-out must not wait for a reachable Umbrel. Server revocation is
 		// attempted afterward without reading or writing Keychain state, so a quick
@@ -2242,7 +2278,10 @@ final class MainModel {
 		}
 		PhotoBackupPreferenceStore.removeDevice(device.id)
 
-		if let session = Keychain.readSession(deviceId: device.id).session {
+		let session = Keychain.readSession(deviceId: device.id).session
+		// Before the pinned CA is forgotten below: ending the browser session needs it.
+		await BrowserContext.signOut(target: device.nativeTarget, accountId: session?.accountId)
+		if let session {
 			try? await Umbreld.logout(target: device.nativeTarget, session: session)
 		}
 		Keychain.deleteSession(deviceId: device.id)
@@ -2256,6 +2295,10 @@ final class MainModel {
 		photoBackupSetupFailure = nil
 		if PhotoBackupStore.configuration()?.deviceId == deviceId {
 			disablePhotoBackupLocally(deviceId: deviceId)
+		}
+		if let target = nativeTarget {
+			let accountId = session?.accountId
+			Task { await BrowserContext.signOut(target: target, accountId: accountId) }
 		}
 		Keychain.deleteSession(deviceId: deviceId)
 		session = nil

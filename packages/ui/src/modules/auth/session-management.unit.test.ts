@@ -292,6 +292,26 @@ test('classifies mobile, desktop, and missing user agents for session icons', ()
 	assert.equal(parseSessionUserAgent(undefined).deviceType, 'unknown')
 })
 
+test('labels the iPhone app in-app browser and its login as the app', () => {
+	const userAgents = [
+		// The in-app web view: WebKit's iPhone user agent plus the app's applicationNameForUserAgent.
+		'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1 UmbrelApp/0.1',
+		// The browser login the app makes alongside its native sign-in.
+		'UmbrelApp/0.1',
+	]
+
+	for (const userAgent of userAgents) {
+		const client = parseSessionUserAgent(userAgent)
+		assert.equal(client.label, 'Umbrel for iPhone', userAgent)
+		assert.equal(client.deviceType, 'mobile', userAgent)
+		assert.equal(client.clientIcon, '/assets/umbrel-ios.png', userAgent)
+		assert.equal(client.os, 'iOS', userAgent)
+		assert.equal(client.osIcon, '/assets/session-icons/os/apple.png', userAgent)
+	}
+
+	assert.equal(parseSessionUserAgent('UmbrelAppAuthVm/1.0').label, 'UmbrelAppAuthVm')
+})
+
 test('uses structured native metadata for client labels and icons', () => {
 	const common = {appVersion: '0.1', appBuild: '20', osVersion: '26.6.1'}
 	const cases = [

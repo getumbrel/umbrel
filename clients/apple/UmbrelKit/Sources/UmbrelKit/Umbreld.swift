@@ -34,6 +34,14 @@ public enum Umbreld {
 		public var requiresTwoFactorAuthentication: Bool { message == "Missing 2FA code" }
 	}
 
+	// Whether a failure means the Umbrel answered with a different identity than the one
+	// this iPhone paired with, as it does after the Umbrel or its certificate is reset.
+	public static func isIdentityChange(_ error: Swift.Error) -> Bool {
+		if let error = error as? LocalHTTPSTransportError { return error == .identityChanged }
+		guard let error = error as? Error else { return false }
+		return error.kind == .trust && error.message == LocalHTTPSTransportError.identityChanged.localizedDescription
+	}
+
 	// The stable device credential is stored in the Keychain and sent only to the
 	// access exchange. Normal API calls carry the short-lived access credential.
 	public struct Session: Codable, Sendable, Equatable {
@@ -430,6 +438,46 @@ public enum Umbreld {
 			return identity.id == deviceId
 		} catch {
 			return false
+		}
+	}
+
+	// Whether the Umbrel answers at one of its addresses with a different identity than
+	// the one this iPhone paired with, as it does after the Umbrel or its certificate is
+	// reset. Asked once requests have failed, to tell that apart from being unreachable.
+	public static func identityChanged(for target: Target) async -> Bool {
+		enum Answer { case verified, changed, other }
+		return await withTaskGroup(of: Answer.self) { group in
+			for host in target.hosts {
+				group.addTask {
+					do {
+						_ = try await verifiedLocalHTTPSIdentity(host: host, expectedDeviceId: target.deviceId)
+						return .verified
+					} catch LocalHTTPSTransportError.identityChanged {
+						// Any HTTPS server at a saved address (a printer that got the Umbrel's
+						// old IP, a captive portal) looks the same from here. It counts only if
+						// it proves it's this Umbrel, with the same device id and a new CA.
+						let proven = try? await verifiedFirstUseCandidate(
+							host: host,
+							expectedDeviceId: target.deviceId)
+						return proven == nil ? .other : .changed
+					} catch {
+						return .other
+					}
+				}
+			}
+			var changed = false
+			for await answer in group {
+				switch answer {
+				case .verified:
+					group.cancelAll()
+					return false
+				case .changed:
+					changed = true
+				case .other:
+					break
+				}
+			}
+			return changed
 		}
 	}
 
@@ -942,6 +990,24 @@ public enum Umbreld {
 		}
 	}
 
+	// A drive the Umbrel can see. Only what decides whether first-time setup offers
+	// RAID is decoded.
+	public struct InternalStorageDevice: Decodable, Sendable, Equatable {
+		public let id: String?
+		public let isSystemDrive: Bool?
+
+		// umbrelOS offers a drive for RAID when it has an id and isn't the drive
+		// umbrelOS runs from (getEligibleStorageDevices in packages/ui).
+		public var isRAIDCandidate: Bool { !(id ?? "").isEmpty && isSystemDrive != true }
+	}
+
+	// Answered without signing in only until the Umbrel has its first account.
+	public static func internalStorageDevices(target: Target) async throws -> [InternalStorageDevice] {
+		try await withResolvedHost(for: target, replay: .safe) { host in
+			try await query(host: host, path: "hardware.internalStorage.getDevices", deviceId: target.deviceId)
+		}
+	}
+
 	// Native apps are public clients: they receive a revocable device grant instead
 	// of impersonating a browser session or embedding an app-wide client secret.
 	public static func login(
@@ -1357,12 +1423,14 @@ public enum Umbreld {
 	// Browser routing has more hostname choices than native transport, but it keeps the
 	// same identity rule: a name or address is usable only when the public discovery
 	// endpoint reports the saved device id. No session or other secret is sent here.
+	// Over HTTPS it trusts only the certificates this device trusts, as Safari does.
 	public static func isBrowserEndpoint(
 		host: String,
 		expectedDeviceId: String,
+		secure: Bool = false,
 		timeout: TimeInterval = 3
 	) async -> Bool {
-		guard let url = URL(string: "http://\(host)/trpc/system.discoveryInfo") else {
+		guard let url = URL(string: "\(secure ? "https" : "http")://\(host)/trpc/system.discoveryInfo") else {
 			return false
 		}
 		var request = URLRequest(
@@ -1600,12 +1668,12 @@ public enum Umbreld {
 		}
 	}
 
-	private enum ReplayPolicy {
+	enum ReplayPolicy {
 		case safe
 		case never
 	}
 
-	private static func withResolvedHost<T>(
+	static func withResolvedHost<T>(
 		for target: Target,
 		replay: ReplayPolicy,
 		operation: @escaping (String) async throws -> T
@@ -1849,12 +1917,14 @@ public enum Umbreld {
 			timeout: timeout)
 	}
 
-	private static func performRequestRaw(
+	static func performRequestRaw(
 		host: String,
 		path: String,
 		method: String,
 		deviceId: String,
 		accessToken: String?,
+		cookieHeader: String? = nil,
+		userAgent: String? = nil,
 		body: Data?,
 		timeout: TimeInterval
 	) async throws -> (Data, HTTPURLResponse) {
@@ -1862,6 +1932,12 @@ public enum Umbreld {
 		request.httpMethod = method
 		if let accessToken {
 			request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+		}
+		if let cookieHeader {
+			request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+		}
+		if let userAgent {
+			request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
 		}
 		if let body {
 			request.setValue("application/json", forHTTPHeaderField: "Content-Type")

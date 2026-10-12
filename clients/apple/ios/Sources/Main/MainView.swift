@@ -16,8 +16,10 @@ struct MainView: View {
 
 	let device: SavedDevice
 	var onBack: () -> Void
+	var onReconnect: () async -> Void
 	@Binding private var connectionSnapshot: DeviceConnectionSnapshot
 	@State private var model: MainModel?
+	@State private var browser: Browser?
 	@State private var selection: Tab = .home
 	@State private var showProfile = false
 	@State private var profilePath: [ProfileDestination] = []
@@ -25,23 +27,25 @@ struct MainView: View {
 	init(
 		device: SavedDevice,
 		connectionSnapshot: Binding<DeviceConnectionSnapshot>,
-		onBack: @escaping () -> Void
+		onBack: @escaping () -> Void,
+		onReconnect: @escaping () async -> Void
 	) {
 		self.device = device
 		self.onBack = onBack
+		self.onReconnect = onReconnect
 		_connectionSnapshot = connectionSnapshot
 	}
 
 	var body: some View {
 		Group {
-			if let model, model.device?.id == device.id {
+			if let model, let browser, model.device?.id == device.id {
 				GeometryReader { geometry in
 					// The full window size, not the safe-area size: the wallpaper backdrop
 					// and the card frost both pin their image to this, and the backdrop
 					// draws edge to edge under the status bar and home indicator. It also
 					// makes the frost's global-coordinate offsets line up exactly, since
 					// the global space measures from the same screen origin.
-					mainContent(model)
+					content(model, browser: browser)
 						.environment(
 							\.wallpaperViewportSize,
 							CGSize(
@@ -59,7 +63,7 @@ struct MainView: View {
 		.task(id: device.id) {
 			guard model?.device?.id != device.id else { return }
 			let snapshot = _connectionSnapshot
-			model = MainModel(
+			let model = MainModel(
 				device: device,
 				initialConnectionState: snapshot.wrappedValue.state,
 				onConnectionCheck: { state in
@@ -69,10 +73,56 @@ struct MainView: View {
 					)
 				}
 			)
+			self.model = model
+			browser = Browser(model: model)
 		}
 	}
 
-	private func mainContent(_ model: MainModel) -> some View {
+	// The wallpaper is the one thing that never changes. The native tabs and umbrelOS
+	// are two layers of content over it, and opening umbrelOS is a handover between
+	// them: the tabs dissolve off the wallpaper as umbrelOS settles onto it.
+	private func content(_ model: MainModel, browser: Browser) -> some View {
+		let showsUmbrel = browser.showsUmbrel
+		return ZStack {
+			mainContent(model, browser: browser)
+				.opacity(showsUmbrel ? 0 : 1)
+				.allowsHitTesting(!showsUmbrel)
+				.accessibilityHidden(showsUmbrel)
+				.animation(
+					.easeOut(duration: showsUmbrel ? 0.18 : 0.3).delay(showsUmbrel ? 0 : 0.08),
+					value: showsUmbrel)
+			if let umbrel = browser.umbrel {
+				UmbrelOSView(browser: browser, page: umbrel, isShown: showsUmbrel)
+					.animation(
+						showsUmbrel
+							? .spring(duration: 0.42, bounce: 0.12).delay(0.08)
+							: .easeIn(duration: 0.16),
+						value: showsUmbrel)
+			}
+		}
+		// The status-bar shading and the header belong to neither layer. They are
+		// shared by every tab and by umbrelOS, and stay exactly as they are while
+		// what's beneath them changes.
+		.overlay(alignment: .top) { WallpaperTopGradient() }
+		.overlay(alignment: .top) { headerBar(model, browser: browser) }
+		// A background, not a layer in the stack: it must not take part in layout, or
+		// its full-screen size would push the content out of the safe area.
+		// It is also the only wallpaper there is: every tab and umbrelOS show this one
+		// image, so nothing can be out of register with anything else.
+		.background { WallpaperBackground(image: model.wallpaperImage) }
+		.environment(\.brandColor, BrandColor.color(model.wallpaperBrandColorHsl))
+		.environment(model)
+		.environment(browser)
+		.onChange(of: showsUmbrel) { _, shown in
+			// umbrelOS takes over the screen itself, so anything presented over the
+			// tabs (Profile, a setup guide) gets out of its way.
+			guard shown else { return }
+			showProfile = false
+			model.dismissTailscaleSetup()
+		}
+	}
+
+	private func mainContent(_ model: MainModel, browser: Browser) -> some View {
 		TabView(selection: tabSelection) {
 			HomeView(onShowConnectionDetails: showConnectionDetails)
 				.tabItem { Label("Home", systemImage: "house.fill") }
@@ -88,13 +138,19 @@ struct MainView: View {
 				.tag(Tab.profile)
 		}
 		.tint(Theme.blue)
-		// The header controls are shared by every tab. Keeping one glass layer alive
-		// avoids rebuilding an identical compositor whenever the selected tab changes.
-		.overlay(alignment: .top) { headerBar(model) }
 		.sheet(isPresented: $showProfile, onDismiss: { profilePath.removeAll() }) {
 			ProfileSheet(path: $profilePath)
 		}
+		// Lives behind the tabs purely to present the browser over everything.
+		.background {
+			BrowserPresenter(
+				browser: browser,
+				isPresented: browser.isPresented,
+				brandColor: BrandColor.color(model.wallpaperBrandColorHsl)
+			)
+		}
 		.environment(model)
+		.environment(browser)
 		.sheet(
 			isPresented: Binding(
 				// Profile owns the nested setup sheet while it is visible. Keeping one
@@ -107,13 +163,21 @@ struct MainView: View {
 		) {
 			TailscaleSetupSheet()
 				.environment(model)
+				.environment(browser)
 		}
 		// umbrelOS accents (primary buttons, storage donut, Profile links/toggles) follow the
 		// wallpaper's brand color. Set once here so every tab and the sheet inherit it.
 		.environment(\.brandColor, BrandColor.color(model.wallpaperBrandColorHsl))
 		.onAppear {
 			model.onBack = onBack
-			model.onLogOut = onBack
+			// Close any open app page first. While a page covers the screen, SwiftUI doesn't
+			// tear down the views under it, so the presenter's own cleanup would only run
+			// once the page was closed by hand.
+			model.onLogOut = {
+				browser.close()
+				onBack()
+			}
+			model.onReconnect = onReconnect
 			model.openLibrary = { selection = .library }
 			model.openApps = { selection = .apps }
 			model.reconcilePhotoLibraryAccess()
@@ -124,6 +188,8 @@ struct MainView: View {
 		.task(id: scenePhase) {
 			guard scenePhase == .active else { return }
 			await model.load()
+			await browser.keepSessionAlive()
+			await browser.preloadUmbrel()
 			while !Task.isCancelled {
 				do {
 					try await Task.sleep(for: .seconds(15))
@@ -208,18 +274,22 @@ struct MainView: View {
 		}
 	}
 
-	private func headerBar(_ model: MainModel) -> some View {
-		HStack {
+	private func headerBar(_ model: MainModel, browser: Browser) -> some View {
+		// Back leads from Home out to the list of Umbrels. umbrelOS has its own navigation,
+		// and the pill's X closes it.
+		let showsBack = selection == .home && !browser.showsUmbrel
+		return HStack {
 			// Keep the glass compositor alive across tab changes, like the browser pill.
-			// Non-Home tabs hide the control without removing it from the hierarchy.
+			// Elsewhere the control is hidden without being removed from the hierarchy.
 			CircleIconButton(system: "chevron.left", accessibilityLabel: "All Umbrels") { model.onBack() }
-				.opacity(selection == .home ? 1 : 0)
-				.allowsHitTesting(selection == .home)
-				.accessibilityHidden(selection != .home)
+				.opacity(showsBack ? 1 : 0)
+				.allowsHitTesting(showsBack)
+				.accessibilityHidden(!showsBack)
 			Spacer()
 			HeaderAccessPill(model: model)
 		}
 		.padding(.horizontal, Theme.contentInset)
+		.animation(.easeOut(duration: 0.2), value: showsBack)
 	}
 
 	private var tabSelection: Binding<Tab> {
@@ -287,6 +357,7 @@ struct TailscaleSetupPage: View {
 
 private struct TailscaleSetupContent: View {
 	@Environment(MainModel.self) private var model
+	@Environment(Browser.self) private var browser
 	@Environment(\.openURL) private var openURL
 	@State private var isOpeningUmbrel = false
 	@State private var isShowingUmbrelUnavailable = false
@@ -427,17 +498,12 @@ private struct TailscaleSetupContent: View {
 		isOpeningUmbrel = true
 		Task {
 			defer { isOpeningUmbrel = false }
-			let url: URL?
-			if let app = model.tailscaleApp {
-				url = await model.appURLForOpening(app)
+			let opened = if let app = model.tailscaleApp {
+				await browser.open(app)
 			} else {
-				url = await model.dashboardURLForOpening(path: "/app-store/tailscale")
+				await browser.openUmbrel(path: "/app-store/tailscale")
 			}
-			if let url {
-				openURL(url)
-			} else {
-				isShowingUmbrelUnavailable = true
-			}
+			if !opened { isShowingUmbrelUnavailable = true }
 		}
 	}
 

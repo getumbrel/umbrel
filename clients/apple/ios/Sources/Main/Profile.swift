@@ -165,7 +165,7 @@ private struct ConnectionSection: View {
 			case .tailscale: "Tailscale"
 			case nil: "Connected"
 			}
-		case .unavailable, .localNetworkDenied: "Offline"
+		case .unavailable, .localNetworkDenied: model.identityChanged ? "Not recognized" : "Offline"
 		}
 	}
 }
@@ -361,7 +361,7 @@ private struct ConnectionDetailsPage: View {
 			case .tailscale: "network"
 			case nil: "network"
 			}
-		case .unavailable: "wifi.exclamationmark"
+		case .unavailable: model.identityChanged ? "lock.trianglebadge.exclamationmark" : "wifi.exclamationmark"
 		case .localNetworkDenied: "wifi.slash"
 		case .unverified: "ellipsis"
 		}
@@ -375,7 +375,7 @@ private struct ConnectionDetailsPage: View {
 			case .tailscale: "Connected through Tailscale"
 			case nil: "Connected"
 			}
-		case .unavailable: "Not connected"
+		case .unavailable: model.identityChanged ? "Not recognized" : "Not connected"
 		case .localNetworkDenied: "Local Network Access Off"
 		case .unverified: "Checking connection"
 		}
@@ -389,6 +389,8 @@ private struct ConnectionDetailsPage: View {
 			case .tailscale: "This iPhone is connected through your private Tailscale network."
 			case nil: "This iPhone is securely connected to your Umbrel."
 			}
+		case .unavailable where model.identityChanged:
+			"This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app."
 		case .unavailable:
 			if model.hasKnownTailscaleAddress {
 				"Make sure your Umbrel is turned on. Connect this iPhone to the same local network, or turn on Tailscale."

@@ -36,6 +36,12 @@ final class NativeAPIContractTests: XCTestCase {
 		XCTAssertNil(accounts[1].avatarUrl)
 	}
 
+	func testInternalStorageDevicesDecodeAndMarkRAIDCandidates() throws {
+		let devices: [Umbreld.InternalStorageDevice] = try decode(
+			#"{"result":{"data":[{"type":"ssd","device":"nvme0n1","id":"nvme-system","isSystemDrive":true,"future":1},{"type":"hdd","device":"sda","id":"ata-disk"},{"type":"ssd","device":"nvme1n1","isSystemDrive":false}]}}"#)
+		XCTAssertEqual(devices.map(\.isRAIDCandidate), [false, true, false])
+	}
+
 	func testNativeSessionResponsesDecode() throws {
 		let login: Umbreld.NativeSessionResponse = try decode(
 			#"{"result":{"data":{"accountId":"alice","accessToken":"access","accessExpiresAt":1787000000000,"deviceToken":"device","future":true}}}"#)

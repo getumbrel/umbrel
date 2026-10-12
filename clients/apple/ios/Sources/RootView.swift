@@ -32,7 +32,7 @@ struct RootView: View {
 		Group {
 			if devices.isEmpty || addingDevice {
 				OnboardingFlow(
-					mode: devices.isEmpty ? .firstRun : .addDevice,
+					mode: addingDevice ? .addDevice : .firstRun,
 					onCancel: { addingDevice = false }
 				) { deviceId in
 					connectionSnapshots[deviceId] = DeviceConnectionSnapshot(
@@ -43,17 +43,22 @@ struct RootView: View {
 					addingDevice = false
 					reloadSavedDevices()
 				}
+				// The flow keeps its mode for its lifetime; cancelling adding after Reconnect
+				// removed the only Umbrel has to start a fresh first run.
+				.id(addingDevice)
 			} else if let device = devices.first(where: { $0.id == selectedDeviceId }),
 				hasSession(device.id)
 			{
 				MainView(
 					device: device,
-					connectionSnapshot: connectionSnapshot(for: device.id)
-				) {
-					// Back or sign out: re-read session state before routing.
-					selectedDeviceId = ""
-					reloadSavedDevices()
-				}
+					connectionSnapshot: connectionSnapshot(for: device.id),
+					onBack: {
+						// Back or sign out: re-read session state before routing.
+						selectedDeviceId = ""
+						reloadSavedDevices()
+					},
+					onReconnect: { await reconnect(device) }
+				)
 			} else {
 				AllDevicesView(
 					devices: devices,
@@ -79,25 +84,15 @@ struct RootView: View {
 			if let device = signInDevice {
 				UmbrelSignInForm(
 					title: device.model ?? device.name,
+					model: device.model,
 					target: device.nativeTarget,
-					browserHost: device.host,
 					preferredUserId: device.lastAccountId,
 					onPrepare: {
 						try await Umbreld.prepareSavedDeviceForSignIn(device.nativeTarget)
 					},
 					onCancel: { signInDevice = nil },
-					onRemove: {
-						do {
-							try await MainModel.removeSavedDevice(device)
-						} catch {
-							configStorageIssue = (error as? Config.StorageIssue) ?? .saveFailed
-							return
-						}
-						connectionSnapshots[device.id] = nil
-						signInDevice = nil
-						selectedDeviceId = ""
-						reloadSavedDevices()
-					}
+					onRemove: { await remove(device) },
+					onReconnect: { await reconnect(device) }
 				) { account, userId, password, totpToken in
 					let session = try await Umbreld.login(
 						target: device.nativeTarget,
@@ -105,9 +100,29 @@ struct RootView: View {
 						password: password,
 						totpToken: totpToken
 					)
-					try Task.checkCancellation()
+					// A sign-in cancelled from here on (the sheet was closed) ends what it created.
+					// The cleanup runs in its own task: this one is cancelled, so its requests
+					// would never be sent.
+					if Task.isCancelled {
+						Task { try? await Umbreld.logout(target: device.nativeTarget, session: session) }
+						throw CancellationError()
+					}
 					guard Keychain.setSession(session, deviceId: device.id) else {
 						throw SignInError.sessionStorageFailed
+					}
+					await BrowserContext.signIn(
+						target: device.nativeTarget,
+						userId: userId,
+						password: password,
+						totpToken: totpToken
+					)
+					if Task.isCancelled {
+						Keychain.deleteSession(deviceId: device.id)
+						Task {
+							await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
+							try? await Umbreld.logout(target: device.nativeTarget, session: session)
+						}
+						throw CancellationError()
 					}
 					// Reconnecting an account must not move the iPhone library away from
 					// another Umbrel. Backup ownership changes only through backup controls.
@@ -115,12 +130,14 @@ struct RootView: View {
 					if let issue = result.issue {
 						Keychain.deleteSession(deviceId: device.id)
 						try? await Umbreld.logout(target: device.nativeTarget, session: session)
+						await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
 						throw issue
 					}
 					var config = result.config
 					guard config.savedDevices[device.id] != nil else {
 						Keychain.deleteSession(deviceId: device.id)
 						try? await Umbreld.logout(target: device.nativeTarget, session: session)
+						await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
 						throw Config.StorageIssue.saveFailed
 					}
 					do {
@@ -148,6 +165,7 @@ struct RootView: View {
 					} catch {
 						Keychain.deleteSession(deviceId: device.id)
 						try? await Umbreld.logout(target: device.nativeTarget, session: session)
+						await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
 						throw error
 					}
 					connectionSnapshots[device.id] = DeviceConnectionSnapshot(
@@ -159,6 +177,21 @@ struct RootView: View {
 					signInDevice = nil
 				}
 			}
+		}
+		.task {
+			// Web data for accounts that are no longer signed in on this iPhone, only when
+			// that's certain. A Keychain or config that can't be read right now (before
+			// first unlock, say) must not look like being signed out, as in hasSession.
+			guard configStorageIssue == nil else { return }
+			var signedIn: [(deviceId: String, accountId: String)] = []
+			for device in devices {
+				switch Keychain.readSession(deviceId: device.id) {
+				case .found(let session): signedIn.append((device.id, session.accountId))
+				case .missing, .invalid: break
+				case .unavailable: return
+				}
+			}
+			await BrowserContext.removeOrphanedData(keeping: signedIn)
 		}
 		.onAppear { updateSavedDeviceDiscovery() }
 		.onDisappear { savedDeviceDiscovery.stop() }
@@ -205,6 +238,27 @@ struct RootView: View {
 			get: { connectionSnapshots[deviceId] ?? .unverified },
 			set: { connectionSnapshots[deviceId] = $0 }
 		)
+	}
+
+	@discardableResult
+	private func remove(_ device: SavedDevice) async -> Bool {
+		do {
+			try await MainModel.removeSavedDevice(device)
+		} catch {
+			configStorageIssue = (error as? Config.StorageIssue) ?? .saveFailed
+			return false
+		}
+		connectionSnapshots[device.id] = nil
+		signInDevice = nil
+		selectedDeviceId = ""
+		reloadSavedDevices()
+		return true
+	}
+
+	// For an Umbrel the app no longer recognizes: remove it, then go straight to adding
+	// an Umbrel, where it shows up again as it is now.
+	private func reconnect(_ device: SavedDevice) async {
+		if await remove(device) { addingDevice = true }
 	}
 
 	private func reloadSavedDevices() {

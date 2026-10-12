@@ -1,5 +1,7 @@
 import type {AnyTRPCMutationProcedure, AnyTRPCQueryProcedure, inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
+import type {APP_GATEWAY_HTTPS_COOKIE_NAME} from '../../auth/app-gateway-cookie.js'
+import type {BROWSER_SESSION_HTTPS_COOKIE_NAME} from '../../auth/browser-session-cookie.js'
 import type {AppRouter} from './index.js'
 
 // Backward-compatibility ledger for released native clients.
@@ -35,11 +37,14 @@ type _discoveryInfoMethod = Expect<IsQuery<Procedures['system']['discoveryInfo']
 type _ipAddressesMethod = Expect<IsQuery<Procedures['system']['getIpAddresses']>>
 type _tailscaleBrowserHostnameMethod = Expect<IsQuery<Procedures['system']['getTailscaleBrowserHostname']>>
 type _diskUsageMethod = Expect<IsQuery<Procedures['system']['diskUsage']>>
+type _internalStorageDevicesMethod = Expect<IsQuery<Procedures['hardware']['internalStorage']['getDevices']>>
 type _is2faEnabledMethod = Expect<IsQuery<Procedures['user']['is2faEnabled']>>
 type _accountsMethod = Expect<IsQuery<Procedures['user']['listAccounts']>>
 type _nativeLoginMethod = Expect<IsMutation<Procedures['user']['loginNative']>>
 type _nativeRefreshMethod = Expect<IsMutation<Procedures['user']['refreshNativeAccess']>>
 type _logoutMethod = Expect<IsMutation<Procedures['user']['logout']>>
+type _browserLoginMethod = Expect<IsMutation<Procedures['user']['login']>>
+type _browserRenewMethod = Expect<IsMutation<Procedures['user']['renewToken']>>
 type _userMethod = Expect<IsQuery<Procedures['user']['get']>>
 type _createPhotoBackupGrantMethod = Expect<IsMutation<Procedures['photos']['createBackupGrant']>>
 type _revokePhotoBackupGrantMethod = Expect<IsMutation<Procedures['photos']['revokeBackupGrant']>>
@@ -75,6 +80,15 @@ type _diskUsage = Expect<
 			machines?: Array<{id: string; name: string; osId: string; used: number}>
 		}
 	>
+>
+// Before first-time setup, the iOS app checks for drives umbrelOS would offer for
+// RAID. RAID setup restarts the Umbrel onto those drives, so the app sends it to a
+// browser instead of running it in the app.
+type _internalStorageDeviceId = Expect<
+	ServerProvides<Outputs['hardware']['internalStorage']['getDevices'][number]['id'], string | undefined>
+>
+type _internalStorageSystemDrive = Expect<
+	ServerProvides<Outputs['hardware']['internalStorage']['getDevices'][number]['isSystemDrive'], boolean | undefined>
 >
 
 // MARK: - Accounts and native sessions
@@ -135,6 +149,30 @@ type _nativeRefreshOutput = Expect<
 	ServerProvides<Outputs['user']['refreshNativeAccess'], {accessToken: string; accessExpiresAt: number}>
 >
 type _logout = Expect<ServerProvides<Outputs['user']['logout'], boolean>>
+
+// MARK: - In-app browser sessions
+//
+// The iOS app shows umbrelOS and its apps in an in-app browser. At sign-in it also
+// logs in the way a browser does, then replays the result into its web view: the
+// returned dashboard token goes into localStorage under `umbrel-auth-token`, and
+// the browser-session and app-gateway cookies are set for whichever of the
+// Umbrel's addresses is in use. Beyond these shapes it relies on the HTTPS cookie
+// names pinned below, on credentials not rotating on renewal, on renewToken
+// answering 401 or 403 once a session has ended, and on one 2FA code being accepted
+// for both the native login and this one (sign-in sends the same code to each). A
+// client without a usable session falls back to umbrelOS's own login page, so a
+// break here costs a second sign-in rather than access.
+type _browserLoginInput = Expect<
+	ServerAccepts<Inputs['user']['login'], {userId: string; password: string; totpToken?: string}>
+>
+type _browserLoginOutput = Expect<ServerProvides<Outputs['user']['login'], string>>
+type _browserRenewOutput = Expect<ServerProvides<Outputs['user']['renewToken'], string>>
+type _browserSessionCookieName = Expect<
+	ServerProvides<typeof BROWSER_SESSION_HTTPS_COOKIE_NAME, '__Host-UMBREL_BROWSER_SESSION_HTTPS'>
+>
+type _appGatewayCookieName = Expect<
+	ServerProvides<typeof APP_GATEWAY_HTTPS_COOKIE_NAME, '__Host-UMBREL_APP_SESSION_HTTPS'>
+>
 type _user = Expect<
 	ServerProvides<
 		Outputs['user']['get'],

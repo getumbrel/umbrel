@@ -6,9 +6,12 @@ import UmbrelKit
 // shell, and a storage breakdown, all over the user's wallpaper.
 struct HomeView: View {
 	@Environment(MainModel.self) private var model
+	@Environment(Browser.self) private var browser
 	@Environment(\.openURL) private var openURL
 	@State private var isOpeningBrowser = false
 	@State private var isShowingBrowserUnavailable = false
+	@State private var isConfirmingReconnect = false
+	@State private var isReconnecting = false
 	@State private var showsConnectionProgress = false
 	let onShowConnectionDetails: () -> Void
 
@@ -23,7 +26,7 @@ struct HomeView: View {
 					paths: model.favoritePaths,
 					brandHSL: BrandColor.hsl(model.wallpaperBrandColorHsl),
 					loaded: model.didLoad,
-					// /files resolves to the home of whichever umbrelOS account the browser uses.
+					// /files resolves to the home of the signed-in umbrelOS account.
 					onViewAll: { openUmbrel(path: "/files") },
 					onOpenPath: { openUmbrel(path: "/files\($0)") }
 				)
@@ -50,17 +53,27 @@ struct HomeView: View {
 		.refreshable {
 			await model.refreshVisibleData(for: .home, force: true)
 		}
-		// The wallpaper is a background (not a ZStack sibling) so the ScrollView keeps its
-		// safe-area insets: the header sits below the status bar and content clears the
-		// dock. The frosting doesn't need it as a sibling — it draws its own blurred copy.
-		.background { WallpaperBackground(image: model.wallpaperImage) }
-		.overlay(alignment: .top) { WallpaperTopGradient() }
+		// The wallpaper itself is drawn once, behind every tab and umbrelOS alike, by
+		// MainView. The frosting draws its own blurred copy aligned to it.
+		.background { SeeThroughTab() }
 		// The blurred wallpaper flows to every SectionCard for its frosted fill.
 		.environment(\.frostWallpaper, model.blurredWallpaper)
-		.alert("Can’t Reach Umbrel", isPresented: $isShowingBrowserUnavailable) {
+		.alert(model.unreachableTitle, isPresented: $isShowingBrowserUnavailable) {
 			Button("OK", role: .cancel) {}
 		} message: {
-			Text("Check your connection and try again.")
+			Text(model.unreachableMessage)
+		}
+		.alert("Reconnect your Umbrel?", isPresented: $isConfirmingReconnect) {
+			Button("Reconnect") {
+				isReconnecting = true
+				Task {
+					await model.onReconnect()
+					isReconnecting = false
+				}
+			}
+			Button("Cancel", role: .cancel) {}
+		} message: {
+			Text("You’ll sign in again. If photo backup is on, you’ll need to turn it back on. Everything on your Umbrel stays as it is.")
 		}
 		.task(id: model.connectionState == .unverified) {
 			showsConnectionProgress = false
@@ -76,11 +89,9 @@ struct HomeView: View {
 		isOpeningBrowser = true
 		Task {
 			defer { isOpeningBrowser = false }
-			guard let url = await model.dashboardURLForOpening(path: path, queryItems: queryItems) else {
+			if await !browser.openUmbrel(path: path, queryItems: queryItems) {
 				isShowingBrowserUnavailable = true
-				return
 			}
-			openURL(url)
 		}
 	}
 
@@ -123,7 +134,7 @@ struct HomeView: View {
 					Text("Connected")
 				case .unavailable, .localNetworkDenied:
 					StatusDot(color: Theme.gray)
-					Text("Offline")
+					Text(model.identityChanged ? "Not recognized" : "Offline")
 				}
 			}
 			.frame(minHeight: 18, alignment: .leading)
@@ -140,7 +151,7 @@ struct HomeView: View {
 		switch model.connectionState {
 		case .unverified: "Checking connection"
 		case .connected: "Connected"
-		case .unavailable, .localNetworkDenied: "Offline"
+		case .unavailable, .localNetworkDenied: model.identityChanged ? "Not recognized" : "Offline"
 		}
 	}
 
@@ -168,6 +179,14 @@ struct HomeView: View {
 		switch model.connectionState {
 		case .unverified, .connected:
 			EmptyView()
+		case .unavailable where model.identityChanged:
+			NoticeCard(
+				icon: "lock.trianglebadge.exclamationmark",
+				title: "Umbrel not recognized",
+				message: "This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel to keep using it in this app.",
+				actionLabel: isReconnecting ? "Reconnecting…" : "Reconnect",
+				action: isReconnecting ? nil : { isConfirmingReconnect = true }
+			)
 		case .unavailable:
 			NoticeCard(
 				icon: "wifi.exclamationmark",
@@ -187,45 +206,60 @@ struct HomeView: View {
 	}
 }
 
-// The Safari + ellipsis glass pill shown at the top-right of the main tabs.
+// The glass pill at the top-right of the main tabs and of umbrelOS. Its first button
+// opens umbrelOS and, once there, becomes the way out. Inside umbrelOS it also offers
+// what the page needs, the way an app's title bar does.
 struct HeaderAccessPill: View {
 	let model: MainModel
-	@Environment(\.openURL) private var openURL
-	@State private var isShowingBrowserOptions = false
+	@Environment(Browser.self) private var browser
+	@State private var isShowingPageOptions = false
 	@State private var isOpeningBrowser = false
 	@State private var isShowingBrowserUnavailable = false
 
 	var body: some View {
 		HStack(spacing: 0) {
-			Button { openDashboard() } label: {
-				Image(systemName: "safari")
-					.font(.system(size: 20))
+			Button {
+				if browser.showsUmbrel { browser.closeUmbrel() } else { openDashboard() }
+			} label: {
+				// One glyph in one place. It changes on the spot, with nothing fading
+				// through it, so this never reads as one button uncovering another.
+				Image(systemName: browser.showsUmbrel ? "xmark" : "macwindow")
+					.font(.system(size: 18, weight: .medium))
+					.transaction { $0.animation = nil }
 					.frame(width: 44, height: 42)
 					.contentShape(Rectangle())
 			}
 			.buttonStyle(.plain)
-			.disabled(isOpeningBrowser)
-			.accessibilityLabel("Open Umbrel in a Browser")
+			.accessibilityLabel(browser.showsUmbrel ? "Close umbrelOS" : "Open umbrelOS")
 
-			Button { isShowingBrowserOptions = true } label: {
-				Image(systemName: "ellipsis")
-					.font(.system(size: 20))
-					.frame(width: 44, height: 42)
-					.contentShape(Rectangle())
-			}
-			.buttonStyle(.plain)
-			.accessibilityLabel("Browser options")
-			.sheet(isPresented: $isShowingBrowserOptions) {
-				BrowserOptionsSheet(model: model)
+			if browser.showsUmbrel {
+				Button {
+					isShowingPageOptions = true
+				} label: {
+					Image(systemName: "ellipsis")
+						.font(.system(size: 20))
+						.frame(width: 44, height: 42)
+						.contentShape(Rectangle())
+				}
+				.buttonStyle(.plain)
+				.accessibilityLabel("More")
+				.transition(.opacity)
+				.confirmationDialog("umbrelOS", isPresented: $isShowingPageOptions) {
+					Button("Reload") { browser.umbrel?.reload() }
+					Button("Open in Safari") {
+						if let umbrel = browser.umbrel { openInSafari(umbrel) }
+					}
+				}
 			}
 		}
 		.foregroundStyle(.white.opacity(0.85))
 		.frame(height: 42)
 		.glassControl(in: Capsule())
-		.alert("Can’t Reach Umbrel", isPresented: $isShowingBrowserUnavailable) {
+		.animation(.easeOut(duration: 0.2), value: browser.showsUmbrel)
+		.alert(model.unreachableTitle, isPresented: $isShowingBrowserUnavailable) {
 			Button("OK", role: .cancel) {}
 		} message: {
-			Text("Check your connection and try again.")
+			Text(model.unreachableMessage)
 		}
 	}
 
@@ -234,210 +268,16 @@ struct HeaderAccessPill: View {
 		isOpeningBrowser = true
 		Task {
 			defer { isOpeningBrowser = false }
-			guard let url = await model.dashboardURLForOpening() else {
+			if await !browser.openUmbrel() {
 				isShowingBrowserUnavailable = true
-				return
 			}
-			openURL(url)
 		}
 	}
-}
 
-private struct BrowserOptionsSheet: View {
-	let model: MainModel
-	@Environment(\.dismiss) private var dismiss
-	@Environment(\.brandColor) private var brandColor
-
-	var body: some View {
-		NavigationStack {
-			ScrollView(showsIndicators: false) {
-				VStack(spacing: 0) {
-					Text(
-						"Choose how this app opens your Umbrel in a web browser. This doesn’t change how the app itself connects."
-					)
-					.font(.footnote)
-					.foregroundStyle(Theme.gray)
-					.fixedSize(horizontal: false, vertical: true)
-					.frame(maxWidth: .infinity, alignment: .leading)
-					.padding(.horizontal, 4)
-					.padding(.vertical, 10)
-
-					SettingsSection("Browser Connection") {
-						connectionOption(
-							icon: "sparkles",
-							"Automatic",
-							detail: "Use Tailscale when available, otherwise the local network",
-							connection: .automatic
-						)
-						if model.hasLocalBrowserAddress {
-							SettingsDivider()
-							connectionOption(
-								icon: "wifi",
-								"Local Network Only",
-								detail: "Open using your Umbrel’s local network address",
-								connection: .localNetwork
-							)
-						}
-						SettingsDivider()
-						if model.hasTailscaleBrowserAddress {
-							connectionOption(
-								icon: "network",
-								"Tailscale Only",
-								detail: "Open using your Umbrel’s Tailscale address",
-								connection: .tailscale
-							)
-						} else {
-							tailscaleUnavailableOption
-						}
-					}
-
-					SettingsSection("More") {
-						NavigationLink {
-							BrowserAdvancedOptions(model: model)
-						} label: {
-							HStack(spacing: 14) {
-								Image(systemName: "gearshape.2")
-									.font(.system(size: 17, weight: .medium))
-									.foregroundStyle(.white.opacity(0.9))
-									.frame(width: 28, height: 28)
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Advanced Browser Settings")
-										.font(.subheadline.weight(.semibold))
-										.foregroundStyle(.white)
-									Text("Local browser compatibility options")
-										.font(.footnote)
-										.foregroundStyle(Theme.gray)
-								}
-								.frame(maxWidth: .infinity, alignment: .leading)
-								Spacer(minLength: 8)
-								Image(systemName: "chevron.right")
-									.font(.system(size: 13, weight: .semibold))
-									.foregroundStyle(Theme.gray)
-							}
-							.padding(16)
-							.contentShape(Rectangle())
-						}
-						.buttonStyle(.plain)
-					}
-				}
-				.padding(.horizontal, 20)
-				.padding(.top, 10)
-				.padding(.bottom, 24)
-			}
-			.scrollEdgeEffectStyle(.soft, for: .top)
-			.background(Color(hex: 0x1C1C1E).ignoresSafeArea())
-			.navigationTitle("Open in Browser")
-			.navigationBarTitleDisplayMode(.inline)
-			.toolbar {
-				DrawerCloseToolbarItem(action: { dismiss() })
-			}
-		}
-		.presentationDetents([.large])
-		.presentationDragIndicator(.visible)
-		.presentationCornerRadius(38)
-		.presentationBackground(Color(hex: 0x1C1C1E))
-	}
-
-	private func connectionOption(
-		icon: String,
-		_ title: String,
-		detail: String,
-		connection: MainModel.BrowserConnection
-	) -> some View {
-		Button { model.setBrowserConnection(connection) } label: {
-			HStack(spacing: 14) {
-				Image(systemName: icon)
-					.font(.system(size: 17, weight: .medium))
-					.foregroundStyle(.white.opacity(0.9))
-					.frame(width: 28, height: 28)
-				VStack(alignment: .leading, spacing: 4) {
-					Text(title)
-						.font(.subheadline.weight(.semibold))
-						.foregroundStyle(.white)
-					Text(detail)
-						.font(.footnote)
-						.foregroundStyle(Theme.gray)
-				}
-				.frame(maxWidth: .infinity, alignment: .leading)
-				Spacer(minLength: 8)
-				if model.browserConnectionSelection == connection {
-					Image(systemName: "checkmark")
-						.font(.system(size: 14, weight: .semibold))
-						.foregroundStyle(brandColor)
-				}
-			}
-			.padding(16)
-			.contentShape(Rectangle())
-		}
-		.buttonStyle(.plain)
-	}
-
-	private var tailscaleUnavailableOption: some View {
-		HStack(spacing: 14) {
-			Image(systemName: "network")
-				.font(.system(size: 17, weight: .medium))
-				.frame(width: 28, height: 28)
-			VStack(alignment: .leading, spacing: 4) {
-				Text("Tailscale Only")
-					.font(.subheadline.weight(.semibold))
-				Text("Open using your Umbrel’s Tailscale address")
-					.font(.footnote)
-			}
-			.frame(maxWidth: .infinity, alignment: .leading)
-			Spacer(minLength: 8)
-			Text("Not set up")
-				.font(.footnote.weight(.medium))
-		}
-		.foregroundStyle(Theme.gray)
-		.padding(16)
-	}
-
-}
-
-private struct BrowserAdvancedOptions: View {
-	let model: MainModel
-	@State private var isConfirmingHTTPS = false
-
-	var body: some View {
-		ScrollView(showsIndicators: false) {
-			VStack(alignment: .leading, spacing: 0) {
-				SettingsSection("Compatibility") {
-					SettingsRow(icon: "lock.fill", title: "Always Use HTTPS") {
-						SettingsToggle("Always Use HTTPS", isOn: Binding(
-							get: { model.dashboardUsesHTTPS },
-							set: { enabled in
-								if enabled {
-									isConfirmingHTTPS = true
-								} else {
-									model.setDashboardUsesHTTPS(false)
-								}
-							}
-						))
-					}
-				}
-				Text(
-					"Apps that require HTTPS use it automatically. HTTPS is for browser compatibility, not private access. For private access, use Tailscale."
-				)
-				.font(.footnote)
-				.foregroundStyle(Theme.gray)
-				.fixedSize(horizontal: false, vertical: true)
-				.padding(.horizontal, 4)
-			}
-			.padding(.horizontal, 20)
-			.padding(.top, 10)
-			.padding(.bottom, 24)
-		}
-		.scrollEdgeEffectStyle(.soft, for: .top)
-		.background(Color(hex: 0x1C1C1E).ignoresSafeArea())
-		.navigationTitle("Advanced Browser Settings")
-		.navigationBarTitleDisplayMode(.inline)
-		.alert("Always Use HTTPS Locally?", isPresented: $isConfirmingHTTPS) {
-			Button("Cancel", role: .cancel) {}
-			Button("Use HTTPS Locally") { model.setDashboardUsesHTTPS(true) }
-		} message: {
-			Text(
-				"Your browser may show a privacy warning. If it does, open the details and choose the option to continue to your Umbrel. Only do this for your Umbrel and its installed apps."
-			)
+	private func openInSafari(_ page: BrowserPage) {
+		Task {
+			guard let url = await browser.safariURL(for: page) else { return }
+			await UIApplication.shared.open(url)
 		}
 	}
 }
@@ -474,7 +314,7 @@ struct CircleIconButton: View {
 
 private struct AppsSection: View {
 	let model: MainModel
-	@Environment(\.openURL) private var openURL
+	@Environment(Browser.self) private var browser
 	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
 	private var columnCount: Int { dynamicTypeSize.isAccessibilitySize ? 2 : 3 }
@@ -497,11 +337,7 @@ private struct AppsSection: View {
 						title: "Install your first app",
 						subtitle: "Open the Umbrel App Store to install apps",
 						buttonTitle: "Open Umbrel App Store",
-						action: {
-							Task {
-								if let url = await model.dashboardURLForOpening(path: "/app-store") { openURL(url) }
-							}
-						}
+						action: { Task { await browser.openUmbrel(path: "/app-store") } }
 					)
 				} else {
 					SectionCard { grid }
@@ -560,6 +396,8 @@ struct AppTile: View {
 	let app: Umbreld.AppSummary
 	var labelColor: Color = Theme.gray3
 	var preparing = false
+	// Identifies this tile's icon as the place its app opens from and closes into.
+	var sourceID: AnyHashable?
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
 
 	var body: some View {
@@ -567,6 +405,7 @@ struct AppTile: View {
 		let presentation = AppTilePresentation(state: app.state)
 		VStack(spacing: 8) {
 			AppIconView(url: app.iconURL)
+				.background { if let sourceID { BrowserSource(id: sourceID) } }
 				.brightness(presentation.dimsIcon || preparing ? -0.4 : 0)
 				.overlay {
 					if preparing {
@@ -642,17 +481,18 @@ private struct AppStateProgressBar: View {
 	}
 }
 
-// A tappable app tile: opens the app's web UI in the browser. App lifecycle management
+// A tappable app tile: opens the app in the in-app browser. App lifecycle management
 // stays in umbrelOS, so unavailable apps hand off there instead of duplicating it here.
 struct AppTileButton: View {
 	let app: Umbreld.AppSummary
 	var labelColor: Color = Theme.gray3
 
 	@Environment(MainModel.self) private var model
-	@Environment(\.openURL) private var openURL
+	@Environment(Browser.self) private var browser
 
-	@State private var activeSheet: AppLaunchSheet?
-	@State private var pendingLaunch: PendingAppLaunch?
+	@State private var sourceID = UUID()
+	@State private var showsCredentials = false
+	@State private var opensAfterCredentials = false
 	@State private var launchAlert: AppLaunchAlert?
 	@State private var liveApp: Umbreld.AppSummary?
 	@State private var isPreparingLaunch = false
@@ -668,7 +508,8 @@ struct AppTileButton: View {
 			AppTile(
 				app: app,
 				labelColor: labelColor,
-				preparing: isPreparingLaunch
+				preparing: isPreparingLaunch,
+				sourceID: sourceID
 			)
 		}
 		.buttonStyle(.plain)
@@ -694,16 +535,8 @@ struct AppTileButton: View {
 		} message: { alert in
 			Text(alert.message(canManageApps: model.canManageApps))
 		}
-		.sheet(item: $activeSheet, onDismiss: finishPendingLaunch) { sheet in
-			switch sheet {
-			case .credentials:
-				CredentialsSheet(app: appForLaunch) { pendingLaunch = .evaluateRequirements }
-			case .httpsWarning:
-				AppHTTPSWarningSheet(app: appForLaunch) { suppressFutureWarnings in
-					if suppressFutureWarnings { model.setSuppressHTTPSRequiredAppWarning(true) }
-					pendingLaunch = .open
-				}
-			}
+		.sheet(isPresented: $showsCredentials, onDismiss: finishPendingLaunch) {
+			CredentialsSheet(app: appForLaunch) { opensAfterCredentials = true }
 		}
 	}
 
@@ -712,7 +545,7 @@ struct AppTileButton: View {
 		isPreparingLaunch = true
 		defer { isPreparingLaunch = false }
 		guard let resolvedApp = await model.appForLaunch(id: app.id) else {
-			launchAlert = .unavailable
+			launchAlert = .unavailable(title: model.unreachableTitle, message: model.unreachableMessage)
 			return
 		}
 		liveApp = resolvedApp
@@ -733,61 +566,35 @@ struct AppTileButton: View {
 			return
 		}
 		if resolvedApp.credentials?.showBeforeOpen == true {
-			activeSheet = .credentials
+			showsCredentials = true
 		} else {
-			beginLaunch()
+			await openApp()
 		}
 	}
 
 	private func openUmbrel(path: String = "") {
 		Task {
-			guard let url = await model.dashboardURLForOpening(path: path) else {
-				launchAlert = .unavailable
-				return
-			}
-			openURL(url)
-		}
-	}
-
-	private func beginLaunch() {
-		if appForLaunch.requiresHttps == true,
-			!model.dashboardUsesHTTPS,
-			!model.suppressHTTPSRequiredAppWarning {
-			activeSheet = .httpsWarning
-		} else {
-			openApp()
+			if await !browser.openUmbrel(path: path) { launchAlert = .unavailable(title: model.unreachableTitle, message: model.unreachableMessage) }
 		}
 	}
 
 	private func finishPendingLaunch() {
-		let launch = pendingLaunch
-		pendingLaunch = nil
-		switch launch {
-		case .evaluateRequirements:
-			beginLaunch()
-		case .open:
-			openApp()
-		case nil:
-			break
-		}
+		guard opensAfterCredentials else { return }
+		opensAfterCredentials = false
+		Task { await openApp() }
 	}
 
-	private func openApp() {
-		let app = appForLaunch
-		Task {
-			guard let url = await model.appURLForOpening(app) else {
-				launchAlert = .unavailable
-				return
-			}
-			openURL(url)
-		}
+	// The app grows out of this tile's icon. Inside the app every page is already a
+	// trusted, secure connection, so apps that require HTTPS need no extra step.
+	private func openApp() async {
+		if await !browser.open(appForLaunch, from: sourceID) { launchAlert = .unavailable(title: model.unreachableTitle, message: model.unreachableMessage) }
 	}
 }
 
 private enum AppLaunchAlert {
 	case blocked(app: Umbreld.AppSummary, paused: Bool)
 	case torOnly(app: Umbreld.AppSummary)
-	case unavailable
+	case unavailable(title: String, message: String)
 
 	var title: String {
 		switch self {
@@ -795,8 +602,8 @@ private enum AppLaunchAlert {
 			return "\(app.name ?? app.id) is \(paused ? "Paused" : "Offline")"
 		case let .torOnly(app):
 			return "\(app.name ?? app.id) Uses Tor"
-		case .unavailable:
-			return "Can’t Reach Umbrel"
+		case let .unavailable(title, _):
+			return title
 		}
 	}
 
@@ -815,8 +622,8 @@ private enum AppLaunchAlert {
 			return canManageApps
 				? "This app is only available over Tor. Open Umbrel to view your Umbrel’s Tor address."
 				: "This app is only available over Tor. Ask the owner for your Umbrel’s Tor address, then open Umbrel in Tor Browser."
-		case .unavailable:
-			return "Check your connection and try again."
+		case let .unavailable(_, message):
+			return message
 		}
 	}
 }
@@ -840,104 +647,6 @@ private enum AppLaunchDisposition: Equatable {
 		default:
 			self = .offline
 		}
-	}
-}
-
-private enum AppLaunchSheet: String, Identifiable {
-	case credentials
-	case httpsWarning
-
-	var id: String { rawValue }
-}
-
-private enum PendingAppLaunch {
-	case evaluateRequirements
-	case open
-}
-
-private struct AppHTTPSWarningSheet: View {
-	let app: Umbreld.AppSummary
-	let onOpen: (Bool) -> Void
-
-	@Environment(\.dismiss) private var dismiss
-	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
-	@State private var dontShowAgain = false
-
-	var body: some View {
-		VStack(spacing: 0) {
-			AppIconView(url: app.iconURL, size: 64, corner: 16)
-				.padding(.top, 40)
-
-			Text("Open \(app.name ?? app.id) over HTTPS?")
-				.font(.title3.weight(.semibold))
-				.foregroundStyle(.white)
-				.multilineTextAlignment(.center)
-				.padding(.top, 16)
-
-			Text("This app needs an HTTPS browser connection to work correctly. Your browser may show a privacy warning the first time.")
-				.font(.subheadline)
-				.foregroundStyle(Theme.gray)
-				.multilineTextAlignment(.center)
-				.fixedSize(horizontal: false, vertical: true)
-				.padding(.top, 8)
-
-			Text("If it does, open the details and choose the option to continue to your Umbrel.")
-				.font(.footnote)
-				.foregroundStyle(Theme.gray.opacity(0.8))
-				.multilineTextAlignment(.center)
-				.fixedSize(horizontal: false, vertical: true)
-				.padding(.top, 8)
-
-			Spacer()
-
-			Toggle("Don’t show this warning again", isOn: $dontShowAgain)
-				.toggleStyle(HTTPSWarningCheckboxStyle())
-				.padding(.horizontal, 4)
-				.padding(.bottom, 8)
-
-			Button {
-				onOpen(dontShowAgain)
-				dismiss()
-			} label: {
-				Text("Open over HTTPS")
-					.font(.headline)
-					.foregroundStyle(.white)
-					.frame(maxWidth: .infinity, minHeight: 48)
-					.background(Color(hex: 0x6155F5), in: .capsule)
-			}
-			.buttonStyle(.plain)
-			.padding(.bottom, 20)
-		}
-		.padding(.horizontal, 24)
-		.presentationDetents([dynamicTypeSize.isAccessibilitySize ? .large : .medium])
-		.presentationDragIndicator(.visible)
-		.presentationBackground(Color(hex: 0x1C1C1E))
-	}
-}
-
-// SwiftUI's built-in checkbox style is unavailable on iOS. A custom ToggleStyle
-// keeps the familiar checkbox appearance while preserving native toggle semantics
-// for VoiceOver, Switch Control, and keyboard input.
-private struct HTTPSWarningCheckboxStyle: ToggleStyle {
-	func makeBody(configuration: Configuration) -> some View {
-		Button {
-			configuration.isOn.toggle()
-		} label: {
-			HStack(spacing: 10) {
-				Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-					.font(.system(size: 19))
-					.foregroundStyle(configuration.isOn ? Color(hex: 0x6155F5) : Theme.gray.opacity(0.7))
-
-				configuration.label
-					.font(.subheadline)
-					.foregroundStyle(Theme.gray)
-
-				Spacer(minLength: 0)
-			}
-			.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-			.contentShape(Rectangle())
-		}
-		.buttonStyle(.plain)
 	}
 }
 
@@ -1084,9 +793,51 @@ private struct LibraryPreviewSection: View {
 					.accessibilityIdentifier("homeLibraryHeader")
 				PhotoBackupSetupCard()
 			}
+			ViewAllInPhotosButton()
+				.padding(.top, 4)
 		}
 	}
+}
 
+// The Library screens show this iPhone's library. Everything on the Umbrel, from
+// every device and album, lives in umbrelOS's Photos, one tap away on the same
+// wallpaper.
+struct ViewAllInPhotosButton: View {
+	@Environment(MainModel.self) private var model
+	@Environment(Browser.self) private var browser
+	@State private var isShowingUnavailable = false
+
+	var body: some View {
+		Button {
+			Task {
+				if await !browser.openUmbrel(path: "/photos") { isShowingUnavailable = true }
+			}
+		} label: {
+			HStack(spacing: 6) {
+				Image(systemName: "photo.on.rectangle.angled")
+				Text("View All in Photos")
+			}
+			.font(.footnote.weight(.semibold))
+			.foregroundStyle(.white)
+			.padding(.horizontal, 18)
+			.frame(minHeight: 52)
+			// Same stable wallpaper frost as the cards it sits among.
+			.background {
+				FrostBackground(shape: Capsule(), wallpaper: model.blurredWallpaper)
+			}
+			.glassGlint(in: Capsule())
+		}
+		.buttonStyle(.plain)
+		.frame(maxWidth: .infinity)
+		.alert(model.unreachableTitle, isPresented: $isShowingUnavailable) {
+			Button("OK", role: .cancel) {}
+		} message: {
+			Text(model.unreachableMessage)
+		}
+	}
+}
+
+private extension LibraryPreviewSection {
 	// A window onto the newest rows of the iPhone library, bottom-aligned in a fixed-height
 	// card that crops at the top edge. The window starts on a Library row
 	// boundary so the layout mirrors the tab exactly, ragged last row and all; with a
