@@ -9,6 +9,7 @@ ARG DOCKER_VERSION=28.5.0
 ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
 
 ARG NVIDIA_CUDA_SUPPORT=true
+ARG NVIDIA_DRIVER_VERSION=595.91.07
 ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.19.1-1
 ARG LIBNVIDIA_CONTAINER1_SHA256_amd64=d73bb582af893135198ef81cb22135c790a75d2ad72910446477c6c4430f3e6b
 ARG LIBNVIDIA_CONTAINER_TOOLS_SHA256_amd64=5642763d51961a2295dff09990048a5dcee81edbea2a8c5084e47b09ccf17268
@@ -100,6 +101,7 @@ FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base
 ARG APT_SNAPSHOT_DATE
 ARG TARGETARCH
 ARG NVIDIA_CUDA_SUPPORT
+ARG NVIDIA_DRIVER_VERSION
 
 COPY packages/os/build-steps /build-steps
 
@@ -132,19 +134,44 @@ RUN set -e; \
 # CUDA, NVIDIA's Vulkan implementation, and NVDEC/NVENC share the NVIDIA kernel
 # driver. Keep their userspace libraries on the host so the NVIDIA Container
 # Toolkit can inject the versions matching that driver into application
-# containers. Use Debian's driver-library and Vulkan ICD package contracts so
-# all private compute, video, GLX, EGL, and Vulkan dependencies stay
-# version-matched.
-RUN set -e; \
+# containers.
+#
+# Debian's own NVIDIA packages are stuck on the 550 branch, which predates
+# Blackwell (RTX 50-series) support. Install a production-branch driver from
+# NVIDIA's Debian 13 repository instead. Those packages follow Debian's
+# driver-library and Vulkan ICD package contracts so all private compute, video,
+# GLX, EGL, and Vulkan dependencies stay version-matched. The repository is not
+# archived by snapshot.debian.org, so pin every package by checksum and keep the
+# repository itself out of the image's apt sources.
+#
+# NVIDIA ships nvidia-smi in nvidia-driver-cuda, which also enables
+# nvidia-persistenced. Every amd64 image carries the driver whether or not an
+# NVIDIA GPU is present, so leave the daemon disabled.
+#
+# NVIDIA's nvidia_drm module claims the same PCI IDs as nvidia, so udev would
+# autoload it with modesetting on and give NVIDIA GPUs a /dev/dri card and render
+# node. On systems with an iGPU, the NVIDIA node can then take renderD128, which
+# VA-API/QSV apps assume is the iGPU. CUDA, NVENC/NVDEC, and NVIDIA Vulkan only
+# need /dev/nvidia*, so blacklist the autoload and keep NVIDIA GPUs off /dev/dri.
+COPY packages/os/nvidia-driver-packages.sha256 /tmp/nvidia-driver-packages.sha256
+RUN set -eu; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
-        apt-get install --yes --no-install-recommends \
-            nvidia-open-kernel-dkms \
-            nvidia-driver-libs \
-            libcuda1 \
-            libnvcuvid1 \
-            libnvidia-encode1 \
-            nvidia-smi \
-            nvidia-vulkan-icd; \
+        apt-get install --yes curl ca-certificates; \
+        mkdir -p /tmp/nvidia-driver; \
+        while read -r checksum package_file; do \
+            curl -fsSL "https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/${package_file}" -o "/tmp/nvidia-driver/${package_file}"; \
+            echo "${checksum}  /tmp/nvidia-driver/${package_file}" | sha256sum -c -; \
+        done < /tmp/nvidia-driver-packages.sha256; \
+        apt-get install --yes --no-install-recommends --no-remove /tmp/nvidia-driver/*.deb; \
+        systemctl disable nvidia-persistenced.service; \
+        echo 'blacklist nvidia_drm' > /etc/modprobe.d/nvidia-drm.conf; \
+        module_built=false; \
+        for modules_dir in /lib/modules/*; do \
+            test "$(modinfo -k "$(basename "${modules_dir}")" -F version nvidia)" = "${NVIDIA_DRIVER_VERSION}"; \
+            module_built=true; \
+        done; \
+        test "${module_built}" = "true"; \
+        rm -rf /tmp/nvidia-driver; \
         install --directory /etc/vulkan/icd.d; \
         cp /usr/share/vulkan/icd.d/nvidia_icd.json \
             /etc/vulkan/icd.d/nvidia_icd.json; \
@@ -152,7 +179,8 @@ RUN set -e; \
         rm -f \
             /usr/share/vulkan/icd.d/nvidia_icd.json \
             /usr/share/vulkan/implicit_layer.d/nvidia_layers.json; \
-    fi
+    fi; \
+    rm /tmp/nvidia-driver-packages.sha256
 
 # Keep the cross-hardware acceleration contract explicit. These options are
 # provided by Debian's generic amd64 kernel and expose /dev/dri for Vulkan plus
