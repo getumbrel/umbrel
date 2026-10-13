@@ -5,7 +5,7 @@
 //   GET  /api/photos/original/:id[?download]
 //   GET  /api/photos/live/:id
 //   GET  /api/photos/download?ticket=…
-//   POST /api/photos/upload?name=IMG_1234.jpg&album=<id> (browser import)
+//   POST /api/photos/upload?name=IMG_1234.jpg&album=<id>&lastModified=<ms> (browser import)
 //   POST /api/photos/upload + X-Umbrel-Photo-Backup-* headers (PhotoKit backup)
 //
 import nodePath from 'node:path'
@@ -16,7 +16,7 @@ import express from 'express'
 import type Umbreld from '../../index.js'
 import type {Principal} from '../auth/auth.js'
 import {authorizeDashboardRequest, authorizeHttpRequest, authorizePhotoBackupRequest} from '../auth/http-request.js'
-import {receiveUpload} from '../files/api.js'
+import {receiveUpload, uploadLastModified} from '../files/api.js'
 import {lookupMimeType} from '../files/mime.js'
 import type UploadDiskPreflight from '../server/upload-disk-preflight.js'
 import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.js'
@@ -270,7 +270,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 	async function resolveItemId(id: string, response: express.Response) {
 		const item = await umbreld.photos.resolveItem(accountId(response), id)
 		if (!item) throw new Error('[photos-item-not-found]')
-		return {virtualPath: item.path}
+		return {virtualPath: item.path, modifiedMs: item.modifiedMs}
 	}
 
 	function resolveItem(request: express.Request, response: express.Response) {
@@ -390,10 +390,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 			response.setHeader('Content-Type', 'application/zip')
 			response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''umbrel-photos.zip`)
 			await pipeline(
-				await umbreld.files.archive.createAuthorizedFlatFileZipStream(
-					items.map(({virtualPath}) => virtualPath),
-					accountId(response),
-				),
+				await umbreld.files.archive.createAuthorizedFlatFileZipStream(items, accountId(response)),
 				response,
 			)
 		} catch {
@@ -401,10 +398,12 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 		}
 	})
 
-	// POST /api/photos/upload?name=IMG_1234.jpg&album=a-iceland — body = the
-	// bytes, one file per request. Bytes land in the current account's Photos
-	// directory through Files' hardened upload primitive (temp file,
-	// keep-both collisions, ownership).
+	// POST /api/photos/upload?name=IMG_1234.jpg&album=a-iceland&lastModified=1433116800000
+	// — body = the bytes, one file per request. Bytes land in the current
+	// account's Photos directory through Files' hardened upload primitive (temp
+	// file, keep-both collisions, ownership). The optional `lastModified` is the
+	// browser's File.lastModified and becomes the stored file's modification
+	// time, which dates media whose bytes carry no capture date.
 	// 2xx answers {status: 'imported' | 'duplicate'}; unsupported types → 415.
 	api.post('/upload', async (request, response) => {
 		if (response.locals.photoBackupPrincipal) {
@@ -414,9 +413,14 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 		// whole body before reading the verdict (see Files' uploadFile)
 		const name = typeof request.query.name === 'string' ? nodePath.basename(request.query.name) : ''
 		const albumId = typeof request.query.album === 'string' ? request.query.album : undefined
+		const lastModified = uploadLastModified(request.query.lastModified)
 		if (!name) {
 			response.setHeader('Connection', 'close')
 			return response.status(400).json({error: 'name is required'})
+		}
+		if (lastModified === 'invalid') {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'invalid lastModified parameter'})
 		}
 		if (!supportsPhotos(name)) {
 			response.setHeader('Connection', 'close')
@@ -433,6 +437,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 				virtualPath: `${uploadDirectoryForAccount(id)}/${name}`,
 				collision: 'keep-both',
 				calculateBlake3: true,
+				modifiedMs: lastModified,
 				onBeforePublish: async (blake3) => {
 					const status = await umbreld.photos.prepareUpload(id, blake3, albumId)
 					if (status === 'duplicate') {

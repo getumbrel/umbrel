@@ -123,11 +123,17 @@ later background enrichment pass.
 
 ## Upgrade and rollback (2.0 rollout)
 
-The final file-index schema is **20** and the durable Photos schema is **9**.
+The final file-index schema is **22** and the durable Photos schema is **9**.
 Schema 19 adds stored indexing counters. Schema 20 removes the duplicated source
 name; durable schema 9 replaces the v8 source-update trigger so name-only changes
 do not invalidate the account. Existing v18/v19 indexes upgrade in place, and the
 source-name migration preserves their stored library rows.
+
+File-index schema 22 changes no tables. Media without an embedded date now uses
+its source date, else the earlier of its modification and birth dates, so the migration
+journals exactly those items and the next Photos sync recomputes their stored
+dates through ordinary incremental maintenance, or one account rebuild above the
+usual threshold. Schema 21 adds directory sizes for Files.
 
 On the first upgrade from a build without stored library tables, startup builds
 the projection and indexing counters from the existing index. This is synchronous

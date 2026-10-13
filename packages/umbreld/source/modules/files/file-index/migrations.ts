@@ -500,6 +500,25 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 		},
 	},
 	{version: 21, up: createDirectorySizes},
+	{
+		version: 22,
+		up: (database) => {
+			// Media without an embedded date now falls back to the earlier of its
+			// modification and birth dates instead of preferring the birth time.
+			// Journal those items so the next Photos sync recomputes their dates.
+			database.exec(`
+				INSERT INTO photos_read_model_dirty_contents
+				SELECT DISTINCT index_roots.owner_id, contents.blake3
+				FROM media_metadata
+				JOIN entries ON entries.content_id = media_metadata.content_id
+				JOIN index_roots ON index_roots.id = entries.root_id
+				JOIN contents ON contents.id = entries.content_id
+				WHERE (media_metadata.taken_at IS NULL OR media_metadata.created_at IS NULL)
+					AND index_roots.kind IN ('home', 'trash')
+				ON CONFLICT DO NOTHING;
+			`)
+		},
+	},
 ]
 
 export const FILE_INDEX_SCHEMA_VERSION = fileIndexMigrations.at(-1)?.version ?? 0

@@ -1001,20 +1001,29 @@ export default class PhotosRepository {
 		if (hashes.length === 0) return []
 		this.#ensureSource(database, accountId)
 		this.syncPendingChanges(database)
-		const resolved = new Map<string, {id: string; path: string}>()
+		const resolved = new Map<string, {id: string; path: string; modifiedMs: number}>()
 		for (const batch of hashBatches(hashes)) {
 			const target = targetedHashes(batch)!
 			const rows = this.#prepare(
 				database,
 				`resolve-items:${target.capacity}`,
 				`${photoLibraryCte(target.capacity)}
-					SELECT id, root_virtual_path, relative_path FROM logical_items
+					SELECT id, root_virtual_path, relative_path, modified_ms FROM logical_items
 					WHERE content_hash IN (SELECT content_hash FROM requested_hashes)
 					ORDER BY id, root_kind = 'home' DESC`,
-			).all(...target.parameters, accountId) as Array<{id: string; root_virtual_path: string; relative_path: string}>
+			).all(...target.parameters, accountId) as Array<{
+				id: string
+				root_virtual_path: string
+				relative_path: string
+				modified_ms: number
+			}>
 			for (const row of rows) {
 				if (!resolved.has(row.id)) {
-					resolved.set(row.id, {id: row.id, path: joinVirtualPath(row.root_virtual_path, row.relative_path)})
+					resolved.set(row.id, {
+						id: row.id,
+						path: joinVirtualPath(row.root_virtual_path, row.relative_path),
+						modifiedMs: Number(row.modified_ms),
+					})
 				}
 			}
 		}

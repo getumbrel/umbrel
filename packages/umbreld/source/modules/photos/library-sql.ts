@@ -6,6 +6,18 @@ import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from './types.js'
 const PHOTO_MEDIA_EXTENSIONS = [...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS]
 const LIVE_FALLBACK_STEM_SQL = filenameStemSql('entries.name', PHOTO_MEDIA_EXTENSIONS)
 
+// Media without an embedded date uses its backup source's date, else the
+// earlier of its filesystem dates. Linux sets a file's birth time when it lands
+// on this disk, while copies, network shares and browser imports preserve the
+// original modification time. A zero or negative filesystem time is an unset
+// one (archives and some copy tools write the epoch), not a date.
+const MODIFIED_SQL = 'CASE WHEN canonical_locations.modified_ms > 0 THEN canonical_locations.modified_ms END'
+const BIRTH_SQL = 'CASE WHEN canonical_locations.birthtime_ms > 0 THEN canonical_locations.birthtime_ms END'
+// Scalar MIN() is NULL when either argument is, so each falls back to the other.
+const FALLBACK_DATE_SQL = `umbrel.photos_content_state.source_created_at,
+				MIN(COALESCE(${MODIFIED_SQL}, ${BIRTH_SQL}), COALESCE(${BIRTH_SQL}, ${MODIFIED_SQL})),
+				canonical_locations.modified_ms`
+
 function targetedPhotoContentCtes(hashCount: number) {
 	const fallbackEntryStem = filenameStemSql('fallback_entry.name', PHOTO_MEDIA_EXTENSIONS)
 	const fallbackEntryParent =
@@ -240,12 +252,8 @@ export function photoLibraryCte(targetHashCount = 0, stages: string[] = []) {
 		SELECT canonical_locations.*,
 			COALESCE(umbrel.photos_content_state.is_favorite, 0) AS is_favorite,
 			COALESCE(umbrel.photos_content_state.imported_at, canonical_locations.content_created_at) AS imported_at,
-			COALESCE(canonical_locations.taken_at, umbrel.photos_content_state.source_created_at,
-				canonical_locations.birthtime_ms,
-				canonical_locations.modified_ms) AS logical_taken_at,
-			COALESCE(canonical_locations.created_at, umbrel.photos_content_state.source_created_at,
-				canonical_locations.birthtime_ms,
-				canonical_locations.modified_ms) AS logical_created_at,
+			COALESCE(canonical_locations.taken_at, ${FALLBACK_DATE_SQL}) AS logical_taken_at,
+			COALESCE(canonical_locations.created_at, ${FALLBACK_DATE_SQL}) AS logical_created_at,
 			CASE
 				WHEN canonical_locations.sub_kind = 'spherical' THEN 'spherical'
 				WHEN live_pair.still_hash IS NOT NULL OR canonical_locations.sub_kind = 'live' THEN 'live'

@@ -72,9 +72,14 @@ test('streams a flat Photos zip only through account-authorized file descriptors
 	} as unknown as Umbreld
 	const archive = new Archive(umbreld)
 	const destination = nodePath.join(directory, 'photos.zip')
+	const modifiedMs = Date.UTC(2015, 5, 1, 12, 30, 20)
+	const started = Date.now()
 
 	await pipeline(
-		await archive.createAuthorizedFlatFileZipStream([...files.keys()], 'member'),
+		await archive.createAuthorizedFlatFileZipStream(
+			[{virtualPath: '/Users/member/one/photo.jpg', modifiedMs}, {virtualPath: '/Users/member/two/photo.jpg'}],
+			'member',
+		),
 		createWriteStream(destination),
 	)
 
@@ -83,4 +88,10 @@ test('streams a flat Photos zip only through account-authorized file descriptors
 	expect(zip.getEntries().map(({entryName}) => entryName)).toStrictEqual(['photo.jpg', 'photo (2).jpg'])
 	expect(zip.readAsText('photo.jpg')).toBe('first')
 	expect(zip.readAsText('photo (2).jpg')).toBe('second')
+	// Zip times carry no timezone: the archive stores UTC fields and the reader
+	// returns them as local time.
+	const [dated, undated] = zip.getEntries().map(({header}) => header.time)
+	expect(dated).toStrictEqual(new Date(2015, 5, 1, 12, 30, 20))
+	// Without a known modification time the entry is dated by the download.
+	expect(undated!.getFullYear()).toBe(new Date(started).getUTCFullYear())
 })

@@ -1,5 +1,6 @@
 import {once} from 'node:events'
-import {readFile, writeFile} from 'node:fs/promises'
+import {readFile, rename, stat, utimes, writeFile} from 'node:fs/promises'
+import nodePath from 'node:path'
 import type {AddressInfo} from 'node:net'
 
 import cookieParser from 'cookie-parser'
@@ -11,17 +12,18 @@ import type Umbreld from '../../index.js'
 import {OWNER_ACCOUNT_ID} from '../auth/auth.js'
 import UploadDiskPreflight from '../server/upload-disk-preflight.js'
 import temporaryDirectory from '../utilities/temporary-directory.js'
-import fileApi, {publishUploadWithoutReplacing} from './api.js'
+import fileApi, {publishUploadWithoutReplacing, uploadLastModified} from './api.js'
 
 describe('file API authentication boundaries', () => {
 	const directory = temporaryDirectory()
 	let server: ReturnType<express.Express['listen']>
 	let origin: string
+	let uploadDirectory: string
 
 	beforeAll(async () => {
 		await directory.createRoot()
 		const thumbnailDirectory = await directory.create()
-		const uploadDirectory = await directory.create()
+		uploadDirectory = await directory.create()
 		const systemPrincipal = {sessionId: 'system', accountId: OWNER_ACCOUNT_ID, actor: 'system'} as const
 		const umbreld = {
 			auth: {
@@ -37,7 +39,9 @@ describe('file API authentication boundaries', () => {
 			},
 			files: {
 				thumbnails: {thumbnailDirectory},
-				virtualToSystemPath: async () => `${uploadDirectory}/blocked.txt`,
+				virtualToSystemPath: async (virtualPath: string) =>
+					nodePath.join(uploadDirectory, nodePath.basename(virtualPath)),
+				status: async () => ({type: 'file'}),
 				authorizeWritableDestinationSystemPath: async () => {
 					throw new Error('[cloud-read-only]')
 				},
@@ -108,6 +112,54 @@ describe('file API authentication boundaries', () => {
 		expect(JSON.parse(response.body)).toEqual({error: '[cloud-read-only]'})
 	})
 
+	test.each(['', 'abc', '1.5', '0', '-86400000', '253402300800000', '1&lastModified=2'])(
+		'upload rejects an invalid last-modified time before consuming the body: %s',
+		async (lastModified) => {
+			const response = await got(`${origin}/api/files/upload?path=%2FHome%2Fdated.txt&lastModified=${lastModified}`, {
+				method: 'POST',
+				headers: {Authorization: 'Bearer system-token'},
+				body: 'dated',
+				throwHttpErrors: false,
+			})
+
+			expect(response.statusCode).toBe(400)
+			expect(JSON.parse(response.body)).toEqual({error: 'invalid lastModified parameter'})
+		},
+	)
+
+	test.each(['/api/files/view', '/api/files/download'])(
+		'%s revalidates a replacement that kept the size and modification time',
+		async (route) => {
+			const name = `${route.split('/').at(-1)}-revision.txt`
+			const systemPath = nodePath.join(uploadDirectory, name)
+			const time = new Date(Date.UTC(2015, 5, 1))
+			await writeFile(systemPath, 'old!')
+			await utimes(systemPath, time, time)
+			const url = `${origin}${route}?path=${encodeURIComponent(`/Home/${name}`)}`
+			const headers = {Authorization: 'Bearer system-token'}
+			const first = await got(url, {headers})
+			expect(first.body).toBe('old!')
+			const etag = first.headers.etag!
+
+			// An unchanged file still revalidates.
+			const unchanged = await got(url, {headers: {...headers, 'If-None-Match': etag}, throwHttpErrors: false})
+			expect(unchanged.statusCode).toBe(304)
+
+			// Uploads publish a replacement as a new file carrying the original time.
+			await writeFile(`${systemPath}.tmp`, 'new!')
+			await utimes(`${systemPath}.tmp`, time, time)
+			await rename(`${systemPath}.tmp`, systemPath)
+			const replaced = await got(url, {headers: {...headers, 'If-None-Match': etag}, throwHttpErrors: false})
+			expect(replaced.statusCode).toBe(200)
+			expect(replaced.body).toBe('new!')
+		},
+	)
+
+	test("reads the browser's last-modified time from an upload", () => {
+		expect(uploadLastModified(undefined)).toBeUndefined()
+		expect(uploadLastModified('1433160000000')).toBe(1433160000000)
+	})
+
 	test('publishes without clobbering when the destination filesystem has no hard links', async () => {
 		const testDirectory = await directory.create()
 		const temporaryPath = `${testDirectory}/upload.tmp`
@@ -121,6 +173,21 @@ describe('file API authentication boundaries', () => {
 
 		await expect(readFile(destinationPath, 'utf8')).resolves.toBe('photo bytes')
 		await expect(readFile(temporaryPath)).rejects.toMatchObject({code: 'ENOENT'})
+	})
+
+	test('the hard-link fallback gives the copy the requested modification time', async () => {
+		const testDirectory = await directory.create()
+		const temporaryPath = `${testDirectory}/upload.tmp`
+		const destinationPath = `${testDirectory}/photo.jpg`
+		await writeFile(temporaryPath, 'photo bytes')
+		const unsupportedLink = async () => {
+			throw Object.assign(new Error('hard links unsupported'), {code: 'EOPNOTSUPP'})
+		}
+		const modifiedMs = Date.UTC(2015, 5, 1)
+
+		await publishUploadWithoutReplacing(temporaryPath, destinationPath, {createLink: unsupportedLink, modifiedMs})
+
+		expect((await stat(destinationPath)).mtimeMs).toBe(modifiedMs)
 	})
 
 	test('the hard-link fallback never replaces an existing destination', async () => {

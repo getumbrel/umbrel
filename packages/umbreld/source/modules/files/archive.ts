@@ -101,11 +101,14 @@ export default class Archive {
 	// Photos selections can span folders, but every byte must remain tied to a
 	// descriptor opened and authorized for this account. Each lazy source holds
 	// only its own descriptor while Archiver consumes it, avoiding both path
-	// reopen races and an O(selection) descriptor burst.
-	async createAuthorizedFlatFileZipStream(virtualPaths: string[], userId: string) {
+	// reopen races and an O(selection) descriptor burst. Archiver dates a
+	// stream entry when it is queued, before its file is opened, so the caller
+	// supplies each file's modification time; without one the entry would be
+	// dated by the download.
+	async createAuthorizedFlatFileZipStream(files: Array<{virtualPath: string; modifiedMs?: number}>, userId: string) {
 		const archive = archiver('zip')
 		const usedNames = new Set<string>()
-		for (const virtualPath of virtualPaths) {
+		for (const {virtualPath, modifiedMs} of files) {
 			const name = uniqueArchiveName(nodePath.posix.basename(virtualPath), usedNames)
 			const source = Readable.from(
 				(async function* (umbreld: Umbreld) {
@@ -117,7 +120,11 @@ export default class Archive {
 					}
 				})(this.#umbreld),
 			)
-			archive.append(source, {name, ...(this.#shouldSkipCompression(virtualPath) ? {store: true} : {})})
+			archive.append(source, {
+				name,
+				...(modifiedMs !== undefined && modifiedMs > 0 ? {date: new Date(modifiedMs)} : {}),
+				...(this.#shouldSkipCompression(virtualPath) ? {store: true} : {}),
+			})
 		}
 		archive.finalize().catch((error) => archive.emit('error', error))
 		return archive

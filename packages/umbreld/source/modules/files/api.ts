@@ -81,9 +81,11 @@ export async function publishUploadWithoutReplacing(
 	{
 		createLink = link,
 		copyExclusive = (source: string, destination: string) => copyFile(source, destination, constants.COPYFILE_EXCL),
+		modifiedMs,
 	}: {
 		createLink?: typeof link
 		copyExclusive?: (source: string, destination: string) => Promise<void>
+		modifiedMs?: number
 	} = {},
 ) {
 	try {
@@ -99,6 +101,8 @@ export async function publishUploadWithoutReplacing(
 			copied = true
 			const destination = await open(destinationSystemPath, constants.O_RDONLY | constants.O_NOFOLLOW)
 			try {
+				// Unlike a hard link, the copy is a new file with its own times.
+				if (modifiedMs !== undefined) await destination.utimes(new Date(), new Date(modifiedMs))
 				await destination.sync()
 			} finally {
 				await destination.close()
@@ -161,6 +165,17 @@ function requireFileApiAuth(umbreld: Umbreld) {
 	}
 }
 
+// Express derives its ETag from size and modification time alone, which
+// uploads may now set to the file's original time. A replacement with the same
+// size and time would then revalidate as the old file, so the validator also
+// covers the inode and change time, which a client cannot set.
+async function sendFileRevision(response: express.Response, systemPath: string) {
+	const stats = await fse.stat(systemPath, {bigint: true})
+	const revision = [stats.size, stats.mtimeNs, stats.ctimeNs, stats.ino].map((value) => value.toString(16))
+	response.setHeader('ETag', `W/"${revision.join('-')}"`)
+	response.sendFile(systemPath, {dotfiles: 'allow'})
+}
+
 export function downloadFiles(umbreld: Umbreld) {
 	return async (request: express.Request, response: express.Response) => {
 		// Normalise a single path or multiple paths into an array
@@ -189,7 +204,7 @@ export function downloadFiles(umbreld: Umbreld) {
 			response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
 			response.setHeader('Content-Type', 'application/octet-stream')
 			response.setHeader('X-Content-Type-Options', 'nosniff')
-			return response.sendFile(files[0], {dotfiles: 'allow'})
+			return await sendFileRevision(response, files[0])
 		}
 
 		// For directory or multiple files, create zip archive
@@ -212,6 +227,9 @@ type ReceiveUploadOptions = {
 	virtualPath: string
 	collision: 'error' | 'keep-both' | 'replace'
 	calculateBlake3?: boolean
+	// Epoch milliseconds to store as the file's modification time, for callers
+	// that know when the uploaded file was last modified on its origin.
+	modifiedMs?: number
 	insufficientStorageHeader?: {name: string; value: string}
 	onBeforePublish?: (hash: Buffer) => Promise<'publish' | 'skip'>
 	onPublished?: (upload: PublishedUpload) => Promise<void>
@@ -236,6 +254,7 @@ export async function receiveUpload(
 		virtualPath,
 		collision,
 		calculateBlake3 = false,
+		modifiedMs,
 		insufficientStorageHeader,
 		onBeforePublish,
 		onPublished,
@@ -354,6 +373,10 @@ export async function receiveUpload(
 			}
 			const syncHandle = await open(temporarySystemPath, constants.O_RDONLY | constants.O_NOFOLLOW)
 			try {
+				// Stamp the hidden temporary file, so the published name never
+				// exists with another modification time and the revision read
+				// after publication already includes this change.
+				if (modifiedMs !== undefined) await syncHandle.utimes(new Date(), new Date(modifiedMs))
 				await syncHandle.sync()
 			} finally {
 				await syncHandle.close()
@@ -397,7 +420,7 @@ export async function receiveUpload(
 					await fse.rename(temporarySystemPath, candidate)
 				} else {
 					try {
-						await publishUploadWithoutReplacing(temporarySystemPath, candidate)
+						await publishUploadWithoutReplacing(temporarySystemPath, candidate, {modifiedMs})
 					} catch (error) {
 						if ((error as NodeJS.ErrnoException).code === 'EEXIST' && collision === 'keep-both') continue
 						throw error
@@ -472,6 +495,20 @@ export async function receiveUpload(
 	}
 }
 
+const MAX_UPLOAD_LAST_MODIFIED = 253_402_300_799_999
+
+// Reads the browser's File.lastModified from an upload's query string. Older
+// clients omit it; anything but one positive epoch millisecond value up to
+// year 9999 is invalid.
+export function uploadLastModified(value: unknown) {
+	if (value === undefined) return
+	const lastModified = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : 0
+	if (!Number.isSafeInteger(lastModified) || lastModified <= 0 || lastModified > MAX_UPLOAD_LAST_MODIFIED) {
+		return 'invalid' as const
+	}
+	return lastModified
+}
+
 export function uploadFile(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPreflight) {
 	return async (request: express.Request, response: express.Response) => {
 		// We must set Connection: close on early errors so browser XHR does not
@@ -485,9 +522,15 @@ export function uploadFile(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPref
 			response.setHeader('Connection', 'close')
 			return response.status(400).json({error: 'invalid collision parameter'})
 		}
+		const lastModified = uploadLastModified(request.query.lastModified)
+		if (lastModified === 'invalid') {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'invalid lastModified parameter'})
+		}
 		const result = await receiveUpload(umbreld, uploadDiskPreflight, request, response, {
 			virtualPath: request.query.path,
 			collision,
+			modifiedMs: lastModified,
 		})
 		if (result && 'path' in result) response.status(200).json({path: result.path})
 		return result && 'path' in result ? result.path : undefined
@@ -553,14 +596,14 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 				response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
 				response.setHeader('Content-Type', 'application/octet-stream')
 			}
-			response.sendFile(systemPath, {dotfiles: 'allow'})
+			await sendFileRevision(response, systemPath)
 		} catch {
 			return response.status(404).json({error: 'not found'})
 		}
 	})
 
 	// Uploads a file
-	// POST /api/files/upload?path=/Home/file.txt&collision=error|keep-both|replace
+	// POST /api/files/upload?path=/Home/file.txt&collision=error|keep-both|replace&lastModified=<ms>
 	api.post('/upload', uploadFile(umbreld, uploadDiskPreflight))
 	return api
 }

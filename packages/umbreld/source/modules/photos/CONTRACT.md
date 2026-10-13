@@ -22,7 +22,8 @@ The client must assign a distinct resource key to every resource within a
 source, including separate keys for a Live Photo's still and motion resources.
 New uploads also carry the original filename because the resource-key storage
 path cannot preserve it. They carry PhotoKit's creation date only as a fallback
-for resources whose bytes contain no capture date. Media type, other capture
+for resources whose bytes contain no capture date; it then takes precedence
+over the stored file's own dates. Media type, other capture
 metadata, and Live Photo relationships are derived from the uploaded files by
 the indexer rather than duplicated in the client contract. Mutable library state
 such as favorites and album membership is deliberately not part of the
@@ -99,7 +100,11 @@ type Item = {
 	id: string // lowercase 64-character BLAKE3 hex digest
 	kind: Kind
 	subKind?: SubKind
-	takenAt: number // epoch ms; embedded capture time, else source date, indexed birth time, or modification time
+	// Epoch ms; the embedded capture time. Media without one uses the backup
+	// source's date, else the earlier of the file's modification and birth
+	// times: birth time is when the file landed on this disk, while copies,
+	// network shares and browser imports keep the original modification time.
+	takenAt: number
 	// The offset matching the selected EXIF date as minutes east of UTC, when present.
 	takenAtOffsetMinutes?: number
 	width: number // pixels, after EXIF orientation
@@ -115,7 +120,7 @@ type ItemDetail = Item & {
 	sizeBytes: number
 	source: {id: string; name: string; type: SourceType}
 	path: string // virtual path in the selected Home or Trash projection ("Show in Files")
-	createdAt: number // embedded creation/capture time, else source date, indexed birth time, or modification time
+	createdAt: number // embedded creation/capture time, else the same fallback as takenAt
 	importedAt: number // epoch ms the import wrote the row
 	// Partial camera metadata plus EXIF UserComment. Camera values are
 	// display-ready strings, except iso.
@@ -364,11 +369,17 @@ of these URLs from item ids — API responses carry no URL fields.
 - `GET /api/photos/download?ticket=…` — one selected item is returned as a
   file attachment; several are returned as a flat zip stream. Every item is
   re-authorized for the ticket's account when the HTTP request is handled.
-- `POST /api/photos/upload?name=IMG_1234.jpg&album=<id>` — body = the bytes, one
-  file per request; `album` optional, validated before the bytes stream, files the
-  item on success. The complete hidden temporary file is BLAKE3-hashed and
+- `POST /api/photos/upload?name=IMG_1234.jpg&album=<id>&lastModified=<ms>` — body
+  = the bytes, one file per request; `album` optional, validated before the bytes
+  stream, files the item on success. `lastModified` is optional (older clients
+  omit it): the browser's `File.lastModified` in epoch ms, which becomes the
+  stored file's modification time so media without an embedded capture date
+  keeps its original date, now and after any rescan. A value that is not a
+  positive integer up to year 9999 → 400 before the bytes stream. The complete
+  hidden temporary file is BLAKE3-hashed and
   checked for an account-local duplicate before it is published into the
-  library; duplicate bytes are discarded without creating a visible pathname.
+  library; duplicate bytes are discarded without creating a visible pathname,
+  and the copy already in the library keeps its own dates.
   2xx answers `{status: 'imported' | 'duplicate'}`, and the upload island reports
   "N added · M already in your library".
   Unsupported file types → 415 (the UI filters its pickers too) so nothing is

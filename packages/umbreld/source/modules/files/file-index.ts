@@ -483,7 +483,7 @@ export default class FileIndex {
 	}
 
 	async photosResolveItems(accountId: string, ids: string[]) {
-		return this.#request<Array<{id: string; path: string}>>('photosResolveItems', [accountId, ids])
+		return this.#request<Array<{id: string; path: string; modifiedMs: number}>>('photosResolveItems', [accountId, ids])
 	}
 
 	async photosResolveItemFiles(accountId: string, ids: string[] | undefined, rootKind: 'home' | 'trash') {

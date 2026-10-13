@@ -230,6 +230,64 @@ describe('Photos HTTP account boundaries', () => {
 		)
 	})
 
+	test("stores the browser's last-modified time before the upload is published and registered", async () => {
+		prepareUpload.mockResolvedValue('new')
+		const lastModified = Date.UTC(2015, 5, 1)
+		for (const name of ['dated.jpg', 'dated (2).jpg']) {
+			// The second upload of the same name is kept beside the first.
+			const response = await got(`${origin}/api/photos/upload?name=dated.jpg&lastModified=${lastModified}`, {
+				method: 'POST',
+				headers: {Authorization: 'Bearer member'},
+				body: `bytes of ${name}`,
+			})
+			expect(JSON.parse(response.body)).toStrictEqual({status: 'imported'})
+			const stats = await stat(nodePath.join(directory, 'member-home', 'Photos', name), {bigint: true})
+			expect(Number(stats.mtimeMs)).toBe(lastModified)
+			// The registered revision already describes the final file.
+			expect(registerUpload).toHaveBeenLastCalledWith(
+				'member',
+				nodePath.join(directory, 'member-home', 'Photos', name),
+				expect.objectContaining({length: 32}),
+				expect.objectContaining({modifiedNs: stats.mtimeNs.toString(), ctimeNs: stats.ctimeNs.toString()}),
+				undefined,
+			)
+		}
+	})
+
+	test('an upload without a last-modified time keeps the time it was written', async () => {
+		prepareUpload.mockResolvedValueOnce('new')
+		const before = Date.now()
+		await got(`${origin}/api/photos/upload?name=undated.jpg`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer member'},
+			body: 'undated bytes',
+		})
+		const stats = await stat(nodePath.join(directory, 'member-home', 'Photos', 'undated.jpg'))
+		expect(stats.mtimeMs).toBeGreaterThanOrEqual(before - 1000)
+	})
+
+	test.each([
+		['', 'empty'],
+		['abc', 'not a number'],
+		['1.5', 'fractional'],
+		['1e3', 'exponent'],
+		['0', 'unset'],
+		['-86400000', 'before the epoch'],
+		['253402300800000', 'after the supported range'],
+		['9007199254740993', 'unsafe integer'],
+		['1&lastModified=2', 'repeated'],
+	])('rejects an invalid last-modified time before consuming the upload: %s (%s)', async (lastModified) => {
+		const response = await got(`${origin}/api/photos/upload?name=invalid.jpg&lastModified=${lastModified}`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer member'},
+			body: 'invalid bytes',
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(prepareUpload).not.toHaveBeenCalled()
+		await expect(stat(nodePath.join(directory, 'member-home', 'Photos', 'invalid.jpg'))).rejects.toThrow()
+	})
+
 	test('rejects unsupported uploads before consuming them', async () => {
 		const response = await got(`${origin}/api/photos/upload?name=notes.txt`, {
 			method: 'POST',

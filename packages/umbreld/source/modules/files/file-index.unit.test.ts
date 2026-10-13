@@ -1698,10 +1698,10 @@ test('deduplicates Photos by hash after account authorization and uses a stable 
 	expect(hashId).toMatch(/^[a-f0-9]{64}$/)
 	await expect(index.photosGetItem('owner', hashId)).resolves.toMatchObject({path: '/Home/A/canonical.jpg'})
 	await expect(index.photosResolveItems('owner', [hashId])).resolves.toStrictEqual([
-		{id: hashId, path: '/Home/A/canonical.jpg'},
+		{id: hashId, path: '/Home/A/canonical.jpg', modifiedMs: expect.any(Number)},
 	])
 	await expect(index.photosResolveItems('alice', [hashId])).resolves.toStrictEqual([
-		{id: hashId, path: '/Users/alice/member-copy.jpg'},
+		{id: hashId, path: '/Users/alice/member-copy.jpg', modifiedMs: expect.any(Number)},
 	])
 	await expect(index.photosListItems('owner', {query: 'searchable-sunset'}, undefined, 10)).resolves.toMatchObject({
 		total: 1,
@@ -2187,7 +2187,7 @@ test('pairs a short same-folder motion clip when Apple identifiers are absent', 
 	await expect(index.photosGetItem('owner', still.id)).resolves.not.toMatchObject({subKind: 'live'})
 	await expect(index.photosResolveLiveCompanion('owner', still.id)).resolves.toBeUndefined()
 	await expect(index.photosResolveItems('owner', [motionId])).resolves.toStrictEqual([
-		{id: motionId, path: '/Home/Trip/OTHER.MOV'},
+		{id: motionId, path: '/Home/Trip/OTHER.MOV', modifiedMs: expect.any(Number)},
 	])
 	await expect(index.photosListItems('owner', {}, undefined, 10)).resolves.toMatchObject({total: 2})
 
@@ -2431,7 +2431,7 @@ test('selects one canonical shared Live Photo companion and moves it only with e
 	const losingMotionId = Buffer.alloc(32, 0x82).toString('hex')
 	await expect(index.photosResolveItems('owner', [selectedMotionId])).resolves.toStrictEqual([])
 	await expect(index.photosResolveItems('owner', [losingMotionId])).resolves.toStrictEqual([
-		{id: losingMotionId, path: '/Home/z-motion.mov'},
+		{id: losingMotionId, path: '/Home/z-motion.mov', modifiedMs: expect.any(Number)},
 	])
 	await expect(index.photosResolveItemFiles('owner', [stills[0]!.id], 'home')).resolves.toMatchObject([
 		{id: stills[0]!.id},
