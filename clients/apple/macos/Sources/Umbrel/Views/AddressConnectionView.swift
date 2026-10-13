@@ -30,7 +30,7 @@ struct AddressConnectionView: View {
 
 			Text("Enter your Umbrel’s IP address or hostname. If you’re away from home, use its Tailscale IP address or MagicDNS name. Tailscale must already be set up on this Mac and your Umbrel.")
 				.font(.system(size: 11))
-				.foregroundStyle(Palette.gray)
+				.foregroundStyle(.secondary)
 				.fixedSize(horizontal: false, vertical: true)
 				.padding(.top, 4)
 
@@ -70,7 +70,7 @@ struct AddressConnectionView: View {
 						.foregroundStyle(.white.opacity(0.85))
 					Text("This Umbrel needs to be updated before it can connect to the app.")
 						.font(.system(size: 10))
-						.foregroundStyle(Palette.gray)
+						.foregroundStyle(.secondary)
 						.fixedSize(horizontal: false, vertical: true)
 					Button("Open Umbrel") {
 						guard let url = URL(string: "http://\(updateRequiredHost)") else { return }
@@ -109,7 +109,7 @@ struct AddressConnectionView: View {
 			}
 			.buttonStyle(.plain)
 			.font(.system(size: 10, weight: .medium))
-			.foregroundStyle(Palette.gray)
+			.foregroundStyle(.secondary)
 			.padding(.top, 22)
 		}
 		.padding(.horizontal, 30)

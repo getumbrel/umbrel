@@ -22,7 +22,9 @@ final class StatusItemController: NSObject {
 		self.panel = PopupPanel()
 		super.init()
 
-		let hostingController = NSHostingController(rootView: PanelRoot(state: state))
+		let hostingController = NSHostingController(
+			rootView: PanelRoot(state: state, updateController: updateController)
+		)
 		// Keep the AppKit panel synchronized with SwiftUI's changing ideal size.
 		// Measuring the rendered view would only report the panel's existing bounds.
 		hostingController.sizingOptions = [.preferredContentSize]
@@ -172,14 +174,12 @@ final class StatusItemController: NSObject {
 		// Route keyboard input into the SwiftUI hierarchy (borderless panels don't
 		// pick a first responder on their own)
 		panel.makeFirstResponder(panel.contentView)
-		// Refresh discovery/liveness whenever the popup opens
-		Task {
-			await state.probeSweep()
-		}
+		state.panelDidOpen()
 	}
 
 	private func hidePanel() {
 		panel.orderOut(nil)
+		state.panelDidClose()
 	}
 
 	// Size to the SwiftUI content and place it with NSMenu geometry: left-aligned to
@@ -275,10 +275,12 @@ private final class PopupPanel: NSPanel {
 // AppKit so the panel follows discovery and navigation state without manual geometry.
 private struct PanelRoot: View {
 	let state: AppState
+	let updateController: UpdateController
 
 	var body: some View {
 		PopupView()
 			.environment(state)
+			.environment(updateController)
 			.preferredColorScheme(.dark)
 			.background(PanelMaterial())
 			.clipShape(Panel.shape)

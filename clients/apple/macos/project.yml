@@ -85,6 +85,9 @@ targets:
         SUFeedURL: https://download.umbrel.com/macos/appcast.xml
         SUPublicEDKey: 6WS1H6oCszBQj8boE9u4jM3RPTyKjWLfWeqUIYfSwuA=
         SUEnableAutomaticChecks: true
+        # Every 6 hours rather than Sparkle's daily default: an umbrelOS update can
+        # need a matching app update the same day.
+        SUScheduledCheckInterval: 21600
         SUAutomaticallyUpdate: false
         SURequireSignedFeed: true
         SUVerifyUpdateBeforeExtraction: true

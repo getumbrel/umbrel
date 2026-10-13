@@ -73,6 +73,7 @@ final class AppState {
 	private var fallbackDiscoveryGeneration = 0
 	private var pendingNativeHosts: Set<String> = []
 	private var candidateIdentificationTask: Task<Void, Never>?
+	@ObservationIgnored private var setupRefreshTask: Task<Void, Never>?
 	private var explicitlyClaimedDeviceIds = Set<String>()
 	private var initialDiscoveryWindowElapsed = false
 	private var probes: [String: ProbeRecord] = [:] // deviceId -> latest identity probe
@@ -529,6 +530,58 @@ final class AppState {
 	// force skips the cooldown for explicit user refreshes; in-flight probes still dedupe
 	func probeSweep(force: Bool = false) async {
 		await probeDevices(probeTargetIds, force: force)
+	}
+
+	// Refresh liveness whenever the panel opens. An Umbrel set up in a browser advertises
+	// nothing new afterwards, so while the panel is open, Umbrels still waiting for setup
+	// are also asked again every few seconds. Reopening the panel after setup then moves
+	// the card and its page on to sign-in.
+	func panelDidOpen() {
+		Task { await probeSweep() }
+		setupRefreshTask?.cancel()
+		setupRefreshTask = Task { [weak self] in
+			while !Task.isCancelled {
+				await self?.refreshDevicesAwaitingSetup()
+				try? await Task.sleep(for: .seconds(3), tolerance: .milliseconds(300))
+			}
+		}
+	}
+
+	func panelDidClose() {
+		setupRefreshTask?.cancel()
+		setupRefreshTask = nil
+	}
+
+	private func refreshDevicesAwaitingSetup() async {
+		let awaitingSetup = (mdnsIdentifiedCandidates + manuallyIdentifiedCandidates.values)
+			.filter { !$0.onboarded && config.savedDevices[$0.id] == nil }
+		guard !awaitingSetup.isEmpty else { return }
+		let finished = await withTaskGroup(of: (IdentifiedDevice, IdentifiedDevice)?.self) { group in
+			for device in awaitingSetup {
+				group.addTask {
+					guard let current = await Umbreld.reidentify(device), current.onboarded else { return nil }
+					return (device, current)
+				}
+			}
+			var finished: [(IdentifiedDevice, IdentifiedDevice)] = []
+			for await result in group {
+				if let result { finished.append(result) }
+			}
+			return finished
+		}
+		guard !finished.isEmpty else { return }
+		// Discovery or a manual connection may have replaced a record while it was being
+		// asked. Update only the exact record that was checked and leave a replacement to
+		// the next check.
+		for (checked, current) in finished {
+			if let index = mdnsIdentifiedCandidates.firstIndex(of: checked) {
+				mdnsIdentifiedCandidates[index] = current
+			}
+			if manuallyIdentifiedCandidates[checked.id] == checked {
+				manuallyIdentifiedCandidates[checked.id] = current
+			}
+		}
+		rebuild()
 	}
 
 	private func probeDevices(_ deviceIds: Set<String>, force: Bool) async {

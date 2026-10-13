@@ -604,6 +604,47 @@ public enum Umbreld {
 		return byId.values.sorted { $0.host < $1.host }
 	}
 
+	enum ReidentifyAnchor: Equatable, Sendable {
+		case candidate(Data)
+		case pinned(deviceId: String)
+	}
+
+	typealias ReidentifyProbe = @Sendable (_ host: String, _ anchor: ReidentifyAnchor) async -> DiscoveryInfo?
+
+	// An Umbrel's Bonjour advertisement doesn't change when it finishes setup in a
+	// browser, so a client waiting on setup has to ask again. This re-asks the exact
+	// endpoint over the anchor its scan already verified, so it adds no trust of its own,
+	// and returns the record with its current state. Nil when it doesn't answer as the
+	// same Umbrel.
+	public static func reidentify(_ device: IdentifiedDevice) async -> IdentifiedDevice? {
+		await reidentify(device) { host, anchor in
+			switch anchor {
+			case .candidate(let certificate):
+				try? await discoveryInfoOverHTTPS(host: host, candidateCertificate: certificate)
+			case .pinned(let deviceId):
+				try? await discoveryInfoOverHTTPS(host: host, deviceId: deviceId)
+			}
+		}
+	}
+
+	static func reidentify(_ device: IdentifiedDevice, probe: ReidentifyProbe) async -> IdentifiedDevice? {
+		// A first-use scan holds its candidate anchor; a claimed device was verified with
+		// its Keychain pin and has none.
+		let anchor = device.candidateCACertificate.map(ReidentifyAnchor.candidate)
+			?? .pinned(deviceId: device.id)
+		guard let identity = await probe(device.host, anchor), identity.id == device.id else { return nil }
+		return IdentifiedDevice(
+			host: device.host,
+			discoveryHost: device.discoveryHost,
+			addresses: device.addresses,
+			name: device.name,
+			id: device.id,
+			model: identity.device,
+			onboarded: identity.onboarded,
+			candidateCACertificate: device.candidateCACertificate
+		)
+	}
+
 	// Manual discovery is an explicit user action, so unlike passive Bonjour it may
 	// probe a Tailscale endpoint. A plain HTTP(S) root URL is normalized to its host.
 	// Short hostnames may resolve to a safe LAN or Tailscale address, while full MagicDNS

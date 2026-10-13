@@ -224,9 +224,9 @@ struct StatusLine: View {
 					.fixedSize(horizontal: true, vertical: false)
 			}
 			if let secondaryLabel {
-				Text("\u{00B7}").foregroundStyle(.white.opacity(0.5))
+				Text("\u{00B7}").foregroundStyle(.tertiary)
 				Text(secondaryLabel)
-					.foregroundStyle(.white.opacity(0.7))
+					.foregroundStyle(.secondary)
 					.lineLimit(1)
 					.truncationMode(.middle)
 			}
@@ -307,7 +307,7 @@ struct AccessRow: View {
 						Text("Tailscale")
 					}
 					.font(.system(size: 9, weight: .medium))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 				}
 				Spacer()
 				// The copy control is overlaid in this reserved slot so it remains a
@@ -317,7 +317,7 @@ struct AccessRow: View {
 					.accessibilityHidden(true)
 				Image(systemName: "arrow.up.right")
 					.font(.system(size: 12))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 			.font(.system(size: 11, weight: .medium))
 			.padding(10)
@@ -336,7 +336,7 @@ struct AccessRow: View {
 			Button(action: copy) {
 				Image(systemName: copied ? "checkmark" : "doc.on.doc")
 					.font(.system(size: 12))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 					.padding(6)
 					.contentShape(Rectangle())
 			}
@@ -388,7 +388,7 @@ struct PasswordForm: View {
 		VStack(alignment: .leading, spacing: 12) {
 			Text(label)
 				.font(.system(size: 12))
-				.foregroundStyle(.white.opacity(0.5))
+				.foregroundStyle(.secondary)
 				.lineLimit(1)
 				.truncationMode(.tail)
 
@@ -465,7 +465,7 @@ struct PasswordForm: View {
 						} label: {
 							Image(systemName: showPassword ? "eye.slash" : "eye")
 								.font(.system(size: 12))
-								.foregroundStyle(.white.opacity(0.4))
+								.foregroundStyle(.tertiary)
 						}
 						.buttonStyle(.plain)
 					}

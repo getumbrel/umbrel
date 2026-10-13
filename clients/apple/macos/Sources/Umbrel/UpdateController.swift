@@ -5,10 +5,11 @@ import Sparkle
 // signature verification, download, extraction, installation, and relaunch. The
 // user driver below changes only how those states are presented.
 @MainActor
+@Observable
 final class UpdateController: NSObject, SPUUpdaterDelegate {
 	private(set) var availableUpdateVersion: String?
 	private let userDriver: UmbrelUpdateUserDriver
-	private lazy var updater = SPUUpdater(
+	@ObservationIgnored private lazy var updater = SPUUpdater(
 		hostBundle: .main,
 		applicationBundle: .main,
 		userDriver: userDriver,

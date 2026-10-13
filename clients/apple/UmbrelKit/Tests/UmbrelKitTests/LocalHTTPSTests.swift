@@ -138,6 +138,71 @@ final class LocalHTTPSTests: XCTestCase {
 		XCTAssertEqual(calls, [.init(host: "100.90.0.1", expectedDeviceId: nil)])
 	}
 
+	func testReidentifyReportsFinishedSetupOverTheScannedAnchor() async throws {
+		let device = IdentifiedDevice(
+			host: "192.168.4.23",
+			discoveryHost: "umbrel-3.local",
+			addresses: ["192.168.4.23"],
+			name: "umbrel-3",
+			id: "new-device",
+			model: "Umbrel Home (2025)",
+			onboarded: false,
+			candidateCACertificate: Data("candidate-ca".utf8)
+		)
+
+		let result = await Umbreld.reidentify(device) { host, anchor in
+			// Only the exact endpoint and anchor from the scan may answer
+			guard host == "192.168.4.23", anchor == .candidate(Data("candidate-ca".utf8)) else { return nil }
+			return .init(id: "new-device", device: "Umbrel Home (2025)", onboarded: true)
+		}
+
+		XCTAssertEqual(result?.onboarded, true)
+		XCTAssertEqual(result?.host, device.host)
+		XCTAssertEqual(result?.discoveryHost, device.discoveryHost)
+		XCTAssertEqual(result?.candidateCACertificate, device.candidateCACertificate)
+	}
+
+	func testReidentifyUsesThePinForAClaimedDevice() async throws {
+		let device = IdentifiedDevice(
+			host: "umbrel.local",
+			discoveryHost: "umbrel.local",
+			addresses: [],
+			name: "umbrel",
+			id: "claimed-device",
+			model: "Umbrel Home",
+			onboarded: false
+		)
+
+		let result = await Umbreld.reidentify(device) { host, anchor in
+			guard host == "umbrel.local", anchor == .pinned(deviceId: "claimed-device") else { return nil }
+			return .init(id: "claimed-device", device: "Umbrel Home", onboarded: true)
+		}
+
+		XCTAssertEqual(result?.onboarded, true)
+		XCTAssertNil(result?.candidateCACertificate)
+	}
+
+	func testReidentifyRejectsADifferentUmbrelAtTheSameAddress() async throws {
+		let device = IdentifiedDevice(
+			host: "umbrel.local",
+			discoveryHost: "umbrel.local",
+			addresses: [],
+			name: "umbrel",
+			id: "new-device",
+			model: "Umbrel Home",
+			onboarded: false,
+			candidateCACertificate: Data("candidate-ca".utf8)
+		)
+
+		let replaced = await Umbreld.reidentify(device) { _, _ in
+			.init(id: "other-device", device: "Umbrel Home", onboarded: true)
+		}
+		let unanswered = await Umbreld.reidentify(device) { _, _ in nil }
+
+		XCTAssertNil(replaced)
+		XCTAssertNil(unanswered)
+	}
+
 	func testLivePassiveIdentificationDoesNotEnrollUntilExplicitClaim() async throws {
 		guard let host = ProcessInfo.processInfo.environment["UMBRELKIT_HTTPS_TEST_HOST"] else {
 			throw XCTSkip("Set UMBRELKIT_HTTPS_TEST_HOST to run against an Umbrel")

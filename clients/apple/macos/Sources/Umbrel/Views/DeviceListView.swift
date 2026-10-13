@@ -104,7 +104,7 @@ struct DeviceListView: View {
 				.padding(.bottom, 2)
 			Text(subtitle)
 				.font(.system(size: 11))
-				.foregroundStyle(Palette.gray)
+				.foregroundStyle(.secondary)
 		}
 		.padding(.top, 28) // balances the detail view's 20pt top inset
 		.padding(.horizontal, 6)
@@ -119,10 +119,10 @@ struct DeviceListView: View {
 						+ Text("Connect by address").fontWeight(.semibold)
 				)
 					.font(.system(size: 11))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 				Image(systemName: "chevron.right")
 					.font(.system(size: 9, weight: .semibold))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 			.contentShape(Rectangle())
 		}
@@ -145,7 +145,7 @@ private struct RefreshButton: View {
 						.controlSize(.small)
 				} else {
 					RefreshIcon()
-						.stroke(Palette.gray, style: StrokeStyle(lineWidth: 1.33, lineCap: .round, lineJoin: .round))
+						.stroke(.secondary, style: StrokeStyle(lineWidth: 1.33, lineCap: .round, lineJoin: .round))
 				}
 			}
 			.frame(width: 16, height: 16)
@@ -223,7 +223,7 @@ private struct DeviceCard: View {
 				Spacer()
 				Image(systemName: "chevron.right")
 					.font(.system(size: 12, weight: .semibold))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 			.padding(16)
 			.background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(hovered ? 0.12 : 0.06)))
@@ -263,7 +263,7 @@ private struct UpdateRequiredDeviceCard: View {
 				Spacer()
 				Image(systemName: "arrow.up.right")
 					.font(.system(size: 11, weight: .semibold))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 			.padding(16)
 			.background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(hovered ? 0.12 : 0.06)))

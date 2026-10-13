@@ -101,7 +101,7 @@ struct DeviceDetailView: View {
 			VStack(alignment: .leading, spacing: 12) {
 				Text("Device is offline")
 					.font(.system(size: 13))
-					.foregroundStyle(.white.opacity(0.4))
+					.foregroundStyle(.tertiary)
 				if device.saved && device.connection == .notAuthenticated {
 					Button("Connect") {
 						showPasswordForm = true
@@ -202,7 +202,7 @@ struct DeviceDetailView: View {
 		VStack(alignment: .leading, spacing: 12) {
 			Text("To get started, set up your device in the browser. Once you\u{2019}re done, come back here to connect.")
 				.font(.system(size: 12))
-				.foregroundStyle(.white.opacity(0.5))
+				.foregroundStyle(.secondary)
 			accessBox(device)
 		}
 	}
@@ -222,7 +222,7 @@ struct DeviceDetailView: View {
 						.contentShape(Rectangle())
 				}
 					.buttonStyle(.plain)
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 					.help("Browser Settings")
 			}
 			.padding(.bottom, 6)
@@ -238,7 +238,7 @@ struct DeviceDetailView: View {
 					+ Text("Finder").foregroundStyle(Palette.blue)
 					+ Text(" under Locations"))
 					.font(.system(size: 10))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 					.padding(.bottom, 10)
 
 				if !state.hasLoadedFinderShares(deviceId: deviceId) {
@@ -247,7 +247,7 @@ struct DeviceDetailView: View {
 						Text("Checking shared folders…")
 					}
 					.font(.system(size: 10))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 				} else if device.shares.isEmpty {
 					ShareHomePrompt(deviceId: deviceId)
 				} else {
@@ -302,7 +302,7 @@ struct DeviceDetailView: View {
 				"Some apps need HTTPS in the browser to work correctly. HTTPS is for browser compatibility, not private access. For private access, use Tailscale."
 			)
 			.font(.system(size: 10))
-			.foregroundStyle(Palette.gray)
+			.foregroundStyle(.secondary)
 			.fixedSize(horizontal: false, vertical: true)
 			.padding(.top, 8)
 		}
@@ -409,7 +409,7 @@ struct DeviceDetailView: View {
 					}
 				}
 				.buttonStyle(.plain)
-				.foregroundStyle(Palette.gray)
+				.foregroundStyle(.secondary)
 				Spacer()
 				// Forget is always reachable for saved devices unless the main content already
 				// offers it (the Forget/Connect button pair for online, not-authenticated devices)
@@ -417,7 +417,7 @@ struct DeviceDetailView: View {
 				if page == .overview && device.saved && !mainContentHasForget {
 					HStack(spacing: 6) {
 						if device.connection == .disconnecting {
-							Text("Disconnecting\u{2026}").foregroundStyle(Palette.gray.opacity(0.6))
+							Text("Disconnecting\u{2026}").foregroundStyle(.tertiary)
 							Text("\u{00B7}")
 						} else if device.connection == .connected {
 							Button("Disconnect") {
@@ -438,7 +438,7 @@ struct DeviceDetailView: View {
 						}
 						.buttonStyle(.plain)
 					}
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 				}
 			}
 		}
@@ -611,15 +611,15 @@ private struct ShareRow: View {
 					Text(share.status == .mounting ? "Mounting\u{2026}" : "Unmounting\u{2026}")
 				}
 				.font(.system(size: 9, weight: .medium))
-				.foregroundStyle(Palette.gray)
+				.foregroundStyle(.secondary)
 			case .mounted:
 				Text("View in Finder \u{203A}")
 					.font(.system(size: 9, weight: .medium))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			case .unmounted:
 				Text("Reconnect \u{203A}")
 					.font(.system(size: 9, weight: .medium))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 		}
 		.font(.system(size: 11, weight: .medium))
