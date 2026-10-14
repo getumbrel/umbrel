@@ -7,6 +7,8 @@
 //   GET  /api/photos/download?ticket=…
 //   POST /api/photos/upload?name=IMG_1234.jpg&album=<id>&lastModified=<ms> (browser import)
 //   POST /api/photos/upload + X-Umbrel-Photo-Backup-* headers (PhotoKit backup)
+//   GET  /api/photos/map/points?filter=…
+//   GET  /api/photos/map/tiles/:z/:x/:y
 //
 import nodePath from 'node:path'
 import {pipeline} from 'node:stream/promises'
@@ -24,13 +26,25 @@ import type {ThumbnailVariant} from '../files/thumbnail-support.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 
 import {PHOTO_FILE_EXTENSION_PATTERN, PHOTO_ORIGINAL_FILENAME_MAX_BYTES, PHOTO_RESOURCE_KEY_PATTERN} from './photos.js'
+import {filterSchema} from './routes.js'
 import {supportsPhotos} from './types.js'
+
+// A build of the basemap never changes, and a new one is rare and never
+// urgent: a day of caching, revalidated by ETag after that
+const MAP_CACHE_CONTROL = 'private, max-age=86400'
 
 const INSUFFICIENT_STORAGE_HEADER = 'X-Umbrel-Photo-Backup-Error'
 const MIN_PHOTO_CREATION_DATE = -62_135_596_800_000
 const MAX_PHOTO_CREATION_DATE = 253_402_300_799_999
 
 type PhotoBackupPrincipal = Awaited<ReturnType<Umbreld['auth']['authenticatePhotoBackupGrant']>>
+
+function sendMapFile(response: express.Response, data: Buffer) {
+	response.setHeader('Cache-Control', MAP_CACHE_CONTROL)
+	response.setHeader('Content-Encoding', 'gzip')
+	response.type('application/x-protobuf')
+	return response.send(data)
+}
 
 function isInsufficientStorageError(error: unknown) {
 	const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined
@@ -243,7 +257,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 				.catch(() => response.status(401).json({error: 'unauthorized'}))
 		}
 		let authorization: Promise<Principal> | undefined
-		if (request.method === 'GET' && path.startsWith('/thumb/')) {
+		if (request.method === 'GET' && (path.startsWith('/thumb/') || path.startsWith('/map/'))) {
 			authorization = authorizeHttpRequest(umbreld, request, 'file-thumbnail', path)
 		} else if (request.method === 'GET' && (path.startsWith('/original/') || path.startsWith('/live/'))) {
 			authorization = authorizeHttpRequest(umbreld, request, 'file-view', path)
@@ -334,6 +348,44 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 			response.setHeader('Cache-Control', PRIVATE_IMMUTABLE_CACHE_CONTROL)
 			response.setHeader('X-Content-Type-Options', 'nosniff')
 			return response.sendFile(thumbnailSystemPath, {cacheControl: false, dotfiles: 'deny'})
+		} catch {
+			return response.status(404).json({error: 'not found'})
+		}
+	})
+
+	// GET /api/photos/map/points?filter=<json> — every located item the filter
+	// selects, packed (see MAP_POINT_BYTES in types.ts). Revalidated by ETag,
+	// which saves the transfer when no pin moved; the read itself always runs.
+	api.get('/map/points', async (request, response) => {
+		let filter
+		try {
+			filter = filterSchema.parse(JSON.parse(String(request.query.filter ?? '{}')))
+		} catch {
+			return response.status(400).json({error: 'invalid filter'})
+		}
+		try {
+			const points = await umbreld.photos.mapPoints(accountId(response), filter)
+			response.setHeader('Cache-Control', 'private, no-cache')
+			response.type('application/octet-stream')
+			return response.send(Buffer.from(points.buffer, points.byteOffset, points.byteLength))
+		} catch {
+			return response.status(500).json({error: 'map points unavailable'})
+		}
+	})
+
+	// GET /api/photos/map/tiles/:z/:x/:y — a basemap vector tile (see
+	// map-tiles.ts), gzipped; 204 where the planet has none, which the map
+	// draws as nothing rather than an error. Neither that nor a failed fetch is
+	// cached: the source may only be out of reach.
+	api.get('/map/tiles/:z/:x/:y', async (request, response) => {
+		const [z, x, y] = [request.params.z, request.params.x, request.params.y].map(Number) as [number, number, number]
+		const onTheMap =
+			[z, x, y].every((value) => Number.isInteger(value) && value >= 0) && z <= 26 && x < 2 ** z && y < 2 ** z
+		if (!onTheMap) return response.status(400).json({error: 'invalid tile'})
+		try {
+			const tile = await umbreld.photos.map.tile(z, x, y)
+			if (!tile) return response.status(204).end()
+			return sendMapFile(response, tile)
 		} catch {
 			return response.status(404).json({error: 'not found'})
 		}

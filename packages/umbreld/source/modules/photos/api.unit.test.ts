@@ -3,6 +3,7 @@ import {mkdtemp, open, rm, stat, writeFile} from 'node:fs/promises'
 import type {AddressInfo} from 'node:net'
 import {tmpdir} from 'node:os'
 import nodePath from 'node:path'
+import {gzipSync} from 'node:zlib'
 
 import cookieParser from 'cookie-parser'
 import express from 'express'
@@ -20,6 +21,8 @@ describe('Photos HTTP account boundaries', () => {
 	const resolveThumbnailRequest = vi.fn()
 	const prepareUpload = vi.fn()
 	const registerUpload = vi.fn()
+	const mapPoints = vi.fn()
+	const mapTile = vi.fn()
 
 	beforeAll(async () => {
 		directory = await mkdtemp(nodePath.join(tmpdir(), 'photos-api-'))
@@ -55,6 +58,8 @@ describe('Photos HTTP account boundaries', () => {
 				listAlbums: async () => [{id: 'album'}],
 				prepareUpload,
 				registerUpload,
+				mapPoints,
+				map: {tile: mapTile},
 			},
 			files: {
 				virtualToSystemPath: async (path: string, accountId: string) => {
@@ -118,6 +123,8 @@ describe('Photos HTTP account boundaries', () => {
 	beforeEach(() => {
 		prepareUpload.mockReset().mockResolvedValue('duplicate')
 		registerUpload.mockReset().mockResolvedValue('imported')
+		mapPoints.mockReset().mockResolvedValue(new Uint8Array([1, 0, 0, 0]))
+		mapTile.mockReset()
 	})
 
 	test.each([
@@ -126,6 +133,8 @@ describe('Photos HTTP account boundaries', () => {
 		['GET', '/api/photos/live/member-item'],
 		['GET', '/api/photos/download?ticket=member-download'],
 		['POST', '/api/photos/upload?name=photo.jpg'],
+		['GET', '/api/photos/map/points'],
+		['GET', '/api/photos/map/tiles/0/0/0'],
 		['GET', '/api/photos/future-route'],
 	] as const)('%s %s is denied without credentials', async (method, path) => {
 		const response = await got(`${origin}${path}`, {method, throwHttpErrors: false})
@@ -169,6 +178,67 @@ describe('Photos HTTP account boundaries', () => {
 			'/Users/member/member.jpg',
 			'member',
 		)
+	})
+
+	test('map points are read for the requesting account, with its filter, and revalidate by ETag', async () => {
+		const filter = {favorite: true, bounds: {west: 170, south: -20, east: -170, north: -10}}
+		const url = `${origin}/api/photos/map/points?filter=${encodeURIComponent(JSON.stringify(filter))}`
+		const headers = {Authorization: 'Bearer member'}
+		const response = await got(url, {headers, responseType: 'buffer'})
+		expect([...response.body]).toEqual([1, 0, 0, 0])
+		expect(mapPoints).toHaveBeenCalledWith('member', filter)
+		expect(response.headers['cache-control']).toBe('private, no-cache')
+		const unchanged = await got(url, {headers: {...headers, 'If-None-Match': response.headers.etag}})
+		expect(unchanged.statusCode).toBe(304)
+		await got(`${origin}/api/photos/map/points`, {headers})
+		expect(mapPoints).toHaveBeenLastCalledWith('member', {})
+	})
+
+	test.each([
+		['not json', 'filter=%7B'],
+		['a field of the wrong type', `filter=${encodeURIComponent('{"favorite":"yes"}')}`],
+		['bounds off the map', `filter=${encodeURIComponent('{"bounds":{"west":-200,"south":0,"east":0,"north":10}}')}`],
+	])('map points reject a filter that is %s', async (_, query) => {
+		const response = await got(`${origin}/api/photos/map/points?${query}`, {
+			headers: {Authorization: 'Bearer member'},
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(mapPoints).not.toHaveBeenCalled()
+	})
+
+	test('a basemap tile goes out gzipped, as it is kept', async () => {
+		const headers = {Authorization: 'Bearer member'}
+		mapTile.mockResolvedValue(gzipSync('tile'))
+		const tile = await got(`${origin}/api/photos/map/tiles/3/4/5`, {headers})
+		expect(mapTile).toHaveBeenCalledWith(3, 4, 5)
+		// got undoes the encoding the response declares, as a browser does
+		expect(tile.body).toBe('tile')
+		expect(tile.headers['content-encoding']).toBe('gzip')
+		expect(tile.headers['content-type']).toBe('application/x-protobuf')
+		expect(tile.headers['cache-control']).toBe('private, max-age=86400')
+	})
+
+	test('a tile the planet lacks is empty, and neither it nor a failed fetch is cached', async () => {
+		const headers = {Authorization: 'Bearer member'}
+		mapTile.mockResolvedValue(undefined)
+		const missing = await got(`${origin}/api/photos/map/tiles/9/0/0`, {headers})
+		expect(missing.statusCode).toBe(204)
+		expect(missing.headers['cache-control']).toBeUndefined()
+
+		mapTile.mockRejectedValue(new Error('out of reach'))
+		const failed = await got(`${origin}/api/photos/map/tiles/0/0/0`, {headers, throwHttpErrors: false})
+		expect(failed.statusCode).toBe(404)
+		expect(failed.headers['cache-control']).toBeUndefined()
+	})
+
+	test.each(['a/0/0', '0/-1/0', '0/0/1.5', '2/4/0', '30/0/0'])('a basemap tile at %s is refused', async (tile) => {
+		const response = await got(`${origin}/api/photos/map/tiles/${tile}`, {
+			headers: {Authorization: 'Bearer member'},
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(mapTile).not.toHaveBeenCalled()
 	})
 
 	test('serves video-compatible byte ranges from the authorized descriptor', async () => {

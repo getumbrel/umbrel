@@ -26,7 +26,10 @@ unbounded file list) use the shared reader. Album lists aggregate memberships an
 choose covers; filtered neighbors materialize the matching collection. Neither
 can occupy the reader reserved for quick requests. Paged album/source browsing
 without text search and neighbors without album/source/text filters remain quick
-requests, which can use both readers when capacity is available.
+requests, which can use both readers when capacity is available. The map's
+points, and lists and neighbors narrowed to a stretch of the map (`bounds`), use
+the shared reader too: no index knows where anything was taken, so they read the
+library.
 
 Two readers balance responsiveness with limited RAM. Device tests using SQLite's
 default cache found that reserving one reader removed most thumbnail queuing

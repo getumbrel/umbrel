@@ -13,6 +13,7 @@ import {
 } from '@/features/photos/components/listing/timeline-rows'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {tw} from '@/utils/tw'
 
 // Keyboard steps, in columns — the arrows keep single-stop precision. The
 // track runs from the widest grid on the left to the biggest tiles on the
@@ -37,6 +38,11 @@ const HOLD_REPEAT_MS = 100
 const WHEEL_STEP_PX = 40
 const WHEEL_LINE_PX = 14
 const WHEEL_IDLE_MS = 200
+
+// The slider's look, which the map's zoom shares
+export const sliderRootClass = tw`relative hidden h-8 w-24 touch-none items-center px-1.5 select-none data-disabled:opacity-50 xl:flex`
+export const sliderTrackClass = tw`relative h-1 grow rounded-full bg-white/15`
+export const sliderThumbClass = tw`block size-3.5 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0/0.45)] outline-hidden transition-transform duration-150 ease-out hover:scale-110 focus-visible:ring-2 focus-visible:ring-white/40 active:scale-110`
 
 // No grid, no live zoom to hear
 const noLiveColumns = () => () => {}
@@ -158,7 +164,7 @@ export function ZoomSlider() {
 				onClick={(event) => event.detail === 0 && click(1)}
 			/>
 			<SliderPrimitive.Root
-				className='relative hidden h-8 w-24 touch-none items-center px-1.5 select-none data-disabled:opacity-50 xl:flex'
+				className={sliderRootClass}
 				min={0}
 				max={1}
 				// A step under a pixel of the 96px track: the thumb is continuous
@@ -202,11 +208,11 @@ export function ZoomSlider() {
 					step(by)
 				}}
 			>
-				<SliderPrimitive.Track className='relative h-1 grow rounded-full bg-white/15' />
+				<SliderPrimitive.Track className={sliderTrackClass} />
 				<SliderPrimitive.Thumb
 					aria-label={t('photos-actions.grid-size')}
 					aria-valuetext={t('photos-actions.grid-size-value', {count: columns})}
-					className='block size-3.5 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0/0.45)] outline-hidden transition-transform duration-150 ease-out hover:scale-110 focus-visible:ring-2 focus-visible:ring-white/40 active:scale-110'
+					className={sliderThumbClass}
 				/>
 			</SliderPrimitive.Root>
 			<PillButtonGroupItem

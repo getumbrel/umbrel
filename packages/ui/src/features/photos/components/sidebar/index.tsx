@@ -6,6 +6,7 @@ import {
 	Globe,
 	Heart,
 	Image,
+	MapIcon,
 	RectangleHorizontal,
 	ScanLine,
 	Trash2,
@@ -52,17 +53,17 @@ export function Sidebar({className}: {className?: string}) {
 		{section: 'all', label: t('photos-sidebar.all'), icon: GalleryHorizontalEnd},
 		{section: 'albums', label: t('photos-sidebar.albums'), icon: Album},
 		{section: 'favorites', label: t('photos-sidebar.favorites'), icon: Heart},
+		{section: 'map', label: t('photos-sidebar.map'), icon: MapIcon},
 		{section: 'photos', label: t('photos-sidebar.photos'), icon: Image},
 		{section: 'videos', label: t('photos-sidebar.videos'), icon: Video},
 		{section: 'deleted', label: t('photos-sidebar.deleted'), icon: Trash2},
 	]
 
 	// Smart collections, grouped under their own label like Files' Favorites.
-	// People and Locations stay cut from v1 (no face/geo clustering yet) —
-	// restore those two rows and their icons (Users, MapPin) when they return.
+	// People stays cut from v1 (no face clustering yet) — restore its row and
+	// icon (Users) when it returns. Places live on the map.
 	const utilityItems: Item[] = [
 		// {section: 'people', label: t('photos-sidebar.people'), icon: Users},
-		// {section: 'locations', label: t('photos-sidebar.locations'), icon: MapPin},
 		{section: 'live-photos', label: t('photos-sidebar.live-photos'), icon: LivePhotoIcon},
 		{section: 'panoramas', label: t('photos-sidebar.panoramas'), icon: RectangleHorizontal},
 		{section: 'screenshots', label: t('photos-sidebar.screenshots'), icon: ScanLine},

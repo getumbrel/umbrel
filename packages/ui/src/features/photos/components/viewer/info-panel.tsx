@@ -7,9 +7,10 @@ import {materialSurfaceClasses} from '@/components/ui/shared/material'
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {LocationCard} from '@/features/photos/components/map/location-card'
 import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {timeAgo} from '@/features/photos/components/sources/source-status'
-import {BASE_ROUTE_PATH, sourcePath} from '@/features/photos/constants'
+import {BASE_ROUTE_PATH, sectionPath, sourcePath} from '@/features/photos/constants'
 import type {ItemDetail} from '@/features/photos/hooks/use-items'
 import {usePhotoSource} from '@/features/photos/hooks/use-photo-sources'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
@@ -26,14 +27,6 @@ const FolderBreadcrumbs = lazy(() =>
 	})),
 )
 
-// Map code and its bundled atlas stay out of the viewer until a photograph
-// actually carries a location.
-const OfflineLocationMap = lazy(() =>
-	import('@/features/photos/components/viewer/offline-location-map').then((m) => ({
-		default: m.OfflineLocationMap,
-	})),
-)
-
 function formatDuration(ms: number) {
 	const total = Math.round(ms / 1000)
 	return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
@@ -45,7 +38,18 @@ function formatDuration(ms: number) {
 // (The "where" and "who" facts return with People/Locations, cut from v1.)
 // Motion is the caller's (it docks or slides this in); the panel itself is
 // still.
-export function InfoPanel({item, onClose, sheet = false}: {item: ItemDetail; onClose: () => void; sheet?: boolean}) {
+export function InfoPanel({
+	item,
+	showing,
+	onClose,
+	sheet = false,
+}: {
+	item: ItemDetail
+	// Whether it is out: the caller keeps it mounted when it is put away
+	showing: boolean
+	onClose: () => void
+	sheet?: boolean
+}) {
 	const {t, i18n} = useTranslation()
 	const navigate = useNavigate()
 	const {revealItem, navigateToDirectory} = useFilesNavigate()
@@ -164,17 +168,18 @@ export function InfoPanel({item, onClose, sheet = false}: {item: ItemDetail; onC
 					</div>
 				)}
 
-				{/* Where it was taken, rendered only from the bundled Natural Earth atlas. */}
+				{/* Where it was taken — and the way to every other photo taken
+				    around it */}
 				{item.location && (
 					<Facts label={t('photos-item.fact-place')}>
-						<Suspense fallback={<div className='h-36 w-full animate-pulse rounded-xl bg-white/6' />}>
-							<OfflineLocationMap
-								lat={item.location.lat}
-								lng={item.location.lng}
-								altitude={item.location.altitude}
-								locale={i18n.language}
-							/>
-						</Suspense>
+						<LocationCard
+							item={item}
+							lat={item.location.lat}
+							lng={item.location.lng}
+							altitude={item.location.altitude}
+							showing={showing}
+							onOpen={() => navigate(`${sectionPath('map')}?lat=${item.location!.lat}&lng=${item.location!.lng}`)}
+						/>
 					</Facts>
 				)}
 

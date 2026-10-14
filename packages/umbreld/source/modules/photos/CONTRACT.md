@@ -71,14 +71,15 @@ again. This is backup behavior, not bidirectional deletion sync, and prevents a
 phone from freeing its original based only on a copy the user can permanently
 empty from Trash.
 
-Not in v1 (no routers or fields exist for them): people, locations, semantic
+Not in v1 (no routers or fields exist for them): people, place names, semantic
 search, Android motion photos (the MP4-embedded-in-a-JPEG kind — needs byte
 slicing at import; Apple live pairs are in, see SubKinds). Search suggestions are
 built client-side from `library.summary` + `sources.list` + `albums.list` — no
 suggest endpoint. The importer should still extract and index everything it
 reads in its one pass over the file — GPS coordinates included — so Locations
-and friends can ship later without re-scanning the library; v1 exposes only
-the raw coordinates on `ItemDetail`, nothing else.
+and friends can ship later without re-scanning the library. Coordinates reach
+the UI through `ItemDetail.location`, the map's packed points and the
+`bounds` filter (see Map below); nothing names places on the server yet.
 
 ## Vocabulary
 
@@ -152,6 +153,11 @@ type Filter = {
 	sourceIds?: string[]
 	albumIds?: string[]
 	dates?: {from: number; to: number}[] // half-open [from, to) over takenAt
+	// Taken inside this stretch of the map, in degrees, edges included. West
+	// greater than east crosses the antimeridian. Items without coordinates
+	// never match. Longitudes outside -180..180 or latitudes outside -90..90
+	// are rejected: BAD_REQUEST over tRPC, 400 from the map points endpoint.
+	bounds?: {west: number; south: number; east: number; north: number}
 }
 
 type Album = {
@@ -305,6 +311,14 @@ served at `GET /api/photos/live/:id`. All playback UX is the frontend's.
   inaccessible or other-account copies are never touched. Interrupted revision
   claims are recovered from account Home and Trash roots during Files startup.
 
+### map
+
+- `basemap()` → `{available: boolean, maxZoom: number}` — whether there is a
+  basemap to draw (see the map tile endpoints below), and the deepest zoom the
+  map can ask for tiles at; it magnifies past that. Available when the zoom-0
+  tile can be had, kept on disk or fetched within five seconds; the answer is
+  kept for a minute. Unavailable, the UI draws the atlas it bundles.
+
 ### albums
 
 - `list()` → `Album[]`
@@ -384,6 +398,48 @@ of these URLs from item ids — API responses carry no URL fields.
   "N added · M already in your library".
   Unsupported file types → 415 (the UI filters its pickers too) so nothing is
   silently swallowed.
+
+### Map data
+
+The Map view clusters every located item itself, so the whole selection has to
+fit on the wire, and it never asks a third party for anything: points come from
+umbreld and so does the basemap. Its list beside the map is `items.list` with a
+`bounds` filter, so the grid, the lightbox and selection work unchanged.
+
+- `GET /api/photos/map/points?filter=<Filter as JSON>` — little-endian: how many
+  of the items the filter selects have no coordinates (uint32), then every one
+  that does, in the timeline's order (newest first), as packed 52-byte records:
+  content hash (32 bytes, the item id as bytes), latitude and longitude
+  (float32), takenAt (float64 ms), flags (uint8: favorite 1, video 2, live 4,
+  panorama 8, screenshot 16, spherical 32, has tint 64) and tint (3 bytes RGB).
+  Revalidated by ETag, which saves the transfer when nothing moved but not the
+  read: it is the heaviest Photos read there is, so the UI asks again at most
+  every ten seconds while the library is changing.
+- `GET /api/photos/map/tiles/:z/:x/:y` — a Protomaps vector tile (MVT),
+  gzipped. 204 where the planet has no tile, 404 where it can't be had, neither
+  cached, 400 for a tile that isn't on the map.
+
+The map's labels are drawn by the browser, in the Inter the UI already loads
+(scripts Inter lacks in the device's own fonts): no fonts are served, fetched,
+kept or hosted.
+
+Nothing of the basemap ships with the OS. umbreld fetches each tile as the map
+asks for it, from one build of the planet on a server, which sees the device's
+address and which tiles it asks for: Protomaps' Cloudflare Worker at
+`maps.umbrel.com/<build>/{z}/{x}/{y}.mvt` (zooms 0–15; `UMBREL_MAPS` in
+`map-tiles.ts`). That isn't live yet (#1675): until it is, every device reads
+Protomaps' own daily build instead, a tile at a time out of its PMTiles
+archive.
+
+What is fetched is kept, gzipped, in `<dataDirectory>/photos/map-cache/<build>/`
+(`tiles/<z>/<x>/<y>.mvt`). A build never changes,
+so a kept file is never revalidated; a new build is kept in a directory of its
+own and the old one removed. A tile the planet has none of is kept as an
+empty file, so it isn't fetched again; a failure isn't kept. The cache holds
+about 300 MB, and past that the least recently used files go first. It is
+left out of backups, as it is fetched again as needed. With no connection, a
+device that has kept the zoom-0 tile draws what it has kept, and one that
+hasn't draws the Natural Earth atlas the UI bundles.
 
 ## Events
 

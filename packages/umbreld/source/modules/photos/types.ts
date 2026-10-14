@@ -70,7 +70,30 @@ export type PhotoFilter = {
 	sourceIds?: string[]
 	albumIds?: string[]
 	dates?: Array<{from: number; to: number}>
+	bounds?: PhotoBounds
 }
+
+// A stretch of the map, in degrees. West is east of east when the stretch
+// crosses the antimeridian (Fiji, say), the way map libraries report it.
+export type PhotoBounds = {west: number; south: number; east: number; north: number}
+
+// The map's wire format (GET /api/photos/map/points), little-endian: how many
+// of the selected items have no location (uint32), then a record per located
+// item, in the timeline's order — the content hash (32 bytes: the item id as
+// bytes), latitude and longitude (float32: a metre or so), takenAt (float64
+// ms), flags (uint8, see MAP_POINT_FLAGS) and the tint (RGB, when flags says
+// there is one)
+export const MAP_POINTS_HEADER_BYTES = 4
+export const MAP_POINT_BYTES = 52
+export const MAP_POINT_FLAGS = {
+	favorite: 1,
+	video: 2,
+	live: 4,
+	panorama: 8,
+	screenshot: 16,
+	spherical: 32,
+	tint: 64,
+} as const
 
 export type PhotoItem = {
 	id: string

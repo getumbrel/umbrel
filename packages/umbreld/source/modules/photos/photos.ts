@@ -11,6 +11,7 @@ import type {Principal} from '../auth/auth.js'
 import {Blake3Hasher} from '../files/blake3.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 
+import MapTiles, {protomapsPlanet} from './map-tiles.js'
 import type {PhotoFilter, PhotoScopeMode} from './types.js'
 import {hashFileRevision, type PublishedFileRevision} from '../files/file-index-enrichment.js'
 
@@ -121,9 +122,21 @@ export default class Photos {
 	#backupShardLockTails = new Map<string, Promise<void>>()
 	#durableBackupShards = new Set<string>()
 
+	#map: MapTiles | undefined
+
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		this.logger = umbreld.logger.createChildLogger('photos')
+	}
+
+	// The Map view's basemap (see map-tiles.ts): fetched as it is looked at
+	// and kept beside the library's own data. From Protomaps' own build until
+	// the planet Umbrel hosts is live (#1675), then `remoteMap(UMBREL_MAPS)`
+	get map() {
+		return (this.#map ??= new MapTiles(
+			nodePath.join(this.#umbreld.dataDirectory, 'photos', 'map-cache'),
+			protomapsPlanet(),
+		))
 	}
 
 	get mediaDirectory() {
@@ -715,6 +728,10 @@ export default class Photos {
 
 	listItems(accountId: string, filter: PhotoFilter, cursor: string | undefined, limit: number) {
 		return this.#umbreld.files.fileIndex.photosListItems(accountId, filter, cursor, limit)
+	}
+
+	mapPoints(accountId: string, filter: PhotoFilter) {
+		return this.#umbreld.files.fileIndex.photosMapPoints(accountId, filter)
 	}
 
 	getItem(accountId: string, id: string, deleted = false) {

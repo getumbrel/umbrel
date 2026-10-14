@@ -3,6 +3,7 @@ import {useParams} from 'react-router-dom'
 
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {CountText} from '@/features/photos/components/actions-bar/count-text'
+import {useBarRoute} from '@/features/photos/components/actions-bar/use-bar-route'
 import {useRouteFilter} from '@/features/photos/components/listing'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {isFilterSection, type FilterSection} from '@/features/photos/constants'
@@ -21,8 +22,12 @@ import {formatNumberI18n} from '@/utils/number'
 export function ViewLine() {
 	const {t, i18n} = useTranslation()
 	const {section, sourceId, albumId} = useParams()
-	const {search} = usePhotosView()
-	const {total} = useItems(useRouteFilter(), {keepPrevious: search.active})
+	const {search, mapArea} = usePhotosView()
+	// The map counts its own area — it holds every point — so on it nothing is
+	// asked of the server here
+	const {isMap} = useBarRoute()
+	const list = useItems(useRouteFilter(), {enabled: !isMap, keepPrevious: search.active})
+	const total = isMap ? mapArea?.count : list.total
 	const {data: summary} = useLibrarySummary()
 	// Only fetched on an album page; other routes leave it idle
 	const {data: albums} = useAlbums({enabled: albumId !== undefined})
@@ -33,7 +38,11 @@ export function ViewLine() {
 	// The library's total bytes, shown beside the whole-library count only —
 	// the summary doesn't split sizes any finer
 	let size: string | undefined
-	if (albumId) {
+	if (isMap) {
+		// "In view / 248 items" (the bar's title names the place)
+		name = t('photos-map.in-view')
+		count = total
+	} else if (albumId) {
 		const album = albums?.find((a) => a.id === albumId)
 		name = album?.name
 		count = album?.count

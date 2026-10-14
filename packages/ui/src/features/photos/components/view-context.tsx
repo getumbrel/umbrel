@@ -1,3 +1,4 @@
+import type {Map as MapLibreMap} from 'maplibre-gl'
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react'
 import {useLocation, useSearchParams} from 'react-router-dom'
 
@@ -120,6 +121,27 @@ type PhotosView = {
 	// no grid), shown by the actions bar in the row the grid scrolls under
 	section: string | null
 	setSection: (section: string | null) => void
+	// The stretch of the map its list is showing, how many photos are in it
+	// and what the place is called, published by the map page while it is up
+	// (null elsewhere): the list beside the map, the lightbox opened from it
+	// and the bar's title and count all read the map's area from here
+	mapArea: MapArea | null
+	setMapArea: (area: MapArea | null) => void
+	// The map's controls, for the bar to lay out beside the search (null
+	// while there is no map)
+	mapControls: MapControls | null
+	setMapControls: (controls: MapControls | null) => void
+}
+
+// A map stretch, in degrees: west is east of east across the antimeridian
+export type MapBounds = {west: number; south: number; east: number; north: number}
+export type MapArea = {bounds: MapBounds; count: number; place?: string}
+export type MapControls = {
+	map: MapLibreMap
+	showAll: () => void
+	// The list beside the map (desktop)
+	listOpen: boolean
+	setListOpen: (open: boolean) => void
 }
 
 const PhotosViewContext = createContext<PhotosView | undefined>(undefined)
@@ -255,6 +277,8 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 	const [pageSize] = useState(() => pageSizeFor(tileSize))
 	const [grid, setGrid] = useState<GridHandle | null>(null)
 	const [section, setSection] = useState<string | null>(null)
+	const [mapArea, setMapArea] = useState<MapArea | null>(null)
+	const [mapControls, setMapControls] = useState<MapControls | null>(null)
 	const setTileSize = useCallback((size: number) => setTileSizeState(clampTileSize(size)), [])
 	useEffect(() => {
 		try {
@@ -264,8 +288,23 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 		}
 	}, [tileSize])
 	const value = useMemo(
-		() => ({zoom, setZoom, pageSize, search, tileSize, setTileSize, grid, setGrid, section, setSection}),
-		[zoom, pageSize, search, tileSize, setTileSize, grid, section],
+		() => ({
+			zoom,
+			setZoom,
+			pageSize,
+			search,
+			tileSize,
+			setTileSize,
+			grid,
+			setGrid,
+			section,
+			setSection,
+			mapArea,
+			setMapArea,
+			mapControls,
+			setMapControls,
+		}),
+		[zoom, pageSize, search, tileSize, setTileSize, grid, section, mapArea, mapControls],
 	)
 	return <PhotosViewContext value={value}>{children}</PhotosViewContext>
 }

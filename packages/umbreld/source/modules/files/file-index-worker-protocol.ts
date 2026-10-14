@@ -38,6 +38,7 @@ export type FileIndexRequestMethod =
 	| 'photosSummary'
 	| 'photosIndexingState'
 	| 'photosListItems'
+	| 'photosMapPoints'
 	| 'photosGetItem'
 	| 'photosNeighbors'
 	| 'photosSetFavorite'

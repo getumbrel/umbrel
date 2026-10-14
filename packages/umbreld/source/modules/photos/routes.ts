@@ -29,7 +29,8 @@ const backupResourceReceiptsInput = z.object({
 		.max(256),
 })
 
-const filterSchema = z.object({
+// Shared with the HTTP map endpoint (see api.ts)
+export const filterSchema = z.object({
 	query: z.string().optional(),
 	kind: z.enum(PHOTO_KINDS).optional(),
 	subKind: z.enum(PHOTO_SUB_KINDS).optional(),
@@ -38,6 +39,14 @@ const filterSchema = z.object({
 	sourceIds: z.array(z.string()).optional(),
 	albumIds: z.array(z.string()).optional(),
 	dates: z.array(z.object({from: z.number(), to: z.number()})).optional(),
+	bounds: z
+		.object({
+			west: z.number().min(-180).max(180),
+			south: z.number().min(-90).max(90),
+			east: z.number().min(-180).max(180),
+			north: z.number().min(-90).max(90),
+		})
+		.optional(),
 })
 const ids = z.object({ids: z.array(z.string()).min(1)})
 const accountId = (context: {principal?: Principal}) => {
@@ -134,6 +143,10 @@ export default router({
 		deletePermanently: privateProcedureWithMembers
 			.input(z.object({ids: z.array(z.string()).optional()}))
 			.mutation(({ctx, input}) => ctx.umbreld.photos.deletePermanently(accountId(ctx), input.ids)),
+	}),
+
+	map: router({
+		basemap: privateProcedureWithMembers.query(({ctx}) => ctx.umbreld.photos.map.status()),
 	}),
 
 	albums: router({

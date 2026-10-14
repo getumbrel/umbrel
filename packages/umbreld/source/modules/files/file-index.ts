@@ -470,6 +470,10 @@ export default class FileIndex {
 		])
 	}
 
+	async photosMapPoints(accountId: string, filter: PhotoFilter) {
+		return this.#request<Uint8Array>('photosMapPoints', [accountId, filter])
+	}
+
 	async photosGetItem(accountId: string, id: string, deleted = false) {
 		return this.#request<PhotoItemDetail | undefined>('photosGetItem', [accountId, id, deleted])
 	}

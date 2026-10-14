@@ -11,6 +11,7 @@ import {useRouteFilter} from './route-filter'
 
 const fixtures = vi.hoisted(() => ({
 	searchFilter: {} as Record<string, unknown>,
+	mapArea: null as {bounds: Record<string, number>} | null,
 	listInput: undefined as unknown,
 }))
 
@@ -18,6 +19,7 @@ vi.mock('@/features/photos/components/view-context', () => ({
 	usePhotosView: () => ({
 		pageSize: 200,
 		search: {filter: fixtures.searchFilter},
+		mapArea: fixtures.mapArea,
 	}),
 }))
 
@@ -48,6 +50,7 @@ describe('Photos route filters', () => {
 
 	beforeEach(() => {
 		fixtures.searchFilter = {}
+		fixtures.mapArea = null
 		fixtures.listInput = undefined
 		container = document.createElement('div')
 		document.body.appendChild(container)
@@ -123,5 +126,17 @@ describe('Photos route filters', () => {
 		['/photos/albums/album-a', {albumIds: ['album-b']}, {albumIds: ['album-a']}],
 	])('a conflicting stale search token cannot broaden %s', (path, searchFilter, filter) => {
 		expect(render(path, searchFilter)).toStrictEqual({filter, limit: 200})
+	})
+
+	const bounds = {west: -9.3, south: 38.6, east: -9, north: 38.8}
+
+	test("narrows the map's list to the stretch of map on screen", () => {
+		fixtures.mapArea = {bounds}
+		expect(render('/photos/map', {query: 'tram'})).toStrictEqual({filter: {query: 'tram', bounds}, limit: 200})
+	})
+
+	test("leaves the map's area behind on the page come to from it", () => {
+		fixtures.mapArea = {bounds}
+		expect(render('/photos/favorites')).toStrictEqual({filter: {favorite: true}, limit: 200})
 	})
 })

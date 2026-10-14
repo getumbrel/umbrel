@@ -10,6 +10,11 @@
 // afterwards — the lightbox, closed on an item stepped far from where it
 // opened, scrolls the grid to a tile that did not exist when it was lifted.
 // The canvas's cells are left out of the frame by the renderer (Frame.lifted).
+//
+// Elsewhere the same photo can be on screen twice — the map has it on a
+// marker as well as in its list — and a copy that is not the picture's place
+// (`data-item-copy`, never flown to) empties with it, or it would be the
+// second copy all the same.
 export function createTileLift() {
 	let sheet: CSSStyleSheet | undefined
 	return {
@@ -20,7 +25,8 @@ export function createTileLift() {
 					sheet = new CSSStyleSheet()
 					document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 				}
-				sheet.replaceSync(id === undefined ? '' : `[data-item-id="${CSS.escape(id)}"] { visibility: hidden }`)
+				const value = id === undefined ? undefined : `"${CSS.escape(id)}"`
+				sheet.replaceSync(value ? `[data-item-id=${value}], [data-item-copy=${value}] { visibility: hidden }` : '')
 			} catch {
 				// No constructable stylesheets (Safari before 16.4): the tile
 				// simply stays where it is, as it always did

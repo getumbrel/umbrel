@@ -37,7 +37,8 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 					transition: {duration: 0.2, ease: [0.215, 0.61, 0.355, 1] as const},
 				}
 	return (
-		<div className='flex min-h-11 items-center'>
+		// Above the listing: the map runs up beneath it on phones
+		<div className='relative z-10 flex min-h-11 items-center'>
 			<AnimatePresence initial={false} mode='popLayout'>
 				{searching ? (
 					<motion.div key='search' className='mr-5 flex min-w-0 flex-1' {...swap(1)}>
@@ -107,7 +108,8 @@ export default function PhotosLayout() {
 									<Sidebar className='h-[calc(100svh-140px)]' />
 								</MobileSidebarWrapper>
 							) : (
-								<Sidebar className='h-[calc(100vh-176px)]' />
+								// Above the listing: the map runs on beneath it
+								<Sidebar className='relative z-10 h-[calc(100vh-176px)]' />
 							)}
 
 							{/* Files dropped anywhere on the pane upload into the library */}

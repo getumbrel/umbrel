@@ -5,6 +5,8 @@ import {PhotosListing} from '@/features/photos/components/listing'
 import {SourcesOverview} from '@/features/photos/components/sources/sources-overview'
 
 const Photos = lazy(() => import('@/features/photos'))
+// MapLibre and its worker are only fetched when the map is opened
+const PhotosMap = lazy(() => import('@/features/photos/components/map'))
 
 export const photosRoutes: RouteObject[] = [
 	{
@@ -20,6 +22,12 @@ export const photosRoutes: RouteObject[] = [
 			{
 				path: 'sources',
 				element: <SourcesOverview />,
+			},
+			// Every located photo on a map. Ahead of :section, which would take
+			// 'map' for a section and show the timeline
+			{
+				path: 'map',
+				element: <PhotosMap />,
 			},
 			// Sidebar sections (favorites, photos, videos, ...). All render the same
 			// placeholder listing until each section gets its own view.

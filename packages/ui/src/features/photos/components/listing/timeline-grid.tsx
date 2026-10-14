@@ -176,6 +176,7 @@ export function TimelineGrid({
 	frame,
 	inDeleted,
 	footer,
+	tileSize: fixedTileSize,
 }: {
 	items: Item[]
 	// The filter's full match count, beyond the pages loaded so far — what
@@ -191,12 +192,17 @@ export function TimelineGrid({
 	// A quiet status line after the last row, once every page is loaded —
 	// the layout reserves its band (see FOOTER_HEIGHT)
 	footer?: ReactNode
+	// A fixed tile size, for a list beside something else: tiles of that
+	// size, which a pinch leaves alone, and no time rail down its narrow edge
+	tileSize?: number
 }) {
 	const {inset, handoff} = frame
 	const {t, i18n} = useTranslation()
 	const isMobile = useIsMobile()
 	const reduceMotion = useReducedMotion() ?? false
-	const {zoom, tileSize, setTileSize, setGrid, setSection, pageSize} = usePhotosView()
+	const {zoom, tileSize: preferredTileSize, setTileSize, setGrid, setSection, pageSize} = usePhotosView()
+	const fixed = fixedTileSize !== undefined
+	const tileSize = fixedTileSize ?? preferredTileSize
 	const selection = usePhotosSelection()
 	const scrollerRef = useRef<HTMLDivElement>(null)
 	const contentRef = useRef<HTMLDivElement>(null)
@@ -298,11 +304,11 @@ export function TimelineGrid({
 		// should carry the real domain, not a density guess that reformats a
 		// beat later — a slightly later fade-in over a visible snap.
 		const domainReady = librarySummary !== undefined || summaryFailed
-		const eligible = !isMobile && domainReady && railBuckets.length > 0
+		const eligible = !isMobile && !fixed && domainReady && railBuckets.length > 0
 		setShowRail((on) =>
 			on ? eligible && railViewports > RAIL_HIDE_VIEWPORTS : eligible && railViewports >= RAIL_SHOW_VIEWPORTS,
 		)
-	}, [isMobile, librarySummary, summaryFailed, railBuckets, railViewports])
+	}, [isMobile, fixed, librarySummary, summaryFailed, railBuckets, railViewports])
 
 	// The committed view. A new layout is adopted here, before paint, together
 	// with the scroll position that keeps the focal tile still and the row
@@ -792,6 +798,9 @@ export function TimelineGrid({
 	useEffect(() => {
 		const scroller = scrollerRef.current
 		if (!scroller) return
+		// A grid of fixed tiles takes the pinch all the same, and does nothing
+		// with it: left to the browser, it would zoom the page
+		if (fixed) return attachPinch(scroller, {start() {}, move() {}, end() {}})
 		const detach = attachPinch(scroller, {
 			start: (focal) => {
 				// A zoom and a box drag cannot both own the pointer
@@ -816,7 +825,7 @@ export function TimelineGrid({
 			frameRef.current = 0
 			gesture.cancel()
 		}
-	}, [gesture, pump, marqueeEnd, takeAnchor])
+	}, [gesture, pump, marqueeEnd, takeAnchor, fixed])
 
 	// Every committed view, and every change of selection, reaches the canvas
 	// here; a hover reaches it from the pointer handler below, and a live

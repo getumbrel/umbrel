@@ -7,6 +7,7 @@ import {useNavigate, useParams} from 'react-router-dom'
 import {FilterPills, PillButton} from '@/components/ui/edge-controls'
 import {CountText} from '@/features/photos/components/actions-bar/count-text'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
+import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
 import {PickingActions} from '@/features/photos/components/actions-bar/picking-actions'
 import {SelectionActions} from '@/features/photos/components/actions-bar/selection-actions'
 import {UploadButton} from '@/features/photos/components/actions-bar/upload-button'
@@ -67,7 +68,7 @@ export function ActionsBar() {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
-	const {section} = usePhotosView()
+	const {section, mapArea, mapControls} = usePhotosView()
 	const searchEngaged = useSearchEngaged()
 	const isMobile = useIsMobile()
 	const selection = usePhotosSelection()
@@ -82,7 +83,7 @@ export function ActionsBar() {
 		animate: 'animate',
 		exit: 'exit',
 	})
-	const {collection, isSources, inDeleted, isTimeline} = useBarRoute()
+	const {collection, isSources, isMap, inDeleted, isTimeline} = useBarRoute()
 	const createAlbum = () => navigate(linkToDialog('photos-create-album'))
 	const addSource = () => navigate(linkToDialog('photos-add-source'))
 
@@ -105,7 +106,16 @@ export function ActionsBar() {
 			) : isSources ? (
 				<SourcesCount />
 			) : (
-				<div className={cn('flex min-w-0 flex-col self-end', titleShadowClass)}>
+				<div
+					className={cn(
+						'flex min-w-0 flex-col self-end',
+						titleShadowClass,
+						// On desktop the map runs beneath the sidebar's glass card, which
+						// reaches 8px past its column (the map's SIDEBAR_OVERHANG): the
+						// title stands 20px clear of it
+						isMap && 'lg:ml-7',
+					)}
+				>
 					<div className='relative h-[1lh] overflow-y-clip text-17 leading-tight'>
 						<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 							{selection.coveringFor ? (
@@ -118,7 +128,8 @@ export function ActionsBar() {
 								</motion.h2>
 							) : (
 								<motion.div key='page' className='min-w-0' {...faceProps(titleRoll)}>
-									<SectionTitle section={section} />
+									{/* On the map, the place in view stands where the date would */}
+									<SectionTitle section={isMap ? (mapArea?.place ?? t('photos-sidebar.map')) : section} />
 								</motion.div>
 							)}
 						</AnimatePresence>
@@ -196,6 +207,8 @@ export function ActionsBar() {
 										</CollapseAside>
 									</>
 								)}
+								{/* The map's zoom, and its way back to everything and to the list */}
+								{isMap && mapControls && <MapControls controls={mapControls} />}
 								{/* Phones search from the title row (MobileSearch); mounting this
 								    too would portal a second suggestion panel over it */}
 								{!isMobile && <SearchPill />}

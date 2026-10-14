@@ -5,9 +5,11 @@ import {act} from 'react'
 import {createRoot, type Root} from 'react-dom/client'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
+import {MAP_POINTS_KEY} from '@/features/photos/hooks/use-map-points'
 import {usePhotosEvents} from '@/features/photos/hooks/use-photos-events'
 
 type SubscriptionOptions = {
+	onStarted?: () => void
 	onData: (data: unknown) => void
 	onError: (error: Error) => void
 }
@@ -21,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 	invalidateSources: vi.fn(),
 	invalidateAlbums: vi.fn(),
 	invalidateItem: vi.fn(),
+	cancelItem: vi.fn(async () => {}),
 	invalidateQueries: vi.fn(),
 	findQueries: vi.fn<(...args: unknown[]) => unknown[]>(() => []),
 }))
@@ -46,7 +49,7 @@ vi.mock('@/trpc/trpc', () => ({
 				},
 				sources: {invalidate: mocks.invalidateSources},
 				albums: {invalidate: mocks.invalidateAlbums},
-				items: {get: {invalidate: mocks.invalidateItem}},
+				items: {get: {invalidate: mocks.invalidateItem, cancel: mocks.cancelItem}},
 			},
 		}),
 		eventBus: {
@@ -141,7 +144,61 @@ it('uses the bounded library refresh when indexing becomes ready', async () => {
 	expect(mocks.invalidateSources).toHaveBeenCalledOnce()
 	expect(mocks.invalidateAlbums).toHaveBeenCalledOnce()
 	expect(mocks.invalidateItem).toHaveBeenCalledOnce()
-	expect(mocks.invalidateQueries).toHaveBeenCalledOnce()
+	// The items lists, and the map's points
+	expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
+	expect(mocks.invalidateQueries).toHaveBeenCalledWith({queryKey: MAP_POINTS_KEY})
+})
+
+it("refreshes the map's points at once, then at most every ten seconds while changes keep coming", async () => {
+	const refreshes = () => mocks.invalidateQueries.mock.calls.filter(([{queryKey}]) => queryKey === MAP_POINTS_KEY)
+	// An import: a change a second, for 25 seconds
+	await act(async () => {
+		for (let second = 0; second < 25; second++) {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			await vi.advanceTimersByTimeAsync(1000)
+		}
+	})
+	expect(mocks.invalidateSummary).toHaveBeenCalledTimes(25)
+	// At 1s, 11s and 21s
+	expect(refreshes()).toHaveLength(3)
+	// … and once more for the changes since, when its turn comes
+	await act(async () => vi.advanceTimersByTimeAsync(10_000))
+	expect(refreshes()).toHaveLength(4)
+	await act(async () => vi.advanceTimersByTimeAsync(60_000))
+	expect(refreshes()).toHaveLength(4)
+})
+
+it("leaves the map's points stale, not refetched, when Photos is closed with a refresh of them waiting", async () => {
+	const refreshes = () => mocks.invalidateQueries.mock.calls.filter(([{queryKey}]) => queryKey === MAP_POINTS_KEY)
+	await act(async () => {
+		for (let second = 0; second < 2; second++) {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			await vi.advanceTimersByTimeAsync(1000)
+		}
+	})
+	act(() => root.render(null))
+	await act(async () => vi.advanceTimersByTimeAsync(60_000))
+	expect(refreshes()).toHaveLength(2)
+	expect(refreshes()[1]).toEqual([{queryKey: MAP_POINTS_KEY, refetchType: 'none'}])
+})
+
+it("owes nothing to the map's points when Photos is closed with no refresh of them waiting", async () => {
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	act(() => root.render(null))
+	expect(mocks.invalidateQueries.mock.calls.filter(([{queryKey}]) => queryKey === MAP_POINTS_KEY)).toHaveLength(1)
+})
+
+it("refreshes the map's points once subscribed, for changes made while Photos was closed", async () => {
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onStarted?.()
+		await Promise.resolve()
+	})
+	expect(mocks.invalidateItem).toHaveBeenCalledOnce()
+	// Without cancelling a read the map has only just begun
+	expect(mocks.invalidateQueries).toHaveBeenCalledWith({queryKey: MAP_POINTS_KEY}, {cancelRefetch: false})
 })
 
 it('does not refresh cold data when the initial indexing seed is already ready', async () => {

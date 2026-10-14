@@ -5,6 +5,7 @@ import {useNavigate, useParams} from 'react-router-dom'
 
 import {PillButton} from '@/components/ui/edge-controls'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
+import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
 import {UploadButton} from '@/features/photos/components/actions-bar/upload-button'
 import {useBarRoute} from '@/features/photos/components/actions-bar/use-bar-route'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
@@ -25,14 +26,17 @@ function SelectGlyph({className}: {className?: string}) {
 // can be hovered, so selecting starts from a button here; while selecting,
 // the selection's actions take the bar's row and these step aside. Every
 // button is a glyph: upload, the tile's own circled check for select, search.
+// They float over the page as the bar's do — over the map, which runs up
+// beneath the row — so they are the same glass (.umbrel-photos-actions, whose
+// scroll-pinned ride is lg-only, where these are hidden)
 export function MobileActions({className}: {className?: string}) {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const selection = usePhotosSelection()
-	const {search} = usePhotosView()
+	const {search, mapControls} = usePhotosView()
 	const reduceMotion = useReducedMotion() ?? false
-	const {collection, isSources, inDeleted, hasGrid, isTimeline} = useBarRoute()
+	const {collection, isSources, isMap, inDeleted, hasGrid, isTimeline} = useBarRoute()
 	const {albumId, sourceId} = useParams()
 
 	return (
@@ -40,7 +44,7 @@ export function MobileActions({className}: {className?: string}) {
 			{!selection.selecting && (
 				<motion.div
 					key='page'
-					className={cn('flex items-center gap-2', className)}
+					className={cn('umbrel-photos-actions flex items-center gap-2', className)}
 					initial={reduceMotion ? false : {opacity: 0, y: -4}}
 					animate={{opacity: 1, y: 0}}
 					exit={reduceMotion ? undefined : {opacity: 0, y: -4}}
@@ -57,6 +61,8 @@ export function MobileActions({className}: {className?: string}) {
 						/>
 					)}
 					{isTimeline && !sourceId && <UploadButton iconOnly />}
+					{/* The map's zoom, its way back to everything and its list, beside the search */}
+					{isMap && mapControls && <MapControls controls={mapControls} compact />}
 					{inDeleted && <DeletedActions iconOnly />}
 					{/* The same circled check a tile wears when selected — the row
 					    stays a clean run of glyphs */}

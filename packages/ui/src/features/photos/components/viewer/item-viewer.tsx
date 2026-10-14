@@ -18,6 +18,7 @@ import {preventDialogDismissForToasts} from '@/components/ui/shared/dialog'
 import {toast} from '@/components/ui/toast'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useRouteFilter} from '@/features/photos/components/listing'
+import {createTileLift} from '@/features/photos/components/listing/tile-lift'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {Filmstrip} from '@/features/photos/components/viewer/filmstrip'
 import {InfoPanel} from '@/features/photos/components/viewer/info-panel'
@@ -119,6 +120,11 @@ const INSPECTOR_WIDTH = 340
 // so the inspector slides in from the edge of the window, not the stage's
 const STAGE_MARGIN = 24
 
+// With no grid behind the lightbox — the map with its list put away — the
+// picture's place is emptied all the same, by the same rule (tile-lift.ts): a
+// map marker showing the item is lifted while the picture is away from it
+const ungriddedLift = createTileLift()
+
 // The lightbox. Shares the timeline's item query, so the filmstrip and ←/→
 // walk the same list the user was looking at and extend it page by page;
 // when the item isn't in that list (a deep link), neighbours come from the API.
@@ -217,7 +223,7 @@ export function ItemViewer() {
 		id,
 		reduceMotion,
 		tileRect: grid?.tileRect,
-		liftTile: grid?.liftTile,
+		liftTile: grid?.liftTile ?? ungriddedLift.set,
 	})
 
 	// The picture's shape is the thumbnail's bitmap — what is actually drawn,
@@ -702,7 +708,9 @@ export function ItemViewer() {
 										)}
 										style={{width: INSPECTOR_WIDTH + STAGE_MARGIN}}
 									>
-										{item && infoUsed && <InfoPanel item={item} onClose={() => setInfoByHand(false)} />}
+										{item && infoUsed && (
+											<InfoPanel item={item} showing={showInfo} onClose={() => setInfoByHand(false)} />
+										)}
 									</div>
 								</aside>
 							)}
@@ -746,7 +754,9 @@ export function ItemViewer() {
 									showInfo ? 'translate-y-0' : 'translate-y-full',
 								)}
 							>
-								{item && infoUsed && <InfoPanel item={item} onClose={() => setInfoByHand(false)} sheet />}
+								{item && infoUsed && (
+									<InfoPanel item={item} showing={showInfo} onClose={() => setInfoByHand(false)} sheet />
+								)}
 							</div>
 						)}
 					</div>

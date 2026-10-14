@@ -227,6 +227,8 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 				optionalStringArg(args, 2),
 				numberArg(args, 3),
 			)
+		case 'photosMapPoints':
+			return index.photosMapPoints(stringArg(args), objectArg<PhotoFilter>(args, 1))
 		case 'photosGetItem':
 			return index.photosGetItem(stringArg(args), stringArg(args, 1), booleanArg(args, 2))
 		case 'photosNeighbors':

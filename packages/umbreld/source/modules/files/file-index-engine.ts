@@ -1907,6 +1907,10 @@ export default class FileIndexEngine {
 		return this.#readPhotos('listItems', [accountId, filter, cursor, limit])
 	}
 
+	async photosMapPoints(accountId: string, filter: PhotoFilter) {
+		return this.#readPhotos('mapPoints', [accountId, filter])
+	}
+
 	async photosGetItem(accountId: string, id: string, deleted = false) {
 		return this.#readPhotos('getItem', [accountId, id, deleted])
 	}

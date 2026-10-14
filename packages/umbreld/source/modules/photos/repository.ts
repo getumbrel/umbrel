@@ -9,6 +9,7 @@ import {photoLibraryCte as rawPhotoLibraryCte, sourceScopeSql} from './library-s
 import PhotosReadModel, {photoLibraryCte} from './read-model.js'
 import type {
 	PhotoAlbum,
+	PhotoBounds,
 	PhotoFilter,
 	PhotoIndexingState,
 	PhotoItem,
@@ -16,7 +17,7 @@ import type {
 	PhotoScopeMode,
 	PhotoSource,
 } from './types.js'
-import {supportsPhotos} from './types.js'
+import {MAP_POINT_BYTES, MAP_POINT_FLAGS, MAP_POINTS_HEADER_BYTES, supportsPhotos} from './types.js'
 
 type Database = DatabaseTypes.Database
 
@@ -64,6 +65,17 @@ type ItemDetailRow = ItemRow & {
 	user_comment: string | null
 }
 
+type MapPointRow = [
+	hash: Buffer,
+	latitude: number | null,
+	longitude: number | null,
+	takenAt: number,
+	favorite: number,
+	kind: 'photo' | 'video',
+	subKind: NonNullable<ItemRow['sub_kind']> | null,
+	tint: number | null,
+]
+
 type Query = {sql: string; parameters: unknown[]}
 type PhotoRootKind = 'home' | 'trash'
 type PhotoContentReference = {accountId: string; hash: Buffer}
@@ -74,6 +86,10 @@ const UNKNOWN_EFFECTIVE_TAKEN_AT = -8_640_000_000_000_000
 const TARGETED_HASH_BATCH_SIZE = 128
 const ACCOUNT_WIDE_REFRESH_THRESHOLD = 32_768
 const PHOTO_LIBRARY_CTE = photoLibraryCte()
+// The library read in the table's own order, for a stretch of map: no index
+// knows where anything was taken, so every row is looked at, and unprompted
+// the planner fetches them one by one in the timeline's order, ~10× slower.
+const PHOTO_LIBRARY_SCAN_CTE = photoLibraryCte(0, false, 'NOT INDEXED')
 
 const ITEM_SELECT = `
 	SELECT id, kind, logical_sub_kind AS sub_kind, logical_taken_at AS taken_at,
@@ -731,6 +747,16 @@ export default class PhotosRepository {
 				AND (${filter.dates.map(() => '(logical_taken_at >= ? AND logical_taken_at < ?)').join(' OR ')})`,
 				parameters: [accountId, filter.deleted ? 'trash' : 'home', ...filter.dates.flatMap(({from, to}) => [from, to])],
 			})
+		if (filter.bounds) {
+			const bounds = boundsQuery(filter.bounds)
+			// In the table's own order, as PHOTO_LIBRARY_SCAN_CTE is
+			queries.push({
+				sql: `SELECT item.content_hash FROM photos_library_items AS item NOT INDEXED
+				JOIN media_metadata AS place ON place.content_id = item.content_id
+				WHERE item.account_id = ? AND item.root_kind = ? AND ${bounds.sql}`,
+				parameters: [accountId, filter.deleted ? 'trash' : 'home', ...bounds.parameters],
+			})
+		}
 
 		for (const term of filter.query?.replaceAll('\0', '').normalize('NFC').trim().split(/\s+/).filter(Boolean) ?? []) {
 			if (Array.from(term).length < 3) continue
@@ -786,13 +812,22 @@ export default class PhotosRepository {
 		if (target) where.sql += ' AND content_hash IN (SELECT content_hash FROM requested_hashes)'
 		const parameters = [...(target?.parameters ?? []), accountId, ...where.parameters]
 		const from = simple ? 'photos_library_items WHERE account_id = ? AND' : 'logical_items WHERE'
-		const cte = simple ? '' : photoLibraryCte(target?.capacity ?? 0, false, sourceCandidates !== undefined)
+		// A bounded set of candidates is looked up by hash and sorted. Unprompted,
+		// the planner walks the whole timeline in search of them.
+		const cte = simple
+			? ''
+			: photoLibraryCte(target?.capacity ?? 0, false, target ? 'INDEXED BY photos_library_items_key' : '')
+		// A stretch of map with no candidates is scanned (see
+		// PHOTO_LIBRARY_SCAN_CTE) for its count and first page. Walking the
+		// timeline from the newest item, an area of old photos is found last;
+		// a later page starts from its cursor, so its walk stays short.
+		const scanCte = filter.bounds && !target ? PHOTO_LIBRARY_SCAN_CTE : cte
 		// Count with the covering index, then hydrate only the requested page.
 		// A window count would fetch every matching wide row before LIMIT.
 		const total = cursor
 			? undefined
 			: (
-					database.prepare(`${cte} SELECT COUNT(*) AS total FROM ${from} ${where.sql}`).get(...parameters) as {
+					database.prepare(`${scanCte} SELECT COUNT(*) AS total FROM ${from} ${where.sql}`).get(...parameters) as {
 						total: number
 					}
 				).total
@@ -803,7 +838,7 @@ export default class PhotosRepository {
 		}
 		const rows = database
 			.prepare(
-				`${cte} ${ITEM_SELECT} FROM ${from} ${where.sql}
+				`${decoded ? cte : scanCte} ${ITEM_SELECT} FROM ${from} ${where.sql}
 			ORDER BY logical_taken_at DESC, id LIMIT ?`,
 			)
 			.all(...parameters, limit + 1) as ItemRow[]
@@ -815,6 +850,72 @@ export default class PhotosRepository {
 			...(total === undefined ? {} : {total}),
 			...(rows.length > limit && last ? {nextCursor: encodeCursor(Number(last.taken_at), last.id)} : {}),
 		}
+	}
+
+	// Every item a filter selects that knows where it was taken, newest first,
+	// packed for the map (see MAP_POINT_BYTES) — the map clusters all of them
+	// itself, so a whole library has to fit on the wire — after a count of the
+	// ones that don't, so the map can say what it isn't showing.
+	mapPoints(database: Database, accountId: string, filter: PhotoFilter) {
+		this.#ensureSource(database, accountId)
+		this.syncPendingChanges(database)
+		const where = filterQuery(filter)
+		const candidates = this.#filterCandidates(database, accountId, filter)
+		if (candidates?.length === 0) return new Uint8Array(MAP_POINTS_HEADER_BYTES)
+		const target = candidates ? targetedHashes(candidates) : undefined
+		if (target) where.sql += ' AND content_hash IN (SELECT content_hash FROM requested_hashes)'
+		// A few candidates are looked up by hash; anything more is most of the
+		// library, read in the table's own order (see PHOTO_LIBRARY_SCAN_CTE)
+		const access = target ? 'INDEXED BY photos_library_items_key' : 'NOT INDEXED'
+		// Packed a row at a time: a whole library of rows held at once is ~10× the
+		// size of what is sent
+		const rows = database
+			.prepare(
+				`${photoLibraryCte(target?.capacity ?? 0, false, access)}
+				SELECT item.content_hash, place.latitude, place.longitude, item.logical_taken_at,
+					item.is_favorite, item.kind, item.logical_sub_kind, item.tint
+				FROM (SELECT content_hash, content_id, id, logical_taken_at, is_favorite, kind, logical_sub_kind, tint
+					FROM logical_items WHERE ${where.sql}) AS item
+				LEFT JOIN media_metadata AS place ON place.content_id = item.content_id
+				ORDER BY item.logical_taken_at DESC, item.id`,
+			)
+			.raw()
+			.iterate(...(target?.parameters ?? []), accountId, ...where.parameters) as Iterable<MapPointRow>
+		let points = new Uint8Array(MAP_POINTS_HEADER_BYTES + 1024 * MAP_POINT_BYTES)
+		let view = new DataView(points.buffer)
+		let offset = MAP_POINTS_HEADER_BYTES
+		let unlocated = 0
+		for (const [hash, latitude, longitude, takenAt, favorite, kind, subKind, tint] of rows) {
+			if (latitude === null || longitude === null) {
+				unlocated++
+				continue
+			}
+			if (offset + MAP_POINT_BYTES > points.length) {
+				const grown = new Uint8Array(points.length * 2)
+				grown.set(points)
+				points = grown
+				view = new DataView(points.buffer)
+			}
+			points.set(hash, offset)
+			view.setFloat32(offset + 32, latitude, true)
+			view.setFloat32(offset + 36, longitude, true)
+			view.setFloat64(offset + 40, Number(takenAt), true)
+			view.setUint8(
+				offset + 48,
+				(favorite ? MAP_POINT_FLAGS.favorite : 0) |
+					(kind === 'video' ? MAP_POINT_FLAGS.video : 0) |
+					(subKind ? MAP_POINT_FLAGS[subKind] : 0) |
+					(tint === null ? 0 : MAP_POINT_FLAGS.tint),
+			)
+			if (tint !== null) {
+				view.setUint8(offset + 49, (Number(tint) >> 16) & 0xff)
+				view.setUint8(offset + 50, (Number(tint) >> 8) & 0xff)
+				view.setUint8(offset + 51, Number(tint) & 0xff)
+			}
+			offset += MAP_POINT_BYTES
+		}
+		view.setUint32(0, unlocated, true)
+		return points.slice(0, offset)
 	}
 
 	getItem(database: Database, accountId: string, id: string, deleted = false): PhotoItemDetail | undefined {
@@ -888,7 +989,7 @@ export default class PhotosRepository {
 		const where = filterQuery(filter)
 		const result = database
 			.prepare(
-				`${PHOTO_LIBRARY_CTE}, filtered_items AS MATERIALIZED (
+				`${filter.bounds ? PHOTO_LIBRARY_SCAN_CTE : PHOTO_LIBRARY_CTE}, filtered_items AS MATERIALIZED (
 					SELECT id, logical_taken_at FROM logical_items WHERE ${where.sql}
 				)
 				SELECT (SELECT id FROM filtered_items
@@ -1581,6 +1682,14 @@ function filterQuery(filter: PhotoFilter): Query {
 		clauses.push(`(${filter.dates.map(() => '(logical_taken_at >= ? AND logical_taken_at < ?)').join(' OR ')})`)
 		for (const range of filter.dates) parameters.push(range.from, range.to)
 	}
+	if (filter.bounds) {
+		const bounds = boundsQuery(filter.bounds)
+		clauses.push(
+			`EXISTS (SELECT 1 FROM media_metadata AS place
+			WHERE place.content_id = logical_items.content_id AND ${bounds.sql})`,
+		)
+		parameters.push(...bounds.parameters)
+	}
 	const terms = filter.query?.replaceAll('\0', '').normalize('NFC').trim().split(/\s+/).filter(Boolean) ?? []
 	for (const term of terms) {
 		if (Array.from(term).length >= 3) {
@@ -1613,7 +1722,18 @@ function filterQuery(filter: PhotoFilter): Query {
 }
 
 function isSimpleFilter(filter: PhotoFilter) {
-	return !filter.sourceIds?.length && !filter.albumIds?.length && !filter.query?.trim()
+	return !filter.sourceIds?.length && !filter.albumIds?.length && !filter.query?.trim() && !filter.bounds
+}
+
+// The media_metadata rows, as `place`, inside a map stretch. One that crosses
+// the antimeridian is the two stretches either side of it.
+function boundsQuery({west, south, east, north}: PhotoBounds): Query {
+	return {
+		sql: `place.latitude BETWEEN ? AND ? AND ${
+			west <= east ? 'place.longitude BETWEEN ? AND ?' : '(place.longitude >= ? OR place.longitude <= ?)'
+		}`,
+		parameters: [south, north, west, east],
+	}
 }
 
 function item(row: ItemRow): PhotoItem {
