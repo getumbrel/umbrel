@@ -40,9 +40,6 @@ ARG LIBDE265_SNAPSHOT_DATE=20260831T000000Z
 ARG LIBDE265_SHA256_amd64=9af67dd3a1dce99c936f33865f92407746ca4031b7a8b86ae8c28b9a3445f01c
 ARG LIBDE265_SHA256_arm64=1982300d3b6845a1c96f80a364b7921a69b69abd0c0417dc8554e2d487f488f5
 
-ARG LIBHEIF_VERSION=1.23.4-1
-ARG LIBHEIF_SNAPSHOT_DATE=20260921T000000Z
-
 #########################################################################
 # ui build stage
 #########################################################################
@@ -340,8 +337,6 @@ ARG LIBDE265_VERSION
 ARG LIBDE265_SNAPSHOT_DATE
 ARG LIBDE265_SHA256_amd64
 ARG LIBDE265_SHA256_arm64
-ARG LIBHEIF_VERSION
-ARG LIBHEIF_SNAPSHOT_DATE
 
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
@@ -441,29 +436,6 @@ RUN LIBDE265_SHA256=$(eval echo \$LIBDE265_SHA256_${TARGETARCH}) && \
     dpkg --install /tmp/libde265-0.deb && \
     test "$(dpkg-query -W -f='${Version}' libde265-0)" = "${LIBDE265_VERSION}" && \
     rm /tmp/libde265-0.deb
-
-# Files and Photos decode untrusted HEIF/AVIF images through ImageMagick.
-# The pinned trixie package lacks libheif's security fixes. Install Debian's
-# 1.23.4 packages with matching plugins and their newer sharpyuv/x265 runtimes.
-# Keep this package set separate from the OS-wide apt snapshot.
-COPY packages/os/libheif-packages.sha256 /tmp/libheif-packages.sha256
-RUN set -eu; \
-    mkdir -p /tmp/libheif; \
-    grep "_${TARGETARCH}\\.deb$" /tmp/libheif-packages.sha256 > /tmp/libheif/packages.sha256; \
-    while read -r checksum package_path; do \
-        package_file="/tmp/libheif/${package_path##*/}"; \
-        curl -fsSL "https://snapshot.debian.org/archive/debian/${LIBHEIF_SNAPSHOT_DATE}/${package_path}" -o "${package_file}"; \
-        echo "${checksum}  ${package_file}" | sha256sum -c -; \
-    done < /tmp/libheif/packages.sha256; \
-    apt-get install --yes --no-install-recommends --no-remove /tmp/libheif/*.deb; \
-    for package in libheif1 libheif-plugin-libde265 libheif-plugin-dav1d libheif-plugin-aomenc libheif-plugin-x265; do \
-        test "$(dpkg-query -W -f='${Version}' "${package}")" = "${LIBHEIF_VERSION}"; \
-    done; \
-    convert -list format > /tmp/libheif/formats; \
-    for format in HEIC HEIF AVIF; do \
-        grep -Eq "^[[:space:]]*${format}[[:space:]]+HEIC[[:space:]]+rw[+]?[[:space:]]" /tmp/libheif/formats; \
-    done; \
-    rm -rf /tmp/libheif /tmp/libheif-packages.sha256
 
 # Install the Realtek RTL8127 10GbE driver on amd64 systems. Build against the
 # kernels in the image rather than the kernel running the Docker builder.
