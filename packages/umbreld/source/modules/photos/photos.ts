@@ -11,7 +11,7 @@ import type {Principal} from '../auth/auth.js'
 import {Blake3Hasher} from '../files/blake3.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 
-import MapTiles, {protomapsPlanet} from './map-tiles.js'
+import MapTiles, {umbrelPlanet} from './map-tiles.js'
 import type {PhotoFilter, PhotoScopeMode} from './types.js'
 import {hashFileRevision, type PublishedFileRevision} from '../files/file-index-enrichment.js'
 
@@ -130,13 +130,9 @@ export default class Photos {
 	}
 
 	// The Map view's basemap (see map-tiles.ts): fetched as it is looked at
-	// and kept beside the library's own data. From Protomaps' own build until
-	// the planet Umbrel hosts is live (#1675), then `remoteMap(UMBREL_MAPS)`
+	// from the planet Umbrel hosts
 	get map() {
-		return (this.#map ??= new MapTiles(
-			nodePath.join(this.#umbreld.dataDirectory, 'photos', 'map-cache'),
-			protomapsPlanet(),
-		))
+		return (this.#map ??= new MapTiles(umbrelPlanet()))
 	}
 
 	get mediaDirectory() {

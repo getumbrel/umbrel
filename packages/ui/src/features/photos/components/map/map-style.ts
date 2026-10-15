@@ -159,7 +159,7 @@ const TOWNS = ['city', 'town', 'village']
 
 // The vector source the basemap's layers draw from
 const BASEMAP = 'basemap'
-export type Basemap = {available: boolean; maxZoom: number}
+export type Basemap = {available: boolean; maxZoom: number; build?: string}
 // The basemap's name for the reader's language: its names are tagged the way
 // OpenStreetMap tags them, which for Chinese is by script and for Norwegian
 // is the macrolanguage, where the UI's languages are 'zh', 'zh-TW' and 'nb'
@@ -210,7 +210,12 @@ export function mapStyle({
 		sources: {
 			[BASEMAP]: {
 				type: 'vector',
-				tiles: [authorize(`${location.origin}/api/photos/map/tiles/{z}/{x}/{y}`)],
+				// Under its build, which the browser keeps what it is sent of for good
+				tiles: [
+					authorize(
+						`${location.origin}/api/photos/map/tiles/{z}/{x}/{y}?build=${encodeURIComponent(basemap.build ?? '')}`,
+					),
+				],
 				maxzoom: basemap.maxZoom,
 			},
 		},

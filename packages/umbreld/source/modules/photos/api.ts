@@ -29,9 +29,12 @@ import {PHOTO_FILE_EXTENSION_PATTERN, PHOTO_ORIGINAL_FILENAME_MAX_BYTES, PHOTO_R
 import {filterSchema} from './routes.js'
 import {supportsPhotos} from './types.js'
 
-// A build of the basemap never changes, and a new one is rare and never
-// urgent: a day of caching, revalidated by ETag after that
-const MAP_CACHE_CONTROL = 'private, max-age=86400'
+// A build of the basemap never changes, so a tile asked for under the build
+// it is of is the browser's to keep for good. One asked for under another
+// (a map drawn before a new build came) is this build's, kept no longer than
+// it takes to draw.
+const MAP_KEPT = 'private, max-age=31536000, immutable'
+const MAP_NOT_KEPT = 'private, no-cache'
 
 const INSUFFICIENT_STORAGE_HEADER = 'X-Umbrel-Photo-Backup-Error'
 const MIN_PHOTO_CREATION_DATE = -62_135_596_800_000
@@ -40,7 +43,6 @@ const MAX_PHOTO_CREATION_DATE = 253_402_300_799_999
 type PhotoBackupPrincipal = Awaited<ReturnType<Umbreld['auth']['authenticatePhotoBackupGrant']>>
 
 function sendMapFile(response: express.Response, data: Buffer) {
-	response.setHeader('Cache-Control', MAP_CACHE_CONTROL)
 	response.setHeader('Content-Encoding', 'gzip')
 	response.type('application/x-protobuf')
 	return response.send(data)
@@ -373,20 +375,23 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 		}
 	})
 
-	// GET /api/photos/map/tiles/:z/:x/:y — a basemap vector tile (see
-	// map-tiles.ts), gzipped; 204 where the planet has none, which the map
-	// draws as nothing rather than an error. Neither that nor a failed fetch is
-	// cached: the source may only be out of reach.
+	// GET /api/photos/map/tiles/:z/:x/:y?build=<build> — a basemap vector tile
+	// (see map-tiles.ts), gzipped; 204 where the build has none, which the map
+	// draws as nothing rather than an error. Both are kept by the browser for
+	// good under the build they are of (`photos.map.basemap`'s); a failure
+	// isn't, as the source may only have been out of reach.
 	api.get('/map/tiles/:z/:x/:y', async (request, response) => {
 		const [z, x, y] = [request.params.z, request.params.x, request.params.y].map(Number) as [number, number, number]
 		const onTheMap =
 			[z, x, y].every((value) => Number.isInteger(value) && value >= 0) && z <= 26 && x < 2 ** z && y < 2 ** z
 		if (!onTheMap) return response.status(400).json({error: 'invalid tile'})
 		try {
-			const tile = await umbreld.photos.map.tile(z, x, y)
-			if (!tile) return response.status(204).end()
-			return sendMapFile(response, tile)
+			const {build, data} = await umbreld.photos.map.tile(z, x, y)
+			response.setHeader('Cache-Control', request.query.build === build ? MAP_KEPT : MAP_NOT_KEPT)
+			if (!data) return response.status(204).end()
+			return sendMapFile(response, data)
 		} catch {
+			response.setHeader('Cache-Control', 'no-store')
 			return response.status(404).json({error: 'not found'})
 		}
 	})

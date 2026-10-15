@@ -1,5 +1,3 @@
-import {randomBytes} from 'node:crypto'
-import {mkdir, readdir, readFile, rename, rm, stat, writeFile} from 'node:fs/promises'
 import nodePath from 'node:path'
 import {setTimeout as sleep} from 'node:timers/promises'
 import {promisify} from 'node:util'
@@ -9,38 +7,43 @@ import {FetchSource, type Header, PMTiles, SharedPromiseCache, type Source} from
 
 // The Map view's basemap: Protomaps vector tiles, served by the device, so a
 // browser only ever talks to it (the letters of its labels the browser draws
-// itself, in the UI's own font). None of it ships: the device fetches each
-// tile as someone looks at a place, from one build of the planet on a server
-// — which sees the device's address and which tiles it asks for — and keeps
-// it on disk. A build never changes, so what is kept is good until the next
-// build replaces all of it.
+// itself, in the UI's own font). None of it ships, and the device keeps none
+// of it: it fetches each tile as someone looks at a place, from the build of
+// the planet Umbrel keeps on Cloudflare R2, and the browser keeps what it is
+// sent, for good, as a build never changes. Where that is comes from
+// api.umbrel.com, good for a week, so the device asks there about once a week:
+// either the PMTiles archive itself, at an address signed for R2, which the
+// device reads by byte range, or a server of its tiles at a z/x/y address,
+// such as Protomaps' Cloudflare Worker in front of it, which answers each tile
+// in one request and from Cloudflare's cache. Which, api.umbrel.com alone
+// decides. Cloudflare sees the device's address and which parts of the planet
+// it reads.
 //
-// With nothing to fetch from and nothing kept, the UI draws the atlas it
-// bundles instead.
+// With nothing to fetch from, the UI draws the atlas it bundles instead.
 
-// TODO(#1675): not live yet, so photos.ts reads Protomaps' own build for now.
-// Protomaps' Cloudflare Worker in front of the build on R2 (its TileJSON is at
-// https://maps.umbrel.com/planet-20261011.json).
-export const UMBREL_MAPS: RemoteMap = {
-	build: 'planet-20261011',
-	maxZoom: 15,
-	tiles: 'https://maps.umbrel.com/planet-20261011/{z}/{x}/{y}.mvt',
-}
+// Where the planet is, and until when that address is good:
+// {url: "https://….r2.cloudflarestorage.com/v1/planet-20261011.pmtiles?X-Amz-…", expires: "2026-10-21T17:19:42.195Z"}
+// or its tiles, the deepest zoom of which their TileJSON beside them says
+// (https://maps.umbrel.com/planet-20261011.json here):
+// {url: "https://maps.umbrel.com/planet-20261011/{z}/{x}/{y}.mvt", expires: …}
+export const UMBREL_MAP_URL = 'https://api.umbrel.com/map-url'
 
 const BUILD_PATTERN = /^[\w-]{1,64}$/
 // How long a tile may take to arrive, and each read of a planet archive
 const READ_TIMEOUT_MS = 20_000
+// How long api.umbrel.com may take to say where the planet is
+const ADDRESS_TIMEOUT_MS = 10_000
+// The planet's address is asked for again an hour before it runs out, so an
+// hour of api.umbrel.com being out goes unnoticed, and no read starts on it in
+// its last minute, which one may still be under way in. Asking again waits a
+// minute after the last time, whatever that gave.
+const ADDRESS_RENEWED_EARLY_MS = 60 * 60_000
+const ADDRESS_LAST_READ_MS = 60_000
+const ADDRESS_RETRY_MS = 60_000
 // How long the map waits to hear whether there is a basemap before drawing
 // the atlas, and how long the answer holds
 const PROBE_WAIT_MS = 5000
 const PROBE_TTL_MS = 60_000
-// What is kept on disk, at most: the world down to a few cities' streets.
-// Past it, the least recently used go, down to a little under it, so a sweep
-// makes room for many tiles rather than one
-const CACHE_BYTES = 300 * 1024 * 1024
-const CACHE_SWEPT = 0.9
-// What a file takes on disk: whole blocks, and one for an empty one
-const BLOCK_BYTES = 4096
 // A leaf directory of the planet decodes to ~60k entries, some 5 MB of heap:
 // pmtiles' default of 100 of them would be half a gigabyte
 const PLANET_DIRECTORIES = 8
@@ -58,7 +61,9 @@ export type MapSource = {
 
 export type RemoteMap = {build: string; maxZoom: number; tiles: string}
 
-// A build served a tile at a time, at a z/x/y address
+// A build served a tile at a time, at a z/x/y address. Not where the device
+// reads the planet from (that is umbrelPlanet), but the plainest source there
+// is, which what MapTiles does with any source is tried against.
 export function remoteMap({build, maxZoom, tiles}: RemoteMap): MapSource {
 	return {
 		open: async () => ({build, maxZoom}),
@@ -66,11 +71,14 @@ export function remoteMap({build, maxZoom, tiles}: RemoteMap): MapSource {
 	}
 }
 
+const withoutQuery = (address: string) => address.split(/[?#]/)[0]!
+
 const fill = (template: string, values: Record<string, string | number>) =>
 	template.replace(/\{(\w+)\}/g, (_, name: string) => encodeURIComponent(values[name]!))
 
 // One of a source's files: 204 is a file it doesn't have, and anything but
 // that or a 200 a failure. fetch undoes whatever Content-Encoding it came in.
+// The failure names the file but not its query, which may be a credential.
 async function fetchFile(url: string, signal: AbortSignal) {
 	const response = await fetch(url, {signal})
 	if (response.status === 204) return undefined
@@ -78,211 +86,120 @@ async function fetchFile(url: string, signal: AbortSignal) {
 	// would be kept for good
 	if (response.status !== 200 || /^text\/|html|xml|json/.test(response.headers.get('content-type') ?? '')) {
 		await response.body?.cancel()
-		throw new Error(`${response.status} for ${url}`)
+		throw new Error(`${response.status} for ${withoutQuery(url)}`)
 	}
 	const data = new Uint8Array(await response.arrayBuffer())
 	return data.length > 0 ? data : undefined
 }
 
+export type MapTile = {
+	// The build it is of, which a browser may keep it under for good
+	build: string
+	// Gzipped, or undefined where the build has none
+	data?: Buffer
+}
+
 export default class MapTiles {
-	#directory: string
 	#source: MapSource
 	#readTimeout: number
 	#probeWait: number
-	#cacheBytes: number
-	#cache?: {build: string; cache: DiskCache}
-	#status?: {at: number; answer: Promise<{available: boolean; maxZoom: number}>}
+	#pending = new Map<string, Promise<MapTile>>()
+	#status?: {at: number; answer: Promise<{available: boolean; maxZoom: number; build?: string}>}
 
-	// `directory` is where the tiles fetched are kept, a directory
-	// per build
-	constructor(
-		directory: string,
-		source: MapSource,
-		{readTimeout = READ_TIMEOUT_MS, probeWait = PROBE_WAIT_MS, cacheBytes = CACHE_BYTES} = {},
-	) {
-		this.#directory = directory
+	constructor(source: MapSource, {readTimeout = READ_TIMEOUT_MS, probeWait = PROBE_WAIT_MS} = {}) {
 		this.#source = source
 		this.#readTimeout = readTimeout
 		this.#probeWait = probeWait
-		this.#cacheBytes = cacheBytes
 	}
 
-	// Whether there is a basemap to draw, and how far in the map can ask for
-	// tiles; it magnifies past that. There is when the world's one tile at
-	// zoom 0 can be had, fetched or kept, in time. Every page with a map asks,
-	// so the answer is kept a while.
+	// Whether there is a basemap to draw, which build, and how far in the map
+	// can ask for tiles; it magnifies past that. There is when the world's one
+	// tile at zoom 0 can be had in time. Every page with a map asks, so the
+	// answer is kept a while.
 	status() {
 		if (this.#status && Date.now() - this.#status.at < PROBE_TTL_MS) return this.#status.answer
-		const probe = Promise.all([this.#source.open(), this.tile(0, 0, 0)]).then(([{maxZoom}]) => maxZoom)
+		const probe = Promise.all([this.#source.open(), this.tile(0, 0, 0)]).then(([opened]) => opened)
 		const answer = Promise.race([probe, sleep(this.#probeWait, undefined, {ref: false})])
 			.catch(() => undefined)
-			.then((maxZoom) => ({available: maxZoom !== undefined, maxZoom: maxZoom ?? 0}))
+			.then((opened) => (opened ? {available: true, ...opened} : {available: false, maxZoom: 0}))
 		this.#status = {at: Date.now(), answer}
 		return answer
 	}
 
-	// A tile, gzipped, or undefined where the planet has none
-	tile(z: number, x: number, y: number) {
-		return this.#get(`tiles/${z}/${x}/${y}.mvt`, (signal) => this.#source.tile(z, x, y, signal))
-	}
-
-	async #get(key: string, fetch: (signal: AbortSignal) => Promise<Uint8Array | undefined>) {
+	// A tile, fetched once however many ask for it at the same time
+	async tile(z: number, x: number, y: number): Promise<MapTile> {
 		const {build} = await this.#source.open()
-		if (!BUILD_PATTERN.test(build)) throw new Error(`Invalid map build ${build}`)
-		if (this.#cache?.build !== build) {
-			this.#cache = {build, cache: new DiskCache(this.#directory, build, this.#cacheBytes)}
-		}
-		return this.#cache.cache.get(key, async () => {
-			const data = await fetch(AbortSignal.timeout(this.#readTimeout))
-			// Kept, and sent, gzipped: a tile is a third the size. Some
-			// sources store them that way already
-			return data && (data[0] === 0x1f && data[1] === 0x8b ? Buffer.from(data) : gzip(data))
-		})
-	}
-}
-
-// What is kept of one build, in a directory of its own, the least recently
-// used going first once it is past its size. What the build has none of is
-// kept too, as an empty file, so it isn't asked for again and again; a
-// failure isn't, as the source may only have been out of reach. Each file is
-// fetched once however many ask for it at the same time.
-class DiskCache {
-	#directory: string
-	#limit: number
-	// Each file's size on disk, least recently used first
-	#files = new Map<string, number>()
-	#size = 0
-	#pending = new Map<string, Promise<Buffer | undefined>>()
-	#loaded: Promise<void>
-
-	constructor(root: string, build: string, limit: number) {
-		this.#directory = nodePath.join(root, build)
-		this.#limit = limit
-		this.#loaded = this.#load(root, build).catch(() => {})
-	}
-
-	get(key: string, fetch: () => Promise<Buffer | undefined>) {
+		const key = `${build}/${z}/${x}/${y}`
 		let pending = this.#pending.get(key)
 		if (!pending) {
-			pending = this.#read(key, fetch).finally(() => this.#pending.delete(key))
+			pending = (async () => {
+				const data = await this.#source.tile(z, x, y, AbortSignal.timeout(this.#readTimeout))
+				// A new build may have come while it was fetched, and the tile be of
+				// that one: sent as the last, a browser would keep it under the last
+				// for good, so it is none of either, and asked for again
+				if ((await this.#source.open()).build !== build) throw new Error('The map has a new planet')
+				// Sent gzipped: a tile is a third the size. Some sources store them
+				// that way already
+				return {build, data: data && (data[0] === 0x1f && data[1] === 0x8b ? Buffer.from(data) : await gzip(data))}
+			})().finally(() => this.#pending.delete(key))
 			this.#pending.set(key, pending)
 		}
 		return pending
 	}
-
-	async #read(key: string, fetch: () => Promise<Buffer | undefined>) {
-		const kept = await readFile(nodePath.join(this.#directory, key)).catch(() => undefined)
-		if (kept) {
-			void this.#loaded.then(() => this.#used(key))
-			return kept.length > 0 ? kept : undefined
-		}
-		const data = await fetch()
-		// Not kept is only fetched again
-		await this.#write(key, data ?? Buffer.alloc(0)).catch(() => {})
-		return data
-	}
-
-	async #write(key: string, data: Buffer) {
-		// Not while what is kept is being counted: it clears away the
-		// temporary files of writes cut short
-		await this.#loaded
-		const path = nodePath.join(this.#directory, key)
-		await mkdir(nodePath.dirname(path), {recursive: true})
-		const temporary = `${path}.${randomBytes(6).toString('hex')}.tmp`
-		try {
-			await writeFile(temporary, data)
-			await rename(temporary, path)
-		} catch (error) {
-			await rm(temporary, {force: true})
-			throw error
-		}
-		this.#keep(key, data.length)
-	}
-
-	#keep(key: string, length: number) {
-		const size = Math.max(1, Math.ceil(length / BLOCK_BYTES)) * BLOCK_BYTES
-		this.#size += size - (this.#files.get(key) ?? 0)
-		this.#files.delete(key)
-		this.#files.set(key, size)
-		if (this.#size <= this.#limit) return
-		for (const [evicted, evictedSize] of this.#files) {
-			if (this.#size <= this.#limit * CACHE_SWEPT) break
-			this.#files.delete(evicted)
-			this.#size -= evictedSize
-			void rm(nodePath.join(this.#directory, evicted), {force: true}).catch(() => {})
-		}
-	}
-
-	#used(key: string) {
-		const size = this.#files.get(key)
-		if (size === undefined) return
-		this.#files.delete(key)
-		this.#files.set(key, size)
-	}
-
-	// Counted once, when the build is first asked for, rather than as each
-	// file is: oldest first, as when each was last used went with the last run
-	async #load(root: string, build: string) {
-		// Other builds', which nothing asks for again
-		for (const name of await readdir(root).catch(() => [])) {
-			if (name !== build) await rm(nodePath.join(root, name), {recursive: true, force: true})
-		}
-		const files: Array<{key: string; length: number; at: number}> = []
-		const walk = async (directory: string): Promise<void> => {
-			const entries = await readdir(nodePath.join(this.#directory, directory), {withFileTypes: true}).catch(() => [])
-			await Promise.all(
-				entries.map(async (entry) => {
-					const key = nodePath.join(directory, entry.name)
-					const path = nodePath.join(this.#directory, key)
-					if (entry.isDirectory()) return walk(key)
-					if (entry.name.endsWith('.tmp')) return rm(path, {force: true})
-					const kept = await stat(path).catch(() => undefined)
-					if (kept) files.push({key, length: kept.size, at: kept.mtimeMs})
-				}),
-			)
-		}
-		await walk('')
-		for (const {key, length} of files.sort((a, b) => a.at - b.at)) this.#keep(key, length)
-	}
 }
 
-// STOPGAP until UMBREL_MAPS is live (#1675); then delete from here to the
-// end of the file, and point photos.ts at remoteMap(UMBREL_MAPS). Protomaps'
-// own daily build of the planet, a free community resource that keeps each
-// build a week, read a tile at a time out of its PMTiles archive.
-
-export async function latestProtomapsBuild() {
-	for (let daysAgo = 0; daysAgo < 8; daysAgo++) {
-		const day = new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10).replaceAll('-', '')
-		const planet = `https://build.protomaps.com/${day}.pmtiles`
-		if ((await fetch(planet, {method: 'HEAD', signal: AbortSignal.timeout(PROBE_WAIT_MS)})).ok) return planet
+// The planet Umbrel hosts, at the address api.umbrel.com gives for it
+// (`api`): a tile at a time from a server of its tiles, or out of its PMTiles
+// archive. The archive is opened once, and what is read of its directories
+// kept, under the address without its signature, so a new signature for the
+// same archive reads on from what is kept. A failed attempt to open it isn't
+// kept, so a planet that comes back is found. `readTimeout` is how long each
+// read of it may take, and `addressTimeout` how long api.umbrel.com, and a
+// tile server's TileJSON, may take to answer.
+export function umbrelPlanet({
+	api = UMBREL_MAP_URL,
+	readTimeout = READ_TIMEOUT_MS,
+	addressTimeout = ADDRESS_TIMEOUT_MS,
+} = {}): MapSource {
+	const address = new PlanetAddress(api, addressTimeout)
+	type Archive = {key: string; opened: Promise<{tiles: PMTiles; build: string; maxZoom: number}>}
+	let archive: Archive | undefined
+	const forget = (opened: Archive) => {
+		if (archive === opened) archive = undefined
 	}
-	throw new Error('No planet build to read the map from')
-}
-
-// The planet `planet` gives the address of, opened once, and what is read of
-// its directories kept. A failed attempt isn't, so a planet that comes back
-// is found. `readTimeout` is how long each read of it may take.
-export function protomapsPlanet(planet = latestProtomapsBuild, readTimeout = READ_TIMEOUT_MS): MapSource {
-	let archive: Promise<{tiles: PMTiles; build: string; maxZoom: number}> | undefined
-	const open = () =>
-		(archive ??= (async () => {
-			const address = await planet()
-			// Only the archive's directories are decompressed here: tiles come out as stored
-			const tiles = new PMTiles(new PlanetSource(address, readTimeout), new PlanetCache(), async (data) => data)
-			const header = await tiles.getHeader()
-			return {tiles, build: `protomaps-${nodePath.basename(address, '.pmtiles')}`, maxZoom: header.maxZoom}
-		})().catch((error) => {
-			archive = undefined
-			throw error
-		}))
+	// A new build comes at an address of its own, and is opened in the last
+	// one's place. A planet now served by tile has no archive to keep open.
+	const at = async () => {
+		const current = await address.get()
+		if (current.kind === 'tiles') archive = undefined
+		return current
+	}
+	const open = ({key, build}: ArchiveAddress) => {
+		if (archive?.key === key) return archive
+		const opening: Archive = {
+			key,
+			opened: (async () => {
+				// Only the archive's directories are decompressed here: tiles come out as stored
+				const tiles = new PMTiles(new PlanetSource(address, key, readTimeout), new PlanetCache(), async (data) => data)
+				const header = await tiles.getHeader()
+				return {tiles, build, maxZoom: header.maxZoom}
+			})(),
+		}
+		opening.opened.catch(() => forget(opening))
+		return (archive = opening)
+	}
 	return {
 		async open() {
-			const {build, maxZoom} = await open()
+			const current = await at()
+			if (current.kind === 'tiles') return {build: current.build, maxZoom: current.maxZoom}
+			const {build, maxZoom} = await open(current).opened
 			return {build, maxZoom}
 		},
 		async tile(z, x, y, signal) {
-			const {tiles} = await open()
+			const current = await at()
+			if (current.kind === 'tiles') return fetchFile(fill(current.tiles, {z, x, y}), signal)
+			const opened = open(current)
+			const {tiles} = await opened.opened
 			try {
 				const tile = await tiles.getZxy(z, x, y, signal)
 				return tile && new Uint8Array(tile.data)
@@ -290,33 +207,216 @@ export function protomapsPlanet(planet = latestProtomapsBuild, readTimeout = REA
 				// What was read of the planet may be what failed: the next tile starts
 				// afresh. A tile that only ran out of time, or was given up on with
 				// the directory it waited for, says nothing about the rest.
-				if (!['TimeoutError', 'AbortError'].includes((error as Error).name)) archive = undefined
+				if (!['TimeoutError', 'AbortError'].includes((error as Error).name)) forget(opened)
 				throw error
 			}
 		},
 	}
 }
 
-// The planet, with no read of it left waiting on a connection that has
-// stalled. pmtiles reads the header with no signal, and a directory with one
-// that aborts only once every tile waiting on it has, which a stream of
-// tiles may never let happen, so each read has a time limit of its own too.
-class PlanetSource extends FetchSource {
+// Where the planet is, as api.umbrel.com last said: its archive or its tiles,
+// what it is known by, and, by this device's clock, when to ask again and when
+// it may be read no more.
+type Address = {
+	// The address without its query, which may be a signature
+	key: string
+	// The archive's file name, or the tiles' directory, which what is fetched
+	// of it is kept under: the same build either way, served either way
+	build: string
+	// When it was given, and when to ask again and when it may be read no more
+	askedAt: number
+	renewAt: number
+	lastReadAt: number
+} & ({kind: 'archive'; source: FetchSource} | {kind: 'tiles'; tiles: string; maxZoom: number})
+
+type ArchiveAddress = Extract<Address, {kind: 'archive'}>
+
+// A server of a build's tiles: …/<build>/{z}/{x}/{y}.<extension>, maybe with a query
+const TILES_PATTERN = /^[a-z]+:\/\/[^/?#]+\/(?:[^?#]*\/)?([\w-]{1,64})\/\{z\}\/\{x\}\/\{y\}\.\w+(?:\?[^#]*)?$/
+
+// The planet's address, signed for a week, which is a credential for that
+// long: it is never logged, and no error says more of it than its path. It
+// is asked for once however many reads want it at the same time. Shortly
+// before it runs out it is asked for again while reads go on at the one
+// there is, which they keep doing if asking fails, so a read only waits on
+// api.umbrel.com when there is no address that is still good.
+class PlanetAddress {
+	#api: string
 	#timeout: number
-	constructor(url: string, timeout: number) {
-		super(url)
+	#current?: Address
+	#asking?: Promise<Address>
+	#quietUntil = 0
+	// Why asking last failed, which a read with no address to go on is told
+	// until it is time to ask again, rather than every device asking each tile
+	#failure?: unknown
+
+	constructor(api: string, timeout: number) {
+		this.#api = api
 		this.#timeout = timeout
 	}
-	getBytes(offset: number, length: number, signal?: AbortSignal, etag?: string) {
+
+	async get() {
+		const now = Date.now()
+		const current = this.#current
+		if (!current || now >= current.lastReadAt) {
+			if (this.#failure && now < this.#quietUntil) throw this.#failure
+			return this.#ask()
+		}
+		if (now >= current.renewAt && now >= this.#quietUntil) this.#ask().catch(() => {})
+		return current
+	}
+
+	// R2 refused it: its signature has run out, or isn't good yet, by
+	// Cloudflare's clock. The next read that wants it asks for it again, unless
+	// one already has, or it was only just given: asking again so soon would
+	// get the same, so it is kept, refused, until a minute is up. Whether it
+	// was let go.
+	refused(address: Address) {
+		if (this.#current !== address) return true
+		if (Date.now() - address.askedAt < ADDRESS_RETRY_MS) return false
+		this.#current = undefined
+		return true
+	}
+
+	#ask() {
+		return (this.#asking ??= this.#fetch()
+			.then(
+				(address) => {
+					this.#failure = undefined
+					return (this.#current = address)
+				},
+				(error) => {
+					this.#failure = error
+					throw error
+				},
+			)
+			.finally(() => {
+				this.#asking = undefined
+				this.#quietUntil = Date.now() + ADDRESS_RETRY_MS
+			}))
+	}
+
+	async #fetch(): Promise<Address> {
+		const response = await fetch(this.#api, {signal: AbortSignal.timeout(this.#timeout)})
+		if (response.status !== 200) {
+			await response.body?.cancel()
+			throw new Error(`${response.status} for the map's address`)
+		}
+		const answer = (await response.json().catch(() => undefined)) as {url?: unknown; expires?: unknown} | undefined
+		// The tiles' address as it was given: a URL would escape its braces
+		const tiles = typeof answer?.url === 'string' ? TILES_PATTERN.exec(answer.url) : null
+		const url = parseUrl(answer?.url)
+		const secure = url?.protocol === 'https:' || (url?.protocol === 'http:' && LOOPBACK.includes(url.hostname))
+		const build = tiles
+			? tiles[1]
+			: url?.pathname.endsWith('.pmtiles') && nodePath.posix.basename(url.pathname, '.pmtiles')
+		// A URL with a user in it fetch refuses, in an error that has all of it
+		const plain = url && !url.username && !url.password
+		if (!url || !secure || !plain || !build || !BUILD_PATTERN.test(build)) {
+			throw new Error('No map address in the answer')
+		}
+		const expires = typeof answer?.expires === 'string' ? Date.parse(answer.expires) : NaN
+		// How long it is good for, by the clock of the server that signed it,
+		// which is Cloudflare's to within a little, rather than by this
+		// device's, which may be far out: a device that has been off a while,
+		// with no clock of its own, starts in the past. An answer kept by
+		// Vercel's cache says how long it has been.
+		const said = Date.parse(response.headers.get('date') ?? '')
+		const age = Number(response.headers.get('age')) * 1000 || 0
+		const lifetime = expires - (Number.isNaN(said) ? Date.now() : said + age)
+		if (!(lifetime > ADDRESS_LAST_READ_MS)) throw new Error('The map address in the answer has run out')
+		const served = tiles
+			? {kind: 'tiles' as const, tiles: answer!.url as string, maxZoom: await this.#deepestZoom(answer!.url as string)}
+			: {kind: 'archive' as const, source: new FetchSource(url.href)}
+		const now = Date.now()
+		return {
+			key: withoutQuery(served.kind === 'tiles' ? served.tiles : url.href),
+			build,
+			askedAt: now,
+			renewAt: now + lifetime - ADDRESS_RENEWED_EARLY_MS,
+			lastReadAt: now + lifetime - ADDRESS_LAST_READ_MS,
+			...served,
+		}
+	}
+
+	// How far in a server of tiles goes, as the TileJSON beside them says:
+	// …/<build>.json for …/<build>/{z}/{x}/{y}.mvt, with the same query
+	async #deepestZoom(tiles: string) {
+		const response = await fetch(tiles.replace(/\/\{z\}\/\{x\}\/\{y\}\.\w+/, '.json'), {
+			signal: AbortSignal.timeout(this.#timeout),
+		})
+		const tileJson = response.status === 200 ? await response.json().catch(() => undefined) : undefined
+		if (response.status !== 200) await response.body?.cancel()
+		const maxZoom = (tileJson as {maxzoom?: unknown} | undefined)?.maxzoom
+		if (!Number.isInteger(maxZoom) || (maxZoom as number) < 0 || (maxZoom as number) > 30) {
+			throw new Error(`No deepest zoom in the map's TileJSON (${response.status})`)
+		}
+		return maxZoom as number
+	}
+}
+
+// Only a test's server is at one of these, without TLS
+const LOOPBACK = ['127.0.0.1', '[::1]', 'localhost']
+
+// No URL, rather than a TypeError that would carry all of it
+function parseUrl(address: unknown) {
+	try {
+		return typeof address === 'string' ? new URL(address) : undefined
+	} catch {
+		return undefined
+	}
+}
+
+// How pmtiles' FetchSource fails a read R2 refuses the signature of. The
+// package is pinned, and the tests of a refused signature would see it change.
+const REFUSED = 'Bad response code: 403'
+
+// The planet, read at its address of the moment, with no read of it left
+// waiting on a connection that has stalled. pmtiles reads the header with no
+// signal, and a directory with one that aborts only once every tile waiting
+// on it has, which a stream of tiles may never let happen, so each read has a
+// time limit of its own too. pmtiles keeps what it reads under getKey(), the
+// address without its signature, and checks it against the archive's ETag,
+// which R2 gives the object whatever the signature: a new signature reads on
+// from what is kept.
+class PlanetSource implements Source {
+	#address: PlanetAddress
+	#key: string
+	#timeout: number
+	constructor(address: PlanetAddress, key: string, timeout: number) {
+		this.#address = address
+		this.#key = key
+		this.#timeout = timeout
+	}
+	getKey() {
+		return this.#key
+	}
+	async getBytes(offset: number, length: number, signal?: AbortSignal, etag?: string) {
+		const address = await this.#signed()
+		try {
+			return await this.#read(address, offset, length, signal, etag)
+		} catch (error) {
+			// Once more, at an address signed since: twice refused is a failure
+			if ((error as Error).message !== REFUSED || !this.#address.refused(address)) throw error
+			return this.#read(await this.#signed(), offset, length, signal, etag)
+		}
+	}
+	async #signed() {
+		const address = await this.#address.get()
+		// A new build, which another archive reads, or none to read at all
+		if (address.kind !== 'archive' || address.key !== this.#key) throw new Error('The map has a new planet')
+		return address
+	}
+	#read(address: ArchiveAddress, offset: number, length: number, signal: AbortSignal | undefined, etag?: string) {
 		const timeout = AbortSignal.timeout(this.#timeout)
-		if (!signal) return super.getBytes(offset, length, timeout, etag)
+		if (!signal) return address.source.getBytes(offset, length, timeout, etag)
 		// Either signal, as AbortSignal.any would, which Node 18 doesn't have
 		const either = new AbortController()
 		for (const abort of [signal, timeout]) {
 			if (abort.aborted) either.abort(abort.reason)
 			abort.addEventListener('abort', () => either.abort(abort.reason), {once: true})
 		}
-		return super.getBytes(offset, length, either.signal, etag)
+		return address.source.getBytes(offset, length, either.signal, etag)
 	}
 }
 

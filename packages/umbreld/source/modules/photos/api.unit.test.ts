@@ -207,29 +207,39 @@ describe('Photos HTTP account boundaries', () => {
 		expect(mapPoints).not.toHaveBeenCalled()
 	})
 
-	test('a basemap tile goes out gzipped, as it is kept', async () => {
+	test('a basemap tile goes out gzipped, kept by the browser for good under the build it is of', async () => {
 		const headers = {Authorization: 'Bearer member'}
-		mapTile.mockResolvedValue(gzipSync('tile'))
-		const tile = await got(`${origin}/api/photos/map/tiles/3/4/5`, {headers})
+		mapTile.mockResolvedValue({build: 'planet-1', data: gzipSync('tile')})
+		const tile = await got(`${origin}/api/photos/map/tiles/3/4/5?build=planet-1`, {headers})
 		expect(mapTile).toHaveBeenCalledWith(3, 4, 5)
 		// got undoes the encoding the response declares, as a browser does
 		expect(tile.body).toBe('tile')
 		expect(tile.headers['content-encoding']).toBe('gzip')
 		expect(tile.headers['content-type']).toBe('application/x-protobuf')
-		expect(tile.headers['cache-control']).toBe('private, max-age=86400')
+		expect(tile.headers['cache-control']).toBe('private, max-age=31536000, immutable')
+
+		// Asked for under a build that has gone, or none, it is the current one's, kept no longer
+		for (const query of ['?build=planet-0', '']) {
+			const stale = await got(`${origin}/api/photos/map/tiles/3/4/5${query}`, {headers})
+			expect(stale.body).toBe('tile')
+			expect(stale.headers['cache-control']).toBe('private, no-cache')
+		}
 	})
 
-	test('a tile the planet lacks is empty, and neither it nor a failed fetch is cached', async () => {
+	test('a tile the build lacks is empty, kept like one it has, and a failed fetch is not kept at all', async () => {
 		const headers = {Authorization: 'Bearer member'}
-		mapTile.mockResolvedValue(undefined)
-		const missing = await got(`${origin}/api/photos/map/tiles/9/0/0`, {headers})
+		mapTile.mockResolvedValue({build: 'planet-1', data: undefined})
+		const missing = await got(`${origin}/api/photos/map/tiles/9/0/0?build=planet-1`, {headers})
 		expect(missing.statusCode).toBe(204)
-		expect(missing.headers['cache-control']).toBeUndefined()
+		expect(missing.headers['cache-control']).toBe('private, max-age=31536000, immutable')
 
 		mapTile.mockRejectedValue(new Error('out of reach'))
-		const failed = await got(`${origin}/api/photos/map/tiles/0/0/0`, {headers, throwHttpErrors: false})
+		const failed = await got(`${origin}/api/photos/map/tiles/0/0/0?build=planet-1`, {
+			headers,
+			throwHttpErrors: false,
+		})
 		expect(failed.statusCode).toBe(404)
-		expect(failed.headers['cache-control']).toBeUndefined()
+		expect(failed.headers['cache-control']).toBe('no-store')
 	})
 
 	test.each(['a/0/0', '0/-1/0', '0/0/1.5', '2/4/0', '30/0/0'])('a basemap tile at %s is refused', async (tile) => {

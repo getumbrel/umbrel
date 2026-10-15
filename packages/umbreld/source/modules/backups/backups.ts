@@ -763,8 +763,6 @@ export default class Backups {
 		ignoreFileContents.push('app-stores')
 		ignoreFileContents.push(this.#umbreld.files.thumbnails.thumbnailDirectory)
 		ignoreFileContents.push('file-index')
-		// The Photos map's basemap, kept as it is fetched (see photos/map-tiles.ts)
-		ignoreFileContents.push('photos/map-cache')
 
 		// Ignore kopia's own cache and logs otherwise backups include the backup cache
 		ignoreFileContents.push('kopia')

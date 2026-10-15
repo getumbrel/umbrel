@@ -63,16 +63,6 @@ test('excludes every live SQLite file while including the standalone backup dire
 	expect(ignore).not.toContain(`/${UMBREL_DATABASE_BACKUP_DIRECTORY}`)
 })
 
-test('excludes the Photos map basemap cache, which is fetched again as needed', async () => {
-	const {backups, dataDirectory} = await fixture()
-
-	await backups.createIgnoreFile()
-
-	const ignore = await fse.readFile(nodePath.join(dataDirectory, '.kopiaignore'), 'utf8')
-	expect(ignore).toMatch(/^\/photos\/map-cache$/m)
-	expect(ignore).not.toMatch(/^\/photos$/m)
-})
-
 async function createProbeDatabase(databasePath: string, value: string) {
 	await fse.ensureDir(nodePath.dirname(databasePath))
 	const database = new BetterSqlite3(databasePath)

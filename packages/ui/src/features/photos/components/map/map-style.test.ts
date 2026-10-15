@@ -73,15 +73,15 @@ describe('the basemap', () => {
 	test('is one source of tiles from the device, as deep as it goes', () => {
 		vi.stubGlobal('location', {origin: 'http://umbrel.local'})
 		const style = mapStyle({
-			basemap: {available: true, maxZoom: 15},
+			basemap: {available: true, maxZoom: 15, build: 'planet-20261011'},
 			atlas: undefined,
 			lang: 'en',
-			authorize: (url) => `${url}?token=t`,
+			authorize: (url) => `${url}&token=t`,
 		})
 		expect(style.sources).toEqual({
 			basemap: {
 				type: 'vector',
-				tiles: ['http://umbrel.local/api/photos/map/tiles/{z}/{x}/{y}?token=t'],
+				tiles: ['http://umbrel.local/api/photos/map/tiles/{z}/{x}/{y}?build=planet-20261011&token=t'],
 				maxzoom: 15,
 			},
 		})

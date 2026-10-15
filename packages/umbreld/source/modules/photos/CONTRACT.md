@@ -313,11 +313,12 @@ served at `GET /api/photos/live/:id`. All playback UX is the frontend's.
 
 ### map
 
-- `basemap()` → `{available: boolean, maxZoom: number}` — whether there is a
-  basemap to draw (see the map tile endpoints below), and the deepest zoom the
-  map can ask for tiles at; it magnifies past that. Available when the zoom-0
-  tile can be had, kept on disk or fetched within five seconds; the answer is
-  kept for a minute. Unavailable, the UI draws the atlas it bundles.
+- `basemap()` → `{available: boolean, maxZoom: number, build?: string}` —
+  whether there is a basemap to draw (see the map tile endpoints below), which
+  build of the planet, and the deepest zoom the map can ask for tiles at; it
+  magnifies past that. Available when the zoom-0 tile can be fetched within
+  five seconds; the answer is kept for a minute. Unavailable, the UI draws the
+  atlas it bundles.
 
 ### albums
 
@@ -415,31 +416,55 @@ umbreld and so does the basemap. Its list beside the map is `items.list` with a
   Revalidated by ETag, which saves the transfer when nothing moved but not the
   read: it is the heaviest Photos read there is, so the UI asks again at most
   every ten seconds while the library is changing.
-- `GET /api/photos/map/tiles/:z/:x/:y` — a Protomaps vector tile (MVT),
-  gzipped. 204 where the planet has no tile, 404 where it can't be had, neither
-  cached, 400 for a tile that isn't on the map.
+- `GET /api/photos/map/tiles/:z/:x/:y?build=<build>` — a Protomaps vector
+  tile (MVT), gzipped, or 204 where the build has no tile. Asked for under the
+  build it is of (`basemap().build`), either is the browser's to keep for good
+  (`private, max-age=31536000, immutable`): a build never changes. Under any
+  other build (a page drawn before a new one came) it is the current build's,
+  `no-cache`. 404 where it can't be had (`no-store`), 400 for a tile that isn't
+  on the map.
 
 The map's labels are drawn by the browser, in the Inter the UI already loads
 (scripts Inter lacks in the device's own fonts): no fonts are served, fetched,
 kept or hosted.
 
 Nothing of the basemap ships with the OS. umbreld fetches each tile as the map
-asks for it, from one build of the planet on a server, which sees the device's
-address and which tiles it asks for: Protomaps' Cloudflare Worker at
-`maps.umbrel.com/<build>/{z}/{x}/{y}.mvt` (zooms 0–15; `UMBREL_MAPS` in
-`map-tiles.ts`). That isn't live yet (#1675): until it is, every device reads
-Protomaps' own daily build instead, a tile at a time out of its PMTiles
-archive.
+asks for it from the one build of the planet Umbrel keeps on Cloudflare R2
+(zooms 0–15; `umbrelPlanet` in `map-tiles.ts`). Where it is comes from
+`GET https://api.umbrel.com/map-url`, `{url, expires}`, and `url` takes either
+of two shapes, so the API alone can move devices between them:
 
-What is fetched is kept, gzipped, in `<dataDirectory>/photos/map-cache/<build>/`
-(`tiles/<z>/<x>/<y>.mvt`). A build never changes,
-so a kept file is never revalidated; a new build is kept in a directory of its
-own and the old one removed. A tile the planet has none of is kept as an
-empty file, so it isn't fetched again; a failure isn't kept. The cache holds
-about 300 MB, and past that the least recently used files go first. It is
-left out of backups, as it is fetched again as needed. With no connection, a
-device that has kept the zoom-0 tile draws what it has kept, and one that
-hasn't draws the Natural Earth atlas the UI bundles.
+- `…/<build>.pmtiles?<signature>`: the PMTiles archive itself, a URL signed for
+  R2, read by byte range (a tile in a new area is two or three reads in a row).
+  A 403 from R2 drops the URL and asks once more.
+- `…/<build>/{z}/{x}/{y}.mvt`: a server of its tiles, such as Protomaps'
+  Cloudflare Worker, one request per tile (204 = no tile). Its deepest zoom is
+  read once per answer from the TileJSON beside it, `…/<build>.json` (with the
+  same query), as `maxzoom`.
+
+umbreld keeps the answer until shortly before `expires` (measured by the
+response's own `Date`, so a device clock that is out doesn't matter) and asks
+again an hour early, carrying on with the one it has if that fails; a failed
+ask is retried a minute later at the soonest. The API's own cache (Vercel's
+edge) must hold an answer for well under the signature's week, a day or so at
+most: a device takes what lifetime is left, so an answer served in its last
+hour has it asking every minute, and one served after it ran out has no map
+until the cache turns over. The URL may be a credential: it
+is never logged, and no error carries its query. Cloudflare sees the device's
+address and which parts of the planet it reads; api.umbrel.com sees the device
+about once a week.
+
+umbreld keeps no tiles: the browser does, under the build. `<build>` is the
+archive's file name or the tiles' directory (`planet-20261011` for
+`…/v1/planet-20261011.pmtiles?X-Amz-…` and for `…/planet-20261011/{z}/{x}/{y}.mvt`
+alike, so moving between the shapes keeps what browsers have kept); a new
+planet comes under a new file name, so a new build. As browsers keep a build's
+tiles for a year with no way for the device to take them back, a build's name
+is never used again for anything else, at any path or host (a new schema of
+the same day's planet included). In memory umbreld holds only the
+answer from api.umbrel.com and, for an archive, up to 8 of its directories
+(some 5 MB each). With no connection, or with api.umbrel.com or the planet
+down, the UI draws the Natural Earth atlas it bundles.
 
 ## Events
 

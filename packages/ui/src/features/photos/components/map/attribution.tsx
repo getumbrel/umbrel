@@ -55,7 +55,7 @@ export function Attribution({map}: {map: MapLibreMap}) {
 					href='https://www.openstreetmap.org/copyright'
 					target='_blank'
 					rel='noreferrer'
-					className='rounded-full bg-black/55 px-1.5 py-0.5 text-11 font-medium whitespace-nowrap text-white backdrop-blur-sm transition-colors select-none hover:bg-black/70 motion-safe:animate-in motion-safe:fade-in'
+					className='rounded-full bg-black/70 px-1.5 py-0.5 text-11 font-medium whitespace-nowrap text-white transition-colors select-none hover:bg-black/70 motion-safe:animate-in motion-safe:fade-in'
 				>
 					© OpenStreetMap
 				</a>

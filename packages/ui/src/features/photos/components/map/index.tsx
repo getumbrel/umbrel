@@ -74,8 +74,8 @@ const ARRIVAL_PATIENCE_MS = 1200
 // Photos on a map: every photo that knows where it was taken, gathered into
 // markers that are photographs themselves, over a quiet night-time map
 // served by the device: the browser asks nothing else for a tile or a place's
-// name (the device fetches the basemap from a server itself, and keeps it:
-// see umbreld's map-tiles.ts), and draws the labels' letters itself.
+// name (the device fetches the basemap from a server itself, and the browser
+// keeps it: see umbreld's map-tiles.ts), and draws the labels' letters itself.
 // The list beside it is always exactly the photos in the stretch of map on
 // screen (or in the one spot a marker was tapped for), and is the real
 // timeline grid: dates, selection, and the lightbox flying out of it.
@@ -442,7 +442,8 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 	return (
 		<div
 			ref={stageRef}
-			className='relative overflow-hidden'
+			// .umbrel-photos-map (index.css): what floats over the map isn't glass
+			className='umbrel-photos-map relative overflow-hidden'
 			style={{
 				margin: `-${reach.top}px -${reach.right}px 0 -${reach.left}px`,
 				height: `calc(100% + ${reach.top}px)`,
@@ -510,11 +511,15 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 			)}
 
 			{unsupported ? (
-				<Notice title={t('photos-map.unsupported-title')} description={t('photos-map.unsupported-description')} />
+				<Notice
+					area={padding}
+					title={t('photos-map.unsupported-title')}
+					description={t('photos-map.unsupported-description')}
+				/>
 			) : pointsFailed ? (
-				<Notice title={t('photos-map.load-error')} />
+				<Notice area={padding} title={t('photos-map.load-error')} />
 			) : (
-				empty && <NoLocations unlocated={unlocated} search={search} />
+				empty && <NoLocations area={padding} unlocated={unlocated} search={search} />
 			)}
 
 			{hasArea && !empty && listShown && (
@@ -580,10 +585,25 @@ function useSheetReach(stageRef: React.RefObject<HTMLElement | null>, isMobile: 
 	return reach
 }
 
-// What the map has to say in place of what it can't show
-function Notice({title, description, children}: {title: string; description?: string; children?: ReactNode}) {
+// The part of the stage the map is seen in: clear of the sidebar's card, the
+// bar, the dock and the list (the camera's padding)
+type SeenArea = {top: number; right: number; bottom: number; left: number}
+
+// What the map has to say in place of what it can't show, centred where the
+// map is seen rather than on the whole stage, which runs under the sidebar
+function Notice({
+	area,
+	title,
+	description,
+	children,
+}: {
+	area: SeenArea
+	title: string
+	description?: string
+	children?: ReactNode
+}) {
 	return (
-		<div className='pointer-events-none absolute inset-0 flex items-center justify-center p-6'>
+		<div className='pointer-events-none absolute flex items-center justify-center p-6' style={area}>
 			<div className='umbrel-material umbrel-material-popover max-w-sm px-6 py-5 text-center'>
 				<p className='text-15 font-medium text-white/85'>{title}</p>
 				{description && <p className='mt-1 text-13 text-white/50'>{description}</p>}
@@ -595,10 +615,11 @@ function Notice({title, description, children}: {title: string; description?: st
 
 // Nothing with a location (yet): say what makes a photo land on the map —
 // or, when it is a search that found none, offer the way out of it
-function NoLocations({unlocated, search}: {unlocated: number; search: PhotosSearch}) {
+function NoLocations({area, unlocated, search}: {area: SeenArea; unlocated: number; search: PhotosSearch}) {
 	const {t, i18n} = useTranslation()
 	return (
 		<Notice
+			area={area}
 			title={search.active ? t('photos-search.no-results-title') : t('photos-map.empty-title')}
 			description={search.active ? undefined : t('photos-map.empty-description')}
 		>
@@ -611,7 +632,7 @@ function NoLocations({unlocated, search}: {unlocated: number; search: PhotosSear
 				</p>
 			)}
 			{search.active && (
-				<PillButton className='pointer-events-auto mt-4 backdrop-blur-sm' onClick={search.clear}>
+				<PillButton className='pointer-events-auto mt-4' onClick={search.clear}>
 					{t('photos-search.clear')}
 				</PillButton>
 			)}
