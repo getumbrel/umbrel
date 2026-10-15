@@ -53,6 +53,9 @@ final class MainModel {
 		case error
 		case backingUp(Int?)
 		case upToDate
+		// Only failed items remain. The extension retries them, and until the app can list
+		// them there's nothing for the user to do.
+		case upToDateExceptFailures
 
 		var text: String {
 			switch self {
@@ -68,6 +71,7 @@ final class MainModel {
 					"\($0.formatted()) \($0 == 1 ? "item" : "items") queued"
 				} ?? "Checking backup…"
 			case .upToDate: "All backed up"
+			case .upToDateExceptFailures: "Up to date"
 			}
 		}
 
@@ -75,7 +79,7 @@ final class MainModel {
 			switch self {
 			case .off: Theme.gray
 			case .backgroundRefreshUnavailable, .error, .paused: Theme.red
-			case .upToDate: Theme.online
+			case .upToDate, .upToDateExceptFailures: Theme.online
 			case .settingUp, .waitingForUmbrel, .checkingStorage, .backingUp: Theme.syncing
 			}
 		}
@@ -691,6 +695,11 @@ final class MainModel {
 			if photoBackup.phase == .waitingForUmbrel { return .waitingForUmbrel }
 			if photoBackupHasRuntimeError { return .error }
 			if let remaining = photoBackupRemainingCount(configuration: configuration) {
+				if let statistics = photoBackup.statistics,
+					statistics.onlyFailuresRemain(remainingCount: remaining)
+				{
+					return .upToDateExceptFailures
+				}
 				return remaining > 0 ? .backingUp(remaining) : .upToDate
 			}
 			return photoBackup.phase == .upToDate ? .upToDate : .backingUp(nil)
@@ -714,7 +723,7 @@ final class MainModel {
 			return .reconnect
 		case .error:
 			return .needsAttention
-		case .off, .settingUp, .paused, .backingUp, .upToDate:
+		case .off, .settingUp, .paused, .backingUp, .upToDate, .upToDateExceptFailures:
 			return nil
 		}
 	}
@@ -735,7 +744,6 @@ final class MainModel {
 	private var photoBackupHasRuntimeError: Bool {
 		guard !photoBackupCheckingStorage else { return false }
 		return photoBackup.issue != nil
-			|| (photoBackup.statistics?.failedCount ?? 0) > 0
 			|| (photoBackup.phase == .needsAttention && photoBackup.lastError != nil)
 	}
 

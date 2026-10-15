@@ -509,6 +509,63 @@ final class PhotoBackupLedgerTests: XCTestCase {
 		XCTAssertEqual(try ledger.statistics(deviceId: "device").queuedCount, 1)
 	}
 
+	func testFailedResourcesRetryOnceAfterBackupCatchesUp() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory(
+			[candidate("backed-up", mediaType: 1), candidate("failing", mediaType: 1)],
+			deviceId: "device",
+			changeToken: Data()
+		)
+		try prepare(ledger, "backed-up")
+		try prepare(ledger, "failing")
+		try ledger.recordResourceFailed(resourceKey: "failing", message: "server error")
+		XCTAssertFalse(
+			try ledger.requeueFailedAssetsAfterProgress(deviceId: "device", includePhotos: true, includeVideos: true),
+			"Failed uploads wait while other assets are still being backed up"
+		)
+
+		try ledger.recordResourceSucceeded(resourceKey: "backed-up", bytes: 10)
+		XCTAssertTrue(
+			try ledger.requeueFailedAssetsAfterProgress(deviceId: "device", includePhotos: true, includeVideos: true)
+		)
+		var stats = try ledger.statistics(deviceId: "device")
+		XCTAssertEqual(stats.failedCount, 0)
+		XCTAssertEqual(stats.queuedCount, 1)
+
+		try ledger.recordResourceFailed(resourceKey: "failing", message: "server error")
+		XCTAssertFalse(
+			try ledger.requeueFailedAssetsAfterProgress(deviceId: "device", includePhotos: true, includeVideos: true),
+			"A resource that keeps failing isn't retried again until another backup succeeds"
+		)
+		stats = try ledger.statistics(deviceId: "device")
+		XCTAssertEqual(stats.failedCount, 1)
+
+		XCTAssertTrue(try ledger.recordObservedChanges(
+			inserted: [candidate("new", mediaType: 1)],
+			contentChanged: [],
+			metadataChanged: [],
+			deviceId: "device"
+		))
+		try prepare(ledger, "new")
+		try ledger.recordResourceSucceeded(resourceKey: "new", bytes: 10)
+		XCTAssertTrue(
+			try ledger.requeueFailedAssetsAfterProgress(deviceId: "device", includePhotos: true, includeVideos: true)
+		)
+		XCTAssertEqual(try ledger.statistics(deviceId: "device").failedCount, 0)
+	}
+
+	func testStatisticsReportWhenTheLastAssetFinishedUploading() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory([candidate("photo", mediaType: 1)], deviceId: "device", changeToken: Data())
+		try prepare(ledger, "photo")
+		XCTAssertNil(try ledger.statistics(deviceId: "device").lastUploadedAt)
+
+		let before = Date()
+		try ledger.recordResourceSucceeded(resourceKey: "photo", bytes: 10)
+		let lastUploadedAt = try XCTUnwrap(try ledger.statistics(deviceId: "device").lastUploadedAt)
+		XCTAssertEqual(lastUploadedAt.timeIntervalSince1970, before.timeIntervalSince1970, accuracy: 5)
+	}
+
 	func testConnectivityFailureReturnsOnlyFailedResourceToQueue() throws {
 		let ledger = try makeLedger()
 		try ledger.seedInventory([candidate("live", mediaType: 1)], deviceId: "device", changeToken: Data())
@@ -833,6 +890,21 @@ final class PhotoBackupLedgerTests: XCTestCase {
 
 	private func makeLedger() throws -> PhotoBackupLedger {
 		try XCTUnwrap(PhotoBackupLedger(url: databaseURL))
+	}
+
+	private func prepare(_ ledger: PhotoBackupLedger, _ localIdentifier: String) throws {
+		try ledger.prepareAsset(
+			deviceId: "device",
+			localIdentifier: localIdentifier,
+			revision: 1,
+			resources: [
+				.init(
+					resourceKey: localIdentifier,
+					filename: "\(localIdentifier).heic",
+					destinationPath: "/Photos/\(localIdentifier).heic"
+				),
+			]
+		)
 	}
 
 	private func userVersion() throws -> Int32 {

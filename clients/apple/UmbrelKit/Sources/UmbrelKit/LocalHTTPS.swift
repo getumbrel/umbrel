@@ -27,8 +27,8 @@ enum LocalHTTPSTransportError: LocalizedError, Equatable {
 
 // UmbrelKit trusts one device-local CA per Umbrel. The trust applies only to the
 // URLSession evaluating that Umbrel; it is never installed as a system-wide root.
-// Apple still evaluates the complete TLS chain, certificate lifetime, server usage,
-// and the exact hostname/IP through SecPolicyCreateSSL.
+// Apple still evaluates the complete TLS chain, certificate lifetime and server usage
+// through SecPolicyCreateSSL, but not the address (see evaluateServerTrust).
 enum LocalHTTPSTransport {
 	private static let sessions = LocalHTTPSSessionPool()
 	private static let bootstrapResponseMaximumBytes = 64 * 1_024
@@ -166,7 +166,7 @@ enum LocalHTTPSTransport {
 			let trust = space.serverTrust,
 			case .found(let certificate) = Keychain.readLocalHTTPSCA(deviceId: deviceId),
 			let anchor = SecCertificateCreateWithData(nil, certificate as CFData),
-			evaluateServerTrust(trust, host: normalizedHost(space.host), anchor: anchor)
+			evaluateServerTrust(trust, anchor: anchor)
 		else { return nil }
 		return URLCredential(trust: trust)
 	}
@@ -301,7 +301,7 @@ private final class LocalHTTPSSessionDelegate: NSObject, URLSessionDelegate, URL
 		}
 		guard normalizedHost(protectionSpace.host) == expectedHost,
 			let trust = protectionSpace.serverTrust,
-			evaluateServerTrust(trust, host: expectedHost, anchor: anchor)
+			evaluateServerTrust(trust, anchor: anchor)
 		else {
 			// A certificate this Umbrel's CA didn't issue is a different identity, as after
 			// the Umbrel or its certificate is reset. Anything else is a failed check.
@@ -361,8 +361,11 @@ func chainsToAnchor(_ certificates: [SecCertificate], anchor: SecCertificate) ->
 	return SecTrustEvaluateWithError(trust, &error)
 }
 
-private func evaluateServerTrust(_ trust: SecTrust, host: String, anchor: SecCertificate) -> Bool {
-	let policy = SecPolicyCreateSSL(true, host as CFString)
+// The anchor is the Umbrel's own CA, which signs only that Umbrel's server certificate,
+// so the anchor alone proves identity. The certificate's names can lag behind the
+// Umbrel's real addresses (e.g. a new Tailscale or DHCP address), so they aren't matched.
+func evaluateServerTrust(_ trust: SecTrust, anchor: SecCertificate) -> Bool {
+	let policy = SecPolicyCreateSSL(true, nil)
 	guard SecTrustSetPolicies(trust, policy) == errSecSuccess,
 		SecTrustSetAnchorCertificates(trust, [anchor] as CFArray) == errSecSuccess,
 		SecTrustSetAnchorCertificatesOnly(trust, true) == errSecSuccess

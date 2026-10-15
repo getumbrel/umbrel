@@ -435,8 +435,27 @@ private struct PhotosSection: View {
 				}
 				SettingsDivider()
 				cellularUploadRow
+				if let lastUploadedAt = model.photoBackup.statistics?.lastUploadedAt {
+					SettingsDivider()
+					SettingsRow(icon: "clock.arrow.circlepath", title: "Last backed up") {
+						SettingsValue(text: Self.lastBackupText(lastUploadedAt))
+					}
+				}
 			}
 		}
+	}
+
+	// Like iCloud Backup's "Last successful backup": a date, which reads as a fact
+	// rather than an age that can look like a stall after a quiet few days.
+	static func lastBackupText(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+		let time = date.formatted(date: .omitted, time: .shortened)
+		if calendar.isDateInToday(date) { return "Today at \(time)" }
+		if calendar.isDateInYesterday(date) { return "Yesterday at \(time)" }
+		let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day ?? 0
+		if days < 7 { return "\(date.formatted(.dateTime.weekday(.wide))) at \(time)" }
+		return calendar.isDate(date, equalTo: now, toGranularity: .year)
+			? date.formatted(.dateTime.month(.abbreviated).day())
+			: date.formatted(.dateTime.month(.abbreviated).day().year())
 	}
 
 	private var cellularUploadRow: some View {

@@ -3,11 +3,12 @@ import Foundation
 import SwiftUI
 import UIKit
 
-// umbreld serves app icons as external SVG URLs, which AsyncImage/UIImage can't decode.
-// We fetch the SVG (cached by URL), render it in a small on-screen WKWebView, and
+// umbreld serves app icons as external URLs, mostly SVG, which AsyncImage/UIImage can't
+// decode. We fetch the SVG (cached by URL), render it in a small on-screen WKWebView, and
 // snapshot that once to a UIImage cached in memory and on disk. After an icon renders
 // once it appears instantly forever after (scrolling, tab switches, next launch), so
-// the slow WebKit path only runs the very first time an icon is seen.
+// the slow WebKit path only runs the very first time an icon is seen. Community app
+// stores often use PNG or JPEG icons instead; those are decoded directly.
 
 // ── Rasterized-icon cache (memory + disk) ──
 @MainActor
@@ -50,17 +51,22 @@ final class IconCache {
 		return directory.appendingPathComponent(hash).appendingPathExtension("png")
 	}
 }
-// ── SVG loading ──
+// ── Icon loading ──
+enum IconSource {
+	case svg(String)
+	case raster(Data)
+}
+
 @MainActor
-final class SVGStringLoader {
-	static let shared = SVGStringLoader()
+final class IconSourceLoader {
+	static let shared = IconSourceLoader()
 
-	private var inFlight: [URL: Task<String?, Never>] = [:]
+	private var inFlight: [URL: Task<IconSource?, Never>] = [:]
 
-	func string(for url: URL) async -> String? {
+	func source(for url: URL) async -> IconSource? {
 		if let task = inFlight[url] { return await task.value }
-		let task = Task { () -> String? in
-			await SVGDownload.string(for: url)
+		let task = Task { () -> IconSource? in
+			await IconDownload.source(for: url)
 		}
 		inFlight[url] = task
 		let result = await task.value
@@ -69,12 +75,13 @@ final class SVGStringLoader {
 	}
 }
 
-private enum SVGDownload {
+private enum IconDownload {
 	// The largest first-party gallery icon is currently about 3.3 MB. This keeps
 	// legitimate icons working while bounding an untrusted manifest response.
 	private static let maximumByteCount = 4 * 1_024 * 1_024
+	private static let rasterTypes: Set<String> = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
-	static func string(for url: URL) async -> String? {
+	static func source(for url: URL) async -> IconSource? {
 		guard url.scheme?.lowercased() == "https",
 			url.host != nil,
 			url.user == nil,
@@ -82,16 +89,17 @@ private enum SVGDownload {
 		else { return nil }
 
 		var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 15)
-		request.setValue("image/svg+xml", forHTTPHeaderField: "Accept")
+		request.setValue("image/svg+xml, image/*;q=0.8", forHTTPHeaderField: "Accept")
 
 		do {
 			let (bytes, response) = try await URLSession.shared.bytes(
 				for: request,
-				delegate: SVGNoRedirectDelegate()
+				delegate: IconNoRedirectDelegate()
 			)
 			guard let response = response as? HTTPURLResponse,
 				(200..<300).contains(response.statusCode),
-				response.mimeType?.lowercased() == "image/svg+xml",
+				let mimeType = response.mimeType?.lowercased(),
+				mimeType == "image/svg+xml" || rasterTypes.contains(mimeType),
 				response.expectedContentLength <= Int64(maximumByteCount)
 			else { return nil }
 
@@ -103,14 +111,17 @@ private enum SVGDownload {
 				guard data.count < maximumByteCount else { return nil }
 				data.append(byte)
 			}
-			return String(data: data, encoding: .utf8)
+			if mimeType == "image/svg+xml" {
+				return String(data: data, encoding: .utf8).map(IconSource.svg)
+			}
+			return .raster(data)
 		} catch {
 			return nil
 		}
 	}
 }
 
-private final class SVGNoRedirectDelegate: NSObject, URLSessionTaskDelegate {
+private final class IconNoRedirectDelegate: NSObject, URLSessionTaskDelegate {
 	func urlSession(
 		_ session: URLSession,
 		task: URLSessionTask,
@@ -178,11 +189,41 @@ struct AppIconView: View {
 				image = cached
 				return
 			}
-			guard let svg = await SVGStringLoader.shared.string(for: url),
+			guard let source = await IconSourceLoader.shared.source(for: url),
 				!Task.isCancelled,
 				cacheKey == self.cacheKey
 			else { return }
-			svgRender = SVGRender(cacheKey: cacheKey, svg: svg)
+			switch source {
+			case .svg(let svg):
+				svgRender = SVGRender(cacheKey: cacheKey, svg: svg)
+			case .raster(let data):
+				guard let raster = Self.rasterIcon(data, pixelSize: (size * displayScale).rounded(.up)) else { return }
+				IconCache.shared.store(raster, forKey: cacheKey)
+				image = raster
+			}
+		}
+	}
+
+	// Draw a PNG or JPEG icon filling a square at the icon's on-screen pixel size, like
+	// an SVG snapshot, so a large source image isn't kept in memory or on disk.
+	private static func rasterIcon(_ data: Data, pixelSize: CGFloat) -> UIImage? {
+		guard let decoded = UIImage(data: data),
+			decoded.size.width > 0,
+			decoded.size.height > 0,
+			pixelSize > 0
+		else { return nil }
+		let fill = max(pixelSize / decoded.size.width, pixelSize / decoded.size.height)
+		let drawn = CGSize(width: decoded.size.width * fill, height: decoded.size.height * fill)
+		let format = UIGraphicsImageRendererFormat()
+		format.scale = 1
+		let renderer = UIGraphicsImageRenderer(size: CGSize(width: pixelSize, height: pixelSize), format: format)
+		return renderer.image { _ in
+			decoded.draw(in: CGRect(
+				x: (pixelSize - drawn.width) / 2,
+				y: (pixelSize - drawn.height) / 2,
+				width: drawn.width,
+				height: drawn.height
+			))
 		}
 	}
 

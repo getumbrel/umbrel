@@ -321,6 +321,9 @@ public struct PhotoBackupStatistics: Codable, Equatable, Sendable {
 	public let uploadedVideoCount: Int
 	public let failedCount: Int
 	public let uploadedBytes: Int64
+	// When the most recent asset finished uploading. Optional so snapshots written
+	// before it existed still decode.
+	public let lastUploadedAt: Date?
 
 	public var uploadedCount: Int { uploadedPhotoCount + uploadedVideoCount }
 
@@ -339,13 +342,20 @@ public struct PhotoBackupStatistics: Codable, Equatable, Sendable {
 		return max(0, included - uploaded)
 	}
 
+	// Failed uploads count as remaining work while anything else is still waiting,
+	// because the extension retries them once the rest have caught up.
+	public func onlyFailuresRemain(remainingCount: Int) -> Bool {
+		failedCount > 0 && remainingCount <= failedCount
+	}
+
 	public init(
 		queuedCount: Int,
 		preparedCount: Int,
 		uploadedPhotoCount: Int,
 		uploadedVideoCount: Int,
 		failedCount: Int,
-		uploadedBytes: Int64
+		uploadedBytes: Int64,
+		lastUploadedAt: Date? = nil
 	) {
 		self.queuedCount = queuedCount
 		self.preparedCount = preparedCount
@@ -353,6 +363,7 @@ public struct PhotoBackupStatistics: Codable, Equatable, Sendable {
 		self.uploadedVideoCount = uploadedVideoCount
 		self.failedCount = failedCount
 		self.uploadedBytes = uploadedBytes
+		self.lastUploadedAt = lastUploadedAt
 	}
 }
 

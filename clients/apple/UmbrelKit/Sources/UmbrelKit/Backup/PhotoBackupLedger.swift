@@ -109,6 +109,7 @@ public final class PhotoBackupLedger {
 	}
 
 	private static let changeTokenKey = "photoLibraryChangeToken"
+	private static let automaticRetryProgressKey = "automaticRetryUploadedCount"
 	private static let schemaVersion: Int64 = 2
 	private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 	private let queue = DispatchQueue(label: "com.umbrel.app.photo-backup-ledger")
@@ -893,10 +894,62 @@ public final class PhotoBackupLedger {
 		try queue.sync { try markDeletedLocked(deviceId: deviceId, localIdentifier: localIdentifier) }
 	}
 
-	// PhotoKit tells the extension not to retry permanent failures in a tight
-	// background loop. A foreground app launch is the explicit next opportunity:
-	// retry only the failed resources and retain successful Live Photo siblings.
+	// Retries only the failed resources and keeps successful Live Photo siblings. Used by
+	// Try Again, a backup configuration change and the storage probe; the extension's
+	// automatic retry is requeueFailedAssetsAfterProgress.
 	public func requeueFailedAssets(
+		deviceId: String,
+		includePhotos: Bool,
+		includeVideos: Bool
+	) throws {
+		try queue.sync {
+			try transaction {
+				try requeueFailedAssetsLocked(
+					deviceId: deviceId,
+					includePhotos: includePhotos,
+					includeVideos: includeVideos
+				)
+			}
+		}
+	}
+
+	// Most failures are Umbrel answering an upload with a temporary server error,
+	// and umbreld recognizes an exact retry without storing a second copy. Once only
+	// failed resources remain, retry them once in the same pass. Remembering the
+	// uploaded count at that retry means a resource that keeps failing is tried
+	// again only after other backups have made progress, never in a loop.
+	public func requeueFailedAssetsAfterProgress(
+		deviceId: String,
+		includePhotos: Bool,
+		includeVideos: Bool
+	) throws -> Bool {
+		return try queue.sync {
+			try transaction {
+				let statistics = try statisticsLocked(
+					deviceId: deviceId,
+					includePhotos: includePhotos,
+					includeVideos: includeVideos
+				)
+				guard statistics.failedCount > 0,
+					statistics.queuedCount == 0,
+					statistics.preparedCount == 0
+				else { return false }
+				let progress = Data(String(statistics.uploadedCount).utf8)
+				guard try metadataLocked(key: Self.automaticRetryProgressKey, deviceId: deviceId) != progress else {
+					return false
+				}
+				try requeueFailedAssetsLocked(
+					deviceId: deviceId,
+					includePhotos: includePhotos,
+					includeVideos: includeVideos
+				)
+				try setMetadataLocked(progress, key: Self.automaticRetryProgressKey, deviceId: deviceId)
+				return true
+			}
+		}
+	}
+
+	private func requeueFailedAssetsLocked(
 		deviceId: String,
 		includePhotos: Bool,
 		includeVideos: Bool
@@ -906,47 +959,43 @@ public final class PhotoBackupLedger {
 		if includeVideos { mediaTypes.append(2) }
 		guard !mediaTypes.isEmpty else { return }
 
-		try queue.sync {
-			try transaction {
-				let placeholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
-				let resources = try prepare(
-					"""
-					UPDATE photo_resources SET state = ?, lastError = NULL
-					WHERE state = ? AND EXISTS (
-						SELECT 1 FROM photo_assets
-						WHERE photo_assets.deviceId = photo_resources.deviceId
-							AND photo_assets.localIdentifier = photo_resources.localIdentifier
-							AND photo_assets.revision = photo_resources.revision
-							AND photo_assets.deviceId = ?
-							AND photo_assets.state = ?
-							AND photo_assets.mediaType IN (\(placeholders))
-					)
-					""")
-				defer { sqlite3_finalize(resources) }
-				try bind(Self.resourcePending, at: 1, in: resources)
-				try bind(Self.resourceFailed, at: 2, in: resources)
-				try bind(deviceId, at: 3, in: resources)
-				try bind(Self.assetFailed, at: 4, in: resources)
-				for (offset, mediaType) in mediaTypes.enumerated() {
-					try bind(mediaType, at: Int32(5 + offset), in: resources)
-				}
-				try stepDone(resources)
-
-				let assets = try prepare(
-					"""
-					UPDATE photo_assets SET state = ?, lastError = NULL
-					WHERE deviceId = ? AND state = ? AND mediaType IN (\(placeholders))
-					""")
-				defer { sqlite3_finalize(assets) }
-				try bind(Self.assetPending, at: 1, in: assets)
-				try bind(deviceId, at: 2, in: assets)
-				try bind(Self.assetFailed, at: 3, in: assets)
-				for (offset, mediaType) in mediaTypes.enumerated() {
-					try bind(mediaType, at: Int32(4 + offset), in: assets)
-				}
-				try stepDone(assets)
-			}
+		let placeholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
+		let resources = try prepare(
+			"""
+			UPDATE photo_resources SET state = ?, lastError = NULL
+			WHERE state = ? AND EXISTS (
+				SELECT 1 FROM photo_assets
+				WHERE photo_assets.deviceId = photo_resources.deviceId
+					AND photo_assets.localIdentifier = photo_resources.localIdentifier
+					AND photo_assets.revision = photo_resources.revision
+					AND photo_assets.deviceId = ?
+					AND photo_assets.state = ?
+					AND photo_assets.mediaType IN (\(placeholders))
+			)
+			""")
+		defer { sqlite3_finalize(resources) }
+		try bind(Self.resourcePending, at: 1, in: resources)
+		try bind(Self.resourceFailed, at: 2, in: resources)
+		try bind(deviceId, at: 3, in: resources)
+		try bind(Self.assetFailed, at: 4, in: resources)
+		for (offset, mediaType) in mediaTypes.enumerated() {
+			try bind(mediaType, at: Int32(5 + offset), in: resources)
 		}
+		try stepDone(resources)
+
+		let assets = try prepare(
+			"""
+			UPDATE photo_assets SET state = ?, lastError = NULL
+			WHERE deviceId = ? AND state = ? AND mediaType IN (\(placeholders))
+			""")
+		defer { sqlite3_finalize(assets) }
+		try bind(Self.assetPending, at: 1, in: assets)
+		try bind(deviceId, at: 2, in: assets)
+		try bind(Self.assetFailed, at: 3, in: assets)
+		for (offset, mediaType) in mediaTypes.enumerated() {
+			try bind(mediaType, at: Int32(4 + offset), in: assets)
+		}
+		try stepDone(assets)
 	}
 
 	public func statistics(
@@ -955,54 +1004,68 @@ public final class PhotoBackupLedger {
 		includeVideos: Bool = true
 	) throws -> PhotoBackupStatistics {
 		try queue.sync {
-			var enabledMediaTypes = [Int64]()
-			if includePhotos { enabledMediaTypes.append(1) }
-			if includeVideos { enabledMediaTypes.append(2) }
-			let mediaPredicate = enabledMediaTypes.isEmpty
-				? "0"
-				: "mediaType IN (\(enabledMediaTypes.map { _ in "?" }.joined(separator: ",")))"
-			let counts = try prepare(
-				"""
-				SELECT
-					SUM(CASE WHEN state = ? AND \(mediaPredicate) THEN 1 ELSE 0 END),
-					SUM(CASE WHEN state = ? AND \(mediaPredicate) THEN 1 ELSE 0 END),
-					SUM(CASE WHEN state = ? AND mediaType = 1 THEN 1 ELSE 0 END),
-					SUM(CASE WHEN state = ? AND mediaType = 2 THEN 1 ELSE 0 END),
-					SUM(CASE WHEN state = ? AND \(mediaPredicate) THEN 1 ELSE 0 END),
-					CAST(MIN(TOTAL(CASE WHEN state = ? THEN uploadedBytes ELSE 0 END), 9223372036854775807) AS INTEGER)
-				FROM photo_assets WHERE deviceId = ?
-				""")
-			defer { sqlite3_finalize(counts) }
-			var index: Int32 = 1
-			for state in [Self.assetPending, Self.assetPrepared, Self.assetFailed] {
-				try bind(state, at: index, in: counts)
-				index += 1
-				for mediaType in enabledMediaTypes {
-					try bind(mediaType, at: index, in: counts)
-					index += 1
-				}
-				if state == Self.assetPrepared {
-					try bind(Self.assetUploaded, at: index, in: counts)
-					index += 1
-					try bind(Self.assetUploaded, at: index, in: counts)
-					index += 1
-				}
-			}
-			try bind(Self.assetUploaded, at: index, in: counts)
-			index += 1
-			try bind(deviceId, at: index, in: counts)
-			let result = sqlite3_step(counts)
-			guard result == SQLITE_ROW else { throw databaseError(result) }
-
-			return PhotoBackupStatistics(
-				queuedCount: Int(sqlite3_column_int64(counts, 0)),
-				preparedCount: Int(sqlite3_column_int64(counts, 1)),
-				uploadedPhotoCount: Int(sqlite3_column_int64(counts, 2)),
-				uploadedVideoCount: Int(sqlite3_column_int64(counts, 3)),
-				failedCount: Int(sqlite3_column_int64(counts, 4)),
-				uploadedBytes: sqlite3_column_int64(counts, 5)
-			)
+			try statisticsLocked(deviceId: deviceId, includePhotos: includePhotos, includeVideos: includeVideos)
 		}
+	}
+
+	private func statisticsLocked(
+		deviceId: String,
+		includePhotos: Bool,
+		includeVideos: Bool
+	) throws -> PhotoBackupStatistics {
+		var enabledMediaTypes = [Int64]()
+		if includePhotos { enabledMediaTypes.append(1) }
+		if includeVideos { enabledMediaTypes.append(2) }
+		let mediaPredicate = enabledMediaTypes.isEmpty
+			? "0"
+			: "mediaType IN (\(enabledMediaTypes.map { _ in "?" }.joined(separator: ",")))"
+		let counts = try prepare(
+			"""
+			SELECT
+				SUM(CASE WHEN state = ? AND \(mediaPredicate) THEN 1 ELSE 0 END),
+				SUM(CASE WHEN state = ? AND \(mediaPredicate) THEN 1 ELSE 0 END),
+				SUM(CASE WHEN state = ? AND mediaType = 1 THEN 1 ELSE 0 END),
+				SUM(CASE WHEN state = ? AND mediaType = 2 THEN 1 ELSE 0 END),
+				SUM(CASE WHEN state = ? AND \(mediaPredicate) THEN 1 ELSE 0 END),
+				CAST(MIN(TOTAL(CASE WHEN state = ? THEN uploadedBytes ELSE 0 END), 9223372036854775807) AS INTEGER),
+				MAX(CASE WHEN state = ? THEN uploadedAt END)
+			FROM photo_assets WHERE deviceId = ?
+			""")
+		defer { sqlite3_finalize(counts) }
+		var index: Int32 = 1
+		for state in [Self.assetPending, Self.assetPrepared, Self.assetFailed] {
+			try bind(state, at: index, in: counts)
+			index += 1
+			for mediaType in enabledMediaTypes {
+				try bind(mediaType, at: index, in: counts)
+				index += 1
+			}
+			if state == Self.assetPrepared {
+				try bind(Self.assetUploaded, at: index, in: counts)
+				index += 1
+				try bind(Self.assetUploaded, at: index, in: counts)
+				index += 1
+			}
+		}
+		try bind(Self.assetUploaded, at: index, in: counts)
+		index += 1
+		try bind(Self.assetUploaded, at: index, in: counts)
+		index += 1
+		try bind(deviceId, at: index, in: counts)
+		let result = sqlite3_step(counts)
+		guard result == SQLITE_ROW else { throw databaseError(result) }
+
+		return PhotoBackupStatistics(
+			queuedCount: Int(sqlite3_column_int64(counts, 0)),
+			preparedCount: Int(sqlite3_column_int64(counts, 1)),
+			uploadedPhotoCount: Int(sqlite3_column_int64(counts, 2)),
+			uploadedVideoCount: Int(sqlite3_column_int64(counts, 3)),
+			failedCount: Int(sqlite3_column_int64(counts, 4)),
+			uploadedBytes: sqlite3_column_int64(counts, 5),
+			lastUploadedAt: sqlite3_column_type(counts, 6) == SQLITE_NULL
+				? nil
+				: Date(timeIntervalSince1970: sqlite3_column_double(counts, 6))
+		)
 	}
 
 	// Indexed lookup for one visible thumbnail. The host app deliberately avoids

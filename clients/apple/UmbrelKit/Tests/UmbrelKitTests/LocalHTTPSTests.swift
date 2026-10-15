@@ -293,6 +293,18 @@ final class LocalHTTPSTests: XCTestCase {
 		XCTAssertTrue(isIssued(by: caA, chain: [caA]))
 	}
 
+	func testPinnedTrustAcceptsTheUmbrelAtAnAddressItsCertificateDoesNotName() throws {
+		let caA = try certificate(fromPEM: testUmbrelCAAPEM)
+		let caB = try certificate(fromPEM: testUmbrelCABPEM)
+		let current = try certificate(fromPEM: testUmbrelCurrentLeafPEM)
+		let expired = try certificate(fromPEM: testUmbrelExpiredLeafPEM)
+
+		XCTAssertTrue(evaluateServerTrust(try challengeTrust([current], host: "100.90.0.1"), anchor: caA))
+		// The anchor still decides identity, and the dates still apply.
+		XCTAssertFalse(evaluateServerTrust(try challengeTrust([current], host: "100.90.0.1"), anchor: caB))
+		XCTAssertFalse(evaluateServerTrust(try challengeTrust([expired], host: "umbrel.local"), anchor: caA))
+	}
+
 	// Asked as the in-app browser asks it: after the pinned credential was refused for the
 	// same challenge.
 	func testRefusedIdentityDiffersOnlyForAnotherAuthoritysCertificate() throws {
@@ -306,11 +318,9 @@ final class LocalHTTPSTests: XCTestCase {
 		try enroll(testUmbrelCABPEM, deviceId: pinnedB)
 		let caA = try certificate(fromPEM: testUmbrelCAAPEM)
 		let leaf = try certificate(fromPEM: testUmbrelLeafPEM)
-		let current = try certificate(fromPEM: testUmbrelCurrentLeafPEM)
 		let expired = try certificate(fromPEM: testUmbrelExpiredLeafPEM)
 
-		// The pinned authority's certificate, refused for its address or dates: the same Umbrel.
-		XCTAssertFalse(try identityDiffersAfterRefusal(host: "192.168.1.9", chain: [current], deviceId: pinnedA))
+		// The pinned authority's certificate, refused for its dates: the same Umbrel.
 		XCTAssertFalse(try identityDiffersAfterRefusal(host: "umbrel.local", chain: [expired], deviceId: pinnedA))
 		// Another authority's certificate, even with this one sent alongside: a reset Umbrel.
 		XCTAssertTrue(try identityDiffersAfterRefusal(host: "umbrel.local", chain: [leaf], deviceId: pinnedB))
@@ -348,6 +358,15 @@ final class LocalHTTPSTests: XCTestCase {
 			failureResponse: nil,
 			error: nil,
 			sender: UnansweredChallengeSender())
+	}
+
+	// A trust as a challenge for `host` delivers it, on the same fixed date as pinnedTrust.
+	private func challengeTrust(_ certificates: [SecCertificate], host: String) throws -> SecTrust {
+		var trust: SecTrust?
+		SecTrustCreateWithCertificates(certificates as CFArray, SecPolicyCreateSSL(true, host as CFString), &trust)
+		let created = try XCTUnwrap(trust)
+		SecTrustSetVerifyDate(created, Date(timeIntervalSince1970: 1_798_761_600) as CFDate) // 2027-01-01
+		return created
 	}
 
 	// The chain a failed pinned evaluation leaves behind, as the trust delegates see it.

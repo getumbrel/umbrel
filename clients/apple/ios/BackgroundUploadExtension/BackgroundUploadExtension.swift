@@ -294,6 +294,23 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 					issue: recovery.issue
 				)
 			}
+			// Once everything else has been backed up, give failed uploads another try in
+			// this pass instead of leaving them for the user to retry. Storage, sign-in and
+			// connectivity problems keep their own recovery.
+			if activeJobs.isEmpty,
+				changeResult != .moreWork,
+				authenticationIssue == nil,
+				!recovery.storagePaused,
+				!recovery.storageProbing,
+				!recovery.connectivityRecovering,
+				try ledger.requeueFailedAssetsAfterProgress(
+					deviceId: configuration.source.id,
+					includePhotos: configuration.includePhotos,
+					includeVideos: configuration.includeVideos
+				)
+			{
+				Self.logger.notice("Requeued failed resources after the rest of the backup caught up")
+			}
 
 			guard !isTerminated else {
 				Self.logger.notice("Invocation yielded after PhotoKit requested termination")
