@@ -51,7 +51,8 @@ function Timeline() {
 	const listKey = JSON.stringify(filter)
 
 	return (
-		<ListingSurface>
+		// Edge to edge below lg, like iOS Photos' grid (see ListingSurface)
+		<ListingSurface bleed>
 			{(frame) =>
 				indexingState?.phase === 'indexing' ? (
 					<Indexing frame={frame} />

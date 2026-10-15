@@ -1,6 +1,12 @@
 import {describe, expect, it} from 'vitest'
 
-import {groupItems, HEADER_HEIGHT, layoutAt, rectOf} from '@/features/photos/components/listing/timeline-rows'
+import {
+	groupItems,
+	HEADER_HEIGHT,
+	layoutAt,
+	rectOf,
+	sectionAt,
+} from '@/features/photos/components/listing/timeline-rows'
 import type {Item} from '@/features/photos/hooks/use-items'
 
 import {
@@ -10,6 +16,7 @@ import {
 	monthAtRailY,
 	monthKeyFor,
 	monthKeyOf,
+	monthNamedAt,
 	monthRange,
 	monthsFromItems,
 	monthSpan,
@@ -20,6 +27,7 @@ import {
 	railYForMonth,
 	scrollForMonth,
 	scrollForTime,
+	scrollNamingMonth,
 	timeAtFraction,
 	timeAtScroll,
 	yearMarks,
@@ -355,5 +363,55 @@ describe('time ⇄ scroll', () => {
 	it('keeps headers in the geometry it reasons over', () => {
 		// Sanity: the section math above depends on HEADER_HEIGHT rows existing
 		expect(layout.tops[1]! - layout.tops[0]!).toBe(HEADER_HEIGHT + 2 * 100)
+	})
+})
+
+describe('agreeing with the bar', () => {
+	// A phone's frame: content starts 54px down, the bar names the section
+	// whose header has reached 2px above the scroller's top (see surface.tsx)
+	const frame = {inset: 54, handoff: -2}
+	const items = [
+		...month(2024, 6, 12, 'a'),
+		...month(2024, 5, 7, 'b'),
+		...month(2024, 3, 9, 'c'),
+		...month(2023, 12, 20, 'd'),
+	]
+	const layout = layoutOf(items, 3, 120, 2, frame.inset - HEADER_HEIGHT)
+	const window = {inset: frame.inset, viewport: 500, trailing: 80, handoff: frame.handoff}
+	const max = layout.total + window.trailing - window.viewport
+	const barMonth = (scrollTop: number) => Number(sectionAt(layout, scrollTop + frame.handoff)!.key.split(':')[2])
+
+	it('lands every month so the bar names it, however far through it', () => {
+		for (const key of [monthKeyFor(2024, 5), monthKeyFor(2024, 3), monthKeyFor(2023, 12)]) {
+			for (const fraction of [0, 0.1, 0.34, 0.5, 0.99]) {
+				const target = scrollNamingMonth(layout, key, fraction, window)!
+				// The foot of the list can't scroll a late month to the top
+				if (target >= max) continue
+				expect(barMonth(target)).toBe(key)
+			}
+		}
+	})
+
+	it('only ever moves a landing on, never back, and by no more than a header', () => {
+		for (const fraction of [0, 0.2, 0.6]) {
+			const plain = scrollForMonth(layout, monthKeyFor(2024, 3), fraction, window)!
+			const named = scrollNamingMonth(layout, monthKeyFor(2024, 3), fraction, window)!
+			expect(named).toBeGreaterThanOrEqual(plain)
+			expect(named - plain).toBeLessThanOrEqual(HEADER_HEIGHT + 1)
+		}
+		expect(scrollNamingMonth(layout, monthKeyFor(2024, 4), 0, window)).toBeUndefined()
+	})
+
+	it('names the month the bar names, at every scroll position', () => {
+		for (let scrollTop = 0; scrollTop <= max; scrollTop += 7) {
+			expect(monthNamedAt(layout, scrollTop, frame)).toBe(barMonth(scrollTop))
+		}
+		expect(monthNamedAt(layoutOf([]), 0, frame)).toBeUndefined()
+	})
+
+	it('names the month the eye is on within a year, under years grouping', () => {
+		const years = layoutAt(groupItems({items, zoom: 'years', hasMore: false, language: 'en-US'}), 3, 120, 2, 16)
+		const target = rectOf(years, 14).y - frame.inset // a May row, under 2024's header
+		expect(monthNamedAt(years, target, frame)).toBe(monthKeyFor(2024, 5))
 	})
 })

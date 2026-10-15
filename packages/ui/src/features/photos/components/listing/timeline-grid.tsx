@@ -13,6 +13,7 @@ import {
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {FadedScroller} from '@/features/photos/components/listing/faded-scroller'
 import {TileCanvas, useDevicePixelRatio, type TileCanvasHandle} from '@/features/photos/components/listing/gpu'
 import {
@@ -34,6 +35,7 @@ import type {Frame} from '@/features/photos/components/listing/surface'
 import {ThumbnailQueue} from '@/features/photos/components/listing/thumbnail-queue'
 import {TileLayer} from '@/features/photos/components/listing/tile-layer'
 import {createTileLift} from '@/features/photos/components/listing/tile-lift'
+import {DateScrubber} from '@/features/photos/components/listing/time-rail/date-scrubber'
 import {monthsFromItems, railDomain} from '@/features/photos/components/listing/time-rail/rail-scale'
 import {
 	RAIL_HIDE_VIEWPORTS,
@@ -199,6 +201,10 @@ export function TimelineGrid({
 	const {inset, handoff} = frame
 	const {t, i18n} = useTranslation()
 	const isMobile = useIsMobile()
+	// The index a long scroll gets: the time rail, or on a phone's touch
+	// screen the scrubber under the thumb (see DateScrubber)
+	const isTouch = useIsTouchDevice()
+	const touchScrub = isMobile && isTouch
 	const reduceMotion = useReducedMotion() ?? false
 	const {zoom, tileSize: preferredTileSize, setTileSize, setGrid, setSection, pageSize} = usePhotosView()
 	const fixed = fixedTileSize !== undefined
@@ -269,7 +275,9 @@ export function TimelineGrid({
 	//
 	// Only listings long enough that scrolling is work get one (measured in
 	// viewports, below), and it replaces the scrollbar on that edge rather
-	// than fighting it for the pixels. Its domain is the library calendar when
+	// than fighting it for the pixels. A phone's is the date scrubber — the
+	// scroll indicator made something to hold — on the same gate, scale and
+	// seek. Its domain is the library calendar when
 	// this listing is the whole library — exact to the month before a single
 	// page beyond the first has loaded — and otherwise the loaded months plus
 	// a tail estimated from what remains, refining as pages land.
@@ -304,11 +312,15 @@ export function TimelineGrid({
 		// should carry the real domain, not a density guess that reformats a
 		// beat later — a slightly later fade-in over a visible snap.
 		const domainReady = librarySummary !== undefined || summaryFailed
-		const eligible = !isMobile && !fixed && domainReady && railBuckets.length > 0
+		// A phone-sized window with a mouse has neither: the rail is the
+		// desktop's, the scrubber is for a thumb, and the scrollbar is a mouse's
+		// own index (which the rail would hide). A grid of fixed tiles (a list
+		// beside the map) has neither down its narrow edge.
+		const eligible = (!isMobile || touchScrub) && !fixed && domainReady && railBuckets.length > 0
 		setShowRail((on) =>
 			on ? eligible && railViewports > RAIL_HIDE_VIEWPORTS : eligible && railViewports >= RAIL_SHOW_VIEWPORTS,
 		)
-	}, [isMobile, fixed, librarySummary, summaryFailed, railBuckets, railViewports])
+	}, [isMobile, touchScrub, fixed, librarySummary, summaryFailed, railBuckets, railViewports])
 
 	// The committed view. A new layout is adopted here, before paint, together
 	// with the scroll position that keeps the focal tile still and the row
@@ -362,6 +374,10 @@ export function TimelineGrid({
 	// one tile stays put through a whole gesture instead of drifting stop by stop
 	const anchorRef = useRef<Anchor | null>(null)
 	const adoptedAt = useRef(0)
+	// The last blend the canvas drew, so tiles coming back to the DOM at the
+	// seam fly from where the pixels actually were rather than from the stop
+	// the gesture started at, several column counts away
+	const drawnLayout = useRef<Layout | null>(null)
 	// Reflows are paced: a flick across the slider crosses many stops in a few
 	// frames, and every stop re-rasterizes each tile at its new size. Adopting
 	// the latest layout after a short beat instead lets the springs blend two
@@ -398,7 +414,21 @@ export function TimelineGrid({
 		const focal = focalRef.current ?? {y: defaultFocalY(current, height)}
 		focalRef.current = null
 		const last = anchorRef.current
-		const inGesture = last !== null && sinceLast < GESTURE_MS && view?.width === width && layout.indexOf.has(last.id)
+		// The gesture's anchor holds only while it still says what is on
+		// screen. Anything that moved the scroll since it was taken — the
+		// user's own scrolling, a landing from the rail, which splices page
+		// after page well inside the gesture's window — left it pointing at
+		// where the grid was, and a page landing now (the load-ahead under a
+		// fresh landing, the next page of a fast scroll) would put the grid
+		// back there: the jump back to the top. A pinch moves the anchor with
+		// its scroll, and a zoom takes a fresh one as it starts, so neither
+		// loses it. Within 2px, for scroll positions the browser rounds to
+		// device pixels.
+		const reference = drawnLayout.current ?? view?.layout
+		const lastAt = last && reference ? anchoredScrollTop(reference, last) : undefined
+		const onScreen = lastAt !== undefined && Math.abs(lastAt - current) < 2
+		const inGesture =
+			last !== null && onScreen && sinceLast < GESTURE_MS && view?.width === width && layout.indexOf.has(last.id)
 		const anchor = inGesture ? last : view ? findAnchor(view.layout, current, focal) : undefined
 		const anchored = anchor && anchoredScrollTop(layout, anchor)
 		const scrollTop = Math.max(0, Math.min(anchored ?? current, layout.total + endSpacer - height))
@@ -469,10 +499,6 @@ export function TimelineGrid({
 	useEffect(() => () => motion.stop(), [motion])
 	const rects = useRef<{tiles: Map<string, Slot>; headers: Map<string, Header>} | null>(null)
 	const appliedLayout = useRef<Layout | null>(null)
-	// The last blend the canvas drew, so tiles coming back to the DOM at the
-	// seam fly from where the pixels actually were rather than from the stop
-	// the gesture started at, several column counts away
-	const drawnLayout = useRef<Layout | null>(null)
 	useLayoutEffect(() => {
 		if (!view) return
 		const scroller = scrollerRef.current!
@@ -584,19 +610,29 @@ export function TimelineGrid({
 	// The layouts either side of the fractional column count a live gesture
 	// sits at. Two per frame, each a running sum over the sections, and only
 	// rebuilt when the gesture crosses a whole count.
-	const cacheRef = useRef<{timeline: typeof timeline; width: number; inset: number; at: Map<number, Layout>} | null>(
-		null,
-	)
+	const cacheRef = useRef<{
+		timeline: typeof timeline
+		width: number
+		inset: number
+		isMobile: boolean
+		at: Map<number, Layout>
+	} | null>(null)
 	const layoutOf = (count: number) => {
 		const cache = cacheRef.current
-		if (!cache || cache.timeline !== timeline || cache.width !== width || cache.inset !== inset) {
-			cacheRef.current = {timeline, width, inset, at: new Map()}
+		if (
+			!cache ||
+			cache.timeline !== timeline ||
+			cache.width !== width ||
+			cache.inset !== inset ||
+			cache.isMobile !== isMobile
+		) {
+			cacheRef.current = {timeline, width, inset, isMobile, at: new Map()}
 		}
 		const at = cacheRef.current!.at
 		const known = at.get(count)
 		if (known) return known
-		const size = tileSizeFor(width, count)
-		const built = layoutAt(timeline, count, size, tileGap(size), Math.max(0, inset - HEADER_HEIGHT))
+		const size = tileSizeFor(width, count, isMobile)
+		const built = layoutAt(timeline, count, size, tileGap(size, isMobile), Math.max(0, inset - HEADER_HEIGHT))
 		if (at.size > 4) at.clear()
 		at.set(count, built)
 		return built
@@ -693,7 +729,7 @@ export function TimelineGrid({
 			// (below), never committed
 			const whole = Math.round(Math.min(gesture.range.max, Math.max(gesture.range.min, moved.columns)))
 			const committed = viewRef.current
-			if (committed?.gpu && scroller && moved.live && tileSizeFor(width, whole) < bounds.min) {
+			if (committed?.gpu && scroller && moved.live && tileSizeFor(width, whole, isMobile) < bounds.min) {
 				const low = Math.floor(moved.columns)
 				const blended = blend(layoutOf(low), layoutOf(low + 1), moved.columns - low)
 				const anchor = anchorRef.current
@@ -708,7 +744,7 @@ export function TimelineGrid({
 				// Keep the settle inside the same gesture, so the anchor holds
 				adoptedAt.current = now
 			} else if (whole !== columns) {
-				setTileSize(tileSizeFor(width, whole))
+				setTileSize(tileSizeFor(width, whole, isMobile))
 			} else if (committed?.gpu && scroller && !moved.live && committed.layout === layout) {
 				// Let go at the stop it started from: the live frames moved the
 				// geometry and no new layout is coming, so put the committed one
@@ -873,11 +909,11 @@ export function TimelineGrid({
 
 	// The context died (see noteContextLoss for what a second one costs). The
 	// tiles spring up to the seam rather than leaving anyone looking at a blank
-	// page.
+	// page — for this session only: nobody chose that size, so it isn't stored.
 	const onContextLost = () => {
 		noteContextLoss()
 		setGpuFailed(true)
-		setTileSize(bounds.min)
+		setTileSize(bounds.min, {persist: false})
 	}
 
 	// What the actions bar drives and the lightbox measures. Republished only
@@ -915,21 +951,24 @@ export function TimelineGrid({
 		},
 		[gpu, setColumns, width, isMobile],
 	)
-	const tileRectOf = useCallback((id: string) => {
-		const scroller = scrollerRef.current
-		const current = viewRef.current
-		if (!scroller || !current) return null
-		const rect = tileRect(current.layout, id)
-		if (!rect) return null
-		const bounds = scroller.getBoundingClientRect()
-		return {
-			left: bounds.left + rect.x,
-			top: bounds.top + rect.y - scroller.scrollTop,
-			width: rect.size,
-			height: rect.size,
-			radius: tileRadius(rect.size),
-		}
-	}, [])
+	const tileRectOf = useCallback(
+		(id: string) => {
+			const scroller = scrollerRef.current
+			const current = viewRef.current
+			if (!scroller || !current) return null
+			const rect = tileRect(current.layout, id)
+			if (!rect) return null
+			const bounds = scroller.getBoundingClientRect()
+			return {
+				left: bounds.left + rect.x,
+				top: bounds.top + rect.y - scroller.scrollTop,
+				width: rect.size,
+				height: rect.size,
+				radius: tileRadius(rect.size, isMobile),
+			}
+		},
+		[isMobile],
+	)
 	// If the item's tile isn't fully in the band the eye can see — below the
 	// bar floating over the top — jump the scroll to centre it there. The
 	// caller is the lightbox mid-close, whose backdrop hides the jump; the
@@ -1042,7 +1081,7 @@ export function TimelineGrid({
 						// Corner radius follows the tile size, like the gap (see tileRadius)
 						style={{
 							height: view.layout.total + endSpacer,
-							['--umbrel-photos-tile-radius' as string]: `${tileRadius(view.layout.tile)}px`,
+							['--umbrel-photos-tile-radius' as string]: `${tileRadius(view.layout.tile, isMobile)}px`,
 						}}
 					>
 						{headers.map((header) => (
@@ -1118,19 +1157,32 @@ export function TimelineGrid({
 					</div>
 				)}
 			</FadedScroller>
-			{showRail && (
-				<TimeRail
-					buckets={railBuckets}
-					scrollerRef={scrollerRef}
-					contentRef={contentRef}
-					viewRef={viewRef}
-					frame={frame}
-					height={height}
-					endSpacer={endSpacer}
-					hasMore={hasMore}
-					seek={seek}
-				/>
-			)}
+			{showRail &&
+				(touchScrub ? (
+					<DateScrubber
+						buckets={railBuckets}
+						scrollerRef={scrollerRef}
+						contentRef={contentRef}
+						viewRef={viewRef}
+						frame={frame}
+						height={height}
+						endSpacer={endSpacer}
+						hasMore={hasMore}
+						seek={seek}
+					/>
+				) : (
+					<TimeRail
+						buckets={railBuckets}
+						scrollerRef={scrollerRef}
+						contentRef={contentRef}
+						viewRef={viewRef}
+						frame={frame}
+						height={height}
+						endSpacer={endSpacer}
+						hasMore={hasMore}
+						seek={seek}
+					/>
+				))}
 		</div>
 	)
 }
@@ -1182,9 +1234,11 @@ const GroupHeader = memo(function GroupHeader({
 }) {
 	const ref = useRegistration(header.key, registry)
 	return (
+		// Inset by the padding a phone's edge-to-edge grid gave up, so a date
+		// still lines up with the page's title over it (see ListingSurface)
 		<h2
 			ref={ref}
-			className='pointer-events-none absolute inset-x-0 flex items-end pb-2 text-17 leading-none font-semibold text-white/90'
+			className='pointer-events-none absolute inset-x-0 flex items-end px-[var(--umbrel-photos-gutter,0px)] pb-2 text-17 leading-none font-semibold text-white/90'
 			style={{top: header.top, height: HEADER_HEIGHT}}
 		>
 			{header.title}

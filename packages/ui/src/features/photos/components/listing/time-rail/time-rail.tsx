@@ -13,6 +13,7 @@ import {TbLoader} from 'react-icons/tb'
 
 import type {Frame} from '@/features/photos/components/listing/surface'
 import {
+	bucketIndexFor,
 	buildScale,
 	labelUnit,
 	monthAtRailY,
@@ -23,17 +24,19 @@ import {
 	pickYearLabels,
 	railYForMonth,
 	scrollForMonth,
-	scrollForTime,
 	timeAtFraction,
 	timeAtScroll,
 	yearMarks,
 	yearOf,
 	type MonthBucket,
 	type MonthKey,
-	type ScrollWindow,
 } from '@/features/photos/components/listing/time-rail/rail-scale'
+import {
+	useLanding,
+	type CommittedView,
+	type ElementRef,
+} from '@/features/photos/components/listing/time-rail/use-landing'
 import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
-import type {Layout} from '@/features/photos/components/listing/timeline-rows'
 import {cn} from '@/lib/utils'
 import {formatNumberI18n} from '@/utils/number'
 
@@ -70,9 +73,6 @@ const HIDE_AFTER_MS = 1200
 const MIN_TRACK = 160
 // A press that travels no further than this is a click, not a scrub
 const DRAG_SLOP_PX = 3
-// Landings: an eased scroll nearby; across anything longer than this many
-// viewports, a fade-through teleport — tweening 100k px is a smear, not motion
-const TWEEN_MAX_VIEWPORTS = 12
 
 // ── The lens ──
 // Hovering magnifies the pointer's neighbourhood the way the dock does:
@@ -92,24 +92,6 @@ const LENS_PUSH = 14
 const LENS_PUSH_PEAK = 0.7
 // Amplitude easing time constant: quick enough to feel liquid, no lag
 const LENS_EASE_MS = 80
-
-type CommittedView = {layout: Layout; height: number}
-type Ref<T> = {readonly current: T | null}
-
-// Keys descend: the first bucket at or below the month
-function bucketIndexFor(buckets: MonthBucket[], key: MonthKey): number {
-	if (buckets.length === 0) return 0
-	if (key >= buckets[0]!.key) return 0
-	if (key <= buckets[buckets.length - 1]!.key) return buckets.length - 1
-	let lo = 0
-	let hi = buckets.length - 1
-	while (lo < hi) {
-		const mid = (lo + hi) >> 1
-		if (buckets[mid]!.key <= key) hi = mid
-		else lo = mid + 1
-	}
-	return lo
-}
 
 // The Time Machine-style index down a long timeline's right edge: a thumb
 // marking where in time the viewport is, year ticks and labels, and a pill
@@ -131,9 +113,9 @@ export function TimeRail({
 	seek,
 }: {
 	buckets: MonthBucket[]
-	scrollerRef: Ref<HTMLDivElement>
-	contentRef: Ref<HTMLDivElement>
-	viewRef: Ref<CommittedView>
+	scrollerRef: ElementRef<HTMLDivElement>
+	contentRef: ElementRef<HTMLDivElement>
+	viewRef: ElementRef<CommittedView>
 	frame: Frame
 	height: number
 	endSpacer: number
@@ -218,14 +200,16 @@ export function TimeRail({
 	const dragRef = useRef<{startY: number; scrubbing: boolean} | null>(null)
 	const moveRaf = useRef(0)
 	const pendingY = useRef(0)
-	const pollRaf = useRef(0)
-	const tweenRef = useRef<{stop: () => void} | null>(null)
-	const timersRef = useRef<number[]>([])
 
-	const scrollWindow = useCallback(
-		(view: CommittedView): ScrollWindow => ({inset: frame.inset, viewport: view.height, trailing: endSpacer}),
-		[frame.inset, endSpacer],
-	)
+	const {scrollWindow, stopTween, jump} = useLanding({
+		scrollerRef,
+		contentRef,
+		viewRef,
+		inset: frame.inset,
+		endSpacer,
+		hasMore,
+		seek,
+	})
 
 	const wake = useCallback(() => {
 		setAwake(true)
@@ -234,11 +218,6 @@ export function TimeRail({
 	}, [])
 	// Announce the rail once when a listing that warrants it appears
 	useEffect(() => wake(), [wake])
-
-	const stopTween = useCallback(() => {
-		tweenRef.current?.stop()
-		tweenRef.current = null
-	}, [])
 
 	// ── The lens loop ──
 	// One frame: ease the amplitude toward its target, then write every
@@ -330,137 +309,6 @@ export function TimeRail({
 		}
 	}, [scrollerRef, syncThumb, wake])
 
-	// ── Landing ──
-	const tween = useCallback(
-		(target: number) => {
-			const scroller = scrollerRef.current
-			const view = viewRef.current
-			if (!scroller || !view) return
-			stopTween()
-			const from = scroller.scrollTop
-			const distance = Math.abs(target - from)
-			if (distance < 1) return
-			const duration = Math.min(650, 350 + (distance / Math.max(1, view.height)) * 30)
-			const started = performance.now()
-			let raf = 0
-			// The user's own input takes the scroll back mid-flight
-			const cancelOn = ['wheel', 'pointerdown', 'touchstart'] as const
-			const stop = () => {
-				cancelAnimationFrame(raf)
-				for (const type of cancelOn) scroller.removeEventListener(type, stop)
-			}
-			for (const type of cancelOn) scroller.addEventListener(type, stop, {passive: true})
-			const ease = (progress: number) => (progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2)
-			const step = (now: number) => {
-				const progress = Math.min(1, (now - started) / duration)
-				scroller.scrollTop = from + (target - from) * ease(progress)
-				if (progress < 1) raf = requestAnimationFrame(step)
-				else stop()
-			}
-			raf = requestAnimationFrame(step)
-			tweenRef.current = {stop}
-		},
-		[scrollerRef, viewRef, stopTween],
-	)
-
-	const later = useCallback((fn: () => void, ms: number) => {
-		timersRef.current.push(window.setTimeout(fn, ms))
-	}, [])
-
-	// Across a distance no tween survives: fade the grid through, jump, and
-	// let the commit mount the destination before fading back — arrivals then
-	// wash in as their thumbnails land, which is the transition
-	const teleport = useCallback(
-		(target: number) => {
-			const scroller = scrollerRef.current
-			const content = contentRef.current
-			if (!scroller) return
-			if (!content) {
-				scroller.scrollTop = target
-				return
-			}
-			content.style.transition = 'opacity 130ms ease-out'
-			content.style.opacity = '0'
-			later(() => {
-				scroller.scrollTop = target
-				requestAnimationFrame(() =>
-					requestAnimationFrame(() => {
-						content.style.transition = 'opacity 240ms ease-in'
-						content.style.opacity = '1'
-						later(() => {
-							content.style.transition = ''
-							content.style.opacity = ''
-						}, 260)
-					}),
-				)
-			}, 140)
-		},
-		[contentRef, scrollerRef, later],
-	)
-
-	const land = useCallback(
-		(target: number) => {
-			const scroller = scrollerRef.current
-			const view = viewRef.current
-			if (!scroller || !view) return
-			stopTween()
-			const distance = Math.abs(target - scroller.scrollTop)
-			if (reduceMotion || distance > TWEEN_MAX_VIEWPORTS * view.height) teleport(target)
-			else tween(target)
-		},
-		[reduceMotion, scrollerRef, viewRef, stopTween, teleport, tween],
-	)
-
-	// After a seek: the pages are in the cache but the grid adopts them on its
-	// own paced beat — poll the committed layout for the month, briefly. A
-	// seek that ran the list dry without finding the month ('exhausted': it
-	// was an estimate, or the filter skips it) has nothing further to wait
-	// for: land at the month's neighbour the moment the final pages commit,
-	// not after the full deadline.
-	const landOnMonth = useCallback(
-		(key: MonthKey, fraction: number, exhausted = false) => {
-			cancelAnimationFrame(pollRaf.current)
-			const deadline = performance.now() + 2000
-			const attempt = () => {
-				const view = viewRef.current
-				if (!view) return
-				const where = scrollWindow(view)
-				const target = scrollForMonth(view.layout, key, fraction, where)
-				if (target !== undefined) return land(target)
-				const settled = exhausted && !view.layout.hasMore
-				if (!settled && performance.now() < deadline) {
-					pollRaf.current = requestAnimationFrame(attempt)
-					return
-				}
-				// The listing turned out not to hold the month: its neighbour
-				const fallback = scrollForTime(view.layout, monthStartUtc(key + 1), where)
-				if (fallback !== undefined) land(fallback)
-			}
-			attempt()
-		},
-		[viewRef, scrollWindow, land],
-	)
-
-	const jump = useCallback(
-		(key: MonthKey, fraction: number) => {
-			const view = viewRef.current
-			if (!view) return
-			const where = scrollWindow(view)
-			const direct = scrollForMonth(view.layout, key, fraction, where)
-			if (direct !== undefined) return land(direct)
-			if (!hasMore) {
-				const nearest = scrollForTime(view.layout, monthStartUtc(key + 1), where)
-				if (nearest !== undefined) land(nearest)
-				return
-			}
-			seek.start(key, (outcome) => {
-				if (outcome === 'cancelled') return
-				landOnMonth(key, fraction, outcome === 'exhausted')
-			})
-		},
-		[viewRef, scrollWindow, land, hasMore, seek, landOnMonth],
-	)
-
 	// Wheel over the strip, attached by hand: React's root wheel listener is
 	// passive (the filmstrip pulls the same trick), and this one must claim
 	// the event — a trackpad pinch over the strip belongs to the grid's zoom,
@@ -497,37 +345,13 @@ export function TimeRail({
 		return () => strip.removeEventListener('wheel', onWheel)
 	}, [scrollerRef, seek.cancel])
 
-	// The user's own scroll or press during a seek means "never mind"
-	useEffect(() => {
-		if (!seek.busy) return
-		const scroller = scrollerRef.current
-		if (!scroller) return
-		const abandon = () => seek.cancel()
-		const on = ['wheel', 'pointerdown', 'touchstart'] as const
-		for (const type of on) scroller.addEventListener(type, abandon, {passive: true})
-		return () => {
-			for (const type of on) scroller.removeEventListener(type, abandon)
-		}
-	}, [seek, scrollerRef])
-
 	useEffect(
 		() => () => {
 			window.clearTimeout(hideTimer.current)
 			cancelAnimationFrame(moveRaf.current)
-			cancelAnimationFrame(pollRaf.current)
 			cancelAnimationFrame(lensRef.current.raf)
-			for (const timer of timersRef.current) window.clearTimeout(timer)
-			stopTween()
-			// A teleport interrupted by this unmount (a zoom-out crossing the
-			// rail's threshold mid-landing) must not strand the grid faded out:
-			// the content div outlives the rail, and its restore timers just died
-			const content = contentRef.current
-			if (content) {
-				content.style.transition = ''
-				content.style.opacity = ''
-			}
 		},
-		[stopTween, contentRef],
+		[],
 	)
 
 	// ── The pointer on the strip ──

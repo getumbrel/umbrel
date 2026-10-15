@@ -2,8 +2,9 @@ import type {Map as MapLibreMap} from 'maplibre-gl'
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react'
 import {useLocation, useSearchParams} from 'react-router-dom'
 
-import {clampTileSize, DEFAULT_TILE_SIZE} from '@/features/photos/components/listing/timeline-rows'
+import {clampTileSize, defaultTileSize} from '@/features/photos/components/listing/timeline-rows'
 import type {PhotoSubKind} from '@/features/photos/constants'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 
 export type Zoom = 'years' | 'months' | 'days'
 
@@ -114,7 +115,10 @@ type PhotosView = {
 	// Preferred tile width in px. The grid rounds it to whole columns for its
 	// width, so it's device independent; see TILE_SIZE
 	tileSize: number
-	setTileSize: (size: number) => void
+	// The user chose a size (a pinch, the slider, its keys): the one way the
+	// preference is ever written. `persist: false` is a size the app forces on
+	// this session alone (the canvas lost, see TimelineGrid), not a choice.
+	setTileSize: (size: number, options?: {persist?: boolean}) => void
 	grid: GridHandle | null
 	setGrid: (grid: GridHandle | null) => void
 	// Title of the timeline section at the top of the grid (null when there is
@@ -148,14 +152,20 @@ const PhotosViewContext = createContext<PhotosView | undefined>(undefined)
 
 // View state shared between the actions bar (which sets it) and the listing
 // (which reads it): the timeline zoom, the tile size and the search query.
-// Tile size is a device preference and lives in localStorage.
+// Tile size is a device preference and lives in localStorage — but only once
+// it has been chosen. Until then the size is the device's default, read at
+// the time (see TILE_SIZE.initial): a phone opens at three columns and a
+// desktop at 180px tiles, and a default that was written back on the first
+// render would freeze whichever the first visit happened to be — a desktop
+// window narrowed to a phone's width, say — into a choice nobody made.
 const TILE_SIZE_STORAGE_KEY = 'photos:tile-size'
-function readTileSize() {
+function readStoredTileSize() {
 	try {
 		const stored = localStorage.getItem(TILE_SIZE_STORAGE_KEY)
-		return stored === null ? DEFAULT_TILE_SIZE : clampTileSize(Number(stored))
+		const size = stored === null ? Number.NaN : Number(stored)
+		return Number.isFinite(size) ? clampTileSize(size) : null
 	} catch {
-		return DEFAULT_TILE_SIZE
+		return null
 	}
 }
 // Typing narrows the grid as it goes, but only once the keys pause for a
@@ -273,20 +283,26 @@ function useSearchState(): PhotosSearch {
 export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 	const [zoom, setZoom] = useState<Zoom>('months')
 	const search = useSearchState()
-	const [tileSize, setTileSizeState] = useState(readTileSize)
+	const isMobile = useIsMobile()
+	const [chosenTileSize, setChosenTileSize] = useState(readStoredTileSize)
+	const tileSize = chosenTileSize ?? defaultTileSize(isMobile)
 	const [pageSize] = useState(() => pageSizeFor(tileSize))
 	const [grid, setGrid] = useState<GridHandle | null>(null)
 	const [section, setSection] = useState<string | null>(null)
 	const [mapArea, setMapArea] = useState<MapArea | null>(null)
 	const [mapControls, setMapControls] = useState<MapControls | null>(null)
-	const setTileSize = useCallback((size: number) => setTileSizeState(clampTileSize(size)), [])
-	useEffect(() => {
+	// Written where the choice is made rather than by an effect watching the
+	// size, which would also store the default the first render shows
+	const setTileSize = useCallback((size: number, {persist = true}: {persist?: boolean} = {}) => {
+		const next = clampTileSize(size)
+		setChosenTileSize(next)
+		if (!persist) return
 		try {
-			localStorage.setItem(TILE_SIZE_STORAGE_KEY, String(Math.round(tileSize)))
+			localStorage.setItem(TILE_SIZE_STORAGE_KEY, String(Math.round(next)))
 		} catch {
 			// Private mode etc.: the preference just doesn't persist
 		}
-	}, [tileSize])
+	}, [])
 	const value = useMemo(
 		() => ({
 			zoom,

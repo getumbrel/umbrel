@@ -5,6 +5,7 @@ import {useTranslation} from 'react-i18next'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {FilterPills, PillButton} from '@/components/ui/edge-controls'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {CountText} from '@/features/photos/components/actions-bar/count-text'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
 import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
@@ -71,6 +72,11 @@ export function ActionsBar() {
 	const {section, mapArea, mapControls} = usePhotosView()
 	const searchEngaged = useSearchEngaged()
 	const isMobile = useIsMobile()
+	// A phone's grid zooms under the fingers — two columns to six in one
+	// pinch — so the − / + steps would only be a smaller, slower copy of the
+	// gesture taking the date's row. A window merely narrowed to a phone's
+	// width has a mouse, and keeps them.
+	const pinchZooms = useIsTouchDevice() && isMobile
 	const selection = usePhotosSelection()
 	const {albumId, sourceId} = useParams()
 	const reduceMotion = useReducedMotion() ?? false
@@ -147,7 +153,7 @@ export function ActionsBar() {
 						<motion.div key='covering' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
 							{isTimeline && (
 								<div className='hidden items-center gap-2 md:flex'>
-									<TimelineZoom />
+									<TimelineZoom slider={!pinchZooms} />
 								</div>
 							)}
 							<PillButton onClick={() => selection.done()}>{t('cancel')}</PillButton>
@@ -156,7 +162,7 @@ export function ActionsBar() {
 						<motion.div key='picking' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
 							{isTimeline && (
 								<div className='hidden items-center gap-2 md:flex'>
-									<TimelineZoom />
+									<TimelineZoom slider={!pinchZooms} />
 								</div>
 							)}
 							<PickingActions albumId={selection.pickingFor} />
@@ -169,8 +175,9 @@ export function ActionsBar() {
 						<motion.div key='page' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
 							{/* Phones: the page's controls live in the title row, so the
 							    date's row carries only the zoom steps, right over the grid
-							    they size (the slider folds to − / + below xl) */}
-							{isTimeline && (
+							    they size (the slider folds to − / + below xl) — and on a
+							    touch screen not even those: the date has the row */}
+							{isTimeline && !pinchZooms && (
 								<div className='flex items-center md:hidden'>
 									<ZoomSlider />
 								</div>
@@ -196,7 +203,7 @@ export function ActionsBar() {
 								</CollapseAside>
 								{isTimeline && (
 									<>
-										<ZoomSlider />
+										{!pinchZooms && <ZoomSlider />}
 										<CollapseAside hidden={searchEngaged}>
 											{albumId && (
 												<PillButton icon={Plus} onClick={() => selection.pickFor(albumId)}>
@@ -265,12 +272,12 @@ function GroupingPills() {
 
 // The grouping and the thumbnail size together (the picking face keeps them
 // side by side; the page face lays them out itself so the slider can stay up
-// while the search is open)
-function TimelineZoom() {
+// while the search is open) — the size only where it isn't a pinch
+function TimelineZoom({slider}: {slider: boolean}) {
 	return (
 		<>
 			<GroupingPills />
-			<ZoomSlider />
+			{slider && <ZoomSlider />}
 		</>
 	)
 }

@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react'
 
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 
 // The actions bar, in the scroller's coordinates: its height, the gap the
 // listing keeps below it (PhotosLayout's gap-3), and how far above it the
@@ -44,9 +45,13 @@ export type Frame = {inset: number; fadeFrom: number; fadeTo: number; handoff: n
 // desktop, out to the sheet's right edge (countering its padding: see
 // layouts/sheet.tsx) and down to its bottom edge beneath the dock — content
 // runs from the sidebar to the edge and the bar's controls float over it.
-// Phones and tablets keep the sheet's padding on both sides. A flex column,
-// so the box's negative top margin can't collapse through.
-export function ListingSurface({children}: {children: (frame: Frame) => ReactNode}) {
+// Phones and tablets keep the sheet's padding on both sides — unless the
+// listing `bleed`s: the timeline runs to the sheet's edges there, as iOS
+// Photos' grid does, and hands the padding it gave up to whatever inside it
+// should still line up with the page's title (its date headers) as
+// `--umbrel-photos-gutter`. A flex column, so the box's negative top margin
+// can't collapse through.
+export function ListingSurface({bleed = false, children}: {bleed?: boolean; children: (frame: Frame) => ReactNode}) {
 	const isMobile = useIsMobile()
 	const drop = useBarDrop()
 	const barBottom = (isMobile ? BAR_TOP.mobile : BAR_TOP.desktop) + BAR_HEIGHT
@@ -73,9 +78,15 @@ export function ListingSurface({children}: {children: (frame: Frame) => ReactNod
 			    title add 28), plus the pull-up → 136/164. Desktop: sheet
 			    100vh−60px, the box starts
 			    66px down (bar 10+44, gap 12) plus the pull-up → 134. The right
-			    margins mirror the sheet's md/xl padding (layouts/sheet.tsx). */}
+			    margins mirror the sheet's md/xl padding (layouts/sheet.tsx), and
+			    so do a bleeding listing's side margins below lg (its px-3 and
+			    md:px-[40px]). */}
 			<div
-				className='-mt-(--umbrel-photos-inset) h-[calc(100dvh-var(--sheet-top)-136px+var(--umbrel-photos-inset))] md:h-[calc(100dvh-var(--sheet-top)-164px+var(--umbrel-photos-inset))] lg:-mr-10 lg:h-[calc(100vh-134px+var(--umbrel-photos-inset))] xl:-mr-[60px]'
+				className={cn(
+					'-mt-(--umbrel-photos-inset) h-[calc(100dvh-var(--sheet-top)-136px+var(--umbrel-photos-inset))] md:h-[calc(100dvh-var(--sheet-top)-164px+var(--umbrel-photos-inset))] lg:-mr-10 lg:h-[calc(100vh-134px+var(--umbrel-photos-inset))] xl:-mr-[60px]',
+					bleed &&
+						'max-lg:-mx-3 max-lg:[--umbrel-photos-gutter:12px] md:max-lg:-mx-10 md:max-lg:[--umbrel-photos-gutter:40px]',
+				)}
 				style={{['--umbrel-photos-inset' as string]: `${barBottom + BAR_GAP}px`}}
 			>
 				{children(frame)}
