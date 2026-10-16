@@ -73,6 +73,11 @@ describe('RAID storage mode', () => {
 		expect(initialTotalSpace).toBeGreaterThan(0)
 	})
 
+	test('creates the pool with the OpenZFS 2.3 feature set', async () => {
+		const compatibility = await umbreld.vm.ssh('zpool get -H -o value compatibility')
+		expect(compatibility.trim()).toBe('openzfs-2.3')
+	})
+
 	test('creates marker directory to verify data consistency', async () => {
 		await umbreld.client.files.createDirectory.mutate({path: '/Home/data-consistency-marker'})
 		const listing = await umbreld.client.files.list.query({path: '/Home'})

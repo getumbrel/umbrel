@@ -1457,9 +1457,12 @@ export default class Raid {
 		//   autotrim=on: Enable automatic TRIM for SSDs
 		//   autoexpand=on: Automatically expand pool when devices are replaced with larger ones
 		//   cachefile=none: Don't write to /etc/zfs/zpool.cache since it won't exist before we've mounted the pool
+		//   compatibility=openzfs-2.3: Only enable pool features OpenZFS 2.3 supports, so a pool created on a
+		//     release with newer ZFS can still be imported after an OTA rollback to a release with OpenZFS 2.3.
+		//     Only raise this when we deliberately opt in to newer pool features.
 		//   -m none: Don't mount the pool itself
 		this.logger.log(`Creating ZFS pool '${poolName}' (${topology}) with partitions: ${dataPartitions.join(', ')}`)
-		await $`zpool create -f -o ashift=12 -o autotrim=on -o autoexpand=on -o cachefile=none -m none ${poolName} ${vdevSpec}`
+		await $`zpool create -f -o ashift=12 -o autotrim=on -o autoexpand=on -o cachefile=none -o compatibility=openzfs-2.3 -m none ${poolName} ${vdevSpec}`
 		this.logger.log(`ZFS pool '${poolName}' created successfully`)
 	}
 
