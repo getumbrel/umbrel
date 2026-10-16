@@ -217,7 +217,7 @@ function startNext() {
 	loaded = 0
 	syncPreview()
 
-	const query = new URLSearchParams({name: file.name})
+	const query = new URLSearchParams({name: file.name, lastModified: String(file.lastModified)})
 	if (albumId) query.set('album', albumId)
 	const xhr = new XMLHttpRequest()
 	request = xhr
