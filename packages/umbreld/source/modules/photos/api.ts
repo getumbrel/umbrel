@@ -426,6 +426,21 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 			response.setHeader('Connection', 'close')
 			return response.status(400).json({error: '[photos-album-not-found]'})
 		}
+		const rawSourceCreationDate =
+			typeof request.query.lastModified === 'string'
+				? request.query.lastModified
+				: request.get('X-Umbrel-Photo-Creation-Date-Ms')
+		const sourceCreationDate = rawSourceCreationDate === undefined ? undefined : Number(rawSourceCreationDate)
+		if (
+			rawSourceCreationDate !== undefined &&
+			(!/^-?\d+$/.test(rawSourceCreationDate) ||
+				!Number.isSafeInteger(sourceCreationDate) ||
+				sourceCreationDate! < MIN_PHOTO_CREATION_DATE ||
+				sourceCreationDate! > MAX_PHOTO_CREATION_DATE)
+		) {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'invalid lastModified'})
+		}
 		try {
 			const id = accountId(response)
 			let importStatus: 'imported' | 'duplicate' | undefined
@@ -434,7 +449,12 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 				collision: 'keep-both',
 				calculateBlake3: true,
 				onBeforePublish: async (blake3) => {
-					const status = await umbreld.photos.prepareUpload(id, blake3, albumId)
+					const status = await umbreld.photos.prepareUpload(
+						id,
+						blake3,
+						albumId,
+						...(sourceCreationDate === undefined ? [] : [sourceCreationDate]),
+					)
 					if (status === 'duplicate') {
 						importStatus = status
 						return 'skip'
@@ -449,6 +469,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 						published.blake3,
 						published.revision,
 						albumId,
+						...(sourceCreationDate === undefined ? [] : [sourceCreationDate]),
 					)
 				},
 			})

@@ -892,8 +892,8 @@ export default class Photos {
 		return this.#umbreld.files.fileIndex.photosResolveLiveCompanion(accountId, id)
 	}
 
-	async prepareUpload(accountId: string, hash: Buffer, albumId?: string) {
-		const result = await this.#umbreld.files.fileIndex.photosPrepareUpload(accountId, hash, albumId)
+	async prepareUpload(accountId: string, hash: Buffer, albumId?: string, sourceCreationDate?: number) {
+		const result = await this.#umbreld.files.fileIndex.photosPrepareUpload(accountId, hash, albumId, sourceCreationDate)
 		if (result.status === 'duplicate') this.#changed(accountId)
 		return result.status
 	}
@@ -904,6 +904,7 @@ export default class Photos {
 		hash: Buffer,
 		revision: PublishedFileRevision,
 		albumId?: string,
+		sourceCreationDate?: number,
 	) {
 		const result = await this.#umbreld.files.fileIndex.photosRegisterUpload(
 			accountId,
@@ -911,6 +912,7 @@ export default class Photos {
 			hash,
 			revision,
 			albumId,
+			sourceCreationDate,
 		)
 		this.#changed(accountId)
 		return result.status

@@ -230,6 +230,78 @@ describe('Photos HTTP account boundaries', () => {
 		)
 	})
 
+	test('publishes and registers an upload with lastModified query parameter', async () => {
+		prepareUpload.mockResolvedValueOnce('new')
+		const response = await got(`${origin}/api/photos/upload?name=modified.png&album=album&lastModified=1431441120000`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer member'},
+			body: 'screenshot png',
+		})
+		expect(JSON.parse(response.body)).toStrictEqual({status: 'imported'})
+		expect(prepareUpload).toHaveBeenCalledWith(
+			'member',
+			expect.objectContaining({length: 32}),
+			'album',
+			1431441120000,
+		)
+		expect(registerUpload).toHaveBeenCalledWith(
+			'member',
+			nodePath.join(directory, 'member-home', 'Photos', 'modified.png'),
+			expect.objectContaining({length: 32}),
+			expect.objectContaining({
+				inode: expect.any(String),
+				size: 14,
+				modifiedNs: expect.any(String),
+				ctimeNs: expect.any(String),
+			}),
+			'album',
+			1431441120000,
+		)
+	})
+
+	test('publishes and registers an upload with X-Umbrel-Photo-Creation-Date-Ms header', async () => {
+		prepareUpload.mockResolvedValueOnce('new')
+		const response = await got(`${origin}/api/photos/upload?name=header.png`, {
+			method: 'POST',
+			headers: {
+				Authorization: 'Bearer member',
+				'X-Umbrel-Photo-Creation-Date-Ms': '1431441120000',
+			},
+			body: 'header bytes',
+		})
+		expect(JSON.parse(response.body)).toStrictEqual({status: 'imported'})
+		expect(prepareUpload).toHaveBeenCalledWith(
+			'member',
+			expect.objectContaining({length: 32}),
+			undefined,
+			1431441120000,
+		)
+		expect(registerUpload).toHaveBeenCalledWith(
+			'member',
+			nodePath.join(directory, 'member-home', 'Photos', 'header.png'),
+			expect.objectContaining({length: 32}),
+			expect.objectContaining({
+				inode: expect.any(String),
+				size: 12,
+				modifiedNs: expect.any(String),
+				ctimeNs: expect.any(String),
+			}),
+			undefined,
+			1431441120000,
+		)
+	})
+
+	test('rejects uploads with invalid lastModified values', async () => {
+		const response = await got(`${origin}/api/photos/upload?name=bad-date.png&lastModified=invalid-timestamp`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer member'},
+			body: 'bad date bytes',
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(JSON.parse(response.body)).toStrictEqual({error: 'invalid lastModified'})
+	})
+
 	test('rejects unsupported uploads before consuming them', async () => {
 		const response = await got(`${origin}/api/photos/upload?name=notes.txt`, {
 			method: 'POST',
