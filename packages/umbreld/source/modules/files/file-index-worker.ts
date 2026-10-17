@@ -183,7 +183,12 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 		case 'ensureThumbnail':
 			return index.ensureThumbnail(stringArg(args), thumbnailVariantArg(args, 1))
 		case 'photosPrepareUpload':
-			return index.photosPrepareUpload(stringArg(args), bufferArg(args, 1), optionalStringArg(args, 2))
+			return index.photosPrepareUpload(
+				stringArg(args),
+				bufferArg(args, 1),
+				optionalStringArg(args, 2),
+				optionalNumberArg(args, 3),
+			)
 		case 'photosRegisterUpload':
 			return index.photosRegisterUpload(
 				stringArg(args),
@@ -191,6 +196,7 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 				bufferArg(args, 2),
 				contentFingerprintArg(args, 3),
 				optionalStringArg(args, 4),
+				optionalNumberArg(args, 5),
 			)
 		case 'photosUpsertBackupSource':
 			return index.photosUpsertBackupSource(stringArg(args), stringArg(args, 1), stringArg(args, 2), numberArg(args, 3))

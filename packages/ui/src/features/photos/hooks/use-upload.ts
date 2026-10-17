@@ -219,9 +219,15 @@ function startNext() {
 
 	const query = new URLSearchParams({name: file.name})
 	if (albumId) query.set('album', albumId)
+	if (typeof file.lastModified === 'number' && Number.isFinite(file.lastModified)) {
+		query.set('lastModified', String(Math.trunc(file.lastModified)))
+	}
 	const xhr = new XMLHttpRequest()
 	request = xhr
 	xhr.open('POST', `/api/photos/upload?${query}`)
+	if (typeof file.lastModified === 'number' && Number.isFinite(file.lastModified)) {
+		xhr.setRequestHeader('X-Umbrel-Photo-Creation-Date-Ms', String(Math.trunc(file.lastModified)))
+	}
 	const authorization = dashboardAuthHeaders().Authorization
 	if (authorization) xhr.setRequestHeader('Authorization', authorization)
 

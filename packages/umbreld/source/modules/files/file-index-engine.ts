@@ -1678,6 +1678,7 @@ export default class FileIndexEngine {
 		hash: Buffer,
 		expectedRevision: PublishedFileRevision,
 		albumId?: string,
+		sourceCreationDate?: number,
 	) {
 		this.#requirePhotos()
 		await this.reconcilePath(systemPath)
@@ -1686,7 +1687,13 @@ export default class FileIndexEngine {
 		await this.#enrichment.attachKnownContentHash(entry.id, hash, expectedRevision)
 		return this.#mutate((database) => {
 			const register = database.transaction(() =>
-				this.#photos.registerUpload(this.#photosDatabase(database), accountId, entry.id, albumId),
+				this.#photos.registerUpload(
+					this.#photosDatabase(database),
+					accountId,
+					entry.id,
+					albumId,
+					sourceCreationDate,
+				),
 			)
 			return register.immediate()
 		})
@@ -1824,11 +1831,11 @@ export default class FileIndexEngine {
 		}
 	}
 
-	async photosPrepareUpload(accountId: string, hash: Buffer, albumId?: string) {
+	async photosPrepareUpload(accountId: string, hash: Buffer, albumId?: string, sourceCreationDate?: number) {
 		this.#requirePhotos()
 		return this.#mutate((database) => {
 			const prepare = database.transaction(() =>
-				this.#photos.prepareUpload(this.#photosDatabase(database), accountId, hash, albumId),
+				this.#photos.prepareUpload(this.#photosDatabase(database), accountId, hash, albumId, sourceCreationDate),
 			)
 			return prepare.immediate()
 		})

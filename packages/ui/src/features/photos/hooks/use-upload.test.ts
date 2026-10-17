@@ -22,13 +22,17 @@ class FakeXHR {
 	aborted = false
 	responseText = ''
 
+	headers: Record<string, string> = {}
+
 	constructor() {
 		FakeXHR.instances.push(this)
 	}
 	open(_method: string, url: string) {
 		this.url = url
 	}
-	setRequestHeader() {}
+	setRequestHeader(name: string, value: string) {
+		this.headers[name] = value
+	}
 	send(body: unknown) {
 		this.sent = body
 	}
@@ -99,6 +103,18 @@ describe('photosUploads', () => {
 		expect(photosUploads.snapshot().currentPreview).toBe('blob:a.png')
 		last().respond(200)
 		expect(revoked).toContain('blob:a.png')
+	})
+
+	it('includes lastModified in upload query parameters and headers', () => {
+		const file = new File([new Uint8Array(100)], 'photo.png', {
+			type: 'image/png',
+			lastModified: 1431441120000,
+		})
+		photosUploads.enqueue([file])
+		expect(last().url).toContain('lastModified=1431441120000')
+		expect(last().headers['X-Umbrel-Photo-Creation-Date-Ms']).toBe('1431441120000')
+		last().respond(200)
+		expect(photosUploads.snapshot().status).toBe('idle')
 	})
 
 	it('pause freezes the bar and re-sends the file on resume', () => {

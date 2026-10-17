@@ -364,9 +364,11 @@ of these URLs from item ids — API responses carry no URL fields.
 - `GET /api/photos/download?ticket=…` — one selected item is returned as a
   file attachment; several are returned as a flat zip stream. Every item is
   re-authorized for the ticket's account when the HTTP request is handled.
-- `POST /api/photos/upload?name=IMG_1234.jpg&album=<id>` — body = the bytes, one
+- `POST /api/photos/upload?name=IMG_1234.jpg&album=<id>&lastModified=<ms>` — body = the bytes, one
   file per request; `album` optional, validated before the bytes stream, files the
-  item on success. The complete hidden temporary file is BLAKE3-hashed and
+  item on success. `lastModified` optional epoch ms timestamp (or
+  `X-Umbrel-Photo-Creation-Date-Ms` header), used as fallback capture date for media
+  without embedded capture dates. The complete hidden temporary file is BLAKE3-hashed and
   checked for an account-local duplicate before it is published into the
   library; duplicate bytes are discarded without creating a visible pathname.
   2xx answers `{status: 'imported' | 'duplicate'}`, and the upload island reports

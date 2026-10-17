@@ -632,7 +632,13 @@ export default class PhotosRepository {
 		).map(({owner_id}) => owner_id)
 	}
 
-	registerUpload(database: Database, accountId: string, entryId: number, albumId?: string) {
+	registerUpload(
+		database: Database,
+		accountId: string,
+		entryId: number,
+		albumId?: string,
+		sourceCreationDate?: number,
+	) {
 		if (albumId && !this.#albumExists(database, accountId, albumId)) throw new Error('[photos-album-not-found]')
 		const uploaded = database
 			.prepare(
@@ -644,7 +650,7 @@ export default class PhotosRepository {
 			)
 			.get(entryId, accountId) as {blake3: Buffer} | undefined
 		if (!uploaded) throw new Error('Uploaded Photos item was not indexed')
-		if (this.#ensureContentState(database, accountId, uploaded.blake3)) {
+		if (this.#ensureContentState(database, accountId, uploaded.blake3, sourceCreationDate)) {
 			this.#refreshEffectiveTakenAt(database, accountId, [uploaded.blake3])
 		}
 		if (albumId) this.#addAlbumHash(database, accountId, albumId, uploaded.blake3)
@@ -652,7 +658,7 @@ export default class PhotosRepository {
 		return {status: 'imported' as const, itemId: id, uploadedItemId: id}
 	}
 
-	prepareUpload(database: Database, accountId: string, hash: Buffer, albumId?: string) {
+	prepareUpload(database: Database, accountId: string, hash: Buffer, albumId?: string, sourceCreationDate?: number) {
 		if (albumId && !this.#albumExists(database, accountId, albumId)) throw new Error('[photos-album-not-found]')
 		this.#ensureSource(database, accountId)
 		const duplicate = database
@@ -671,7 +677,7 @@ export default class PhotosRepository {
 			)
 			.get(accountId, hash)
 		if (!duplicate) return {status: 'new' as const}
-		if (this.#ensureContentState(database, accountId, hash)) {
+		if (this.#ensureContentState(database, accountId, hash, sourceCreationDate)) {
 			this.#refreshEffectiveTakenAt(database, accountId, [hash])
 		}
 		if (albumId) this.#addAlbumHash(database, accountId, albumId, hash)
@@ -1323,17 +1329,19 @@ export default class PhotosRepository {
 		return {phase: 'ready', completed, total, percentage: 100}
 	}
 
-	#ensureContentState(database: Database, accountId: string, hash: Buffer) {
+	#ensureContentState(database: Database, accountId: string, hash: Buffer, sourceCreatedAt?: number) {
 		const sourceId = this.#ensureSource(database, accountId)
 		return (
 			database
 				.prepare(
 					`INSERT INTO umbrel.photos_content_state(
-						account_id, content_hash, source_id, is_favorite, imported_at
-					) VALUES (?, ?, ?, 0, ?)
-					ON CONFLICT(account_id, content_hash) DO NOTHING`,
+						account_id, content_hash, source_id, is_favorite, imported_at, source_created_at
+					) VALUES (?, ?, ?, 0, ?, ?)
+					ON CONFLICT(account_id, content_hash) DO UPDATE SET
+						source_created_at = excluded.source_created_at
+					WHERE photos_content_state.source_created_at IS NULL AND excluded.source_created_at IS NOT NULL`,
 				)
-				.run(accountId, hash, sourceId, Date.now()).changes > 0
+				.run(accountId, hash, sourceId, Date.now(), sourceCreatedAt ?? null).changes > 0
 		)
 	}
 

@@ -381,6 +381,7 @@ export default class FileIndex {
 		hash: Buffer,
 		expectedRevision: PublishedFileRevision,
 		albumId?: string,
+		sourceCreationDate?: number,
 	) {
 		return this.#request<{status: 'imported'; itemId: string; uploadedItemId: string}>('photosRegisterUpload', [
 			accountId,
@@ -388,6 +389,7 @@ export default class FileIndex {
 			hash,
 			expectedRevision,
 			albumId,
+			sourceCreationDate,
 		])
 	}
 
@@ -429,11 +431,12 @@ export default class FileIndex {
 		>('photosConfirmedBackupResources', [accountId, sourceId, resourceKeys])
 	}
 
-	async photosPrepareUpload(accountId: string, hash: Buffer, albumId?: string) {
+	async photosPrepareUpload(accountId: string, hash: Buffer, albumId?: string, sourceCreationDate?: number) {
 		return this.#request<{status: 'new'} | {status: 'duplicate'; itemId: string}>('photosPrepareUpload', [
 			accountId,
 			hash,
 			albumId,
+			sourceCreationDate,
 		])
 	}
 

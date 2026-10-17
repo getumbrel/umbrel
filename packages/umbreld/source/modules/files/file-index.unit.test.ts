@@ -1989,6 +1989,39 @@ test('preflights Photos upload duplicates without publishing or rereading the fi
 	photos.close()
 })
 
+test('uses client source creation date as fallback takenAt for uploads without EXIF', async () => {
+	const digest = Buffer.alloc(32, 0x88)
+	const hashFile = vi.fn(async () => digest)
+	const extractMediaMetadata = vi.fn(async () => ({kind: 'photo' as const, width: 800, height: 600}))
+	const {index, homeDirectory, dataDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {hashFile, extractMediaMetadata},
+	})
+	const screenshot = nodePath.join(homeDirectory, 'screenshot.png')
+	await writeFile(screenshot, 'screenshot bytes')
+	await index.reconcileRoot('/Home', 'photos-upload-fallback')
+	await index.initializePhotos('owner')
+
+	const revision = await contentRevision(screenshot)
+	const clientLastModified = 1431441120000
+	const upload = await index.photosRegisterUpload('owner', screenshot, digest, revision, undefined, clientLastModified)
+	expect(upload).toMatchObject({status: 'imported'})
+
+	const photos = new BetterSqlite3(nodePath.join(dataDirectory, 'umbrel.db'))
+	const contentState = photos
+		.prepare('SELECT source_created_at, effective_taken_at FROM photos_content_state WHERE account_id = ? AND content_hash = ?')
+		.get('owner', digest) as {source_created_at: number; effective_taken_at: number}
+	expect(contentState.source_created_at).toBe(clientLastModified)
+	expect(contentState.effective_taken_at).toBe(clientLastModified)
+	photos.close()
+
+	const item = await index.photosGetItem('owner', upload.itemId)
+	expect(item).toMatchObject({
+		id: upload.itemId,
+		takenAt: clientLastModified,
+		createdAt: clientLastModified,
+	})
+})
+
 test('does not deduplicate uploads against missing or invalidated durable Photos rows', async () => {
 	const oldDigest = Buffer.alloc(32, 0x72)
 	const newDigest = Buffer.alloc(32, 0x73)
