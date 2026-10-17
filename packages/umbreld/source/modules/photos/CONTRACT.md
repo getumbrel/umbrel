@@ -357,6 +357,10 @@ of these URLs from item ids — API responses carry no URL fields.
 
 - `GET /api/photos/original/:id` — the original bytes; range requests for video.
   `?download` switches to attachment disposition.
+- `GET /api/photos/video/:id` — browser-compatible video stream; range requests for playback.
+  If the video's codec and container are natively supported by modern browsers, streams
+  the original file directly; otherwise transcodes on-demand to web-compatible H.264/AAC
+  MP4 and caches the artifact.
 - `GET /api/photos/live/:id` — a live pair's motion clip; only for items with
   `subKind: 'live'`, NOT_FOUND otherwise. Range requests like the original.
 - `photos.items.createDownload({ids})` returns a short-lived, account-bound,

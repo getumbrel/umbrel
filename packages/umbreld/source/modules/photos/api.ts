@@ -3,11 +3,14 @@
 //
 //   GET  /api/photos/thumb/:id?s=192|512|1280
 //   GET  /api/photos/original/:id[?download]
+//   GET  /api/photos/video/:id
 //   GET  /api/photos/live/:id
 //   GET  /api/photos/download?ticket=…
 //   POST /api/photos/upload?name=IMG_1234.jpg&album=<id> (browser import)
 //   POST /api/photos/upload + X-Umbrel-Photo-Backup-* headers (PhotoKit backup)
 //
+import {constants as fsConstants} from 'node:fs'
+import {open as openFile} from 'node:fs/promises'
 import nodePath from 'node:path'
 import {pipeline} from 'node:stream/promises'
 
@@ -245,7 +248,10 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 		let authorization: Promise<Principal> | undefined
 		if (request.method === 'GET' && path.startsWith('/thumb/')) {
 			authorization = authorizeHttpRequest(umbreld, request, 'file-thumbnail', path)
-		} else if (request.method === 'GET' && (path.startsWith('/original/') || path.startsWith('/live/'))) {
+		} else if (
+			request.method === 'GET' &&
+			(path.startsWith('/original/') || path.startsWith('/video/') || path.startsWith('/live/'))
+		) {
 			authorization = authorizeHttpRequest(umbreld, request, 'file-view', path)
 		} else if (request.method === 'GET' && path === '/download') {
 			authorization = authorizeHttpRequest(umbreld, request, 'file-download', path)
@@ -270,7 +276,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 	async function resolveItemId(id: string, response: express.Response) {
 		const item = await umbreld.photos.resolveItem(accountId(response), id)
 		if (!item) throw new Error('[photos-item-not-found]')
-		return {virtualPath: item.path}
+		return {virtualPath: item.path, id: item.id}
 	}
 
 	function resolveItem(request: express.Request, response: express.Response) {
@@ -309,6 +315,38 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 			await pipeline(file.handle.createReadStream({autoClose: false, start: range.start, end: range.end}), response)
 		} finally {
 			await file.handle.close().catch(() => {})
+		}
+	}
+
+	async function streamSystemFile(
+		systemPath: string,
+		filename: string,
+		request: express.Request,
+		response: express.Response,
+		{contentAddressed = false}: {contentAddressed?: boolean} = {},
+	) {
+		const handle = await openFile(systemPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW)
+		try {
+			const stats = await handle.stat()
+			const size = Number(stats.size)
+			const range = requestedByteRange(request.get('Range'), size)
+			if (!range) {
+				response.setHeader('Content-Range', `bytes */${size}`)
+				return response.status(416).end()
+			}
+			if (contentAddressed) response.setHeader('Cache-Control', PRIVATE_IMMUTABLE_CACHE_CONTROL)
+			response.setHeader('Accept-Ranges', 'bytes')
+			response.setHeader('Content-Length', String(size === 0 ? 0 : range.end - range.start + 1))
+			response.setHeader('Last-Modified', new Date(Number(stats.mtimeMs)).toUTCString())
+			response.setHeader('Content-Type', lookupMimeType(filename) || 'video/mp4')
+			if (range.partial) {
+				response.status(206)
+				response.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${size}`)
+			}
+			if (size === 0) return response.end()
+			await pipeline(handle.createReadStream({autoClose: false, start: range.start, end: range.end}), response)
+		} finally {
+			await handle.close().catch(() => {})
 		}
 	}
 
@@ -351,6 +389,29 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 			)
 			return await streamAuthorizedFile(virtualPath, request, response, {
 				download: request.query.download !== undefined,
+				contentAddressed: true,
+			})
+		} catch {
+			return response.status(404).json({error: 'not found'})
+		}
+	})
+
+	// GET /api/photos/video/:id — browser-playable video stream, including video ranges.
+	// Serves the original file if already browser-safe, or transcodes to web-compatible MP4.
+	api.get('/video/:id', async (request, response) => {
+		try {
+			const {virtualPath, id} = await resolveItem(request, response)
+			const systemPath = await umbreld.files.virtualToSystemPath(virtualPath, accountId(response))
+			const playback = await umbreld.photos.resolvePlayableVideo(systemPath, id)
+			response.setHeader('X-Content-Type-Options', 'nosniff')
+			response.setHeader(
+				'Content-Security-Policy',
+				"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
+			)
+			if (playback.type === 'original') {
+				return await streamAuthorizedFile(virtualPath, request, response, {contentAddressed: true})
+			}
+			return await streamSystemFile(playback.systemPath, `${id}.mp4`, request, response, {
 				contentAddressed: true,
 			})
 		} catch {

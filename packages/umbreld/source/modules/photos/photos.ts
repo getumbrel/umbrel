@@ -13,6 +13,7 @@ import {OWNER_USER_ID} from '../user/constants.js'
 
 import type {PhotoFilter, PhotoScopeMode} from './types.js'
 import {hashFileRevision, type PublishedFileRevision} from '../files/file-index-enrichment.js'
+import {VideoTranscoder, type PlayableVideoResult} from './video-transcode.js'
 
 export type PhotoBackupSource = {
 	id: string
@@ -120,18 +121,32 @@ export default class Photos {
 	#backupSourceLockTails = new Map<string, Promise<void>>()
 	#backupShardLockTails = new Map<string, Promise<void>>()
 	#durableBackupShards = new Set<string>()
+	transcoder: VideoTranscoder
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		this.logger = umbreld.logger.createChildLogger('photos')
+		const transcodeLogger =
+			typeof this.logger.createChildLogger === 'function'
+				? this.logger.createChildLogger('transcode')
+				: this.logger
+		this.transcoder = new VideoTranscoder({
+			directory: nodePath.join(this.#umbreld.dataDirectory ?? '/tmp', 'photos', 'transcoded'),
+			logger: transcodeLogger,
+		})
 	}
 
 	get mediaDirectory() {
 		return nodePath.join(this.#umbreld.dataDirectory, 'photos', 'media')
 	}
 
+	get transcodedVideoDirectory() {
+		return this.transcoder.directory
+	}
+
 	async start() {
 		this.logger.log('Starting photos')
+		await this.transcoder.start()
 		await this.#umbreld.files.fileIndex.initializePhotos()
 		for (const removal of (await this.#umbreld.store.get('photos.backupSourceRemovals')) ?? []) {
 			try {
@@ -890,6 +905,10 @@ export default class Photos {
 
 	resolveLiveCompanion(accountId: string, id: string) {
 		return this.#umbreld.files.fileIndex.photosResolveLiveCompanion(accountId, id)
+	}
+
+	async resolvePlayableVideo(systemPath: string, contentHash: string): Promise<PlayableVideoResult> {
+		return this.transcoder.getPlayableVideo(systemPath, contentHash)
 	}
 
 	async prepareUpload(accountId: string, hash: Buffer, albumId?: string) {
