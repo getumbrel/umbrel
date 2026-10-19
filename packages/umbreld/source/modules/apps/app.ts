@@ -24,7 +24,7 @@ import {pullAll} from '../utilities/docker-pull.js'
 import {copyWithProgress} from '../utilities/copy-with-progress.js'
 import {removeDurably, renameDurably, syncDirectoryTree, writeFileDurably} from '../utilities/durable-filesystem.js'
 import FileStore from '../utilities/file-store.js'
-import {fillSelectedDependencies} from '../utilities/dependencies.js'
+import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.js'
 import type Umbreld from '../../index.js'
 import {
 	AppCustomMountSchema,
@@ -2123,34 +2123,15 @@ export default class App {
 				this.store.get('dependencies'),
 			])
 			const resolvedDependencies =
-				dependencies !== undefined ? fillSelectedDependencies(manifest.dependencies, dependencies) : undefined
-			if (dependencies !== undefined) {
-				const declaredDependencies = new Set(manifest.dependencies ?? [])
-				for (const dependencyId of Object.keys(dependencies)) {
-					if (!declaredDependencies.has(dependencyId)) {
-						throw new Error(
-							`[apps-settings-dependency-unsupported] App '${this.id}' does not declare '${dependencyId}'`,
-						)
-					}
-				}
-				const previousSelections = fillSelectedDependencies(manifest.dependencies, previousDependencies)
-				for (const [dependencyId, providerId] of Object.entries(resolvedDependencies!)) {
-					// Existing selections can outlive a provider or its implementation.
-					// Only validate changes so those stale choices remain repairable.
-					if (providerId === previousSelections[dependencyId]) continue
-					const provider = this.#umbreld.apps.instances.find((app) => app.id === providerId)
-					if (!provider || provider.state === 'installing' || provider.state === 'uninstalling') {
-						throw new Error(
-							`[apps-settings-dependency-not-installed] Dependency provider '${providerId}' is not installed`,
-						)
-					}
-					if (providerId !== dependencyId && !(await provider.readManifest()).implements?.includes(dependencyId)) {
-						throw new Error(
-							`[apps-settings-dependency-incompatible] App '${providerId}' does not implement '${dependencyId}'`,
-						)
-					}
-				}
-			}
+				dependencies !== undefined
+					? await resolveSelectedDependencies({
+							appId: this.id,
+							dependencies: manifest.dependencies,
+							selectedDependencies: dependencies,
+							previousSelections: fillSelectedDependencies(manifest.dependencies, previousDependencies),
+							providers: this.#umbreld.apps.instances,
+						})
+					: undefined
 			const dependencyDataRootPaths = resolvedDependencies
 				? await this.#umbreld.apps.getDataRootPathsForApps(Object.values(resolvedDependencies))
 				: []
@@ -2865,8 +2846,17 @@ export default class App {
 	async #setSelectedDependencies(selectedDependencies: Record<string, string>) {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
-		const {dependencies} = await this.readManifest()
-		const filledSelectedDependencies = fillSelectedDependencies(dependencies, selectedDependencies)
+		const [{dependencies}, previousDependencies] = await Promise.all([
+			this.readManifest(),
+			this.store.get('dependencies'),
+		])
+		const filledSelectedDependencies = await resolveSelectedDependencies({
+			appId: this.id,
+			dependencies,
+			selectedDependencies,
+			previousSelections: fillSelectedDependencies(dependencies, previousDependencies),
+			providers: this.#umbreld.apps.instances,
+		})
 		const success = await this.store.set('dependencies', filledSelectedDependencies)
 		if (success) await this.applySettingsChange()
 		return success

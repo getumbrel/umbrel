@@ -282,6 +282,69 @@ describe('install lifecycle', () => {
 	})
 })
 
+describe('install dependency alternatives', () => {
+	async function createInstall(alternatives?: Record<string, string>) {
+		const root = await fse.mkdtemp('/tmp/umbrel-install-alternatives-')
+		const template = `${root}/template`
+		await fse.ensureDir(template)
+		const {apps, umbreld} = createApps('2.0.0')
+		;(umbreld as any).dataDirectory = `${root}/data`
+		;(umbreld.appStore.getAppTemplateFilePath as ReturnType<typeof vi.fn>).mockResolvedValue(template)
+		vi.mocked(readManifestInDirectory).mockResolvedValue({
+			manifestVersion: '1.0.0',
+			port: 3000,
+			dependencies: ['bitcoin'],
+		} as AppManifest)
+		vi.mocked(appEnvironment).mockRejectedValue(new Error('stop focused install'))
+		const addProvider = (id: string, implement: string[], state = 'ready') => {
+			apps.instances.push({id, state, readManifest: async () => ({implements: implement})} as unknown as App)
+		}
+		const install = () => apps.install('test-app', {alternatives})
+		const appDataDirectory = `${root}/data/app-data/test-app`
+		return {apps, install, addProvider, appDataDirectory, cleanup: () => fse.remove(root)}
+	}
+
+	test.each([
+		['undeclared', {unknown: 'provider'}, '[apps-settings-dependency-unsupported]'],
+		['missing', {bitcoin: 'missing-provider'}, '[apps-settings-dependency-not-installed]'],
+		['path-like', {bitcoin: '../home/provider'}, '[apps-settings-dependency-not-installed]'],
+		['incompatible', {bitcoin: 'incompatible-provider'}, '[apps-settings-dependency-incompatible]'],
+		['installing', {bitcoin: 'installing-provider'}, '[apps-settings-dependency-not-installed]'],
+	])('rejects a %s alternative before creating the app data directory', async (_, alternatives, error) => {
+		const {install, addProvider, appDataDirectory, cleanup} = await createInstall(alternatives)
+		addProvider('incompatible-provider', [])
+		addProvider('installing-provider', ['bitcoin'], 'installing')
+		try {
+			await expect(install()).rejects.toThrow(error)
+			await expect(fse.pathExists(appDataDirectory)).resolves.toBe(false)
+			expect(appEnvironment).not.toHaveBeenCalled()
+		} finally {
+			await cleanup()
+		}
+	})
+
+	test('accepts an installed alternative that implements the dependency', async () => {
+		const {install, addProvider, cleanup} = await createInstall({bitcoin: 'bitcoin-knots'})
+		addProvider('bitcoin-knots', ['bitcoin'])
+		try {
+			await expect(install()).rejects.toThrow('stop focused install')
+			expect(appEnvironment).toHaveBeenCalledOnce()
+		} finally {
+			await cleanup()
+		}
+	})
+
+	test('does not require the default provider to be installed yet', async () => {
+		const {install, cleanup} = await createInstall({bitcoin: 'bitcoin'})
+		try {
+			await expect(install()).rejects.toThrow('stop focused install')
+			expect(appEnvironment).toHaveBeenCalledOnce()
+		} finally {
+			await cleanup()
+		}
+	})
+})
+
 describe('app data root status', () => {
 	test('distinguishes available storage, a missing data folder, and missing storage', async () => {
 		const {apps, resolveStorageDestination} = createApps('2.0.0')

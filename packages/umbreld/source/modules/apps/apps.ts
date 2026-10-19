@@ -17,7 +17,7 @@ import App, {
 	type AppSettingsUpdate,
 } from './app.js'
 import type {AppManifest} from './schema.js'
-import {fillSelectedDependencies} from '../utilities/dependencies.js'
+import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 import {assertManifestVersionCompatible} from './manifest-compatibility.js'
 import ImageCleanup, {removeUnusedImages} from './image-cleanup.js'
@@ -966,6 +966,17 @@ export default class Apps {
 		// the canonical machine definitions before installing so a later app
 		// cannot silently steal a stable port promised to a VM.
 		await this.#umbreld.machines.assertAppPortAvailable(manifest.port)
+		// Alternatives name the installed apps that satisfy this app's dependencies.
+		// Their ids become app-data directories whose exports the app script sources
+		// on the host, so only a validated provider may be stored. Default selections
+		// are not required to be installed yet so restores can reinstall in any order.
+		const dependencies = await resolveSelectedDependencies({
+			appId,
+			dependencies: manifest.dependencies,
+			selectedDependencies: alternatives,
+			previousSelections: fillSelectedDependencies(manifest.dependencies),
+			providers: this.instances,
+		})
 
 		this.logger.log(`Setting up data directory for ${appId}`)
 		const appDataDirectory = `${this.#umbreld.dataDirectory}/app-data/${appId}`
@@ -976,7 +987,6 @@ export default class Apps {
 
 		// Save reference to app instance
 		const app = new App(this.#umbreld, appId)
-		const dependencies = fillSelectedDependencies(manifest.dependencies, alternatives)
 		// The instance becomes reachable as soon as it is added below, so claim the
 		// lifecycle state before the first await. Settings and data-root changes must
 		// never observe a half-installed app as idle.
