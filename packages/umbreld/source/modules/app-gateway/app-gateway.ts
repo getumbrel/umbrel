@@ -199,16 +199,6 @@ export default class AppGateway {
 			xfwd: false,
 			proxyTimeout: this.#config.timeout,
 			followRedirects: false,
-			onProxyReq: (proxyRequest, request, response) => {
-				if (request.socket.remoteAddress === undefined) return response.end()
-				if (!this.#config.trustUpstream) {
-					proxyRequest.setHeader('x-forwarded-proto', request.protocol)
-					if (request.headers.host) proxyRequest.setHeader('x-forwarded-host', request.headers.host)
-					proxyRequest.setHeader('x-forwarded-for', request.socket.remoteAddress)
-				}
-				this.stripCookies(proxyRequest, request)
-			},
-			onProxyReqWs: (proxyRequest, request) => this.stripCookies(proxyRequest, request),
 			onError: (error, _request, response) => this.handleUpstreamError(response, error),
 		})
 	}
@@ -261,10 +251,10 @@ export default class AppGateway {
 		} catch {}
 	}
 
-	private stripCookies(proxyRequest: http.ClientRequest, request: http.IncomingMessage) {
+	private stripCookies(request: http.IncomingMessage) {
 		const cookies = stripAppGatewayCookies(request.headers.cookie)
-		if (cookies) proxyRequest.setHeader('cookie', cookies)
-		else proxyRequest.removeHeader('cookie')
+		if (cookies) request.headers.cookie = cookies
+		else delete request.headers.cookie
 	}
 
 	private async isAuthorized(request: express.Request | http.IncomingMessage) {
@@ -315,6 +305,17 @@ export default class AppGateway {
 			response.redirect(`${request.protocol}://${host}/app-auth?${searchParams}`)
 			return
 		}
+		if (request.socket.remoteAddress === undefined) return response.end()
+		// Rewrite the incoming request's headers, which http-proxy copies into the
+		// upstream request, rather than using onProxyReq. http-proxy skips that hook
+		// for requests with an Expect header, since Node has already sent their
+		// headers by then.
+		if (!this.#config.trustUpstream) {
+			request.headers['x-forwarded-proto'] = request.protocol
+			if (request.headers.host) request.headers['x-forwarded-host'] = request.headers.host
+			request.headers['x-forwarded-for'] = request.socket.remoteAddress
+		}
+		this.stripCookies(request)
 		this.#proxy(request, response, (error) => {
 			if (error) this.sendUpstreamError(response, error)
 		})
@@ -329,6 +330,7 @@ export default class AppGateway {
 		if (principal && !this.#umbreld.auth.registerAppSocket(principal, this.#config.appId, socket, appAccessRevision)) {
 			return
 		}
+		this.stripCookies(request)
 		this.#proxy.upgrade?.(request as express.Request, socket, head)
 	}
 }

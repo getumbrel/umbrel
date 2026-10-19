@@ -997,6 +997,7 @@ export default class LanIngress {
 					return
 				}
 			}
+			this.setForwardedHost(request)
 			middleware(request as any, response as any, (error?: unknown) => {
 				// Reset instead of an error response for the same reason as onError above.
 				this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
@@ -1033,6 +1034,7 @@ export default class LanIngress {
 						return
 					}
 				}
+				this.setForwardedHost(request)
 				middleware(request as any, response as any, (error?: unknown) => {
 					// Reset instead of an error response for the same reason as onError above.
 					this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
@@ -1068,6 +1070,11 @@ export default class LanIngress {
 			// X-Forwarded-For from an unconfigured proxy (Home Assistant returns 400),
 			// and the plain-HTTP raw forward path never carried it either.
 			xfwd: includeForwardedFor,
+			// The upstream target is always HTTP. Tell umbreld/app-auth/app-gateway
+			// whether the original browser request used HTTP or HTTPS. http-proxy
+			// applies these when it builds the upstream request, after xfwd, so unlike
+			// onProxyReq they also cover requests with an Expect header.
+			headers: {'x-forwarded-proto': originalProtocol},
 			logProvider: () => ({
 				log: this.logger.verbose,
 				debug: this.logger.verbose,
@@ -1075,18 +1082,6 @@ export default class LanIngress {
 				warn: this.logger.log,
 				error: this.logger.error,
 			}),
-			onProxyReq: (proxyRequest, request) => {
-				// The upstream target is always HTTP. Tell umbreld/app-auth/app-proxy
-				// whether the original browser request used HTTP or HTTPS.
-				proxyRequest.setHeader('x-forwarded-proto', originalProtocol)
-				if (request.headers.host) proxyRequest.setHeader('x-forwarded-host', request.headers.host)
-			},
-			onProxyReqWs: (proxyRequest, request) => {
-				// WebSocket upgrade requests bypass onProxyReq, so mirror the same
-				// forwarded headers for ws:// and wss:// traffic.
-				proxyRequest.setHeader('x-forwarded-proto', originalProtocol)
-				if (request.headers.host) proxyRequest.setHeader('x-forwarded-host', request.headers.host)
-			},
 			onProxyRes: (proxyResponse) => {
 				// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
 				// and HTTP fallback paths that are important for private local certs.
@@ -1108,7 +1103,17 @@ export default class LanIngress {
 	}
 
 	private attachProxyUpgradeHandler(server: http.Server, middleware: RequestHandler) {
-		server.on('upgrade', (request, socket, head) => middleware.upgrade?.(request as any, socket as net.Socket, head))
+		server.on('upgrade', (request, socket, head) => {
+			this.setForwardedHost(request)
+			middleware.upgrade?.(request as any, socket as net.Socket, head)
+		})
+	}
+
+	// Set on the incoming request, which http-proxy copies into the upstream one,
+	// rather than in onProxyReq. http-proxy skips that hook for requests with an
+	// Expect header, since Node has already sent their headers by then.
+	private setForwardedHost(request: http.IncomingMessage) {
+		if (request.headers.host) request.headers['x-forwarded-host'] = request.headers.host
 	}
 
 	private serverPort(server: net.Server | http.Server) {

@@ -9,14 +9,16 @@ import path from 'node:path'
 import {promisify} from 'node:util'
 
 import {afterAll, afterEach, beforeAll, expect, test, vi} from 'vitest'
+import {WebSocket, WebSocketServer} from 'ws'
 
 import AppGateway from '../app-gateway/app-gateway.js'
 import {APP_GATEWAY_HTTP_COOKIE_NAME, APP_GATEWAY_HTTPS_COOKIE_NAME} from '../auth/app-gateway-cookie.js'
+import {BROWSER_SESSION_COOKIE_NAMES} from '../auth/browser-session-cookie.js'
 import LanIngress from './lan-ingress.js'
 
 type ProxyFactory = {
 	createHttpProxyServer(port: number, protocol: 'http'): http.Server
-	createHttpsProxyServer(port: number): Promise<https.Server>
+	createHttpsProxyServer(port: number, options?: {includeForwardedFor?: boolean}): Promise<https.Server>
 }
 
 const logger = {createChildLogger: () => logger, verbose: () => {}, log: () => {}, error: () => {}}
@@ -97,6 +99,8 @@ async function createProxy(protocol: 'http' | 'https', upstreamPort: number, gat
 					return {accountId: 'owner'}
 				},
 				authorizeApp: async () => {},
+				appAccessRevision: 0,
+				registerAppSocket: () => true,
 			}
 			const server = new AppGateway({logger, auth} as never, {
 				appId: 'upload-test',
@@ -118,7 +122,8 @@ async function createProxy(protocol: 'http' | 'https', upstreamPort: number, gat
 		}
 		return protocol === 'http'
 			? ingress.createHttpProxyServer(upstreamPort, 'http')
-			: await ingress.createHttpsProxyServer(upstreamPort)
+			: // Match app routes, which don't add X-Forwarded-For in front of the gateway.
+				await ingress.createHttpsProxyServer(upstreamPort, {includeForwardedFor: !gateway})
 	} finally {
 		httpSpy.mockRestore()
 		httpsSpy.mockRestore()
@@ -208,5 +213,112 @@ test.each(routes)(
 			await expect(response).rejects.toMatchObject({code: 'ECONNRESET'})
 		}
 		expect(upstreamErrorCode).toBe('ERR_HTTP_REQUEST_TIMEOUT')
+	},
+)
+
+function post(protocol: 'http' | 'https', port: number, headers: http.OutgoingHttpHeaders) {
+	return new Promise<{status: number | undefined; body: string}>((resolve, reject) => {
+		const client = protocol === 'http' ? http : https
+		const request = client.request(
+			{hostname: '127.0.0.1', port, method: 'POST', agent: false, rejectUnauthorized: false, headers},
+			(response) => {
+				const chunks: Buffer[] = []
+				response.on('data', (data: Buffer) => chunks.push(data))
+				response.on('error', reject)
+				response.on('end', () => resolve({status: response.statusCode, body: Buffer.concat(chunks).toString()}))
+			},
+		)
+		request.on('error', reject)
+		// Like curl, wait for 100 Continue before sending the body.
+		if (headers.expect) request.once('continue', () => request.end(chunk))
+		else request.end(chunk)
+	})
+}
+
+// Only the app session cookie for the original protocol is valid, so the
+// gateway must know whether the request arrived over HTTPS to authenticate it.
+function sessionCookies(protocol: 'http' | 'https') {
+	const sessionCookie = protocol === 'https' ? APP_GATEWAY_HTTPS_COOKIE_NAME : APP_GATEWAY_HTTP_COOKIE_NAME
+	const otherSessionCookie = protocol === 'https' ? APP_GATEWAY_HTTP_COOKIE_NAME : APP_GATEWAY_HTTPS_COOKIE_NAME
+	return [
+		`${otherSessionCookie}=stale-session`,
+		...BROWSER_SESSION_COOKIE_NAMES.map((name) => `${name}=browser-session`),
+		'UMBREL_PROXY_TOKEN=legacy-token',
+		`${sessionCookie}=upload-session`,
+		'app-cookie=preserved',
+	].join('; ')
+}
+
+function forwardedHeaders(request: http.IncomingMessage) {
+	return JSON.stringify({
+		cookie: request.headers.cookie,
+		proto: request.headers['x-forwarded-proto'],
+		host: request.headers['x-forwarded-host'],
+	})
+}
+
+// http-proxy skips onProxyReq for requests with an Expect header, so check
+// what reaches the upstream both with and without one.
+test.each(routes.flatMap((route) => [false, true].map((expectContinue) => ({...route, expectContinue}))))(
+	'$protocol forwards the original protocol and strips Umbrel cookies (app gateway: $gateway, Expect: $expectContinue)',
+	async ({protocol, gateway, expectContinue}) => {
+		const upstream = http.createServer((request, response) => {
+			request.resume()
+			request.on('end', () => response.end(forwardedHeaders(request)))
+		})
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const port = await listen(proxy)
+		const response = await post(protocol, port, {
+			'content-length': chunk.length,
+			cookie: sessionCookies(protocol),
+			...(expectContinue ? {expect: '100-continue'} : {}),
+		})
+
+		expect(response.status).toBe(200)
+		const received = JSON.parse(response.body)
+		expect(received.proto).toBe(protocol)
+		expect(received.host).toBe(`127.0.0.1:${port}`)
+		if (gateway) expect(received.cookie).toBe('app-cookie=preserved')
+	},
+)
+
+test.each(routes)(
+	'$protocol forwards the original protocol and strips Umbrel cookies from WebSockets (app gateway: $gateway)',
+	async ({protocol, gateway}) => {
+		const upstream = http.createServer((request, response) => {
+			request.resume()
+			request.on('end', () => response.end())
+		})
+		const webSocketServer = new WebSocketServer({server: upstream})
+		webSocketServer.on('connection', (socket, request) => socket.send(forwardedHeaders(request)))
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const port = await listen(proxy)
+		const cookie = sessionCookies(protocol)
+
+		const openWebSocket = async () => {
+			const socket = new WebSocket(`${protocol === 'https' ? 'wss' : 'ws'}://127.0.0.1:${port}/`, {
+				headers: {cookie},
+				rejectUnauthorized: false,
+			})
+			socket.on('error', () => {})
+			const [message] = await once(socket, 'message')
+			socket.terminate()
+			const received = JSON.parse(message.toString())
+			// The gateway doesn't add forwarded headers to upgrades, but it can only
+			// authenticate an HTTPS one if LAN ingress forwarded the original protocol.
+			if (gateway) {
+				expect(received.cookie).toBe('app-cookie=preserved')
+			} else {
+				expect(received.proto).toBe(protocol)
+				expect(received.host).toBe(`127.0.0.1:${port}`)
+			}
+		}
+
+		await openWebSocket()
+		// http-proxy-middleware subscribes its own upgrade listener once a proxy
+		// has served an HTTP request, so check upgrades after one as well.
+		expect((await post(protocol, port, {'content-length': chunk.length, cookie})).status).toBe(200)
+		await openWebSocket()
+		webSocketServer.close()
 	},
 )
