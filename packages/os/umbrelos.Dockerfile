@@ -3,6 +3,8 @@ ARG DEBIAN_VERSION=trixie
 # and apt repositories independently.
 ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20261005
 ARG APT_SNAPSHOT_DATE=20261014
+# amd64 and generic arm64 take their kernel, ZFS, and firmware from trixie-backports (see umbrelos-base below), pinned to their own snapshot
+ARG KERNEL_BACKPORTS_SNAPSHOT_DATE=20261006T000000Z
 ARG BASE_VARIANT=""
 
 ARG DOCKER_VERSION=28.5.0
@@ -27,10 +29,6 @@ ARG NODE_SHA256_arm64=e0cc088cb4fb2e945d3d5c416c601e1101a15f73e0f024c9529b964d9f
 ARG KOPIA_VERSION=0.19.0
 ARG KOPIA_SHA256_amd64=c07843822c82ec752e5ee749774a18820b858215aabd7da448ce665b9b9107aa
 ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e75669210ed9
-
-ARG RTL8127_VERSION=11.015.00
-ARG RTL8127_COMMIT=d4efe6050041f7d794d6f31b288abbacef11ff63
-ARG RTL8127_SHA256=7ef27a4b5845ed011271217a8d5824f97ef6f1720ae304661b57bf0714010080
 
 ARG RCLONE_RELEASE=1.75.1
 ARG RCLONE_SHA256_amd64=982b5aa772841168f8e380f139e9e787b2a105403e32b94da8676a0e1c0a13ab
@@ -96,6 +94,7 @@ RUN skopeo copy --override-arch "${TARGETARCH}" docker://ghcr.io/getumbrel/tor@s
 FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base
 
 ARG APT_SNAPSHOT_DATE
+ARG KERNEL_BACKPORTS_SNAPSHOT_DATE
 ARG TARGETARCH
 ARG NVIDIA_CUDA_SUPPORT
 ARG NVIDIA_DRIVER_VERSION
@@ -104,22 +103,53 @@ COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
 
-# Install Linux kernel, firmware, and ZFS
-RUN apt-get install --yes \
-    zfs-dkms \
-    zfsutils-linux \
-    linux-headers-${TARGETARCH} \
-    linux-image-${TARGETARCH} \
-    firmware-linux
+# Install Linux kernel, firmware, and ZFS.
+#
+# Take the kernel and firmware from trixie-backports, which tracks newer
+# upstream kernels, so new hardware is supported without out-of-tree drivers.
+# trixie's 6.12 kernel only gets fixes. The backports firmware matches the
+# backports kernel. Generic arm64 (dev VMs) takes the same kernel so it matches
+# what amd64 devices run.
+#
+# ZFS stays on trixie for now. trixie's ZFS builds against kernels up to its
+# upstream Linux-Maximum (7.2 for 2.3.9) and refuses anything newer. To build
+# against newer kernels, add src:zfs-linux to the pin to take ZFS from
+# backports too.
+#
+# Pin the source packages that have to come from backports, rather than using
+# --target-release, which would also pull in whatever other backports packages
+# the install's dependencies happen to reach and then conflict with later
+# installs from trixie. Everything else stays on trixie. If a future backports
+# kernel, ZFS, or firmware needs another backports package, the install fails
+# and its source package needs adding here.
+#
+# Newer kernels depend on dracut | initramfs-tools, and apt picks dracut on
+# arm64. umbrelOS builds its initramfs with initramfs-tools, so install it
+# explicitly.
+RUN set -e; \
+    echo "deb http://snapshot.debian.org/archive/debian/${KERNEL_BACKPORTS_SNAPSHOT_DATE} trixie-backports main contrib non-free non-free-firmware" \
+        >/etc/apt/sources.list.d/trixie-backports.list; \
+    printf '%s\n' \
+        'Package: src:linux src:linux-signed-amd64 src:linux-signed-arm64 src:linux-base src:firmware-nonfree' \
+        'Pin: release n=trixie-backports' \
+        'Pin-Priority: 990' \
+        >/etc/apt/preferences.d/trixie-backports-kernel; \
+    apt-get update --yes; \
+    apt-get install --yes \
+        zfs-dkms \
+        zfsutils-linux \
+        linux-headers-${TARGETARCH} \
+        linux-image-${TARGETARCH} \
+        initramfs-tools \
+        firmware-linux
 
-# Install amd64-specific microcode, firmware, and network drivers
+# Install amd64-specific microcode and firmware
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ]; then \
     apt-get install --yes \
         intel-microcode \
         amd64-microcode \
         firmware-realtek \
-        r8125-dkms \
         firmware-iwlwifi \
         firmware-atheros; \
     fi
@@ -342,9 +372,6 @@ ARG NODE_SHA256_arm64
 ARG KOPIA_VERSION
 ARG KOPIA_SHA256_amd64
 ARG KOPIA_SHA256_arm64
-ARG RTL8127_VERSION
-ARG RTL8127_COMMIT
-ARG RTL8127_SHA256
 ARG RCLONE_RELEASE
 ARG RCLONE_SHA256_amd64
 ARG RCLONE_SHA256_arm64
@@ -451,31 +478,6 @@ RUN LIBDE265_SHA256=$(eval echo \$LIBDE265_SHA256_${TARGETARCH}) && \
     dpkg --install /tmp/libde265-0.deb && \
     test "$(dpkg-query -W -f='${Version}' libde265-0)" = "${LIBDE265_VERSION}" && \
     rm /tmp/libde265-0.deb
-
-# Install the Realtek RTL8127 10GbE driver on amd64 systems. Build against the
-# kernels in the image rather than the kernel running the Docker builder.
-RUN set -e; \
-    if [ "${TARGETARCH}" = "amd64" ]; then \
-        curl -fsSL "https://github.com/openwrt/rtl8127/archive/${RTL8127_COMMIT}.tar.gz" -o /tmp/rtl8127.tar.gz && \
-        echo "${RTL8127_SHA256}  /tmp/rtl8127.tar.gz" | sha256sum -c - && \
-        mkdir -p /tmp/rtl8127 && \
-        tar -xzf /tmp/rtl8127.tar.gz -C /tmp/rtl8127 --strip-components=1 && \
-        module_built=false && \
-        for modules_dir in /lib/modules/*; do \
-            if [ ! -d "${modules_dir}/build" ]; then \
-                continue; \
-            fi; \
-            kernel_version="$(basename "${modules_dir}")"; \
-            make -C "${modules_dir}/build" M=/tmp/rtl8127 clean; \
-            make -C "${modules_dir}/build" M=/tmp/rtl8127 modules; \
-            make -C "${modules_dir}/build" M=/tmp/rtl8127 INSTALL_MOD_DIR=kernel/drivers/net/ethernet/realtek modules_install; \
-            depmod -a "${kernel_version}"; \
-            test "$(modinfo -k "${kernel_version}" -F version r8127)" = "${RTL8127_VERSION}-NAPI"; \
-            module_built=true; \
-        done && \
-        test "${module_built}" = "true" && \
-        rm -rf /tmp/rtl8127 /tmp/rtl8127.tar.gz; \
-    fi
 
 # Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
 RUN systemctl disable smbd wsdd2

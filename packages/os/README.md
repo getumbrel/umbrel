@@ -1,5 +1,66 @@
 # umbrelOS
 
+## Kernel
+
+The amd64 and generic arm64 images take a newer kernel and firmware from
+trixie-backports, pinned to their own snapshot date
+(`KERNEL_BACKPORTS_SNAPSHOT_DATE`) separate from the rest of the system
+(`APT_SNAPSHOT_DATE`). Generic arm64 is used for dev VMs, and runs the same
+kernel so it matches what amd64 devices run. The Raspberry Pi image uses the
+Raspberry Pi kernel and is unaffected. An apt pin takes every package built from
+these source packages from backports:
+
+- **Kernel:** `linux`, `linux-signed-amd64`, `linux-signed-arm64` and
+  `linux-base`.
+- **Firmware:** `firmware-nonfree`, so newer in-tree drivers find the firmware
+  they ask for.
+
+Everything else, including ZFS and microcode, stays on trixie. The pin persists
+in the image, so later build steps follow it too. If a future backports kernel
+or firmware depends on another backports package, the build fails until its
+source package is added to the pin.
+
+trixie's 6.12 kernel only gets fixes, so hardware released after it often needs
+out-of-tree drivers or doesn't work at all. Backports follows newer upstream
+kernels, so new NICs, GPUs, Wi-Fi chips and platforms are supported in-tree. For
+example, the in-tree `r8169` driver handles RTL8125D rev B, RTL8125BP/CP/K and
+RTL8127A, so the image ships no out-of-tree Realtek drivers.
+
+The amd64 build fails if:
+
+- the kernel is missing a config option the GPU stack depends on;
+- the NVIDIA kernel module didn't build for the kernel at the pinned driver
+  version.
+
+### Bumping the kernel
+
+Backports picks up a new kernel series about every two months. To bump, update
+`KERNEL_BACKPORTS_SNAPSHOT_DATE` and check:
+
+- **ZFS builds against it.** trixie's ZFS refuses kernels newer than its
+  upstream `Linux-Maximum` (7.2 for 2.3.9), so the build fails once backports
+  moves past that. trixie rarely updates ZFS, so the fix is to add `src:zfs-linux`
+  to the pin and take ZFS from backports too.
+- **NVIDIA's DKMS module still builds against it.**
+- **Existing pools import and ZFS works on real hardware**, along with
+  networking, GPUs and anything else the new kernel's drivers touch.
+
+### ZFS from backports
+
+Once ZFS comes from backports, also check:
+
+- **The backports ZFS supports the kernel.** Debian builds backports ZFS with
+  `--enable-linux-experimental`, so it builds against kernels upstream hasn't
+  validated. A successful build proves nothing: compare `Linux-Maximum` in
+  `/usr/src/zfs-*/META` with the kernel version. Backports kernels sometimes
+  land before a supporting ZFS (7.1 ran four weeks ahead), so pick a snapshot
+  date where they line up. On amd64 the kernel comes from `linux-signed-amd64`,
+  which reaches backports a week or more after `linux`.
+- **New pool features.** Backports follows the newest OpenZFS major version.
+  umbrelOS creates pools with `compatibility=openzfs-2.3`, so a newer ZFS
+  doesn't enable features that would stop a pool importing after an OTA
+  rollback. Existing pools aren't upgraded automatically.
+
 ## GPU acceleration
 
 The amd64 image keeps GPU userspace in application containers while providing
