@@ -193,7 +193,9 @@ export default class AppGateway {
 					? new https.Agent({servername: this.#config.targetHost})
 					: undefined,
 			changeOrigin: false,
-			ws: true,
+			// WebSocket upgrades are proxied explicitly by handleUpgrade(), so don't let
+			// http-proxy-middleware subscribe its own upgrade listener as well.
+			ws: false,
 			xfwd: false,
 			proxyTimeout: this.#config.timeout,
 			followRedirects: false,
