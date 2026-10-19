@@ -483,10 +483,7 @@ RUN LIBDE265_SHA256=$(eval echo \$LIBDE265_SHA256_${TARGETARCH}) && \
 RUN systemctl disable smbd wsdd2
 
 # Filessystem support
-RUN apt-get install --yes gdisk parted e2fsprogs exfatprogs
-# For some reason this always fails on arm64 but it's ok since we
-# don't support external storage on Pi anyway.
-RUN [ "${TARGETARCH}" = "amd64" ] && apt-get install --yes ntfs-3g || true
+RUN apt-get install --yes gdisk parted e2fsprogs exfatprogs ntfs-3g
 
 # Install Node.js
 RUN NODE_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") && \
