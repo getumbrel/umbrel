@@ -29,6 +29,15 @@ type BlockDevice = {
 	}[]
 }
 
+// Filesystems we auto-mount, named as lsblk reports them. Mounting makes the
+// kernel parse whatever is on the drive, so without this a crafted USB drive
+// could reach any of the kernel's filesystem drivers, including rarely used
+// ones that fuzzers regularly find memory corruption bugs in. Mounts pass the
+// type explicitly so mount never falls back to trying other drivers.
+export function isAutoMountableFilesystem(filesystemType: string) {
+	return ['ext2', 'ext3', 'ext4', 'btrfs', 'xfs', 'vfat', 'exfat', 'ntfs'].includes(filesystemType.toLowerCase())
+}
+
 // These filesystems cannot store Linux ownership or permissions, so mounts
 // synthesize them. Anything needing real ownership (e.g. an app data root
 // whose containers chown their files) cannot live on them.
@@ -222,6 +231,14 @@ export default class ExternalStorage {
 					// Skip EFI partitions since they're just confusing for users
 					if (partition.type === 'EFI System') continue
 
+					// Skip partitions without a filesystem we support
+					if (!isAutoMountableFilesystem(partition.filesystemType)) {
+						this.logger.log(
+							`Skipping partition ${device.name} ${partition.label} with unsupported filesystem ${partition.filesystemType}`,
+						)
+						continue
+					}
+
 					// We have a new partition to mount
 					this.logger.log(`Mounting new partition ${device.name} ${partition.label}`)
 					try {
@@ -262,9 +279,9 @@ export default class ExternalStorage {
 										// Files and QEMU share this group. Permission-emulating
 										// filesystems cannot chown an individual VM disk later, so
 										// grant group write access at mount time instead.
-										await $`mount -o ${mountOptions} /dev/${partition.id} ${systemMountpoint}`
+										await $`mount -t ${partition.filesystemType} -o ${mountOptions} /dev/${partition.id} ${systemMountpoint}`
 									} else {
-										await $`mount /dev/${partition.id} ${systemMountpoint}`
+										await $`mount -t ${partition.filesystemType} /dev/${partition.id} ${systemMountpoint}`
 									}
 								},
 								{

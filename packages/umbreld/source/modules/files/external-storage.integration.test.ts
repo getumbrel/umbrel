@@ -38,10 +38,9 @@ vi.mock('fs-extra', async () => {
 const nullMock = (command: string) => {}
 let mockCommand = nullMock
 afterEach(() => (mockCommand = nullMock))
-// The execa mock receives the static prefix of tagged-template commands. Both
-// forms are valid: native Unix filesystems mount directly, while FAT/exFAT use
-// synthetic uid/gid/mode options before the block-device argument.
-const isBlockDeviceMount = (command: string) => command.startsWith('mount /dev/') || command.startsWith('mount -o ')
+// The execa mock receives the static prefix of tagged-template commands.
+// External partitions always mount with an explicit filesystem type.
+const isBlockDeviceMount = (command: string) => command.startsWith('mount -t ')
 vi.mock('execa', async () => {
 	const originalModule = (await vi.importActual('execa')) as any
 	const runMock = (tag: any, args: any[]) => {
@@ -513,6 +512,31 @@ describe('externalstorage.#mountExternalDevices', () => {
 		await delay(2000)
 
 		expect(mountCommands).toBe(3)
+		mockCommand = (command: string) => {
+			if (command.startsWith('lsblk')) return JSON.stringify(LSBLK_NO_EXTERNAL_DISK)
+		}
+	})
+
+	test('does not mount partitions with unsupported filesystems', async () => {
+		const blockDevices = structuredClone(LSBLK_EXTERNAL_DISK_ATTACHED)
+		for (const partition of blockDevices.blockdevices[0].children) {
+			if (partition.fstype === 'exfat') partition.fstype = 'hfs'
+		}
+
+		let mountCommands = 0
+		mockCommand = (command: string) => {
+			if (command.startsWith('lsblk')) return JSON.stringify(blockDevices)
+			if (command.startsWith('mountpoint')) return {exitCode: 1}
+			if (isBlockDeviceMount(command)) {
+				mountCommands++
+				return 'fake mount worked'
+			}
+		}
+
+		await umbreld.instance.eventBus.emit('system:disk:change')
+		await delay(500)
+
+		expect(mountCommands).toBe(0)
 		mockCommand = (command: string) => {
 			if (command.startsWith('lsblk')) return JSON.stringify(LSBLK_NO_EXTERNAL_DISK)
 		}
