@@ -227,6 +227,70 @@ test('repairs a split attached-database WAL commit on restart', async () => {
 	durable.close()
 })
 
+test('refreshes ready video dimensions in place and rebuilds only renditions whose shape changed', async () => {
+	const anamorphicHash = Buffer.alloc(32, 0xe1)
+	let displayShape = false
+	const rendered: string[] = []
+	const runtime = {
+		availableParallelism: 1,
+		hashFile: async (systemPath: string) =>
+			nodePath.basename(systemPath) === 'camcorder.mp4' ? anamorphicHash : Buffer.alloc(32, 0xe2),
+		generateThumbnail: async (source: string, destination: string) => {
+			rendered.push(nodePath.basename(source))
+			await fse.outputFile(destination, 'thumbnail')
+		},
+		extractMediaMetadata: async (systemPath: string) => ({
+			kind: 'video' as const,
+			width: displayShape && nodePath.basename(systemPath) === 'camcorder.mp4' ? 768 : 352,
+			height: 576,
+		}),
+	}
+	const {index, root, homeDirectory, dataDirectory} = await fixture(undefined, {enrichmentRuntime: runtime})
+	await Promise.all([
+		writeFile(nodePath.join(homeDirectory, 'camcorder.mp4'), 'camcorder'),
+		writeFile(nodePath.join(homeDirectory, 'square.mp4'), 'square'),
+	])
+	await index.reconcileRoot('/Home', 'video-refresh-initial')
+	await index.initializePhotos('owner')
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const id = anamorphicHash.toString('hex')
+	await expect(index.photosGetItem('owner', id)).resolves.toMatchObject({width: 352, height: 576})
+	await index.stop()
+
+	// An upgrade both corrects the extractor and queues every ready video.
+	displayShape = true
+	rendered.length = 0
+	const database = new BetterSqlite3(index.databasePath)
+	database.exec("INSERT INTO media_metadata_refresh SELECT content_id FROM media_metadata WHERE kind = 'video'")
+	database.close()
+	const restarted = new FileIndex({dataDirectory, logger, isHidden: () => false, enrichmentRuntime: runtime})
+	indexes.push(restarted)
+	await restarted.start()
+	await restarted.setRoots([root])
+	await restarted.initializePhotos('owner')
+	restarted.startBackgroundReconciliation()
+	await pRetry(
+		async () => {
+			await expect(restarted.photosGetItem('owner', id)).resolves.toMatchObject({width: 768, height: 576})
+			expect(rendered).toContain('camcorder.mp4')
+			const check = new BetterSqlite3(restarted.databasePath, {readonly: true})
+			try {
+				expect(check.prepare('SELECT COUNT(*) AS count FROM media_metadata_refresh').get()).toStrictEqual({count: 0})
+			} finally {
+				check.close()
+			}
+		},
+		{retries: 200, minTimeout: 10, maxTimeout: 20},
+	)
+	expect(rendered.every((name) => name === 'camcorder.mp4')).toBe(true)
+	await expect(restarted.photosListItems('owner', {}, undefined, 10)).resolves.toMatchObject({total: 2})
+})
+
 function noteWatcherChanges(index: FileIndex, paths: string[], type: WatcherChange['type'] = 'create') {
 	index.noteWatcherChanges(
 		'/Home',
@@ -713,6 +777,32 @@ describe('file index migrations', () => {
 			{kind: 'photo', state: 'pending', failure_count: 0, retry_at: null, last_error: null, updated_at: 0},
 			{kind: 'video', state: 'pending', failure_count: 0, retry_at: null, last_error: null, updated_at: 0},
 		])
+		database.close()
+	})
+
+	test('queues ready videos for an in-place metadata refresh', async () => {
+		const database = new BetterSqlite3(':memory:')
+		await migrateFileIndex(
+			database,
+			fileIndexMigrations.filter(({version}) => version < 23),
+		)
+		const insertContent = database.prepare('INSERT INTO contents(blake3, size, created_at) VALUES (?, 5, 1)')
+		const insertMetadata = database.prepare(
+			`INSERT INTO media_metadata(content_id, state, kind, width, height, failure_count, updated_at)
+			VALUES (?, ?, ?, 352, 576, 0, 1)`,
+		)
+		const readyVideo = insertContent.run(Buffer.alloc(32, 0xf1)).lastInsertRowid
+		insertMetadata.run(readyVideo, 'ready', 'video')
+		insertMetadata.run(insertContent.run(Buffer.alloc(32, 0xf2)).lastInsertRowid, 'ready', 'photo')
+		insertMetadata.run(insertContent.run(Buffer.alloc(32, 0xf3)).lastInsertRowid, 'pending', 'video')
+
+		await expect(migrateFileIndex(database)).resolves.toBe(FILE_INDEX_SCHEMA_VERSION)
+		expect(database.prepare('SELECT content_id FROM media_metadata_refresh').all()).toStrictEqual([
+			{content_id: Number(readyVideo)},
+		])
+		expect(database.prepare("SELECT COUNT(*) AS count FROM media_metadata WHERE state = 'ready'").get()).toStrictEqual({
+			count: 2,
+		})
 		database.close()
 	})
 

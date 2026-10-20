@@ -519,6 +519,21 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 			`)
 		},
 	},
+	{
+		version: 23,
+		up: (database) => {
+			// Video display dimensions now honour the sample aspect ratio. Re-probe
+			// every indexed video in the background while it stays visible; only
+			// anamorphic ones change shape and have their renditions rebuilt.
+			database.exec(`
+				CREATE TABLE media_metadata_refresh (
+					content_id INTEGER PRIMARY KEY REFERENCES media_metadata(content_id) ON DELETE CASCADE
+				);
+				INSERT INTO media_metadata_refresh
+				SELECT content_id FROM media_metadata WHERE state = 'ready' AND kind = 'video';
+			`)
+		},
+	},
 ]
 
 export const FILE_INDEX_SCHEMA_VERSION = fileIndexMigrations.at(-1)?.version ?? 0

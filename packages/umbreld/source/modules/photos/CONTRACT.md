@@ -108,7 +108,7 @@ type Item = {
 	takenAt: number
 	// The offset matching the selected EXIF date as minutes east of UTC, when present.
 	takenAtOffsetMinutes?: number
-	width: number // pixels, after EXIF orientation
+	width: number // display pixels, after EXIF orientation or video crop, pixel aspect and rotation
 	height: number
 	durationMs?: number // videos only
 	isFavorite: boolean
@@ -228,9 +228,10 @@ fall back to the selected width/height tags.
 
 FFprobe remains required for videos, but only for facts for which the decoded
 stream is authoritative: whether a video stream is playable, its playable
-duration, and its crop- and rotation-adjusted display dimensions. Codecs, pixel
-and colour formats, audio stream details, and Dolby Vision descriptors are not
-requested because the current Photos index does not store or consume them.
+duration, and its display dimensions after crop, sample aspect ratio and
+rotation. Codecs, pixel and colour formats, audio stream details, and Dolby
+Vision descriptors are not requested because the current Photos index does not
+store or consume them.
 Creation time, projection, Live Photo identifiers, and camera fields come only
 from ExifTool rather than being merged from competing readers. The two video
 passes run concurrently, and ExifTool remains best-effort for videos so an

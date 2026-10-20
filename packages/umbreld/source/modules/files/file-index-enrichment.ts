@@ -698,6 +698,13 @@ export default class FileIndexEnrichment {
 			return
 		}
 
+		const refresh = await this.#nextContentNeedingMetadataRefresh()
+		if (refresh) {
+			const retryDelay = await this.#backgroundMediaStep(refresh, true)
+			this.#schedule(retryDelay)
+			return
+		}
+
 		// Maintenance is independent of a source file's retry schedule. In
 		// particular, one unreadable file must not prevent repair or garbage
 		// collection for every other content record.
@@ -869,18 +876,64 @@ export default class FileIndexEnrichment {
 		}, BACKGROUND_DATABASE_PRIORITY)
 	}
 
+	async #nextContentNeedingMetadataRefresh() {
+		return this.#selectDatabase(async (database) => {
+			const excluded = [...this.#activeMediaContents]
+			const exclusion =
+				excluded.length > 0
+					? `AND media_metadata_refresh.content_id NOT IN (${excluded.map(() => '?').join(', ')})`
+					: ''
+			const row = (await database
+				.prepare(
+					`SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
+						entries.device, entries.inode, entries.size, entries.modified_ns,
+						entries.ctime_ns, entries.thumbnail_identity_kind,
+						index_roots.system_path AS root_system_path, entries.relative_path
+					FROM media_metadata_refresh
+					JOIN contents ON contents.id = media_metadata_refresh.content_id
+					JOIN entries INDEXED BY entries_by_content ON entries.content_id = media_metadata_refresh.content_id
+					JOIN index_roots ON index_roots.id = entries.root_id
+					WHERE ${BACKGROUND_ENRICHMENT_ROOT_SQL}
+						${exclusion}
+					ORDER BY media_metadata_refresh.content_id, entries.id
+					LIMIT 1`,
+				)
+				.get(...excluded)) as ContentCandidateRow | undefined
+			if (!row) return
+			const candidate = contentCandidate(row)
+			if (this.#activeMediaContents.has(candidate.id)) return
+			this.#activeMediaContents.add(candidate.id)
+			return candidate
+		}, BACKGROUND_DATABASE_PRIORITY)
+	}
+
 	async #ensureMediaMetadata(content: ContentCandidate, onDemand: boolean, freshReference = false) {
 		const priority = onDemand ? ON_DEMAND_DATABASE_PRIORITY : BACKGROUND_DATABASE_PRIORITY
 		const current = await this.#readDatabase(
 			async (database) =>
 				(await database
-					.prepare('SELECT state, retry_at, last_error FROM media_metadata WHERE content_id = ?')
+					.prepare(
+						`SELECT state, retry_at, last_error, width, height,
+							EXISTS (SELECT 1 FROM media_metadata_refresh WHERE content_id = media_metadata.content_id) AS refresh
+						FROM media_metadata WHERE content_id = ?`,
+					)
 					.get(content.id)) as
-					| {state: 'pending' | 'ready' | 'failed'; retry_at: number | null; last_error: string | null}
+					| {
+							state: 'pending' | 'ready' | 'failed'
+							retry_at: number | null
+							last_error: string | null
+							width: number | null
+							height: number | null
+							refresh: number
+					  }
 					| undefined,
 			priority,
 		)
-		if (!current || current.state === 'ready') return
+		if (!current) return
+		// A background refresh re-extracts ready metadata in place, so the item
+		// stays visible meanwhile and keeps its last good values if it fails.
+		const refreshing = current.state === 'ready' && !onDemand && Boolean(current.refresh)
+		if (current.state === 'ready' && !refreshing) return
 		if (
 			!onDemand &&
 			current.state === 'failed' &&
@@ -961,11 +1014,23 @@ export default class FileIndexEnrichment {
 								Date.now(),
 								content.id,
 							)
+						database.prepare('DELETE FROM media_metadata_refresh WHERE content_id = ?').run(content.id)
 						return this.#onMediaMetadataReady?.(database, content.id)
 					})
 					return persist.immediate()
 				}, priority)
 				afterCommit?.()
+				// Renditions take the display shape recorded here. When re-extraction
+				// corrects that shape, rebuild them instead of keeping old proportions.
+				if (
+					current.width !== null &&
+					current.height !== null &&
+					(Number(current.width) !== metadata.width || Number(current.height) !== metadata.height)
+				) {
+					await this.#discardContentThumbnails(content, priority).catch((error) =>
+						this.logger.error(`Failed to discard outdated renditions of '${content.systemPath}'`, error),
+					)
+				}
 				return
 			} catch (error) {
 				const referenceFailure = referenceFailureKind(error) ?? (await contentReferenceFailure(error, content))
@@ -978,6 +1043,12 @@ export default class FileIndexEnrichment {
 					}
 					if (referenceFailure === 'stale')
 						throw new StaleFileRevisionError('No current metadata source remains', {cause: error})
+				}
+				if (refreshing) {
+					await this.#withDatabase((database) => {
+						database.prepare('DELETE FROM media_metadata_refresh WHERE content_id = ?').run(content.id)
+					}, priority)
+					throw new PersistedEnrichmentFailure(error)
 				}
 				await this.#recordMediaMetadataFailure(content.id, error, priority, referenceFailure === 'unreadable')
 				await this.#onContentFailure?.(content.id)
@@ -2096,6 +2167,16 @@ export default class FileIndexEnrichment {
 		}, BACKGROUND_DATABASE_PRIORITY)
 	}
 
+	async #discardContentThumbnails(content: ContentCandidate, priority: number) {
+		for (const variant of ALL_THUMBNAIL_VARIANTS) {
+			await this.#remove(thumbnailSystemPath(this.thumbnailDirectory, contentIdentity(content.hash, variant)))
+		}
+		await this.#markThumbnailPending(
+			ALL_THUMBNAIL_VARIANTS.map((variant) => ({contentId: content.id, variant})),
+			priority,
+		)
+	}
+
 	async #markThumbnailPending(references: Array<{contentId: number; variant: ThumbnailVariant}>, priority: number) {
 		if (references.length === 0) return
 		await this.#withDatabase((database) => {
@@ -2369,30 +2450,43 @@ async function extractVideoMetadata(
 	// FFprobe is authoritative only for the playable video stream. ExifTool owns
 	// semantic metadata for every media type, but remains optional for videos: an
 	// unusual vendor trailer must never make otherwise playable media disappear.
-	const [{stdout}, exifMetadata] = await Promise.all([
-		runBoundedMediaProcess(
-			'ffprobe',
-			[
-				'-v',
-				'error',
-				'-show_entries',
-				'stream=codec_type,width,height,duration:stream_tags=rotate:stream_side_data=rotation,crop_top,crop_bottom,crop_left,crop_right:format=duration',
-				'-of',
-				'json',
-				mediaProcessInput(systemPath, sourceFileDescriptor),
-			],
-			sourceFileDescriptor,
-		),
+	const [video, exifMetadata] = await Promise.all([
+		probeVideoStream(systemPath, sourceFileDescriptor),
 		extractExifMetadata(systemPath, sourceFileDescriptor).catch((error) => {
 			onOptionalMetadataFailure?.(error)
 			return {metadata: {}, spherical: false}
 		}),
 	])
+	return {
+		kind: 'video',
+		...(exifMetadata.spherical ? {subKind: 'spherical' as const} : {}),
+		width: video.width,
+		height: video.height,
+		...(video.durationMs === undefined ? {} : {durationMs: video.durationMs}),
+		...exifMetadata.metadata,
+	}
+}
+
+async function probeVideoStream(systemPath: string, sourceFileDescriptor?: number) {
+	const {stdout} = await runBoundedMediaProcess(
+		'ffprobe',
+		[
+			'-v',
+			'error',
+			'-show_entries',
+			'stream=codec_type,width,height,sample_aspect_ratio,duration:stream_tags=rotate:stream_side_data=rotation,crop_top,crop_bottom,crop_left,crop_right:format=duration',
+			'-of',
+			'json',
+			mediaProcessInput(systemPath, sourceFileDescriptor),
+		],
+		sourceFileDescriptor,
+	)
 	const probe = JSON.parse(stdout) as {
 		streams?: Array<{
 			codec_type?: string
 			width?: number
 			height?: number
+			sample_aspect_ratio?: string
 			duration?: string
 			tags?: Record<string, string>
 			side_data_list?: Array<{
@@ -2415,19 +2509,21 @@ async function extractVideoMetadata(
 	const cropBottom = sideDataValue(stream.side_data_list, 'crop_bottom') ?? 0
 	const croppedWidth = stream.width - cropLeft - cropRight
 	const croppedHeight = stream.height - cropTop - cropBottom
-	const displayWidth = croppedWidth > 0 ? croppedWidth : stream.width
+	// Anamorphic video stores non-square pixels: players stretch each stored
+	// row by the sample aspect ratio, so 352x576 at 24:11 displays as 768x576.
+	// The stretch is horizontal in stored pixels and so turns with rotation.
+	const sampleAspectRatio = parseRational(stream.sample_aspect_ratio?.replace(':', '/'))
+	const pixelAspectRatio = sampleAspectRatio && sampleAspectRatio > 0 ? sampleAspectRatio : 1
+	const displayWidth = Math.round((croppedWidth > 0 ? croppedWidth : stream.width) * pixelAspectRatio)
 	const displayHeight = croppedHeight > 0 ? croppedHeight : stream.height
 	const rotated = Math.abs(rotation) % 180 === 90
-	const width = rotated ? displayHeight : displayWidth
-	const height = rotated ? displayWidth : displayHeight
 	const durationSeconds = [stream.duration, probe.format?.duration].map(Number).find(Number.isFinite)
 	return {
-		kind: 'video',
-		...(exifMetadata.spherical ? {subKind: 'spherical' as const} : {}),
-		width,
-		height,
+		width: rotated ? displayHeight : displayWidth,
+		height: rotated ? displayWidth : displayHeight,
+		rotated,
+		pixelAspectRatio,
 		...(durationSeconds === undefined ? {} : {durationMs: Math.max(0, Math.round(durationSeconds * 1000))}),
-		...exifMetadata.metadata,
 	}
 }
 
@@ -2797,6 +2893,19 @@ export async function generateThumbnailFiles(
 		`${escapeImageMagickInputPath(imageMagickMediaProcessInput(systemPath, sourceFileDescriptor))}[0]`,
 		'-auto-orient',
 	]
+	// FFmpeg hands ImageMagick an anamorphic frame in its stored, non-square
+	// pixels (already rotated). Stretch it to the shape players display. The
+	// probe only refines the frame, so a failed one leaves it as decoded.
+	if (photoKind(systemPath) === 'video') {
+		const {rotated, pixelAspectRatio} = await probeVideoStream(systemPath, sourceFileDescriptor).catch(() => ({
+			rotated: false,
+			pixelAspectRatio: 1,
+		}))
+		if (pixelAspectRatio !== 1) {
+			const stretch = `${pixelAspectRatio * 100}%`
+			arguments_.push('-resize', rotated ? `100%x${stretch}` : `${stretch}x100%`)
+		}
+	}
 	for (const {destination, variant} of outputs) {
 		const definition = THUMBNAIL_VARIANTS[variant]
 		arguments_.push(
