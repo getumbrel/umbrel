@@ -1954,6 +1954,57 @@ test('orders Photos dates by embedded capture time, filesystem birth time, then 
 	expect(byPath.get('/Home/modified.jpg')).toMatchObject({takenAt: 3_000, createdAt: 3_000})
 })
 
+test.each([undefined, 946_684_800_000])(
+	'uses the browser file date only when embedded capture metadata is absent (%s)',
+	async (takenAt) => {
+		const hash = Buffer.alloc(32, 0x45)
+		const lastModified = -315_619_200_000
+		const {index, homeDirectory, dataDirectory} = await fixture(undefined, {
+			enrichmentRuntime: {
+				hashFile: async () => hash,
+				generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+				extractMediaMetadata: async () => ({
+					kind: 'photo' as const,
+					width: 10,
+					height: 10,
+					takenAt,
+					createdAt: takenAt,
+				}),
+			},
+		})
+		await index.initializePhotos('owner')
+		const uploaded = nodePath.join(homeDirectory, 'Photos', 'web.jpg')
+		await fse.outputFile(uploaded, 'web photo')
+		const revision = await contentRevision(uploaded)
+		await index.photosRegisterUpload('owner', uploaded, hash, revision, undefined, lastModified)
+		index.startBackgroundReconciliation()
+		await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+			retries: 200,
+			minTimeout: 10,
+			maxTimeout: 20,
+		})
+
+		const expectedDate = takenAt ?? lastModified
+		expect((await index.photosListItems('owner', {}, undefined, 10)).items).toMatchObject([{takenAt: expectedDate}])
+		await expect(index.photosGetItem('owner', hash.toString('hex'))).resolves.toMatchObject({
+			takenAt: expectedDate,
+			createdAt: expectedDate,
+		})
+		// Re-registering the same bytes must not replace a previously supplied source date.
+		await index.photosRegisterUpload('owner', uploaded, hash, revision, undefined, lastModified + 1)
+		const durable = new BetterSqlite3(nodePath.join(dataDirectory, 'umbrel.db'))
+		try {
+			expect(
+				durable
+					.prepare('SELECT source_created_at, effective_taken_at FROM photos_content_state WHERE content_hash = ?')
+					.get(hash),
+			).toEqual({source_created_at: lastModified, effective_taken_at: expectedDate})
+		} finally {
+			durable.close()
+		}
+	},
+)
+
 test('preflights Photos upload duplicates without publishing or rereading the file', async () => {
 	const digest = Buffer.alloc(32, 0x71)
 	const hashFile = vi.fn(async () => digest)

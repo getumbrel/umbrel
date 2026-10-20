@@ -72,6 +72,18 @@ afterEach(() => {
 })
 
 describe('photosUploads', () => {
+	it('sends each file modification date, including when retrying an upload', () => {
+		const first = new File(['first'], 'first.png', {lastModified: 946684800000})
+		const second = new File(['second'], 'second.png', {lastModified: -315619200000})
+		photosUploads.enqueue([first, second])
+		expect(last().url).toContain(`lastModified=${first.lastModified}`)
+		photosUploads.pause()
+		photosUploads.resume()
+		expect(last().url).toContain(`lastModified=${first.lastModified}`)
+		last().respond(200)
+		expect(last().url).toContain(`lastModified=${second.lastModified}`)
+	})
+
 	it('uploads sequentially with bytes-weighted progress', () => {
 		photosUploads.enqueue([makeFile('a.png', 100), makeFile('b.png', 300)])
 		expect(photosUploads.snapshot()).toMatchObject({status: 'uploading', done: 0, total: 2, progress: 0})

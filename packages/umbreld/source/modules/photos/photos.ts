@@ -904,6 +904,7 @@ export default class Photos {
 		hash: Buffer,
 		revision: PublishedFileRevision,
 		albumId?: string,
+		lastModified?: number,
 	) {
 		const result = await this.#umbreld.files.fileIndex.photosRegisterUpload(
 			accountId,
@@ -911,6 +912,7 @@ export default class Photos {
 			hash,
 			revision,
 			albumId,
+			lastModified,
 		)
 		this.#changed(accountId)
 		return result.status

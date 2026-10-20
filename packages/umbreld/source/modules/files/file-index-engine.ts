@@ -1678,6 +1678,7 @@ export default class FileIndexEngine {
 		hash: Buffer,
 		expectedRevision: PublishedFileRevision,
 		albumId?: string,
+		lastModified?: number,
 	) {
 		this.#requirePhotos()
 		await this.reconcilePath(systemPath)
@@ -1686,7 +1687,7 @@ export default class FileIndexEngine {
 		await this.#enrichment.attachKnownContentHash(entry.id, hash, expectedRevision)
 		return this.#mutate((database) => {
 			const register = database.transaction(() =>
-				this.#photos.registerUpload(this.#photosDatabase(database), accountId, entry.id, albumId),
+				this.#photos.registerUpload(this.#photosDatabase(database), accountId, entry.id, albumId, lastModified),
 			)
 			return register.immediate()
 		})

@@ -632,7 +632,7 @@ export default class PhotosRepository {
 		).map(({owner_id}) => owner_id)
 	}
 
-	registerUpload(database: Database, accountId: string, entryId: number, albumId?: string) {
+	registerUpload(database: Database, accountId: string, entryId: number, albumId?: string, lastModified?: number) {
 		if (albumId && !this.#albumExists(database, accountId, albumId)) throw new Error('[photos-album-not-found]')
 		const uploaded = database
 			.prepare(
@@ -644,9 +644,18 @@ export default class PhotosRepository {
 			)
 			.get(entryId, accountId) as {blake3: Buffer} | undefined
 		if (!uploaded) throw new Error('Uploaded Photos item was not indexed')
-		if (this.#ensureContentState(database, accountId, uploaded.blake3)) {
-			this.#refreshEffectiveTakenAt(database, accountId, [uploaded.blake3])
+		let changed = this.#ensureContentState(database, accountId, uploaded.blake3)
+		if (lastModified !== undefined) {
+			// Keep client dates separate from embedded metadata and preserve an existing source date.
+			const result = database
+				.prepare(
+					`UPDATE umbrel.photos_content_state SET source_created_at = ?
+					WHERE account_id = ? AND content_hash = ? AND source_created_at IS NULL`,
+				)
+				.run(lastModified, accountId, uploaded.blake3)
+			changed = changed || result.changes > 0
 		}
+		if (changed) this.#refreshEffectiveTakenAt(database, accountId, [uploaded.blake3])
 		if (albumId) this.#addAlbumHash(database, accountId, albumId, uploaded.blake3)
 		const id = hashToId(uploaded.blake3)
 		return {status: 'imported' as const, itemId: id, uploadedItemId: id}

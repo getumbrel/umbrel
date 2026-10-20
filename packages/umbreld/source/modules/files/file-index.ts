@@ -381,6 +381,7 @@ export default class FileIndex {
 		hash: Buffer,
 		expectedRevision: PublishedFileRevision,
 		albumId?: string,
+		lastModified?: number,
 	) {
 		return this.#request<{status: 'imported'; itemId: string; uploadedItemId: string}>('photosRegisterUpload', [
 			accountId,
@@ -388,6 +389,7 @@ export default class FileIndex {
 			hash,
 			expectedRevision,
 			albumId,
+			lastModified,
 		])
 	}
 

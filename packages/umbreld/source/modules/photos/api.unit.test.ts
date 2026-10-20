@@ -227,7 +227,47 @@ describe('Photos HTTP account boundaries', () => {
 				ctimeNs: expect.any(String),
 			}),
 			'album',
+			undefined,
 		)
+	})
+
+	test.each([946684800000, 0, -315619200000, -62135596800000, 253402300799999])(
+		'passes a valid browser modification date to registration: %s',
+		async (lastModified) => {
+			prepareUpload.mockResolvedValueOnce('new')
+			const response = await got(
+				`${origin}/api/photos/upload?name=date-${lastModified}.jpg&lastModified=${lastModified}`,
+				{
+					method: 'POST',
+					headers: {Authorization: 'Bearer member'},
+					body: 'dated bytes',
+				},
+			)
+			expect(response.statusCode).toBe(200)
+			expect(registerUpload.mock.calls[0]?.slice(4)).toEqual([undefined, lastModified])
+		},
+	)
+
+	test.each([
+		'',
+		'NaN',
+		'Infinity',
+		'1.5',
+		'1e3',
+		'253402300800000',
+		'-62135596800001',
+		'0&lastModified=1',
+		'0&lastModified[x]=1',
+	])('rejects an invalid browser modification date before importing: %s', async (lastModified) => {
+		const response = await got(`${origin}/api/photos/upload?name=invalid.jpg&lastModified=${lastModified}`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer member'},
+			body: 'invalid date',
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(prepareUpload).not.toHaveBeenCalled()
+		expect(registerUpload).not.toHaveBeenCalled()
 	})
 
 	test('rejects unsupported uploads before consuming them', async () => {

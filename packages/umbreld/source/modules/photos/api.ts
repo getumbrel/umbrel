@@ -414,6 +414,19 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 		// whole body before reading the verdict (see Files' uploadFile)
 		const name = typeof request.query.name === 'string' ? nodePath.basename(request.query.name) : ''
 		const albumId = typeof request.query.album === 'string' ? request.query.album : undefined
+		const rawLastModified = request.query.lastModified
+		const lastModified = typeof rawLastModified === 'string' ? Number(rawLastModified) : undefined
+		if (
+			rawLastModified !== undefined &&
+			(typeof rawLastModified !== 'string' ||
+				!/^-?\d+$/.test(rawLastModified) ||
+				!Number.isSafeInteger(lastModified) ||
+				lastModified! < MIN_PHOTO_CREATION_DATE ||
+				lastModified! > MAX_PHOTO_CREATION_DATE)
+		) {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'invalid lastModified'})
+		}
 		if (!name) {
 			response.setHeader('Connection', 'close')
 			return response.status(400).json({error: 'name is required'})
@@ -449,6 +462,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 						published.blake3,
 						published.revision,
 						albumId,
+						lastModified,
 					)
 				},
 			})

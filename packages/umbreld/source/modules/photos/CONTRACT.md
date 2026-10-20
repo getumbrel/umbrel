@@ -366,7 +366,13 @@ of these URLs from item ids — API responses carry no URL fields.
   re-authorized for the ticket's account when the HTTP request is handled.
 - `POST /api/photos/upload?name=IMG_1234.jpg&album=<id>` — body = the bytes, one
   file per request; `album` optional, validated before the bytes stream, files the
-  item on success. The complete hidden temporary file is BLAKE3-hashed and
+  item on success. Optional `lastModified` carries the browser's `File.lastModified`
+  as integer epoch milliseconds (years 0001–9999); malformed values return 400.
+  It is stored as a durable source-date fallback: embedded capture dates still
+  win, followed by the source date, filesystem birth time, and modification time.
+  Omitting it preserves the existing date behavior. Duplicate uploads do not
+  change an existing item's date.
+  The complete hidden temporary file is BLAKE3-hashed and
   checked for an account-local duplicate before it is published into the
   library; duplicate bytes are discarded without creating a visible pathname.
   2xx answers `{status: 'imported' | 'duplicate'}`, and the upload island reports

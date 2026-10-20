@@ -191,6 +191,7 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 				bufferArg(args, 2),
 				contentFingerprintArg(args, 3),
 				optionalStringArg(args, 4),
+				optionalNumberArg(args, 5),
 			)
 		case 'photosUpsertBackupSource':
 			return index.photosUpsertBackupSource(stringArg(args), stringArg(args, 1), stringArg(args, 2), numberArg(args, 3))
