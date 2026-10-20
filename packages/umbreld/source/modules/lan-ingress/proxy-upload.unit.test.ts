@@ -6,6 +6,7 @@ import https from 'node:https'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
+import {Readable} from 'node:stream'
 import {promisify} from 'node:util'
 
 import {afterAll, afterEach, beforeAll, expect, test, vi} from 'vitest'
@@ -321,4 +322,124 @@ test.each(routes)(
 		await openWebSocket()
 		webSocketServer.close()
 	},
+)
+
+function* endless() {
+	while (true) yield chunk
+}
+
+function request(
+	protocol: 'http' | 'https',
+	port: number,
+	expectContinue: boolean,
+	onResponse: (request: http.ClientRequest, response: http.IncomingMessage) => void,
+) {
+	const client = protocol === 'http' ? http : https
+	const clientRequest = client.request(
+		{
+			hostname: '127.0.0.1',
+			port,
+			method: 'POST',
+			agent: false,
+			rejectUnauthorized: false,
+			headers: {
+				'content-length': chunk.length,
+				cookie: sessionCookies(protocol),
+				...(expectContinue ? {expect: '100-continue'} : {}),
+			},
+		},
+		(response) => onResponse(clientRequest, response),
+	)
+	if (expectContinue) clientRequest.once('continue', () => clientRequest.end(chunk))
+	else clientRequest.end(chunk)
+	return clientRequest
+}
+
+// http-proxy only aborts the upstream when the client request emits 'aborted',
+// which Node doesn't emit once the request body has been read. An abandoned
+// download must not leave the upstream response paused forever, or count as an
+// upstream failure.
+test.each(routes.flatMap((route) => [false, true].map((expectContinue) => ({...route, expectContinue}))))(
+	'$protocol releases the upstream when a client abandons a response (app gateway: $gateway, Expect: $expectContinue)',
+	async ({protocol, gateway, expectContinue}) => {
+		const errors = vi.spyOn(logger, 'error')
+		let upstreamClosed!: Promise<boolean>
+		const upstream = http.createServer((request, response) => {
+			upstreamClosed = once(response, 'close').then(() => response.writableFinished)
+			request.resume()
+			// Stream until the proxy stops reading, like a large file or media response.
+			request.on('end', () => Readable.from(endless()).pipe(response))
+		})
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const port = await listen(proxy)
+
+		await new Promise<void>((resolve, reject) => {
+			request(protocol, port, expectContinue, (clientRequest, response) => {
+				expect(response.statusCode).toBe(200)
+				let received = 0
+				response.on('data', (data: Buffer) => {
+					received += data.length
+					if (received < 1024 * 1024) return
+					clientRequest.destroy()
+					resolve()
+				})
+			}).on('error', reject)
+		})
+
+		await expect(upstreamClosed).resolves.toBe(false)
+		expect(errors).not.toHaveBeenCalled()
+	},
+	5000,
+)
+
+// Requests with an Expect header aren't covered until upstream replies, since
+// http-proxy skips onProxyReq for them. http-proxy reports the cancelled upstream
+// request as a client reset, which must not count as an upstream failure.
+test.each(routes)(
+	'$protocol releases the upstream when a client gives up before it replies (app gateway: $gateway)',
+	async ({protocol, gateway}) => {
+		const errors = vi.spyOn(logger, 'error')
+		const verbose = vi.spyOn(logger, 'verbose')
+		let received!: (request: http.IncomingMessage) => void
+		const upstreamRequest = new Promise<http.IncomingMessage>((resolve) => (received = resolve))
+		const upstream = http.createServer((request) => {
+			request.resume()
+			received(request)
+		})
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const clientRequest = request(protocol, await listen(proxy), false, () => {})
+		clientRequest.on('error', () => {})
+
+		const {socket} = await upstreamRequest
+		clientRequest.destroy()
+		await once(socket, 'close')
+		expect(errors).not.toHaveBeenCalledWith(expect.stringContaining('App gateway upstream error'), expect.anything())
+		expect(verbose).not.toHaveBeenCalledWith(expect.stringContaining('LAN ingress proxy error'))
+	},
+	5000,
+)
+
+test.each(routes)(
+	'$protocol closes the client when the upstream response is cut short (app gateway: $gateway)',
+	async ({protocol, gateway}) => {
+		const upstream = http.createServer((request, response) => {
+			request.resume()
+			request.on('end', () => {
+				response.writeHead(200, {'content-length': chunk.length * 2})
+				response.write(chunk, () => response.socket?.destroy())
+			})
+		})
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const port = await listen(proxy)
+
+		const closed = new Promise<boolean>((resolve) => {
+			request(protocol, port, false, (_request, response) => {
+				response.resume()
+				response.on('error', () => {})
+				response.on('close', () => resolve(response.complete))
+			}).on('error', () => {})
+		})
+		await expect(closed).resolves.toBe(false)
+	},
+	5000,
 )

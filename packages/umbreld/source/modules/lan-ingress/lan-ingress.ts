@@ -15,6 +15,7 @@ import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
 import {getHostname, getIpAddresses} from '../system/system.js'
 import runEvery from '../utilities/run-every.js'
+import {closeClientOnUpstreamAbort, releaseUpstreamOnClientClose} from '../utilities/proxy-stream-lifetime.js'
 import {forwardTcp} from './forward-tcp.js'
 import {readNativeTlsPrelude} from './native-tls-preread.js'
 import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.js'
@@ -1082,7 +1083,9 @@ export default class LanIngress {
 				warn: this.logger.log,
 				error: this.logger.error,
 			}),
-			onProxyRes: (proxyResponse) => {
+			onProxyReq: (proxyRequest, _request, response) => releaseUpstreamOnClientClose(proxyRequest, response),
+			onProxyRes: (proxyResponse, request, response) => {
+				closeClientOnUpstreamAbort(proxyResponse, request, response)
 				// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
 				// and HTTP fallback paths that are important for private local certs.
 				delete proxyResponse.headers['strict-transport-security']

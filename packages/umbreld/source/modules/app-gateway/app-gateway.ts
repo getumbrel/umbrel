@@ -10,6 +10,7 @@ import type {Compose} from 'compose-spec-schema'
 import {createProxyMiddleware} from 'http-proxy-middleware'
 
 import type Umbreld from '../../index.js'
+import {closeClientOnUpstreamAbort, releaseUpstreamOnClientClose} from '../utilities/proxy-stream-lifetime.js'
 import {
 	appGatewayTokenFromCookieHeader,
 	appGatewayTokenFromRequest,
@@ -199,6 +200,8 @@ export default class AppGateway {
 			xfwd: false,
 			proxyTimeout: this.#config.timeout,
 			followRedirects: false,
+			onProxyReq: (proxyRequest, _request, response) => releaseUpstreamOnClientClose(proxyRequest, response),
+			onProxyRes: (proxyResponse, request, response) => closeClientOnUpstreamAbort(proxyResponse, request, response),
 			onError: (error, _request, response) => this.handleUpstreamError(response, error),
 		})
 	}
