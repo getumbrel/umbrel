@@ -223,6 +223,9 @@ function build_rugix_artifacts() {
     fi
     if [ -z "${SKIP_PI:-}" ] && [ -z "${SKIP_PI_TRYBOOT:-}" ]; then
         build_rugix_system "umbrelos-pi-tryboot" "$release" "$dev"
+        # Set the GPT's first usable LBA to 34 so Windows doesn't break the image
+        # for the Raspberry Pi bootloader.
+        DOCKER_FLAGS="--entrypoint /project/fix-umbrelos-pi-gpt.sh" ./run-bakery
         maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.img" "../build/umbrelos-pi.img"
         maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.rugixb" "../build/umbrelos-pi.rugixb"
     fi
