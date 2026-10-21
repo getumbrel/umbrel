@@ -2,6 +2,13 @@
 Description=Umbrel daemon
 Wants=umbrel-custom-pre-start.service libvirtd.socket
 After=network-online.target docker.service libvirtd.socket umbrel-custom-pre-start.service
+# Umbreld gracefully shuts down running Machines when it stops, so on host
+# shutdown it must stop before libvirt (the monolithic libvirtd today, or the
+# modular virtqemud) and before systemd kills the QEMU scopes. Libvirt orders
+# those scopes before virt-guest-shutdown.target, the same hook
+# libvirt-guests.service (masked in favour of umbreld) relies on.
+Wants=virt-guest-shutdown.target
+After=libvirtd.service virtqemud.service virtlogd.service virt-guest-shutdown.target
 
 [Service]
 TimeoutStopSec=15min

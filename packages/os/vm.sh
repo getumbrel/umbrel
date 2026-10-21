@@ -97,6 +97,7 @@ Commands:
     boot [image]                   Boot VM from the given image (defaults to native arch image)
     reflash                        Delete boot disk overlay (simulates reflashing the OS)
     reset                          Delete all VM state (overlay, NVMe disks, HDDs, UEFI vars)
+    power-button                   Press the power button of the running VM (ACPI power button event)
 
     nvme list                      List all NVMe devices and their status
     nvme add <slot> [--size SIZE]  Add an NVMe device to slot (1-${MAX_NVME_SLOTS})
@@ -1407,6 +1408,17 @@ reflash() {
   fi
 }
 
+# Press the power button (sends an ACPI power button event to the guest)
+press_power_button() {
+  initialize_qmp_socket
+  if ! qmp_is_available; then
+    echo "Error: The power button can only be pressed while the VM is running" >&2
+    exit 1
+  fi
+  qmp_execute '{"execute":"system_powerdown"}'
+  echo "Power button pressed"
+}
+
 # Reset all state
 reset_state() {
   remove_qmp_socket
@@ -1441,6 +1453,11 @@ case "$command" in
 
   reset)
     reset_state
+    exit 0
+    ;;
+
+  power-button)
+    press_power_button
     exit 0
     ;;
 

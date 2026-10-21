@@ -716,6 +716,11 @@ export async function createTestVm({
 		await $({env})`${vmScript} reflash`
 	}
 
+	// Sends an ACPI power button event, like pressing the physical button
+	async function pressPowerButton() {
+		await $({env})`${vmScript} power-button`
+	}
+
 	async function cleanup() {
 		await powerOff()
 		await directory.destroyRoot()
@@ -874,6 +879,7 @@ printf '\\n${authFailureMarker}\\n'
 		disconnectUsbStorage,
 		connectUsbStorage,
 		reflash,
+		pressPowerButton,
 		ssh,
 		sshAsRoot,
 	}

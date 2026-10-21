@@ -185,6 +185,7 @@ export default class Umbreld {
 	mcp: Mcp
 	photos: Photos
 	isBackupRestoreFirstStart = false
+	private stopped = false
 
 	constructor({
 		dataDirectory,
@@ -372,6 +373,10 @@ export default class Umbreld {
 	}
 
 	async stop() {
+		// Power actions stop umbreld before handing over to the OS, which then
+		// stops it again with SIGTERM. Don't repeat a stop that already completed:
+		// by then the OS may be stopping the services it relies on, like libvirt.
+		if (this.stopped) return true
 		try {
 			await Promise.all([
 				// Stop file consumers and public listeners before module teardown.
@@ -394,6 +399,7 @@ export default class Umbreld {
 				this.auth.stop(),
 				this.photos.stop(),
 			])
+			this.stopped = true
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false
