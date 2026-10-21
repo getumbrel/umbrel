@@ -1,8 +1,8 @@
 ARG DEBIAN_VERSION=trixie
 # Debian Docker image tags lag behind snapshot.debian.org, so pin the base image
 # and apt repositories independently.
-ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20261005
-ARG APT_SNAPSHOT_DATE=20261014
+ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20261020
+ARG APT_SNAPSHOT_DATE=20261022
 # amd64 and generic arm64 take their kernel, ZFS, and firmware from trixie-backports (see umbrelos-base below), pinned to their own snapshot
 ARG KERNEL_BACKPORTS_SNAPSHOT_DATE=20261006T000000Z
 ARG BASE_VARIANT=""
