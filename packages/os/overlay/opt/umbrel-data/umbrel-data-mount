@@ -10,6 +10,34 @@ CONFIG_FILE="$CONFIG_PARTITION/umbrel.yaml"
 MOUNT_POINT="$1"
 DEFAULT_PARTITION="${2:-}"
 
+# udev has already exited by the time Rugix's pre-init runs this script, so a device the
+# kernel adds after the initramfs has finished (common behind SAS HBAs, which can still be
+# discovering drives then) wouldn't get its /dev/disk/by-umbrel-id link until systemd starts,
+# after the pool has been imported without it. When a device is missing we run udev
+# ourselves while we wait, the same way the initramfs does, and replay add events for block
+# devices so ones the kernel added after the initramfs get their links.
+UDEV_STARTED="false"
+start_udev() {
+    echo ">>> Starting udev to pick up devices added after the initramfs"
+    if /usr/lib/systemd/systemd-udevd --daemon --resolve-names=never; then
+        UDEV_STARTED="true"
+        # Stop it however the script exits, so it never runs on into the booted system
+        trap stop_udev EXIT
+        udevadm trigger --action=add --subsystem-match=block || true
+    else
+        echo ">>> Failed to start udev"
+    fi
+}
+
+# Stop our udev before boot continues, systemd starts its own
+stop_udev() {
+    if [ "$UDEV_STARTED" = "true" ]; then
+        UDEV_STARTED="false"
+        echo ">>> Stopping udev"
+        udevadm control --exit || true
+    fi
+}
+
 wait_for_devices() {
     local devices=("$@")
     local missing_devices=()
@@ -33,6 +61,9 @@ wait_for_devices() {
         if [ "$all_devices_present" = "true" ]; then
             echo ">>> All devices present"
             break
+        fi
+        if [ "$i" = "1" ]; then
+            start_udev
         fi
         if [ "$i" = "300" ]; then
             echo ">>> wait_for_devices timeout reached after 30 seconds, missing: ${missing_devices[*]}"
@@ -120,6 +151,7 @@ if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
 
     echo ">>> Waiting for pending udev events before import"
     udevadm settle || true
+    stop_udev
 
     # Check if we're in the middle of a failsafe transition
     if [ "$RAID_STATE" = "transitioning-to-failsafe" ]; then
