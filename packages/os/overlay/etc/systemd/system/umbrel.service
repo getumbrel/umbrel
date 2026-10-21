@@ -5,6 +5,9 @@ After=network-online.target docker.service libvirtd.socket umbrel-custom-pre-sta
 
 [Service]
 TimeoutStopSec=15min
+# Trust the system CA store instead of the root store compiled into Node, so
+# umbreld's trusted CAs are managed in one place with the rest of the OS.
+Environment=NODE_OPTIONS=--use-openssl-ca
 ExecStart=umbreld --data-directory=/home/umbrel/umbrel
 Restart=always
 # This prevents us hitting restart rate limits and ensures we keep restarting
