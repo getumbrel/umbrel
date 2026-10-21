@@ -158,6 +158,8 @@ jobs:
     needs: [detect-changes, umbrelos-amd64-cache]
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-ubuntu-2404
+    outputs:
+      image-key: ${{ steps.image-key.outputs.key }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -181,17 +183,45 @@ jobs:
         run: SKIP_AMD64_RUGIX_BUNDLE=true SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
       # Hack to pass the image to the next job. We used to use upload-artifact but network performance
       # is terrible between GitHub <> Ubicloud. Just abuse the cache for now which is local and fast.
+      # Each attempt saves under its own key. A failed save can leave its key
+      # reserved, so a re-run reusing it could never save the image.
+      - name: Choose OS image cache key
+        id: image-key
+        run: echo "key=umbrelos-amd64-image-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - name: Cache OS image
         uses: actions/cache/save@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
-          key: umbrelos-amd64-image-${{ github.run_id }}
+          key: ${{ steps.image-key.outputs.key }}
+      # actions/cache/save only warns when saving fails, and then every VM test
+      # job fails to restore the image. Fail here instead, where re-running this
+      # job recovers. The lookup is retried once like the VM jobs' restore.
+      - name: Check the OS image was cached
+        id: check-os-image
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+      - name: Wait before checking the OS image again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Check the OS image was cached again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+          fail-on-cache-miss: true
 
   umbrelos-pi-vm-image-build:
     name: Build umbrelOS Pi VM image
     needs: [detect-changes, umbrelos-pi-cache]
     if: needs.detect-changes.outputs.ui-only != 'true' && needs.detect-changes.outputs.run-pi-tests == 'true'
     runs-on: ubicloud-standard-4-ubuntu-2404
+    outputs:
+      image-key: ${{ steps.image-key.outputs.key }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -213,11 +243,37 @@ jobs:
         # backend errors, which would block the Pi VM test that depends on this
         # image; the --cache-from import keeps the build fast regardless.
         run: SKIP_CACHE_EXPORT=true npm run build:pi5
+      # Each attempt saves under its own key. A failed save can leave its key
+      # reserved, so a re-run reusing it could never save the image.
+      - name: Choose OS image cache key
+        id: image-key
+        run: echo "key=umbrelos-pi-image-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - name: Cache OS image
         uses: actions/cache/save@v5
         with:
           path: packages/os/build/umbrelos-pi.img
-          key: umbrelos-pi-image-${{ github.run_id }}
+          key: ${{ steps.image-key.outputs.key }}
+      # actions/cache/save only warns when saving fails, and then every VM test
+      # job fails to restore the image. Fail here instead, where re-running this
+      # job recovers. The lookup is retried once like the VM jobs' restore.
+      - name: Check the OS image was cached
+        id: check-os-image
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-pi.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+      - name: Wait before checking the OS image again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Check the OS image was cached again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-pi.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+          fail-on-cache-miss: true
 
   # Discover all MV test files so we can run the result as a build matrix
   discover-vm-tests:
@@ -293,7 +349,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
-          key: umbrelos-amd64-image-${{ github.run_id }}
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.image-key }}
       - name: Wait before retrying OS image restore
         if: steps.restore-os-image.outputs.cache-hit != 'true'
         run: sleep 10
@@ -302,7 +358,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
-          key: umbrelos-amd64-image-${{ github.run_id }}
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.image-key }}
           fail-on-cache-miss: true
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
@@ -368,7 +424,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-pi.img
-          key: umbrelos-pi-image-${{ github.run_id }}
+          key: ${{ needs.umbrelos-pi-vm-image-build.outputs.image-key }}
       - name: Wait before retrying OS image restore
         if: steps.restore-os-image.outputs.cache-hit != 'true'
         run: sleep 10
@@ -377,7 +433,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-pi.img
-          key: umbrelos-pi-image-${{ github.run_id }}
+          key: ${{ needs.umbrelos-pi-vm-image-build.outputs.image-key }}
           fail-on-cache-miss: true
       - name: Prepare Nix store for caching
         run: sudo mkdir -p /nix && sudo chown "$(id -un)" /nix
