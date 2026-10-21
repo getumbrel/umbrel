@@ -61,7 +61,9 @@ describe('Static IP configuration', () => {
 
 		await new Promise((resolve) => setTimeout(resolve, 2000)) // Give the mutation a moment to trigger the network change
 
-		// Wait for the connection to re-establish after down/up
+		// Wait for the connection to re-establish after down/up. This has taken
+		// over 5 seconds on a busy CI runner. It must still finish well inside the
+		// 30 seconds setStaticIp waits for confirmation before rolling back.
 		let after!: Awaited<ReturnType<typeof umbreld.client.system.getNetworkInterfaces.query>>[number]
 		await pWaitFor(
 			async () => {
@@ -76,7 +78,7 @@ describe('Static IP configuration', () => {
 					return false
 				}
 			},
-			{interval: 100, timeout: 5000},
+			{interval: 100, timeout: 20_000},
 		)
 
 		// Settings should not be persisted until the client confirms the change worked
