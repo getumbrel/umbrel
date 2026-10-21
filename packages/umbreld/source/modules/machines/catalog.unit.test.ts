@@ -176,7 +176,7 @@ describe('built-in Machines catalog', () => {
 		expect(ubuntu.cloudInit).toEqual({packages: ['ubuntu-desktop'], graphical: true})
 		expect(fedora.cloudInit).toEqual({
 			commands: [
-				['dnf', 'install', '-y', '@workstation-product-environment'],
+				['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 				['systemctl', 'enable', 'gdm.service'],
 			],
 			graphical: true,
@@ -196,8 +196,8 @@ describe('built-in Machines catalog', () => {
 		expect(desktopEstimates).toEqual({
 			'ubuntu-26.04-desktop-amd64': 5_000,
 			'ubuntu-26.04-desktop-arm64': 7_900,
-			'fedora-44-desktop-amd64': 5_400,
-			'fedora-44-desktop-arm64': 6_200,
+			'fedora-44-desktop-amd64': 5_700,
+			'fedora-44-desktop-arm64': 6_700,
 			'debian-13-desktop-amd64': 3_400,
 			'debian-13-desktop-arm64': 6_100,
 		})

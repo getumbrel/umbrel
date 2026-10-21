@@ -499,16 +499,18 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			variantName: 'Desktop',
 			version: 'Fedora 44',
 			sizeMb: 584,
-			estimatedInstalledSizeMb: 5_400,
+			estimatedInstalledSizeMb: 5_700,
 			arch: 'amd64',
 			platform: 'linux',
 			requiresCredentials: true,
 			url: 'https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2',
 			sha256: '28680fe5b371a5a82ebf43a31926e086a168e59949d03969c5093e7071f90b7f',
 			platformProfile: 'modern-x86',
+			// Cloud Base only ships kernel-core, and the HDA sound drivers live in
+			// kernel-modules, which the Workstation group doesn't pull in.
 			cloudInit: {
 				commands: [
-					['dnf', 'install', '-y', '@workstation-product-environment'],
+					['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 					['systemctl', 'enable', 'gdm.service'],
 				],
 				graphical: true,
@@ -535,7 +537,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			variantName: 'Desktop',
 			version: 'Fedora 44',
 			sizeMb: 528,
-			estimatedInstalledSizeMb: 6_200,
+			estimatedInstalledSizeMb: 6_700,
 			arch: 'arm64',
 			platform: 'linux',
 			requiresCredentials: true,
@@ -544,7 +546,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			platformProfile: 'modern-arm64',
 			cloudInit: {
 				commands: [
-					['dnf', 'install', '-y', '@workstation-product-environment'],
+					['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 					['systemctl', 'enable', 'gdm.service'],
 				],
 				graphical: true,

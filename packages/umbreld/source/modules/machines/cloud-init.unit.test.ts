@@ -121,7 +121,7 @@ describe('Machines cloud-init seed', () => {
 	test('runs Fedora Workstation setup before rebooting', () => {
 		const document = renderCloudInitUserData('fedora', '$6$test-hash', {
 			commands: [
-				['dnf', 'install', '-y', '@workstation-product-environment'],
+				['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 				['systemctl', 'enable', 'gdm.service'],
 			],
 			graphical: true,
@@ -134,7 +134,7 @@ describe('Machines cloud-init seed', () => {
 
 		expect(config.users[0]).not.toHaveProperty('groups')
 		expect(config.runcmd).toEqual([
-			['dnf', 'install', '-y', '@workstation-product-environment'],
+			['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 			['systemctl', 'enable', 'gdm.service'],
 			['systemctl', 'set-default', 'graphical.target'],
 		])
