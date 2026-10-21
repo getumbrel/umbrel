@@ -196,8 +196,8 @@ describe('built-in Machines catalog', () => {
 		expect(desktopEstimates).toEqual({
 			'ubuntu-26.04-desktop-amd64': 5_000,
 			'ubuntu-26.04-desktop-arm64': 7_900,
-			'fedora-44-desktop-amd64': 5_700,
-			'fedora-44-desktop-arm64': 6_700,
+			'fedora-44-desktop-amd64': 6_200,
+			'fedora-44-desktop-arm64': 7_200,
 			'debian-13-desktop-amd64': 3_400,
 			'debian-13-desktop-arm64': 6_100,
 		})
