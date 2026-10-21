@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_DIR="${VM_STATE_DIR:-$SCRIPT_DIR/vm-state}"
 NVME_STATE_FILE="$STATE_DIR/nvme.json"
 HDD_STATE_FILE="$STATE_DIR/hdd.json"
+SAS_STATE_FILE="$STATE_DIR/sas.json"
 USB_STATE_FILE="$STATE_DIR/usb.json"
 QMP_SOCKET=""
 RUNNING_DEVICE_FILE="$STATE_DIR/running-device"
@@ -26,6 +27,7 @@ DEFAULT_HDD_SIZE="1T"
 DEFAULT_USB_STORAGE_SIZE="64G"
 MAX_NVME_SLOTS=8
 MAX_HDD_SLOTS=8
+MAX_SAS_SLOTS=8
 MAX_USB_STORAGE_SLOTS=8
 
 # Get Umbrel Pro PCIe slot number for an NVMe slot.
@@ -96,7 +98,7 @@ Usage: $0 <command> [options]
 Commands:
     boot [image]                   Boot VM from the given image (defaults to native arch image)
     reflash                        Delete boot disk overlay (simulates reflashing the OS)
-    reset                          Delete all VM state (overlay, NVMe disks, HDDs, UEFI vars)
+    reset                          Delete all VM state (overlay, NVMe disks, SATA/SAS drives, UEFI vars)
     power-button                   Press the power button of the running VM (ACPI power button event)
 
     nvme list                      List all NVMe devices and their status
@@ -112,6 +114,15 @@ Commands:
     sata destroy <slot>            Destroy SATA device (deletes data)
     sata connect <slot>            Connect an existing SATA device to the VM
     sata disconnect <slot>         Disconnect a SATA device from the VM
+    sata move <from> <to>          Move a SATA device from one slot to another
+
+    sas list                       List all SAS slot devices and their status
+    sas add <slot> [--size SIZE] [--type hdd|ssd]
+                                   Add a HDD/SSD behind a SAS HBA to slot (1-${MAX_SAS_SLOTS})
+    sas destroy <slot>             Destroy SAS device (deletes data)
+    sas connect <slot>             Connect an existing SAS device to the VM
+    sas disconnect <slot>          Disconnect a SAS device from the VM
+    sas move <from> <to>           Move a SAS device from one slot to another
 
     usb list                       List all USB storage devices and their status
     usb add <slot> [--size SIZE]   Add a USB storage device to slot (1-${MAX_USB_STORAGE_SLOTS})
@@ -134,8 +145,8 @@ Boot Options:
     --forward-port <host:guest>    Extra local TCP port forward to the VM, repeatable
 
 Disk Options:
-    --size <size>                  Disk size for nvme/sata/usb add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata, ${DEFAULT_USB_STORAGE_SIZE} usb)
-    --type <hdd|ssd>               For sata add only: set SATA device type (default: hdd)
+    --size <size>                  Disk size for nvme/sata/sas/usb add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata/sas, ${DEFAULT_USB_STORAGE_SIZE} usb)
+    --type <hdd|ssd>               For sata/sas add only: set device type (default: hdd)
 
 Environment Variables:
     VM_STATE_DIR                   Override state directory (default: ./vm-state)
@@ -150,6 +161,7 @@ Examples:
     $0 boot --arch arm64                           # Boot arm64 image
     $0 nvme add 1 --size 128G
     $0 sata add 1 --size 4T --type hdd
+    $0 sas add 1 --size 4T --type ssd
     $0 usb add 1 --size 128G
     $0 nvme list
     $0 sata list
@@ -210,6 +222,9 @@ init_state() {
   fi
   if [[ ! -f "$HDD_STATE_FILE" ]]; then
     echo '{}' > "$HDD_STATE_FILE"
+  fi
+  if [[ ! -f "$SAS_STATE_FILE" ]]; then
+    echo '{}' > "$SAS_STATE_FILE"
   fi
   if [[ ! -f "$USB_STATE_FILE" ]]; then
     echo '{}' > "$USB_STATE_FILE"
@@ -276,6 +291,33 @@ get_hdd_disk_path() {
   echo "$STATE_DIR/hdd-slot${slot}.qcow2"
 }
 
+get_sas_disk_path() {
+  local slot="$1"
+  echo "$STATE_DIR/sas-slot${slot}.qcow2"
+}
+
+# SATA and SAS drive bays share one implementation, keyed by bus
+get_bay_state_file() {
+  local bus="$1"
+  if [[ "$bus" == "sas" ]]; then echo "$SAS_STATE_FILE"; else echo "$HDD_STATE_FILE"; fi
+}
+
+get_bay_max_slots() {
+  local bus="$1"
+  if [[ "$bus" == "sas" ]]; then echo "$MAX_SAS_SLOTS"; else echo "$MAX_HDD_SLOTS"; fi
+}
+
+get_bay_disk_path() {
+  local bus="$1"
+  local slot="$2"
+  if [[ "$bus" == "sas" ]]; then get_sas_disk_path "$slot"; else get_hdd_disk_path "$slot"; fi
+}
+
+get_bay_label() {
+  local bus="$1"
+  if [[ "$bus" == "sas" ]]; then echo "SAS drive"; else echo "HDD"; fi
+}
+
 get_usb_disk_path() {
   local slot="$1"
   echo "$STATE_DIR/usb-slot${slot}.qcow2"
@@ -322,22 +364,21 @@ disk_list() {
 
 nvme_list() { disk_list "NVMe" "$NVME_STATE_FILE" "$MAX_NVME_SLOTS"; }
 sata_list() { disk_list "SATA" "$HDD_STATE_FILE" "$MAX_HDD_SLOTS"; }
+sas_list() { disk_list "SAS" "$SAS_STATE_FILE" "$MAX_SAS_SLOTS"; }
 usb_list() { disk_list "USB Storage" "$USB_STATE_FILE" "$MAX_USB_STORAGE_SLOTS"; }
 
-sata_add() {
-  local slot="$1"
-  local size="$2"
-  local sata_type="$3"
+# Arguments: <bus> <slot> <size> <hdd|ssd>
+bay_add() {
+  local bus="$1"
+  local slot="$2"
+  local size="$3"
+  local drive_type="$4"
   local is_ssd="false"
-  if [[ "$sata_type" == "ssd" ]]; then
+  if [[ "$drive_type" == "ssd" ]]; then
     is_ssd="true"
   fi
-  hdd_add "$slot" "$size" "$is_ssd"
+  hdd_add "$bus" "$slot" "$size" "$is_ssd"
 }
-
-sata_destroy() { hdd_destroy "$1"; }
-sata_connect() { hdd_connect "$1"; }
-sata_disconnect() { hdd_disconnect "$1"; }
 
 # Add NVMe device
 nvme_add() {
@@ -480,21 +521,25 @@ nvme_move() {
   echo "NVMe device moved from slot $from_slot to slot $to_slot"
 }
 
-# Add HDD device
+# Add a drive to a SATA or SAS bay
+# Arguments: <bus> <slot> <size> <is_ssd>
 hdd_add() {
-  local slot="$1"
-  local size="$2"
-  local is_ssd="$3"
+  local bus="$1"
+  local slot="$2"
+  local size="$3"
+  local is_ssd="$4"
+  local state_file
+  state_file=$(get_bay_state_file "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local disk_path
-  disk_path=$(get_hdd_disk_path "$slot")
+  disk_path=$(get_bay_disk_path "$bus" "$slot")
 
   if [[ -f "$disk_path" ]]; then
-    echo "Error: HDD already exists in slot $slot" >&2
-    echo "Use 'sata destroy $slot' to remove it first" >&2
+    echo "Error: $(get_bay_label "$bus") already exists in slot $slot" >&2
+    echo "Use '$bus destroy $slot' to remove it first" >&2
     exit 1
   fi
 
@@ -504,96 +549,168 @@ hdd_add() {
     label="SATA SSD"
     serial_prefix="satassd"
   fi
+  # Every SAS device carries a unique NAA world wide name, which udev prefers over the
+  # serial for its ID. Persist one per drive so its ID is stable across boots.
+  local wwn=""
+  if [[ "$bus" == "sas" ]]; then
+    label="SAS ${label#SATA }"
+    serial_prefix="sas${serial_prefix#sata}"
+    wwn=$(printf '0x5000c500%02x%06x' "$slot" "$(( (RANDOM << 9 ^ RANDOM) & 0xffffff ))")
+  fi
   local serial="${serial_prefix}${slot}-$(date +%s)-${RANDOM}"
+  # QEMU rejects scsi-hd serials longer than 20 characters (the serial doubles as
+  # the device id), so keep SAS ones short: sas{hdd,ssd}N-<epoch><2 digits>.
+  if [[ "$bus" == "sas" ]]; then
+    serial="${serial_prefix}${slot}-$(date +%s)$((RANDOM % 100))"
+  fi
 
   echo "Creating ${label} in slot $slot (${size})..."
   qemu-img create -f qcow2 "$disk_path" "$size" >/dev/null
   local tmp
   tmp=$(mktemp)
-  jq --arg size "$size" --arg serial "$serial" --argjson is_ssd "$is_ssd" \
-    ".\"$slot\" = {\"size\": \$size, \"serial\": \$serial, \"connected\": true, \"exists\": true, \"ssd\": \$is_ssd}" \
-    "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
+  jq --arg size "$size" --arg serial "$serial" --argjson is_ssd "$is_ssd" --arg wwn "$wwn" \
+    ".\"$slot\" = {\"size\": \$size, \"serial\": \$serial, \"connected\": true, \"exists\": true, \"ssd\": \$is_ssd} + (if \$wwn == \"\" then {} else {\"wwn\": \$wwn} end)" \
+    "$state_file" > "$tmp" && mv "$tmp" "$state_file"
   echo "Done. ${label} created in slot $slot (serial: $serial)"
 }
 
-# Destroy HDD device
+# Destroy the drive in a SATA or SAS bay
+# Arguments: <bus> <slot>
 hdd_destroy() {
-  local slot="$1"
+  local bus="$1"
+  local slot="$2"
+  local state_file label
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local disk_path
-  disk_path=$(get_hdd_disk_path "$slot")
+  disk_path=$(get_bay_disk_path "$bus" "$slot")
 
   if [[ ! -f "$disk_path" ]]; then
-    echo "Error: No HDD in slot $slot" >&2
+    echo "Error: No $label in slot $slot" >&2
     exit 1
   fi
 
-  echo "Destroying HDD in slot $slot..."
+  echo "Destroying $label in slot $slot..."
   rm -f "$disk_path"
   local tmp
   tmp=$(mktemp)
-  jq "del(.\"$slot\")" "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
-  echo "Done. HDD in slot $slot destroyed"
+  jq "del(.\"$slot\")" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+  echo "Done. $label in slot $slot destroyed"
 }
 
-# Connect HDD device
+# Connect the drive in a SATA or SAS bay
+# Arguments: <bus> <slot>
 hdd_connect() {
-  local slot="$1"
+  local bus="$1"
+  local slot="$2"
+  local state_file label
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local disk_path
-  disk_path=$(get_hdd_disk_path "$slot")
+  disk_path=$(get_bay_disk_path "$bus" "$slot")
 
   if [[ ! -f "$disk_path" ]]; then
-    echo "Error: No HDD in slot $slot" >&2
-    echo "Use 'sata add $slot --type hdd' to create one first" >&2
+    echo "Error: No $label in slot $slot" >&2
+    echo "Use '$bus add $slot --type hdd' to create one first" >&2
     exit 1
   fi
 
   local connected
-  connected=$(jq -r ".\"$slot\".connected // empty" "$HDD_STATE_FILE")
+  connected=$(jq -r ".\"$slot\".connected // empty" "$state_file")
   if [[ "$connected" == "true" ]]; then
-    echo "HDD in slot $slot is already connected"
+    echo "$label in slot $slot is already connected"
     exit 0
   fi
 
   local tmp
   tmp=$(mktemp)
-  jq ".\"$slot\".connected = true" "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
-  echo "HDD in slot $slot connected (will be available on next boot)"
+  jq ".\"$slot\".connected = true" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+  echo "$label in slot $slot connected (will be available on next boot)"
 }
 
-# Disconnect HDD device
+# Disconnect the drive in a SATA or SAS bay
+# Arguments: <bus> <slot>
 hdd_disconnect() {
-  local slot="$1"
+  local bus="$1"
+  local slot="$2"
+  local state_file label
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local exists
-  exists=$(jq -r ".\"$slot\".exists // empty" "$HDD_STATE_FILE")
+  exists=$(jq -r ".\"$slot\".exists // empty" "$state_file")
 
   if [[ "$exists" != "true" ]]; then
-    echo "Error: No HDD in slot $slot" >&2
+    echo "Error: No $label in slot $slot" >&2
     exit 1
   fi
 
   local connected
-  connected=$(jq -r ".\"$slot\".connected // empty" "$HDD_STATE_FILE")
+  connected=$(jq -r ".\"$slot\".connected // empty" "$state_file")
   if [[ "$connected" != "true" ]]; then
-    echo "HDD in slot $slot is already disconnected"
+    echo "$label in slot $slot is already disconnected"
     exit 0
   fi
 
   local tmp
   tmp=$(mktemp)
-  jq ".\"$slot\".connected = false" "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
-  echo "HDD in slot $slot disconnected (will be unavailable on next boot)"
+  jq ".\"$slot\".connected = false" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+  echo "$label in slot $slot disconnected (will be unavailable on next boot)"
+}
+
+# Move the drive in a SATA or SAS bay to another bay on the same controller, keeping
+# its serial and WWN like a physically re-seated disk
+# Arguments: <bus> <from_slot> <to_slot>
+hdd_move() {
+  local bus="$1"
+  local from_slot="$2"
+  local to_slot="$3"
+  local state_file label max_slots
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
+  max_slots=$(get_bay_max_slots "$bus")
+
+  validate_slot "$from_slot" "$max_slots"
+  validate_slot "$to_slot" "$max_slots"
+  init_state
+
+  if [[ "$from_slot" == "$to_slot" ]]; then
+    echo "Error: Source and destination slots are the same" >&2
+    exit 1
+  fi
+
+  local from_disk_path to_disk_path
+  from_disk_path=$(get_bay_disk_path "$bus" "$from_slot")
+  to_disk_path=$(get_bay_disk_path "$bus" "$to_slot")
+
+  if [[ ! -f "$from_disk_path" ]]; then
+    echo "Error: No $label in slot $from_slot" >&2
+    exit 1
+  fi
+
+  if [[ -f "$to_disk_path" ]]; then
+    echo "Error: Slot $to_slot already has a $label" >&2
+    echo "Use '$bus destroy $to_slot' to remove it first" >&2
+    exit 1
+  fi
+
+  mv "$from_disk_path" "$to_disk_path"
+  local tmp
+  tmp=$(mktemp)
+  jq ".\"$to_slot\" = .\"$from_slot\" | del(.\"$from_slot\")" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+
+  echo "$label moved from slot $from_slot to slot $to_slot"
 }
 
 # Add USB storage device
@@ -856,6 +973,43 @@ build_hdd_args() {
   done
 
   echo "$hdd_args"
+}
+
+# Build QEMU SAS arguments for connected devices (SCSI disks behind an LSI SAS HBA, the
+# same Fusion-MPT family as the SAS2008/SAS3008 cards common in DIY NAS builds)
+build_sas_args() {
+  local sas_args=""
+  local has_sas=false
+
+  for (( slot=1; slot<=MAX_SAS_SLOTS; slot++ )); do
+    local exists connected
+    exists=$(jq -r ".\"$slot\".exists // empty" "$SAS_STATE_FILE")
+    connected=$(jq -r ".\"$slot\".connected // empty" "$SAS_STATE_FILE")
+
+    if [[ "$exists" == "true" && "$connected" == "true" ]]; then
+      local disk_path serial wwn ssd rotation_rate
+      disk_path=$(get_sas_disk_path "$slot")
+      serial=$(jq -r ".\"$slot\".serial // \"sas${slot}\"" "$SAS_STATE_FILE")
+      wwn=$(jq -r ".\"$slot\".wwn" "$SAS_STATE_FILE")
+      ssd=$(jq -r ".\"$slot\".ssd // false" "$SAS_STATE_FILE")
+      rotation_rate=7200
+      if [[ "$ssd" == "true" ]]; then
+        # SCSI medium rotation rate of 1 indicates non-rotational media (SSD).
+        rotation_rate=1
+      fi
+
+      # Add the HBA on first SAS device
+      if [[ "$has_sas" == "false" ]]; then
+        sas_args="$sas_args -device mptsas1068,id=sas"
+        has_sas=true
+      fi
+
+      sas_args="$sas_args -drive file=${disk_path},format=qcow2,if=none,id=sas${slot},cache=none,discard=unmap,aio=threads"
+      sas_args="$sas_args -device scsi-hd,drive=sas${slot},bus=sas.0,scsi-id=$(( slot - 1 )),serial=${serial},wwn=${wwn},rotation_rate=${rotation_rate}"
+    fi
+  done
+
+  echo "$sas_args"
 }
 
 # Build QEMU USB storage arguments for existing devices
@@ -1252,9 +1406,10 @@ boot_vm() {
   fi
 
   # Build disk arguments for data drives
-  local nvme_args hdd_args usb_args
+  local nvme_args hdd_args sas_args usb_args
   nvme_args=$(build_nvme_args "$device" "$boot_nvme_slot")
   hdd_args=$(build_hdd_args)
+  sas_args=$(build_sas_args)
   usb_args=$(build_usb_args "$device")
 
   # Platform and architecture-specific settings
@@ -1374,6 +1529,7 @@ boot_vm() {
     -device ${network_device},netdev=net0 \
     $nvme_args \
     $hdd_args \
+    $sas_args \
     $usb_args
 }
 
@@ -1535,10 +1691,11 @@ case "$command" in
     exit 0
     ;;
 
-  sata)
+  sata|sas)
+    bus="$command"
     if [[ $# -lt 1 ]]; then
-      echo "Error: sata requires a subcommand" >&2
-      echo "Usage: $0 sata <list|add|destroy|connect|disconnect> [args]" >&2
+      echo "Error: $bus requires a subcommand" >&2
+      echo "Usage: $0 $bus <list|add|destroy|connect|disconnect|move> [args]" >&2
       exit 1
     fi
 
@@ -1547,17 +1704,17 @@ case "$command" in
 
     case "$subcommand" in
       list)
-        sata_list
+        if [[ "$bus" == "sas" ]]; then sas_list; else sata_list; fi
         ;;
       add)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata add requires a slot number" >&2
+          echo "Error: $bus add requires a slot number" >&2
           exit 1
         fi
         slot="$1"
         shift
         size="$DEFAULT_HDD_SIZE"
-        sata_type="hdd"
+        drive_type="hdd"
         while [[ $# -gt 0 ]]; do
           case "$1" in
             --size)
@@ -1565,7 +1722,7 @@ case "$command" in
               shift 2
               ;;
             --type)
-              sata_type="$2"
+              drive_type="$2"
               shift 2
               ;;
             *)
@@ -1574,36 +1731,44 @@ case "$command" in
               ;;
           esac
         done
-        if [[ "$sata_type" != "hdd" && "$sata_type" != "ssd" ]]; then
+        if [[ "$drive_type" != "hdd" && "$drive_type" != "ssd" ]]; then
           echo "Error: --type must be one of: hdd, ssd" >&2
           exit 1
         fi
-        sata_add "$slot" "$size" "$sata_type"
+        bay_add "$bus" "$slot" "$size" "$drive_type"
         ;;
       destroy)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata destroy requires a slot number" >&2
+          echo "Error: $bus destroy requires a slot number" >&2
           exit 1
         fi
-        sata_destroy "$1"
+        hdd_destroy "$bus" "$1"
         ;;
       connect)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata connect requires a slot number" >&2
+          echo "Error: $bus connect requires a slot number" >&2
           exit 1
         fi
-        sata_connect "$1"
+        hdd_connect "$bus" "$1"
         ;;
       disconnect)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata disconnect requires a slot number" >&2
+          echo "Error: $bus disconnect requires a slot number" >&2
           exit 1
         fi
-        sata_disconnect "$1"
+        hdd_disconnect "$bus" "$1"
+        ;;
+      move)
+        if [[ $# -lt 2 ]]; then
+          echo "Error: $bus move requires source and destination slot numbers" >&2
+          echo "Usage: $0 $bus move <from-slot> <to-slot>" >&2
+          exit 1
+        fi
+        hdd_move "$bus" "$1" "$2"
         ;;
       *)
-        echo "Error: Unknown sata subcommand: $subcommand" >&2
-        echo "Usage: $0 sata <list|add|destroy|connect|disconnect> [args]" >&2
+        echo "Error: Unknown $bus subcommand: $subcommand" >&2
+        echo "Usage: $0 $bus <list|add|destroy|connect|disconnect|move> [args]" >&2
         exit 1
         ;;
     esac

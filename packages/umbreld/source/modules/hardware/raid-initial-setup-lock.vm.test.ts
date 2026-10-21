@@ -1,9 +1,9 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
 
-describe('Initial RAID setup lock', () => {
+describe.each(driveBuses)('Initial RAID setup lock (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let hddDeviceId: string
 	let ssdDeviceId: string
@@ -26,7 +26,7 @@ describe('Initial RAID setup lock', () => {
 	})
 
 	test('boots a NAS VM with HDD and SSD data devices', async () => {
-		await umbreld.vm.addHdd({slot: 1})
+		await umbreld.vm.addHdd({slot: 1, bus})
 		await umbreld.vm.addNvme({slot: 2})
 		await umbreld.vm.powerOn()
 	})

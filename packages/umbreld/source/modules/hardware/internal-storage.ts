@@ -15,7 +15,7 @@ function kelvinToCelsius(kelvin: number): number {
 
 export type SsdDevice = {
 	type: 'ssd'
-	transport: 'nvme' | 'sata'
+	transport: 'nvme' | 'sata' | 'sas'
 	device: string
 	id?: string
 	pciSlotNumber?: number
@@ -35,7 +35,7 @@ export type SsdDevice = {
 
 export type HddDevice = {
 	type: 'hdd'
-	transport: 'sata'
+	transport: 'sata' | 'sas'
 	device: string
 	id?: string
 	slot?: number
@@ -178,6 +178,17 @@ async function getDevicePciSlotNumber(deviceName: string): Promise<number | unde
 	return undefined
 }
 
+// Whether an lsblk device is an internal disk, by transport protocol. SAS covers drives behind
+// a SAS HBA, including SATA drives which the controller presents as SCSI devices. This is an
+// allowlist so network-backed (iscsi, fc), USB and unknown-transport disks stay excluded.
+// Disks the kernel attaches with no capacity are excluded too. Used enterprise SAS drives
+// formatted with 520 byte sectors or T10 protection type 2 show up like this and can't be used
+// until they're reformatted.
+export function isInternalStorageDisk(device: {type?: string; tran?: string | null; size?: number}) {
+	const supportedTransports = ['nvme', 'sata', 'sas']
+	return device.type === 'disk' && supportedTransports.includes(device.tran ?? '') && (device.size ?? 0) > 0
+}
+
 // Get all internal storage devices using lsblk and nvme commands
 export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 	type LsBlkDevice = {
@@ -193,11 +204,7 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 	const {stdout} = await $`lsblk --output NAME,MODEL,SERIAL,SIZE,TYPE,TRAN,ROTA --json --bytes`
 	const {blockdevices} = JSON.parse(stdout) as {blockdevices: LsBlkDevice[]}
 
-	// Filter to internal disk devices by transport protocol
-	const supportedTransports = ['nvme', 'sata']
-	const internalBlockDevices = blockdevices.filter(
-		(device) => device.type === 'disk' && supportedTransports.includes(device.tran ?? ''),
-	)
+	const internalBlockDevices = blockdevices.filter(isInternalStorageDisk)
 
 	// Fetch SMART data, device IDs, and PCIe slot numbers for all devices in parallel
 	const devices: StorageDevice[] = await Promise.all(
@@ -205,8 +212,9 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 			const devicePath = `/dev/${device.name}`
 			const id = await getDeviceId(device.name).catch(() => undefined)
 			const size = device.size ?? 0
-			const isNvme = device.tran === 'nvme'
-			const name = device.model?.trim() ?? (isNvme ? 'Unknown NVMe Device' : 'Unknown SATA Device')
+			const transport = device.tran as SsdDevice['transport']
+			const isNvme = transport === 'nvme'
+			const name = device.model?.trim() ?? `Unknown ${transport.toUpperCase()} Device`
 			const model = device.model?.trim() ?? 'Unknown'
 			const serial = device.serial?.trim() ?? 'Unknown'
 			const roundedSize = getRoundedDeviceSize(size)
@@ -223,7 +231,7 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 			if (isSsd) {
 				return {
 					type: 'ssd' as const,
-					transport: device.tran as 'nvme' | 'sata',
+					transport,
 					device: device.name,
 					id,
 					pciSlotNumber,
@@ -242,7 +250,7 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 
 			return {
 				type: 'hdd' as const,
-				transport: 'sata' as const,
+				transport: transport as HddDevice['transport'],
 				device: device.name,
 				id,
 				name,

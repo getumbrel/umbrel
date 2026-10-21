@@ -1,14 +1,14 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
 
 // Capacity reporting must stay stable while a mirror member is missing. ZFS stops
 // reporting phys_space for missing members, which used to make totalSpace (and the UI's
 // "Total capacity added" / "For FailSafe" numbers derived from it) drop by the size of
 // every missing drive while the pool was degraded. The rep_dev_size fallback keeps raw
 // capacity stable; usable space was always unaffected.
-describe('Mirror pool capacity with a missing member', () => {
+describe.each(driveBuses)('Mirror pool capacity with a missing member (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstHddId: string
 	let secondHddId: string
@@ -33,8 +33,8 @@ describe('Mirror pool capacity with a missing member', () => {
 	})
 
 	test('boots a NAS VM with two HDD bays', async () => {
-		await umbreld.vm.addHdd({slot: 1})
-		await umbreld.vm.addHdd({slot: 2})
+		await umbreld.vm.addHdd({slot: 1, bus})
+		await umbreld.vm.addHdd({slot: 2, bus})
 		await umbreld.vm.powerOn()
 	})
 
@@ -75,7 +75,7 @@ describe('Mirror pool capacity with a missing member', () => {
 
 	test('detaches one mirror member and reboots degraded', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.disconnectSata({slot: 2})
+		await umbreld.vm.disconnectHdd({slot: 2, bus})
 		await umbreld.vm.powerOn()
 		await umbreld.waitForStartup({waitForUser: true})
 		await umbreld.login()
@@ -102,7 +102,7 @@ describe('Mirror pool capacity with a missing member', () => {
 
 	test('reattaching the member restores a healthy pool', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.connectSata({slot: 2})
+		await umbreld.vm.connectHdd({slot: 2, bus})
 		await umbreld.vm.powerOn()
 		await umbreld.waitForStartup({waitForUser: true})
 		await umbreld.login()

@@ -1,7 +1,7 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
 
 function expectSizeToBeWithinTenPercentOfGb(actualBytes: number | undefined, expectedGb: number) {
 	expect(actualBytes).toBeDefined()
@@ -10,13 +10,13 @@ function expectSizeToBeWithinTenPercentOfGb(actualBytes: number | undefined, exp
 	expect(actualGb).toBeLessThanOrEqual(expectedGb * 1.1)
 }
 
-for (const {ssdSizeGb, expectedL2arcTotalGb, expectedSpecialTotalGb} of [
+for (const {ssdSizeGb, expectedL2arcTotalGb, expectedSpecialTotalGb, bus} of [
 	{ssdSizeGb: 128, expectedL2arcTotalGb: 20, expectedSpecialTotalGb: 117}, // 128 GB each, no rounding
 	{ssdSizeGb: 256, expectedL2arcTotalGb: 20, expectedSpecialTotalGb: 240}, // 256 GB each, rounded to 250 GB
 	{ssdSizeGb: 512, expectedL2arcTotalGb: 20, expectedSpecialTotalGb: 490}, // 512 GB each, rounded to 500 GB
 	{ssdSizeGb: 1024, expectedL2arcTotalGb: 20, expectedSpecialTotalGb: 990}, // 1024 GB each, rounded to 1000 GB
-]) {
-	describe(`RAID HDD mirrored accelerator during initial failsafe setup with ${ssdSizeGb}GB SSDs`, () => {
+].flatMap((sizes) => driveBuses.map((bus) => ({...sizes, bus})))) {
+	describe(`RAID HDD mirrored accelerator during initial failsafe setup with ${ssdSizeGb}GB SSDs (${bus})`, () => {
 		let umbreld: Awaited<ReturnType<typeof createTestVm>>
 		let hddDeviceId1: string
 		let hddDeviceId2: string
@@ -41,8 +41,8 @@ for (const {ssdSizeGb, expectedL2arcTotalGb, expectedSpecialTotalGb} of [
 		})
 
 		test('adds two HDDs and two same-size NVMe SSDs and boots VM', async () => {
-			await umbreld.vm.addHdd({slot: 1})
-			await umbreld.vm.addHdd({slot: 2})
+			await umbreld.vm.addHdd({slot: 1, bus})
+			await umbreld.vm.addHdd({slot: 2, bus})
 			await umbreld.vm.addNvme({slot: 1, size: `${ssdSizeGb}G`})
 			await umbreld.vm.addNvme({slot: 2, size: `${ssdSizeGb}G`})
 			await umbreld.vm.powerOn()

@@ -1,9 +1,9 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
 
-describe('Partially mirrored HDD RAID status', () => {
+describe.each(driveBuses)('Partially mirrored HDD RAID status (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
@@ -29,9 +29,9 @@ describe('Partially mirrored HDD RAID status', () => {
 
 	// Set up a two-disk HDD stripe with one spare disk for a partial mirror transition.
 	test('adds three HDDs and boots the VM', async () => {
-		await umbreld.vm.addHdd({slot: 1})
-		await umbreld.vm.addHdd({slot: 2})
-		await umbreld.vm.addHdd({slot: 3})
+		await umbreld.vm.addHdd({slot: 1, bus})
+		await umbreld.vm.addHdd({slot: 2, bus})
+		await umbreld.vm.addHdd({slot: 3, bus})
 		await umbreld.vm.powerOn()
 	})
 

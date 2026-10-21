@@ -1,9 +1,9 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
 
-describe('RAID HDD storage mode and device type validation', () => {
+describe.each(driveBuses)('RAID HDD storage mode and device type validation (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let hddDeviceId1: string
 	let hddDeviceId2: string
@@ -30,7 +30,7 @@ describe('RAID HDD storage mode and device type validation', () => {
 	// --- Phase 1: Boot and detect devices ---
 
 	test('adds HDD and NVMe devices and boots VM', async () => {
-		await umbreld.vm.addHdd({slot: 1})
+		await umbreld.vm.addHdd({slot: 1, bus})
 		await umbreld.vm.addNvme({slot: 1})
 		await umbreld.vm.powerOn()
 	})
@@ -43,7 +43,7 @@ describe('RAID HDD storage mode and device type validation', () => {
 		const ssd = devices.find((d) => d.type === 'ssd')
 		expect(hdd).toBeDefined()
 		expect(ssd).toBeDefined()
-		expect(hdd!.transport).toBe('sata')
+		expect(hdd!.transport).toBe(bus)
 
 		hddDeviceId1 = hdd!.id!
 		ssdDeviceId = ssd!.id!
@@ -122,7 +122,7 @@ describe('RAID HDD storage mode and device type validation', () => {
 
 	test('shuts down and adds second HDD', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.addHdd({slot: 2})
+		await umbreld.vm.addHdd({slot: 2, bus})
 		await umbreld.vm.powerOn()
 	})
 

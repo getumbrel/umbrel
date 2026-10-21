@@ -14,8 +14,14 @@ wait_for_devices() {
     local devices=("$@")
     local missing_devices=()
     echo ">>> Waiting for devices to appear: ${devices[*]}"
-    # 50 checks with 0.1s sleep = 5 second timeout
-    for i in {1..50}; do
+    # 300 checks with 0.1s sleep = 30 second timeout. Drives behind a SAS HBA only appear
+    # once the controller has finished discovering them, which takes around 8 seconds after
+    # the driver loads on common LSI cards. SAS drives also don't spin up until the HBA tells
+    # them to, and enterprise SAS drives are specced to take up to 30 seconds from then to
+    # become ready. 30 seconds is also how long Debian's initramfs waits for a root device.
+    # Present devices return immediately so this only delays boot when a configured device
+    # is really missing.
+    for i in {1..300}; do
         local all_devices_present="true"
         missing_devices=()
         for dev in "${devices[@]}"; do
@@ -28,8 +34,8 @@ wait_for_devices() {
             echo ">>> All devices present"
             break
         fi
-        if [ "$i" = "50" ]; then
-            echo ">>> wait_for_devices timeout reached after 5 seconds, missing: ${missing_devices[*]}"
+        if [ "$i" = "300" ]; then
+            echo ">>> wait_for_devices timeout reached after 30 seconds, missing: ${missing_devices[*]}"
             break
         fi
         sleep 0.1

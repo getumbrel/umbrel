@@ -367,6 +367,11 @@ export default async function createTestUmbreld({
 	}
 }
 
+// The controller a VM drive bay is attached to: the motherboard's SATA (AHCI) controller,
+// or a SAS HBA. HDD tests run against both via describe.each(driveBuses).
+export type DriveBus = 'sata' | 'sas'
+export const driveBuses: DriveBus[] = ['sata', 'sas']
+
 export async function createTestVm({
 	device,
 	bootDisk,
@@ -652,24 +657,37 @@ export async function createTestVm({
 		await $({env})`${vmScript} nvme destroy ${slot}`
 	}
 
-	async function addSata({slot, type, size}: {slot: number; type: 'hdd' | 'ssd'; size?: string}) {
+	async function addBayDrive({
+		bus,
+		slot,
+		type,
+		size,
+	}: {
+		bus: DriveBus
+		slot: number
+		type: 'hdd' | 'ssd'
+		size?: string
+	}) {
 		if (size) {
-			await $({env})`${vmScript} sata add ${slot} --size ${size} --type ${type}`
+			await $({env})`${vmScript} ${bus} add ${slot} --size ${size} --type ${type}`
 		} else {
-			await $({env})`${vmScript} sata add ${slot} --type ${type}`
+			await $({env})`${vmScript} ${bus} add ${slot} --type ${type}`
 		}
 	}
 
-	async function addHdd({slot, size}: {slot: number; size?: string}) {
-		await addSata({slot, type: 'hdd', size})
+	// HDDs go in SATA bays on the motherboard's AHCI controller by default, or in SAS bays
+	// behind an LSI SAS HBA
+	async function addHdd({slot, size, bus = 'sata'}: {slot: number; size?: string; bus?: DriveBus}) {
+		await addBayDrive({bus, slot, type: 'hdd', size})
 	}
 
-	async function addSataSsd({slot, size}: {slot: number; size?: string}) {
-		await addSata({slot, type: 'ssd', size})
+	// SATA or SAS SSD in a drive bay (NVMe SSDs use addNvme)
+	async function addSsd({slot, size, bus}: {slot: number; size?: string; bus: DriveBus}) {
+		await addBayDrive({bus, slot, type: 'ssd', size})
 	}
 
-	async function removeHdd({slot}: {slot: number}) {
-		await $({env})`${vmScript} sata destroy ${slot}`
+	async function removeHdd({slot, bus = 'sata'}: {slot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} destroy ${slot}`
 	}
 
 	async function addUsbStorage({slot, size}: {slot: number; size?: string}) {
@@ -696,12 +714,12 @@ export async function createTestVm({
 		await $({env})`${vmScript} nvme disconnect ${slot}`
 	}
 
-	async function disconnectSata({slot}: {slot: number}) {
-		await $({env})`${vmScript} sata disconnect ${slot}`
+	async function disconnectHdd({slot, bus = 'sata'}: {slot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} disconnect ${slot}`
 	}
 
-	async function connectSata({slot}: {slot: number}) {
-		await $({env})`${vmScript} sata connect ${slot}`
+	async function connectHdd({slot, bus = 'sata'}: {slot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} connect ${slot}`
 	}
 
 	async function connectNvme({slot}: {slot: number}) {
@@ -710,6 +728,10 @@ export async function createTestVm({
 
 	async function moveNvme({fromSlot, toSlot}: {fromSlot: number; toSlot: number}) {
 		await $({env})`${vmScript} nvme move ${fromSlot} ${toSlot}`
+	}
+
+	async function moveHdd({fromSlot, toSlot, bus = 'sata'}: {fromSlot: number; toSlot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} move ${fromSlot} ${toSlot}`
 	}
 
 	async function reflash() {
@@ -868,11 +890,12 @@ printf '\\n${authFailureMarker}\\n'
 		removeNvme,
 		disconnectNvme,
 		connectNvme,
-		disconnectSata,
-		connectSata,
+		disconnectHdd,
+		connectHdd,
 		moveNvme,
+		moveHdd,
 		addHdd,
-		addSataSsd,
+		addSsd,
 		removeHdd,
 		addUsbStorage,
 		removeUsbStorage,
