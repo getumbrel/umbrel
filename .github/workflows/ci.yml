@@ -306,9 +306,16 @@ jobs:
           fail-on-cache-miss: true
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
+      # Retried once: a dropped registry connection (ECONNRESET) or a race in
+      # npm's own cache (EEXIST) has failed this step, and with it the job
       - name: Install umbreld dependencies
         working-directory: packages/umbreld
-        run: npm clean-install
+        run: |
+          npm clean-install || {
+            echo "::warning title=Retried npm install::npm clean-install failed, retrying once"
+            sleep 10
+            npm clean-install
+          }
       - name: Install browser for LAN ingress end-to-end test
         if: matrix.test.requiresPlaywright
         working-directory: packages/umbreld
@@ -398,9 +405,16 @@ jobs:
           fi
           echo "/nix/qemu/bin" >> "$GITHUB_PATH"
           /nix/qemu/bin/qemu-system-aarch64 --version
+      # Retried once: a dropped registry connection (ECONNRESET) or a race in
+      # npm's own cache (EEXIST) has failed this step, and with it the job
       - name: Install umbreld dependencies
         working-directory: packages/umbreld
-        run: npm clean-install
+        run: |
+          npm clean-install || {
+            echo "::warning title=Retried npm install::npm clean-install failed, retrying once"
+            sleep 10
+            npm clean-install
+          }
       # Retried once with a fresh VM for the same reason as the amd64 VM tests
       - name: Run Pi VM test
         id: vm-test
@@ -493,7 +507,12 @@ jobs:
         with:
           node-version: 18
       - name: Install dependencies
-        run: sudo npm clean-install
+        run: |
+          sudo npm clean-install || {
+            echo "::warning title=Retried npm install::sudo npm clean-install failed, retrying once"
+            sleep 10
+            sudo npm clean-install
+          }
       - run: sudo npm run ${{ matrix.task }}
 
   # Run the shared Apple client tests and compile both native apps. The macOS 26
@@ -565,9 +584,19 @@ jobs:
           node-version: 22
       - name: Install Umbreld dependencies
         if: ${{ matrix.task == 'typecheck' || matrix.task == 'test' }}
-        run: npm --prefix ../umbreld clean-install
+        run: |
+          npm --prefix ../umbreld clean-install || {
+            echo "::warning title=Retried npm install::npm --prefix ../umbreld clean-install failed, retrying once"
+            sleep 10
+            npm --prefix ../umbreld clean-install
+          }
       - name: Install dependencies
-        run: npm clean-install
+        run: |
+          npm clean-install || {
+            echo "::warning title=Retried npm install::npm clean-install failed, retrying once"
+            sleep 10
+            npm clean-install
+          }
       - run: npm run ${{ matrix.task }}
 
   # If the current build is tagged, build all release assets, push to Cloudflare R2 and create a GitHub Release
