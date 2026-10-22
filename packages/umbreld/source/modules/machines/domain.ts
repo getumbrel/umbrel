@@ -170,6 +170,19 @@ export function buildDomainXml({
 		definition.firmware === 'uefi'
 			? `<loader readonly='yes'${definition.secureBoot && !arm ? " secure='yes'" : ''} type='pflash'>${escapeXml(firmwareCode!)}</loader><nvram>${escapeXml(nvramPath)}</nvram>`
 			: ''
+	// Hyper-V enlightenments and the Hyper-V clock give Windows paravirtual
+	// timers, interrupts and TLB flushes. Without them an idle Windows guest
+	// keeps trapping into emulated hardware and burns host CPU. They're limited
+	// to KVM x86 Windows guests: Linux moves off kvm-clock when it sees Hyper-V,
+	// and the XP/98 legacy profiles are left exactly as they are.
+	const hyperv =
+		acceleration === 'kvm' && !arm && ['windows-11', 'windows-server', 'windows-7'].includes(definition.osId)
+	const hypervFeatures = hyperv
+		? "<hyperv mode='custom'><relaxed state='on'/><vapic state='on'/><spinlocks state='on' retries='8191'/><vpindex state='on'/><runtime state='on'/><synic state='on'/><stimer state='on'><direct state='on'/></stimer><frequencies state='on'/><tlbflush state='on'/><ipi state='on'/></hyperv>"
+		: ''
+	const clock = hyperv
+		? "<clock offset='utc'><timer name='rtc' tickpolicy='catchup'/><timer name='pit' tickpolicy='delay'/><timer name='hpet' present='no'/><timer name='hypervclock' present='yes'/></clock>"
+		: "<clock offset='utc'/>"
 	// Native ARM guests must use the interrupt controller exposed by the host:
 	// Raspberry Pi 5 KVM provides GICv2, while server-class ARM hosts commonly
 	// provide GICv3. TCG can consistently emulate GICv3.
@@ -177,7 +190,7 @@ export function buildDomainXml({
 		? `<acpi/><gic version="${acceleration === 'kvm' ? 'host' : '3'}"/>`
 		: windows98
 			? "<apic/><vmport state='on'/>"
-			: `<acpi/><apic/>${definition.secureBoot ? "<smm state='on'/>" : ''}`
+			: `<acpi/><apic/>${hypervFeatures}${definition.secureBoot ? "<smm state='on'/>" : ''}`
 	const cdrom = definition.installMedia
 		? arm
 			? windowsArm
@@ -249,7 +262,7 @@ export function buildDomainXml({
   </os>
   <features>${features}</features>
   <cpu mode='${acceleration === 'kvm' ? 'host-passthrough' : 'maximum'}' check='none'>${topology}</cpu>
-  <clock offset='utc'/>
+  ${clock}
   <on_poweroff>destroy</on_poweroff>
   <on_reboot>restart</on_reboot>
   <on_crash>restart</on_crash>

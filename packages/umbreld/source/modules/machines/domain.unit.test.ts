@@ -222,6 +222,70 @@ describe('libvirt domain XML', () => {
 		)
 	})
 
+	const hyperv =
+		"<hyperv mode='custom'><relaxed state='on'/><vapic state='on'/><spinlocks state='on' retries='8191'/><vpindex state='on'/><runtime state='on'/><synic state='on'/><stimer state='on'><direct state='on'/></stimer><frequencies state='on'/><tlbflush state='on'/><ipi state='on'/></hyperv>"
+	const hypervClock =
+		"<clock offset='utc'><timer name='rtc' tickpolicy='catchup'/><timer name='pit' tickpolicy='delay'/><timer name='hpet' present='no'/><timer name='hypervclock' present='yes'/></clock>"
+
+	test.each([
+		{osId: 'windows-11', overrides: {secureBoot: true, tpm: true}},
+		{osId: 'windows-server', overrides: {secureBoot: true, tpm: true}},
+		{osId: 'windows-7', overrides: {platformProfile: 'windows-7-x86', firmware: 'bios'}},
+	] as const)('gives KVM $osId guests Hyper-V enlightenments and the Hyper-V clock', ({osId, overrides}) => {
+		const xml = buildDomainXml({
+			definition: definition({...overrides, osId}),
+			machineDirectory: '/data/machines/windows',
+			runtimeDirectory: '/run/umbrel-machines/windows',
+			acceleration: 'kvm',
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.ms.fd',
+		})
+
+		expect(xml).toContain(`<features><acpi/><apic/>${hyperv}`)
+		expect(xml).toContain(hypervClock)
+		expect(xml).not.toContain('evmcs')
+	})
+
+	// Linux switches clocksource away from kvm-clock when it sees Hyper-V, and
+	// the legacy Windows profiles and non-KVM guests stay as they were
+	test.each([
+		{name: 'a custom image', acceleration: 'kvm', overrides: {}},
+		{name: 'Ubuntu', acceleration: 'kvm', overrides: {osId: 'ubuntu'}},
+		{name: 'Android', acceleration: 'kvm', overrides: {osId: 'android'}},
+		{
+			name: 'Windows XP',
+			acceleration: 'kvm',
+			overrides: {osId: 'windows-xp', platformProfile: 'legacy-x86', machineType: 'pc-i440fx-9.2', firmware: 'bios'},
+		},
+		{
+			name: 'Windows 98',
+			acceleration: 'kvm',
+			overrides: {
+				osId: 'windows-98',
+				platformProfile: 'windows-98-x86',
+				machineType: 'pc-i440fx-9.2',
+				firmware: 'bios',
+			},
+		},
+		{
+			name: 'Windows 11 on Arm',
+			acceleration: 'kvm',
+			overrides: {osId: 'windows-11', arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'},
+		},
+		{name: 'emulated Windows 11', acceleration: 'tcg', overrides: {osId: 'windows-11'}},
+	] as const)('keeps $name on the plain UTC clock without Hyper-V', ({acceleration, overrides}) => {
+		const xml = buildDomainXml({
+			definition: definition(overrides),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration,
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+		})
+
+		expect(xml).not.toContain('<hyperv')
+		expect(xml).not.toContain('<timer')
+		expect(xml).toContain("<clock offset='utc'/>")
+	})
+
 	test('keeps port forwarding out of domain XML so umbreld can enforce DNAT centrally', () => {
 		const xml = buildDomainXml({
 			definition: definition({
