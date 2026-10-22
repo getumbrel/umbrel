@@ -674,15 +674,22 @@ export async function deleteWifiConnections({inactiveOnly = false}: {inactiveOnl
 }
 
 export async function connectToWiFiNetwork({ssid, password}: {ssid: string; password?: string}) {
-	let connection
-	if (password !== undefined) {
-		connection = $`nmcli device wifi connect ${ssid} password ${password}`
-	} else {
-		connection = $`nmcli device wifi connect ${ssid}`
-	}
+	const connect = () =>
+		password !== undefined
+			? $`nmcli device wifi connect ${ssid} password ${password}`
+			: $`nmcli device wifi connect ${ssid}`
 
 	try {
-		await connection
+		try {
+			await connect()
+		} catch (error) {
+			// nmcli only looks for the network in NetworkManager's last scan results, which
+			// won't include it yet if NetworkManager has only just started or the network has
+			// only just come back. So if it's not found, rescan and try once more.
+			if ((error as ExecaError).exitCode !== 10) throw error
+			await $`nmcli device wifi list --rescan yes`.catch(() => {})
+			await connect()
+		}
 
 		// Destroy any inactive WiFi connections incase we just transitioned
 		// from a previous wireless connection. We don't wanna leave that
@@ -705,8 +712,9 @@ export async function connectToWiFiNetwork({ssid, password}: {ssid: string; pass
 			console.log(`Failed to cleanup WiFi connections: ${(error as Error).message}`)
 		}
 
-		if (connection.exitCode === 10) throw new Error('Network not found')
-		if (connection.exitCode === 1 || connection.exitCode === 4) throw new Error('Incorrect password')
+		const {exitCode} = error as ExecaError
+		if (exitCode === 10) throw new Error('Network not found')
+		if (exitCode === 1 || exitCode === 4) throw new Error('Incorrect password')
 		throw new Error('Connection failed')
 	}
 }
@@ -724,6 +732,22 @@ export async function restoreWiFi(umbreld: Umbreld): Promise<void> {
 		} catch (error) {
 			umbreld.logger.error(`Failed to restore WiFi connection, retrying in 1 minute`, error)
 			await setTimeout(1000 * 60)
+		}
+
+		// Stop retrying if the user has disconnected or switched to another network
+		// since we started, otherwise we'd connect to a network they no longer want.
+		// If the settings can't be read, keep retrying rather than throwing, since
+		// nothing awaits this and an unhandled rejection would crash umbreld.
+		const currentWifiCredentials = await umbreld.store.get('settings.wifi').catch((error) => {
+			umbreld.logger.error(`Failed to read WiFi settings, retrying anyway`, error)
+			return wifiCredentials
+		})
+		if (
+			currentWifiCredentials?.ssid !== wifiCredentials.ssid ||
+			currentWifiCredentials?.password !== wifiCredentials.password
+		) {
+			umbreld.logger.log(`WiFi settings changed, no longer restoring WiFi connection to ${wifiCredentials.ssid}`)
+			break
 		}
 	}
 }

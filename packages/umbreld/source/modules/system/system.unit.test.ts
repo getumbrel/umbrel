@@ -18,11 +18,15 @@ import {
 	shutdown,
 	reboot,
 	restoreStaticIp,
+	connectToWiFiNetwork,
+	restoreWiFi,
 } from './system.js'
 
 vi.mock('systeminformation')
 vi.mock('execa')
 vi.mock('fs-extra')
+// Don't actually wait between WiFi restore attempts
+vi.mock('node:timers/promises', () => ({setTimeout: vi.fn(async () => {})}))
 
 afterEach(() => {
 	vi.restoreAllMocks()
@@ -281,5 +285,116 @@ describe('restoreStaticIp', () => {
 		expect(changes[1]).toMatch(
 			/^nmcli connection modify wired-connection-[0-9a-f]{8} ipv4.method manual ipv4.addresses 192.168.1.50\/24 ipv4.gateway 192.168.1.1 ipv4.dns 1.1.1.1,8.8.8.8$/,
 		)
+	})
+})
+
+describe('WiFi', () => {
+	const credentials = {ssid: 'Home', password: 'hunter22'}
+
+	// Fake nmcli where each `wifi connect` takes the next exit code from the list
+	// (0 for success) and return the commands that were run
+	function mockNetworkManager(connectExitCodes: number[]) {
+		const commands: string[] = []
+		vi.mocked(execa.$).mockImplementation(async (strings: TemplateStringsArray, ...values: unknown[]) => {
+			const command = strings.reduce((command, string, index) => command + values[index - 1] + string)
+			commands.push(command)
+			if (command.startsWith('nmcli device wifi connect')) {
+				const exitCode = connectExitCodes.shift() ?? 0
+				if (exitCode !== 0) throw Object.assign(new Error(`Command failed: ${command}`), {exitCode})
+			}
+			return {stdout: ''}
+		})
+		return commands
+	}
+
+	const connectCommand = 'nmcli device wifi connect Home password hunter22'
+	const rescanCommand = 'nmcli device wifi list --rescan yes'
+	const nmcliCalls = (commands: string[]) =>
+		commands.filter((command) => command === connectCommand || command === rescanCommand)
+
+	describe('connectToWiFiNetwork', () => {
+		test('connects without rescanning when the network is already known', async () => {
+			const commands = mockNetworkManager([0])
+
+			await expect(connectToWiFiNetwork(credentials)).resolves.toBe(true)
+			expect(nmcliCalls(commands)).toEqual([connectCommand])
+		})
+
+		test('rescans and tries again when the network is not in the scan results yet', async () => {
+			const commands = mockNetworkManager([10, 0])
+
+			await expect(connectToWiFiNetwork(credentials)).resolves.toBe(true)
+			expect(nmcliCalls(commands)).toEqual([connectCommand, rescanCommand, connectCommand])
+		})
+
+		test('fails with network not found when the network is still missing after a rescan', async () => {
+			const commands = mockNetworkManager([10, 10])
+
+			await expect(connectToWiFiNetwork(credentials)).rejects.toThrow('Network not found')
+			expect(nmcliCalls(commands)).toEqual([connectCommand, rescanCommand, connectCommand])
+		})
+
+		test('does not rescan when the connection fails for another reason', async () => {
+			const commands = mockNetworkManager([4])
+
+			await expect(connectToWiFiNetwork(credentials)).rejects.toThrow('Incorrect password')
+			expect(nmcliCalls(commands)).toEqual([connectCommand])
+		})
+	})
+
+	describe('restoreWiFi', () => {
+		// Fake store whose saved WiFi settings come from the list in turn, sticking on the last one.
+		// An Error in the list makes that read fail.
+		function createUmbreld(savedWifiSettings: unknown[]) {
+			return {
+				store: {
+					get: vi.fn(async () => {
+						const settings = savedWifiSettings.length > 1 ? savedWifiSettings.shift() : savedWifiSettings[0]
+						if (settings instanceof Error) throw settings
+						return settings
+					}),
+				},
+				logger: {log: vi.fn(), error: vi.fn()},
+			} as any
+		}
+
+		test('does nothing when no WiFi network is saved', async () => {
+			const commands = mockNetworkManager([])
+
+			await restoreWiFi(createUmbreld([undefined]))
+			expect(nmcliCalls(commands)).toEqual([])
+		})
+
+		test('keeps retrying until the saved network connects', async () => {
+			const commands = mockNetworkManager([10, 10, 10, 10, 0])
+			const umbreld = createUmbreld([credentials])
+
+			await restoreWiFi(umbreld)
+			expect(nmcliCalls(commands).filter((command) => command === connectCommand)).toHaveLength(5)
+			expect(umbreld.logger.log).toHaveBeenCalledWith('WiFi connection restored!')
+		})
+
+		test.each([
+			['disconnects from WiFi', undefined],
+			['switches to another network', {ssid: 'Neighbour', password: 'hunter33'}],
+			['changes the password', {ssid: 'Home', password: 'hunter33'}],
+		])('stops retrying when the user %s in the meantime', async (_, newWifiSettings) => {
+			const commands = mockNetworkManager([10, 10, 0])
+			const umbreld = createUmbreld([credentials, newWifiSettings])
+
+			await restoreWiFi(umbreld)
+			// Only the first attempt (with its rescan) ran, and nothing reconnected to the old network
+			expect(nmcliCalls(commands)).toEqual([connectCommand, rescanCommand, connectCommand])
+			expect(umbreld.logger.log).not.toHaveBeenCalledWith('WiFi connection restored!')
+		})
+
+		test('keeps retrying when the saved settings cannot be read', async () => {
+			const commands = mockNetworkManager([10, 10, 0])
+			const umbreld = createUmbreld([credentials, new Error('Failed to read store'), credentials])
+
+			await expect(restoreWiFi(umbreld)).resolves.toBeUndefined()
+			expect(nmcliCalls(commands).filter((command) => command === connectCommand)).toHaveLength(3)
+			expect(umbreld.logger.log).toHaveBeenCalledWith('WiFi connection restored!')
+		})
 	})
 })
