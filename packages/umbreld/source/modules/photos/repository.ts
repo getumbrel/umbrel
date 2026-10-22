@@ -1422,14 +1422,18 @@ export default class PhotosRepository {
 		const counts = this.#indexingStatus.counts(database, accountId, !this.#readonly)
 		const total = Number(counts.total)
 		const completed = Number(counts.completed)
+		const failures = Number(counts.failures)
 		const percentage = total === 0 ? 100 : Math.floor((completed / total) * 100)
 		if (root.state === 'degraded') {
 			return {phase: 'degraded', completed, total, percentage, ...(root.last_error ? {error: root.last_error} : {})}
 		}
-		if (Number(counts.failures) > 0) {
+		// Failed items keep retrying with backoff and never count as completed.
+		// Keep enriching until every item is either completed or failed, so an
+		// early failure doesn't report the partial library as degraded.
+		if (completed + failures < total) return {phase: 'enriching', completed, total, percentage}
+		if (failures > 0) {
 			return {phase: 'degraded', completed, total, percentage, error: 'Some media could not be prepared'}
 		}
-		if (completed < total) return {phase: 'enriching', completed, total, percentage}
 		return {phase: 'ready', completed, total, percentage: 100}
 	}
 

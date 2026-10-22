@@ -1,3 +1,4 @@
+import {randomBytes} from 'node:crypto'
 import nodePath from 'node:path'
 
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
@@ -475,5 +476,74 @@ describe('Photos account isolation', () => {
 				expect.objectContaining({id: memberWatchedItemId}),
 			]),
 		})
+	})
+
+	test('keeps enriching past an undecodable file until other media settles, then reports degraded', async () => {
+		await useSession(ownerSession)
+		type Status = Awaited<ReturnType<typeof umbreld.client.photos.library.status.query>>
+		const settledDegraded = (total: number) => ({
+			phase: 'degraded',
+			total,
+			completed: total - 1,
+			error: 'Some media could not be prepared',
+		})
+
+		// A file with a photo extension but random content fails to prepare. It
+		// must land in the failed count rather than leaving the library enriching.
+		const {total: baseTotal} = (await umbreld.client.photos.library.status.query()) as {total: number}
+		const undecodablePath = '/Home/Photos/undecodable.jpg'
+		await umbreld.api.post(`files/upload?path=${encodeURIComponent(undecodablePath)}`, {
+			body: randomBytes(64 * 1024),
+		})
+		await pRetry(
+			async () => {
+				expect(await umbreld.client.photos.library.status.query()).toMatchObject(settledDegraded(baseTotal + 1))
+			},
+			{retries: 240, factor: 1, minTimeout: 250, maxTimeout: 250},
+		)
+
+		// Add a batch of large photos while that failure is known. Each is written
+		// as a JPEG under a .part name and renamed into place so the indexer never
+		// sees a partly-written image, and each has distinct trailing bytes so they
+		// are separate content.
+		const count = 12
+		const directory = `${umbreld.vm.dataDirectory}/home/Photos/degraded-batch`
+		await umbreld.vm.sshAsRoot(`
+			mkdir -p '${directory}'
+			convert -seed 1 -size 4000x3000 plasma:fractal jpg:'${directory}/base.jpg.part'
+			for i in $(seq 1 ${count}); do
+				cp '${directory}/base.jpg.part' "${directory}/batch-$i.jpg.part"
+				printf 'batch-%s' "$i" >> "${directory}/batch-$i.jpg.part"
+			done
+			rm '${directory}/base.jpg.part'
+			for i in $(seq 1 ${count}); do mv "${directory}/batch-$i.jpg.part" "${directory}/batch-$i.jpg"; done
+		`)
+
+		// Poll until the library settles. While good media is still pending the
+		// library is enriching; it is only degraded once everything else is done.
+		const observed: Status[] = []
+		await pRetry(
+			async () => {
+				const status = await umbreld.client.photos.library.status.query()
+				observed.push(status)
+				expect(status).toMatchObject(settledDegraded(baseTotal + 1 + count))
+			},
+			{retries: 1200, factor: 1, minTimeout: 100, maxTimeout: 100},
+		)
+		for (const status of observed) {
+			if (status.phase === 'degraded') expect(status).toMatchObject({completed: status.total! - 1})
+		}
+		expect(observed.some((status) => status.phase === 'enriching' && status.completed + 1 < status.total)).toBe(true)
+
+		// Removing the undecodable file leaves a fully prepared library.
+		const trashed = await umbreld.client.files.trash.mutate({path: undecodablePath})
+		await waitForReady()
+		await expect(umbreld.client.photos.library.status.query()).resolves.toEqual({
+			phase: 'ready',
+			total: baseTotal + count,
+			completed: baseTotal + count,
+			percentage: 100,
+		})
+		await expect(umbreld.client.files.delete.mutate({path: trashed})).resolves.toBe(true)
 	})
 })
