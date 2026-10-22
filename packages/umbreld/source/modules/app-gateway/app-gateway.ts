@@ -178,7 +178,11 @@ export default class AppGateway {
 		// Keep the separate timeout for receiving request headers.
 		this.server.requestTimeout = 0
 		this.server.on('upgrade', (request, socket, head) => {
-			this.handleUpgrade(request, socket as net.Socket, head).catch(() => {
+			// Node.js 26 passes a stream wrapper instead of the socket when an upgrade
+			// request has a body, which http-proxy can't proxy and crashes on.
+			// WebSocket handshakes never have a body.
+			if (!(socket instanceof net.Socket)) return socket.destroy()
+			this.handleUpgrade(request, socket, head).catch(() => {
 				socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n')
 				socket.destroy()
 			})
@@ -190,7 +194,8 @@ export default class AppGateway {
 		return createProxyMiddleware({
 			target: `${this.#config.targetProtocol}://${targetHost}`,
 			agent:
-				this.#config.targetProtocol === 'https' && this.#config.targetAddress
+				// Node.js 25+ rejects an IP address as a TLS server name
+				this.#config.targetProtocol === 'https' && this.#config.targetAddress && !net.isIP(this.#config.targetHost)
 					? new https.Agent({servername: this.#config.targetHost})
 					: undefined,
 			changeOrigin: false,

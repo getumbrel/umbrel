@@ -213,7 +213,7 @@ services:
       PROXY_AUTH_ADD: "true"
       PROXY_AUTH_WHITELIST: /public/*
   keepalive:
-    image: ghcr.io/getumbrel/tor:0.4.9.11
+    image: ghcr.io/getumbrel/tor:0.4.9.14
     command: ["sleep", "infinity"]
 YAML
 

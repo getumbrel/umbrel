@@ -6,6 +6,7 @@ import https from 'node:https'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
+import tls from 'node:tls'
 import {Readable} from 'node:stream'
 import {promisify} from 'node:util'
 
@@ -316,10 +317,45 @@ test.each(routes)(
 		}
 
 		await openWebSocket()
-		// http-proxy-middleware subscribes its own upgrade listener once a proxy
+		// http-proxy-middleware would subscribe its own upgrade listener once a proxy
 		// has served an HTTP request, so check upgrades after one as well.
 		expect((await post(protocol, port, {'content-length': chunk.length, cookie})).status).toBe(200)
 		await openWebSocket()
+		webSocketServer.close()
+	},
+)
+
+test.each(routes)(
+	'$protocol closes an upgrade request that has a body without crashing (app gateway: $gateway)',
+	async ({protocol, gateway}) => {
+		const upstream = http.createServer((request, response) => {
+			request.resume()
+			request.on('end', () => response.end())
+		})
+		const webSocketServer = new WebSocketServer({server: upstream})
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const port = await listen(proxy)
+		const cookie = sessionCookies(protocol)
+		expect((await post(protocol, port, {'content-length': chunk.length, cookie})).status).toBe(200)
+
+		// Node.js 26 hands upgrade listeners a stream wrapper rather than the socket
+		// when the request declares a body that hasn't arrived yet. http-proxy can't
+		// proxy that and used to crash umbreld with an unhandled rejection.
+		const socket =
+			protocol === 'https'
+				? tls.connect({host: '127.0.0.1', port, rejectUnauthorized: false})
+				: net.connect({host: '127.0.0.1', port})
+		socket.on('error', () => {})
+		await once(socket, protocol === 'https' ? 'secureConnect' : 'connect')
+		socket.write(
+			`GET / HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n` +
+				`Sec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nCookie: ${cookie}\r\n` +
+				'Content-Length: 1\r\n\r\n',
+		)
+		await once(socket, 'close')
+
+		// The proxy is still serving
+		expect((await post(protocol, port, {'content-length': chunk.length, cookie})).status).toBe(200)
 		webSocketServer.close()
 	},
 )

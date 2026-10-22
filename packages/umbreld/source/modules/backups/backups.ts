@@ -601,6 +601,17 @@ export default class Backups {
 		const repository = await this.getRepository(repositoryId)
 		this.logger.log(`Backing up to ${repository.path}`)
 
+		// Kopia runs automatic maintenance after a write command succeeds, and since
+		// Kopia 0.22 a maintenance failure (e.g. clock skew with a NAS) fails the
+		// command too. The command itself already succeeded, so log the failure and
+		// carry on instead of skipping or failing the backup. Kopia reports it on its
+		// own line, so a failed snapshot that only mentions it (e.g. in a file name)
+		// still fails.
+		const ignoreMaintenanceFailure = (error: unknown) => {
+			if (!/^running auto-maintenance: /m.test((error as ExecaError)?.stderr ?? '')) throw error
+			this.logger.error(`Automatic maintenance failed for ${repository.path}`, error)
+		}
+
 		// Ensure policy is enforced
 		this.logger.log(`Ensuring policy is enforced`)
 		await this.repository(repository.id, [
@@ -620,7 +631,7 @@ export default class Backups {
 			'--one-file-system=true',
 			// Throttle CPU usage
 			'--max-parallel-file-reads=1',
-		])
+		]).catch(ignoreMaintenanceFailure)
 		this.logger.log(`Retention policy enforced`)
 
 		// Ensure we own repository maintenance
@@ -663,7 +674,8 @@ export default class Backups {
 				// Create the snapshot
 				// TODO: Attempt recovering from device out of space errors by deleting old snapshots
 				this.logger.log(`Creating snapshot`)
-				await this.repository(repository.id, ['snapshot', 'create', this.#umbreld.dataDirectory], {
+				// Kopia only prints progress to a terminal unless --progress is passed
+				await this.repository(repository.id, ['snapshot', 'create', '--progress', this.#umbreld.dataDirectory], {
 					onOutput: (output) => {
 						// Pluck progress in brackets from output like:
 						// '/ 1 hashing, 216 hashed (1.6 GB), 21121 cached (5.4 GB), uploaded 1.4 GB, estimated 7.6 GB (91.6%) 0s left'
@@ -674,7 +686,7 @@ export default class Backups {
 						backupProgress.percent = Number(match[1])
 						this.#umbreld.eventBus.emit('backups:backup-progress', this.backupsInProgress)
 					},
-				})
+				}).catch(ignoreMaintenanceFailure)
 			} catch (error) {
 				failure = error
 			}

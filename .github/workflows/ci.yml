@@ -169,7 +169,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Expose GitHub Actions runtime for Docker cache
@@ -259,7 +259,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Expose GitHub Actions runtime for Docker cache
@@ -374,7 +374,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       # The cache service intermittently answers the lookup with HTTP 500,
       # which restore treats as a miss. Wait briefly and retry once before
       # failing the job.
@@ -466,7 +466,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       # The cache service intermittently answers the lookup with HTTP 500,
       # which restore treats as a miss. Wait briefly and retry once before
       # failing the job.
@@ -612,15 +612,16 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 18
+          node-version: 26
+      # sudo resets PATH, which would run the runner's own Node.js instead of setup-node's
       - name: Install dependencies
         run: |
-          sudo npm clean-install || {
+          sudo env "PATH=$PATH" npm clean-install || {
             echo "::warning title=Retried npm install::sudo npm clean-install failed, retrying once"
             sleep 10
-            sudo npm clean-install
+            sudo env "PATH=$PATH" npm clean-install
           }
-      - run: sudo npm run ${{ matrix.task }}
+      - run: sudo env "PATH=$PATH" npm run ${{ matrix.task }}
 
   # Run the shared Apple client tests and compile both native apps. The macOS 26
   # runner includes the iOS 26.5 SDK required by the generated iOS project.
@@ -688,7 +689,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       - name: Install Umbreld dependencies
         if: ${{ matrix.task == 'typecheck' || matrix.task == 'test' }}
         run: |

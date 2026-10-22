@@ -7,37 +7,37 @@ ARG APT_SNAPSHOT_DATE=20261022
 ARG KERNEL_BACKPORTS_SNAPSHOT_DATE=20261006T000000Z
 ARG BASE_VARIANT=""
 
-ARG DOCKER_VERSION=28.5.0
+ARG DOCKER_VERSION=29.9.2
 ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
 
 ARG NVIDIA_CUDA_SUPPORT=true
 ARG NVIDIA_DRIVER_VERSION=595.91.07
-ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.19.1-1
-ARG LIBNVIDIA_CONTAINER1_SHA256_amd64=d73bb582af893135198ef81cb22135c790a75d2ad72910446477c6c4430f3e6b
-ARG LIBNVIDIA_CONTAINER_TOOLS_SHA256_amd64=5642763d51961a2295dff09990048a5dcee81edbea2a8c5084e47b09ccf17268
-ARG NVIDIA_CONTAINER_TOOLKIT_BASE_SHA256_amd64=b6c5b4e77a28cde0197cc0e64edf75538604775d9f8aea502cef667e7e5b2132
-ARG NVIDIA_CONTAINER_TOOLKIT_SHA256_amd64=e66acb5b33420a8417429cd217abc8400b4a409a2ae17a3852cf6feb34b5c8e6
+ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.20.1-1
+ARG LIBNVIDIA_CONTAINER1_SHA256_amd64=9d803cd9c898cb2fa927529d5ac4fc09f3d65c8cfbde8985de1b9398e53a4656
+ARG LIBNVIDIA_CONTAINER_TOOLS_SHA256_amd64=8bd131b8977a3db667982024850ae7b50cfa02d6b2be06a718064ec814778f05
+ARG NVIDIA_CONTAINER_TOOLKIT_BASE_SHA256_amd64=e01964a064fbdb62425ab22ec5832349f92c5b0b50c8f23fdf14dad004db4fb2
+ARG NVIDIA_CONTAINER_TOOLKIT_SHA256_amd64=a95c9d206a7ecd6a90adff9290635271fa167a86b5767b17eaa0478a552eb02c
 
-ARG YQ_VERSION=4.24.5
-ARG YQ_SHA256_amd64=c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961c760
-ARG YQ_SHA256_arm64=8879e61c0b3b70908160535ea358ec67989ac4435435510e1fcb2eda5d74a0e9
+ARG YQ_VERSION=4.54.1
+ARG YQ_SHA256_amd64=8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f
+ARG YQ_SHA256_arm64=189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b
 
-ARG NODE_VERSION=22.13.0
-ARG NODE_SHA256_amd64=9a33e89093a0d946c54781dcb3ccab4ccf7538a7135286528ca41ca055e9b38f  
-ARG NODE_SHA256_arm64=e0cc088cb4fb2e945d3d5c416c601e1101a15f73e0f024c9529b964d9f6dce5b
+ARG NODE_VERSION=26.12.1
+ARG NODE_SHA256_amd64=0fd1eb7770598f52a21995edf6ed35fc690400fa437c2386af329519e9143132
+ARG NODE_SHA256_arm64=a6c01af459dd8972ab3fb08ee5da81244d26ba8c4944a62d5bbba8c597ae154f
 
-ARG KOPIA_VERSION=0.19.0
-ARG KOPIA_SHA256_amd64=c07843822c82ec752e5ee749774a18820b858215aabd7da448ce665b9b9107aa
-ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e75669210ed9
+ARG KOPIA_VERSION=0.23.1
+ARG KOPIA_SHA256_amd64=416d0f84a3dbb321a8b2d8f0997b1a0a6e915babe79ee76fa6e4d2bd1e1c5178
+ARG KOPIA_SHA256_arm64=a4ffbc019e0b0f932e2632054e73ec521dc1e80172a00095369c53ecf4e5a6cb
 
-ARG RCLONE_RELEASE=1.75.1
-ARG RCLONE_SHA256_amd64=982b5aa772841168f8e380f139e9e787b2a105403e32b94da8676a0e1c0a13ab
-ARG RCLONE_SHA256_arm64=03f2504174034b6d004152ed7369251c9a9ec1f7e0836eda420f5c7a5ec0dff9
+ARG RCLONE_RELEASE=1.75.2
+ARG RCLONE_SHA256_amd64=349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+ARG RCLONE_SHA256_arm64=7e1e8d69654941b7b7df84ee74c5f7fb09cce7d5496947fb7bf16b55ff427d10
 
-ARG LIBDE265_VERSION=1.1.1-1
-ARG LIBDE265_SNAPSHOT_DATE=20260831T000000Z
-ARG LIBDE265_SHA256_amd64=9af67dd3a1dce99c936f33865f92407746ca4031b7a8b86ae8c28b9a3445f01c
-ARG LIBDE265_SHA256_arm64=1982300d3b6845a1c96f80a364b7921a69b69abd0c0417dc8554e2d487f488f5
+ARG LIBDE265_VERSION=1.1.3-1
+ARG LIBDE265_SNAPSHOT_DATE=20260919T000000Z
+ARG LIBDE265_SHA256_amd64=36115188a321806ac797218cb878be15e8df7584fc65b10ea50d52cad065c5f5
+ARG LIBDE265_SHA256_arm64=36c69add16a79fdffd85f284501b8f9ddd7128ccb8e078598818beb3e50109ec
 
 #########################################################################
 # ui build stage
@@ -84,7 +84,7 @@ COPY packages/os/build-steps /build-steps
 RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}" && \
     apt-get install --yes ca-certificates skopeo && \
     mkdir -p /images
-RUN skopeo copy --override-arch "${TARGETARCH}" docker://ghcr.io/getumbrel/tor@sha256:e382b8629c0dfef6ceb396b062622d4e4e955b19d6f16b883fd2c0723ad5671a docker-archive:/images/tor
+RUN skopeo copy --override-arch "${TARGETARCH}" docker://ghcr.io/getumbrel/tor@sha256:7663d18fe37b3edd97c859aa36bb5eeaa328d86c57729db0433dff430e8abd8d docker-archive:/images/tor
 
 
 #########################################################################
@@ -515,6 +515,14 @@ RUN RCLONE_SHA256=$(eval echo \$RCLONE_SHA256_${TARGETARCH}) && \
     test "$(rclone version | head -n 1)" = "rclone v${RCLONE_RELEASE}" && \
     rm -rf /tmp/rclone /tmp/rclone.zip
 
+# Docker 29 changed two defaults that /etc/docker/daemon.json reverts:
+# - Fresh installs default to the containerd image store, which keeps images
+#   in /var/lib/containerd on the root filesystem. Only /var/lib/docker is
+#   persisted on the data partition, so new devices and factory-reset devices
+#   would lose every app image on reboot. Keep the graphdriver store that
+#   existing devices already use.
+# - The minimum API version rose from 1.24 to 1.40, which would break apps
+#   that talk to the host Docker socket with older clients. Keep 1.24.
 RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_INSTALL_SCRIPT_COMMIT}/install.sh -o /tmp/install-docker.sh
 RUN sh /tmp/install-docker.sh --version v${DOCKER_VERSION}
 RUN rm /tmp/install-docker.sh
@@ -586,15 +594,20 @@ WORKDIR /
 COPY packages/os/overlay /
 
 # The common overlay is shared with arm64 builds, so add the NVIDIA runtime
-# after copying it and only when the runtime binary exists on amd64. Toolkit
-# 1.19.1 auto-selects JIT CDI, which does not inject private dependencies from
+# after copying it and only when the runtime binary exists on amd64. The
+# toolkit auto-selects JIT CDI, which does not inject private dependencies from
 # Debian's split NVIDIA packages. Legacy mode uses libnvidia-container's
 # complete dependency discovery.
+#
+# Toolkit 1.20 enables nvidia-cdi-refresh, which writes a CDI spec at boot.
+# Docker tries CDI before the legacy hook for GPU device requests, so that spec
+# would silently bypass legacy mode. Mask it so GPU apps keep using the hook.
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
         nvidia-ctk runtime configure --runtime=docker; \
         nvidia-ctk config --in-place \
             --set nvidia-container-runtime.mode=legacy; \
+        systemctl mask nvidia-cdi-refresh.service nvidia-cdi-refresh.path; \
     fi
 
 # Rebuild initramfs after overlay changes so custom udev rules are available

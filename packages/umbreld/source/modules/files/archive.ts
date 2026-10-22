@@ -108,6 +108,7 @@ export default class Archive {
 	async createAuthorizedFlatFileZipStream(files: Array<{virtualPath: string; modifiedMs?: number}>, userId: string) {
 		const archive = archiver('zip')
 		const usedNames = new Set<string>()
+		const sources: Readable[] = []
 		for (const {virtualPath, modifiedMs} of files) {
 			const name = uniqueArchiveName(nodePath.posix.basename(virtualPath), usedNames)
 			const source = Readable.from(
@@ -120,12 +121,17 @@ export default class Archive {
 					}
 				})(this.#umbreld),
 			)
+			sources.push(source)
 			archive.append(source, {
 				name,
 				...(modifiedMs !== undefined && modifiedMs > 0 ? {date: new Date(modifiedMs)} : {}),
 				...(this.#shouldSkipCompression(virtualPath) ? {store: true} : {}),
 			})
 		}
+		// Archiver never destroys its sources, so a cancelled download would leave
+		// their descriptors open until garbage collection, which kills the process
+		// on Node.js 25+. Destroying a source closes its descriptor via the finally.
+		archive.once('close', () => sources.forEach((source) => source.destroy()))
 		archive.finalize().catch((error) => archive.emit('error', error))
 		return archive
 	}

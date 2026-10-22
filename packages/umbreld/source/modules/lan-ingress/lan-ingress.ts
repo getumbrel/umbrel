@@ -1064,7 +1064,9 @@ export default class LanIngress {
 		return createProxyMiddleware({
 			target: `http://127.0.0.1:${upstreamPort}`,
 			changeOrigin: false,
-			ws: true,
+			// WebSocket upgrades are proxied explicitly by attachProxyUpgradeHandler(), so
+			// don't let http-proxy-middleware subscribe its own upgrade listener as well.
+			ws: false,
 			pathRewrite: rewritePath,
 			// Umbrel-owned upstreams (dashboard, app-auth) get X-Forwarded-For since they
 			// only trust it from loopback. App upstreams must not: some apps reject any
@@ -1107,8 +1109,12 @@ export default class LanIngress {
 
 	private attachProxyUpgradeHandler(server: http.Server, middleware: RequestHandler) {
 		server.on('upgrade', (request, socket, head) => {
+			// Node.js 26 passes a stream wrapper instead of the socket when an upgrade
+			// request has a body, which http-proxy can't proxy and crashes on.
+			// WebSocket handshakes never have a body.
+			if (!(socket instanceof net.Socket)) return socket.destroy()
 			this.setForwardedHost(request)
-			middleware.upgrade?.(request as any, socket as net.Socket, head)
+			middleware.upgrade?.(request as any, socket, head)
 		})
 	}
 

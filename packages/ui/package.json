@@ -4,7 +4,7 @@
 	"version": "0.0.0",
 	"type": "module",
 	"engines": {
-		"node": "^22.13.0"
+		"node": ">=22.13.0"
 	},
 	"scripts": {
 		"translations:generate": "node update-translations.js --generate",

@@ -2,10 +2,11 @@ import {createWriteStream} from 'node:fs'
 import {mkdir, mkdtemp, open, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import nodePath from 'node:path'
+import {Writable} from 'node:stream'
 import {pipeline} from 'node:stream/promises'
 
 import AdmZip from 'adm-zip'
-import {afterEach, expect, test} from 'vitest'
+import {afterEach, expect, test, vi} from 'vitest'
 
 import type Umbreld from '../../index.js'
 import Archive from './archive.js'
@@ -94,4 +95,41 @@ test('streams a flat Photos zip only through account-authorized file descriptors
 	expect(dated).toStrictEqual(new Date(2015, 5, 1, 12, 30, 20))
 	// Without a known modification time the entry is dated by the download.
 	expect(undated!.getFullYear()).toBe(new Date(started).getUTCFullYear())
+})
+
+test('closes every opened Photos file descriptor when the download is cancelled', async () => {
+	const directory = await mkdtemp(nodePath.join(tmpdir(), 'photos-cancelled-archive-'))
+	directories.push(directory)
+	const handles: Awaited<ReturnType<typeof open>>[] = []
+	const logger = {createChildLogger: () => ({})}
+	const umbreld = {
+		logger,
+		files: {
+			openFileForRead: async (virtualPath: string) => {
+				const systemPath = nodePath.join(directory, nodePath.basename(virtualPath))
+				await writeFile(systemPath, Buffer.alloc(1024 * 1024, 1))
+				const handle = await open(systemPath, 'r')
+				handles.push(handle)
+				return {handle, stats: await handle.stat({bigint: true}), virtualPath, systemPath, name: virtualPath}
+			},
+		},
+	} as unknown as Umbreld
+	const archive = new Archive(umbreld)
+	const files = ['one', 'two', 'three'].map((name) => ({virtualPath: `/Users/member/${name}.jpg`}))
+	// A client that disconnects partway through the download
+	let received = 0
+	const cancelledResponse = new Writable({
+		write: (chunk, _encoding, callback) => {
+			received += chunk.length
+			callback(received > 256 * 1024 ? new Error('cancelled') : undefined)
+		},
+	})
+
+	await expect(
+		pipeline(await archive.createAuthorizedFlatFileZipStream(files, 'member'), cancelledResponse),
+	).rejects.toThrow('cancelled')
+
+	// Node.js 25+ kills the process if a FileHandle is left for garbage collection
+	expect(handles.length).toBeGreaterThan(0)
+	await vi.waitFor(() => expect(handles.map((handle) => handle.fd)).toStrictEqual(handles.map(() => -1)))
 })

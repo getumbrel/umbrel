@@ -50,7 +50,7 @@ jobs:
         run: bash .github/scripts/prepare-translations.sh
       - uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: '26'
       - name: Show pending translations
         run: node packages/ui/update-translations.js --plan
       - name: Install dependencies

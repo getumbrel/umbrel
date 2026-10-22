@@ -1,3 +1,9 @@
+import {execFile} from 'node:child_process'
+import {once} from 'node:events'
+import https from 'node:https'
+import nodePath from 'node:path'
+import {promisify} from 'node:util'
+
 import {afterEach, describe, expect, test, vi} from 'vitest'
 import fse from 'fs-extra'
 import {WebSocket} from 'ws'
@@ -176,6 +182,70 @@ describe('app gateway upstream recovery', () => {
 			expect(onUpstreamUnavailable).toHaveBeenCalledTimes(2)
 		} finally {
 			await new Promise<void>((resolve) => gateway.server.close(() => resolve()))
+		}
+	})
+})
+
+describe('app gateway HTTPS upstreams', () => {
+	test('connects to an HTTPS upstream addressed by IP', async () => {
+		const directory = temporaryDirectory()
+		await directory.createRoot()
+		try {
+			const keyPath = nodePath.join(await directory.create(), 'key.pem')
+			const certificatePath = `${keyPath}.crt`
+			await promisify(execFile)('openssl', [
+				'req',
+				'-x509',
+				'-newkey',
+				'rsa:2048',
+				'-nodes',
+				'-days',
+				'1',
+				'-keyout',
+				keyPath,
+				'-out',
+				certificatePath,
+				'-subj',
+				'/CN=127.0.0.1',
+			])
+			const upstream = https.createServer({key: await fse.readFile(keyPath), cert: await fse.readFile(certificatePath)})
+			const connections: unknown[] = []
+			upstream.on('connection', (socket) => connections.push(socket))
+			upstream.on('tlsClientError', () => {})
+			upstream.listen(0, '127.0.0.1')
+			await once(upstream, 'listening')
+			const upstreamAddress = upstream.address()
+			if (!upstreamAddress || typeof upstreamAddress === 'string') throw new Error('Upstream did not listen on TCP')
+			const gateway = new AppGateway({logger: {error: vi.fn()}, auth: {appAccessRevision: 0}} as never, {
+				appId: 'secure',
+				appName: 'Secure',
+				appIcon: '',
+				targetProtocol: 'https',
+				targetHost: '127.0.0.1',
+				targetAddress: '127.0.0.1',
+				targetPort: upstreamAddress.port,
+				auth: false,
+				authWhitelist: [],
+				authBlacklist: [],
+				trustUpstream: false,
+				timeout: 1000,
+			})
+			gateway.server.listen(0, '127.0.0.1')
+			await once(gateway.server, 'listening')
+			try {
+				const address = gateway.server.address()
+				if (!address || typeof address === 'string') throw new Error('Gateway did not listen on TCP')
+				// The self-signed certificate is rejected, but only after connecting.
+				// Node.js 25+ throws before connecting if given an IP as the TLS server name.
+				await fetch(`http://127.0.0.1:${address.port}/`)
+				expect(connections).toHaveLength(1)
+			} finally {
+				await new Promise<void>((resolve) => gateway.server.close(() => resolve()))
+				upstream.closeAllConnections()
+				await new Promise<void>((resolve) => upstream.close(() => resolve()))
+			}
+		} finally {
+			await directory.destroyRoot()
 		}
 	})
 })

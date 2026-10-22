@@ -3,5 +3,9 @@
   "log-opts": {
     "max-size": "10m",
     "max-file": "10"
-  }
+  },
+  "features": {
+    "containerd-snapshotter": false
+  },
+  "min-api-version": "1.24"
 }

@@ -2309,7 +2309,7 @@ export default class App {
 
 	async pull() {
 		const defaultImages = [
-			'ghcr.io/getumbrel/tor:0.4.9.11@sha256:e382b8629c0dfef6ceb396b062622d4e4e955b19d6f16b883fd2c0723ad5671a',
+			'ghcr.io/getumbrel/tor:0.4.9.14@sha256:7663d18fe37b3edd97c859aa36bb5eeaa328d86c57729db0433dff430e8abd8d',
 		]
 		const compose = await this.readCompose()
 		const images = Object.values(compose.services!)
