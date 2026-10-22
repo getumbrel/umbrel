@@ -3,7 +3,7 @@ import crypto from 'node:crypto'
 
 import fse from 'fs-extra'
 import * as git from 'isomorphic-git'
-import http from 'isomorphic-git/http/node/index.js'
+import http from 'isomorphic-git/http/node'
 import yaml from 'js-yaml'
 import {globby} from 'globby'
 import {$} from 'execa'

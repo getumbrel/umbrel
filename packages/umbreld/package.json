@@ -48,7 +48,7 @@
 		"@types/semver": "^7.5.8",
 		"@types/tcp-port-used": "^1.0.4",
 		"@types/ws": "^8.5.10",
-		"@vitest/coverage-v8": "^2.1.2",
+		"@vitest/coverage-v8": "^2.1.9",
 		"adm-zip": "^0.5.16",
 		"get-port": "^7.0.0",
 		"got": "^14.4.6",
@@ -60,7 +60,7 @@
 		"tcp-port-used": "^1.0.2",
 		"tough-cookie": "^5.1.2",
 		"typescript": "^5.8.3",
-		"vitest": "^2.1.2",
+		"vitest": "^2.1.9",
 		"wait-port": "^1.0.4"
 	},
 	"dependencies": {
@@ -99,8 +99,8 @@
 		"globby": "^13.2.1",
 		"helmet": "^7.1.0",
 		"http-proxy-middleware": "^2.0.6",
-		"isomorphic-git": "^1.24.5",
-		"js-yaml": "^4.1.0",
+		"isomorphic-git": "^1.42.2",
+		"js-yaml": "^4.3.2",
 		"ky": "^1.10.0",
 		"mime-types": "^2.1.35",
 		"minimatch": "^10.0.1",
@@ -122,8 +122,11 @@
 		"thirty-two": "^1.0.2",
 		"tsx": "^4.7.1",
 		"valid-filename": "^4.0.0",
-		"ws": "^8.16.0",
+		"ws": "^8.21.3",
 		"zod": "^3.21.4",
 		"zod4": "npm:zod@4.4.3"
+	},
+	"overrides": {
+		"body-parser": "^1.20.9"
 	}
 }
