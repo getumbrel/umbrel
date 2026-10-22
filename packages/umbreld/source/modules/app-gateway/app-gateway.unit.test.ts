@@ -1,6 +1,7 @@
 import {execFile} from 'node:child_process'
 import {once} from 'node:events'
 import https from 'node:https'
+import net from 'node:net'
 import nodePath from 'node:path'
 import {promisify} from 'node:util'
 
@@ -246,6 +247,66 @@ describe('app gateway HTTPS upstreams', () => {
 			}
 		} finally {
 			await directory.destroyRoot()
+		}
+	})
+})
+
+describe('app gateway malformed upstream responses', () => {
+	test('closes the response without crashing when the upstream sends data after its declared body', async () => {
+		// Like Collabora's PHP proxy, answer /malformed with a Connection: close
+		// response followed by a second response in the same write. Node's parser
+		// fails on the extra bytes after the first response has started piping.
+		const upstream = net.createServer((socket) => {
+			socket.on('error', () => {})
+			socket.once('data', (data) => {
+				const body = 'x'.repeat(1000)
+				const response = `HTTP/1.1 200 OK\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n${body}`
+				const extra = data.toString().startsWith('GET /malformed ')
+					? 'HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nextra'
+					: ''
+				socket.end(response + extra)
+			})
+		})
+		upstream.listen(0, '127.0.0.1')
+		await once(upstream, 'listening')
+		const upstreamAddress = upstream.address()
+		if (!upstreamAddress || typeof upstreamAddress === 'string') throw new Error('Upstream did not listen on TCP')
+		const gateway = new AppGateway({logger: {error: vi.fn()}, auth: {appAccessRevision: 0}} as never, {
+			appId: 'nextcloud',
+			appName: 'Nextcloud',
+			appIcon: '',
+			targetProtocol: 'http',
+			targetHost: 'nextcloud_web_1',
+			targetAddress: '127.0.0.1',
+			targetPort: upstreamAddress.port,
+			auth: false,
+			authWhitelist: [],
+			authBlacklist: [],
+			trustUpstream: false,
+			timeout: 1000,
+		})
+		const uncaughtErrors: unknown[] = []
+		const onUncaughtError = (error: unknown) => uncaughtErrors.push(error)
+		process.on('uncaughtException', onUncaughtError)
+		gateway.server.listen(0, '127.0.0.1')
+		await once(gateway.server, 'listening')
+		try {
+			const address = gateway.server.address()
+			if (!address || typeof address === 'string') throw new Error('Gateway did not listen on TCP')
+
+			await expect(
+				fetch(`http://127.0.0.1:${address.port}/malformed`).then((response) => response.text()),
+			).rejects.toThrow()
+
+			// A subsequent request proves the failure did not terminate or wedge the gateway.
+			const response = await fetch(`http://127.0.0.1:${address.port}/`)
+			expect(response.status).toBe(200)
+			expect(await response.text()).toBe('x'.repeat(1000))
+			expect(uncaughtErrors).toEqual([])
+		} finally {
+			process.off('uncaughtException', onUncaughtError)
+			await new Promise<void>((resolve) => gateway.server.close(() => resolve()))
+			await new Promise<void>((resolve) => upstream.close(() => resolve()))
 		}
 	})
 })

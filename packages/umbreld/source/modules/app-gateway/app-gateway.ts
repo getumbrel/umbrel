@@ -148,6 +148,9 @@ export default class AppGateway {
 	#config: AppGatewayConfig
 	#onUpstreamUnavailable?: () => void
 	#proxy: ReturnType<typeof createProxyMiddleware>
+	// Responses the upstream has started answering, whether or not any of it has
+	// been written to the client yet.
+	#upstreamResponses = new WeakSet<http.ServerResponse>()
 	server: http.Server
 
 	constructor(umbreld: Umbreld, config: AppGatewayConfig, options: AppGatewayOptions = {}) {
@@ -206,7 +209,10 @@ export default class AppGateway {
 			proxyTimeout: this.#config.timeout,
 			followRedirects: false,
 			onProxyReq: (proxyRequest, _request, response) => releaseUpstreamOnClientClose(proxyRequest, response),
-			onProxyRes: (proxyResponse, request, response) => closeClientOnUpstreamAbort(proxyResponse, request, response),
+			onProxyRes: (proxyResponse, request, response) => {
+				this.#upstreamResponses.add(response)
+				closeClientOnUpstreamAbort(proxyResponse, request, response)
+			},
 			onError: (error, _request, response) => this.handleUpstreamError(response, error),
 		})
 	}
@@ -234,8 +240,13 @@ export default class AppGateway {
 			return
 		}
 
+		// Once the upstream has replied, http-proxy is already piping its body into
+		// the response, even if the headers haven't been flushed yet. An error from
+		// then on, such as a parse error on bytes after the declared body, must close
+		// the response. Ending it with an error page makes the piped body write after
+		// end, which throws an unhandled error that terminates umbreld.
 		const httpResponse = response as http.ServerResponse
-		if (httpResponse.headersSent) {
+		if (httpResponse.headersSent || this.#upstreamResponses.has(httpResponse)) {
 			this.destroyProxyResponse(httpResponse)
 			return
 		}
