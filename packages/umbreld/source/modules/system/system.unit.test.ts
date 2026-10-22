@@ -10,7 +10,15 @@ import * as execa from 'execa'
 import fse from 'fs-extra'
 
 import Umbreld from '../../index.js'
-import {getCpuTemperature, getMemoryUsage, getDiskUsage, getDiskUsageByPath, shutdown, reboot} from './system.js'
+import {
+	getCpuTemperature,
+	getMemoryUsage,
+	getDiskUsage,
+	getDiskUsageByPath,
+	shutdown,
+	reboot,
+	restoreStaticIp,
+} from './system.js'
 
 vi.mock('systeminformation')
 vi.mock('execa')
@@ -181,5 +189,97 @@ describe('reboot', () => {
 	test('should throw error when "shutdown" command fails', async () => {
 		vi.mocked(execa.$).mockRejectedValue(new Error('Failed'))
 		await expect(reboot()).rejects.toThrow()
+	})
+})
+
+describe('restoreStaticIp', () => {
+	const mac = '52:54:00:12:34:56'
+	const savedSettings = {ip: '192.168.1.50', subnetPrefix: 24, gateway: '192.168.1.1', dns: ['1.1.1.1', '8.8.8.8']}
+	const matchingConnection = {
+		'ipv4.method': 'manual',
+		'ipv4.addresses': '192.168.1.50/24',
+		'ipv4.gateway': '192.168.1.1',
+		'ipv4.dns': '1.1.1.1,8.8.8.8',
+	}
+
+	// Fake nmcli for a single ethernet interface and return the commands that were run
+	function mockNetworkManager({connection}: {connection?: Record<string, string>}) {
+		const commands: string[] = []
+		vi.mocked(fse.pathExists).mockResolvedValue(true)
+		vi.mocked(fse.readFile).mockResolvedValue(`${mac}\n`)
+		vi.mocked(execa.$).mockImplementation(async (strings: TemplateStringsArray, ...values: unknown[]) => {
+			const command = strings.reduce((command, string, index) => command + values[index - 1] + string)
+			commands.push(command)
+			let stdout = ''
+			if (command.endsWith('device status')) {
+				stdout = `enp1s0:ethernet:connected:${connection ? 'Wired connection 1' : '--'}`
+			} else if (command.endsWith('--fields UUID connection show')) {
+				stdout = connection ? 'uuid-1' : ''
+			} else if (command.endsWith('connection show uuid-1')) {
+				stdout = 'connection.interface-name:enp1s0\nconnection.id:Wired connection 1'
+			} else if (command.includes('--fields ipv4.method,ipv4.addresses') && connection) {
+				stdout = Object.entries(connection)
+					.map(([key, value]) => `${key}:${value}`)
+					.join('\n')
+			}
+			return {stdout}
+		})
+		return commands
+	}
+
+	function createUmbreld() {
+		return {
+			store: {get: async () => ({[mac]: savedSettings})},
+			logger: {log: vi.fn(), error: vi.fn()},
+		} as any
+	}
+
+	test('leaves the connection alone when it already has the saved settings', async () => {
+		const commands = mockNetworkManager({connection: matchingConnection})
+		const umbreld = createUmbreld()
+
+		await restoreStaticIp(umbreld)
+
+		expect(umbreld.logger.error).not.toHaveBeenCalled()
+		expect(umbreld.logger.log).toHaveBeenCalledWith(`Restored static IP for ${mac} (enp1s0)`)
+		expect(commands.filter((command) => /connection (add|modify|down|up) /.test(command))).toEqual([])
+	})
+
+	test.each([
+		['the connection is on DHCP', {'ipv4.method': 'auto', 'ipv4.addresses': '', 'ipv4.gateway': '', 'ipv4.dns': ''}],
+		['the IP differs', {'ipv4.addresses': '192.168.1.51/24'}],
+		['the subnet prefix differs', {'ipv4.addresses': '192.168.1.50/16'}],
+		['the gateway differs', {'ipv4.gateway': '192.168.1.254'}],
+		['a DNS server differs', {'ipv4.dns': '1.1.1.1,9.9.9.9'}],
+		['the DNS servers are in a different order', {'ipv4.dns': '8.8.8.8,1.1.1.1'}],
+	])('applies the saved settings and reconnects when %s', async (_, difference) => {
+		const commands = mockNetworkManager({connection: {...matchingConnection, ...difference}})
+		const umbreld = createUmbreld()
+
+		await restoreStaticIp(umbreld)
+
+		expect(umbreld.logger.error).not.toHaveBeenCalled()
+		expect(commands.filter((command) => /connection (add|modify|down|up) /.test(command))).toEqual([
+			'nmcli connection modify Wired connection 1 ipv4.method manual ipv4.addresses 192.168.1.50/24 ipv4.gateway 192.168.1.1 ipv4.dns 1.1.1.1,8.8.8.8',
+			'nmcli connection down Wired connection 1',
+			'nmcli connection up Wired connection 1',
+		])
+	})
+
+	test('creates a connection with the saved settings when the interface has none', async () => {
+		const commands = mockNetworkManager({})
+		const umbreld = createUmbreld()
+
+		await restoreStaticIp(umbreld)
+
+		expect(umbreld.logger.error).not.toHaveBeenCalled()
+		const changes = commands.filter((command) => /connection (add|modify|down|up) /.test(command))
+		expect(changes).toHaveLength(2)
+		expect(changes[0]).toMatch(
+			/^nmcli connection add type ethernet con-name wired-connection-[0-9a-f]{8} ifname enp1s0$/,
+		)
+		expect(changes[1]).toMatch(
+			/^nmcli connection modify wired-connection-[0-9a-f]{8} ipv4.method manual ipv4.addresses 192.168.1.50\/24 ipv4.gateway 192.168.1.1 ipv4.dns 1.1.1.1,8.8.8.8$/,
+		)
 	})
 })

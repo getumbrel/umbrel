@@ -928,6 +928,28 @@ async function applyStaticIp({
 		await $`nmcli connection add type ethernet con-name ${connection} ifname ${device}`
 	}
 
+	// If the existing connection already has these settings there's nothing to apply. This is
+	// the case on boot since umbrel-static-ip-restore writes them before NetworkManager starts,
+	// and hard reloading the connection would needlessly drop the IP while apps are starting.
+	if (existingConnection) {
+		const {stdout} =
+			await $`nmcli --terse --fields ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns connection show ${connection}`
+		const current = Object.fromEntries(
+			stdout.split('\n').map((line) => {
+				const [key, ...valueParts] = line.split(':')
+				return [key, valueParts.join(':')]
+			}),
+		)
+		if (
+			current['ipv4.method'] === 'manual' &&
+			current['ipv4.addresses'] === `${ip}/${subnetPrefix}` &&
+			current['ipv4.gateway'] === gateway &&
+			current['ipv4.dns'] === dns.join(',')
+		) {
+			return device
+		}
+	}
+
 	// Modify the connection with static ip settings
 	await $`nmcli connection modify ${connection} ipv4.method manual ipv4.addresses ${`${ip}/${subnetPrefix}`} ipv4.gateway ${gateway} ipv4.dns ${dns.join(',')}`
 
