@@ -160,6 +160,7 @@ jobs:
     runs-on: ubicloud-standard-4-ubuntu-2404
     outputs:
       image-key: ${{ steps.image-key.outputs.key }}
+      update-bundle-key: ${{ steps.update-bundle-key.outputs.key }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -180,7 +181,7 @@ jobs:
         # redundant re-export. It can intermittently fail the build with cache
         # backend errors, which would block every VM test that depends on this
         # image; the --cache-from import keeps the build fast regardless.
-        run: SKIP_AMD64_RUGIX_BUNDLE=true SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
+        run: SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
       # Hack to pass the image to the next job. We used to use upload-artifact but network performance
       # is terrible between GitHub <> Ubicloud. Just abuse the cache for now which is local and fast.
       # Each attempt saves under its own key. A failed save can leave its key
@@ -212,6 +213,34 @@ jobs:
         with:
           path: packages/os/build/umbrelos-amd64.img
           key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+          fail-on-cache-miss: true
+      # The update bundle is cached separately, the same way, so only the OS
+      # update tests restore it.
+      - name: Choose OS update bundle cache key
+        id: update-bundle-key
+        run: echo "key=umbrelos-amd64-update-bundle-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+      - name: Cache OS update bundle
+        uses: actions/cache/save@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update
+          key: ${{ steps.update-bundle-key.outputs.key }}
+      - name: Check the OS update bundle was cached
+        id: check-update-bundle
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update
+          key: ${{ steps.update-bundle-key.outputs.key }}
+          lookup-only: true
+      - name: Wait before checking the OS update bundle again
+        if: steps.check-update-bundle.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Check the OS update bundle was cached again
+        if: steps.check-update-bundle.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update
+          key: ${{ steps.update-bundle-key.outputs.key }}
           lookup-only: true
           fail-on-cache-miss: true
 
@@ -296,11 +325,16 @@ jobs:
                 if grep --quiet '^// @vm-requires-playwright$' "${test_path}"; then
                   requires_playwright=true
                 fi
+                requires_update_bundle=false
+                if grep --quiet '^// @vm-requires-update-bundle$' "${test_path}"; then
+                  requires_update_bundle=true
+                fi
                 jq --null-input --compact-output \
                   --arg path "${relative_path}" \
                   --arg name "${name}" \
                   --argjson requiresPlaywright "${requires_playwright}" \
-                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright}'
+                  --argjson requiresUpdateBundle "${requires_update_bundle}" \
+                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright, requiresUpdateBundle: $requiresUpdateBundle}'
               done |
               jq --slurp --compact-output
           )
@@ -359,6 +393,23 @@ jobs:
         with:
           path: packages/os/build/umbrelos-amd64.img
           key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.image-key }}
+          fail-on-cache-miss: true
+      - name: Restore OS update bundle from cache
+        id: restore-update-bundle
+        if: matrix.test.requiresUpdateBundle
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
+      - name: Wait before retrying OS update bundle restore
+        if: matrix.test.requiresUpdateBundle && steps.restore-update-bundle.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Retry restoring OS update bundle from cache
+        if: matrix.test.requiresUpdateBundle && steps.restore-update-bundle.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
           fail-on-cache-miss: true
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86

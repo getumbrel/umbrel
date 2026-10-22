@@ -2,3 +2,8 @@
 # This is safe to enable on all systems as it mounts the default
 # data partition if no external RAID has been configured.
 mount-script = "/opt/umbrel-data/umbrel-data-mount"
+# Keep booting with ephemeral state if mounting the data partition fails. Rugix
+# then writes .rugix/data-mount-error.log to the in-memory data mount, which
+# umbreld uses to boot into recovery mode. This is Rugix's default, but we pin
+# it because failing init here would leave the device unbootable instead.
+fail-on-mount-error = false
