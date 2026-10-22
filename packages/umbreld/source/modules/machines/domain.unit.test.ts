@@ -192,6 +192,36 @@ describe('libvirt domain XML', () => {
 		expect(xml).toContain("<input type='keyboard' bus='usb'/>")
 	})
 
+	// Without a topology libvirt gives each vCPU its own socket, and Windows
+	// client editions use at most two sockets
+	test.each([
+		{acceleration: 'kvm', cores: 6, overrides: {}},
+		{acceleration: 'kvm', cores: 1, overrides: {}},
+		{
+			acceleration: 'tcg',
+			cores: 3,
+			overrides: {arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'},
+		},
+		{
+			acceleration: 'kvm',
+			cores: 64,
+			overrides: {platformProfile: 'windows-98-x86', machineType: 'pc-i440fx-9.2', firmware: 'bios'},
+		},
+	] as const)('presents $cores $acceleration vCPUs as cores on a single socket', ({acceleration, cores, overrides}) => {
+		const xml = buildDomainXml({
+			definition: definition({...overrides, cores}),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration,
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+		})
+
+		expect(xml).toContain(`<vcpu placement='static'>${cores}</vcpu>`)
+		expect(xml).toMatch(
+			new RegExp(`<cpu mode='[a-z-]+' check='none'>\\s*<topology sockets='1' cores='${cores}' threads='1'/>\\s*</cpu>`),
+		)
+	})
+
 	test('keeps port forwarding out of domain XML so umbreld can enforce DNAT centrally', () => {
 		const xml = buildDomainXml({
 			definition: definition({

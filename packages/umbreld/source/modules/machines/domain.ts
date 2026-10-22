@@ -232,6 +232,10 @@ export function buildDomainXml({
 		? "<controller type='usb' model='qemu-xhci'/><input type='tablet' bus='usb'/><input type='keyboard' bus='usb'/>"
 		: "<controller type='usb' model='qemu-xhci'/><input type='tablet' bus='usb'/><input type='keyboard' bus='ps2'/>"
 
+	// Present every vCPU as a core on one socket. Without a topology libvirt
+	// gives each vCPU its own socket, and Windows client editions use at most two.
+	const topology = `<topology sockets='1' cores='${definition.cores}' threads='1'/>`
+
 	return `<?xml version='1.0' encoding='UTF-8'?>
 <domain type='${acceleration === 'kvm' ? 'kvm' : 'qemu'}' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
   <name>umbrel-machine-${escapeXml(definition.id)}</name>
@@ -244,7 +248,7 @@ export function buildDomainXml({
     ${loader}
   </os>
   <features>${features}</features>
-  <cpu mode='${acceleration === 'kvm' ? 'host-passthrough' : 'maximum'}' check='none'/>
+  <cpu mode='${acceleration === 'kvm' ? 'host-passthrough' : 'maximum'}' check='none'>${topology}</cpu>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>
   <on_reboot>restart</on_reboot>
