@@ -1,4 +1,5 @@
 import nodePath from 'node:path'
+import type {Stats} from 'node:fs'
 import {appendFile, chmod, link, lstat, readFile, symlink, utimes, writeFile} from 'node:fs/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
@@ -3369,6 +3370,39 @@ test('preserves a Photos id, favorite, and album membership across a filesystem 
 	})
 })
 
+test('preserves a Photos id, favorite, and album membership across a directory rename', async () => {
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile: async () => Buffer.alloc(32, 0x33),
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const source = nodePath.join(homeDirectory, 'Before')
+	const destination = nodePath.join(homeDirectory, 'After')
+	await fse.outputFile(nodePath.join(source, 'Nested', 'photo.jpg'), 'photo')
+	await index.reconcileRoot('/Home', 'move-state')
+	await index.initializePhotos('owner')
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const original = (await index.photosListItems('owner', {}, undefined, 10)).items[0]!
+	await index.photosSetFavorite('owner', [original.id], true)
+	const album = await index.photosCreateAlbum('owner', 'Moves', [original.id])
+	await fse.move(source, destination)
+	await index.movePath(source, destination)
+
+	await expect(index.photosGetItem('owner', original.id)).resolves.toMatchObject({
+		id: original.id,
+		path: '/Home/After/Nested/photo.jpg',
+		isFavorite: true,
+		albums: [{id: album.id, name: 'Moves'}],
+	})
+	await expect(index.photosListItems('owner', {}, undefined, 10)).resolves.toMatchObject({total: 1})
+})
+
 test('reports indexing, enrichment progress, ready, and persistent enrichment failures', async () => {
 	const onPhotosIndexingProgress = vi.fn()
 	const {index, homeDirectory} = await fixture(undefined, {
@@ -4322,6 +4356,176 @@ test('rehashes moved directory entries and reuses their content-addressed thumbn
 	expect(after).toStrictEqual(before)
 	expect(hashFile).toHaveBeenCalledTimes(6)
 	expect(generateThumbnail).toHaveBeenCalledTimes(3)
+})
+
+test('moves an indexed directory in place without waiting for a root walk or rehashing', async () => {
+	let held: Promise<void> | undefined
+	const walk: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (root, ...args) {
+		await held
+		yield* walkFileTree(root, ...args)
+	}
+	const hashFile = vi.fn(async () => Buffer.alloc(32, 0x5a))
+	const generateThumbnail = async (_source: string, destination: string) => fse.outputFile(destination, 'thumbnail')
+	const {index, homeDirectory} = await fixture(walk, {enrichmentRuntime: {hashFile, generateThumbnail}})
+	const source = nodePath.join(homeDirectory, 'Album')
+	const destination = nodePath.join(homeDirectory, 'Renamed')
+	const photo = nodePath.join('Nested', 'photo.png')
+	await fse.outputFile(nodePath.join(source, 'cover.txt'), 'cover')
+	await fse.outputFile(nodePath.join(source, photo), 'nested photo')
+	await index.reconcileRoot('/Home', 'initial')
+	await index.ensureThumbnail(nodePath.join(source, photo))
+	hashFile.mockClear()
+	let release!: () => void
+	held = new Promise((resolve) => (release = resolve))
+
+	// The root walk the move requests is held, so this only resolves in place
+	await fse.move(source, destination)
+	await index.movePath(source, destination)
+
+	await expect(index.directorySizes(['/Home/Album', '/Home/Renamed', '/Home/Renamed/Nested'])).resolves.toStrictEqual([
+		{virtualPath: '/Home/Renamed', size: 17},
+		{virtualPath: '/Home/Renamed/Nested', size: 12},
+	])
+	await expect(index.getEntryBySystemPath(destination)).resolves.toMatchObject({name: 'Renamed', type: 'directory'})
+	await expect(index.getEntryBySystemPath(nodePath.join(source, photo))).resolves.toBeUndefined()
+	await expect(candidateNames(index, 'Album')).resolves.toStrictEqual([])
+	await expect(candidateNames(index, 'Renamed')).resolves.toStrictEqual(['Renamed'])
+	release()
+	await index.ensureThumbnail(nodePath.join(destination, photo))
+	expect(hashFile).not.toHaveBeenCalled()
+})
+
+test('falls back to the generic move when the in-place move fails', async () => {
+	const {index, homeDirectory, dataDirectory} = await fixture()
+	const source = nodePath.join(homeDirectory, 'Album')
+	const destination = nodePath.join(homeDirectory, 'Renamed')
+	await fse.outputFile(nodePath.join(source, 'file.txt'), 'file')
+	await index.reconcileRoot('/Home', 'initial')
+	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+	database.exec(`
+		CREATE TRIGGER reject_in_place_move BEFORE UPDATE OF relative_path ON entries
+		BEGIN
+			SELECT RAISE(ABORT, 'injected in-place move failure');
+		END
+	`)
+	database.close()
+
+	await fse.move(source, destination)
+	await index.movePath(source, destination)
+
+	await expect(index.getEntryBySystemPath(nodePath.join(source, 'file.txt'))).resolves.toBeUndefined()
+	await expect(index.getEntryBySystemPath(nodePath.join(destination, 'file.txt'))).resolves.toMatchObject({size: 4})
+	expect(logger.error).toHaveBeenCalledWith(
+		`Failed to move index rows from '${source}' in place`,
+		expect.objectContaining({message: 'injected in-place move failure'}),
+	)
+})
+
+test('picks up contents the index had not recorded when moving a directory in place', async () => {
+	const {index, homeDirectory} = await fixture()
+	const source = nodePath.join(homeDirectory, 'Album')
+	const destination = nodePath.join(homeDirectory, 'Renamed')
+	await fse.outputFile(nodePath.join(source, 'indexed.txt'), 'indexed')
+	await index.reconcileRoot('/Home', 'initial')
+	// Written without telling the index, as if its watcher event were still in flight
+	await fse.outputFile(nodePath.join(source, 'unrecorded.txt'), 'unrecorded')
+
+	await fse.move(source, destination)
+	await index.movePath(source, destination)
+
+	await expect(index.getEntryBySystemPath(nodePath.join(destination, 'indexed.txt'))).resolves.toMatchObject({size: 7})
+	await pRetry(
+		async () =>
+			expect(await index.getEntryBySystemPath(nodePath.join(destination, 'unrecorded.txt'))).toMatchObject({
+				size: 10,
+			}),
+		{retries: 100, minTimeout: 10, maxTimeout: 20},
+	)
+	await expect(index.directorySizes(['/Home/Renamed'])).resolves.toStrictEqual([
+		{virtualPath: '/Home/Renamed', size: 17},
+	])
+})
+
+test('leaves the rows and sizes a root walk would after an in-place directory move', async () => {
+	const {index, homeDirectory, dataDirectory} = await fixture()
+	const source = nodePath.join(homeDirectory, 'Album 😀')
+	const destination = nodePath.join(homeDirectory, 'Target', 'Moved 😀')
+	await Promise.all([
+		fse.outputFile(nodePath.join(source, 'a.txt'), 'abc'),
+		fse.outputFile(nodePath.join(source, '.hidden.txt'), 'hidden'),
+		fse.outputFile(nodePath.join(source, 'Nested', 'b.txt'), 'nested'),
+		fse.outputFile(nodePath.join(source, 'Nested', 'Deeper', 'c.txt'), 'deeper file'),
+		fse.outputFile(nodePath.join(homeDirectory, 'Album 😀0.txt'), 'adjacent'),
+		fse.outputFile(nodePath.join(homeDirectory, 'Album 😀-other', 'd.txt'), 'other'),
+		fse.outputFile(nodePath.join(homeDirectory, 'Target', 'e.txt'), 'target'),
+	])
+	await index.reconcileRoot('/Home', 'initial')
+	const indexed = async () => {
+		const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'), {readonly: true})
+		const rows = database
+			.prepare(
+				`SELECT relative_path, name, search_name, search_name_folded, type, size, modified_ns, ctime_ns,
+					device, inode, hidden, content_id
+				FROM entries ORDER BY relative_path`,
+			)
+			.all() as Array<{relative_path: string; type: string}>
+		database.close()
+		const directories = rows.filter(({type}) => type === 'directory').map(({relative_path}) => `/Home/${relative_path}`)
+		return {rows, sizes: await index.directorySizes(directories)}
+	}
+
+	await fse.move(source, destination)
+	await index.movePath(source, destination)
+	const moved = await indexed()
+	await index.reconcileRoot('/Home', 'verify')
+
+	expect(moved.rows.map(({relative_path}) => relative_path)).toContain('Target/Moved 😀/Nested/Deeper/c.txt')
+	expect(await indexed()).toStrictEqual(moved)
+})
+
+test('keeps in-place moved rows through a root snapshot that already walked past them', async () => {
+	let script: Array<{systemPath: string; stats: Stats}> | undefined
+	let reachedPause!: () => void
+	const atPause = new Promise<void>((resolve) => (reachedPause = resolve))
+	let release!: () => void
+	const released = new Promise<void>((resolve) => (release = resolve))
+	const walk: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (root, ...args) {
+		// Only the snapshot under test replays the script; later ones walk the disk
+		const scripted = script
+		script = undefined
+		if (!scripted) return yield* walkFileTree(root, ...args)
+		for (const [position, entry] of scripted.entries()) {
+			if (position === scripted.length - 1) {
+				reachedPause()
+				await released
+			}
+			yield entry
+		}
+	}
+	const {index, homeDirectory} = await fixture(walk, {batchSize: 1})
+	const source = nodePath.join(homeDirectory, 'a-directory')
+	const destination = nodePath.join(homeDirectory, 'b-directory')
+	const last = nodePath.join(homeDirectory, 'z.txt')
+	await Promise.all([fse.outputFile(nodePath.join(source, 'file.txt'), 'file'), writeFile(last, 'last')])
+	await index.reconcileRoot('/Home', 'initial')
+	script = await Promise.all(
+		[source, nodePath.join(source, 'file.txt'), last].map(async (systemPath) => ({
+			systemPath,
+			stats: await fse.lstat(systemPath),
+		})),
+	)
+	const snapshot = index.reconcileRoot('/Home', 'concurrent')
+	await atPause
+
+	await fse.move(source, destination)
+	const move = index.movePath(source, destination)
+	await new Promise((resolve) => setTimeout(resolve, 100))
+	release()
+	await Promise.all([snapshot, move])
+
+	await expect(index.getEntryBySystemPath(source)).resolves.toBeUndefined()
+	await expect(index.getEntryBySystemPath(destination)).resolves.toMatchObject({name: 'b-directory'})
+	await expect(index.getEntryBySystemPath(nodePath.join(destination, 'file.txt'))).resolves.toMatchObject({size: 4})
 })
 
 test('processes watcher move destinations before deletions and reuses their content thumbnail', async () => {
