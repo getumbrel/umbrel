@@ -129,6 +129,13 @@ describe('RAID mount failure detection', () => {
 		expect(devices.every((d) => d.isOk === false)).toBe(true)
 	})
 
+	test('keeps the config partition read-only after the mount failure', async () => {
+		// Rugix records the mount failure on the config partition, which also holds
+		// the RAID config, and must leave it read-only again
+		const options = await umbreld.vm.sshAsRoot('findmnt --noheadings --output OPTIONS /run/rugix/mounts/config')
+		expect(options.split(',')).toContain('ro')
+	})
+
 	// Reconnect both SSDs and verify recovery
 	test('powers off and reconnects both SSDs', async () => {
 		await umbreld.vm.powerOff()

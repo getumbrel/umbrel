@@ -178,7 +178,7 @@ jobs:
         # redundant re-export. It can intermittently fail the build with cache
         # backend errors, which would block every VM test that depends on this
         # image; the --cache-from import keeps the build fast regardless.
-        run: SKIP_AMD64_RUGIX_BUNDLE=true SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
+        run: SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
       # Hack to pass the image to the next job. We used to use upload-artifact but network performance
       # is terrible between GitHub <> Ubicloud. Just abuse the cache for now which is local and fast.
       - name: Cache OS image
@@ -186,6 +186,13 @@ jobs:
         with:
           path: packages/os/build/umbrelos-amd64.img
           key: umbrelos-amd64-image-${{ github.run_id }}
+      # The update bundle is cached separately, so only the OS update tests
+      # restore it.
+      - name: Cache OS update bundle
+        uses: actions/cache/save@v4
+        with:
+          path: packages/os/build/umbrelos-amd64.update
+          key: umbrelos-amd64-update-bundle-${{ github.run_id }}
 
   umbrelos-pi-vm-image-build:
     name: Build umbrelOS Pi VM image
@@ -240,11 +247,16 @@ jobs:
                 if grep --quiet '^// @vm-requires-playwright$' "${test_path}"; then
                   requires_playwright=true
                 fi
+                requires_update_bundle=false
+                if grep --quiet '^// @vm-requires-update-bundle$' "${test_path}"; then
+                  requires_update_bundle=true
+                fi
                 jq --null-input --compact-output \
                   --arg path "${relative_path}" \
                   --arg name "${name}" \
                   --argjson requiresPlaywright "${requires_playwright}" \
-                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright}'
+                  --argjson requiresUpdateBundle "${requires_update_bundle}" \
+                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright, requiresUpdateBundle: $requiresUpdateBundle}'
               done |
               jq --slurp --compact-output
           )
@@ -290,6 +302,13 @@ jobs:
         with:
           path: packages/os/build/umbrelos-amd64.img
           key: umbrelos-amd64-image-${{ github.run_id }}
+          fail-on-cache-miss: true
+      - name: Restore OS update bundle from cache
+        if: matrix.test.requiresUpdateBundle
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/os/build/umbrelos-amd64.update
+          key: umbrelos-amd64-update-bundle-${{ github.run_id }}
           fail-on-cache-miss: true
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
