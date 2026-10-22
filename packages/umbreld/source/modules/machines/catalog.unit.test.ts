@@ -173,8 +173,9 @@ describe('built-in Machines catalog', () => {
 		const fedora = builtinMachinesCatalog.images.find(({id}) => id === 'fedora-44-desktop-amd64')!
 		const debian = builtinMachinesCatalog.images.find(({id}) => id === 'debian-13-desktop-amd64')!
 
-		expect(ubuntu.cloudInit).toEqual({packages: ['ubuntu-desktop'], graphical: true})
+		expect(ubuntu.cloudInit).toEqual({adminGroup: 'sudo', packages: ['ubuntu-desktop'], graphical: true})
 		expect(fedora.cloudInit).toEqual({
+			adminGroup: 'wheel',
 			commands: [
 				['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 				['systemctl', 'enable', 'gdm.service'],

@@ -173,6 +173,10 @@ type InternalOsImage = OsImage & {
 
 type CloudInitProvisioning = {
 	shell?: string
+	// The distro's administrator group. Sudo access comes from the sudoers rule,
+	// but polkit only treats members of this group as administrators, so the
+	// desktop rejects the user's password for admin actions without it.
+	adminGroup?: 'sudo' | 'wheel'
 	packages?: string[]
 	commands?: string[][]
 	graphical?: boolean
@@ -241,6 +245,7 @@ const catalogSchema = z.object({
 			cloudInit: z
 				.object({
 					shell: z.string().startsWith('/').optional(),
+					adminGroup: z.enum(['sudo', 'wheel']).optional(),
 					packages: z.array(z.string().min(1)).optional(),
 					commands: z.array(z.array(z.string().min(1)).min(1)).optional(),
 					graphical: z.boolean().optional(),
@@ -443,7 +448,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
-			cloudInit: {packages: ['ubuntu-desktop'], graphical: true},
+			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop'], graphical: true},
 		},
 		{
 			id: 'ubuntu-26.04-server-amd64',
@@ -459,6 +464,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'ubuntu-26.04-desktop-arm64',
@@ -475,7 +481,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
-			cloudInit: {packages: ['ubuntu-desktop'], graphical: true},
+			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop'], graphical: true},
 		},
 		{
 			id: 'ubuntu-26.04-server-arm64',
@@ -491,6 +497,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'fedora-44-desktop-amd64',
@@ -509,6 +516,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			// Cloud Base only ships kernel-core, and the HDA sound drivers live in
 			// kernel-modules, which the Workstation group doesn't pull in.
 			cloudInit: {
+				adminGroup: 'wheel',
 				commands: [
 					['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 					['systemctl', 'enable', 'gdm.service'],
@@ -529,6 +537,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2',
 			sha256: '28680fe5b371a5a82ebf43a31926e086a168e59949d03969c5093e7071f90b7f',
 			platformProfile: 'modern-x86',
+			cloudInit: {adminGroup: 'wheel'},
 		},
 		{
 			id: 'fedora-44-desktop-arm64',
@@ -545,6 +554,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '55c60a3b80d3616a08705afd0459e75fe9f03c54aba7a46e4002a41a72fa0d5b',
 			platformProfile: 'modern-arm64',
 			cloudInit: {
+				adminGroup: 'wheel',
 				commands: [
 					['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 					['systemctl', 'enable', 'gdm.service'],
@@ -565,6 +575,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-44-1.7.aarch64.qcow2',
 			sha256: '55c60a3b80d3616a08705afd0459e75fe9f03c54aba7a46e4002a41a72fa0d5b',
 			platformProfile: 'modern-arm64',
+			cloudInit: {adminGroup: 'wheel'},
 		},
 		{
 			id: 'debian-13-desktop-amd64',
@@ -580,7 +591,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-amd64-20260706-2531.qcow2',
 			sha256: '7568c141e73c83eca7882625fafb9464fa683d46a499964f555a7f6f8c7cd282',
 			platformProfile: 'modern-x86',
-			cloudInit: {commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
 		},
 		{
 			id: 'debian-13-server-amd64',
@@ -595,6 +606,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-amd64-20260706-2531.qcow2',
 			sha256: '7568c141e73c83eca7882625fafb9464fa683d46a499964f555a7f6f8c7cd282',
 			platformProfile: 'modern-x86',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'debian-13-desktop-arm64',
@@ -610,7 +622,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-arm64-20260706-2531.qcow2',
 			sha256: 'b8a05fc7c18deff0aa213ddbdc883ccfaeeee1478f12d608e9da97a7aaaac5f9',
 			platformProfile: 'modern-arm64',
-			cloudInit: {commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
 		},
 		{
 			id: 'debian-13-server-arm64',
@@ -625,6 +637,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-arm64-20260706-2531.qcow2',
 			sha256: 'b8a05fc7c18deff0aa213ddbdc883ccfaeeee1478f12d608e9da97a7aaaac5f9',
 			platformProfile: 'modern-arm64',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'alpine-3.24.1-amd64',
@@ -638,7 +651,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/generic_alpine-3.24.1-x86_64-uefi-cloudinit-r0.qcow2',
 			sha256: '20acb6673d31497bc292a8f6a075d98aa47d03cfe79ddf3c811840e60cf6f8c5',
 			platformProfile: 'modern-x86',
-			cloudInit: {shell: '/bin/ash', packages: ['sudo']},
+			cloudInit: {shell: '/bin/ash', adminGroup: 'wheel', packages: ['sudo']},
 		},
 		{
 			id: 'alpine-3.24.1-arm64',
@@ -652,7 +665,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/generic_alpine-3.24.1-aarch64-uefi-cloudinit-r0.qcow2',
 			sha256: '3059a6280977c2122982632e0317c5ddbd39069d46ca1e60480de283091f720f',
 			platformProfile: 'modern-arm64',
-			cloudInit: {shell: '/bin/ash', packages: ['sudo']},
+			cloudInit: {shell: '/bin/ash', adminGroup: 'wheel', packages: ['sudo']},
 		},
 		{
 			id: 'android-13-amd64',
@@ -667,7 +680,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
-			cloudInit: {commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
 		},
 		{
 			id: 'android-13-arm64',
@@ -682,7 +695,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
-			cloudInit: {commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
 		},
 		{
 			id: 'omarchy-4.0.4-amd64',
@@ -891,6 +904,7 @@ export function renderCloudInitUserData(
 				lock_passwd: false,
 				passwd: passwordHash,
 				sudo: 'ALL=(ALL) NOPASSWD:ALL',
+				...(provisioning.adminGroup && {groups: [provisioning.adminGroup]}),
 			},
 		],
 		ssh_pwauth: true,
