@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Pin the Rugix Docker image.
-export RUGIX_BAKERY_IMAGE="ghcr.io/rugix/rugix-bakery@sha256:41fbea6785fccec14e43d22501b50af8cb4812f3560fc5d5abf41e2607350ef7" # v0.9.3
+export RUGIX_BAKERY_IMAGE="ghcr.io/rugix/rugix-bakery@sha256:abd9f86531f004d76ba73783e4e2d4f8046857c28a8786a435f67d45fc87a58b" # v0.9.4
 # export RUGIX_VERSION="branch-main"
 # export RUGIX_DEV=true
 
@@ -143,6 +143,14 @@ function main() {
     mv build/umbrelos-mender-amd64.rugixb build/umbrelos-amd64-legacy.update           2>/dev/null || true
     mv build/umbrelos-pi.mender           build/umbrelos-pi-legacy-migration.update    2>/dev/null || true
     mv build/umbrelos-pi.rugixb           build/umbrelos-pi.update                     2>/dev/null || true
+
+    # Rugix Bakery writes bundles as root with mode 0600, so make them readable like the
+    # images, otherwise CI can't cache, checksum or upload them
+    for artifact in build/*.update; do
+        if [ -e "${artifact}" ]; then
+            maybe_sudo chmod 0644 "${artifact}"
+        fi
+    done
 
     # To boot from QEMU
     # qemu-system-x86_64 -net nic -net user,hostfwd=tcp::2222-:22 -machine accel=tcg -cpu max -smp 4 -m 8192 -hda build/umbrelos.img -bios OVMF.fd
