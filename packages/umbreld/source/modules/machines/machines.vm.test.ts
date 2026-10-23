@@ -620,7 +620,7 @@ set -eu
 test "$(virsh --connect qemu:///system domstate umbrel-machine-${machineId})" = running
 virsh --connect qemu:///system net-info umbrel-machines | grep -q '^Persistent:.*no$'
 nft list table ip umbrel_machines >/dev/null
-test "$(nft list chain ip filter DOCKER-USER | grep -c 'comment "umbrel-machines"')" = 3
+test "$(iptables -S DOCKER-USER | grep -c -- '--comment umbrel-machines')" = 3
 test "$(nft list chain ip libvirt_network guest_input | grep -c 'comment "umbrel-machines"')" = 1
 test "$(nft list chain ip libvirt_network guest_cross | grep -c 'comment "umbrel-machines"')" = 1
 echo healthy
@@ -629,6 +629,19 @@ echo healthy
 			},
 			{retries: 30, minTimeout: 500, maxTimeout: 500},
 		)
+	})
+
+	test('keeps the host firewall readable by iptables', async () => {
+		// Docker-in-Docker images pick their iptables backend by running
+		// `iptables -nL` and fall back to legacy iptables when it fails, which
+		// leaves their containers behind the host's nftables FORWARD drop. Check
+		// with the machine firewall fully in place: running guest and LAN forwards.
+		const readable = await umbreld.vm.sshAsRoot(`
+set -eu
+for table in filter nat raw mangle; do iptables -t "$table" -nL >/dev/null; done
+echo readable
+`)
+		expect(readable).toBe('readable')
 	})
 
 	test('grows a running machine disk through libvirt', async () => {

@@ -351,15 +351,25 @@ export default class Libvirt {
 			timeout: 10_000,
 		})
 
-		await this.#removeManagedNftRules('filter', 'DOCKER-USER')
+		await this.#removeManagedDockerUserRules()
 		await this.#removeManagedNftRules('libvirt_network', 'guest_input')
 		await this.#removeManagedNftRules('libvirt_network', 'guest_cross')
+		// Written with iptables rather than nft so `iptables -nL` can still read the
+		// filter table. iptables-nft can't decode conntrack matches written by nft,
+		// and Docker-in-Docker images fall back to legacy iptables when that listing
+		// fails, which leaves their containers behind the nftables FORWARD drop.
+		// Any other rule added to Docker's tables needs the same care, and
+		// machines.vm.test.ts checks every table stays readable.
 		for (const rule of [
-			`iifname ${JSON.stringify(MACHINE_NETWORK_BRIDGE)} counter accept comment "umbrel-machines"`,
-			`oifname ${JSON.stringify(MACHINE_NETWORK_BRIDGE)} ct state related,established counter accept comment "umbrel-machines"`,
-			`oifname ${JSON.stringify(MACHINE_NETWORK_BRIDGE)} ct status dnat counter accept comment "umbrel-machines"`,
+			['-i', MACHINE_NETWORK_BRIDGE],
+			['-o', MACHINE_NETWORK_BRIDGE, '-m', 'conntrack', '--ctstate', 'RELATED,ESTABLISHED'],
+			['-o', MACHINE_NETWORK_BRIDGE, '-m', 'conntrack', '--ctstate', 'DNAT'],
 		]) {
-			await execa('nft', ['insert', 'rule', 'ip', 'filter', 'DOCKER-USER', ...rule.split(' ')], {timeout: 10_000})
+			await execa(
+				'iptables',
+				['-w', '-I', 'DOCKER-USER', ...rule, '-m', 'comment', '--comment', 'umbrel-machines', '-j', 'ACCEPT'],
+				{timeout: 10_000},
+			)
 		}
 		await execa(
 			'nft',
@@ -403,6 +413,20 @@ export default class Libvirt {
 		this.#nextFirewallCheckAt = Date.now() + 5_000
 	}
 
+	async #removeManagedDockerUserRules() {
+		// Older versions wrote these rules with nft, which also stops iptables
+		// listing the chain, so remove those first.
+		await this.#removeManagedNftRules('filter', 'DOCKER-USER')
+		// Throws if iptables still can't read the chain, rather than stacking up
+		// duplicate rules on every check.
+		const {stdout} = await execa('iptables', ['-w', '-S', 'DOCKER-USER'], {timeout: 10_000})
+		// Splitting on spaces is safe because none of our rule arguments contain any.
+		for (const rule of stdout.split('\n')) {
+			if (!rule.startsWith('-A DOCKER-USER ') || !rule.includes('--comment umbrel-machines')) continue
+			await execa('iptables', ['-w', '-D', ...rule.split(' ').slice(1)], {timeout: 10_000})
+		}
+	}
+
 	async #removeManagedNftRules(table: string, chain: string) {
 		const current = await execa('nft', ['-a', 'list', 'chain', 'ip', table, chain], {reject: false, timeout: 10_000})
 		for (const match of current.stdout.matchAll(/comment "umbrel-machines"[^\n]*# handle (\d+)/g)) {
@@ -436,7 +460,9 @@ export default class Libvirt {
 			if (Date.now() < this.#nextFirewallCheckAt) return
 			const [natTable, dockerUser, libvirtInput, libvirtCross] = await Promise.all([
 				execa('nft', ['list', 'table', 'ip', 'umbrel_machines'], {reject: false, timeout: 10_000}),
-				execa('nft', ['list', 'chain', 'ip', 'filter', 'DOCKER-USER'], {reject: false, timeout: 10_000}),
+				// Fails while older nft-written rules are still in the chain, which
+				// counts as missing rules and triggers a reconcile that replaces them.
+				execa('iptables', ['-w', '-S', 'DOCKER-USER'], {reject: false, timeout: 10_000}),
 				execa('nft', ['list', 'chain', 'ip', 'libvirt_network', 'guest_input'], {
 					reject: false,
 					timeout: 10_000,
@@ -448,7 +474,7 @@ export default class Libvirt {
 			])
 			if (
 				natTable.exitCode !== 0 ||
-				(dockerUser.stdout.match(/comment "umbrel-machines"/g)?.length ?? 0) !== 3 ||
+				(dockerUser.stdout.match(/--comment umbrel-machines/g)?.length ?? 0) !== 3 ||
 				(libvirtInput.stdout.match(/comment "umbrel-machines"/g)?.length ?? 0) !== 1 ||
 				(libvirtCross.stdout.match(/comment "umbrel-machines"/g)?.length ?? 0) !== 1
 			) {
@@ -462,7 +488,7 @@ export default class Libvirt {
 	async cleanupNetwork() {
 		await this.#networkQueue.add(async () => {
 			await execa('nft', ['delete', 'table', 'ip', 'umbrel_machines'], {reject: false, timeout: 10_000})
-			await this.#removeManagedNftRules('filter', 'DOCKER-USER')
+			await this.#removeManagedDockerUserRules()
 			await this.#removeManagedNftRules('libvirt_network', 'guest_input')
 			await this.#removeManagedNftRules('libvirt_network', 'guest_cross')
 			await execa('virsh', ['--connect', LIBVIRT_URI, 'net-destroy', MACHINE_NETWORK_NAME], {

@@ -309,6 +309,102 @@ describe('libvirt domain state', () => {
 	})
 })
 
+describe('machine firewall', () => {
+	const managedDockerUserRules = [
+		'-A DOCKER-USER -o umbrel-vm -m conntrack --ctstate DNAT -m comment --comment umbrel-machines -j ACCEPT',
+		'-A DOCKER-USER -o umbrel-vm -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment umbrel-machines -j ACCEPT',
+		'-A DOCKER-USER -i umbrel-vm -m comment --comment umbrel-machines -j ACCEPT',
+	]
+	const createLibvirt = () =>
+		new Libvirt({
+			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},
+		} as unknown as Umbreld)
+	const calls = (command: string, prefix: string) =>
+		execaMock.mock.calls
+			.filter(([called, args]) => called === command && args?.join(' ').startsWith(prefix))
+			.map(([, args]) => args!.join(' '))
+	const mockFirewall = ({
+		dockerUser = ['-N DOCKER-USER'],
+		nftDockerUser = '',
+		iptablesReadable = true,
+	}: {dockerUser?: string[]; nftDockerUser?: string; iptablesReadable?: boolean} = {}) =>
+		execaMock.mockImplementation(async (command?: string, args: string[] = [], options: {reject?: boolean} = {}) => {
+			const joined = args.join(' ')
+			if (command === 'iptables' && joined === '-w -S DOCKER-USER') {
+				if (iptablesReadable) return {stdout: dockerUser.join('\n'), stderr: '', exitCode: 0}
+				const stderr = "iptables v1.8.11 (nf_tables): chain `DOCKER-USER' in table `filter' is incompatible"
+				if (options.reject === false) return {stdout: '', stderr, exitCode: 1}
+				throw new Error(stderr)
+			}
+			if (command === 'nft' && joined === '-a list chain ip filter DOCKER-USER') {
+				return {stdout: nftDockerUser, stderr: '', exitCode: 0}
+			}
+			if (command === 'nft' && joined.includes('list chain ip libvirt_network')) {
+				return {stdout: 'counter accept comment "umbrel-machines" # handle 100', stderr: '', exitCode: 0}
+			}
+			return {stdout: '', stderr: '', exitCode: 0}
+		})
+
+	test('writes DOCKER-USER rules with iptables so iptables can still read the filter table', async () => {
+		mockFirewall()
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('iptables', '-w -I')).toEqual([
+			'-w -I DOCKER-USER -i umbrel-vm -m comment --comment umbrel-machines -j ACCEPT',
+			'-w -I DOCKER-USER -o umbrel-vm -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment umbrel-machines -j ACCEPT',
+			'-w -I DOCKER-USER -o umbrel-vm -m conntrack --ctstate DNAT -m comment --comment umbrel-machines -j ACCEPT',
+		])
+		expect(calls('nft', 'insert rule ip filter')).toEqual([])
+	})
+
+	test('replaces only its own DOCKER-USER rules', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules, '-A DOCKER-USER -j RETURN']})
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('iptables', '-w -D')).toEqual(managedDockerUserRules.map((rule) => `-w ${rule.replace(/^-A/, '-D')}`))
+	})
+
+	test('removes DOCKER-USER rules older versions wrote with nft', async () => {
+		mockFirewall({
+			nftDockerUser: [
+				'oifname "umbrel-vm" ct status dnat counter packets 0 bytes 0 accept comment "umbrel-machines" # handle 7',
+				'counter packets 0 bytes 0 return # handle 4',
+			].join('\n'),
+		})
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('nft', 'delete rule ip filter DOCKER-USER')).toEqual(['delete rule ip filter DOCKER-USER handle 7'])
+		expect(calls('iptables', '-w -I')).toHaveLength(3)
+	})
+
+	test('leaves a complete rule set in place', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules]})
+
+		await createLibvirt().ensureFirewall([])
+
+		expect(calls('iptables', '-w -I')).toEqual([])
+	})
+
+	test('reinstalls DOCKER-USER rules that have gone missing', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', managedDockerUserRules[0]]})
+
+		await createLibvirt().ensureFirewall([])
+
+		expect(calls('iptables', '-w -D')).toHaveLength(1)
+		expect(calls('iptables', '-w -I')).toHaveLength(3)
+	})
+
+	test('does not stack duplicate rules when iptables cannot read DOCKER-USER', async () => {
+		mockFirewall({iptablesReadable: false})
+
+		await expect(createLibvirt().ensureFirewall([])).rejects.toThrow('incompatible')
+		expect(calls('iptables', '-w -I')).toEqual([])
+	})
+})
+
 describe('installation media eject', () => {
 	test('ejects both Omarchy CDs after setup', async () => {
 		const libvirt = new Libvirt({
