@@ -6,20 +6,19 @@ import type {Worker} from 'node:worker_threads'
 import PQueue from 'p-queue'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './reader-pool.js'
-import FileIndexReader, {type FileIndexReadArgs} from './reader.js'
-import type {SqlRead} from './read-database.js'
-import type {FileIndexReaderRequest, FileIndexReaderResponse} from './reader-worker.js'
-import FileIndexEngine, {type FileIndexEngineOptions} from '../file-index-engine.js'
-import temporaryDirectory from '../../utilities/temporary-directory.js'
+import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './reader-pool.ts'
+import FileIndexReader, {type FileIndexReadArgs} from './reader.ts'
+import type {SqlRead} from './read-database.ts'
+import type {FileIndexReaderRequest, FileIndexReaderResponse} from './reader-worker.ts'
+import FileIndexEngine, {type FileIndexEngineOptions} from '../file-index-engine.ts'
+import temporaryDirectory from '../../utilities/temporary-directory.ts'
 
 class FakeReader extends EventEmitter {
 	messages: FileIndexReaderRequest[] = []
-	constructor(
-		readonly threadId: number,
-		ready = true,
-	) {
+	readonly threadId: number
+	constructor(threadId: number, ready = true) {
 		super()
+		this.threadId = threadId
 		if (ready) queueMicrotask(() => this.emit('message', {type: 'ready'}))
 	}
 	postMessage(message: FileIndexReaderRequest) {

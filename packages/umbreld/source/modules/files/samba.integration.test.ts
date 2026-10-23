@@ -6,7 +6,7 @@ import {default as SMB2} from '@tryjsky/v9u-smb2'
 import tcpPortUsed from 'tcp-port-used'
 import {$} from 'execa'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 

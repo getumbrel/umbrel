@@ -1,18 +1,18 @@
 import {beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import App from './app.js'
-import Apps from './apps.js'
-import {removeUnusedImages} from './image-cleanup.js'
-import appEnvironment from './legacy-compat/app-environment.js'
+import type Umbreld from '../../index.ts'
+import App from './app.ts'
+import Apps from './apps.ts'
+import {removeUnusedImages} from './image-cleanup.ts'
+import appEnvironment from './legacy-compat/app-environment.ts'
 
-vi.mock('./app.js', async (original) => ({
-	...(await original<typeof import('./app.js')>()),
+vi.mock('./app.ts', async (original) => ({
+	...(await original<typeof import('./app.ts')>()),
 	readManifestInDirectory: vi.fn(async () => ({manifestVersion: '1.0.0'})),
 }))
-vi.mock('./legacy-compat/app-environment.js', () => ({default: vi.fn()}))
-vi.mock('./image-cleanup.js', async (original) => ({
-	...(await original<typeof import('./image-cleanup.js')>()),
+vi.mock('./legacy-compat/app-environment.ts', () => ({default: vi.fn()}))
+vi.mock('./image-cleanup.ts', async (original) => ({
+	...(await original<typeof import('./image-cleanup.ts')>()),
 	removeUnusedImages: vi.fn(async () => {}),
 }))
 

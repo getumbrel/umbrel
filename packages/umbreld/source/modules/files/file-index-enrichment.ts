@@ -9,11 +9,11 @@ import {execa} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import {photoKind, type PhotoKind, type PhotoSubKind} from '../photos/types.js'
-import {readDatabase, type ReadDatabase, type ReadLane, type ReadSql} from './file-index/read-database.js'
-import {BACKGROUND_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.js'
-import {Blake3Hasher} from './blake3.js'
-import {foldSearchName} from './file-index/migrations.js'
+import {photoKind, type PhotoKind, type PhotoSubKind} from '../photos/types.ts'
+import {readDatabase, type ReadDatabase, type ReadLane, type ReadSql} from './file-index/read-database.ts'
+import {BACKGROUND_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
+import {Blake3Hasher} from './blake3.ts'
+import {foldSearchName} from './file-index/migrations.ts'
 import {
 	FILES_THUMBNAIL_VARIANT,
 	PHOTOS_THUMBNAIL_VARIANTS,
@@ -24,7 +24,7 @@ import {
 	type ThumbnailIdentity,
 	type ThumbnailIdentityKind,
 	type ThumbnailVariant,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 
 type Database = DatabaseTypes.Database
 

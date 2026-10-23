@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {nativeClientSchema} from './native-client.js'
+import {nativeClientSchema} from './native-client.ts'
 
 const client = {
 	id: 'umbrel',

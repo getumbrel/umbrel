@@ -7,11 +7,11 @@ import {describe, beforeAll, afterAll, expect, test, vi} from 'vitest'
 import fse from 'fs-extra'
 import {$} from 'execa'
 
-import runGitServer from '../test-utilities/run-git-server.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import runGitServer from '../test-utilities/run-git-server.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
-import AppRepository from './app-repository.js'
-import Umbreld from '../../index.js'
+import AppRepository from './app-repository.ts'
+import Umbreld from '../../index.ts'
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 

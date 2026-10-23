@@ -1,6 +1,6 @@
 import {expect, test} from 'vitest'
 
-import {sanitizeRegistry} from './app-store.js'
+import {sanitizeRegistry} from './app-store.ts'
 
 test('public registry excludes repository locations and undeclared manifest fields', () => {
 	const registry = [

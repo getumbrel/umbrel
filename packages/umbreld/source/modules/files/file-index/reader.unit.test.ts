@@ -4,12 +4,12 @@ import BetterSqlite3 from 'better-sqlite3'
 import PQueue from 'p-queue'
 import {afterEach, expect, test} from 'vitest'
 
-import {migrateFileIndex} from './migrations.js'
-import temporaryDirectory from '../../utilities/temporary-directory.js'
-import {migratePhotos} from '../../photos/migrations.js'
-import FileIndexReader, {type FileIndexReadArgs, type PhotosReadMethod} from './reader.js'
-import FileIndexReaderPool from './reader-pool.js'
-import PhotosRepository from '../../photos/repository.js'
+import {migrateFileIndex} from './migrations.ts'
+import temporaryDirectory from '../../utilities/temporary-directory.ts'
+import {migratePhotos} from '../../photos/migrations.ts'
+import FileIndexReader, {type FileIndexReadArgs, type PhotosReadMethod} from './reader.ts'
+import FileIndexReaderPool from './reader-pool.ts'
+import PhotosRepository from '../../photos/repository.ts'
 
 const temporary = temporaryDirectory()
 const cleanup: Array<() => void | Promise<void>> = []

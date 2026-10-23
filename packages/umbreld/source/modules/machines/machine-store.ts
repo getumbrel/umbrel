@@ -5,8 +5,8 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {z} from 'zod'
 
-import type {MachineDefinition} from './domain.js'
-import {machineIdSchema} from './machine-id.js'
+import type {MachineDefinition} from './domain.ts'
+import {machineIdSchema} from './machine-id.ts'
 
 const portForwardSchema = z.object({
 	id: z.string().min(1),

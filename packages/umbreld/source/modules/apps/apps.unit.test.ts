@@ -6,18 +6,18 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import App, {readManifestInDirectory} from './app.js'
-import Apps from './apps.js'
-import appEnvironment from './legacy-compat/app-environment.js'
-import type {AppManifest} from './schema.js'
+import type Umbreld from '../../index.ts'
+import App, {readManifestInDirectory} from './app.ts'
+import Apps from './apps.ts'
+import appEnvironment from './legacy-compat/app-environment.ts'
+import type {AppManifest} from './schema.ts'
 
-vi.mock('./app.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('./app.js')>()),
+vi.mock('./app.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./app.ts')>()),
 	readManifestInDirectory: vi.fn(),
 }))
 
-vi.mock('./legacy-compat/app-environment.js', () => ({default: vi.fn()}))
+vi.mock('./legacy-compat/app-environment.ts', () => ({default: vi.fn()}))
 
 function createApps(umbrelVersion: string) {
 	const assertAppPortAvailable = vi.fn()

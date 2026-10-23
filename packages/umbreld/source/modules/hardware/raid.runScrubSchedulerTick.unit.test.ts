@@ -1,6 +1,6 @@
 import {describe, expect, test, vi} from 'vitest'
 
-import {ensureScrubSchedule, runScrubSchedulerTick, type ScrubStatus} from './raid.js'
+import {ensureScrubSchedule, runScrubSchedulerTick, type ScrubStatus} from './raid.ts'
 
 describe('ensureScrubSchedule', () => {
 	test('creates a missing deadline without replacing an existing one', async () => {

@@ -7,7 +7,7 @@ import fse from 'fs-extra'
 import got from 'got'
 import pRetry from 'p-retry'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 type BrowserSession = {token: string; cookies: string[]}
 

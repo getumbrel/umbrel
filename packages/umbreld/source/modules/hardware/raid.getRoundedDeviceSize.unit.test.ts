@@ -1,6 +1,6 @@
 import {describe, test, expect} from 'vitest'
 
-import {getRoundedDeviceSize} from './raid.js'
+import {getRoundedDeviceSize} from './raid.ts'
 
 describe('getRoundedDeviceSize', () => {
 	test('keeps sizes below 250GB unchanged and rounds 250GB to under 1TB down to 25GB buckets', () => {

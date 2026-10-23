@@ -5,8 +5,8 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 import fse from 'fs-extra'
 import pRetry from 'p-retry'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {CLOUD_SCHEDULER_INTERVAL} from '../files/cloud.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {CLOUD_SCHEDULER_INTERVAL} from '../files/cloud.ts'
 import {
 	startVmCloudWebDav,
 	waitForSync,
@@ -14,8 +14,8 @@ import {
 	VM_CLOUD_WEBDAV_URL,
 	VM_CLOUD_WEBDAV_USERNAME,
 	writeVmCloudFixture,
-} from '../files/cloud.vm-test-helpers.js'
-import {UMBREL_DATABASE_BACKUP_DIRECTORY, UMBREL_DATABASE_BACKUP_FILENAME, type RestoreStatus} from './backups.js'
+} from '../files/cloud.vm-test-helpers.ts'
+import {UMBREL_DATABASE_BACKUP_DIRECTORY, UMBREL_DATABASE_BACKUP_FILENAME, type RestoreStatus} from './backups.ts'
 import {
 	bootWithExternalStorage,
 	expectRestoreProgressEvents,
@@ -25,7 +25,7 @@ import {
 	restoreBackupAndWait,
 	waitForBackupsKopiaReady,
 	waitForExternalStorage,
-} from './backups.vm-test-helpers.js'
+} from './backups.vm-test-helpers.ts'
 
 describe.sequential('Backup restore on current install', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

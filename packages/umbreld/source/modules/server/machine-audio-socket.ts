@@ -5,9 +5,9 @@ import {setTimeout as delay} from 'node:timers/promises'
 
 import type {WebSocket} from 'ws'
 
-import type Umbreld from '../../index.js'
-import type createLogger from '../utilities/logger.js'
-import type MachineConsoleSessions from './machine-console-sessions.js'
+import type Umbreld from '../../index.ts'
+import type createLogger from '../utilities/logger.ts'
+import type MachineConsoleSessions from './machine-console-sessions.ts'
 
 const MAX_BUFFERED_AUDIO_BYTES = 1024 * 1024
 

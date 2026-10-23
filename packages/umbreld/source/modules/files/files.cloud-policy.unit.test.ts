@@ -3,8 +3,8 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterAll, beforeAll, describe, expect, test, vi} from 'vitest'
 
-import Files from './files.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import Files from './files.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
 function createFiles({
 	authorize,

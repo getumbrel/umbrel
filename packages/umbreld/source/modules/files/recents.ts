@@ -1,6 +1,6 @@
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import {OWNER_USER_ID} from '../user/constants.js'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 const NON_FILE_TYPES = new Set(['directory', 'symbolic-link', 'socket', 'block-device', 'character-device', 'fifo'])
 const MAX_RECENTS = 50

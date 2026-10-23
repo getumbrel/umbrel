@@ -5,10 +5,10 @@ import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 import type {WebSocket} from 'ws'
 import yaml from 'js-yaml'
 
-import type Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import type Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
-import Auth, {NATIVE_ACCESS_DURATION, OWNER_ACCOUNT_ID, SESSION_DURATION} from './auth.js'
+import Auth, {NATIVE_ACCESS_DURATION, OWNER_ACCOUNT_ID, SESSION_DURATION} from './auth.ts'
 
 const nativeClient = {
 	id: 'umbrel',

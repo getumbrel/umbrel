@@ -8,12 +8,12 @@ import {Client, StreamableHTTPClientTransport} from '@modelcontextprotocol/clien
 import express from 'express'
 import {afterAll, beforeAll, beforeEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {normalizePath} from '../files/files.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import type {McpPermissions} from './mcp.js'
-import createMcpEndpoint from './server.js'
+import type Umbreld from '../../index.ts'
+import {normalizePath} from '../files/files.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import type {McpPermissions} from './mcp.ts'
+import createMcpEndpoint from './server.ts'
 
 const tokenId = 'a'.repeat(32)
 const token = `umbrelmcp_${tokenId}_${'b'.repeat(64)}`

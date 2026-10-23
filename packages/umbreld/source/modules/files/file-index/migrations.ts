@@ -1,15 +1,15 @@
 import type BetterSqlite3 from 'better-sqlite3'
-import {createDirectorySizes} from './directory-sizes.js'
+import {createDirectorySizes} from './directory-sizes.ts'
 
-import {photosIndexingSchema} from '../../photos/indexing-schema.js'
+import {photosIndexingSchema} from '../../photos/indexing-schema.ts'
 
 import {
 	photosReadModelSchema,
 	photosReadModelDirtySchema,
 	photosReadModelIndexTriggers,
-} from '../../photos/read-model-schema.js'
+} from '../../photos/read-model-schema.ts'
 
-import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../../photos/types.js'
+import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../../photos/types.ts'
 
 export type FileIndexMigration = {
 	version: number

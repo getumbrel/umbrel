@@ -4,7 +4,7 @@ import {once} from 'node:events'
 
 import {describe, expect, test, vi} from 'vitest'
 import getPort from 'get-port'
-import type {AppGatewayConfig} from '../app-gateway/app-gateway.js'
+import type {AppGatewayConfig} from '../app-gateway/app-gateway.ts'
 
 const {dockerCommand, execaDollar} = vi.hoisted(() => {
 	const dockerCommand = vi.fn()
@@ -13,7 +13,7 @@ const {dockerCommand, execaDollar} = vi.hoisted(() => {
 
 vi.mock('execa', () => ({$: execaDollar}))
 
-import LanIngress, {appAuthDashboardRedirect} from './lan-ingress.js'
+import LanIngress, {appAuthDashboardRedirect} from './lan-ingress.ts'
 
 describe('app gateway TCP readiness', () => {
 	function createIngress() {

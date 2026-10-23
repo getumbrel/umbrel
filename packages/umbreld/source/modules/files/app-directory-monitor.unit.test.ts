@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os'
 
 import {afterEach, expect, test, vi} from 'vitest'
 
-import AppDirectoryMonitor from './app-directory-monitor.js'
+import AppDirectoryMonitor from './app-directory-monitor.ts'
 
 const cleanups: Array<() => Promise<void>> = []
 afterEach(async () => {

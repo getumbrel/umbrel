@@ -7,7 +7,7 @@ import PQueue from 'p-queue'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 import {
 	buildDomainXml,
 	MACHINE_NETWORK_NAME,
@@ -15,7 +15,7 @@ import {
 	type MachineArchitecture,
 	type MachineDefinition,
 	resolveAcceleration,
-} from './domain.js'
+} from './domain.ts'
 import {
 	buildMachineNetworkXml,
 	buildMachinePortForwardNftables,
@@ -26,14 +26,14 @@ import {
 	machineDhcpLeases,
 	parseActiveMachineLeaseAddresses,
 	parseMachineDhcpLeases,
-} from './machine-network.js'
+} from './machine-network.ts'
 import {
 	installCommandOptions,
 	MACHINE_INSTALL_COMMAND_TIMEOUT_MS,
 	MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS,
-} from './install-command.js'
+} from './install-command.ts'
 
-export {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.js'
+export {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.ts'
 
 const LIBVIRT_URI = 'qemu:///system'
 const LIBVIRT_SWTPM_STATE_ROOT = '/var/lib/libvirt/swtpm'

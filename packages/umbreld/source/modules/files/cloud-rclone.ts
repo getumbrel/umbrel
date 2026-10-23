@@ -12,7 +12,7 @@ import {execa, type ExecaChildProcess, type ExecaError, type ExecaReturnValue} f
 import fse from 'fs-extra'
 import pWaitFor from 'p-wait-for'
 
-import randomToken from '../utilities/random-token.js'
+import randomToken from '../utilities/random-token.ts'
 
 import {
 	CLOUD_INVALID_ACCOUNT_CONFIG_ERROR,
@@ -21,7 +21,7 @@ import {
 	type CloudSyncActivity,
 	type Provider,
 	type RemoteRef,
-} from './cloud-types.js'
+} from './cloud-types.ts'
 
 export const CLOUD_RCLONE_REMOTE = 'cloud'
 

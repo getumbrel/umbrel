@@ -4,14 +4,14 @@ import nodePath from 'node:path'
 import {CLIENT_INFO_META_KEY} from '@modelcontextprotocol/server'
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
-import {assertSystemPathInsideBase, isPathInsideOrEqual, resolveRealPathForValidation} from '../files/files.js'
-import type {FileChangeEvent} from '../files/watcher.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import randomToken from '../utilities/random-token.js'
-import AsyncBurstCache from '../utilities/async-burst-cache.js'
-import createMcpEndpoint, {type McpEndpoint} from './server.js'
-import {MCP_PERMISSION_REMEDIATION} from './tools/shared.js'
+import type Umbreld from '../../index.ts'
+import {assertSystemPathInsideBase, isPathInsideOrEqual, resolveRealPathForValidation} from '../files/files.ts'
+import type {FileChangeEvent} from '../files/watcher.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import randomToken from '../utilities/random-token.ts'
+import AsyncBurstCache from '../utilities/async-burst-cache.ts'
+import createMcpEndpoint, {type McpEndpoint} from './server.ts'
+import {MCP_PERMISSION_REMEDIATION} from './tools/shared.ts'
 
 export type McpPermissions = {
 	apps: 'all' | string[]

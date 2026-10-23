@@ -16,7 +16,7 @@ import {
 	parseThumbnailFilename,
 	thumbnailFilename,
 	type ThumbnailVariant,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 import {
 	enrichmentQueueConcurrency,
 	extractMediaMetadata,
@@ -25,7 +25,7 @@ import {
 	generateThumbnailFiles,
 	hashFileRevision,
 	THUMBNAIL_GENERATION_TIMEOUT_MS,
-} from './file-index-enrichment.js'
+} from './file-index-enrichment.ts'
 
 vi.mock('execa')
 

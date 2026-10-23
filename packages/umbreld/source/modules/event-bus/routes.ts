@@ -1,11 +1,11 @@
 import z from 'zod'
 import {TRPCError} from '@trpc/server'
 
-import {router, privateProcedureWithMembers} from '../server/trpc/trpc.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import type {OperationsInProgress} from '../files/files.js'
+import {router, privateProcedureWithMembers} from '../server/trpc/trpc.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import type {OperationsInProgress} from '../files/files.ts'
 
-import {type EventTypes, events} from './event-bus.js'
+import {type EventTypes, events} from './event-bus.ts'
 
 // The only events member accounts may listen to. Each one is filtered down to
 // what belongs to the member before it's streamed, or carries no payload at

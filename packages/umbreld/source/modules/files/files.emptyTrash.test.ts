@@ -1,6 +1,6 @@
 import {expect, beforeAll, afterAll, afterEach, test, vi} from 'vitest'
 import fse from 'fs-extra'
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 

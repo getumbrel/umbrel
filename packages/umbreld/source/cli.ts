@@ -1,13 +1,13 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 import process from 'node:process'
 
 import arg from 'arg'
 import camelcaseKeys from 'camelcase-keys'
 
-import {cliClient} from './modules/cli-client.js'
-import blacklistUas from './modules/blacklist-uas/blacklist-uas.js'
+import {cliClient} from './modules/cli-client.ts'
+import blacklistUas from './modules/blacklist-uas/blacklist-uas.ts'
 
-import Umbreld, {type UmbreldOptions} from './index.js'
+import Umbreld, {type UmbreldOptions} from './index.ts'
 
 // Blacklists uas drivers early in the boot process
 if (process.argv.includes('blacklist-uas')) {

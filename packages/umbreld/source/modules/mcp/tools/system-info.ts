@@ -1,7 +1,7 @@
 import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
-import {runTool, type McpToolContext} from './shared.js'
+import {runTool, type McpToolContext} from './shared.ts'
 
 export default function registerSystemInfoTools(server: McpServer, context: McpToolContext) {
 	server.registerTool(

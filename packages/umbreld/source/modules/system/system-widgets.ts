@@ -1,7 +1,7 @@
 import prettyBytes from 'pretty-bytes'
 
-import type Umbreld from '../../index.js'
-import {getSystemDiskUsage, getSystemMemoryUsage, getCpuUsage} from './system.js'
+import type Umbreld from '../../index.ts'
+import {getSystemDiskUsage, getSystemMemoryUsage, getCpuUsage} from './system.ts'
 
 export const systemWidgets = {
 	storage: async function (umbreld: Umbreld) {

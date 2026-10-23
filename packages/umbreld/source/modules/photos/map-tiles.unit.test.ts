@@ -8,7 +8,7 @@ import {gunzipSync, gzipSync} from 'node:zlib'
 import {zxyToTileId} from 'pmtiles'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import MapTiles, {type MapTile, remoteMap, umbrelPlanet} from './map-tiles.js'
+import MapTiles, {type MapTile, remoteMap, umbrelPlanet} from './map-tiles.ts'
 
 let servers: Server[] = []
 

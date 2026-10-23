@@ -9,14 +9,14 @@ import express from 'express'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
-import type {Principal} from '../auth/auth.js'
-import {authorizeDashboardRequest, authorizeHttpRequest} from '../auth/http-request.js'
-import type UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.js'
-import {Blake3Hasher} from './blake3.js'
-import type {PublishedFileRevision} from './file-index-enrichment.js'
-import {lookupMimeType} from './mime.js'
+import type Umbreld from '../../index.ts'
+import type {Principal} from '../auth/auth.ts'
+import {authorizeDashboardRequest, authorizeHttpRequest} from '../auth/http-request.ts'
+import type UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.ts'
+import {Blake3Hasher} from './blake3.ts'
+import type {PublishedFileRevision} from './file-index-enrichment.ts'
+import {lookupMimeType} from './mime.ts'
 
 // Final publication must choose and claim a keep-both name atomically. Umbreld
 // has one upload API process, so this also avoids two concurrent requests

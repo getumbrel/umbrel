@@ -9,7 +9,7 @@ import {
 	parseNvidiaPmon,
 	parsePciControllers,
 	type DrmClientSample,
-} from './gpu-usage.js'
+} from './gpu-usage.ts'
 
 describe('PCI GPU parsing', () => {
 	test('normalizes NVIDIA and Linux PCI address formats', () => {

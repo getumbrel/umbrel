@@ -1,6 +1,6 @@
 import type net from 'node:net'
 
-import {ClientHelloReader, CLIENT_HELLO_READER_BUFFER_BYTES, MAX_CLIENT_HELLO_WIRE_BYTES} from './tls-client-hello.js'
+import {ClientHelloReader, CLIENT_HELLO_READER_BUFFER_BYTES, MAX_CLIENT_HELLO_WIRE_BYTES} from './tls-client-hello.ts'
 
 export const NATIVE_TLS_PREREAD_TIMEOUT = 5000
 export const MAX_PENDING_NATIVE_TLS_CONNECTIONS = 128

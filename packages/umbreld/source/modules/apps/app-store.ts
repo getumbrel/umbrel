@@ -1,9 +1,9 @@
 import pRetry from 'p-retry'
 
-import type Umbreld from '../../index.js'
-import runEvery from '../utilities/run-every.js'
-import AppRepository from './app-repository.js'
-import {isManifestVersionCompatible} from './manifest-compatibility.js'
+import type Umbreld from '../../index.ts'
+import runEvery from '../utilities/run-every.ts'
+import AppRepository from './app-repository.ts'
+import {isManifestVersionCompatible} from './manifest-compatibility.ts'
 
 type RepositoryRegistry = Awaited<ReturnType<AppRepository['readRegistry']>>
 type RegistryApp = RepositoryRegistry['apps'][number]

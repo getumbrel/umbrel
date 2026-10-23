@@ -9,11 +9,11 @@ import yaml from 'js-yaml'
 import pRetry from 'p-retry'
 import prettyBytes from 'pretty-bytes'
 
-import type Umbreld from '../../index.js'
-import FileStore from '../utilities/file-store.js'
-import {reboot} from '../system/system.js'
-import {setSystemStatus} from '../system/routes.js'
-import runEvery from '../utilities/run-every.js'
+import type Umbreld from '../../index.ts'
+import FileStore from '../utilities/file-store.ts'
+import {reboot} from '../system/system.ts'
+import {setSystemStatus} from '../system/routes.ts'
+import runEvery from '../utilities/run-every.ts'
 
 // Get the size of a block device or partition in bytes
 async function getDeviceSize(device: string): Promise<number> {

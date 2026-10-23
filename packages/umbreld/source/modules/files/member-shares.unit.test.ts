@@ -5,8 +5,8 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import MemberShares, {type MemberShare} from './member-shares.js'
+import type Umbreld from '../../index.ts'
+import MemberShares, {type MemberShare} from './member-shares.ts'
 
 function createMemberShares(fileShares: MemberShare[] = []) {
 	const get = vi.fn(async (key: string) => {

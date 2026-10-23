@@ -7,33 +7,33 @@ import fse from 'fs-extra'
 import pRetry from 'p-retry'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import {migratePhotos} from '../photos/migrations.js'
-import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import {migratePhotos} from '../photos/migrations.ts'
+import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 import FileIndex, {
 	walkFileTree,
 	type FileIndexEngineOptions,
 	type FileIndexRoot,
 	type WatcherChange,
-} from './file-index-engine.js'
+} from './file-index-engine.ts'
 import {
 	FILE_INDEX_SCHEMA_VERSION,
 	fileIndexMigrations,
 	filenameStemSql,
 	migrateFileIndex,
 	type FileIndexMigration,
-} from './file-index/migrations.js'
-import FileIndexReaderPool from './file-index/reader-pool.js'
-import DirectorySizes from './file-index/directory-sizes.js'
-import type {SqlRead} from './file-index/read-database.js'
-import {Blake3Hasher} from './blake3.js'
-import {THUMBNAIL_GENERATION_TIMEOUT_MS} from './file-index-enrichment.js'
+} from './file-index/migrations.ts'
+import FileIndexReaderPool from './file-index/reader-pool.ts'
+import DirectorySizes from './file-index/directory-sizes.ts'
+import type {SqlRead} from './file-index/read-database.ts'
+import {Blake3Hasher} from './blake3.ts'
+import {THUMBNAIL_GENERATION_TIMEOUT_MS} from './file-index-enrichment.ts'
 import {
 	PHOTOS_THUMBNAIL_VARIANTS,
 	THUMBNAIL_VARIANT,
 	thumbnailSystemPath,
 	type ThumbnailIdentity,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 
 const temporary = temporaryDirectory()
 const indexes: FileIndex[] = []

@@ -5,22 +5,22 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import pRetry from 'p-retry'
 
-import randomToken from '../../modules/utilities/random-token.js'
-import type Umbreld from '../../index.js'
-import {CLOUD_DESTINATION_MISSING_ERROR} from '../files/cloud-types.js'
-import appEnvironment from './legacy-compat/app-environment.js'
-import type {AppDataRootLocation, AppFolderAccessSelection, AppSettings} from './schema.js'
+import randomToken from '../../modules/utilities/random-token.ts'
+import type Umbreld from '../../index.ts'
+import {CLOUD_DESTINATION_MISSING_ERROR} from '../files/cloud-types.ts'
+import appEnvironment from './legacy-compat/app-environment.ts'
+import type {AppDataRootLocation, AppFolderAccessSelection, AppSettings} from './schema.ts'
 import App, {
 	getFolderAccessSlots,
 	readComposeInDirectory,
 	readManifestInDirectory,
 	type AppSettingsUpdate,
-} from './app.js'
-import type {AppManifest} from './schema.js'
-import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import {assertManifestVersionCompatible} from './manifest-compatibility.js'
-import ImageCleanup, {removeUnusedImages} from './image-cleanup.js'
+} from './app.ts'
+import type {AppManifest} from './schema.ts'
+import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import {assertManifestVersionCompatible} from './manifest-compatibility.ts'
+import ImageCleanup, {removeUnusedImages} from './image-cleanup.ts'
 
 export type AppDataRootStatus = 'available' | 'storage-unavailable' | 'data-missing'
 

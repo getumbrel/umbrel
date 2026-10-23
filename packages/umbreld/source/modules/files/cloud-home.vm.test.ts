@@ -1,9 +1,9 @@
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 import pRetry from 'p-retry'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {CLOUD_HOME_FREE_SPACE_FLOOR} from './cloud.js'
-import type {CloudSyncActivity} from './cloud-types.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {CLOUD_HOME_FREE_SPACE_FLOOR} from './cloud.ts'
+import type {CloudSyncActivity} from './cloud-types.ts'
 import {
 	createLargeVmCloudFixture,
 	createVmCloudFixtureDirectory,
@@ -19,7 +19,7 @@ import {
 	VM_CLOUD_WEBDAV_URL,
 	VM_CLOUD_WEBDAV_USERNAME,
 	writeVmCloudFixture,
-} from './cloud.vm-test-helpers.js'
+} from './cloud.vm-test-helpers.ts'
 
 const destination = '/Home/Cloud/Main'
 const destinationSystemPath = '/home/umbrel/umbrel/home/Cloud/Main'

@@ -1,6 +1,6 @@
 import {expect, beforeAll, afterAll, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 type LsblkDevice = {
 	name: string

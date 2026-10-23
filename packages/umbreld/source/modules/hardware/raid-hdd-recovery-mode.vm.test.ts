@@ -1,7 +1,7 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
 
 // The data mount runs at early boot, after the initramfs and before systemd starts, so HDDs
 // in drive bays (including those behind a SAS HBA, whose driver has to come up in the

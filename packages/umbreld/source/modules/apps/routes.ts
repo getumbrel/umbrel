@@ -1,13 +1,13 @@
 import z from 'zod'
 
-import {router, privateProcedure, privateProcedureWithMembers} from '../server/trpc/trpc.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import {router, privateProcedure, privateProcedureWithMembers} from '../server/trpc/trpc.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 import {
 	AppCustomEnvironmentVariableSchema,
 	AppCustomMountSchema,
 	AppEnvironmentVariableSchema,
 	AppFolderAccessSelectionSchema,
-} from './schema.js'
+} from './schema.ts'
 
 export const appStore = router({
 	// Returns the app store registry.

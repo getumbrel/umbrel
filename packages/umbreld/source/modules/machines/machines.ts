@@ -12,9 +12,9 @@ import PQueue from 'p-queue'
 import yaml from 'js-yaml'
 import {z} from 'zod'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import {OWNER_USER_ID} from '../user/constants.js'
+import {OWNER_USER_ID} from '../user/constants.ts'
 import {
 	architectureForProfile,
 	defaultMachineType,
@@ -27,19 +27,19 @@ import {
 	type MachineDefinition,
 	type PlatformProfile,
 	type PortForward,
-} from './domain.js'
-import Libvirt, {QEMU_GIBIBYTE_BYTES, qemuImageFormatForPath, type QemuImageFormat} from './libvirt.js'
-import {machineIdCandidate, slugifyMachineId} from './machine-id.js'
-import {MACHINE_GUEST_HOST_ADDRESS, machineIpAddressSchema, nextMachineIpAddress} from './machine-network.js'
-import MachineStore from './machine-store.js'
-import {safeDownload} from './safe-download.js'
-import {prepareWindowsInstallMedia, type WindowsInstaller} from './windows-image.js'
-import {prepareOmarchySeed, probeOmarchySetup, removeOmarchySetupCredentials} from './omarchy-install.js'
-import MachineGuestApi from './guest-api.js'
-import {encodeScreenshot, performInputAction, type MachineInputAction, type PointerTarget} from './machine-control.js'
-import type {InputFeedback, PointerMotion} from './input-motion.js'
-import RfbClient from './rfb-client.js'
-import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.js'
+} from './domain.ts'
+import Libvirt, {QEMU_GIBIBYTE_BYTES, qemuImageFormatForPath, type QemuImageFormat} from './libvirt.ts'
+import {machineIdCandidate, slugifyMachineId} from './machine-id.ts'
+import {MACHINE_GUEST_HOST_ADDRESS, machineIpAddressSchema, nextMachineIpAddress} from './machine-network.ts'
+import MachineStore from './machine-store.ts'
+import {safeDownload} from './safe-download.ts'
+import {prepareWindowsInstallMedia, type WindowsInstaller} from './windows-image.ts'
+import {prepareOmarchySeed, probeOmarchySetup, removeOmarchySetupCredentials} from './omarchy-install.ts'
+import MachineGuestApi from './guest-api.ts'
+import {encodeScreenshot, performInputAction, type MachineInputAction, type PointerTarget} from './machine-control.ts'
+import type {InputFeedback, PointerMotion} from './input-motion.ts'
+import RfbClient from './rfb-client.ts'
+import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.ts'
 
 export const FIRST_BOOT_SETUP_TIMEOUT_MS = 60 * 60 * 1_000
 export const WINDOWS_ARM_FIRST_BOOT_SETUP_TIMEOUT_MS = 4 * FIRST_BOOT_SETUP_TIMEOUT_MS

@@ -4,10 +4,10 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import routes from './routes.js'
-import type {Context} from '../server/trpc/context.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import routes from './routes.ts'
+import type {Context} from '../server/trpc/context.ts'
 
 const SOURCE_ID = '11111111-1111-4111-8111-111111111111'
 const libraryId = (accountId: string) =>

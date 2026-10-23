@@ -1,4 +1,3 @@
-import {createRequire} from 'node:module'
 import {fileURLToPath} from 'node:url'
 
 import {execa} from 'execa'
@@ -10,8 +9,6 @@ test.each(['/image', '/redirect'])('downloads over slow IPv4 with unreachable IP
 	const {stdout} = await execa('unshare', [
 		'--net',
 		process.execPath,
-		'--import',
-		createRequire(import.meta.url).resolve('tsx'),
 		fileURLToPath(new URL('./fixtures/slow-download.ts', import.meta.url)),
 		path,
 	])

@@ -4,8 +4,8 @@ import path from 'node:path'
 import {execa} from 'execa'
 import fse from 'fs-extra'
 
-import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.js'
-import {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.js'
+import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.ts'
+import {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.ts'
 
 const setupKeyName = 'omarchy-setup-key'
 const setupPasswordName = 'omarchy-setup-password'

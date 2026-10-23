@@ -9,9 +9,9 @@ import {afterEach, describe, expect, test, vi} from 'vitest'
 import fse from 'fs-extra'
 import {WebSocket} from 'ws'
 
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import AppGateway, {pathMatches, readAppGatewayConfig} from './app-gateway.js'
-import {appGatewayErrorPage} from './error-page.js'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import AppGateway, {pathMatches, readAppGatewayConfig} from './app-gateway.ts'
+import {appGatewayErrorPage} from './error-page.ts'
 
 describe('app gateway configuration', () => {
 	const directories: Array<ReturnType<typeof temporaryDirectory>> = []

@@ -1,14 +1,14 @@
 import BetterSqlite3 from 'better-sqlite3'
 import {expect, test} from 'vitest'
 
-import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.js'
+import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.ts'
 
 import {
 	migratePhotos,
 	PHOTOS_MIGRATION_MODULE,
 	PHOTOS_SCHEMA_VERSION,
 	UnsupportedPhotosSchemaError,
-} from './migrations.js'
+} from './migrations.ts'
 
 test('creates and idempotently migrates the durable Photos schema', () => {
 	const database = new BetterSqlite3(':memory:')

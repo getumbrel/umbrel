@@ -1,6 +1,6 @@
 import {expect, describe, test} from 'vitest'
 
-import {parseUasDeviceId, applyUasQuirks} from './blacklist-uas.js'
+import {parseUasDeviceId, applyUasQuirks} from './blacklist-uas.ts'
 
 describe('parseUasDeviceId', () => {
 	test('returns vendorId:productId for a device bound to the uas driver', () => {

@@ -2,8 +2,8 @@ import nodePath from 'node:path'
 
 import z from 'zod'
 
-import {accountAvatarUrl} from '../user/avatar-api.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import {accountAvatarUrl} from '../user/avatar-api.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 import {
 	router,
@@ -11,10 +11,10 @@ import {
 	privateProcedureWithMembers,
 	publicProcedureWhenNoUserExists,
 	publicProcedureWhenNoUserExistsWithMembers,
-} from '../server/trpc/trpc.js'
-import {CLOUD_SYNC_MODE_IDS, CLOUD_WEBDAV_FLAVOR_IDS} from './cloud-types.js'
-import {supportsAppDataRootFilesystem} from './external-storage.js'
-import {getDirectoryStream} from './files.js'
+} from '../server/trpc/trpc.ts'
+import {CLOUD_SYNC_MODE_IDS, CLOUD_WEBDAV_FLAVOR_IDS} from './cloud-types.ts'
+import {supportsAppDataRootFilesystem} from './external-storage.ts'
+import {getDirectoryStream} from './files.ts'
 
 // Numeric collation matches the Files UI. Distinct names can collate equally
 // (for example 1.txt and 01.txt), so use the raw name as a tie-breaker to make

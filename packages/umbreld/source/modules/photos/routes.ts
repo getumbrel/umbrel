@@ -1,11 +1,11 @@
 import {TRPCError} from '@trpc/server'
 import z from 'zod'
 
-import {NativeSessionRequiredError, type Principal} from '../auth/auth.js'
-import {privateProcedureWithMembers, router} from '../server/trpc/trpc.js'
+import {NativeSessionRequiredError, type Principal} from '../auth/auth.ts'
+import {privateProcedureWithMembers, router} from '../server/trpc/trpc.ts'
 
-import {PHOTO_BACKUP_SOURCE_ID_PATTERN, PHOTO_FILE_EXTENSION_PATTERN, PHOTO_RESOURCE_KEY_PATTERN} from './photos.js'
-import {PHOTO_KINDS, PHOTO_SCOPE_MODES, PHOTO_SUB_KINDS} from './types.js'
+import {PHOTO_BACKUP_SOURCE_ID_PATTERN, PHOTO_FILE_EXTENSION_PATTERN, PHOTO_RESOURCE_KEY_PATTERN} from './photos.ts'
+import {PHOTO_KINDS, PHOTO_SCOPE_MODES, PHOTO_SUB_KINDS} from './types.ts'
 
 const backupSourceInput = z.object({
 	sourceId: z.string().regex(PHOTO_BACKUP_SOURCE_ID_PATTERN),

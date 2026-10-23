@@ -1,6 +1,6 @@
 import type DatabaseTypes from 'better-sqlite3'
 
-import {photoLibraryCte as rawPhotoLibraryCte} from './library-sql.js'
+import {photoLibraryCte as rawPhotoLibraryCte} from './library-sql.ts'
 
 type Database = DatabaseTypes.Database
 const BATCH_SIZE = 128

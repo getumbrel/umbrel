@@ -1,7 +1,7 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
 
 // Capacity reporting must stay stable while a mirror member is missing. ZFS stops
 // reporting phys_space for missing members, which used to make totalSpace (and the UI's

@@ -3,9 +3,9 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterAll, beforeAll, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import Files from './files.js'
+import type Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import Files from './files.ts'
 
 const temporary = temporaryDirectory()
 

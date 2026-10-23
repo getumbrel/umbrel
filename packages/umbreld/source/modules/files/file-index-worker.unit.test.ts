@@ -8,13 +8,13 @@ import fse from 'fs-extra'
 import pRetry from 'p-retry'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import FileIndex, {type FileIndexRoot} from './file-index.js'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import FileIndex, {type FileIndexRoot} from './file-index.ts'
 import type {
 	FileIndexRequestMethod,
 	FileIndexWorkerInboundMessage,
 	FileIndexWorkerOutboundMessage,
-} from './file-index-worker-protocol.js'
+} from './file-index-worker-protocol.ts'
 
 const temporary = temporaryDirectory()
 const indexes: FileIndex[] = []

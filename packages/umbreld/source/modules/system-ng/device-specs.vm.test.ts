@@ -1,6 +1,6 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // Smoke tests that run against a real umbrelos VM to catch breaking changes in the
 // system binaries we depend on (lscpu, dmidecode, df, lsblk, /proc/meminfo). These

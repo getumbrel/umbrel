@@ -9,7 +9,7 @@ import systemInformation from 'systeminformation'
 import * as execa from 'execa'
 import fse from 'fs-extra'
 
-import Umbreld from '../../index.js'
+import Umbreld from '../../index.ts'
 import {
 	getCpuTemperature,
 	getMemoryUsage,
@@ -20,7 +20,7 @@ import {
 	restoreStaticIp,
 	connectToWiFiNetwork,
 	restoreWiFi,
-} from './system.js'
+} from './system.ts'
 
 vi.mock('systeminformation')
 vi.mock('execa')

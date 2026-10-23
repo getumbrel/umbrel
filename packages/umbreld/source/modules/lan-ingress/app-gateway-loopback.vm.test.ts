@@ -2,8 +2,8 @@ import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from
 import got from 'got'
 import pRetry from 'p-retry'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
 
 const appId = 'sparkles-hello-world'
 const appPort = 4000

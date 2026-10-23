@@ -8,11 +8,11 @@ import fse from 'fs-extra'
 import got from 'got'
 import {afterAll, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {Blake3Hasher} from '../files/blake3.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import photoApi from './api.js'
+import type Umbreld from '../../index.ts'
+import {Blake3Hasher} from '../files/blake3.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import photoApi from './api.ts'
 
 type FileWriteFailureCode = 'ENOSPC' | 'EDQUOT' | 'EIO'
 

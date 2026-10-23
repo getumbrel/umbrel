@@ -1,6 +1,6 @@
 import {z} from 'zod'
-import {privateProcedure, router} from '../server/trpc/trpc.js'
-import {hasWifi, getWifiNetworks, connectToWiFiNetwork, deleteWifiConnections} from './system.js'
+import {privateProcedure, router} from '../server/trpc/trpc.ts'
+import {hasWifi, getWifiNetworks, connectToWiFiNetwork, deleteWifiConnections} from './system.ts'
 
 export default router({
 	supported: privateProcedure.query(() => hasWifi()),

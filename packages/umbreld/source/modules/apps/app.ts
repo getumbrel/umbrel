@@ -12,20 +12,20 @@ import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
 import pRetry from 'p-retry'
 
-import getDirectorySize from '../utilities/get-directory-size.js'
+import getDirectorySize from '../utilities/get-directory-size.ts'
 import {
 	applyGpuAccelerationToService,
 	getGpuAcceleration,
 	removeGpuAccelerationFromService,
 	removeLegacyDriDeviceMappingsFromService,
 	type AppliedGpuAcceleration,
-} from '../hardware/gpu.js'
-import {pullAll} from '../utilities/docker-pull.js'
-import {copyWithProgress} from '../utilities/copy-with-progress.js'
-import {removeDurably, renameDurably, syncDirectoryTree, writeFileDurably} from '../utilities/durable-filesystem.js'
-import FileStore from '../utilities/file-store.js'
-import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.js'
-import type Umbreld from '../../index.js'
+} from '../hardware/gpu.ts'
+import {pullAll} from '../utilities/docker-pull.ts'
+import {copyWithProgress} from '../utilities/copy-with-progress.ts'
+import {removeDurably, renameDurably, syncDirectoryTree, writeFileDurably} from '../utilities/durable-filesystem.ts'
+import FileStore from '../utilities/file-store.ts'
+import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.ts'
+import type Umbreld from '../../index.ts'
 import {
 	AppCustomMountSchema,
 	AppCustomEnvironmentVariableSchema,
@@ -45,10 +45,10 @@ import {
 	type AppManifestEnvironmentVariable,
 	type AppFolderAccessSelection,
 	type AppSettings,
-} from './schema.js'
-import appScript from './legacy-compat/app-script.js'
-import {readAppGatewayConfig} from '../app-gateway/app-gateway.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+} from './schema.ts'
+import appScript from './legacy-compat/app-script.ts'
+import {readAppGatewayConfig} from '../app-gateway/app-gateway.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))

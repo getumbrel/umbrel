@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import fse from 'fs-extra'
 
-import randomToken from './random-token.js'
+import randomToken from './random-token.ts'
 
 function temporaryDirectory({parentDirectory}: {parentDirectory?: string} = {}) {
 	const baseDirectory = parentDirectory ?? os.tmpdir()

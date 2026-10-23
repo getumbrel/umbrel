@@ -1,19 +1,19 @@
 import fse from 'fs-extra'
 import express from 'express'
 
-import type Umbreld from '../../index.js'
-import type {Principal} from '../auth/auth.js'
-import {authorizeDashboardRequest} from '../auth/http-request.js'
-import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.js'
+import type Umbreld from '../../index.ts'
+import type {Principal} from '../auth/auth.ts'
+import {authorizeDashboardRequest} from '../auth/http-request.ts'
+import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.ts'
 import {
 	AvatarError,
 	MAX_AVATAR_UPLOAD_BYTES,
 	removeAccountAvatar,
 	resolveAccountAvatar,
 	setAccountAvatar,
-} from './avatar.js'
-import {OWNER_USER_ID} from './constants.js'
-import type {Account} from './user.js'
+} from './avatar.ts'
+import {OWNER_USER_ID} from './constants.ts'
+import type {Account} from './user.ts'
 
 export function accountAvatarUrl(userId: string, hash: string, context: 'dashboard' | 'app-auth' = 'dashboard') {
 	const encodedUserId = encodeURIComponent(userId)

@@ -3,7 +3,7 @@ import {setTimeout as delay} from 'node:timers/promises'
 import {execa} from 'execa'
 import {describe, expect, test} from 'vitest'
 
-import {installCommandOptions} from './install-command.js'
+import {installCommandOptions} from './install-command.ts'
 
 describe('bounded machine install commands', () => {
 	test('terminates a running child process when its install is cancelled', async () => {

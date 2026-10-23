@@ -5,9 +5,9 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import pRetry from 'p-retry'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
-import appEnvironment from './legacy-compat/app-environment.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
+import appEnvironment from './legacy-compat/app-environment.ts'
 
 // Like other app integration tests, run inside an isolated umbrel-dev instance:
 // the feature deliberately cleans all unused images in its Docker daemon.

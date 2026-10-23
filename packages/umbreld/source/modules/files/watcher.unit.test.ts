@@ -5,8 +5,8 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {FileChangeEvent} from './watcher.js'
+import type Umbreld from '../../index.ts'
+import type {FileChangeEvent} from './watcher.ts'
 
 const mocks = vi.hoisted(() => {
 	const command = vi.fn(() => Promise.resolve({stdout: ''}))
@@ -23,16 +23,16 @@ const mocks = vi.hoisted(() => {
 })
 
 vi.mock('execa', () => ({$: mocks.execaDollar}))
-vi.mock('./watchman.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('./watchman.js')>()),
+vi.mock('./watchman.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./watchman.ts')>()),
 	default: class {
 		subscribe = mocks.subscribe
 		close = mocks.close
 	},
 }))
 
-import Watcher from './watcher.js'
-import {WatchmanFreshInstanceError, WatchmanSubscriptionLostError} from './watchman.js'
+import Watcher from './watcher.ts'
+import {WatchmanFreshInstanceError, WatchmanSubscriptionLostError} from './watchman.ts'
 
 const cleanups: Array<() => Promise<void>> = []
 

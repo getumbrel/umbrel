@@ -3,10 +3,10 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 
-import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {migratePhotos} from './migrations.js'
-import PhotosRepository from './repository.js'
+import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {migratePhotos} from './migrations.ts'
+import PhotosRepository from './repository.ts'
 
 let database: BetterSqlite3.Database
 let directory: string

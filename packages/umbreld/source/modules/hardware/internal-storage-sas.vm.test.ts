@@ -3,8 +3,8 @@ import nodePath from 'node:path'
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import fse from 'fs-extra'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {StorageDevice} from './internal-storage.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import type {StorageDevice} from './internal-storage.ts'
 
 // Drives behind a SAS HBA (the LSI/Broadcom cards common in DIY NAS builds) show up with a
 // sas transport whether they are native SAS drives or SATA drives the controller presents

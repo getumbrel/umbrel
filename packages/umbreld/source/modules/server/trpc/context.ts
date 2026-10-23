@@ -1,7 +1,7 @@
 import {type CreateExpressContextOptions} from '@trpc/server/adapters/express'
 
-import type Umbreld from '../../../index.js'
-import type {AuthenticatedWebSocketRequest} from '../index.js'
+import type Umbreld from '../../../index.ts'
+import type {AuthenticatedWebSocketRequest} from '../index.ts'
 
 export const createContextExpress = ({req, res}: CreateExpressContextOptions) => {
 	const umbreld = req.app.get('umbreld') as Umbreld

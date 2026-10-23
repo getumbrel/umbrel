@@ -11,7 +11,7 @@ import {
 	firstBootTokenMatches,
 	isFirstBootSetupActive,
 	renderCloudInitUserData,
-} from './machines.js'
+} from './machines.ts'
 
 describe('Machines cloud-init seed', () => {
 	test('marks an incomplete first-boot setup delayed after one hour', () => {

@@ -11,9 +11,9 @@ import {
 	type IndexedEntry,
 	type SearchCandidate,
 	type WatcherChange,
-} from './file-index-engine.js'
-import type {PublishedFileRevision, ThumbnailReference} from './file-index-enrichment.js'
-import {PHOTOS_THUMBNAIL_VARIANTS, type ThumbnailVariant} from './thumbnail-support.js'
+} from './file-index-engine.ts'
+import type {PublishedFileRevision, ThumbnailReference} from './file-index-enrichment.ts'
+import {PHOTOS_THUMBNAIL_VARIANTS, type ThumbnailVariant} from './thumbnail-support.ts'
 import type {
 	PhotoAlbum,
 	PhotoFilter,
@@ -24,7 +24,7 @@ import type {
 	PhotoScopeMode,
 	PhotoSource,
 	PhotoSummary,
-} from '../photos/types.js'
+} from '../photos/types.ts'
 import {
 	deserializeError,
 	type FileIndexNotificationMethod,
@@ -32,7 +32,7 @@ import {
 	type FileIndexWorkerData,
 	type FileIndexWorkerInboundMessage,
 	type FileIndexWorkerOutboundMessage,
-} from './file-index-worker-protocol.js'
+} from './file-index-worker-protocol.ts'
 
 const DEFAULT_WORKER_RESTART_DELAY_MS = 1000
 const MAX_WORKER_RESTART_DELAY_MS = 60_000
@@ -184,7 +184,7 @@ export default class FileIndex {
 	async #bootWorker() {
 		if (!this.#started || this.#stopping || this.#worker) return
 		const generation = ++this.#workerGeneration
-		const worker = this.#createWorker(new URL('./file-index-worker-bootstrap.js', import.meta.url), {
+		const worker = this.#createWorker(new URL('./file-index-worker.ts', import.meta.url), {
 			workerData: this.#workerData,
 			execArgv: [],
 			name: 'file-index',
@@ -733,4 +733,4 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
 	}
 }
 
-export type {FileIndexRoot, IndexedEntry, SearchCandidate} from './file-index-engine.js'
+export type {FileIndexRoot, IndexedEntry, SearchCandidate} from './file-index-engine.ts'

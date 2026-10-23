@@ -15,7 +15,7 @@ import {
 	windowsArmUsbImageSize,
 	windowsVirtioDriverPaths,
 	windowsVirtioExtractionPaths,
-} from './windows-image.js'
+} from './windows-image.ts'
 
 const common = {
 	arch: 'amd64',

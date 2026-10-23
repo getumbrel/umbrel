@@ -8,11 +8,11 @@ import express from 'express'
 import got from 'got'
 import {afterAll, beforeAll, describe, expect, test} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {OWNER_ACCOUNT_ID} from '../auth/auth.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import fileApi, {publishUploadWithoutReplacing, uploadLastModified} from './api.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_ACCOUNT_ID} from '../auth/auth.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import fileApi, {publishUploadWithoutReplacing, uploadLastModified} from './api.ts'
 
 describe('file API authentication boundaries', () => {
 	const directory = temporaryDirectory()

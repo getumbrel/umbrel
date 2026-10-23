@@ -1,7 +1,7 @@
 import {z} from 'zod'
 import semver from 'semver'
 
-import {NativeTlsHostnameSuffixesSchema} from './native-tls.js'
+import {NativeTlsHostnameSuffixesSchema} from './native-tls.ts'
 
 // TODO: this is used outside of the apps module, move it somewhere more appropriate
 export type ProgressStatus = {

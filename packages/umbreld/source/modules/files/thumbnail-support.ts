@@ -1,6 +1,6 @@
 import nodePath from 'node:path'
 
-import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.js'
+import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.ts'
 
 export const SUPPORTED_THUMBNAIL_EXTENSIONS = new Set([...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS])
 

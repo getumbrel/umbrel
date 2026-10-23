@@ -1,9 +1,9 @@
 import {expect, test, vi} from 'vitest'
 import {WebSocketServer} from 'ws'
 
-import type Umbreld from '../../../index.js'
-import {coalesceWrites} from './coalesce-writes.js'
-import {trpcWssHandler} from './index.js'
+import type Umbreld from '../../../index.ts'
+import {coalesceWrites} from './coalesce-writes.ts'
+import {trpcWssHandler} from './index.ts'
 
 test('coalesces writes on every tRPC WebSocket connection', () => {
 	const wss = new WebSocketServer({noServer: true})

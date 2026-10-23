@@ -4,7 +4,7 @@ import {Readable} from 'node:stream'
 import {expect, beforeAll, afterAll, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // The entire upload API runs end-to-end here, including the disk-full write
 // error case which is triggered by genuinely filling a filesystem (a tiny

@@ -1,10 +1,10 @@
 import fse from 'fs-extra'
 import {$} from 'execa'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 // Used by getIdentity() until detectDevice is refactored into this module
-import {detectDevice} from '../system/system.js'
-import randomToken from '../utilities/random-token.js'
+import {detectDevice} from '../system/system.ts'
+import randomToken from '../utilities/random-token.ts'
 
 type LsblkDevice = {
 	name: string

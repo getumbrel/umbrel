@@ -5,8 +5,8 @@ import {expect} from 'vitest'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {RestoreStatus} from './backups.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import type {RestoreStatus} from './backups.ts'
 
 export const externalPath = '/External/SanDisk'
 export const repositoryPassword = 'test-password'

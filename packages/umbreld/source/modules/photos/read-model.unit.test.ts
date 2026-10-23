@@ -3,11 +3,11 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {expect, test} from 'vitest'
 
-import {migrateFileIndex} from '../files/file-index/migrations.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {photoLibraryCte} from './library-sql.js'
-import {migratePhotos} from './migrations.js'
-import PhotosRepository from './repository.js'
+import {migrateFileIndex} from '../files/file-index/migrations.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {photoLibraryCte} from './library-sql.ts'
+import {migratePhotos} from './migrations.ts'
+import PhotosRepository from './repository.ts'
 
 const hash = (value: number) => Buffer.from(value.toString(16).padStart(64, '0'), 'hex')
 const id = (value: number) => hash(value).toString('hex')

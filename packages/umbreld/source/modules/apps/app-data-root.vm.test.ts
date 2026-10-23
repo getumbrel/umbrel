@@ -1,9 +1,9 @@
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 import pRetry from 'p-retry'
 
-import {waitForExternalStorage} from '../backups/backups.vm-test-helpers.js'
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
+import {waitForExternalStorage} from '../backups/backups.vm-test-helpers.ts'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
 
 const appId = 'sparkles-storage'
 const externalPath = '/External/AppStorage'

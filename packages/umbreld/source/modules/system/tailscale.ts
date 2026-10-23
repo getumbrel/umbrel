@@ -1,6 +1,6 @@
 import {execa} from 'execa'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 type UnknownRecord = Record<string, unknown>
 

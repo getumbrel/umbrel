@@ -1,13 +1,13 @@
 import {expect, beforeAll, afterAll, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 import {
 	createLegacyUsbInstall,
 	piStartupTimeout,
 	rebootIntoLegacyUsbInstall,
 	waitForUsbDisks,
-} from './pi-storage-test-helpers.js'
+} from './pi-storage-test-helpers.ts'
 
 describe('Pi with two legacy USB data installations', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

@@ -1,7 +1,7 @@
 import {parentPort, threadId, workerData} from 'node:worker_threads'
 
-import type {PhotoFilter, PhotoScopeMode} from '../photos/types.js'
-import FileIndexEngine, {type FileIndexRoot, type WatcherChange} from './file-index-engine.js'
+import type {PhotoFilter, PhotoScopeMode} from '../photos/types.ts'
+import FileIndexEngine, {type FileIndexRoot, type WatcherChange} from './file-index-engine.ts'
 import {
 	isFileIndexRoot,
 	serializeError,
@@ -10,9 +10,9 @@ import {
 	type FileIndexWorkerData,
 	type FileIndexWorkerInboundMessage,
 	type FileIndexWorkerOutboundMessage,
-} from './file-index-worker-protocol.js'
-import {isThumbnailVariant, type ThumbnailVariant} from './thumbnail-support.js'
-import type {PublishedFileRevision} from './file-index-enrichment.js'
+} from './file-index-worker-protocol.ts'
+import {isThumbnailVariant, type ThumbnailVariant} from './thumbnail-support.ts'
+import type {PublishedFileRevision} from './file-index-enrichment.ts'
 
 if (!parentPort) throw new Error('File index worker requires a parent port')
 

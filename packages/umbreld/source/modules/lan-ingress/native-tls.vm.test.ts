@@ -12,8 +12,8 @@ import pRetry from 'p-retry'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 import {WebSocket} from 'ws'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
 
 const appId = 'sparkles-native-tls'
 const appPort = 4002

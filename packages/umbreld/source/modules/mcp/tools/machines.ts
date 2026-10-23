@@ -10,10 +10,10 @@ import {
 	MIN_LONG_PRESS_SECONDS,
 	SCREENSHOT_MAX_EDGE,
 	type MachineScreenshot,
-} from '../../machines/machine-control.js'
-import {machineIdPattern, MACHINE_ID_MAX_LENGTH} from '../../machines/machine-id.js'
-import type {McpPermissions} from '../mcp.js'
-import {runTool, runToolResult, type McpToolContext} from './shared.js'
+} from '../../machines/machine-control.ts'
+import {machineIdPattern, MACHINE_ID_MAX_LENGTH} from '../../machines/machine-id.ts'
+import type {McpPermissions} from '../mcp.ts'
+import {runTool, runToolResult, type McpToolContext} from './shared.ts'
 
 // Mirrors the canonical validation in machine-id.ts
 const machineIdSchema = z.string().max(MACHINE_ID_MAX_LENGTH).regex(machineIdPattern)

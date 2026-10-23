@@ -1,7 +1,7 @@
 import z from 'zod'
 
-import {router, privateProcedure} from '../server/trpc/trpc.js'
-import {fetchPageMetadata} from './fetch-page-metadata.js'
+import {router, privateProcedure} from '../server/trpc/trpc.ts'
+import {fetchPageMetadata} from './fetch-page-metadata.ts'
 
 function toFetchableUrl(url: string): string {
 	return url.startsWith('umbrel:') ? `${url.replace('umbrel:', 'http://localhost:')}` : url

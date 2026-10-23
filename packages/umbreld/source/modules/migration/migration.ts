@@ -9,12 +9,12 @@ import {globby} from 'globby'
 import yaml from 'js-yaml'
 import semver from 'semver'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import isUmbrelHome from '../is-umbrel-home.js'
-import type {ProgressStatus} from '../apps/schema.js'
-import {reboot} from '../system/system.js'
-import {setSystemStatus} from '../system/routes.js'
+import isUmbrelHome from '../is-umbrel-home.ts'
+import type {ProgressStatus} from '../apps/schema.ts'
+import {reboot} from '../system/system.ts'
+import {setSystemStatus} from '../system/routes.ts'
 
 let migrationStatus: ProgressStatus = {
 	running: false,

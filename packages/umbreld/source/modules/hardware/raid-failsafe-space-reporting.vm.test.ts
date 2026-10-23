@@ -2,8 +2,8 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {ExpansionStatus} from './raid.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import type {ExpansionStatus} from './raid.ts'
 
 const toGB = (bytes?: number) => (bytes != null ? `${(bytes / 1e9).toFixed(2)} GB` : 'N/A')
 const logSpace = (

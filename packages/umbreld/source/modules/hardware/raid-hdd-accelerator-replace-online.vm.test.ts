@@ -1,8 +1,8 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
-import type {ReplaceStatus} from './raid.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
+import type {ReplaceStatus} from './raid.ts'
 
 const expectedStripedAcceleratorL2arcSizeGb = 20
 const expectedMirroredAcceleratorSpecialSizeGb = 490

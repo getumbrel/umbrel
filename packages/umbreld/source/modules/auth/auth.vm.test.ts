@@ -4,7 +4,7 @@ import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from
 import got, {type Response} from 'got'
 import {WebSocket} from 'ws'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 type TestVm = Awaited<ReturnType<typeof createTestVm>>
 

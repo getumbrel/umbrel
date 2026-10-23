@@ -10,9 +10,9 @@ import express from 'express'
 import got from 'got'
 import {afterAll, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import photosApi from './api.js'
+import type Umbreld from '../../index.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import photosApi from './api.ts'
 
 describe('Photos HTTP account boundaries', () => {
 	let server: ReturnType<express.Express['listen']>

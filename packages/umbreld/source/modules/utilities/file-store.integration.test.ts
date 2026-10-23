@@ -2,9 +2,9 @@ import path from 'node:path'
 import {describe, beforeAll, afterAll, expect, test} from 'vitest'
 import fse from 'fs-extra'
 
-import temporaryDirectory from './temporary-directory.js'
+import temporaryDirectory from './temporary-directory.ts'
 
-import FileStore from './file-store.js'
+import FileStore from './file-store.ts'
 
 const directory = temporaryDirectory()
 

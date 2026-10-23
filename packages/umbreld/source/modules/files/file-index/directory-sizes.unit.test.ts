@@ -3,11 +3,11 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {afterEach, expect, test} from 'vitest'
 
-import temporaryDirectory from '../../utilities/temporary-directory.js'
-import DirectorySizes from './directory-sizes.js'
-import {fileIndexMigrations, migrateFileIndex} from './migrations.js'
-import {fileIndexQueries} from './queries.js'
-import type {IndexedDirectorySize} from '../file-index-engine.js'
+import temporaryDirectory from '../../utilities/temporary-directory.ts'
+import DirectorySizes from './directory-sizes.ts'
+import {fileIndexMigrations, migrateFileIndex} from './migrations.ts'
+import {fileIndexQueries} from './queries.ts'
+import type {IndexedDirectorySize} from '../file-index-engine.ts'
 
 const temporary = temporaryDirectory()
 const databases: BetterSqlite3.Database[] = []

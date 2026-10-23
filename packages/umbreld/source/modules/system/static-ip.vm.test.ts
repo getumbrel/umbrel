@@ -2,7 +2,7 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 describe('Static IP configuration', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

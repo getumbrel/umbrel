@@ -6,10 +6,10 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import App, {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from './app.js'
-import ImageCleanup from './image-cleanup.js'
-import type {AppManifest} from './schema.js'
+import type Umbreld from '../../index.ts'
+import App, {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from './app.ts'
+import ImageCleanup from './image-cleanup.ts'
+import type {AppManifest} from './schema.ts'
 
 const temporaryDirectories: string[] = []
 

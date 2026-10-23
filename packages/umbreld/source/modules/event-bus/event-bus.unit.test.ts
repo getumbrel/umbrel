@@ -1,7 +1,7 @@
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import EventBus from './event-bus.js'
+import type Umbreld from '../../index.ts'
+import EventBus from './event-bus.ts'
 
 afterEach(() => vi.useRealTimers())
 

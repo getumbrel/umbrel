@@ -18,7 +18,11 @@ export default class AppDirectoryMonitor {
 	#pending?: Promise<void>
 	#refreshAgain = false
 
-	constructor(private readonly options: Options) {}
+	readonly #options: Options
+
+	constructor(options: Options) {
+		this.#options = options
+	}
 
 	async start() {
 		if (this.#started) return
@@ -39,7 +43,7 @@ export default class AppDirectoryMonitor {
 			() => {
 				void this.refresh().finally(() => this.#schedule())
 			},
-			this.options.intervalMs ?? 24 * 60 * 60 * 1000,
+			this.#options.intervalMs ?? 24 * 60 * 60 * 1000,
 		)
 		this.#timer.unref()
 	}
@@ -53,7 +57,7 @@ export default class AppDirectoryMonitor {
 		this.#pending = (async () => {
 			do {
 				this.#refreshAgain = false
-				await this.#check().catch((error) => this.options.logger.error('Failed to check app directories', error))
+				await this.#check().catch((error) => this.#options.logger.error('Failed to check app directories', error))
 			} while (this.#started && this.#refreshAgain)
 		})()
 		try {
@@ -64,14 +68,14 @@ export default class AppDirectoryMonitor {
 	}
 
 	async #check() {
-		const paths = new Set((await this.options.listPaths()).filter((path) => path.startsWith('/Apps/')))
+		const paths = new Set((await this.#options.listPaths()).filter((path) => path.startsWith('/Apps/')))
 		for (const path of this.#identities.keys()) {
 			if (!paths.has(path)) this.#identities.delete(path)
 		}
 		for (const path of paths) {
 			if (!this.#started) return
 			try {
-				const stats = await stat(this.options.systemPath(path), {bigint: true}).catch(
+				const stats = await stat(this.#options.systemPath(path), {bigint: true}).catch(
 					(error: NodeJS.ErrnoException) => {
 						if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return undefined
 						throw error
@@ -80,14 +84,14 @@ export default class AppDirectoryMonitor {
 				const identity = stats?.isDirectory() ? `${stats.dev}:${stats.ino}:${stats.birthtimeNs}` : undefined
 				const previous = this.#identities.get(path)
 				if (!identity || (previous !== undefined && identity !== previous)) {
-					await this.options.onDelete(path)
+					await this.#options.onDelete(path)
 					this.#identities.delete(path)
 				} else {
 					this.#identities.set(path, identity)
 				}
 			} catch (error) {
 				// Retain the previous identity and retry; an I/O error is not deletion.
-				this.options.logger.error(`Failed to check app directory '${path}'`, error)
+				this.#options.logger.error(`Failed to check app directory '${path}'`, error)
 			}
 		}
 	}

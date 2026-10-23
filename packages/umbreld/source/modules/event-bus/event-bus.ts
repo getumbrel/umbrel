@@ -1,20 +1,20 @@
 import Emittery from 'emittery'
 
-import type Umbreld from '../../index.js'
-import type {AppState} from '../apps/app.js'
-import type {CloudSyncActivity} from '../files/cloud-types.js'
-import type {FileChangeEvent} from '../files/watcher.js'
-import type {OperationsInProgress} from '../files/files.js'
-import type {BackupsInProgress, RestoreStatus} from '../backups/backups.js'
+import type Umbreld from '../../index.ts'
+import type {AppState} from '../apps/app.ts'
+import type {CloudSyncActivity} from '../files/cloud-types.ts'
+import type {FileChangeEvent} from '../files/watcher.ts'
+import type {OperationsInProgress} from '../files/files.ts'
+import type {BackupsInProgress, RestoreStatus} from '../backups/backups.ts'
 import type {
 	ExpansionStatus,
 	FailsafeTransitionStatus,
 	RebuildStatus,
 	ReplaceStatus,
 	ScrubStatus,
-} from '../hardware/raid.js'
-import type {Machine, OsImage, MachineAgentControlEvent} from '../machines/machines.js'
-import type {PhotoIndexingProgress} from '../photos/types.js'
+} from '../hardware/raid.ts'
+import type {Machine, OsImage, MachineAgentControlEvent} from '../machines/machines.ts'
+import type {PhotoIndexingProgress} from '../photos/types.ts'
 
 // A file change listener that never settles mustn't hold up later batches
 // forever. Timing out releases the dispatch; it doesn't cancel the listener.

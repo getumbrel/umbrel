@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {isFailsafeRebuildComplete} from './raid.js'
+import {isFailsafeRebuildComplete} from './raid.ts'
 
 describe('isFailsafeRebuildComplete', () => {
 	const onlineDevice = {status: 'ONLINE' as const}

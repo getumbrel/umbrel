@@ -12,9 +12,9 @@ import {promisify} from 'node:util'
 import {afterAll, afterEach, beforeAll, expect, test, vi} from 'vitest'
 import {WebSocket, WebSocketServer} from 'ws'
 
-import LanIngress from './lan-ingress.js'
-import {forwardTcp} from './forward-tcp.js'
-import {readNativeTlsPrelude, MAX_PENDING_NATIVE_TLS_CONNECTIONS} from './native-tls-preread.js'
+import LanIngress from './lan-ingress.ts'
+import {forwardTcp} from './forward-tcp.ts'
+import {readNativeTlsPrelude, MAX_PENDING_NATIVE_TLS_CONNECTIONS} from './native-tls-preread.ts'
 
 const hostname = '192-168-1-100.server-id.plex.direct'
 const logger = {createChildLogger: () => logger, verbose: () => {}, log: () => {}, error: () => {}}

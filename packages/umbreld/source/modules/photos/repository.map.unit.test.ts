@@ -3,11 +3,11 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {afterAll, afterEach, beforeEach, expect, test} from 'vitest'
 
-import {migrateFileIndex} from '../files/file-index/migrations.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {migratePhotos} from './migrations.js'
-import PhotosRepository from './repository.js'
-import {MAP_POINT_BYTES, MAP_POINT_FLAGS, MAP_POINTS_HEADER_BYTES} from './types.js'
+import {migrateFileIndex} from '../files/file-index/migrations.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {migratePhotos} from './migrations.ts'
+import PhotosRepository from './repository.ts'
+import {MAP_POINT_BYTES, MAP_POINT_FLAGS, MAP_POINTS_HEADER_BYTES} from './types.ts'
 
 // Each item: where it was taken (or nowhere), what it is, and its tint.
 // Newer items have higher ids (taken_at is id seconds).

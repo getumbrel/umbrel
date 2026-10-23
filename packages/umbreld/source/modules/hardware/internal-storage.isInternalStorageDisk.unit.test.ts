@@ -1,6 +1,6 @@
 import {describe, test, expect} from 'vitest'
 
-import {isInternalStorageDisk} from './internal-storage.js'
+import {isInternalStorageDisk} from './internal-storage.ts'
 
 const size = 2 * 1024 ** 4
 

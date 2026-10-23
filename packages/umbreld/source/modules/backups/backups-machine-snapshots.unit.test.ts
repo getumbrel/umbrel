@@ -2,8 +2,8 @@ import os from 'node:os'
 
 import {describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import Backups from './backups.js'
+import type Umbreld from '../../index.ts'
+import Backups from './backups.ts'
 
 function createBackups() {
 	const prepareBackup = vi.fn(async () => true)

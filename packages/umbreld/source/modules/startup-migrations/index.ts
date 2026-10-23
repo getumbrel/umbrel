@@ -3,10 +3,10 @@ import {z} from 'zod'
 import yaml from 'js-yaml'
 import semver from 'semver'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import {detectDevice, commitOsPartition} from '../system/system.js'
-import {findExternalUmbrelInstall, runPreMigrationChecks, migrateData} from '../migration/migration.js'
+import {detectDevice, commitOsPartition} from '../system/system.ts'
+import {findExternalUmbrelInstall, runPreMigrationChecks, migrateData} from '../migration/migration.ts'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))

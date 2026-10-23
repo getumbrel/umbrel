@@ -1,8 +1,8 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.js'
-import type {FailsafeTransitionStatus} from './raid.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
+import type {FailsafeTransitionStatus} from './raid.ts'
 
 describe.each(driveBuses)('RAID HDD storage to failsafe mirror transition (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

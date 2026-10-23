@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import UploadDiskPreflight from './upload-disk-preflight.js'
+import UploadDiskPreflight from './upload-disk-preflight.ts'
 
 const gigabyte = 1_000_000_000
 

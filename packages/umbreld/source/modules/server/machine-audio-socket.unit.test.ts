@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {machineAudioCaptureArguments, machineAudioPlaybackIsRunning} from './machine-audio-socket.js'
+import {machineAudioCaptureArguments, machineAudioPlaybackIsRunning} from './machine-audio-socket.ts'
 
 describe('machine audio capture', () => {
 	test('captures browser-compatible raw 48 kHz stereo PCM from the allocated loopback substream', () => {

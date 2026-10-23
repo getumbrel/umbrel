@@ -5,13 +5,13 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import type {WebSocket} from 'ws'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import FileStore from '../utilities/file-store.js'
-import getOrCreateFile from '../utilities/get-or-create-file.js'
-import randomToken from '../utilities/random-token.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import FileStore from '../utilities/file-store.ts'
+import getOrCreateFile from '../utilities/get-or-create-file.ts'
+import randomToken from '../utilities/random-token.ts'
 
-import type {NativeClient} from './native-client.js'
+import type {NativeClient} from './native-client.ts'
 
 export const OWNER_ACCOUNT_ID = OWNER_USER_ID
 

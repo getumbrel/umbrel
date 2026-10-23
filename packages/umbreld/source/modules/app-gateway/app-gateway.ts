@@ -9,16 +9,16 @@ import fse from 'fs-extra'
 import type {Compose} from 'compose-spec-schema'
 import {createProxyMiddleware} from 'http-proxy-middleware'
 
-import type Umbreld from '../../index.js'
-import {closeClientOnUpstreamAbort, releaseUpstreamOnClientClose} from '../utilities/proxy-stream-lifetime.js'
+import type Umbreld from '../../index.ts'
+import {closeClientOnUpstreamAbort, releaseUpstreamOnClientClose} from '../utilities/proxy-stream-lifetime.ts'
 import {
 	appGatewayTokenFromCookieHeader,
 	appGatewayTokenFromRequest,
 	setAppGatewayCookie,
 	stripAppGatewayCookies,
-} from '../auth/app-gateway-cookie.js'
-import {SESSION_DURATION} from '../auth/auth.js'
-import {appGatewayErrorPage} from './error-page.js'
+} from '../auth/app-gateway-cookie.ts'
+import {SESSION_DURATION} from '../auth/auth.ts'
+import {appGatewayErrorPage} from './error-page.ts'
 
 export type AppGatewayConfig = {
 	appId: string

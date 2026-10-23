@@ -1,10 +1,10 @@
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {Context} from '../server/trpc/context.js'
-import type {CloudSyncActivity} from '../files/cloud-types.js'
-import type {PhotoIndexingState} from '../photos/types.js'
-import routes from './routes.js'
+import type Umbreld from '../../index.ts'
+import type {Context} from '../server/trpc/context.ts'
+import type {CloudSyncActivity} from '../files/cloud-types.ts'
+import type {PhotoIndexingState} from '../photos/types.ts'
+import routes from './routes.ts'
 
 test('Cloud subscriptions discard another account wake-up before yielding', async () => {
 	const ownerActivity: CloudSyncActivity = {

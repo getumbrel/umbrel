@@ -1,7 +1,7 @@
 // @vm-requires-update-bundle
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 import {
 	downloadReleaseImage,
 	getRugixState,
@@ -10,7 +10,7 @@ import {
 	runUpdateScript,
 	serveUpdateBundle,
 	waitForCommittedBoot,
-} from '../test-utilities/os-update.js'
+} from '../test-utilities/os-update.ts'
 
 // The oldest Rugix releases still in the field. 1.6.x ships Rugix Ctrl 0.8, which the update
 // script drives with `--reboot deferred`, and 1.7.x ships Rugix Ctrl 1.0.

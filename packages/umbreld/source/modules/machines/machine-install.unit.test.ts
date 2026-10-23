@@ -7,7 +7,7 @@ import yaml from 'js-yaml'
 import pWaitFor from 'p-wait-for'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 const downloadControls = vi.hoisted(
 	() =>
@@ -45,7 +45,7 @@ const libvirtControls = vi.hoisted(() => ({
 	convertSignals: [] as AbortSignal[],
 }))
 
-vi.mock('./safe-download.js', async () => {
+vi.mock('./safe-download.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	const nodePath = await import('node:path')
 	return {
@@ -95,7 +95,7 @@ vi.mock('execa', async () => {
 	}
 })
 
-vi.mock('./windows-image.js', async () => {
+vi.mock('./windows-image.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	return {
 		prepareWindowsInstallMedia: vi.fn(async (_source: string, destination: string, options: {licenseKey?: string}) => {
@@ -105,7 +105,7 @@ vi.mock('./windows-image.js', async () => {
 	}
 })
 
-vi.mock('./guest-api.js', () => ({
+vi.mock('./guest-api.ts', () => ({
 	default: class FakeMachineGuestApi {
 		async start() {
 			guestApiControls.starts++
@@ -116,7 +116,7 @@ vi.mock('./guest-api.js', () => ({
 	},
 }))
 
-vi.mock('./omarchy-install.js', async () => {
+vi.mock('./omarchy-install.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	const path = await import('node:path')
 	return {
@@ -137,8 +137,8 @@ vi.mock('./omarchy-install.js', async () => {
 	}
 })
 
-vi.mock('./rfb-client.js', async () => ({
-	...(await vi.importActual<typeof import('./rfb-client.js')>('./rfb-client.js')),
+vi.mock('./rfb-client.ts', async () => ({
+	...(await vi.importActual<typeof import('./rfb-client.ts')>('./rfb-client.ts')),
 	default: class FakeRfbClient {
 		width = 1280
 		height = 800
@@ -160,8 +160,8 @@ vi.mock('./rfb-client.js', async () => ({
 	},
 }))
 
-vi.mock('./machine-control.js', async () => {
-	const actual = await vi.importActual<typeof import('./machine-control.js')>('./machine-control.js')
+vi.mock('./machine-control.ts', async () => {
+	const actual = await vi.importActual<typeof import('./machine-control.ts')>('./machine-control.ts')
 	return {
 		...actual,
 		encodeScreenshot: async (frame: {width: number; height: number}) => ({
@@ -173,7 +173,7 @@ vi.mock('./machine-control.js', async () => {
 	}
 })
 
-vi.mock('./libvirt.js', async () => {
+vi.mock('./libvirt.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	const nodePath = await import('node:path')
 	return {
@@ -301,8 +301,8 @@ vi.mock('./libvirt.js', async () => {
 	}
 })
 
-import Machines from './machines.js'
-import * as machineDomain from './domain.js'
+import Machines from './machines.ts'
+import * as machineDomain from './domain.ts'
 
 const roots: string[] = []
 const instances: Machines[] = []

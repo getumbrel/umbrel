@@ -3,7 +3,7 @@ import process from 'node:process'
 import {createTRPCClient, httpLink, createWSClient, wsLink, splitLink} from '@trpc/client'
 import fse from 'fs-extra'
 
-import {type AppRouter, httpOnlyPaths} from './server/trpc/common.js'
+import {type AppRouter, httpOnlyPaths} from './server/trpc/common.ts'
 
 // TODO: Maybe just read the endpoint from the data dir
 const dataDir = process.env.UMBREL_DATA_DIR ?? '/home/umbrel/umbrel'

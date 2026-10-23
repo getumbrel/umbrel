@@ -2,9 +2,9 @@ import nodePath from 'node:path'
 
 import {afterEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import Backups from './backups.js'
+import type Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import Backups from './backups.ts'
 
 const temporary = temporaryDirectory()
 

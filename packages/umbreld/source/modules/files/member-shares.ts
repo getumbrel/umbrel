@@ -1,10 +1,10 @@
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import type {FileChangeEvent} from './watcher.js'
-import AsyncBurstCache from '../utilities/async-burst-cache.js'
-import AppDirectoryMonitor from './app-directory-monitor.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import type {FileChangeEvent} from './watcher.ts'
+import AsyncBurstCache from '../utilities/async-burst-cache.ts'
+import AppDirectoryMonitor from './app-directory-monitor.ts'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 

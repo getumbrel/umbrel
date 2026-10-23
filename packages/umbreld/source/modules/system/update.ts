@@ -1,7 +1,7 @@
 import {$} from 'execa'
-import type {ProgressStatus} from '../apps/schema.js'
-import {detectDevice, isUmbrelOS} from './system.js'
-import Umbreld from '../../index.js'
+import type {ProgressStatus} from '../apps/schema.ts'
+import {detectDevice, isUmbrelOS} from './system.ts'
+import Umbreld from '../../index.ts'
 
 type UpdateStatus = ProgressStatus
 

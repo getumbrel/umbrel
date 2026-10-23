@@ -10,8 +10,8 @@ import CloudRclone, {
 	activityFromRcloneStats,
 	buildRcloneRemoteSource,
 	cloudTransferBudget,
-} from './cloud-rclone.js'
-import {CLOUD_JUNK_FILTER} from './cloud-types.js'
+} from './cloud-rclone.ts'
+import {CLOUD_JUNK_FILTER} from './cloud-types.ts'
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111'
 const SYNC_ID = '22222222-2222-4222-8222-222222222222'

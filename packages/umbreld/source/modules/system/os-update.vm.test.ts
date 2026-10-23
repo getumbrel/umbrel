@@ -2,8 +2,8 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {triggerFactoryReset} from '../test-utilities/rebooting-action.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {triggerFactoryReset} from '../test-utilities/rebooting-action.ts'
 import {
 	downloadReleaseImage,
 	getRugixState,
@@ -12,7 +12,7 @@ import {
 	runUpdateScript,
 	serveUpdateBundle,
 	waitForCommittedBoot,
-} from '../test-utilities/os-update.js'
+} from '../test-utilities/os-update.ts'
 
 // The release devices in the field update from. Its Rugix Ctrl installs this build's bundle.
 const fromVersion = '2.0.0'

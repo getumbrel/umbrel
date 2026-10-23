@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {builtinMachinesCatalog} from './machines.js'
+import {builtinMachinesCatalog} from './machines.ts'
 
 describe('built-in Machines catalog', () => {
 	test.each(['amd64', 'arm64'] as const)('ships native Server and Desktop templates for %s', (arch) => {

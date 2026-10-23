@@ -9,9 +9,9 @@ import {
 	SCREENSHOT_MAX_EDGE,
 	textToKeystrokes,
 	type MachineInputAction,
-} from './machine-control.js'
-import {pointOnMotion, type InputUpdate} from './input-motion.js'
-import type RfbClient from './rfb-client.js'
+} from './machine-control.ts'
+import {pointOnMotion, type InputUpdate} from './input-motion.ts'
+import type RfbClient from './rfb-client.ts'
 
 const SHIFT = 0xffe1
 const CONTROL = 0xffe3

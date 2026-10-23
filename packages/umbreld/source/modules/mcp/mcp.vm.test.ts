@@ -3,8 +3,8 @@ import {Client, StreamableHTTPClientTransport, type CallToolResult} from '@model
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
 
 const appId = 'sparkles-hello-world'
 const grantedDirectory = '/Home/mcp-vm-test'

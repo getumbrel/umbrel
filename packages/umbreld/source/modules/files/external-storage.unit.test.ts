@@ -5,7 +5,7 @@ import {
 	isEligibleExternalStorageDevice,
 	supportsAppDataRootFilesystem,
 	syntheticOwnershipMountOptions,
-} from './external-storage.js'
+} from './external-storage.ts'
 
 describe('isEligibleExternalStorageDevice', () => {
 	test('excludes USB devices that report zero capacity', () => {

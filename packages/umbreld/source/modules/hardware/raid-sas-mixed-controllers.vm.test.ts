@@ -1,7 +1,7 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // A typical DIY NAS: a SAS HBA adds drive bays to the motherboard's own SATA ports, with
 // HDDs and SSDs on both. A FailSafe mirror can pair drives across the two controllers,

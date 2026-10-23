@@ -1,9 +1,9 @@
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {Context} from '../server/trpc/context.js'
-import type {CloudSyncActivity} from './cloud-types.js'
-import routes from './routes.js'
+import type Umbreld from '../../index.ts'
+import type {Context} from '../server/trpc/context.ts'
+import type {CloudSyncActivity} from './cloud-types.ts'
+import routes from './routes.ts'
 
 test('Cloud activity snapshots are scoped to the authenticated account', async () => {
 	const activity: CloudSyncActivity = {

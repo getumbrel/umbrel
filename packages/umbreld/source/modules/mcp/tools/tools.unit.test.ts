@@ -1,13 +1,13 @@
 import type {CallToolResult, McpServer} from '@modelcontextprotocol/server'
 import {beforeEach, expect, test, vi} from 'vitest'
 
-import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../apps/app.js'
-import registerAppTools from './apps.js'
-import registerFileTools from './files.js'
-import registerMachineTools from './machines.js'
-import type {McpToolContext} from './shared.js'
-import registerSystemInfoTools from './system-info.js'
-import registerSystemManagementTools from './system-management.js'
+import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../apps/app.ts'
+import registerAppTools from './apps.ts'
+import registerFileTools from './files.ts'
+import registerMachineTools from './machines.ts'
+import type {McpToolContext} from './shared.ts'
+import registerSystemInfoTools from './system-info.ts'
+import registerSystemManagementTools from './system-management.ts'
 
 type ToolHandler = (input: Record<string, unknown>) => Promise<CallToolResult>
 

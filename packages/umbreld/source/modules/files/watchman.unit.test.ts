@@ -33,7 +33,7 @@ vi.mock('fb-watchman', async () => {
 	return {default: {Client}}
 })
 
-import Watchman, {WatchmanFreshInstanceError, WatchmanSubscriptionLostError, type FileChangeEvent} from './watchman.js'
+import Watchman, {WatchmanFreshInstanceError, WatchmanSubscriptionLostError, type FileChangeEvent} from './watchman.ts'
 
 const S_IFREG = 0o100644
 const S_IFDIR = 0o040755

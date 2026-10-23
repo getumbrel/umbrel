@@ -15,19 +15,19 @@ import {pipeline} from 'node:stream/promises'
 
 import express from 'express'
 
-import type Umbreld from '../../index.js'
-import type {Principal} from '../auth/auth.js'
-import {authorizeDashboardRequest, authorizeHttpRequest, authorizePhotoBackupRequest} from '../auth/http-request.js'
-import {receiveUpload, uploadLastModified} from '../files/api.js'
-import {lookupMimeType} from '../files/mime.js'
-import type UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.js'
-import type {ThumbnailVariant} from '../files/thumbnail-support.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import type Umbreld from '../../index.ts'
+import type {Principal} from '../auth/auth.ts'
+import {authorizeDashboardRequest, authorizeHttpRequest, authorizePhotoBackupRequest} from '../auth/http-request.ts'
+import {receiveUpload, uploadLastModified} from '../files/api.ts'
+import {lookupMimeType} from '../files/mime.ts'
+import type UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.ts'
+import type {ThumbnailVariant} from '../files/thumbnail-support.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
-import {PHOTO_FILE_EXTENSION_PATTERN, PHOTO_ORIGINAL_FILENAME_MAX_BYTES, PHOTO_RESOURCE_KEY_PATTERN} from './photos.js'
-import {filterSchema} from './routes.js'
-import {supportsPhotos} from './types.js'
+import {PHOTO_FILE_EXTENSION_PATTERN, PHOTO_ORIGINAL_FILENAME_MAX_BYTES, PHOTO_RESOURCE_KEY_PATTERN} from './photos.ts'
+import {filterSchema} from './routes.ts'
+import {supportsPhotos} from './types.ts'
 
 // A build of the basemap never changes, so a tile asked for under the build
 // it is of is the browser's to keep for good. One asked for under another

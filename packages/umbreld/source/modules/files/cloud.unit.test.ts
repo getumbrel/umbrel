@@ -2,9 +2,9 @@ import fsp from 'node:fs/promises'
 
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import FileStore from '../utilities/file-store.js'
-import createLogger from '../utilities/logger.js'
+import type Umbreld from '../../index.ts'
+import FileStore from '../utilities/file-store.ts'
+import createLogger from '../utilities/logger.ts'
 
 import CloudManager, {
 	CLOUD_AUTO_INTERVAL,
@@ -16,9 +16,9 @@ import CloudManager, {
 	CLOUD_STARTUP_JITTER_MAX,
 	classifyCloudFailure,
 	cloudDestinationDetails,
-} from './cloud.js'
-import {CloudProviderHttpError, OAUTH_SESSION_LIFETIME} from './cloud-auth.js'
-import {RcloneAbortedError, RcloneProcessError} from './cloud-rclone.js'
+} from './cloud.ts'
+import {CloudProviderHttpError, OAUTH_SESSION_LIFETIME} from './cloud-auth.ts'
+import {RcloneAbortedError, RcloneProcessError} from './cloud-rclone.ts'
 import {
 	CLOUD_ACCOUNT_NOT_FOUND_ERROR,
 	CLOUD_DESTINATION_MISSING_ERROR,
@@ -29,7 +29,7 @@ import {
 	type CloudStore,
 	type DestinationRef,
 	type Provider,
-} from './cloud-types.js'
+} from './cloud-types.ts'
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111'
 const SYNC_ID = '22222222-2222-4222-8222-222222222222'

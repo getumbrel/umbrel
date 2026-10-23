@@ -3,11 +3,11 @@ import nodePath from 'node:path'
 
 import {$} from 'execa'
 
-import type Umbreld from '../../index.js'
-import {getSystemDiskNames} from '../system/system-disk.js'
-import {getRoundedDeviceSize} from './raid.js'
+import type Umbreld from '../../index.ts'
+import {getSystemDiskNames} from '../system/system-disk.ts'
+import {getRoundedDeviceSize} from './raid.ts'
 
-export {resolveSystemDiskNames} from '../system/system-disk.js'
+export {resolveSystemDiskNames} from '../system/system-disk.ts'
 
 function kelvinToCelsius(kelvin: number): number {
 	return kelvin - 273

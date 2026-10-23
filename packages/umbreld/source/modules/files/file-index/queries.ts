@@ -1,8 +1,8 @@
 import type DatabaseTypes from 'better-sqlite3'
 import {fuzzy} from 'fast-fuzzy'
-import {foldSearchName} from './migrations.js'
-import {isReservedMemberTrashPath, joinVirtualPath} from './paths.js'
-import type {FileIndexRoot, SearchCandidate, IndexedDirectorySize} from '../file-index-engine.js'
+import {foldSearchName} from './migrations.ts'
+import {isReservedMemberTrashPath, joinVirtualPath} from './paths.ts'
+import type {FileIndexRoot, SearchCandidate, IndexedDirectorySize} from '../file-index-engine.ts'
 
 type Database = DatabaseTypes.Database
 type SearchRow = {id: number; name: string; relative_path: string}

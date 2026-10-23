@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {shouldCreateScrubErrorNotification, type ScrubStatus} from './raid.js'
+import {shouldCreateScrubErrorNotification, type ScrubStatus} from './raid.ts'
 
 const scrubbing: ScrubStatus = {state: 'scrubbing', progress: 50, errors: 0}
 

@@ -3,8 +3,8 @@ import {fileURLToPath} from 'node:url'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 import pRetry from 'p-retry'
 
-import {installPreStartHook} from '../system/custom-hooks.vm-test-helpers.js'
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {installPreStartHook} from '../system/custom-hooks.vm-test-helpers.ts'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const dnsPortHolderScript = `#!/usr/bin/python3
 import select

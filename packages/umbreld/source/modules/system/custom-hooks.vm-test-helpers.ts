@@ -2,7 +2,7 @@ import {Buffer} from 'node:buffer'
 import {expect} from 'vitest'
 import pRetry from 'p-retry'
 
-import type {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import type {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 export type TestUmbreldVm = Awaited<ReturnType<typeof createTestVm>>
 

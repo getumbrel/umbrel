@@ -7,8 +7,8 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {afterEach, describe, expect, test} from 'vitest'
 
-import type {MachineDefinition} from './domain.js'
-import MachineStore from './machine-store.js'
+import type {MachineDefinition} from './domain.ts'
+import MachineStore from './machine-store.ts'
 
 const roots: string[] = []
 

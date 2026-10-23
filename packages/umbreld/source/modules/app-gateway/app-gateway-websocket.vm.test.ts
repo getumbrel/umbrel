@@ -5,7 +5,7 @@ import got from 'got'
 import pRetry from 'p-retry'
 import {WebSocket} from 'ws'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 type TestVm = Awaited<ReturnType<typeof createTestVm>>
 type UpstreamStats = {connections: number; open: number; paths: string[]}

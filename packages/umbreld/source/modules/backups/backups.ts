@@ -5,22 +5,22 @@ import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
-import {execa, ExecaError, ExecaChildProcess} from 'execa'
+import {execa, type ExecaError, type ExecaChildProcess} from 'execa'
 import fse from 'fs-extra'
 import pQueue from 'p-queue'
 import prettyBytes from 'pretty-bytes'
 
-import randomToken from '../../modules/utilities/random-token.js'
-import {copyWithProgress} from '../utilities/copy-with-progress.js'
+import randomToken from '../../modules/utilities/random-token.ts'
+import {copyWithProgress} from '../utilities/copy-with-progress.ts'
 
 // TODO: These should be refactored into proper umbreld modules
-import {getSystemDiskUsage} from '../system/system.js'
-import {setSystemStatus} from '../system/routes.js'
-import {reboot} from '../system/system.js'
-import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
-import type Umbreld from '../../index.js'
-import type {ProgressStatus} from '../apps/schema.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import {getSystemDiskUsage} from '../system/system.ts'
+import {setSystemStatus} from '../system/routes.ts'
+import {reboot} from '../system/system.ts'
+import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.ts'
+import type Umbreld from '../../index.ts'
+import type {ProgressStatus} from '../apps/schema.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 type Backup = {
 	// Our internal id in the format: <repositoryId>:<snapshotId>

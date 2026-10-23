@@ -6,9 +6,9 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {MachineDefinition} from './domain.js'
-import {MACHINE_INSTALL_COMMAND_TIMEOUT_MS, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.js'
+import type Umbreld from '../../index.ts'
+import type {MachineDefinition} from './domain.ts'
+import {MACHINE_INSTALL_COMMAND_TIMEOUT_MS, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.ts'
 import Libvirt, {
 	audioDevicesForSlot,
 	buildWindows98Mbr,
@@ -22,7 +22,7 @@ import Libvirt, {
 	qemuImageFormatForPath,
 	qemuImageInfoArguments,
 	supportsVirglGraphics,
-} from './libvirt.js'
+} from './libvirt.ts'
 
 const execaMock = vi.hoisted(() =>
 	vi.fn(async (_command?: string, _arguments?: string[], _options?: Record<string, unknown>) => ({

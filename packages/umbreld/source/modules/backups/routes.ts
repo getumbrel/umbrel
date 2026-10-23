@@ -1,6 +1,6 @@
 import z from 'zod'
 
-import {router, privateProcedure, publicProcedureWhenNoUserExists} from '../server/trpc/trpc.js'
+import {router, privateProcedure, publicProcedureWhenNoUserExists} from '../server/trpc/trpc.ts'
 
 export default router({
 	// Get all backup repositories

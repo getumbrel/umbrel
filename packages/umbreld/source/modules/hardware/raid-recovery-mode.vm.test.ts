@@ -1,8 +1,8 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {triggerFactoryReset, triggerRebootingAction} from '../test-utilities/rebooting-action.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {triggerFactoryReset, triggerRebootingAction} from '../test-utilities/rebooting-action.ts'
 
 describe('RAID mount failure detection', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

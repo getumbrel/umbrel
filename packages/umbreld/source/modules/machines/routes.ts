@@ -1,8 +1,8 @@
 import z from 'zod'
 
-import {router, privateProcedure} from '../server/trpc/trpc.js'
-import {MACHINE_INPUT_ACTIONS, MAX_SCROLL_AMOUNT, MAX_TYPE_TEXT_LENGTH, MAX_WAIT_SECONDS} from './machine-control.js'
-import {machineIdSchema} from './machine-id.js'
+import {router, privateProcedure} from '../server/trpc/trpc.ts'
+import {MACHINE_INPUT_ACTIONS, MAX_SCROLL_AMOUNT, MAX_TYPE_TEXT_LENGTH, MAX_WAIT_SECONDS} from './machine-control.ts'
+import {machineIdSchema} from './machine-id.ts'
 
 const windowsLicenseKey = z.string().regex(/^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$/i)
 const screenshotCoordinate = z.tuple([z.number().int().min(0), z.number().int().min(0)])

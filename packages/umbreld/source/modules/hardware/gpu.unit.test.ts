@@ -11,7 +11,7 @@ import {
 	removeLegacyDriDeviceMappingsFromService,
 	type ComposeService,
 	type GpuAcceleration,
-} from './gpu.js'
+} from './gpu.ts'
 
 vi.mock('execa')
 vi.mock('fs-extra')

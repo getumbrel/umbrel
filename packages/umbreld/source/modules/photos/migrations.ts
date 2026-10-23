@@ -1,6 +1,6 @@
 import type BetterSqlite3 from 'better-sqlite3'
 
-import {photosReadModelDirtySchema, photosReadModelDurableTriggers} from './read-model-schema.js'
+import {photosReadModelDirtySchema, photosReadModelDurableTriggers} from './read-model-schema.ts'
 
 export const PHOTOS_SCHEMA_VERSION = 9
 export const PHOTOS_MIGRATION_MODULE = 'photos'

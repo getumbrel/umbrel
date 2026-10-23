@@ -1,14 +1,14 @@
 import {initTRPC} from '@trpc/server'
 import {ZodError} from 'zod'
 
-import {type Context} from './context.js'
+import {type Context} from './context.ts'
 import {
 	isAuthenticated,
 	isAuthenticatedIfUserExists,
 	isAuthenticatedIfUserExistsAllowingMembers,
 	isOwner,
-} from './is-authenticated.js'
-import {websocketLogger} from './websocket-logger.js'
+} from './is-authenticated.ts'
+import {websocketLogger} from './websocket-logger.ts'
 
 export const t = initTRPC.context<Context>().create({
 	// TODO: Add more context on why this is needed

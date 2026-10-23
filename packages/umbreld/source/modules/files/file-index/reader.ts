@@ -1,9 +1,9 @@
 import BetterSqlite3 from 'better-sqlite3'
 
-import PhotosRepository from '../../photos/repository.js'
-import type {PhotoFilter} from '../../photos/types.js'
-import {fileIndexQueries} from './queries.js'
-import type {ReadLane, SqlRead} from './read-database.js'
+import PhotosRepository from '../../photos/repository.ts'
+import type {PhotoFilter} from '../../photos/types.ts'
+import {fileIndexQueries} from './queries.ts'
+import type {ReadLane, SqlRead} from './read-database.ts'
 
 export type PhotosReadMethod =
 	| 'summary'

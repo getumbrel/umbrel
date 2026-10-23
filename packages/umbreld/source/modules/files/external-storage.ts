@@ -7,8 +7,8 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
-import {getSystemDiskNames} from '../system/system-disk.js'
+import type Umbreld from '../../index.ts'
+import {getSystemDiskNames} from '../system/system-disk.ts'
 
 type BlockDevice = {
 	id: string

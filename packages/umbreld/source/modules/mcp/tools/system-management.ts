@@ -3,7 +3,7 @@ import {setTimeout as delay} from 'node:timers/promises'
 import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
-import {MAX_LOG_BYTES, newestLogs, runTool, type McpToolContext} from './shared.js'
+import {MAX_LOG_BYTES, newestLogs, runTool, type McpToolContext} from './shared.ts'
 
 export default function registerSystemManagementTools(server: McpServer, context: McpToolContext) {
 	server.registerTool(

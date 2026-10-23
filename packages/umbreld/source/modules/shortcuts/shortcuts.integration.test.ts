@@ -3,7 +3,7 @@ import type {AddressInfo} from 'node:net'
 
 import {afterAll, beforeAll, expect, test} from 'vitest'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 let webServer: Server

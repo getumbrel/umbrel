@@ -7,9 +7,9 @@ import pRetry from 'p-retry'
 import type {Browser} from 'playwright'
 import {WebSocket} from 'ws'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import createVmBrowser from '../test-utilities/create-vm-browser.js'
-import * as totp from '../utilities/totp.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import createVmBrowser from '../test-utilities/create-vm-browser.ts'
+import * as totp from '../utilities/totp.ts'
 
 type TestVm = Awaited<ReturnType<typeof createTestVm>>
 type TrpcResponse<T> = {result: {data: T}}

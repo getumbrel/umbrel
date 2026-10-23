@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url'
 import {$} from 'execa'
 import pWaitFor from 'p-wait-for'
 
-import type {createTestVm} from './create-test-umbreld.js'
+import type {createTestVm} from './create-test-umbreld.ts'
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 const repoDirectory = path.resolve(currentDirectory, '../../../../..')

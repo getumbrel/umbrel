@@ -1,5 +1,5 @@
-import type {FileIndexRoot} from './file-index-engine.js'
-import type {PhotoIndexingProgress} from '../photos/types.js'
+import type {FileIndexRoot} from './file-index-engine.ts'
+import type {PhotoIndexingProgress} from '../photos/types.ts'
 
 export type FileIndexWorkerData = {
 	dataDirectory: string

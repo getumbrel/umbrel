@@ -2,12 +2,12 @@ import bcrypt from 'bcryptjs'
 import fse from 'fs-extra'
 import {$} from 'execa'
 
-import type Umbreld from '../../index.js'
-import type {ViewPreferences} from '../files/files.js'
+import type Umbreld from '../../index.ts'
+import type {ViewPreferences} from '../files/files.ts'
 
-import * as totp from '../utilities/totp.js'
-import {removeAccountAvatarDirectory} from './avatar.js'
-import {OWNER_USER_ID} from './constants.js'
+import * as totp from '../utilities/totp.ts'
+import {removeAccountAvatarDirectory} from './avatar.ts'
+import {OWNER_USER_ID} from './constants.ts'
 
 export type Member = {
 	id: string

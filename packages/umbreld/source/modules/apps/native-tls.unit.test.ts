@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {getNativeTlsPolicy, matchesNativeTlsHostname, NativeTlsHostnameSuffixesSchema} from './native-tls.js'
+import {getNativeTlsPolicy, matchesNativeTlsHostname, NativeTlsHostnameSuffixesSchema} from './native-tls.ts'
 
 describe('native TLS hostname policy', () => {
 	test('normalizes and deduplicates DNS suffixes', () => {

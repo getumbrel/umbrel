@@ -1,7 +1,7 @@
 import {expect, test, beforeAll, afterAll} from 'vitest'
 import AdmZip from 'adm-zip'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestVm>>
 

@@ -5,7 +5,7 @@ import {setTimeout} from 'node:timers/promises'
 import fse from 'fs-extra'
 import {execa} from 'execa'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 export const THUNDERBOLT_NOTIFICATION_PREFIX = 'thunderbolt-authorization-required:'
 export const LEGACY_EXTERNAL_GPU_NOTIFICATION_PREFIX = 'egpu-authorization-required:'

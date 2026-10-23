@@ -11,7 +11,7 @@ import {
 	removeOmarchySetupCredentials,
 	renderOmarchyConfiguration,
 	renderOmarchySetupKey,
-} from './omarchy-install.js'
+} from './omarchy-install.ts'
 
 vi.mock('execa', () => ({execa: vi.fn()}))
 afterEach(() => vi.resetAllMocks())

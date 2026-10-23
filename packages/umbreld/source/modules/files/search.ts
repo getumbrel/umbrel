@@ -1,5 +1,5 @@
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 export default class Search {
 	#umbreld: Umbreld

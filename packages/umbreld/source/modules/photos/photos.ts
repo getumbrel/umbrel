@@ -6,14 +6,14 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import isValidFilename from 'valid-filename'
 
-import type Umbreld from '../../index.js'
-import type {Principal} from '../auth/auth.js'
-import {Blake3Hasher} from '../files/blake3.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import type Umbreld from '../../index.ts'
+import type {Principal} from '../auth/auth.ts'
+import {Blake3Hasher} from '../files/blake3.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
-import MapTiles, {umbrelPlanet} from './map-tiles.js'
-import type {PhotoFilter, PhotoScopeMode} from './types.js'
-import {hashFileRevision, type PublishedFileRevision} from '../files/file-index-enrichment.js'
+import MapTiles, {umbrelPlanet} from './map-tiles.ts'
+import type {PhotoFilter, PhotoScopeMode} from './types.ts'
+import {hashFileRevision, type PublishedFileRevision} from '../files/file-index-enrichment.ts'
 
 export type PhotoBackupSource = {
 	id: string

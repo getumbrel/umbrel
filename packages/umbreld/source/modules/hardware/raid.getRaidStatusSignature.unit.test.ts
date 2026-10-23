@@ -1,6 +1,6 @@
 import {describe, test, expect} from 'vitest'
 
-import {getRaidStatusSignature} from './raid.js'
+import {getRaidStatusSignature} from './raid.ts'
 
 const basePool = () => ({
 	exists: true,

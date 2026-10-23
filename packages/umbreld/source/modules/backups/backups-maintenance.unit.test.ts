@@ -2,8 +2,8 @@ import os from 'node:os'
 
 import {describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import Backups from './backups.js'
+import type Umbreld from '../../index.ts'
+import Backups from './backups.ts'
 
 // Kopia reports an automatic maintenance failure after an otherwise successful command
 const maintenanceFailure = Object.assign(new Error('Command failed with exit code 1'), {

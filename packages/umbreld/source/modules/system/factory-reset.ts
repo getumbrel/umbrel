@@ -3,8 +3,8 @@ import path from 'node:path'
 import {$} from 'execa'
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
-import {reboot} from './system.js'
+import type Umbreld from '../../index.ts'
+import {reboot} from './system.ts'
 
 const BACKUP_PREFIX = 'umbrel-factory-reset'
 const RAID_FACTORY_RESET_PREPARE_HOOK = '/etc/rugix/hooks/state-reset/prepare/10-umbrel.sh'

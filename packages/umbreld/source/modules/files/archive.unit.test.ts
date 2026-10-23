@@ -8,8 +8,8 @@ import {pipeline} from 'node:stream/promises'
 import AdmZip from 'adm-zip'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import Archive from './archive.js'
+import type Umbreld from '../../index.ts'
+import Archive from './archive.ts'
 
 const directories: string[] = []
 

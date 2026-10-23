@@ -1,9 +1,9 @@
 import type {CallToolResult} from '@modelcontextprotocol/server'
 
-import type Machines from '../../machines/machines.js'
-import type {MachineAgent} from '../../machines/machines.js'
-import type {InternalTrpcCaller} from '../../server/trpc/index.js'
-import type Mcp from '../mcp.js'
+import type Machines from '../../machines/machines.ts'
+import type {MachineAgent} from '../../machines/machines.ts'
+import type {InternalTrpcCaller} from '../../server/trpc/index.ts'
+import type Mcp from '../mcp.ts'
 
 export type McpToolContext = {
 	rpc: InternalTrpcCaller

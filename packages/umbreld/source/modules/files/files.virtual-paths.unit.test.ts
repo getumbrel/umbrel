@@ -2,9 +2,9 @@ import nodePath from 'node:path'
 
 import {describe, expect, test, vi} from 'vitest'
 
-import Files, {isPathInsideOrEqual, normalizePath} from './files.js'
+import Files, {isPathInsideOrEqual, normalizePath} from './files.ts'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 const dataDirectory = '/home/umbrel/umbrel'
 

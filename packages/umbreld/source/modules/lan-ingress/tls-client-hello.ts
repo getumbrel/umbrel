@@ -1,4 +1,4 @@
-import {isDnsHostname} from '../apps/native-tls.js'
+import {isDnsHostname} from '../apps/native-tls.ts'
 
 // Bound preread resources; TLS permits larger ClientHellos than we accept here.
 export const MAX_CLIENT_HELLO_WIRE_BYTES = 64 * 1024

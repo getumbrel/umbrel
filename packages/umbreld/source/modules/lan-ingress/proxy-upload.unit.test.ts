@@ -13,10 +13,10 @@ import {promisify} from 'node:util'
 import {afterAll, afterEach, beforeAll, expect, test, vi} from 'vitest'
 import {WebSocket, WebSocketServer} from 'ws'
 
-import AppGateway from '../app-gateway/app-gateway.js'
-import {APP_GATEWAY_HTTP_COOKIE_NAME, APP_GATEWAY_HTTPS_COOKIE_NAME} from '../auth/app-gateway-cookie.js'
-import {BROWSER_SESSION_COOKIE_NAMES} from '../auth/browser-session-cookie.js'
-import LanIngress from './lan-ingress.js'
+import AppGateway from '../app-gateway/app-gateway.ts'
+import {APP_GATEWAY_HTTP_COOKIE_NAME, APP_GATEWAY_HTTPS_COOKIE_NAME} from '../auth/app-gateway-cookie.ts'
+import {BROWSER_SESSION_COOKIE_NAMES} from '../auth/browser-session-cookie.ts'
+import LanIngress from './lan-ingress.ts'
 
 type ProxyFactory = {
 	createHttpProxyServer(port: number, protocol: 'http'): http.Server

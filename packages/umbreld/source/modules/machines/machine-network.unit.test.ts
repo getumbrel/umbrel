@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto'
 
 import {describe, expect, test} from 'vitest'
 
-import type {MachineDefinition} from './domain.js'
+import type {MachineDefinition} from './domain.ts'
 import {
 	buildMachineNetworkXml,
 	buildMachinePortForwardNftables,
@@ -13,7 +13,7 @@ import {
 	nextMachineIpAddress,
 	parseActiveMachineLeaseAddresses,
 	parseMachineDhcpLeases,
-} from './machine-network.js'
+} from './machine-network.ts'
 
 function definition(id: string, ipAddress?: string): MachineDefinition {
 	return {

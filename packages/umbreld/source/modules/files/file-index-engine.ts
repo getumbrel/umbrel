@@ -7,36 +7,36 @@ import type DatabaseTypes from 'better-sqlite3'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import {migratePhotos} from '../photos/migrations.js'
-import PhotosRepository from '../photos/repository.js'
-import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index/reader-pool.js'
-import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.js'
-import {readDatabase, type ReadSql} from './file-index/read-database.js'
-import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.js'
-import {supportsPhotos, type PhotoFilter, type PhotoIndexingProgress, type PhotoScopeMode} from '../photos/types.js'
+import {migratePhotos} from '../photos/migrations.ts'
+import PhotosRepository from '../photos/repository.ts'
+import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index/reader-pool.ts'
+import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.ts'
+import {readDatabase, type ReadSql} from './file-index/read-database.ts'
+import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
+import {supportsPhotos, type PhotoFilter, type PhotoIndexingProgress, type PhotoScopeMode} from '../photos/types.ts'
 import FileIndexEnrichment, {
 	BACKGROUND_QUIET_PERIOD_MS,
 	assertPublishedRevision,
 	type FileIndexEnrichmentRuntime,
 	type PublishedFileRevision,
 	type ThumbnailReference,
-} from './file-index-enrichment.js'
+} from './file-index-enrichment.ts'
 import {
 	hasReservedMemberTrashPath,
 	isReservedMemberTrashPath,
 	relativePathWithin,
 	relativeVirtualPath,
 	joinVirtualPath,
-} from './file-index/paths.js'
-import {FILE_INDEX_SCHEMA_VERSION, foldSearchName, migrateFileIndex} from './file-index/migrations.js'
-import DirectorySizes from './file-index/directory-sizes.js'
+} from './file-index/paths.ts'
+import {FILE_INDEX_SCHEMA_VERSION, foldSearchName, migrateFileIndex} from './file-index/migrations.ts'
+import DirectorySizes from './file-index/directory-sizes.ts'
 import {
 	FILES_THUMBNAIL_VARIANT,
 	PHOTOS_THUMBNAIL_VARIANTS,
 	supportsThumbnail,
 	type ThumbnailIdentityKind,
 	type ThumbnailVariant,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 
 type Database = DatabaseTypes.Database
 

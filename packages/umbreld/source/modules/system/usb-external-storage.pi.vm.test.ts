@@ -1,8 +1,8 @@
 import {expect, beforeAll, afterAll, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {piStartupTimeout, waitForUsbDisks, waitForUsbPartitionByUuid} from './pi-storage-test-helpers.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {piStartupTimeout, waitForUsbDisks, waitForUsbPartitionByUuid} from './pi-storage-test-helpers.ts'
 
 describe('Pi SD installation with ordinary USB storage', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

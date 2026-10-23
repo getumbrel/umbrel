@@ -5,8 +5,8 @@ import {tmpdir} from 'node:os'
 import {execa} from 'execa'
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import Watcher from './watcher.js'
+import type Umbreld from '../../index.ts'
+import Watcher from './watcher.ts'
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`
 

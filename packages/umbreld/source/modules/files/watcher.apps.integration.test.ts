@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os'
 import {execa} from 'execa'
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`
 
@@ -26,7 +26,7 @@ test.runIf(process.platform === 'linux')(
 			{mode: 0o755},
 		)
 		process.env.PATH = `${binDirectory}:${previousPath}`
-		const {default: Files} = await import('./files.js')
+		const {default: Files} = await import('./files.ts')
 		const watchman = async (...args: string[]) => {
 			const result = JSON.parse((await execa(wrapper, ['--no-pretty', ...args])).stdout)
 			if (result.error) throw new Error(result.error)

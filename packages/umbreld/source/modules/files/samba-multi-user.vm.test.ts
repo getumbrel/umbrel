@@ -3,7 +3,7 @@ import {setTimeout as delay} from 'node:timers/promises'
 import {default as SMB2} from '@tryjsky/v9u-smb2'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const ownerDashboardPassword = 'moneyprintergobrrr'
 const memberDashboardPassword = 'member-password'

@@ -1,8 +1,8 @@
 import type {AnyTRPCMutationProcedure, AnyTRPCQueryProcedure, inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
-import type {APP_GATEWAY_HTTPS_COOKIE_NAME} from '../../auth/app-gateway-cookie.js'
-import type {BROWSER_SESSION_HTTPS_COOKIE_NAME} from '../../auth/browser-session-cookie.js'
-import type {AppRouter} from './index.js'
+import type {APP_GATEWAY_HTTPS_COOKIE_NAME} from '../../auth/app-gateway-cookie.ts'
+import type {BROWSER_SESSION_HTTPS_COOKIE_NAME} from '../../auth/browser-session-cookie.ts'
+import type {AppRouter} from './index.ts'
 
 // Backward-compatibility ledger for released native clients.
 //

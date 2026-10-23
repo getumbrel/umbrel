@@ -6,11 +6,11 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {normalizePath} from '../files/files.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import FileStore from '../utilities/file-store.js'
-import Mcp, {type McpStoreSettings} from './mcp.js'
+import type Umbreld from '../../index.ts'
+import {normalizePath} from '../files/files.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import FileStore from '../utilities/file-store.ts'
+import Mcp, {type McpStoreSettings} from './mcp.ts'
 
 type TestStore = {
 	mcp?: McpStoreSettings

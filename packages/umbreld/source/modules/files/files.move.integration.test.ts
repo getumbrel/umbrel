@@ -1,7 +1,7 @@
 import {expect, beforeAll, afterAll, test} from 'vitest'
 import fse from 'fs-extra'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
 
 // The rest of move() is covered end-to-end in files.move.vm.test.ts. This
 // test remains an integration test because it installs a fixture app from

@@ -10,13 +10,13 @@ import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 import {Client as SshClient} from 'ssh2'
 
-import Umbreld from '../../index.js'
-import type {AppRouter} from '../server/trpc/index.js'
-import type {events} from '../event-bus/event-bus.js'
+import Umbreld from '../../index.ts'
+import type {AppRouter} from '../server/trpc/index.ts'
+import type {events} from '../event-bus/event-bus.ts'
 
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import runGitServer from './run-git-server.js'
-import {retryVmPortCollisions} from './vm-port-retry.js'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import runGitServer from './run-git-server.ts'
+import {retryVmPortCollisions} from './vm-port-retry.ts'
 
 // Use the data/ directory in the umbreld package root for test temp files
 // This avoids filling up RAM-based tmpfs when running many tests in parallel

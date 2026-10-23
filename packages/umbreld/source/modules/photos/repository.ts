@@ -3,10 +3,10 @@ import nodePath from 'node:path'
 
 import type DatabaseTypes from 'better-sqlite3'
 
-import {foldSearchName} from '../files/file-index/migrations.js'
-import PhotosIndexingStatus from './indexing-status.js'
-import {photoLibraryCte as rawPhotoLibraryCte, sourceScopeSql} from './library-sql.js'
-import PhotosReadModel, {photoLibraryCte} from './read-model.js'
+import {foldSearchName} from '../files/file-index/migrations.ts'
+import PhotosIndexingStatus from './indexing-status.ts'
+import {photoLibraryCte as rawPhotoLibraryCte, sourceScopeSql} from './library-sql.ts'
+import PhotosReadModel, {photoLibraryCte} from './read-model.ts'
 import type {
 	PhotoAlbum,
 	PhotoBounds,
@@ -16,8 +16,8 @@ import type {
 	PhotoItemDetail,
 	PhotoScopeMode,
 	PhotoSource,
-} from './types.js'
-import {MAP_POINT_BYTES, MAP_POINT_FLAGS, MAP_POINTS_HEADER_BYTES, supportsPhotos} from './types.js'
+} from './types.ts'
+import {MAP_POINT_BYTES, MAP_POINT_FLAGS, MAP_POINTS_HEADER_BYTES, supportsPhotos} from './types.ts'
 
 type Database = DatabaseTypes.Database
 

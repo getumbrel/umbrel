@@ -7,11 +7,11 @@ import fse from 'fs-extra'
 import pWaitFor from 'p-wait-for'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import type {MachineDefinition} from './domain.js'
-import MachineStore from './machine-store.js'
-import Machines, {FIRST_BOOT_SETUP_TIMEOUT_MS} from './machines.js'
+import type {MachineDefinition} from './domain.ts'
+import MachineStore from './machine-store.ts'
+import Machines, {FIRST_BOOT_SETUP_TIMEOUT_MS} from './machines.ts'
 
 const roots: string[] = []
 let machines: Machines | undefined

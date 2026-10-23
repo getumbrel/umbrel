@@ -3,16 +3,16 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import * as system from '../system/system.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import Umbreld from '../../index.ts'
+import * as system from '../system/system.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
 vi.mock('execa', async (importOriginal) => ({
 	...(await importOriginal<typeof import('execa')>()),
 	$: vi.fn(async () => ({stdout: ''})),
 }))
 
-vi.mock('../utilities/copy-with-progress.js', () => ({
+vi.mock('../utilities/copy-with-progress.ts', () => ({
 	copyWithProgress: (source: string, destination: string) => fse.copy(source, destination),
 }))
 

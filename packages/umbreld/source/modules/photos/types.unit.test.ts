@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'vitest'
 
-import {supportsThumbnail} from '../files/thumbnail-support.js'
-import {photoKind, supportsPhotos} from './types.js'
+import {supportsThumbnail} from '../files/thumbnail-support.ts'
+import {photoKind, supportsPhotos} from './types.ts'
 
 const photoExtensions = [
 	'jpg',

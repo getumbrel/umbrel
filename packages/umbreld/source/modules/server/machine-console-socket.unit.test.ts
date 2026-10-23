@@ -2,14 +2,14 @@ import {EventEmitter} from 'node:events'
 
 import {beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import {MACHINE_CONSOLE_SUPERSEDED_CODE, MACHINE_CONSOLE_SUPERSEDED_REASON} from './machine-console-sessions.js'
-import MachineConsoleSessions from './machine-console-sessions.js'
+import {MACHINE_CONSOLE_SUPERSEDED_CODE, MACHINE_CONSOLE_SUPERSEDED_REASON} from './machine-console-sessions.ts'
+import MachineConsoleSessions from './machine-console-sessions.ts'
 import createMachineConsoleWebSocketHandler, {
 	CONSOLE_BACKPRESSURE_HIGH_WATER_BYTES,
 	MAX_BUFFERED_CONSOLE_BYTES,
-} from './machine-console-socket.js'
+} from './machine-console-socket.ts'
 
 const netMocks = vi.hoisted(() => ({createConnection: vi.fn()}))
 

@@ -4,7 +4,7 @@ import fse from 'fs-extra'
 import pRetry from 'p-retry'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const suiteRoot = '/Home/thumbnail-index-vm'
 const guestHome = '/home/umbrel/umbrel/home'

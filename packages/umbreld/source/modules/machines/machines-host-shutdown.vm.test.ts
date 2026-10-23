@@ -4,7 +4,7 @@ import {afterAll, beforeAll, describe, expect, test} from 'vitest'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const READY_MARKER = 'UMBREL-FIXTURE-READY'
 const SHUTDOWN_MARKER = 'UMBREL-GRACEFUL-SHUTDOWN'

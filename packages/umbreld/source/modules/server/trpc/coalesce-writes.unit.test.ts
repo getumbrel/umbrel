@@ -3,7 +3,7 @@ import type {AddressInfo, Socket} from 'node:net'
 import {afterEach, expect, test, vi} from 'vitest'
 import {WebSocket, WebSocketServer} from 'ws'
 
-import {coalesceWrites} from './coalesce-writes.js'
+import {coalesceWrites} from './coalesce-writes.ts'
 
 const cleanups: Array<() => void> = []
 afterEach(() => {

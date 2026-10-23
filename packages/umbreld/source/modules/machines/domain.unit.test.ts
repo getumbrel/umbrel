@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto'
 
 import {describe, expect, test} from 'vitest'
 
-import {buildDomainXml, type MachineDefinition} from './domain.js'
+import {buildDomainXml, type MachineDefinition} from './domain.ts'
 
 function definition(overrides: Partial<MachineDefinition> = {}): MachineDefinition {
 	const id = randomUUID()

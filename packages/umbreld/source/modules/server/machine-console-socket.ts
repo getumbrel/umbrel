@@ -3,9 +3,9 @@ import net from 'node:net'
 
 import type {WebSocket} from 'ws'
 
-import type Umbreld from '../../index.js'
-import type createLogger from '../utilities/logger.js'
-import type MachineConsoleSessions from './machine-console-sessions.js'
+import type Umbreld from '../../index.ts'
+import type createLogger from '../utilities/logger.ts'
+import type MachineConsoleSessions from './machine-console-sessions.ts'
 
 export const CONSOLE_BACKPRESSURE_HIGH_WATER_BYTES = 1024 * 1024
 export const CONSOLE_BACKPRESSURE_LOW_WATER_BYTES = 512 * 1024

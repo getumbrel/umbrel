@@ -1,7 +1,7 @@
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import Device from './device.js'
-import Advertisement from './advertisement.js'
+import Device from './device.ts'
+import Advertisement from './advertisement.ts'
 
 // Replacement for the legacy system module. Will be renamed to "system" once the old module is fully migrated.
 export default class SystemNg {

@@ -8,7 +8,7 @@ import {
 	installCommandOptions,
 	MACHINE_INSTALL_CLEANUP_TIMEOUT_MS,
 	MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS,
-} from './install-command.js'
+} from './install-command.ts'
 
 export type WindowsInstaller = 'windows-11' | 'windows-server-2025' | 'windows-7' | 'windows-xp' | 'windows-98'
 export type WindowsArchitecture = 'amd64' | 'arm64'

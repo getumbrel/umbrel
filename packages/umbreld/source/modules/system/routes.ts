@@ -7,10 +7,10 @@ import {$} from 'execa'
 import fse from 'fs-extra'
 import stripAnsi from 'strip-ansi'
 
-import {performReset} from './factory-reset.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import type Umbreld from '../../index.js'
-import {getUpdateStatus, performUpdate, getLatestRelease} from './update.js'
+import {performReset} from './factory-reset.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import type Umbreld from '../../index.ts'
+import {getUpdateStatus, performUpdate, getLatestRelease} from './update.ts'
 import {
 	getCpuTemperature,
 	getSystemDiskUsage,
@@ -30,8 +30,8 @@ import {
 	confirmStaticIp,
 	clearStaticIp,
 	syncDns,
-} from './system.js'
-import {getTailscaleBrowserHostname} from './tailscale.js'
+} from './system.ts'
+import {getTailscaleBrowserHostname} from './tailscale.ts'
 
 import {
 	privateProcedure,
@@ -39,8 +39,8 @@ import {
 	publicProcedureWhenNoUserExists,
 	router,
 	privateProcedureWithMembers,
-} from '../server/trpc/trpc.js'
-import {runAfterResponse} from '../server/run-after-response.js'
+} from '../server/trpc/trpc.ts'
+import {runAfterResponse} from '../server/run-after-response.ts'
 
 type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting' | 'restoring'
 let systemStatus: SystemStatus = 'running'

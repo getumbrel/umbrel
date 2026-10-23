@@ -4,9 +4,9 @@ import BetterSqlite3 from 'better-sqlite3'
 import fse from 'fs-extra'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import Backups, {UMBREL_DATABASE_BACKUP_DIRECTORY} from './backups.js'
+import type Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import Backups, {UMBREL_DATABASE_BACKUP_DIRECTORY} from './backups.ts'
 
 const temporary = temporaryDirectory()
 

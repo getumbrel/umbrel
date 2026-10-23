@@ -1,5 +1,5 @@
-import {filenameStemSql} from '../files/file-index/migrations.js'
-import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from './types.js'
+import {filenameStemSql} from '../files/file-index/migrations.ts'
+import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from './types.ts'
 
 // Authoritative projection used only when indexed inputs change. Reads use the
 // persisted tables maintained by PhotosReadModel.

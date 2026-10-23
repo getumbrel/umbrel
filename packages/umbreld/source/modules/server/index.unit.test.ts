@@ -1,8 +1,8 @@
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import Server, {MAX_WEBSOCKET_PAYLOAD_BYTES} from './index.js'
+import Server, {MAX_WEBSOCKET_PAYLOAD_BYTES} from './index.ts'
 
 test('mounted WebSocket servers reject oversized client messages', () => {
 	const logger = {log: vi.fn(), error: vi.fn(), verbose: vi.fn()}
