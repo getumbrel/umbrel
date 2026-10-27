@@ -1,6 +1,6 @@
 import http from 'node:http'
 import process from 'node:process'
-import {promisify} from 'node:util'
+import {format, promisify} from 'node:util'
 import {fileURLToPath} from 'node:url'
 import {dirname, join} from 'node:path'
 import {createGzip} from 'node:zlib'
@@ -306,13 +306,12 @@ class Server {
 				createProxyMiddleware({
 					target: process.env.UMBREL_UI_PROXY,
 					ws: true,
-					logProvider: () => ({
-						log: this.logger.verbose,
-						debug: this.logger.verbose,
-						info: this.logger.verbose,
-						warn: this.logger.verbose,
-						error: this.logger.error,
-					}),
+					// http-proxy-middleware logs printf-style messages.
+					logger: {
+						info: (...args) => this.logger.verbose(format(...args)),
+						warn: (...args) => this.logger.verbose(format(...args)),
+						error: (...args) => this.logger.error(format(...args)),
+					},
 				}),
 			)
 		} else {

@@ -16,7 +16,6 @@ import type Umbreld from '../../index.ts'
 import randomToken from '../utilities/random-token.ts'
 import {getHostname, getIpAddresses} from '../system/system.ts'
 import runEvery from '../utilities/run-every.ts'
-import {closeClientOnUpstreamAbort, releaseUpstreamOnClientClose} from '../utilities/proxy-stream-lifetime.ts'
 import {forwardTcp} from './forward-tcp.ts'
 import {readNativeTlsPrelude} from './native-tls-preread.ts'
 import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.ts'
@@ -1006,9 +1005,11 @@ export default class LanIngress {
 					return
 				}
 			}
-			this.setForwardedHost(request)
+			this.setForwardedHeaders(request, options.includeForwardedFor ?? true)
 			middleware(request as any, response as any, (error?: unknown) => {
-				// Reset instead of an error response for the same reason as onError above.
+				// http-proxy-middleware declines URLs it can't parse, such as GET //[
+				if (!error) return void response.writeHead(400).end()
+				// Reset instead of an error response for the same reason as the error handler above.
 				this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
 				response.destroy()
 			})
@@ -1016,7 +1017,7 @@ export default class LanIngress {
 		// Let umbreld and upstream apps enforce their own upload deadlines.
 		// Keep the separate timeout for receiving request headers.
 		server.requestTimeout = 0
-		this.attachProxyUpgradeHandler(server, middleware)
+		this.attachProxyUpgradeHandler(server, middleware, options.includeForwardedFor ?? true)
 		return server
 	}
 
@@ -1043,9 +1044,11 @@ export default class LanIngress {
 						return
 					}
 				}
-				this.setForwardedHost(request)
+				this.setForwardedHeaders(request, includeForwardedFor)
 				middleware(request as any, response as any, (error?: unknown) => {
-					// Reset instead of an error response for the same reason as onError above.
+					// http-proxy-middleware declines URLs it can't parse, such as GET //[
+					if (!error) return void response.writeHead(400).end()
+					// Reset instead of an error response for the same reason as the error handler above.
 					this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
 					response.destroy()
 				})
@@ -1054,7 +1057,7 @@ export default class LanIngress {
 		// Let umbreld and upstream apps enforce their own upload deadlines.
 		// Keep the separate timeout for receiving request headers.
 		server.requestTimeout = 0
-		this.attachProxyUpgradeHandler(server, middleware)
+		this.attachProxyUpgradeHandler(server, middleware, includeForwardedFor)
 		return server
 	}
 
@@ -1075,6 +1078,10 @@ export default class LanIngress {
 			// WebSocket upgrades are proxied explicitly by attachProxyUpgradeHandler(), so
 			// don't let http-proxy-middleware subscribe its own upgrade listener as well.
 			ws: false,
+			// Open a new upstream connection for every request instead of pooling
+			// keep-alive connections, so apps see the same connection behavior as they
+			// did behind http-proxy.
+			agent: false,
 			pathRewrite: rewritePath,
 			// Umbrel-owned upstreams (dashboard, app-auth) get X-Forwarded-For since they
 			// only trust it from loopback. App upstreams must not: some apps reject any
@@ -1082,55 +1089,65 @@ export default class LanIngress {
 			// and the plain-HTTP raw forward path never carried it either.
 			xfwd: includeForwardedFor,
 			// The upstream target is always HTTP. Tell umbreld/app-auth/app-gateway
-			// whether the original browser request used HTTP or HTTPS. http-proxy
+			// whether the original browser request used HTTP or HTTPS. httpxy
 			// applies these when it builds the upstream request, after xfwd, so unlike
-			// onProxyReq they also cover requests with an Expect header.
+			// the proxyReq event they also cover requests with an Expect header.
 			headers: {'x-forwarded-proto': originalProtocol},
-			logProvider: () => ({
-				log: this.logger.verbose,
-				debug: this.logger.verbose,
-				info: this.logger.verbose,
-				warn: this.logger.log,
-				error: this.logger.error,
-			}),
-			onProxyReq: (proxyRequest, _request, response) => releaseUpstreamOnClientClose(proxyRequest, response),
-			onProxyRes: (proxyResponse, request, response) => {
-				closeClientOnUpstreamAbort(proxyResponse, request, response)
-				// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
-				// and HTTP fallback paths that are important for private local certs.
-				delete proxyResponse.headers['strict-transport-security']
-			},
-			onError: (error, _request, response) => {
-				// Destroy the connection instead of answering with an error body. An
-				// unreachable upstream means umbreld or an app is still starting (or has
-				// crashed), and before LAN ingress existed clients saw connection refused
-				// in those windows. Existing retry loops (UI polling, tRPC websocket
-				// reconnects, companion apps) treat a reset the same way, while an error
-				// body breaks JSON clients mid-poll. The plain-HTTP raw forward path
-				// already resets on upstream failure, so this also keeps HTTP and HTTPS
-				// behavior consistent on the same port.
-				this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
-				response.destroy()
+			// Leave http-proxy-middleware's own logging off, as the app gateway does. Its
+			// lines include each request's URL, and so any token in the query string.
+			// The error handler below logs failures without it.
+			on: {
+				proxyRes: (proxyResponse) => {
+					// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
+					// and HTTP fallback paths that are important for private local certs.
+					delete proxyResponse.headers['strict-transport-security']
+				},
+				error: (error, _request, response) => {
+					// Destroy the connection instead of answering with an error body. An
+					// unreachable upstream means umbreld or an app is still starting (or has
+					// crashed), and before LAN ingress existed clients saw connection refused
+					// in those windows. Existing retry loops (UI polling, tRPC websocket
+					// reconnects, companion apps) treat a reset the same way, while an error
+					// body breaks JSON clients mid-poll. The plain-HTTP raw forward path
+					// already resets on upstream failure, so this also keeps HTTP and HTTPS
+					// behavior consistent on the same port.
+					// A WebSocket client dropping its connection, and the upstream request
+					// that then cancels, isn't a proxy failure.
+					const clientFailed = response instanceof net.Socket && response.errored
+					this.logger[clientFailed ? 'verbose' : 'error'](`LAN ingress proxy error to ${upstreamPort}: ${error}`)
+					response.destroy()
+				},
 			},
 		})
 	}
 
-	private attachProxyUpgradeHandler(server: http.Server, middleware: RequestHandler) {
+	private attachProxyUpgradeHandler(server: http.Server, middleware: RequestHandler, includeForwardedFor: boolean) {
 		server.on('upgrade', (request, socket, head) => {
 			// Node.js 26 passes a stream wrapper instead of the socket when an upgrade
-			// request has a body, which http-proxy can't proxy and crashes on.
-			// WebSocket handshakes never have a body.
+			// request has a body, which the proxy can't handle. WebSocket handshakes
+			// never have a body.
 			if (!(socket instanceof net.Socket)) return socket.destroy()
-			this.setForwardedHost(request)
-			middleware.upgrade?.(request as any, socket, head)
+			// http-proxy-middleware ignores upgrades whose URL it can't read a path from,
+			// such as GET //[ or GET foo://host, which would leave the socket open.
+			if (!URL.parse(request.url ?? '', 'http://localhost')?.pathname.startsWith('/')) return socket.destroy()
+			this.setForwardedHeaders(request, includeForwardedFor)
+			middleware.upgrade(request as any, socket, head)
 		})
 	}
 
-	// Set on the incoming request, which http-proxy copies into the upstream one,
-	// rather than in onProxyReq. http-proxy skips that hook for requests with an
-	// Expect header, since Node has already sent their headers by then.
-	private setForwardedHost(request: http.IncomingMessage) {
+	// Set on the incoming request, which httpxy copies into the upstream one,
+	// rather than in the proxyReq event. httpxy skips that event for requests with
+	// an Expect header, since Node has already sent their headers by then.
+	private setForwardedHeaders(request: http.IncomingMessage, includeForwardedFor: boolean) {
 		if (request.headers.host) request.headers['x-forwarded-host'] = request.headers.host
+		// xfwd only fills in X-Forwarded-For when the client didn't send one, which
+		// would pass a client-chosen address to upstreams that trust it from
+		// loopback. Append the peer address instead, so the last entry is always ours.
+		if (includeForwardedFor) {
+			const forwardedFor = request.headers['x-forwarded-for']
+			const remoteAddress = request.socket.remoteAddress ?? ''
+			request.headers['x-forwarded-for'] = forwardedFor ? `${forwardedFor},${remoteAddress}` : remoteAddress
+		}
 	}
 
 	private serverPort(server: net.Server | http.Server) {

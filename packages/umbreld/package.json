@@ -98,7 +98,7 @@
 		"fs-extra": "^11.1.1",
 		"globby": "^13.2.1",
 		"helmet": "^7.1.0",
-		"http-proxy-middleware": "^2.0.6",
+		"http-proxy-middleware": "^4.2.0",
 		"isomorphic-git": "^1.42.2",
 		"js-yaml": "^4.3.2",
 		"ky": "^1.10.0",

@@ -259,7 +259,7 @@ function forwardedHeaders(request: http.IncomingMessage) {
 	})
 }
 
-// http-proxy skips onProxyReq for requests with an Expect header, so check
+// The proxy skips its proxyReq event for requests with an Expect header, so check
 // what reaches the upstream both with and without one.
 test.each(routes.flatMap((route) => [false, true].map((expectContinue) => ({...route, expectContinue}))))(
 	'$protocol forwards the original protocol and strips Umbrel cookies (app gateway: $gateway, Expect: $expectContinue)',
@@ -325,6 +325,157 @@ test.each(routes)(
 	},
 )
 
+// The proxy's xfwd option keeps a client-sent X-Forwarded-For as it is, so a
+// client could choose the address that umbreld sees as the last proxy hop.
+test.each(
+	routes.flatMap((route) =>
+		[false, true].flatMap((expectContinue) =>
+			[undefined, '203.0.113.7'].map((forwardedFor) => ({...route, expectContinue, forwardedFor})),
+		),
+	),
+)(
+	'$protocol appends the client address to X-Forwarded-For $forwardedFor (app gateway: $gateway, Expect: $expectContinue)',
+	async ({protocol, gateway, expectContinue, forwardedFor}) => {
+		const upstream = http.createServer((request, response) => {
+			request.resume()
+			request.on('end', () => response.end(request.headers['x-forwarded-for']))
+		})
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const response = await post(protocol, await listen(proxy), {
+			'content-length': chunk.length,
+			cookie: sessionCookies(protocol),
+			...(forwardedFor ? {'x-forwarded-for': forwardedFor} : {}),
+			...(expectContinue ? {expect: '100-continue'} : {}),
+		})
+
+		expect(response.status).toBe(200)
+		// The gateway replaces the header with its own peer address.
+		if (gateway) expect(response.body).toBe('127.0.0.1')
+		else expect(response.body).toBe(forwardedFor ? `${forwardedFor},127.0.0.1` : '127.0.0.1')
+	},
+)
+
+test.each(routes.filter(({gateway}) => !gateway))(
+	'$protocol appends the client address to X-Forwarded-For on WebSockets',
+	async ({protocol}) => {
+		const upstream = http.createServer()
+		const webSocketServer = new WebSocketServer({server: upstream})
+		webSocketServer.on('connection', (socket, request) => socket.send(String(request.headers['x-forwarded-for'])))
+		const proxy = await createProxy(protocol, await listen(upstream))
+		const socket = new WebSocket(`${protocol === 'https' ? 'wss' : 'ws'}://127.0.0.1:${await listen(proxy)}/`, {
+			headers: {'x-forwarded-for': '203.0.113.7'},
+			rejectUnauthorized: false,
+		})
+		socket.on('error', () => {})
+		const [message] = await once(socket, 'message')
+		socket.terminate()
+		webSocketServer.close()
+		expect(message.toString()).toBe('203.0.113.7,127.0.0.1')
+	},
+)
+
+// The proxy pools keep-alive connections to upstreams unless told otherwise.
+// Apps have always seen one connection per request.
+test.each(routes)(
+	'$protocol opens a new upstream connection for each request (app gateway: $gateway)',
+	async ({protocol, gateway}) => {
+		const connectionHeaders: (string | undefined)[] = []
+		const upstream = http.createServer((request, response) => {
+			connectionHeaders.push(request.headers.connection)
+			request.resume()
+			request.on('end', () => response.end('ok'))
+		})
+		let upstreamConnections = 0
+		upstream.on('connection', () => upstreamConnections++)
+		const proxy = await createProxy(protocol, await listen(upstream), gateway)
+		const port = await listen(proxy)
+		const agent = new (protocol === 'https' ? https : http).Agent({keepAlive: true, maxSockets: 1})
+		try {
+			for (let i = 0; i < 3; i++) {
+				const response = await new Promise<http.IncomingMessage>((resolve, reject) => {
+					;(protocol === 'https' ? https : http)
+						.get(
+							{
+								hostname: '127.0.0.1',
+								port,
+								agent,
+								rejectUnauthorized: false,
+								headers: {cookie: sessionCookies(protocol)},
+							},
+							resolve,
+						)
+						.on('error', reject)
+				})
+				response.resume()
+				await once(response, 'end')
+				expect(response.statusCode).toBe(200)
+			}
+		} finally {
+			agent.destroy()
+		}
+		expect(upstreamConnections).toBe(3)
+		expect(connectionHeaders).toEqual(['close', 'close', 'close'])
+	},
+)
+
+test.each(routes.filter(({gateway}) => !gateway))(
+	'$protocol logs proxy errors as errors without the request URL',
+	async ({protocol}) => {
+		const spies = [vi.spyOn(logger, 'error'), vi.spyOn(logger, 'log'), vi.spyOn(logger, 'verbose')]
+		const closed = net.createServer()
+		const upstreamPort = await listen(closed as unknown as http.Server)
+		await new Promise<void>((resolve) => closed.close(() => resolve()))
+		const port = await listen(await createProxy(protocol, upstreamPort))
+		const client = protocol === 'http' ? http : https
+		await new Promise<void>((resolve) =>
+			client
+				.get({hostname: '127.0.0.1', port, path: '/?token=secret', agent: false, rejectUnauthorized: false})
+				.on('error', () => resolve()),
+		)
+		expect(spies[0]).toHaveBeenCalledWith(
+			expect.stringContaining(`LAN ingress proxy error to ${upstreamPort}: Error: connect ECONNREFUSED`),
+		)
+		const messages = spies.flatMap((spy) => (spy.mock.calls as unknown[][]).map((call) => call.join(' ')))
+		expect(messages.join('\n')).not.toContain('secret')
+	},
+)
+
+test.each([false, true])('does not log a WebSocket client resetting as an error (upgraded: %s)', async (upgraded) => {
+	const errors = vi.spyOn(logger, 'error')
+	const upstream = http.createServer()
+	upstream.on('upgrade', (_request, socket) => {
+		socket.on('error', () => {})
+		if (upgraded) socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n')
+	})
+	const port = await listen(await createProxy('http', await listen(upstream)))
+	const socket = net.connect({host: '127.0.0.1', port})
+	socket.on('error', () => {})
+	await once(socket, 'connect')
+	socket.write(
+		'GET / HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n',
+	)
+	if (upgraded) await once(socket, 'data')
+	else await new Promise((resolve) => setTimeout(resolve, 100))
+	socket.resetAndDestroy()
+	await new Promise((resolve) => setTimeout(resolve, 200))
+	expect(errors).not.toHaveBeenCalled()
+})
+
+test.each(routes.filter(({gateway}) => !gateway))(
+	"$protocol answers a request whose URL the proxy can't parse with 400",
+	async ({protocol}) => {
+		const upstream = http.createServer((_request, response) => response.end())
+		const port = await listen(await createProxy(protocol, await listen(upstream)))
+		const client = protocol === 'http' ? http : https
+		const response = await new Promise<http.IncomingMessage>((resolve, reject) =>
+			client
+				.get({hostname: '127.0.0.1', port, path: '//[', agent: false, rejectUnauthorized: false}, resolve)
+				.on('error', reject),
+		)
+		expect(response.statusCode).toBe(400)
+	},
+)
+
 test.each(routes)(
 	'$protocol closes an upgrade request that has a body without crashing (app gateway: $gateway)',
 	async ({protocol, gateway}) => {
@@ -360,6 +511,31 @@ test.each(routes)(
 	},
 )
 
+test.each(
+	routes
+		.filter(({gateway}) => !gateway)
+		.flatMap((route) => ['//[', 'foo://host', 'a://b?c'].map((target) => ({...route, target}))),
+)(
+	"$protocol closes an upgrade request for $target, which the proxy can't read a path from",
+	async ({protocol, target}) => {
+		const upstream = http.createServer()
+		const webSocketServer = new WebSocketServer({server: upstream})
+		const port = await listen(await createProxy(protocol, await listen(upstream)))
+		const socket =
+			protocol === 'https'
+				? tls.connect({host: '127.0.0.1', port, rejectUnauthorized: false})
+				: net.connect({host: '127.0.0.1', port})
+		socket.on('error', () => {})
+		await once(socket, protocol === 'https' ? 'secureConnect' : 'connect')
+		socket.write(
+			`GET ${target} HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n` +
+				'Sec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n',
+		)
+		await once(socket, 'close')
+		webSocketServer.close()
+	},
+)
+
 function* endless() {
 	while (true) yield chunk
 }
@@ -391,10 +567,10 @@ function request(
 	return clientRequest
 }
 
-// http-proxy only aborts the upstream when the client request emits 'aborted',
-// which Node doesn't emit once the request body has been read. An abandoned
-// download must not leave the upstream response paused forever, or count as an
-// upstream failure.
+// An abandoned download must not leave the upstream response paused forever,
+// or count as an upstream failure. http-proxy leaked these, since it only
+// aborted the upstream when the client request emitted 'aborted', which Node
+// doesn't emit once the request body has been read.
 test.each(routes.flatMap((route) => [false, true].map((expectContinue) => ({...route, expectContinue}))))(
 	'$protocol releases the upstream when a client abandons a response (app gateway: $gateway, Expect: $expectContinue)',
 	async ({protocol, gateway, expectContinue}) => {
@@ -428,9 +604,8 @@ test.each(routes.flatMap((route) => [false, true].map((expectContinue) => ({...r
 	5000,
 )
 
-// Requests with an Expect header aren't covered until upstream replies, since
-// http-proxy skips onProxyReq for them. http-proxy reports the cancelled upstream
-// request as a client reset, which must not count as an upstream failure.
+// The cancelled upstream request is reported as a client reset, which must not
+// count as an upstream failure.
 test.each(routes)(
 	'$protocol releases the upstream when a client gives up before it replies (app gateway: $gateway)',
 	async ({protocol, gateway}) => {
@@ -450,6 +625,7 @@ test.each(routes)(
 		clientRequest.destroy()
 		await once(socket, 'close')
 		expect(errors).not.toHaveBeenCalledWith(expect.stringContaining('App gateway upstream error'), expect.anything())
+		expect(errors).not.toHaveBeenCalledWith(expect.stringContaining('LAN ingress proxy error'))
 		expect(verbose).not.toHaveBeenCalledWith(expect.stringContaining('LAN ingress proxy error'))
 	},
 	5000,
