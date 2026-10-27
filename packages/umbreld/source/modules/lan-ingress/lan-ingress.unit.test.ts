@@ -6,12 +6,23 @@ import {describe, expect, test, vi} from 'vitest'
 import getPort from 'get-port'
 import type {AppGatewayConfig} from '../app-gateway/app-gateway.ts'
 
-const {dockerCommand, execaDollar} = vi.hoisted(() => {
-	const dockerCommand = vi.fn()
-	return {dockerCommand, execaDollar: vi.fn(() => dockerCommand)}
+const {execaDollar, inspectContainer, getContainer, listContainers} = vi.hoisted(() => {
+	const inspectContainer = vi.fn()
+	return {
+		execaDollar: vi.fn(),
+		inspectContainer,
+		getContainer: vi.fn((id: string) => ({inspect: () => inspectContainer(id)})),
+		listContainers: vi.fn(),
+	}
 })
 
 vi.mock('execa', () => ({$: execaDollar}))
+vi.mock('node:dns/promises', () => ({lookup: vi.fn(async () => Promise.reject(new Error('ENOTFOUND')))}))
+vi.mock('dockerode', () => ({
+	default: vi.fn(function () {
+		return {getContainer, listContainers}
+	}),
+}))
 
 import LanIngress, {appAuthDashboardRedirect} from './lan-ingress.ts'
 
@@ -212,24 +223,65 @@ describe('app auth navigation redirect', () => {
 })
 
 describe('LAN ingress app targets', () => {
-	test('resolves a compose container on the Umbrel network', async () => {
-		dockerCommand.mockResolvedValue({
-			exitCode: 0,
-			stdout: JSON.stringify({
-				umbrel_main_network: {IPAddress: '10.21.0.3'},
-				other_network: {IPAddress: '172.18.0.2'},
-			}),
-		})
+	function createIngress() {
 		const logger = {createChildLogger: () => logger}
-		const ingress = new LanIngress({dataDirectory: '/tmp', logger} as never) as unknown as {
+		return new LanIngress({dataDirectory: '/tmp', logger} as never) as unknown as {
 			inspectContainerAddress(container: string): Promise<string | null>
+			resolveAppTarget(appId: string, host: string, compose: unknown): Promise<string | null>
 		}
+	}
+	const networks = (Networks: Record<string, {IPAddress: string}>) => ({NetworkSettings: {Networks}})
+	const notFound = () => Object.assign(new Error('no such container'), {statusCode: 404})
 
-		await expect(ingress.inspectContainerAddress('transmission_server_1')).resolves.toBe('10.21.0.3')
-		expect(dockerCommand.mock.calls[0]?.slice(1)).toEqual([
-			'{{json .NetworkSettings.Networks}}',
-			'transmission_server_1',
-		])
+	test('resolves a compose container on the Umbrel network', async () => {
+		inspectContainer.mockResolvedValue(
+			networks({other_network: {IPAddress: '172.18.0.2'}, umbrel_main_network: {IPAddress: '10.21.0.3'}}),
+		)
+
+		await expect(createIngress().inspectContainerAddress('transmission_server_1')).resolves.toBe('10.21.0.3')
+		expect(getContainer).toHaveBeenLastCalledWith('transmission_server_1')
+	})
+
+	test('treats a missing container or one without an address as unavailable', async () => {
+		const ingress = createIngress()
+		inspectContainer.mockRejectedValueOnce(notFound())
+		await expect(ingress.inspectContainerAddress('gone_web_1')).resolves.toBeNull()
+		inspectContainer.mockResolvedValueOnce(networks({umbrel_main_network: {IPAddress: ''}}))
+		await expect(ingress.inspectContainerAddress('starting_web_1')).resolves.toBeNull()
+		inspectContainer.mockResolvedValueOnce({NetworkSettings: {}})
+		await expect(ingress.inspectContainerAddress('host_network_1')).resolves.toBeNull()
+	})
+
+	test('escapes the container name in the API request', async () => {
+		inspectContainer.mockRejectedValue(notFound())
+
+		await expect(createIngress().inspectContainerAddress('my app/../web?x')).resolves.toBeNull()
+		expect(getContainer).toHaveBeenLastCalledWith('my%20app%2F..%2Fweb%3Fx')
+	})
+
+	test('falls back to the running compose service container', async () => {
+		inspectContainer.mockImplementation(async (id: string) => {
+			if (id === 'abc123') return networks({umbrel_main_network: {IPAddress: '10.21.0.7'}})
+			throw notFound()
+		})
+		listContainers.mockResolvedValue([{Id: 'abc123'}, {Id: 'older'}])
+
+		await expect(createIngress().resolveAppTarget('files', 'web', {services: {web: {}}})).resolves.toBe('10.21.0.7')
+		expect(listContainers).toHaveBeenLastCalledWith({
+			filters: JSON.stringify({label: ['com.docker.compose.project=files', 'com.docker.compose.service=web']}),
+		})
+	})
+
+	// Every docker CLI call forks umbreld and blocks its event loop until the child
+	// exec's. These lookups run once a second per waiting app and for every app on
+	// each refresh, so they must stay in-process.
+	test('looks up containers without spawning processes', async () => {
+		inspectContainer.mockRejectedValue(notFound())
+		listContainers.mockRejectedValue(new Error('Docker is down'))
+		execaDollar.mockClear()
+
+		await expect(createIngress().resolveAppTarget('files', 'web', {services: {web: {}}})).resolves.toBeNull()
+		expect(execaDollar).not.toHaveBeenCalled()
 	})
 
 	test('coalesces failures and refreshes as soon as a replacement container gets a new IP', async () => {

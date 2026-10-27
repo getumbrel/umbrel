@@ -6,6 +6,7 @@ import {lookup} from 'node:dns/promises'
 import {rename} from 'node:fs/promises'
 import {setTimeout as delay} from 'node:timers/promises'
 
+import Dockerode from 'dockerode'
 import {$} from 'execa'
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
@@ -22,6 +23,13 @@ import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from
 import AppGateway, {readAppGatewayConfig, type AppGatewayConfig} from '../app-gateway/app-gateway.ts'
 
 const NFT_BIN = '/usr/sbin/nft'
+
+// Container lookups go to the Docker Engine API rather than the docker CLI. They
+// run for every gateway app on each ingress refresh and once a second for each
+// app waiting on its gateway, and every CLI call forks umbreld, which blocks the
+// event loop until the child has exec'd. With many apps starting or updating at
+// once that kept the event loop blocked for around half of the time.
+const docker = new Dockerode()
 
 // This table contains only Umbrel-owned LAN ingress rules. App ports stay
 // owned by apps; nftables redirects inbound LAN traffic to hidden Node listeners.
@@ -610,11 +618,15 @@ export default class LanIngress {
 			return host === `${appId}_${serviceName}_1`
 		})?.[0]
 		if (matchingService) {
-			const container = await $({
-				reject: false,
-			})`docker ps --filter label=com.docker.compose.project=${appId} --filter label=com.docker.compose.service=${matchingService} --format {{.ID}}`
-			const containerId = container.stdout.trim().split('\n')[0]
-			if (container.exitCode === 0 && containerId) {
+			const containers = await docker
+				.listContainers({
+					filters: JSON.stringify({
+						label: [`com.docker.compose.project=${appId}`, `com.docker.compose.service=${matchingService}`],
+					}),
+				})
+				.catch(() => [])
+			const containerId = containers[0]?.Id
+			if (containerId) {
 				const serviceAddress = await this.inspectContainerAddress(containerId)
 				if (serviceAddress) return serviceAddress
 			}
@@ -664,16 +676,12 @@ export default class LanIngress {
 	}
 
 	private async inspectContainerAddress(container: string) {
-		// Interpolate the Go template so Execa passes it as one argument. Quotes in an
-		// Execa command template are literal (there is no shell to remove them), which
-		// would wrap Docker's JSON output in single quotes and make it unparsable.
-		const networksFormat = '{{json .NetworkSettings.Networks}}'
-		const inspection = await $({
-			reject: false,
-		})`docker inspect --format ${networksFormat} -- ${container}`
-		if (inspection.exitCode !== 0) return null
 		try {
-			const networks = JSON.parse(inspection.stdout) as Record<string, {IPAddress?: unknown}>
+			// Dockerode puts the name into the request path unescaped, and an app's
+			// APP_HOST can be any string. Unescapable characters would throw where
+			// this catch can't see it and crash umbreld.
+			const inspection = await docker.getContainer(encodeURIComponent(container)).inspect()
+			const networks: Record<string, {IPAddress?: unknown} | undefined> = inspection.NetworkSettings?.Networks ?? {}
 			const addresses = [networks.umbrel_main_network, ...Object.values(networks)]
 				.map((network) => network?.IPAddress)
 				.filter((address): address is string => typeof address === 'string')
