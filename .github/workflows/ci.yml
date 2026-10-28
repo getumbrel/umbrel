@@ -595,6 +595,8 @@ jobs:
   # Run umbreld checks
   umbreld:
     name: umbreld checks
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04
     defaults:
       run:
