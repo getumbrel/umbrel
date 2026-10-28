@@ -72,12 +72,36 @@ const LEAD_MS = 250
 const LEAD_MAX = 48
 // Snap points are mounted much further out than thumbs: a native fling picks
 // its resting snap point when it starts, so the one it will land on must
-// already exist
+// already exist. The same goes for the current item's, around which a window
+// is always mounted too (see snapWindows).
 const SNAP_WINDOW = 160
 // Ask for the next page when this close to the end of what's loaded
 const LOAD_AHEAD = 30
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+// The runs of items that get snap points: SNAP_WINDOW beyond the mounted
+// range, and as far either side of the current item — in order, without
+// overlap. The strip turns mandatory snapping on wherever it comes to rest on
+// the current item, and the browser then holds it to the nearest snap point
+// that exists. The range alone can't promise that one is the current item's:
+// it follows the scroll position after the fact, so in the commit that first
+// centres the strip — a lightbox opened deep into the library — it still
+// describes the strip's start. The snap would carry the strip back to the
+// window's edge, and the strip, taking a scroll it didn't write for the
+// user's, would put the item there on stage.
+function snapWindows(range: {start: number; end: number}, current: number, last: number) {
+	const around = (start: number, end: number) => ({
+		start: Math.max(0, start - SNAP_WINDOW),
+		end: Math.min(last, end + SNAP_WINDOW),
+	})
+	const mounted = around(range.start, range.end)
+	if (current < 0) return [mounted]
+	const own = around(current, current)
+	if (own.end < mounted.start - 1) return [own, mounted]
+	if (own.start > mounted.end + 1) return [mounted, own]
+	return [{start: Math.min(own.start, mounted.start), end: Math.max(own.end, mounted.end)}]
+}
 
 // Whether the strip is the pointer's (see REGULAR_HEIGHT)
 function useRegularStrip() {
@@ -592,8 +616,6 @@ export function Filmstrip({
 	)
 
 	const last = items.length - 1
-	const snapStart = Math.max(0, range.start - SNAP_WINDOW)
-	const snapEnd = Math.min(last, range.end + SNAP_WINDOW)
 	return (
 		<div
 			ref={scrollerRef}
@@ -639,14 +661,18 @@ export function Filmstrip({
 					className='absolute inset-y-0'
 					style={{left: `calc(50% - ${(Math.max(0, last) * SLOT) / 2}px)`}}
 				>
-					{items.slice(snapStart, snapEnd + 1).map((item, i) => (
-						<span
-							key={item.id}
-							aria-hidden='true'
-							className='pointer-events-none absolute top-0 h-px snap-center'
-							style={{left: (snapStart + i) * SLOT - THUMB / 2, width: THUMB}}
-						/>
-					))}
+					{snapWindows(range, currentIndex, last).flatMap(({start, end}) =>
+						items
+							.slice(start, end + 1)
+							.map((item, i) => (
+								<span
+									key={item.id}
+									aria-hidden='true'
+									className='pointer-events-none absolute top-0 h-px snap-center'
+									style={{left: (start + i) * SLOT - THUMB / 2, width: THUMB}}
+								/>
+							)),
+					)}
 					{items.slice(range.start, range.end + 1).map((item, i) => {
 						const index = range.start + i
 						// Neighbours make room: left ones slide left, right ones slide right
