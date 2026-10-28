@@ -16,7 +16,7 @@ import {MARKER_SIZE, padBounds, type Clustering, type MercatorBox} from '@/featu
 import {attachMapGestures, holdWithinWorld} from '@/features/photos/components/map/gestures'
 import {globeness, globeZoom, horizon, locate, mapCamera, viewSize} from '@/features/photos/components/map/globe'
 import {GlobeLight} from '@/features/photos/components/map/globe-light'
-import {FLAT_ZOOM, mapLanguage, settlementNear, SPACE} from '@/features/photos/components/map/map-style'
+import {fadeInLand, FLAT_ZOOM, mapLanguage, settlementNear, SPACE} from '@/features/photos/components/map/map-style'
 import {MapMarkers, SETTLE_RECLUSTER_MS, type MarkerTarget} from '@/features/photos/components/map/markers'
 import {
 	latitudeAt,
@@ -152,8 +152,15 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 		instance.keyboard.disableRotation()
 		holdWithinWorld(instance)
 		const detachGestures = attachMapGestures(instance)
-		instance.once('load', () => setMap(instance))
+		// Handed on once its style is in, not at 'load', which waits for every
+		// tile of the first view: the globe comes in without them
+		let stopLandFade = () => {}
+		instance.once('style.load', () => {
+			stopLandFade = fadeInLand(instance)
+			setMap(instance)
+		})
 		return () => {
+			stopLandFade()
 			// Left before it had arrived, it is found afresh next time
 			if (arrival.current.landed) {
 				const center = instance.getCenter()
@@ -218,10 +225,12 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 		padded.current = map
 	}, [map, padding, sheetShown, scope])
 
-	// First sight. The map waits out of sight until it has drawn and knows
+	// First sight. The map waits out of sight until it is made and knows
 	// where the photos are, then arrives all at once: the globe and its stars
 	// fading up as it turns to the photos, and the photos landing on it as it
-	// settles. Come back to, it is simply as it was left.
+	// settles. It doesn't wait for the basemap's tiles, which the land fades
+	// in from as they come (see fadeInLand). Come back to, it is simply as it
+	// was left.
 	const [phase, setPhase] = useState<'waiting' | 'shown' | 'settled'>('waiting')
 	// What has become of the arrival: begun, once, and landed when the photos
 	// are on the map — as they are from the start on one come back to
@@ -274,12 +283,14 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 		}
 		// Already in sight, having waited long enough: it turns from where it is
 		if (phase === 'shown') return arrive()
-		// Out of sight, it is put where it comes in from; once that is drawn,
-		// and this busy moment is past, it comes in — with every frame to itself
-		map.jumpTo({center: [camera.center[0] + ARRIVAL_TURN, camera.center[1]], zoom: camera.zoom - ARRIVAL_APPROACH})
-		map.once('idle', () => {
-			state.frame = requestAnimationFrame(() => (state.frame = requestAnimationFrame(arrive)))
-		})
+		// Out of sight, it is put where it comes in from — no further off than
+		// the zoom of the tiles it lands on, so the tiles it is drawn from on the
+		// way are the ones it ends on, not a level of them each — and once that
+		// is drawn, and this busy moment is past, it comes in, with every frame
+		// to itself
+		const zoom = Math.max(camera.zoom - ARRIVAL_APPROACH, Math.floor(camera.zoom))
+		map.jumpTo({center: [camera.center[0] + ARRIVAL_TURN, camera.center[1]], zoom})
+		state.frame = requestAnimationFrame(() => (state.frame = requestAnimationFrame(arrive)))
 	}, [map, points])
 	useEffect(() => {
 		if (!map || points || phase !== 'waiting') return

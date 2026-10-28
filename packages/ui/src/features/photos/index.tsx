@@ -18,6 +18,7 @@ import {PhotosViewProvider} from '@/features/photos/components/view-context'
 import {usePhotosEvents} from '@/features/photos/hooks/use-photos-events'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {HttpUrlAuthorizerProvider} from '@/modules/auth/http-url-authorizer'
+import {trpcReact} from '@/trpc/trpc'
 
 // The sheet's title row. On phones it is also the search's stage: while a
 // search is on, the field and its Cancel take the row (the way the desktop
@@ -83,6 +84,13 @@ export default function PhotosLayout() {
 
 	// One subscription for the whole Photos surface: refetches on any change
 	usePhotosEvents()
+
+	// Whether there is a basemap, asked as Photos opens rather than as the map
+	// does: the device's answer can wait on the planet's host (see umbreld's
+	// map-tiles.ts), and the map can't be made before it. Held for as long as
+	// Photos is open, for the map and the inspector's; nothing here reads it,
+	// so its answer re-renders nothing
+	trpcReact.photos.map.basemap.useQuery(undefined, {staleTime: Infinity, notifyOnChangeProps: []})
 
 	// Close the mobile sidebar on navigation
 	useEffect(() => {

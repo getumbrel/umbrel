@@ -1,7 +1,9 @@
 import {createHash, randomBytes} from 'node:crypto'
 import {constants as fsConstants} from 'node:fs'
+import {lookup} from 'node:dns/promises'
 import {lstat, open} from 'node:fs/promises'
 import nodePath from 'node:path'
+import {setTimeout as sleep} from 'node:timers/promises'
 
 import fse from 'fs-extra'
 import isValidFilename from 'valid-filename'
@@ -11,7 +13,7 @@ import type {Principal} from '../auth/auth.ts'
 import {Blake3Hasher} from '../files/blake3.ts'
 import {OWNER_USER_ID} from '../user/constants.ts'
 
-import MapTiles, {umbrelPlanet} from './map-tiles.ts'
+import MapTiles, {UMBREL_MAP_URL, umbrelPlanet} from './map-tiles.ts'
 import type {PhotoFilter, PhotoScopeMode} from './types.ts'
 import {hashFileRevision, type PublishedFileRevision} from '../files/file-index-enrichment.ts'
 
@@ -50,6 +52,11 @@ const PHOTO_BACKUP_FILENAME_PATTERN = /^([0-9a-f]{64})\.([a-z0-9]{1,16})$/
 const PHOTO_BACKUP_SHARD_PATTERN = /^[0-9a-f]{2}$/
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/
 const FILE_NAME_CHARACTER_PATTERN = /[<>:"/\\|?*\u0000-\u001f\u007f]/g
+// When the Map view's basemap is first looked at, after umbreld starts, and
+// how long it waits for the network, a look every half minute for ten minutes
+const MAP_WARM_DELAY_MS = 10_000
+const MAP_WARM_RETRY_MS = 30_000
+const MAP_WARM_ATTEMPTS = 20
 
 const normalizeBackupSourceId = (sourceId: string) => {
 	const normalized = sourceId.toLowerCase()
@@ -123,6 +130,7 @@ export default class Photos {
 	#durableBackupShards = new Set<string>()
 
 	#map: MapTiles | undefined
+	#mapWarming?: AbortController
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -130,7 +138,7 @@ export default class Photos {
 	}
 
 	// The Map view's basemap (see map-tiles.ts): fetched as it is looked at
-	// from the planet Umbrel hosts
+	// from the planet Umbrel hosts, and first asked about as umbreld starts
 	get map() {
 		return (this.#map ??= new MapTiles(umbrelPlanet()))
 	}
@@ -162,9 +170,31 @@ export default class Photos {
 				this.logger.error('Failed to restore Photos backup source', error)
 			}
 		}
+		this.#warmMap()
 	}
 
-	async stop() {}
+	async stop() {
+		this.#mapWarming?.abort()
+	}
+
+	// The Map view's first look at its basemap (see MapTiles.status), taken a
+	// little after umbreld starts, so the first map opened finds the answer in
+	// rather than waiting on the planet's host. Not before the network can
+	// find that host: a device just started may not have one yet, and a look
+	// at the planet that fails holds up the next for a minute.
+	#warmMap() {
+		const warming = (this.#mapWarming = new AbortController())
+		const options = {signal: warming.signal, ref: false}
+		const host = new URL(UMBREL_MAP_URL).hostname
+		const online = async () => Boolean(await lookup(host).catch(() => undefined))
+		;(async () => {
+			await sleep(MAP_WARM_DELAY_MS, undefined, options)
+			for (let attempt = 0; attempt < MAP_WARM_ATTEMPTS; attempt++) {
+				if (await online()) return await this.map.warm()
+				await sleep(MAP_WARM_RETRY_MS, undefined, options)
+			}
+		})().catch(() => {})
+	}
 
 	async registerBackupSource({
 		accountId,

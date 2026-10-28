@@ -277,6 +277,46 @@ function settled(layer: LayerSpecification): LayerSpecification {
 	return {...layer, filter: ['all', layer.filter, ['!in', 'kind_detail', ...UNSETTLED]]} as LayerSpecification
 }
 
+// The land, its roads and its borders, held back while a new map's first
+// tiles are on their way, and faded up together once every tile under the
+// camera is in, rather than coming a tile at a time. The sea and the sky are
+// there from the start, and the names fade in by themselves. Until then a
+// globe is all ocean, which the photos can land on before the basemap has
+// come. Returns what stops waiting.
+const LAND_FADE_MS = 600
+const LAND_OPACITY = {fill: 'fill-opacity', line: 'line-opacity'} as const
+export function fadeInLand(map: MapLibreMap) {
+	const held = map
+		.getStyle()
+		.layers.flatMap((layer) =>
+			(layer.type === 'fill' || layer.type === 'line') && layer.source === BASEMAP
+				? [{id: layer.id, property: LAND_OPACITY[layer.type]}]
+				: [],
+		)
+	const values = held.map(({id, property}) => map.getPaintProperty(id, property) ?? 1)
+	for (const {id, property} of held) {
+		map.setPaintProperty(id, `${property}-transition`, {duration: 0, delay: 0})
+		map.setPaintProperty(id, property, 0)
+	}
+	// A tile come in (or every tile there is to come having come, or failed)
+	const reveal = (event?: {tile?: unknown}) => {
+		if ((event && !event.tile) || !map.areTilesLoaded()) return
+		stop()
+		held.forEach(({id, property}, index) => {
+			map.setPaintProperty(id, `${property}-transition`, {duration: LAND_FADE_MS, delay: 0})
+			map.setPaintProperty(id, property, values[index])
+		})
+	}
+	const onIdle = () => reveal()
+	const stop = () => {
+		map.off('sourcedata', reveal)
+		map.off('idle', onIdle)
+	}
+	map.on('sourcedata', reveal)
+	map.on('idle', onIdle)
+	return stop
+}
+
 // The town or village a spot is in, from the basemap's own names — finer
 // than the atlas, which knows only the bigger places — or nothing where the
 // map has none loaded there

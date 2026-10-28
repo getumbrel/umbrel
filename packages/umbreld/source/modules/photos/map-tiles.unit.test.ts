@@ -199,6 +199,37 @@ test('the answer holds for a minute', async () => {
 	expect(source.requests).toHaveLength(2)
 })
 
+test('a basemap once had is asked about again without a read of it, until a tile of it fails', async () => {
+	const source = await serve()
+	let now = Date.now()
+	vi.spyOn(Date, 'now').mockImplementation(() => now)
+	const map = new MapTiles(source.map())
+	expect((await map.status()).available).toBe(true)
+	expect(source.requests).toEqual(['/planet-1/0/0/0.mvt'])
+
+	now += 61_000
+	expect(await map.status()).toEqual({available: true, maxZoom: 15, build: 'planet-1'})
+	expect(source.requests).toHaveLength(1)
+
+	// A tile that fails has the next to ask look at the world's tile again, at once
+	source.answer = () => ({status: 503})
+	await expect(map.tile(3, 4, 5)).rejects.toThrow('503')
+	expect((await map.status()).available).toBe(false)
+	expect(source.requests).toEqual(['/planet-1/0/0/0.mvt', '/planet-1/3/4/5.mvt', '/planet-1/0/0/0.mvt'])
+})
+
+test('a first look that finds no basemap is not kept for the next to ask', async () => {
+	const source = await serve()
+	source.answer = () => ({status: 503})
+	const map = new MapTiles(source.map())
+	await map.warm()
+	source.answer = () => ({body: 'the world'})
+	expect((await map.status()).available).toBe(true)
+	// One that does is
+	await map.warm()
+	expect(source.requests).toHaveLength(2)
+})
+
 // The planet Umbrel hosts, read out of its archive at the address api.umbrel.com signs
 
 type Entry = {id: number; runLength: number; length: number; offset: number}
@@ -276,7 +307,7 @@ async function host(planet: Buffer) {
 	const hosted = {
 		planet,
 		etag: undefined as string | undefined,
-		answer: (() => undefined) as (from: number) => 'stall' | number | undefined,
+		answer: (() => undefined) as (from: number) => 'stall' | 'drop' | number | undefined,
 		refuses: (() => false) as (signature: string) => boolean,
 		ranges: [] as string[],
 		// What each read was signed with, and where it went
@@ -300,6 +331,7 @@ async function host(planet: Buffer) {
 			}
 			const answer = hosted.answer(Number(from))
 			if (answer === 'stall') return
+			if (answer === 'drop') return request.socket.destroy()
 			if (answer) return response.writeHead(answer).end()
 			const body = hosted.planet.subarray(Number(from), Number(to) + 1)
 			response.writeHead(206, {
@@ -786,5 +818,26 @@ test('a read of the planet that stalls is given up in time, keeping the planet, 
 
 	hosted.answer = () => undefined
 	expect(await source.tile(4, 1, 3, signal())).toEqual(stored('next door'))
+	expect(headerReads(hosted.ranges)).toBe(1)
+})
+
+test('a read of the planet whose connection drops fails that tile alone, keeping what is read of the planet', async () => {
+	const places = [
+		{x: 0, y: 3, tile: 'here'},
+		{x: 1, y: 3, tile: 'next door'},
+	]
+	const {hosted, signing} = await hosting(archive(places, {z: 4, leafSize: 2}))
+	const source = umbrelPlanet({api: signing.address})
+	expect(await source.tile(4, 0, 3, signal())).toEqual(stored('here'))
+	const read = hosted.ranges.length
+
+	// The header, the leaf directory and the first tile are read; the next tile's connection drops
+	hosted.answer = () => 'drop'
+	await expect(source.tile(4, 1, 3, signal())).rejects.toThrow('fetch failed')
+
+	hosted.answer = () => undefined
+	expect(await source.tile(4, 1, 3, signal())).toEqual(stored('next door'))
+	// Only the dropped tile, and that tile again: no header or directory read anew
+	expect(hosted.ranges).toHaveLength(read + 2)
 	expect(headerReads(hosted.ranges)).toBe(1)
 })

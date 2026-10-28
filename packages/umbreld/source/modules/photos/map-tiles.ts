@@ -105,6 +105,8 @@ export default class MapTiles {
 	#probeWait: number
 	#pending = new Map<string, Promise<MapTile>>()
 	#status?: {at: number; answer: Promise<{available: boolean; maxZoom: number; build?: string}>}
+	// Whether the source has given a tile since it last failed to
+	#answering = false
 
 	constructor(source: MapSource, {readTimeout = READ_TIMEOUT_MS, probeWait = PROBE_WAIT_MS} = {}) {
 		this.#source = source
@@ -114,16 +116,29 @@ export default class MapTiles {
 
 	// Whether there is a basemap to draw, which build, and how far in the map
 	// can ask for tiles; it magnifies past that. There is when the world's one
-	// tile at zoom 0 can be had in time. Every page with a map asks, so the
-	// answer is kept a while.
+	// tile at zoom 0 can be had in time, and from then on for as long as the
+	// source goes on giving the tiles asked of it: asked again, only the build
+	// is looked up, which reads nothing of the planet (see umbrelPlanet), and
+	// once a tile fails, the world's tile is asked for again. Every page with
+	// a map asks, so the answer is kept a while.
 	status() {
 		if (this.#status && Date.now() - this.#status.at < PROBE_TTL_MS) return this.#status.answer
-		const probe = Promise.all([this.#source.open(), this.tile(0, 0, 0)]).then(([opened]) => opened)
+		const opened = this.#source.open()
+		const probe = this.#answering ? opened : Promise.all([opened, this.tile(0, 0, 0)]).then(([opened]) => opened)
 		const answer = Promise.race([probe, sleep(this.#probeWait, undefined, {ref: false})])
 			.catch(() => undefined)
 			.then((opened) => (opened ? {available: true, ...opened} : {available: false, maxZoom: 0}))
 		this.#status = {at: Date.now(), answer}
 		return answer
+	}
+
+	// The first look, taken before anyone asks (as umbreld starts), so the
+	// first map opened finds the answer in. One that found no basemap isn't
+	// kept: whoever asks next looks again.
+	async warm() {
+		const answer = this.status()
+		const kept = this.#status
+		if (!(await answer).available && this.#status === kept) this.#status = undefined
 	}
 
 	// A tile, fetched once however many ask for it at the same time
@@ -133,7 +148,18 @@ export default class MapTiles {
 		let pending = this.#pending.get(key)
 		if (!pending) {
 			pending = (async () => {
-				const data = await this.#source.tile(z, x, y, AbortSignal.timeout(this.#readTimeout))
+				const data = await this.#source.tile(z, x, y, AbortSignal.timeout(this.#readTimeout)).then(
+					(data) => {
+						this.#answering = true
+						return data
+					},
+					(error) => {
+						// Whether there is a basemap is for the next to ask to find out afresh
+						if (this.#answering) this.#status = undefined
+						this.#answering = false
+						throw error
+					},
+				)
 				// A new build may have come while it was fetched, and the tile be of
 				// that one: sent as the last, a browser would keep it under the last
 				// for good, so it is none of either, and asked for again
@@ -205,9 +231,11 @@ export function umbrelPlanet({
 				return tile && new Uint8Array(tile.data)
 			} catch (error) {
 				// What was read of the planet may be what failed: the next tile starts
-				// afresh. A tile that only ran out of time, or was given up on with
-				// the directory it waited for, says nothing about the rest.
-				if (!['TimeoutError', 'AbortError'].includes((error as Error).name)) forget(opened)
+				// afresh. A tile that only ran out of time, was given up on with the
+				// directory it waited for, or lost its connection says nothing about
+				// the rest, and starting afresh would read the header and directories
+				// again for every tile after it.
+				if (!unreached(error)) forget(opened)
 				throw error
 			}
 		},
@@ -353,6 +381,14 @@ class PlanetAddress {
 		}
 		return maxZoom as number
 	}
+}
+
+// A read that never got an answer: out of time, given up on, or one whose
+// connection failed — which fetch reports as a TypeError of its own, the
+// cause (a reset, a refused or timed-out connect) beneath it
+function unreached(error: unknown) {
+	const {name, message} = error as Error
+	return name === 'TimeoutError' || name === 'AbortError' || (error instanceof TypeError && message === 'fetch failed')
 }
 
 // Only a test's server is at one of these, without TLS
