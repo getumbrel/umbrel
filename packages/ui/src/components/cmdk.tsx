@@ -12,6 +12,7 @@ import {
 } from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
+import {useLocation, useNavigationType} from 'react-router-dom'
 
 import {CommandDialog, CommandInput} from '@/components/ui/command'
 import {DialogTitle} from '@/components/ui/dialog'
@@ -70,6 +71,16 @@ export function CmdkProvider({children}: {children: React.ReactNode}) {
 	useEffect(() => {
 		if (IS_DEV && new URLSearchParams(window.location.search).get('cmdk') === 'open') setOpen(true)
 	}, [])
+
+	// Back and forward move the page out from under the palette, and so do the
+	// native apps when they take umbrelOS somewhere in place. The first load is
+	// a POP too, so it's left alone.
+	const location = useLocation()
+	const navigationType = useNavigationType()
+	const firstLocation = useRef(location)
+	useEffect(() => {
+		if (navigationType === 'POP' && location !== firstLocation.current) setOpen(false)
+	}, [location, navigationType])
 
 	const value = useMemo(() => ({open, setOpen}), [open])
 	return <CmdkContext value={value}>{children}</CmdkContext>
