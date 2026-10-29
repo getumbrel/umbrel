@@ -2,7 +2,7 @@ import type BetterSqlite3 from 'better-sqlite3'
 
 import {photosReadModelDirtySchema, photosReadModelDurableTriggers} from './read-model-schema.ts'
 
-export const PHOTOS_SCHEMA_VERSION = 9
+export const PHOTOS_SCHEMA_VERSION = 10
 export const PHOTOS_MIGRATION_MODULE = 'photos'
 
 export class UnsupportedPhotosSchemaError extends Error {}
@@ -221,6 +221,21 @@ export function migratePhotos(database: BetterSqlite3.Database) {
 			database.exec(photosReadModelDurableTriggers())
 			database
 				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 9, ?)')
+				.run(PHOTOS_MIGRATION_MODULE, Date.now())
+		}
+		if (version < 10) {
+			// Phone sources stay type 'iphone', Android phones included: allowing another type
+			// means rebuilding photos_sources, which other tables reference, and foreign keys
+			// stay enforced inside this transaction. The platform the phone's app reported
+			// tells them apart, and changing it refreshes the read model's source types.
+			const sourceColumns = new Set(
+				(database.prepare("PRAGMA table_info('photos_sources')").all() as Array<{name: string}>).map(({name}) => name),
+			)
+			if (!sourceColumns.has('platform')) database.exec('ALTER TABLE photos_sources ADD COLUMN platform TEXT')
+			database.exec('DROP TRIGGER IF EXISTS photos_read_model_photos_sources_update')
+			database.exec(photosReadModelDurableTriggers())
+			database
+				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 10, ?)')
 				.run(PHOTOS_MIGRATION_MODULE, Date.now())
 		}
 	})

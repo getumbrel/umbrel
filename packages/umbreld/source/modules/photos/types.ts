@@ -2,7 +2,8 @@ import nodePath from 'node:path'
 
 export const PHOTO_KINDS = ['photo', 'video'] as const
 export const PHOTO_SUB_KINDS = ['live', 'panorama', 'screenshot', 'spherical'] as const
-export const PHOTO_SOURCE_TYPES = ['umbrel', 'iphone'] as const
+// Android phones are stored as 'iphone' sources and shown as 'android'; see photoSourceTypeSql.
+export const PHOTO_SOURCE_TYPES = ['umbrel', 'iphone', 'android'] as const
 export const PHOTO_SCOPE_MODES = ['everything', 'everything-except', 'only'] as const
 
 export type PhotoKind = (typeof PHOTO_KINDS)[number]

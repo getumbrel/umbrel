@@ -1804,11 +1804,17 @@ export default class FileIndexEngine {
 		})
 	}
 
-	async photosUpsertBackupSource(accountId: string, sourceId: string, name: string, createdAt: number) {
+	async photosUpsertBackupSource(
+		accountId: string,
+		sourceId: string,
+		name: string,
+		createdAt: number,
+		platform?: string,
+	) {
 		this.#requirePhotos()
 		return this.#mutate((database) => {
 			const upsert = database.transaction(() =>
-				this.#photos.upsertBackupSource(this.#photosDatabase(database), accountId, sourceId, name, createdAt),
+				this.#photos.upsertBackupSource(this.#photosDatabase(database), accountId, sourceId, name, createdAt, platform),
 			)
 			return upsert.immediate()
 		})

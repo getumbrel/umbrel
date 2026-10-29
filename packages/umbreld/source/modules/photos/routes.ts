@@ -60,13 +60,18 @@ export default router({
 			throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})
 		}
 
-		await ctx.umbreld.auth.validateNativePrincipal(ctx.principal!).catch((error) => {
+		const client = await ctx.umbreld.auth.nativeClient(ctx.principal!).catch((error) => {
 			if (error instanceof NativeSessionRequiredError) {
 				throw new TRPCError({code: 'FORBIDDEN', message: error.message})
 			}
 			throw error
 		})
-		const grant = await ctx.umbreld.photos.createBackupGrant({principal: ctx.principal!, ...input})
+		// The source records which platform the phone runs, so Photos can show it as one.
+		const grant = await ctx.umbreld.photos.createBackupGrant({
+			principal: ctx.principal!,
+			...input,
+			platform: client?.platform,
+		})
 		ctx.response.set('Cache-Control', 'no-store')
 		return grant
 	}),

@@ -449,6 +449,13 @@ export default class Auth {
 		return principal
 	}
 
+	// The app behind a native session, as it described itself at sign-in or its latest
+	// refresh. It's descriptive: what the session may do follows from its credentials.
+	async nativeClient(principal: Principal) {
+		await this.validateNativePrincipal(principal)
+		return this.#sessions.find((candidate) => candidate.id === principal.sessionId)?.nativeClient
+	}
+
 	// PhotoKit may upload after the app exits, so it cannot depend on refreshing the
 	// one-hour access credential. The persisted source binding prevents a grant from
 	// writing into another device's managed library.

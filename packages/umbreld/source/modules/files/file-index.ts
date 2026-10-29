@@ -391,8 +391,14 @@ export default class FileIndex {
 		])
 	}
 
-	async photosUpsertBackupSource(accountId: string, sourceId: string, name: string, createdAt: number) {
-		return this.#request<boolean>('photosUpsertBackupSource', [accountId, sourceId, name, createdAt])
+	async photosUpsertBackupSource(
+		accountId: string,
+		sourceId: string,
+		name: string,
+		createdAt: number,
+		platform?: string,
+	) {
+		return this.#request<boolean>('photosUpsertBackupSource', [accountId, sourceId, name, createdAt, platform])
 	}
 
 	async photosRegisterBackupResource(

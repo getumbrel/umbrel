@@ -49,6 +49,7 @@ test('renames only the display name and retains it across reconnects and restart
 		libraryId('0'),
 		'Holiday phone',
 		original.createdAt,
+		undefined,
 	)
 	expect(emit).toHaveBeenCalledWith('photos:change', {accountIds: ['0']})
 	await expect(register()).resolves.toEqual(renamed)
@@ -67,6 +68,7 @@ test('renames only the display name and retains it across reconnects and restart
 		libraryId('0'),
 		'Holiday phone',
 		original.createdAt,
+		undefined,
 	)
 	await expect(restarted.photos.prepareBackupResourcePath(renamed, key, 'heic')).resolves.toBe(path)
 	await expect(fse.readFile(systemPath, 'utf8')).resolves.toBe('photo')
@@ -143,7 +145,7 @@ test('can retry a rename if updating the Photos database fails', async () => {
 	vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mockClear()
 	await expect(umbreld.photos.renameSource('0', libraryId('0'), 'New name')).resolves.toBe(true)
 	expect(vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mock.calls).toEqual([
-		['0', libraryId('0'), 'New name', original.createdAt],
+		['0', libraryId('0'), 'New name', original.createdAt, undefined],
 	])
 })
 

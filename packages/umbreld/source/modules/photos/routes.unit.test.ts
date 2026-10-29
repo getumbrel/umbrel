@@ -29,20 +29,29 @@ test('creates a source-bound grant only after validating the native session', as
 		name: 'Pixel 9',
 		createdAt: 1,
 	}
-	const validateNativePrincipal = vi.fn(async () => principal)
+	const nativeClient = vi.fn(async () => ({
+		id: 'umbrel',
+		platform: 'android',
+		deviceClass: 'phone',
+		appVersion: '0.1',
+		appBuild: '3',
+		osVersion: '16',
+	}))
 	const createBackupGrant = vi.fn(async () => ({token: 'grant', source}))
-	const context = contextFor({validateNativePrincipal}, {createBackupGrant})
+	const context = contextFor({nativeClient}, {createBackupGrant})
 	const caller = routes.createCaller(context)
 
 	await expect(caller.createBackupGrant({sourceId: source.id, suggestedName: source.name})).resolves.toEqual({
 		token: 'grant',
 		source,
 	})
-	expect(validateNativePrincipal).toHaveBeenCalledWith(principal)
+	expect(nativeClient).toHaveBeenCalledWith(principal)
+	// The source records the platform the app reported for this session.
 	expect(createBackupGrant).toHaveBeenCalledWith({
 		principal,
 		sourceId: source.id,
 		suggestedName: source.name,
+		platform: 'android',
 	})
 	expect(context.response!.set).toHaveBeenCalledWith('Cache-Control', 'no-store')
 })
@@ -51,7 +60,7 @@ test('rejects browser sessions before registering a backup source', async () => 
 	const createBackupGrant = vi.fn()
 	const context = contextFor(
 		{
-			validateNativePrincipal: vi.fn(async () => {
+			nativeClient: vi.fn(async () => {
 				throw new NativeSessionRequiredError()
 			}),
 		},

@@ -193,7 +193,13 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 				optionalStringArg(args, 4),
 			)
 		case 'photosUpsertBackupSource':
-			return index.photosUpsertBackupSource(stringArg(args), stringArg(args, 1), stringArg(args, 2), numberArg(args, 3))
+			return index.photosUpsertBackupSource(
+				stringArg(args),
+				stringArg(args, 1),
+				stringArg(args, 2),
+				numberArg(args, 3),
+				optionalStringArg(args, 4),
+			)
 		case 'photosRegisterBackupResource':
 			return index.photosRegisterBackupResource(
 				stringArg(args),

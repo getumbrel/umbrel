@@ -181,7 +181,7 @@ export function photosReadModelDurableTriggers() {
 					table === 'photos_content_state'
 						? 'account_id, content_hash, is_favorite, imported_at, source_created_at, source_id'
 						: table === 'photos_sources'
-							? 'account_id, type, scope_mode, scope_paths'
+							? 'account_id, type, platform, scope_mode, scope_paths'
 							: 'account_id, source_id, resource_key, content_hash, original_filename'
 				const target = table === 'photos_sources' ? 'accounts' : 'contents'
 				return `CREATE TRIGGER IF NOT EXISTS photos_read_model_${table}_${event.toLowerCase()}

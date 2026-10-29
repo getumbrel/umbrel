@@ -5,7 +5,7 @@ import type DatabaseTypes from 'better-sqlite3'
 
 import {foldSearchName} from '../files/file-index/migrations.ts'
 import PhotosIndexingStatus from './indexing-status.ts'
-import {photoLibraryCte as rawPhotoLibraryCte, sourceScopeSql} from './library-sql.ts'
+import {photoLibraryCte as rawPhotoLibraryCte, photoSourceTypeSql, sourceScopeSql} from './library-sql.ts'
 import PhotosReadModel, {photoLibraryCte} from './read-model.ts'
 import type {
 	PhotoAlbum,
@@ -16,6 +16,7 @@ import type {
 	PhotoItemDetail,
 	PhotoScopeMode,
 	PhotoSource,
+	PhotoSourceType,
 } from './types.ts'
 import {MAP_POINT_BYTES, MAP_POINT_FLAGS, MAP_POINTS_HEADER_BYTES, supportsPhotos} from './types.ts'
 
@@ -47,7 +48,7 @@ type ItemDetailRow = ItemRow & {
 	size_bytes: number
 	source_id: string
 	source_name: string
-	source_type: 'umbrel' | 'iphone'
+	source_type: PhotoSourceType
 	root_virtual_path: string
 	relative_path: string
 	created_at: number
@@ -374,20 +375,28 @@ export default class PhotosRepository {
 			.immediate()
 	}
 
-	upsertBackupSource(database: Database, accountId: string, sourceId: string, name: string, createdAt: number) {
+	upsertBackupSource(
+		database: Database,
+		accountId: string,
+		sourceId: string,
+		name: string,
+		createdAt: number,
+		platform?: string,
+	) {
 		const existing = database
 			.prepare('SELECT account_id, type FROM umbrel.photos_sources WHERE id = ?')
 			.get(sourceId) as {account_id: string; type: string} | undefined
 		if (existing && (existing.account_id !== accountId || existing.type !== 'iphone')) {
 			throw new Error('Photo backup source identity collision')
 		}
+		// Every phone is stored as 'iphone'; its platform says which (see migration v10)
 		database
 			.prepare(
-				`INSERT INTO umbrel.photos_sources(id, account_id, type, name, created_at)
-				VALUES (?, ?, 'iphone', ?, ?)
-				ON CONFLICT(id) DO UPDATE SET name = excluded.name`,
+				`INSERT INTO umbrel.photos_sources(id, account_id, type, name, platform, created_at)
+				VALUES (?, ?, 'iphone', ?, ?, ?)
+				ON CONFLICT(id) DO UPDATE SET name = excluded.name, platform = excluded.platform`,
 			)
-			.run(sourceId, accountId, name, createdAt)
+			.run(sourceId, accountId, name, platform ?? null, createdAt)
 		return true
 	}
 
@@ -1320,7 +1329,7 @@ export default class PhotosRepository {
 							ON membership.content_hash = item.content_hash
 						WHERE item.root_kind = 'home' GROUP BY membership.source_id
 					)
-					SELECT source.*, COALESCE(counts.photos, 0) AS photos,
+					SELECT source.*, ${photoSourceTypeSql('source')} AS shown_type, COALESCE(counts.photos, 0) AS photos,
 						COALESCE(counts.videos, 0) AS videos, COALESCE(counts.size_bytes, 0) AS size_bytes
 					FROM umbrel.photos_sources AS source LEFT JOIN source_counts AS counts ON counts.source_id = source.id
 					WHERE source.account_id = ? ORDER BY source.created_at`,
@@ -1328,6 +1337,7 @@ export default class PhotosRepository {
 				.all(accountId, accountId) as Array<{
 				id: string
 				type: 'umbrel' | 'iphone'
+				shown_type: PhotoSourceType
 				name: string
 				last_import_at: number | null
 				created_at: number
@@ -1339,7 +1349,7 @@ export default class PhotosRepository {
 			}>
 		).map((row) => ({
 			id: row.id,
-			type: row.type,
+			type: row.shown_type,
 			name: row.name,
 			...(row.last_import_at === null ? {} : {lastImportAt: Number(row.last_import_at)}),
 			createdAt: Number(row.created_at),

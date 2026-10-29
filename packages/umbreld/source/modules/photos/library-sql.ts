@@ -6,6 +6,11 @@ import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from './types.ts'
 const PHOTO_MEDIA_EXTENSIONS = [...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS]
 const LIVE_FALLBACK_STEM_SQL = filenameStemSql('entries.name', PHOTO_MEDIA_EXTENSIONS)
 
+// The type a source is shown as. Phones are stored as 'iphone' sources whatever they run
+// (see migration v10); the platform their app reported names Android phones.
+export const photoSourceTypeSql = (source: string) =>
+	`CASE WHEN ${source}.type = 'iphone' AND ${source}.platform = 'android' THEN 'android' ELSE ${source}.type END`
+
 // Media without an embedded date uses its backup source's date, else the
 // earlier of its filesystem dates. Linux sets a file's birth time when it lands
 // on this disk, while copies, network shares and browser imports preserve the
@@ -132,7 +137,7 @@ export function photoLibraryCte(targetHashCount = 0, stages: string[] = []) {
 			? 'SELECT * FROM temp.photos_stage_locations'
 			: `
 		SELECT DISTINCT indexed_locations.*, iphone_source.id AS source_id,
-			iphone_source.name AS source_name, iphone_source.type AS source_type
+			iphone_source.name AS source_name, ${photoSourceTypeSql('iphone_source')} AS source_type
 		FROM indexed_locations
 		JOIN umbrel.photos_source_resources AS resource
 			ON resource.account_id = indexed_locations.account_id

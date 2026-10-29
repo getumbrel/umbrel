@@ -88,8 +88,9 @@ type Kind = 'photo' | 'video'
 // Presentation tier over Kind, derived once at import — see SubKinds below.
 // Absent = plain photo/video.
 type SubKind = 'live' | 'panorama' | 'screenshot' | 'spherical'
-// Android, drives and network shares land after v1
-type SourceType = 'umbrel' | 'iphone'
+// A phone is 'iphone' or 'android' by the platform its app reported. Drives and
+// network shares land after v1
+type SourceType = 'umbrel' | 'iphone' | 'android'
 type ScopeMode = 'everything' | 'everything-except' | 'only'
 ```
 
@@ -171,12 +172,12 @@ type Album = {
 }
 
 // States, progress, paths and auto-import settings return with the post-v1
-// source types (android, drives, shares)
+// source types (drives, shares)
 type Source = {
 	id: string
 	type: SourceType
 	name: string // account name / device name
-	lastImportAt?: number // epoch ms; an iPhone's last backup
+	lastImportAt?: number // epoch ms; a phone's last backup
 	createdAt: number // epoch ms the source was added
 	stats: {photos: number; videos: number; sizeBytes: number}
 	scope?: {mode: ScopeMode; paths: string[]} // the umbrel source: which folders count
@@ -339,11 +340,11 @@ new hash and deliberately does not inherit old state.
 ### sources
 
 - `list()` → `Source[]` — always includes the permanent `umbrel` source (identified
-  by `type === 'umbrel'`; the UI renames it after the account). iPhones appear here
+  by `type === 'umbrel'`; the UI renames it after the account). Phones appear here
   when they pair through the mobile app — there is no `add` procedure in v1.
 - `update({id, scope?})` → `Source` — partial patch. Folder scope is supported
-  only by the built-in `umbrel` source; iPhone source scope updates are rejected.
-- `remove({id, keepItems: boolean})` — unpair an iPhone; `keepItems: false` also
+  only by the built-in `umbrel` source; phone source scope updates are rejected.
+- `remove({id, keepItems: boolean})` — unpair a phone; `keepItems: false` also
   moves its items to Recently Deleted so the ordinary Home index cannot
   immediately re-import them as Umbrel items. If the same bytes exist at more
   than one visible Home path, removal preserves the logical item as an Umbrel

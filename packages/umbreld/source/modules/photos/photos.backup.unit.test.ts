@@ -64,6 +64,7 @@ describe('Photos backup storage', () => {
 			expect.stringMatching(/^iphone:/),
 			'Pixel 9',
 			expect.any(Number),
+			undefined,
 		)
 		const resourceKey = 'ab'.repeat(32)
 		await expect(umbreld.photos.prepareBackupResourcePath(source, resourceKey, 'HEIC')).resolves.toBe(
@@ -80,6 +81,67 @@ describe('Photos backup storage', () => {
 		emit.mockClear()
 		await umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'Pixel 9'})
 		expect(emit).not.toHaveBeenCalledWith('photos:change', expect.anything())
+	})
+
+	test('records the platform a grant reports, and keeps it through startup replay', async () => {
+		vi.spyOn(umbreld.auth, 'issuePhotoBackupGrant').mockResolvedValue({token: 'photo-grant'})
+		const principal = {sessionId: 'native-session', accountId: '0', actor: 'account'} as const
+		// Registered before sources recorded a platform
+		const before = await umbreld.photos.registerBackupSource({
+			accountId: '0',
+			sourceId: SOURCE_ID,
+			suggestedName: 'Pixel 9',
+		})
+		expect(before.platform).toBeUndefined()
+
+		const emit = vi.spyOn(umbreld.eventBus, 'emit')
+		const {source} = await umbreld.photos.createBackupGrant({
+			principal,
+			sourceId: SOURCE_ID,
+			suggestedName: 'Pixel 9',
+			platform: 'android',
+		})
+		expect(source).toEqual({...before, platform: 'android'})
+		await expect(umbreld.store.get('photos.backupSources')).resolves.toEqual([source])
+		expect(umbreld.files.fileIndex.photosUpsertBackupSource).toHaveBeenLastCalledWith(
+			'0',
+			expect.stringMatching(/^iphone:/),
+			'Pixel 9',
+			before.createdAt,
+			'android',
+		)
+		expect(emit).toHaveBeenCalledWith('photos:change', {accountIds: ['0']})
+
+		emit.mockClear()
+		await umbreld.photos.createBackupGrant({
+			principal,
+			sourceId: SOURCE_ID,
+			suggestedName: 'Pixel 9',
+			platform: 'android',
+		})
+		expect(emit).not.toHaveBeenCalledWith('photos:change', expect.anything())
+
+		await expect(
+			umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'Pixel 9'}),
+		).resolves.toEqual(source)
+		expect(umbreld.files.fileIndex.photosUpsertBackupSource).toHaveBeenLastCalledWith(
+			'0',
+			expect.stringMatching(/^iphone:/),
+			'Pixel 9',
+			before.createdAt,
+			'android',
+		)
+	})
+
+	test("names an Android phone's fallback folder after Android", async () => {
+		vi.spyOn(umbreld.auth, 'issuePhotoBackupGrant').mockResolvedValue({token: 'photo-grant'})
+		const {source} = await umbreld.photos.createBackupGrant({
+			principal: {sessionId: 'native-session', accountId: '0', actor: 'account'},
+			sourceId: SOURCE_ID,
+			suggestedName: '..',
+			platform: 'android',
+		})
+		expect(source.directoryName).toBe('Android 11111111')
 	})
 
 	test('serializes concurrent creation of the same backup shard', async () => {

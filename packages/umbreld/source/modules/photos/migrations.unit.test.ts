@@ -43,6 +43,7 @@ test('creates and idempotently migrates the durable Photos schema', () => {
 		{module: PHOTOS_MIGRATION_MODULE, version: 7},
 		{module: PHOTOS_MIGRATION_MODULE, version: 8},
 		{module: PHOTOS_MIGRATION_MODULE, version: 9},
+		{module: PHOTOS_MIGRATION_MODULE, version: 10},
 	])
 	expect(
 		database
@@ -253,6 +254,7 @@ test('migrates v3 by discarding derived Live Photo pairs without touching backup
 		{version: 7},
 		{version: 8},
 		{version: 9},
+		{version: 10},
 	])
 	expect(
 		database
@@ -341,6 +343,7 @@ test('migrates staging v4 by adding managed backup presentation metadata', () =>
 		{version: 7},
 		{version: 8},
 		{version: 9},
+		{version: 10},
 	])
 	database.close()
 })
@@ -433,6 +436,7 @@ test('keeps Photos migration versions independent from other umbrel.db modules',
 		{module: PHOTOS_MIGRATION_MODULE, version: 7},
 		{module: PHOTOS_MIGRATION_MODULE, version: 8},
 		{module: PHOTOS_MIGRATION_MODULE, version: 9},
+		{module: PHOTOS_MIGRATION_MODULE, version: 10},
 	])
 	database.close()
 })
@@ -441,7 +445,7 @@ test('upgrades the v8 source trigger so renames are cheap while scope changes st
 	const database = new BetterSqlite3(':memory:')
 	try {
 		migratePhotos(database)
-		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version=9;
+		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version>=9;
 			DROP TRIGGER photos_read_model_photos_sources_update;
 			CREATE TRIGGER photos_read_model_photos_sources_update AFTER UPDATE OF name ON photos_sources
 			WHEN old.name IS NOT new.name BEGIN
@@ -459,6 +463,54 @@ test('upgrades the v8 source trigger so renames are cheap while scope changes st
 		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([{account_id: 'owner'}])
 		migratePhotos(database)
 		expect(database.prepare('SELECT name FROM photos_sources').get()).toEqual({name: 'After'})
+	} finally {
+		database.close()
+	}
+})
+
+test('adds a platform to phone sources without rebuilding them or their backups', () => {
+	const database = new BetterSqlite3(':memory:')
+	try {
+		migratePhotos(database)
+		// Back to v9: no platform column, and the source trigger v9 installed.
+		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version=10;
+			DROP TRIGGER photos_read_model_photos_sources_update;
+			ALTER TABLE photos_sources DROP COLUMN platform;
+			CREATE TRIGGER photos_read_model_photos_sources_update
+			AFTER UPDATE OF account_id, type, scope_mode, scope_paths ON photos_sources
+			WHEN old.account_id IS NOT new.account_id OR old.type IS NOT new.type
+				OR old.scope_mode IS NOT new.scope_mode OR old.scope_paths IS NOT new.scope_paths BEGIN
+				INSERT INTO photos_read_model_dirty_accounts VALUES(new.account_id) ON CONFLICT DO NOTHING;
+			END;
+			INSERT INTO photos_sources(id,account_id,type,name,created_at) VALUES('iphone:phone','alice','iphone','Pixel',1);`)
+		const hash = Buffer.alloc(32, 1)
+		database
+			.prepare(
+				"INSERT INTO photos_content_state(account_id, content_hash, source_id, imported_at) VALUES ('alice', ?, 'iphone:phone', 2)",
+			)
+			.run(hash)
+		database
+			.prepare(
+				"INSERT INTO photos_source_resources(account_id, source_id, resource_key, content_hash) VALUES ('alice', 'iphone:phone', ?, ?)",
+			)
+			.run('a'.repeat(64), hash)
+		database.exec('DELETE FROM photos_read_model_dirty_accounts; DELETE FROM photos_read_model_dirty_contents;')
+
+		expect(migratePhotos(database)).toBe(PHOTOS_SCHEMA_VERSION)
+		expect(database.prepare('SELECT id, type, name, platform FROM photos_sources').all()).toEqual([
+			{id: 'iphone:phone', type: 'iphone', name: 'Pixel', platform: null},
+		])
+		expect(database.prepare('SELECT source_id FROM photos_content_state').all()).toEqual([{source_id: 'iphone:phone'}])
+		expect(database.prepare('SELECT source_id FROM photos_source_resources').all()).toEqual([
+			{source_id: 'iphone:phone'},
+		])
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([])
+
+		// A rename stays cheap; learning the phone runs Android changes how its items show.
+		database.exec("UPDATE photos_sources SET name='Pixel 8a' WHERE id='iphone:phone'")
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([])
+		database.exec("UPDATE photos_sources SET platform='android' WHERE id='iphone:phone'")
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([{account_id: 'alice'}])
 	} finally {
 		database.close()
 	}

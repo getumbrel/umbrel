@@ -198,6 +198,8 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 		title = t('photos-empty.source-title')
 		if (source.type === 'iphone') {
 			description = t('photos-empty.source-iphone-description')
+		} else if (source.type === 'android') {
+			description = t('photos-empty.source-android-description')
 		} else {
 			description = t('photos-empty.source-umbrel-description')
 			actions = <UploadPill />

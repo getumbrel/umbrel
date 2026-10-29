@@ -24,6 +24,9 @@ export type PhotoBackupSource = {
 	directoryName: string
 	createdAt: number
 	storageVersion?: 3
+	// The platform the phone's app reported at its latest grant, such as 'ios' or
+	// 'android'. Sources from before platforms were recorded have none until then.
+	platform?: string
 }
 
 export type PhotoBackupSourceRemoval = {
@@ -87,6 +90,7 @@ const validateAccountId = (accountId: string) => {
 	return accountId
 }
 
+// Every phone's id starts with iphone:, Android phones too (see migration v10)
 const backupLibrarySourceId = (accountId: string, sourceId: string) =>
 	`iphone:${createHash('sha256').update(accountId).update('\0').update(sourceId).digest('hex')}`
 
@@ -102,7 +106,7 @@ const truncateUtf8 = (value: string, maxBytes: number) => {
 	return result
 }
 
-const backupDirectoryBaseName = (name: string, sourceId: string) => {
+const backupDirectoryBaseName = (name: string, sourceId: string, platform?: string) => {
 	const sanitized = truncateUtf8(
 		name
 			.replace(FILE_NAME_CHARACTER_PATTERN, '-')
@@ -111,7 +115,8 @@ const backupDirectoryBaseName = (name: string, sourceId: string) => {
 			.trim(),
 		240,
 	).replace(/[ .]+$/g, '')
-	return isValidFilename(sanitized) ? sanitized : `iPhone ${sourceId.slice(0, 8)}`
+	if (isValidFilename(sanitized)) return sanitized
+	return `${platform === 'android' ? 'Android' : 'iPhone'} ${sourceId.slice(0, 8)}`
 }
 
 const validateBackupDirectoryName = (name: string) => {
@@ -217,16 +222,18 @@ export default class Photos {
 		principal,
 		sourceId,
 		suggestedName,
+		platform,
 	}: {
 		principal: Principal
 		sourceId: string
 		suggestedName: string
+		platform?: string
 	}) {
 		const accountId = validateAccountId(principal.accountId)
 		sourceId = normalizeBackupSourceId(sourceId)
 		const name = normalizeBackupSourceName(suggestedName)
 		return this.#withBackupSourceLock(accountId, sourceId, async () => {
-			const source = await this.#registerBackupSource({accountId, sourceId, name})
+			const source = await this.#registerBackupSource({accountId, sourceId, name, platform})
 			const grant = await this.#umbreld.auth.issuePhotoBackupGrant(principal, source.id)
 			return {token: grant.token, source}
 		})
@@ -236,10 +243,12 @@ export default class Photos {
 		accountId,
 		sourceId,
 		name,
+		platform,
 	}: {
 		accountId: string
 		sourceId: string
 		name: string
+		platform?: string
 	}): Promise<PhotoBackupSource> {
 		const pendingRemoval = ((await this.#umbreld.store.get('photos.backupSourceRemovals')) ?? []).find(
 			(removal) => removal.accountId === accountId && removal.sourceId === sourceId,
@@ -247,19 +256,32 @@ export default class Photos {
 		if (pendingRemoval) await this.#completeBackupSourceRemoval(pendingRemoval)
 		let source!: PhotoBackupSource
 		let created = false
+		let platformChanged = false
 
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			const sources = (await get('photos.backupSources')) ?? []
 			const existing = sources.find((candidate) => candidate.accountId === accountId && candidate.id === sourceId)
 			if (existing) {
-				if (existing.directoryName) {
+				// A grant records the platform its app reported; startup replay reports none
+				// and keeps the recorded one.
+				const recorded = platform && existing.platform !== platform ? {...existing, platform} : existing
+				platformChanged = recorded !== existing
+				if (recorded.directoryName && !platformChanged) {
 					source = existing
 					return
 				}
-				source = {
-					...existing,
-					directoryName: await this.#uniqueBackupDirectoryName(accountId, existing.name, sourceId, sources),
-				}
+				source = recorded.directoryName
+					? recorded
+					: {
+							...recorded,
+							directoryName: await this.#uniqueBackupDirectoryName(
+								accountId,
+								recorded.name,
+								sourceId,
+								sources,
+								recorded.platform,
+							),
+						}
 				await set(
 					'photos.backupSources',
 					sources.map((candidate) =>
@@ -272,8 +294,9 @@ export default class Photos {
 				id: sourceId,
 				accountId,
 				name,
-				directoryName: await this.#uniqueBackupDirectoryName(accountId, name, sourceId, sources),
+				directoryName: await this.#uniqueBackupDirectoryName(accountId, name, sourceId, sources, platform),
 				createdAt: Date.now(),
+				...(platform ? {platform} : {}),
 			}
 			await set('photos.backupSources', [...sources, source])
 			created = true
@@ -294,9 +317,10 @@ export default class Photos {
 				)
 			})
 		}
-		// A new phone in the sources list is a library change the UI should hear
-		// about right away; re-registrations (re-auth, startup replay) change nothing
-		if (created) this.#changed(accountId)
+		// A new phone in the sources list, or a phone now known to run Android, is a
+		// library change the UI should hear about right away; other re-registrations
+		// (re-auth, startup replay) change nothing
+		if (created || platformChanged) this.#changed(accountId)
 		return source
 	}
 
@@ -689,6 +713,7 @@ export default class Photos {
 			backupLibrarySourceId(source.accountId, source.id),
 			source.name,
 			source.createdAt,
+			source.platform,
 		)
 	}
 
@@ -705,8 +730,14 @@ export default class Photos {
 		await this.#syncDirectory(parentSystemPath)
 	}
 
-	async #uniqueBackupDirectoryName(accountId: string, name: string, sourceId: string, sources: PhotoBackupSource[]) {
-		const baseName = backupDirectoryBaseName(name, sourceId)
+	async #uniqueBackupDirectoryName(
+		accountId: string,
+		name: string,
+		sourceId: string,
+		sources: PhotoBackupSource[],
+		platform?: string,
+	) {
+		const baseName = backupDirectoryBaseName(name, sourceId, platform)
 		const usedNames = new Set(
 			sources
 				.filter((source) => source.accountId === accountId)

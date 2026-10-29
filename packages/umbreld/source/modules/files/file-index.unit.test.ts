@@ -3184,6 +3184,67 @@ test('attributes iPhone resources by durable hash after their files move', async
 	await expect(rebuilt.photosListSources('owner')).resolves.not.toContainEqual(expect.objectContaining({id: sourceId}))
 })
 
+test('shows a phone as Android once its app reports Android, its items included', async () => {
+	const hash = Buffer.alloc(32, 0x41)
+	const enrichmentRuntime = {
+		hashFile: async () => hash,
+		generateThumbnail: async (_source: string, destination: string) => fse.outputFile(destination, 'thumbnail'),
+		extractMediaMetadata: async () => ({
+			kind: 'photo' as const,
+			takenAt: 1,
+			createdAt: 1,
+			width: 1,
+			height: 1,
+		}),
+	}
+	const {index, homeDirectory} = await fixture(undefined, {includeTrash: true, enrichmentRuntime})
+	await index.initializePhotos('owner')
+	const sourceId = 'iphone:android-source'
+	// Registered before sources recorded a platform
+	await index.photosUpsertBackupSource('owner', sourceId, 'Pixel 9', 123)
+	const resourceKey = 'b'.repeat(64)
+	const original = nodePath.join(homeDirectory, 'Photos', 'Pixel 9', resourceKey.slice(0, 2), `${resourceKey}.jpg`)
+	await fse.outputFile(original, 'photo')
+	await index.photosRegisterBackupResource(
+		'owner',
+		sourceId,
+		resourceKey,
+		original,
+		hash,
+		await contentRevision(original),
+		'PXL_0001.jpg',
+		1,
+	)
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const item = (await index.photosListItems('owner', {sourceIds: [sourceId]}, undefined, 10)).items[0]!
+	await expect(index.photosGetItem('owner', item.id)).resolves.toMatchObject({source: {id: sourceId, type: 'iphone'}})
+
+	await index.photosUpsertBackupSource('owner', sourceId, 'Pixel 9', 123, 'android')
+	await expect(index.photosListSources('owner')).resolves.toContainEqual(
+		expect.objectContaining({
+			id: sourceId,
+			name: 'Pixel 9',
+			type: 'android',
+			stats: {photos: 1, videos: 0, sizeBytes: 5},
+		}),
+	)
+	await expect(index.photosGetItem('owner', item.id)).resolves.toMatchObject({
+		source: {id: sourceId, name: 'Pixel 9', type: 'android'},
+	})
+	await expect(index.photosListItems('owner', {sourceIds: [sourceId]}, undefined, 10)).resolves.toMatchObject({
+		items: [{id: item.id}],
+	})
+	// Still a phone: its scope stays on the phone
+	await expect(index.photosUpdateSource('owner', sourceId, {mode: 'only', paths: ['/Home/Photos']})).rejects.toThrow(
+		'[photos-source-scope-unsupported]',
+	)
+})
+
 test('uses an iPhone source date only when the uploaded bytes have no capture date', async () => {
 	const hash = Buffer.alloc(32, 0x32)
 	const {index, homeDirectory} = await fixture(undefined, {

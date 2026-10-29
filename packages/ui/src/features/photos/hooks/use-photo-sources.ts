@@ -9,7 +9,7 @@ export type ImportScopeMode = SourceSettings['scope']['mode']
 // This Umbrel is scanned by umbrelOS; phones push through the Umbrel app and
 // keep their settings on the device.
 export function sourceKind(type: SourceType): 'push' | 'pull' {
-	return type === 'iphone' ? 'push' : 'pull'
+	return type === 'iphone' || type === 'android' ? 'push' : 'pull'
 }
 
 export function usePhotoSources() {
