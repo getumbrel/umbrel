@@ -410,6 +410,7 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 # backends and consume well over a gigabyte on the A/B system partitions.
 # QEMU's OpenGL module loads libEGL at runtime without declaring it as a hard
 # package dependency, so keep libegl1 explicit for the headless virgl display.
+# eject loads the medium of a USB drive a guest ejected before it changes hands.
 RUN apt-get install --yes --no-install-recommends \
     libvirt-daemon-system \
     libvirt-daemon-driver-qemu \
@@ -435,7 +436,8 @@ RUN apt-get install --yes --no-install-recommends \
     genisoimage \
     dosfstools \
     mtools \
-    wimtools
+    wimtools \
+    eject
 
 # Docker's nftables compatibility rules can contain expressions that the
 # iptables frontend cannot round-trip (notably Tailscale interface globs).

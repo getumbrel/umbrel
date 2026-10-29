@@ -3,6 +3,7 @@ import z from 'zod'
 import {router, privateProcedure} from '../server/trpc/trpc.ts'
 import {MACHINE_INPUT_ACTIONS, MAX_SCROLL_AMOUNT, MAX_TYPE_TEXT_LENGTH, MAX_WAIT_SECONDS} from './machine-control.ts'
 import {machineIdSchema} from './machine-id.ts'
+import {MAX_MACHINE_USB_DEVICES, usbDeviceIdentitySchema} from './machine-store.ts'
 
 const windowsLicenseKey = z.string().regex(/^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$/i)
 const screenshotCoordinate = z.tuple([z.number().int().min(0), z.number().int().min(0)])
@@ -97,12 +98,18 @@ export default router({
 						}),
 					)
 					.optional(),
+				// The complete set of host USB devices passed through to the machine
+				usbDevices: z.array(usbDeviceIdentitySchema).max(MAX_MACHINE_USB_DEVICES).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
 			const {id, ...settings} = input
 			return ctx.umbreld.machines.updateSettings(id, settings)
 		}),
+
+	// USB devices plugged into Umbrel that can be passed through to machines,
+	// along with assigned devices that are currently unplugged
+	usbDevices: privateProcedure.query(async ({ctx}) => ctx.umbreld.machines.usbDevices()),
 
 	setPinned: privateProcedure
 		.input(z.object({id: machineIdSchema, pinned: z.boolean()}))

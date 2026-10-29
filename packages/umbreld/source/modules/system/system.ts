@@ -148,7 +148,7 @@ async function getDockerContainerIds(): Promise<Map<string, string>> {
 // container. Docker's systemd cgroup contains every process in a container,
 // including children, and the single `docker ps` snapshot gives us the stable
 // full container ID used by that cgroup path.
-async function getAppPids(umbreld: Umbreld): Promise<Map<number, string>> {
+export async function getAppPids(umbreld: Umbreld): Promise<Map<number, string>> {
 	const [containerIds, appContainers] = await Promise.all([
 		getDockerContainerIds(),
 		Promise.all(

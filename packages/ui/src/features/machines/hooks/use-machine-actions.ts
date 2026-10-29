@@ -32,6 +32,17 @@ export function getMachinesErrorMessage(message: string) {
 			return t('machines-error.machine-shutdown-timeout')
 		case 'machine-start-failed':
 			return t('machines-error.machine-start-failed')
+		case 'machine-usb-unsupported':
+			return t('machines-error.machine-usb-unsupported')
+		case 'machine-usb-device-not-found':
+			return t('machines-error.machine-usb-device-not-found')
+		case 'machine-usb-device-assigned':
+			return t('machines-error.machine-usb-device-assigned')
+		case 'machine-usb-device-in-use':
+			return t('machines-error.machine-usb-device-in-use')
+		// Files couldn't eject a drive the machine was given
+		case 'failed-unmounts':
+			return t('machines-error.failed-unmounts')
 		default:
 			return message
 	}

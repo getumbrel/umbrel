@@ -1,5 +1,7 @@
 import nodePath from 'node:path'
 
+import {buildUsbHostdevXml, type UsbAddress, type UsbDeviceAssignment} from './usb-devices.ts'
+
 export type MachineArchitecture = 'amd64' | 'arm64'
 export type PlatformProfile = 'modern-x86' | 'windows-7-x86' | 'legacy-x86' | 'windows-98-x86' | 'modern-arm64'
 export type PortForwardProtocol = 'tcp' | 'udp'
@@ -62,6 +64,8 @@ export type MachineDefinition = {
 	seedMedia?: string
 	bootMedia?: string
 	portForwards: PortForward[]
+	// Host USB devices passed through to the guest
+	usbDevices?: UsbDeviceAssignment[]
 }
 
 export function machineDiskBus(definition: MachineDefinition) {
@@ -134,6 +138,7 @@ export function buildDomainXml({
 	diskPath,
 	graphicsRenderNode,
 	audioPlaybackDevice,
+	usbDevices = [],
 }: {
 	definition: MachineDefinition
 	machineDirectory: string
@@ -143,6 +148,8 @@ export function buildDomainXml({
 	diskPath?: string
 	graphicsRenderNode?: string
 	audioPlaybackDevice?: string
+	// Where the machine's assigned USB devices are connected right now
+	usbDevices?: UsbAddress[]
 }) {
 	if (!definition.ipAddress) throw new Error('[machine-ip-address-invalid]')
 	const windows7 = definition.platformProfile === 'windows-7-x86'
@@ -244,6 +251,8 @@ export function buildDomainXml({
 	const modernInputs = arm
 		? "<controller type='usb' model='qemu-xhci'/><input type='tablet' bus='usb'/><input type='keyboard' bus='usb'/>"
 		: "<controller type='usb' model='qemu-xhci'/><input type='tablet' bus='usb'/><input type='keyboard' bus='ps2'/>"
+	// Passthrough devices share the xHCI controller, which legacy profiles lack
+	const usbHostdevs = modern ? usbDevices.map(buildUsbHostdevXml).join('') : ''
 
 	// Present every vCPU as a core on one socket. Without a topology libvirt
 	// gives each vCPU its own socket, and Windows client editions use at most two.
@@ -291,6 +300,7 @@ export function buildDomainXml({
     ${acceleratedGraphics}
     ${video}
     ${modern && !windows98 ? modernInputs : "<input type='mouse' bus='ps2'/><input type='keyboard' bus='ps2'/>"}
+    ${usbHostdevs}
     <serial type='file'><source path='${escapeXml(qemuLog)}'/><target port='0'/></serial>
     <console type='file'><source path='${escapeXml(qemuLog)}'/><target type='serial' port='0'/></console>
     <memballoon model='virtio' freePageReporting='on'/>

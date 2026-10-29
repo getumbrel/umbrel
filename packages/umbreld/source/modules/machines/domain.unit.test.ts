@@ -305,6 +305,39 @@ describe('libvirt domain XML', () => {
 		expect(xml).toContain("<port isolated='yes'/>")
 	})
 
+	test('passes assigned USB devices through on the xHCI controller by their current address', () => {
+		const xml = buildDomainXml({
+			definition: definition(),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration: 'kvm',
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+			usbDevices: [
+				{bus: 3, device: 7},
+				{bus: 1, device: 12},
+			],
+		})
+
+		expect(xml).toContain("<controller type='usb' model='qemu-xhci'/>")
+		expect(xml.match(/<hostdev\b[\s\S]*?<\/hostdev>/g)).toEqual([
+			"<hostdev mode='subsystem' type='usb'><source><address bus='3' device='7'/></source></hostdev>",
+			"<hostdev mode='subsystem' type='usb'><source><address bus='1' device='12'/></source></hostdev>",
+		])
+	})
+
+	test('never passes USB devices to legacy profiles without an xHCI controller', () => {
+		for (const platformProfile of ['legacy-x86', 'windows-98-x86'] as const) {
+			const xml = buildDomainXml({
+				definition: definition({platformProfile, machineType: 'pc-i440fx-9.2', firmware: 'bios'}),
+				machineDirectory: '/data/machines/legacy',
+				runtimeDirectory: '/run/umbrel-machines/legacy',
+				acceleration: 'kvm',
+				usbDevices: [{bus: 3, device: 7}],
+			})
+			expect(xml).not.toContain('<hostdev')
+		}
+	})
+
 	test('uses the legacy BIOS device profile without NVRAM', () => {
 		const xml = buildDomainXml({
 			definition: definition({

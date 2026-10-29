@@ -404,7 +404,7 @@ describe('externalstorage.#cleanLeftOverMountPoints()', () => {
 	})
 })
 
-describe('externalstorage.#mountExternalDevices', () => {
+describe('externalstorage.mountExternalDevices', () => {
 	test('detaches a mount whose block device was physically removed', async () => {
 		const mountPoint = `${umbreld.instance.dataDirectory}/external/Disconnected`
 		await fse.ensureDir(mountPoint)

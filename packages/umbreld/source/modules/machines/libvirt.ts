@@ -27,6 +27,7 @@ import {
 	parseActiveMachineLeaseAddresses,
 	parseMachineDhcpLeases,
 } from './machine-network.ts'
+import {buildUsbHostdevXml, parseUsbHostdevAddresses, type UsbAddress} from './usb-devices.ts'
 import {
 	installCommandOptions,
 	MACHINE_INSTALL_COMMAND_TIMEOUT_MS,
@@ -677,7 +678,12 @@ export default class Libvirt {
 		await execa('mount', ['--bind', persistent, runtime])
 	}
 
-	async start(definition: MachineDefinition, machineDirectory: string, diskPath: string) {
+	async start(
+		definition: MachineDefinition,
+		machineDirectory: string,
+		diskPath: string,
+		usbDevices: UsbAddress[] = [],
+	) {
 		if (!this.available) throw new Error('[virtualization-unavailable]')
 		if ((await this.state(definition.id)) !== 'stopped') throw new Error('[machine-not-stopped]')
 
@@ -723,6 +729,7 @@ export default class Libvirt {
 					firmwareCode,
 					graphicsRenderNode: renderNode,
 					audioPlaybackDevice: audio?.playback,
+					usbDevices,
 				})
 				await fsp.writeFile(xmlPath, xml, {encoding: 'utf8', mode: 0o600})
 				// A rapid destroy/create can briefly race systemd removing libvirt's old
@@ -794,6 +801,36 @@ export default class Libvirt {
 		await this.#unmountExternalDisk(id)
 		await this.#unmountStorage(id)
 		await this.#releaseAudio(id)
+	}
+
+	// USB devices passed through to a running machine. A device that was
+	// unplugged keeps its stale entry until it is detached.
+	async attachedUsbDevices(id: string) {
+		const result = await execa('virsh', ['--connect', LIBVIRT_URI, 'dumpxml', this.domainName(id)], {
+			reject: false,
+			timeout: 10_000,
+		})
+		return result.exitCode === 0 ? parseUsbHostdevAddresses(result.stdout) : []
+	}
+
+	async attachUsbDevice(id: string, address: UsbAddress) {
+		await this.#changeUsbDevice('attach-device', id, address)
+	}
+
+	async detachUsbDevice(id: string, address: UsbAddress) {
+		await this.#changeUsbDevice('detach-device', id, address)
+	}
+
+	async #changeUsbDevice(command: 'attach-device' | 'detach-device', id: string, address: UsbAddress) {
+		const xmlPath = nodePath.join(this.runtimeDirectory(id), `usb-${address.bus}-${address.device}.xml`)
+		await fsp.writeFile(xmlPath, buildUsbHostdevXml(address), {encoding: 'utf8', mode: 0o600})
+		try {
+			await execa('virsh', ['--connect', LIBVIRT_URI, command, this.domainName(id), xmlPath, '--live'], {
+				timeout: MACHINE_SHORT_CONTROL_TIMEOUT_MS,
+			})
+		} finally {
+			await fse.remove(xmlPath)
+		}
 	}
 
 	async restart(id: string) {

@@ -493,6 +493,71 @@ describe('disk resize safety', () => {
 	})
 })
 
+describe('live USB passthrough', () => {
+	async function libvirtWithRuntime(id: string) {
+		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'umbrel-machine-runtime-'))
+		temporaryDirectories.push(root)
+		const previousRoot = process.env.UMBREL_MACHINES_RUNTIME_DIR
+		process.env.UMBREL_MACHINES_RUNTIME_DIR = root
+		const libvirt = new Libvirt({
+			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},
+		} as unknown as Umbreld)
+		if (previousRoot === undefined) delete process.env.UMBREL_MACHINES_RUNTIME_DIR
+		else process.env.UMBREL_MACHINES_RUNTIME_DIR = previousRoot
+		await fse.ensureDir(libvirt.runtimeDirectory(id))
+		return libvirt
+	}
+
+	test('hotplugs and unplugs a device by its current host address', async () => {
+		const libvirt = await libvirtWithRuntime('miner')
+		const documents: string[] = []
+		execaMock.mockImplementation(async (_command?: string, args?: string[]) => {
+			documents.push(await fsp.readFile(args![4], 'utf8'))
+			return {stdout: '', stderr: '', exitCode: 0}
+		})
+
+		await libvirt.attachUsbDevice('miner', {bus: 3, device: 7})
+		await libvirt.detachUsbDevice('miner', {bus: 3, device: 2})
+
+		expect(
+			execaMock.mock.calls.map(([command, args, options]) => [command, args?.slice(2, 4), args?.[5], options]),
+		).toEqual([
+			['virsh', ['attach-device', 'umbrel-machine-miner'], '--live', {timeout: MACHINE_SHORT_CONTROL_TIMEOUT_MS}],
+			['virsh', ['detach-device', 'umbrel-machine-miner'], '--live', {timeout: MACHINE_SHORT_CONTROL_TIMEOUT_MS}],
+		])
+		expect(documents).toEqual([
+			"<hostdev mode='subsystem' type='usb'><source><address bus='3' device='7'/></source></hostdev>",
+			"<hostdev mode='subsystem' type='usb'><source><address bus='3' device='2'/></source></hostdev>",
+		])
+		// The device XML is only needed for the duration of the command
+		await expect(fsp.readdir(libvirt.runtimeDirectory('miner'))).resolves.toEqual([])
+	})
+
+	test('cleans up the device XML when libvirt refuses the device', async () => {
+		const libvirt = await libvirtWithRuntime('miner')
+		execaMock.mockRejectedValueOnce(new Error('USB device 003:007 is in use by driver QEMU, domain other'))
+
+		await expect(libvirt.attachUsbDevice('miner', {bus: 3, device: 7})).rejects.toThrow('in use by driver QEMU')
+		await expect(fsp.readdir(libvirt.runtimeDirectory('miner'))).resolves.toEqual([])
+	})
+
+	test('reads attached devices from the live domain and none from a stopped one', async () => {
+		const libvirt = await libvirtWithRuntime('miner')
+		execaMock
+			.mockResolvedValueOnce({
+				stdout:
+					"<domain><devices><hostdev mode='subsystem' type='usb' managed='no'><source><address bus='3' device='2'/></source><alias name='hostdev0'/><address type='usb' bus='0' port='1'/></hostdev></devices></domain>",
+				stderr: '',
+				exitCode: 0,
+			})
+			.mockResolvedValueOnce({stdout: '', stderr: "error: failed to get domain 'umbrel-machine-miner'", exitCode: 1})
+
+		await expect(libvirt.attachedUsbDevices('miner')).resolves.toEqual([{bus: 3, device: 2}])
+		await expect(libvirt.attachedUsbDevices('miner')).resolves.toEqual([])
+		expect(execaMock.mock.calls[0][1]).toEqual(['--connect', 'qemu:///system', 'dumpxml', 'umbrel-machine-miner'])
+	})
+})
+
 describe('libvirt runtime cleanup', () => {
 	test('removes runtime data after confirming failed unmounts are already detached', async () => {
 		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'umbrel-machine-runtime-'))

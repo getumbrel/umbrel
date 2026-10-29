@@ -710,6 +710,51 @@ export async function createTestVm({
 		await $({env})`${vmScript} usb connect ${slot}`
 	}
 
+	// An FTDI USB serial adapter (0403:6001) on its own xHCI controller,
+	// plugged into the port matching its slot. Without a serial number each
+	// adapter reports a distinct one; give several the same to model identical
+	// devices that can only be told apart by port.
+	async function addUsbSerial({slot, serial}: {slot: number; serial?: string}) {
+		if (serial) {
+			await $({env})`${vmScript} usb-serial add ${slot} --serial ${serial}`
+		} else {
+			await $({env})`${vmScript} usb-serial add ${slot}`
+		}
+	}
+
+	async function removeUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial remove ${slot}`
+	}
+
+	async function disconnectUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial disconnect ${slot}`
+	}
+
+	async function connectUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial connect ${slot}`
+	}
+
+	// Replace the adapter in a slot with a QEMU USB keyboard (0627:0001) in the
+	// same port, or the keyboard with the adapter, as a device that reconnects as
+	// a different model once its firmware loads would
+	async function swapUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial swap ${slot}`
+	}
+
+	// A USB Ethernet adapter (0525:a4a2) on its own xHCI controller, plugged into
+	// the port matching its slot, on a network of its own with a DHCP server
+	async function addUsbNet({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-net add ${slot}`
+	}
+
+	async function disconnectUsbNet({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-net disconnect ${slot}`
+	}
+
+	async function connectUsbNet({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-net connect ${slot}`
+	}
+
 	async function disconnectNvme({slot}: {slot: number}) {
 		await $({env})`${vmScript} nvme disconnect ${slot}`
 	}
@@ -901,6 +946,14 @@ printf '\\n${authFailureMarker}\\n'
 		removeUsbStorage,
 		disconnectUsbStorage,
 		connectUsbStorage,
+		addUsbSerial,
+		removeUsbSerial,
+		disconnectUsbSerial,
+		connectUsbSerial,
+		swapUsbSerial,
+		addUsbNet,
+		disconnectUsbNet,
+		connectUsbNet,
 		reflash,
 		pressPowerButton,
 		ssh,

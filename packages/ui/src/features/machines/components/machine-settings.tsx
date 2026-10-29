@@ -19,6 +19,13 @@ import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 import {Input} from '@/components/ui/input'
 import {Spinner} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
+import {
+	MachineUsbDevices,
+	supportsUsbPassthrough,
+	usbDeviceIdentity,
+	usbDeviceKey,
+	type UsbDeviceIdentity,
+} from '@/features/machines/components/machine-usb-devices'
 import {OsIcon} from '@/features/machines/components/os-icon'
 import {SpecRow, Stepper} from '@/features/machines/components/spec-form'
 import {
@@ -69,6 +76,7 @@ export default function MachineSettings() {
 	const [firmwareChoice, setFirmwareChoice] = useState<'uefi' | 'bios' | null>(null)
 	const [diskBusChoice, setDiskBusChoice] = useState<'virtio' | 'sata' | null>(null)
 	const [forwardsChoice, setForwardsChoice] = useState<Machine['portForwards'] | null>(null)
+	const [usbChoice, setUsbChoice] = useState<UsbDeviceIdentity[] | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
 	const [shutdownDialogOpen, setShutdownDialogOpen] = useState(false)
 
@@ -91,6 +99,10 @@ export default function MachineSettings() {
 	const firmware = firmwareChoice ?? machine.firmware
 	const diskBus = diskBusChoice ?? machine.diskBus ?? 'virtio'
 	const portForwards = forwardsChoice ?? machine.portForwards
+	const usbDevices = usbChoice ?? machine.usbDevices.map(usbDeviceIdentity)
+	const usbKeys = (devices: UsbDeviceIdentity[]) => devices.map(usbDeviceKey).sort().join('\n\n')
+	// USB devices are hotplugged, so changing them never needs a shutdown
+	const usbChanged = usbKeys(usbDevices) !== usbKeys(machine.usbDevices)
 
 	// Never below the machine's current allocation so its value stays selectable
 	const maxCores = Math.max(1, threads || DEFAULT_CORES, machine.cores)
@@ -143,7 +155,8 @@ export default function MachineSettings() {
 		memoryGb !== machine.memoryGb ||
 		diskValue !== machine.diskSizeGb ||
 		(machine.osId === 'custom' && (firmware !== machine.firmware || diskBus !== (machine.diskBus ?? 'virtio'))) ||
-		JSON.stringify(portForwards) !== JSON.stringify(machine.portForwards)
+		JSON.stringify(portForwards) !== JSON.stringify(machine.portForwards) ||
+		usbChanged
 
 	const canSave = dirty && !disabled && !nameEmpty && !nameTaken && diskValid && forwardsValid
 
@@ -171,6 +184,7 @@ export default function MachineSettings() {
 				diskSizeGb: Math.round(diskValue),
 				...(machine.osId === 'custom' ? {firmware, diskBus} : {}),
 				portForwards,
+				...(usbChanged && {usbDevices}),
 			})
 			toast.success(t('machines.settings-saved'), {area: 'machines'})
 			setIsSaving(false)
@@ -519,6 +533,15 @@ export default function MachineSettings() {
 								<p className='text-11 leading-relaxed -tracking-2 text-white/30'>{t('machines.windows-rdp-forward')}</p>
 							)}
 						</div>
+						{supportsUsbPassthrough(machine) && (
+							<MachineUsbDevices
+								machine={machine}
+								machines={machines}
+								selected={usbDevices}
+								onChange={setUsbChoice}
+								disabled={disabled}
+							/>
+						)}
 					</div>
 				</div>
 			</div>

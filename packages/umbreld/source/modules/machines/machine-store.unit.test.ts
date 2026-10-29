@@ -110,6 +110,57 @@ describe('MachineStore', () => {
 		expect(restored.portForwards).toEqual([{id: 'ssh', protocol: 'tcp', hostPort: 40_022, guestPort: 22}])
 	})
 
+	test('round trips USB passthrough assignments and leaves them out until there are some', async () => {
+		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-store-'))
+		roots.push(root)
+		const store = new MachineStore(root)
+		await store.start()
+		const machine = definition()
+		await store.write(machine)
+		expect(await fsp.readFile(store.definitionPath(machine.id), 'utf8')).not.toContain('usbDevices')
+
+		machine.usbDevices = [
+			{vendorId: '10c4', productId: 'ea60', serial: 'A1B2C3', port: 'pci0000:00/0000:00:14.0/2', name: 'CP2102'},
+			{vendorId: '1a86', productId: '7523', port: 'pci0000:00/0000:00:14.0/1.4'},
+			// A Coral NPU, which reconnects as a Google device once its firmware loads
+			{
+				vendorId: '1a6e',
+				productId: '089a',
+				port: 'pci0000:00/0000:00:14.0/3',
+				aliases: [{vendorId: '18d1', productId: '9302'}],
+			},
+			// A SATA enclosure, known by the disk inside it
+			{
+				vendorId: '152d',
+				productId: '0578',
+				serial: '0123456789ABCDEF',
+				port: 'pci0000:00/0000:00:14.0/4',
+				diskSerials: ['Samsung_SSD_870_EVO_1TB_S6PUNX0R123456'],
+			},
+		]
+		await store.write(machine)
+
+		await expect(store.read(machine.id)).resolves.toEqual(machine)
+	})
+
+	test('rejects malformed USB device identities', async () => {
+		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-store-'))
+		roots.push(root)
+		const store = new MachineStore(root)
+		await store.start()
+		const machine = definition()
+		await fse.ensureDir(store.directory(machine.id))
+		await fsp.writeFile(
+			store.definitionPath(machine.id),
+			yaml.dump({
+				...machine,
+				usbDevices: [{vendorId: 'not-hex', productId: 'ea60', port: 'pci0000:00/0000:00:14.0/2'}],
+			}),
+		)
+
+		await expect(store.read(machine.id)).rejects.toThrow()
+	})
+
 	test('rejects external disk paths that escape Files-managed storage', async () => {
 		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-store-'))
 		roots.push(root)
