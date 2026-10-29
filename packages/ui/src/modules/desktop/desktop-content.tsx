@@ -178,7 +178,8 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 						))}
 					/>
 				</div>
-				<Search onClick={onSearchClick} />
+				<Search onClick={onSearchClick} visible={variant === 'default'} />
+				{/* The floating islands' row mirrors this gap (SEARCH_DOCK_GAP in floating-island/lane.ts) */}
 				<div className='pt-6' />
 				<DockSpacer />
 			</motion.div>
