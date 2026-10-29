@@ -10,8 +10,10 @@ android/app/build/
 *.apk
 
 # Windows
-windows/bin/
-windows/obj/
+windows/**/bin/
+windows/**/obj/
+windows/**/TestResults/
+windows/dist/
 
 # macOS / Xcode
 *.xcuserstate

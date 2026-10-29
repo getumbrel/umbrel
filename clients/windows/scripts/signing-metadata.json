@@ -1,0 +1,16 @@
+{
+  "Endpoint": "https://eus.codesigning.azure.net/",
+  "CodeSigningAccountName": "umbrelsigning",
+  "CertificateProfileName": "umbrelpublic",
+  "ExcludeCredentials": [
+    "EnvironmentCredential",
+    "WorkloadIdentityCredential",
+    "ManagedIdentityCredential",
+    "SharedTokenCacheCredential",
+    "VisualStudioCredential",
+    "VisualStudioCodeCredential",
+    "AzurePowerShellCredential",
+    "AzureDeveloperCliCredential",
+    "InteractiveBrowserCredential"
+  ]
+}

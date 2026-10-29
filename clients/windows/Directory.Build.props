@@ -1,0 +1,16 @@
+<Project>
+  <!--
+    Shared build settings for the Windows client. EnableWindowsTargeting lets the
+    class library, WPF app, and tests restore and compile on macOS and Linux CI
+    hosts; only the app needs Windows to run.
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+</Project>
