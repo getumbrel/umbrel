@@ -2958,6 +2958,53 @@ test('durably registers backup resources that are not Photos-enrichment formats'
 	await expect(rebuilt.photosConfirmedBackupResources('owner', sourceId, [resourceKey])).resolves.toStrictEqual([])
 })
 
+test('registers non-thumbnail backup resources when a rescan lands before their hash attaches', async () => {
+	const hash = Buffer.alloc(32, 0x43)
+	const {index, homeDirectory} = await fixture(undefined, {enrichmentRuntime: {hashFile: async () => hash}})
+	await index.initializePhotos('owner')
+	const sourceId = 'iphone:sidecar-rescan'
+	await index.photosUpsertBackupSource('owner', sourceId, 'Sidecars', 123)
+	const resourceKey = 'e'.repeat(64)
+	const systemPath = nodePath.join(homeDirectory, 'Photos', 'Sidecars', resourceKey.slice(0, 2), `${resourceKey}.aae`)
+	await fse.outputFile(systemPath, 'sidecar bytes')
+
+	// Registration promotes the sidecar to a content identity, then attaches the
+	// upload's hash. Rescan the unchanged file in between, after the attach has
+	// read the promoted entry, as a watcher event or root scan can.
+	const read = FileIndexReaderPool.prototype.read
+	let rescanned = false
+	const spy = vi.spyOn(FileIndexReaderPool.prototype, 'read').mockImplementation(async function (
+		this: FileIndexReaderPool,
+		...args: Parameters<typeof read>
+	) {
+		const [method, readArgs] = args
+		if (
+			!rescanned &&
+			method === 'sql' &&
+			(readArgs[0] as SqlRead).sql.includes('JOIN contents ON contents.id = entries.content_id')
+		) {
+			rescanned = true
+			await index.reconcilePath(systemPath)
+		}
+		return read.apply(this, args)
+	})
+	try {
+		await expect(
+			index.photosRegisterBackupResource(
+				'owner',
+				sourceId,
+				resourceKey,
+				systemPath,
+				hash,
+				await contentRevision(systemPath),
+			),
+		).resolves.toMatchObject({resourceKey})
+	} finally {
+		spy.mockRestore()
+	}
+	expect(rescanned).toBe(true)
+})
+
 test('attributes iPhone resources by durable hash after their files move', async () => {
 	const hash = Buffer.alloc(32, 0x31)
 	const enrichmentRuntime = {

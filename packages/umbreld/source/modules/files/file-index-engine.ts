@@ -1592,7 +1592,10 @@ export default class FileIndexEngine {
 						modified_ns = excluded.modified_ns,
 						ctime_ns = excluded.ctime_ns,
 						thumbnail_identity_kind = CASE
-							WHEN entries.thumbnail_identity_kind = 'content' AND entries.content_id IS NOT NULL
+							-- Photos backups promote files without thumbnails to a content identity
+							-- before attaching their hash. A rescan of the same revision in between
+							-- must not undo that, so only a changed file drops the promotion.
+							WHEN entries.thumbnail_identity_kind = 'content'
 								AND excluded.type = 'file' AND entries.inode IS excluded.inode
 								AND entries.size IS excluded.size AND entries.modified_ns IS excluded.modified_ns
 							THEN 'content' ELSE excluded.thumbnail_identity_kind END,
