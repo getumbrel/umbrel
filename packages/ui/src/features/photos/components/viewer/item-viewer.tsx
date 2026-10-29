@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {Album, ChevronLeft, ChevronRight, Download, Heart, Info, RotateCcw, Trash2, X} from 'lucide-react'
+import {Album, Download, Heart, Info, RotateCcw, Trash2, X} from 'lucide-react'
 import {useReducedMotion} from 'motion/react'
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -24,7 +24,7 @@ import {usePhotosView} from '@/features/photos/components/view-context'
 import {Filmstrip, FilmstripPlaceholder} from '@/features/photos/components/viewer/filmstrip'
 import {InfoPanel} from '@/features/photos/components/viewer/info-panel'
 import {InfoSheet, useInfoSheet} from '@/features/photos/components/viewer/info-sheet'
-import {LightboxButton, lightboxButtonClass} from '@/features/photos/components/viewer/lightbox-button'
+import {LightboxButton, lightboxButtonClass, StageArrow} from '@/features/photos/components/viewer/lightbox-button'
 import {LivePhoto} from '@/features/photos/components/viewer/live-photo'
 import {useNeighborPrefetch} from '@/features/photos/components/viewer/neighbor-prefetch'
 import {usePictureFlight, type FlightStart} from '@/features/photos/components/viewer/picture-flight'
@@ -925,34 +925,5 @@ function PeekPane({
 				<img src={picture.url} alt='' draggable={false} className='absolute inset-0 h-full w-full object-cover' />
 			</div>
 		</div>
-	)
-}
-
-// Edge arrows: present for the pointer, quiet until the stage is hovered
-function StageArrow({
-	side,
-	label,
-	disabled,
-	onClick,
-}: {
-	side: 'left' | 'right'
-	label: string
-	disabled: boolean
-	onClick: () => void
-}) {
-	const Icon = side === 'left' ? ChevronLeft : ChevronRight
-	return (
-		<button
-			type='button'
-			aria-label={label}
-			disabled={disabled}
-			onClick={onClick}
-			className={cn(
-				'absolute top-1/2 z-[5] flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white/80 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:text-white focus-visible:opacity-100 disabled:!opacity-0',
-				side === 'left' ? 'left-3' : 'right-3',
-			)}
-		>
-			<Icon className='size-5' />
-		</button>
 	)
 }

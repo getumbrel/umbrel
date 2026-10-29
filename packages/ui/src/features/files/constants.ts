@@ -1,5 +1,3 @@
-import {lazy} from 'react'
-
 import {
 	AiThumbnail,
 	AudioThumbnail,
@@ -17,13 +15,7 @@ import {
 	VideoThumbnail,
 	ZipThumbnail,
 } from '@/features/files/assets/file-items-thumbnails'
-import {AudioViewer} from '@/features/files/components/file-viewer/audio-viewer'
-
-// lazy load viewers, except audio viewer since it's a floating ui component
-const ImageViewer = lazy(() => import('@/features/files/components/file-viewer/image-viewer'))
-const PdfViewer = lazy(() => import('@/features/files/components/file-viewer/pdf-viewer'))
-const VideoViewer = lazy(() => import('@/features/files/components/file-viewer/video-viewer'))
-const TextViewer = lazy(() => import('@/features/files/components/file-viewer/text-viewer'))
+import {viewers} from '@/features/files/components/file-viewer/viewers'
 
 export const BASE_ROUTE_PATH = '/files' as const
 export const HOME_PATH = '/Home' as const
@@ -150,7 +142,7 @@ export const FILE_TYPE_MAP = {
 
 	// Archives
 	'application/vnd.rar': {nameTKey: 'files-type.rar', thumbnail: ZipThumbnail, viewer: null},
-	'application/zip': {nameTKey: 'files-type.zip', thumbnail: ZipThumbnail, viewer: null},
+	'application/zip': {nameTKey: 'files-type.zip', thumbnail: ZipThumbnail, viewer: viewers.archive},
 	'application/x-7z-compressed': {nameTKey: 'files-type.7z', thumbnail: ZipThumbnail, viewer: null},
 	'application/x-tar': {nameTKey: 'files-type.tar', thumbnail: ZipThumbnail, viewer: null},
 	'application/x-gzip': {nameTKey: 'files-type.gzip', thumbnail: ZipThumbnail, viewer: null},
@@ -164,98 +156,153 @@ export const FILE_TYPE_MAP = {
 	'application/x-compressed': {nameTKey: 'files-type.compressed', thumbnail: ZipThumbnail, viewer: null},
 
 	// Documents
-	'application/pdf': {nameTKey: 'files-type.pdf', thumbnail: PdfThumbnail, viewer: PdfViewer},
-	'text/csv': {nameTKey: 'files-type.csv', thumbnail: CsvThumbnail, viewer: null},
+	'application/pdf': {nameTKey: 'files-type.pdf', thumbnail: PdfThumbnail, viewer: viewers.pdf},
+	'text/csv': {nameTKey: 'files-type.csv', thumbnail: CsvThumbnail, viewer: viewers.sheet},
+	'text/tab-separated-values': {nameTKey: 'files-type.tsv', thumbnail: CsvThumbnail, viewer: viewers.sheet},
 
 	// Text / Code (editable via TextViewer)
-	'text/plain': {nameTKey: 'files-type.txt', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/yaml': {nameTKey: 'files-type.yaml', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'application/json': {nameTKey: 'files-type.json', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/javascript': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'application/javascript': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/css': {nameTKey: 'files-type.css', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/html': {nameTKey: 'files-type.html', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/markdown': {nameTKey: 'files-type.markdown', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/x-python': {nameTKey: 'files-type.python', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'application/x-sh': {nameTKey: 'files-type.shell', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/x-shellscript': {nameTKey: 'files-type.shell', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/xml': {nameTKey: 'files-type.xml', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'application/xml': {nameTKey: 'files-type.xml', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'application/toml': {nameTKey: 'files-type.toml', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'text/x-toml': {nameTKey: 'files-type.toml', thumbnail: TxtThumbnail, viewer: TextViewer},
-	'application/x-subrip': {nameTKey: 'files-type.srt', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/plain': {nameTKey: 'files-type.txt', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/yaml': {nameTKey: 'files-type.yaml', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/json': {nameTKey: 'files-type.json', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/javascript': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/javascript': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/node': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/jsx': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/css': {nameTKey: 'files-type.css', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/html': {nameTKey: 'files-type.html', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/markdown': {nameTKey: 'files-type.markdown', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/x-python': {nameTKey: 'files-type.python', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/x-sh': {nameTKey: 'files-type.shell', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/x-shellscript': {nameTKey: 'files-type.shell', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/xml': {nameTKey: 'files-type.xml', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/xml': {nameTKey: 'files-type.xml', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/toml': {nameTKey: 'files-type.toml', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/x-toml': {nameTKey: 'files-type.toml', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/x-subrip': {nameTKey: 'files-type.srt', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/vtt': {nameTKey: 'files-type.vtt', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/x-sql': {nameTKey: 'files-type.sql', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/x-c': {nameTKey: 'files-type.source-code', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'text/x-java-source': {nameTKey: 'files-type.source-code', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/x-httpd-php': {nameTKey: 'files-type.source-code', thumbnail: TxtThumbnail, viewer: viewers.text},
+	'application/x-perl': {nameTKey: 'files-type.source-code', thumbnail: TxtThumbnail, viewer: viewers.text},
+	// Other text types open too, without a name of their own (see getFileViewer)
 
 	// Ebooks
 	'application/epub+zip': {nameTKey: 'files-type.epub', thumbnail: EbookThumbnail, viewer: null},
 	'application/x-mobipocket-ebook': {nameTKey: 'files-type.mobi', thumbnail: EbookThumbnail, viewer: null},
 
-	// Microsoft Office
+	// Microsoft Office (the binary pre-2007 formats have no viewer)
 	'application/msword': {nameTKey: 'files-type.word', thumbnail: DocxThumbnail, viewer: null},
 	'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
 		nameTKey: 'files-type.word',
 		thumbnail: DocxThumbnail,
-		viewer: null,
+		viewer: viewers.document,
+	},
+	'application/vnd.ms-word.document.macroenabled.12': {
+		nameTKey: 'files-type.word',
+		thumbnail: DocxThumbnail,
+		viewer: viewers.document,
+	},
+	'application/vnd.openxmlformats-officedocument.wordprocessingml.template': {
+		nameTKey: 'files-type.word',
+		thumbnail: DocxThumbnail,
+		viewer: viewers.document,
 	},
 	'application/vnd.ms-excel': {nameTKey: 'files-type.excel', thumbnail: CsvThumbnail, viewer: null},
 	'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
 		nameTKey: 'files-type.excel',
 		thumbnail: CsvThumbnail,
-		viewer: null,
+		viewer: viewers.sheet,
+	},
+	'application/vnd.ms-excel.sheet.macroenabled.12': {
+		nameTKey: 'files-type.excel',
+		thumbnail: CsvThumbnail,
+		viewer: viewers.sheet,
+	},
+	'application/vnd.openxmlformats-officedocument.spreadsheetml.template': {
+		nameTKey: 'files-type.excel',
+		thumbnail: CsvThumbnail,
+		viewer: viewers.sheet,
 	},
 	'application/vnd.ms-powerpoint': {nameTKey: 'files-type.powerpoint', thumbnail: PptThumbnail, viewer: null},
 	'application/vnd.openxmlformats-officedocument.presentationml.presentation': {
 		nameTKey: 'files-type.powerpoint',
 		thumbnail: PptThumbnail,
-		viewer: null,
+		viewer: viewers.slides,
+	},
+	'application/vnd.ms-powerpoint.presentation.macroenabled.12': {
+		nameTKey: 'files-type.powerpoint',
+		thumbnail: PptThumbnail,
+		viewer: viewers.slides,
+	},
+	'application/vnd.openxmlformats-officedocument.presentationml.slideshow': {
+		nameTKey: 'files-type.powerpoint',
+		thumbnail: PptThumbnail,
+		viewer: viewers.slides,
+	},
+	'application/vnd.openxmlformats-officedocument.presentationml.template': {
+		nameTKey: 'files-type.powerpoint',
+		thumbnail: PptThumbnail,
+		viewer: viewers.slides,
 	},
 
-	// Apple iWork
-	'application/vnd.apple.numbers': {nameTKey: 'files-type.numbers', thumbnail: CsvThumbnail, viewer: null},
-	'application/vnd.apple.pages': {nameTKey: 'files-type.pages', thumbnail: DocxThumbnail, viewer: null},
-	'application/vnd.apple.keynote': {nameTKey: 'files-type.keynote', thumbnail: PptThumbnail, viewer: null},
+	// Apple iWork: Apple's own preview of the first page
+	'application/vnd.apple.numbers': {nameTKey: 'files-type.numbers', thumbnail: CsvThumbnail, viewer: viewers.iwork},
+	'application/vnd.apple.pages': {nameTKey: 'files-type.pages', thumbnail: DocxThumbnail, viewer: viewers.iwork},
+	'application/vnd.apple.keynote': {nameTKey: 'files-type.keynote', thumbnail: PptThumbnail, viewer: viewers.iwork},
 
 	// Images
-	'image/svg+xml': {nameTKey: 'files-type.svg', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/avif': {nameTKey: 'files-type.avif', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/webp': {nameTKey: 'files-type.webp', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/heic': {nameTKey: 'files-type.heic', thumbnail: ImageThumbnail, viewer: null},
-	'image/heif': {nameTKey: 'files-type.heif', thumbnail: ImageThumbnail, viewer: null},
-	'image/jpeg': {nameTKey: 'files-type.jpeg', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/png': {nameTKey: 'files-type.png', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/gif': {nameTKey: 'files-type.gif', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/bmp': {nameTKey: 'files-type.bmp', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/vnd.microsoft.icon': {nameTKey: 'files-type.ico', thumbnail: ImageThumbnail, viewer: ImageViewer},
-	'image/tiff': {nameTKey: 'files-type.tiff', thumbnail: ImageThumbnail, viewer: null},
+	'image/svg+xml': {nameTKey: 'files-type.svg', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/avif': {nameTKey: 'files-type.avif', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/webp': {nameTKey: 'files-type.webp', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/heic': {nameTKey: 'files-type.heic', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/heif': {nameTKey: 'files-type.heif', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/jpeg': {nameTKey: 'files-type.jpeg', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/png': {nameTKey: 'files-type.png', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/gif': {nameTKey: 'files-type.gif', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/bmp': {nameTKey: 'files-type.bmp', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/vnd.microsoft.icon': {nameTKey: 'files-type.ico', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/tiff': {nameTKey: 'files-type.tiff', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-adobe-dng': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-canon-cr2': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-canon-cr3': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-nikon-nef': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-sony-arw': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-fuji-raf': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-olympus-orf': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
+	'image/x-panasonic-rw2': {nameTKey: 'files-type.raw', thumbnail: ImageThumbnail, viewer: viewers.image},
 
 	// Audio
-	'audio/mpeg': {nameTKey: 'files-type.mp3', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/mp4': {nameTKey: 'files-type.mp4-audio', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/wav': {nameTKey: 'files-type.wav', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/aac': {nameTKey: 'files-type.aac', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/aacp': {nameTKey: 'files-type.aac', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/webm': {nameTKey: 'files-type.webm-audio', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/ogg': {nameTKey: 'files-type.ogg', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/x-flac': {nameTKey: 'files-type.flac', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/x-m4a': {nameTKey: 'files-type.m4a', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/x-wav': {nameTKey: 'files-type.wav', thumbnail: AudioThumbnail, viewer: AudioViewer},
-	'audio/x-caf': {nameTKey: 'files-type.caf', thumbnail: AudioThumbnail, viewer: AudioViewer},
+	'audio/mpeg': {nameTKey: 'files-type.mp3', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/mp4': {nameTKey: 'files-type.mp4-audio', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/wav': {nameTKey: 'files-type.wav', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/wave': {nameTKey: 'files-type.wav', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/aac': {nameTKey: 'files-type.aac', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/aacp': {nameTKey: 'files-type.aac', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/x-aac': {nameTKey: 'files-type.aac', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/webm': {nameTKey: 'files-type.webm-audio', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/ogg': {nameTKey: 'files-type.ogg', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/flac': {nameTKey: 'files-type.flac', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/x-flac': {nameTKey: 'files-type.flac', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/x-m4a': {nameTKey: 'files-type.m4a', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/x-wav': {nameTKey: 'files-type.wav', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/x-caf': {nameTKey: 'files-type.caf', thumbnail: AudioThumbnail, viewer: viewers.audio},
+	'audio/x-matroska': {nameTKey: 'files-type.mka', thumbnail: AudioThumbnail, viewer: viewers.audio},
 	'audio/x-aiff': {nameTKey: 'files-type.aiff', thumbnail: AudioThumbnail, viewer: null},
 	'audio/basic': {nameTKey: 'files-type.au', thumbnail: AudioThumbnail, viewer: null},
 	'audio/midi': {nameTKey: 'files-type.midi', thumbnail: AudioThumbnail, viewer: null},
 	'audio/x-midi': {nameTKey: 'files-type.midi', thumbnail: AudioThumbnail, viewer: null},
-	'audio/flac': {nameTKey: 'files-type.flac', thumbnail: AudioThumbnail, viewer: null},
-	'audio/x-matroska': {nameTKey: 'files-type.mka', thumbnail: AudioThumbnail, viewer: null},
 	'audio/x-mpegurl': {nameTKey: 'files-type.m3u', thumbnail: AudioThumbnail, viewer: null},
 	'audio/x-ms-wma': {nameTKey: 'files-type.wma', thumbnail: AudioThumbnail, viewer: null},
 
 	// Video
-	'video/mp4': {nameTKey: 'files-type.mp4', thumbnail: VideoThumbnail, viewer: VideoViewer},
-	'video/quicktime': {nameTKey: 'files-type.quicktime', thumbnail: VideoThumbnail, viewer: VideoViewer},
-	'video/webm': {nameTKey: 'files-type.webm', thumbnail: VideoThumbnail, viewer: VideoViewer},
-	'video/ogg': {nameTKey: 'files-type.ogv', thumbnail: VideoThumbnail, viewer: VideoViewer},
-	'video/mpeg': {nameTKey: 'files-type.mpeg', thumbnail: VideoThumbnail, viewer: VideoViewer},
-	'video/x-m4v': {nameTKey: 'files-type.m4v', thumbnail: VideoThumbnail, viewer: VideoViewer},
-	'video/x-matroska': {nameTKey: 'files-type.mkv', thumbnail: VideoThumbnail, viewer: null},
+	'video/mp4': {nameTKey: 'files-type.mp4', thumbnail: VideoThumbnail, viewer: viewers.video},
+	'video/quicktime': {nameTKey: 'files-type.quicktime', thumbnail: VideoThumbnail, viewer: viewers.video},
+	'video/webm': {nameTKey: 'files-type.webm', thumbnail: VideoThumbnail, viewer: viewers.video},
+	'video/ogg': {nameTKey: 'files-type.ogv', thumbnail: VideoThumbnail, viewer: viewers.video},
+	'video/mpeg': {nameTKey: 'files-type.mpeg', thumbnail: VideoThumbnail, viewer: viewers.video},
+	'video/x-m4v': {nameTKey: 'files-type.m4v', thumbnail: VideoThumbnail, viewer: viewers.video},
+	'video/x-matroska': {nameTKey: 'files-type.mkv', thumbnail: VideoThumbnail, viewer: viewers.video},
 	'video/3gpp': {nameTKey: 'files-type.3gp', thumbnail: VideoThumbnail, viewer: null},
 	'video/3gpp2': {nameTKey: 'files-type.3gp2', thumbnail: VideoThumbnail, viewer: null},
 	'video/x-flv': {nameTKey: 'files-type.flv', thumbnail: VideoThumbnail, viewer: null},

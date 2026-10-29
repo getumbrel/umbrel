@@ -43,38 +43,43 @@ export const useNavigate = () => {
 	// Map UI → virtual for internal consumers
 	const currentPath = uiToVirtualPath(uiPath, config.pathAliases)
 	const setViewerItem = useFilesStore((state) => state.setViewerItem)
+	const leaveViewer = useFilesStore((state) => state.leaveViewer)
 	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
 
-	const navigateToDirectory = (path: string) => {
-		// clear any previous viewer item
-		setViewerItem(null)
+	// A viewer with unsaved changes asks first, and the way there carries on
+	// once they're saved or discarded
+	const navigateToDirectory = (path: string) =>
+		leaveViewer(() => {
+			// clear any previous viewer item
+			setViewerItem(null)
 
-		// Map virtual → UI for outbound navigation
-		const outUi = virtualToUiPath(path, config.pathAliases)
+			// Map virtual → UI for outbound navigation
+			const outUi = virtualToUiPath(path, config.pathAliases)
 
-		if (config.onNavigate) {
-			config.onNavigate(outUi)
-		} else {
-			navigate(`${BASE_ROUTE_PATH}${encodePathSegments(outUi)}`)
-		}
-	}
+			if (config.onNavigate) {
+				config.onNavigate(outUi)
+			} else {
+				navigate(`${BASE_ROUTE_PATH}${encodePathSegments(outUi)}`)
+			}
+		})
 
 	// Show a file where it lives: its parent directory with the file selected,
 	// without opening the viewer (e.g. "Show in Files" from Photos)
-	const revealItem = (item: FileSystemItem) => {
-		const lastSlash = item.path.lastIndexOf('/')
-		const parentDirectory = lastSlash === 0 ? '' : item.path.slice(0, lastSlash)
+	const revealItem = (item: FileSystemItem) =>
+		leaveViewer(() => {
+			const lastSlash = item.path.lastIndexOf('/')
+			const parentDirectory = lastSlash === 0 ? '' : item.path.slice(0, lastSlash)
 
-		navigateToDirectory(parentDirectory)
+			navigateToDirectory(parentDirectory)
 
-		// TODO: This is a hack since we set selected items to []
-		// on path change in packages/ui/src/features/files/index.tsx
-		// so we wait 500ms for the path change to complete => setSelectedItems([])
-		// to execute, and then set the selected item
-		setTimeout(() => {
-			setSelectedItems([item])
-		}, 500)
-	}
+			// TODO: This is a hack since we set selected items to []
+			// on path change in packages/ui/src/features/files/index.tsx
+			// so we wait 500ms for the path change to complete => setSelectedItems([])
+			// to execute, and then set the selected item
+			setTimeout(() => {
+				setSelectedItems([item])
+			}, 500)
+		})
 
 	const navigateToItem = (item: FileSystemItem) => {
 		if (item.isDisconnected && isDirectoryANetworkShare(item.path)) return
@@ -84,14 +89,16 @@ export const useNavigate = () => {
 		}
 
 		// for files we navigate to their parent directory with the file selected
-		// and trigger the viewer if a viewer is available
-		revealItem(item)
+		// and trigger the viewer if a viewer is available (asking once for both)
+		leaveViewer(() => {
+			revealItem(item)
 
-		if (getFileViewer(item)) {
-			// open viewer via global store (the Files feature will render the viewer
-			// component once it sees `viewerItem` being set)
-			setViewerItem(item)
-		}
+			if (getFileViewer(item)) {
+				// open viewer via global store (the Files feature will render the viewer
+				// component once it sees `viewerItem` being set)
+				setViewerItem(item)
+			}
+		})
 	}
 
 	// The current account's home and trash roots (owner: /Home and /Trash,

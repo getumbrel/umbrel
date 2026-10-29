@@ -1,3 +1,4 @@
+import {ChevronLeft, ChevronRight} from 'lucide-react'
 import type {ComponentType} from 'react'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
@@ -34,5 +35,34 @@ export function LightboxButton({
 				<Icon className='size-5' />
 			</button>
 		</DarkTooltip>
+	)
+}
+
+// Edge arrows: present for the pointer, quiet until the stage is hovered
+export function StageArrow({
+	side,
+	label,
+	disabled,
+	onClick,
+}: {
+	side: 'left' | 'right'
+	label: string
+	disabled: boolean
+	onClick: () => void
+}) {
+	const Icon = side === 'left' ? ChevronLeft : ChevronRight
+	return (
+		<button
+			type='button'
+			aria-label={label}
+			disabled={disabled}
+			onClick={onClick}
+			className={cn(
+				'absolute top-1/2 z-[5] flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white/80 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:text-white focus-visible:opacity-100 disabled:!opacity-0',
+				side === 'left' ? 'left-3' : 'right-3',
+			)}
+		>
+			<Icon className='size-5' />
+		</button>
 	)
 }

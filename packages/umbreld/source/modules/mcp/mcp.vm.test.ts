@@ -156,7 +156,7 @@ describe('MCP', () => {
 			const contents = Buffer.from([0, 1, 2, 3])
 			const upload = await uploadThroughMcp(path, contents)
 			expect(upload.status).toBe(200)
-			await expect(upload.json()).resolves.toStrictEqual({path})
+			await expect(upload.json()).resolves.toStrictEqual({path, revision: expect.stringMatching(/^\d+-4-\d+-\d+$/)})
 
 			const download = await downloadThroughMcp(path)
 			expect(download.status).toBe(200)

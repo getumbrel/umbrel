@@ -339,8 +339,8 @@ export function useFilesOperations() {
 		},
 	}).mutateAsync
 
-	const extractSelectedItems = async () => {
-		const items = [...selectedItems]
+	// The listing's selection, or the archive open in the viewer
+	const extractItems = async (items: FileSystemItem[]) => {
 		if (!(await isCommandAllowed({items, itemOperation: 'unarchive'}))) return
 		const paths = items.map((item) => item.path)
 		addPendingPaths(paths, 'processing')
@@ -351,6 +351,7 @@ export function useFilesOperations() {
 		}
 		setSelectedItems([])
 	}
+	const extractSelectedItems = () => extractItems([...selectedItems])
 
 	// Archive
 	const archive = trpcReact.files.archive.useMutation({
@@ -607,6 +608,7 @@ export function useFilesOperations() {
 		moveSelectedItems,
 		pasteItemsFromClipboard,
 		// Compression operations
+		extractItems,
 		extractSelectedItems,
 		archiveSelectedItems,
 		// Trash operations

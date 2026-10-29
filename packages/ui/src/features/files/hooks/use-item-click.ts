@@ -5,6 +5,7 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {FileSystemItem} from '@/features/files/types'
+import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {isDirectoryANetworkShare} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 
@@ -111,13 +112,16 @@ export const useItemClick = () => {
 			return setViewerItem(item)
 		}
 
-		// if the item is an archive file, extract it
-		if (SUPPORTED_ARCHIVE_EXTRACT_EXTENSIONS.some((ext) => item.name.toLowerCase().endsWith(ext))) {
+		// An archive with no viewer is extracted; one Files can show (a ZIP) opens, with Uncompress there
+		if (
+			!getFileViewer(item) &&
+			SUPPORTED_ARCHIVE_EXTRACT_EXTENSIONS.some((ext) => item.name.toLowerCase().endsWith(ext))
+		) {
 			return extractSelectedItems()
 		}
 
 		// else set the item as the viewer item
-		// the viewer will either render it, or show a download dialog if it's not supported
+		// the viewer will either render it, or say it can't and offer the download
 		setViewerItem(item)
 	}
 

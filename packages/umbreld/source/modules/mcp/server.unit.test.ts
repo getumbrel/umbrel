@@ -264,7 +264,10 @@ test('uploads are contained to the directory they write into', async () => {
 		const allowed = await upload('path=/Home/photos/holiday.jpg&collision=keep-both')
 		expect(allowed.status).toBe(200)
 		expect(assertFileWriteAccess).toHaveBeenCalledWith('/Home/photos/holiday.jpg')
-		await expect(allowed.json()).resolves.toStrictEqual({path: '/Home/photos/holiday.jpg'})
+		await expect(allowed.json()).resolves.toStrictEqual({
+			path: '/Home/photos/holiday.jpg',
+			revision: expect.stringMatching(/^\d+-8-\d+-\d+$/),
+		})
 		await expect(readFile(nodePath.join(uploadRoot, 'Home/photos/holiday.jpg'), 'utf8')).resolves.toBe('contents')
 
 		// MCP never exposes permanent replacement, even though the shared Files API

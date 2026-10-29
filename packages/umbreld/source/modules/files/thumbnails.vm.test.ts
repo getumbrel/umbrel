@@ -204,6 +204,24 @@ describe('content-addressed thumbnail index', () => {
 		expect(dimensions).toBe('288x192')
 	})
 
+	test('makes and serves the larger rendition a viewer asks for', async () => {
+		const path = `${suiteRoot}/formats/viewer.tiff`
+		const encoded = await umbreld.vm.sshAsRoot('convert -size 2400x1600 xc:red -compress lzw tiff:- | base64 -w 0')
+		await upload(path, Buffer.from(encoded, 'base64'))
+
+		const url = await umbreld.client.files.getThumbnail.mutate({path, variant: 'preview-1280-webp-v2'})
+		const [, key] = /^content-preview-1280-webp-v2-([a-f0-9]{64})\.webp$/.exec(
+			nodePath.basename(new URL(url, 'http://localhost').pathname),
+		)!
+		const dimensions = await umbreld.vm.sshAsRoot(
+			`identify -quiet -format '%wx%h' '${guestThumbnailRoot}/content/preview-1280-webp-v2/${key.slice(0, 2)}/${key}.webp[0]'`,
+		)
+		expect(dimensions).toBe('1920x1280')
+		const response = await umbreld.api.get(url.replace(/^\/api\//, ''), {responseType: 'buffer'})
+		expect(response.statusCode).toBe(200)
+		expect(response.headers['content-type']).toBe('image/webp')
+	})
+
 	test('treats ImageMagick wildcard syntax in filenames literally', async () => {
 		const directory = `${suiteRoot}/literal-filenames`
 		const guestDirectory = `${guestSuiteRoot}/literal-filenames`

@@ -15,6 +15,7 @@ import {RewindOverlayProvider} from '@/features/files/components/rewind/overlay-
 import {Sidebar} from '@/features/files/components/sidebar'
 import {MobileSidebarWrapper} from '@/features/files/components/sidebar/mobile-sidebar-wrapper'
 import {MachineFoldersProvider} from '@/features/files/hooks/use-machine-folder'
+import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {useWatcherRefetch} from '@/features/files/hooks/use-watcher-refetch'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
@@ -37,6 +38,7 @@ export default function FilesLayout() {
 	const {setSelectedItems} = useFilesStore()
 	const setViewerItem = useFilesStore((state) => state.setViewerItem)
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
+	const {currentPath} = useFilesNavigate()
 
 	const isMobile = useIsMobile()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
@@ -56,8 +58,11 @@ export default function FilesLayout() {
 		// correctly
 		setSelectedItems([])
 
-		// Close any open file viewer (text editor, image viewer, etc.)
-		setViewerItem(null)
+		// Close any open file viewer (text editor, image viewer, etc.), unless its
+		// file is in the folder now shown: a search result elsewhere is revealed
+		// and opened in one go
+		const {viewerItem} = useFilesStore.getState()
+		if (viewerItem?.path.slice(0, viewerItem.path.lastIndexOf('/')) !== currentPath) setViewerItem(null)
 
 		// set selecting on mobile to false when navigating to a different path
 		setIsSelectingOnMobile(false)

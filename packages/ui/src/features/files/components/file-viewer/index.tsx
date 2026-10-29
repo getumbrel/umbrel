@@ -1,57 +1,52 @@
-import {Component, lazy, Suspense, type ErrorInfo, type ReactNode} from 'react'
+import {useEffect, useState, useSyncExternalStore} from 'react'
 
-import DownloadDialog from '@/features/files/components/file-viewer/downloader'
+import {QuickLook} from '@/features/files/components/file-viewer/shell/quick-look'
+import {ViewerShell} from '@/features/files/components/file-viewer/shell/viewer-shell'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 
-const InfoCardViewer = lazy(() => import('@/features/files/components/file-viewer/info-card-viewer'))
-
-// Error boundary that falls back to download dialog when a lazy-loaded viewer fails
-class ViewerErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean}> {
-	state = {hasError: false}
-
-	static getDerivedStateFromError() {
-		return {hasError: true}
-	}
-
-	componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-		console.error('Viewer failed to load:', error, errorInfo)
-	}
-
-	render() {
-		if (this.state.hasError) {
-			return <DownloadDialog />
+// Files and the Files embedded in Rewind each mount a viewer host, both
+// reading the same store. The viewer is a window-wide dialog, so only the
+// host mounted last — the one on top — draws it.
+const hosts: symbol[] = []
+const hostListeners = new Set<() => void>()
+const subscribeHosts = (listener: () => void) => {
+	hostListeners.add(listener)
+	return () => hostListeners.delete(listener)
+}
+function useIsTopViewerHost() {
+	const [host] = useState(() => Symbol('viewer host'))
+	useEffect(() => {
+		hosts.push(host)
+		hostListeners.forEach((listener) => listener())
+		return () => {
+			hosts.splice(hosts.indexOf(host), 1)
+			hostListeners.forEach((listener) => listener())
 		}
-		return this.props.children
-	}
+	}, [host])
+	return useSyncExternalStore(subscribeHosts, () => hosts.at(-1) === host)
 }
 
-export const FileViewer: React.FC = () => {
+export function FileViewer() {
+	const isTopHost = useIsTopViewerHost()
 	const viewerItem = useFilesStore((s) => s.viewerItem)
 	const viewerMode = useFilesStore((s) => s.viewerMode)
+	const selectedItems = useFilesStore((s) => s.selectedItems)
 
-	if (!viewerItem || !viewerItem.type) return null
+	// Warm up the viewer for whatever is selected, so opening it doesn't wait on its code
+	useEffect(() => {
+		if (selectedItems.length === 1)
+			void getFileViewer(selectedItems[0])
+				?.preload()
+				.catch(() => {})
+	}, [selectedItems])
 
-	const Viewer = getFileViewer(viewerItem)
+	if (!isTopHost || !viewerItem?.type || !viewerMode) return null
 
-	// If there's no dedicated viewer, show info card in preview mode or download dialog otherwise
-	if (!Viewer) {
-		if (viewerMode === 'preview') {
-			return (
-				<Suspense>
-					<InfoCardViewer item={viewerItem} />
-				</Suspense>
-			)
-		}
-		return <DownloadDialog />
-	}
-
-	// render the viewer with error boundary fallback
-	return (
-		<ViewerErrorBoundary key={viewerItem.path}>
-			<Suspense>
-				<Viewer item={viewerItem} />
-			</Suspense>
-		</ViewerErrorBoundary>
-	)
+	const viewer = getFileViewer(viewerItem)
+	// Audio plays in its floating island, over whatever comes next
+	if (viewer?.island) return <viewer.Component item={viewerItem} mode={viewerMode} />
+	// A quick look is a glance over the listing; an opened file has the window
+	if (viewerMode === 'preview') return <QuickLook item={viewerItem} viewer={viewer} />
+	return <ViewerShell item={viewerItem} viewer={viewer} />
 }

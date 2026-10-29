@@ -65,6 +65,9 @@ RUN rm -rf node_modules || true
 RUN npm ci
 
 # Build the shared dashboard and app-auth frontend
+# The build needs more than Node's default heap on the arm64 builders, which
+# otherwise run out of memory part way through
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
 
 

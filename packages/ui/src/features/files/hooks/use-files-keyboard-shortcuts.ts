@@ -5,6 +5,7 @@ import {SYSTEM_MANAGED_ROOT_PATHS} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
+import {ARROW_STEPS, type ViewerStep, type ViewerStepper} from '@/features/files/store/slices/file-viewer-slice'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
@@ -54,6 +55,7 @@ export function useFilesKeyboardShortcuts({
 	const viewerItem = useFilesStore((s: FilesStore) => s.viewerItem)
 	const viewerMode = useFilesStore((s: FilesStore) => s.viewerMode)
 	const setViewerItem = useFilesStore((s: FilesStore) => s.setViewerItem)
+	const setViewerStepper = useFilesStore((s: FilesStore) => s.setViewerStepper)
 	const {pasteItemsFromClipboard, trashSelectedItems} = useFilesOperations()
 	const isMobile = useIsMobile()
 
@@ -90,6 +92,47 @@ export function useFilesKeyboardShortcuts({
 			const target = e.target as HTMLElement
 			return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable
 		}
+
+		// Moves the viewer to a neighbour in this listing: ←/→ one file along, ↑/↓
+		// a row of the icon grid (one file in the list). Quick look visits every
+		// file; an opened viewer only those it can show that leave ←/→ to
+		// stepping, as one that keeps them (pages, slides, cells) would hold
+		// them there with no way on. Registered with the store as well: a
+		// viewer open over Files hears the keys itself.
+		const stepTarget = (step: ViewerStep) => {
+			const viewer = viewerItemRef.current
+			const mode = viewerModeRef.current
+			if (!viewer || !mode) return
+			const navigable = items.filter((file) => {
+				if (file.isDisconnected) return false
+				if (typeof file.type !== 'string') return false
+				if (mode === 'preview') return true
+				const fileViewer = getFileViewer(file)
+				return Boolean(fileViewer && !fileViewer.ownsArrows)
+			})
+			const currentIndex = navigable.findIndex((file) => file.path === viewer.path)
+			if (currentIndex === -1) return
+			let distance = 1
+			if ((step === 'up' || step === 'down') && viewRef.current === 'icons') {
+				const scrollEl = scrollAreaRef.current
+				distance = scrollEl
+					? getGridColumnCount(scrollEl.clientWidth - getGridScrollerPadding(isMobile), getGridItemWidth(isMobile))
+					: 1
+			}
+			const nextIndex =
+				step === 'previous' || step === 'up'
+					? Math.max(0, currentIndex - distance)
+					: Math.min(navigable.length - 1, currentIndex + distance)
+			return nextIndex === currentIndex ? undefined : navigable[nextIndex]
+		}
+		const stepper: ViewerStepper = {
+			step: (step) => {
+				const target = stepTarget(step)
+				if (target && setViewerItem(target, viewerModeRef.current ?? 'open')) setSelectedItems([target])
+			},
+			canStep: (step) => Boolean(stepTarget(step)),
+		}
+		setViewerStepper(stepper)
 
 		const handleKeyDown = (e: KeyboardEvent) => {
 			// The listener is on the window so it hears keys pressed in a dialog
@@ -166,6 +209,15 @@ export function useFilesKeyboardShortcuts({
 				}
 			}
 
+			// A quick look playing in an island (audio) leaves the keys here, where
+			// Space and Escape close it as they would any quick look
+			if ((e.key === ' ' || e.key === 'Escape') && viewerItemRef.current && viewerModeRef.current === 'preview') {
+				if (isInInput(e) || mod || e.altKey) return
+				e.preventDefault()
+				setViewerItem(null)
+				return
+			}
+
 			// Space bar to view selected item (allowed even in read-only)
 			if (e.key === ' ') {
 				if (
@@ -191,51 +243,12 @@ export function useFilesKeyboardShortcuts({
 			if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
 				if (isInInput(e) || mod || e.altKey || items.length === 0) return
 
-				const currentView = viewRef.current
-				const viewer = viewerItemRef.current
-				const mode = viewerModeRef.current
-
-				// --- Preview navigation (viewer is open) ---
-				if (viewer) {
-					// In list view, left/right are meaningless
-					const isHorizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight'
-					if (isHorizontal && currentView === 'list') return
-					// Don't intercept arrow keys when viewing video via double-click/navigate —
-					// let the video player handle seek/volume. In preview mode (spacebar),
-					// arrow keys navigate between files instead.
-					if (viewer.type?.startsWith('video/') && mode !== 'preview') return
-
-					// Build the list of items navigable in preview
-					const previewable = items.filter((file) => {
-						if (file.isDisconnected) return false
-						if (typeof file.type !== 'string') return false
-						if (mode === 'preview') return true
-						return Boolean(getFileViewer(file))
-					})
-					if (previewable.length === 0) return
-					const currentIndex = previewable.findIndex((f) => f.path === viewer.path)
-					if (currentIndex === -1) return
-
-					// In icons view, up/down jump by the column count (same as listing navigation)
-					let step = 1
-					if (currentView === 'icons' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-						const scrollEl = scrollAreaRef.current
-						const columnCount = scrollEl
-							? getGridColumnCount(scrollEl.clientWidth - getGridScrollerPadding(isMobile), getGridItemWidth(isMobile))
-							: 1
-						step = columnCount
-					}
-
-					const isPrev = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
-					const nextIndex = isPrev
-						? Math.max(0, currentIndex - step)
-						: Math.min(previewable.length - 1, currentIndex + step)
-
+				// --- Viewer navigation (an island viewer, like audio, leaves the keys here) ---
+				if (viewerItemRef.current) {
+					const viewer = getFileViewer(viewerItemRef.current)
+					if (viewer?.ownsArrows && viewerModeRef.current !== 'preview') return
 					e.preventDefault()
-					if (nextIndex !== currentIndex) {
-						const nextItem = previewable[nextIndex]
-						if (setViewerItem(nextItem, mode)) setSelectedItems([nextItem])
-					}
+					stepper.step(ARROW_STEPS[e.key]!)
 					return
 				}
 
@@ -282,6 +295,7 @@ export function useFilesKeyboardShortcuts({
 				}
 
 				// Calculate the step based on view and direction
+				const currentView = viewRef.current
 				let step = 0
 				if (currentView === 'list') {
 					// List view: only up/down navigate, left/right are ignored
@@ -390,7 +404,10 @@ export function useFilesKeyboardShortcuts({
 		}
 
 		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown)
+			if (useFilesStore.getState().viewerStepper === stepper) setViewerStepper(null)
+		}
 	}, [
 		writeShortcutsEnabled,
 		currentPath,
@@ -400,6 +417,7 @@ export function useFilesKeyboardShortcuts({
 		cutItemsToClipboard,
 		setSelectedItems,
 		setViewerItem,
+		setViewerStepper,
 		pasteItemsFromClipboard,
 		trashSelectedItems,
 		navigateToItem,

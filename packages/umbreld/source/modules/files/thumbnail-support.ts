@@ -13,6 +13,7 @@ export const THUMBNAIL_VARIANTS = {
 } as const
 
 export type ThumbnailVariant = keyof typeof THUMBNAIL_VARIANTS
+export const THUMBNAIL_VARIANT_NAMES = Object.keys(THUMBNAIL_VARIANTS) as [ThumbnailVariant, ...ThumbnailVariant[]]
 
 export const FILES_THUMBNAIL_VARIANT: ThumbnailVariant = 'preview-192-webp-v1'
 export const PHOTOS_THUMBNAIL_VARIANTS = [
