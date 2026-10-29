@@ -1328,7 +1328,7 @@
   "https-access-private-access-note": "Some apps need HTTPS in the browser to work correctly. HTTPS is for browser compatibility, not private access. For private access, use a private networking app like Tailscale from the Umbrel App Store.",
   "https-access-reset-certificate": "Reset certificate",
   "https-access-reset-confirm-action": "Reset certificate",
-  "https-access-reset-confirm-description": "This creates a new certificate for your Umbrel. Phones and computers you already set up will need to install the new certificate again.",
+  "https-access-reset-confirm-description": "This creates a new certificate for your Umbrel. Phones and computers you already set up will need to install the new certificate again. The Umbrel app on your phones and computers will ask you to reconnect.",
   "https-access-reset-confirm-title": "Reset certificate?",
   "https-access-reset-error": "Couldn't reset certificate: {{message}}",
   "https-access-setup-platform-label": "Set up on",
