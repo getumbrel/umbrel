@@ -8,7 +8,7 @@ import {useShortcuts, type Shortcut} from '@/hooks/use-shortcuts'
 import {useWidgets} from '@/hooks/use-widgets'
 import {Widget} from '@/modules/widgets'
 import {WidgetContainer} from '@/modules/widgets/shared/shared'
-import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
+import {WidgetSlot} from '@/modules/widgets/shared/widget-row'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -61,18 +61,19 @@ export function desktopWidgetNode(widget: ReturnType<typeof useWidgets>['selecte
 				opacity: 0,
 			}}
 		>
-			<WidgetWrapper
+			<WidgetSlot
+				id={widget.id}
 				// Get the app name from the endpoint
 				label={widget.app.name}
 			>
 				{widget.app.state === 'ready' ? (
 					<Widget appId={widget.app.id} config={widget} />
 				) : (
-					<WidgetContainer className='grid place-items-center text-13 text-white/50'>
+					<WidgetContainer className='grid place-items-center rounded-17 text-13 text-white/50 sm:rounded-20'>
 						<AppLabel state={widget.app.state} />
 					</WidgetContainer>
 				)}
-			</WidgetWrapper>
+			</WidgetSlot>
 		</motion.div>
 	)
 }

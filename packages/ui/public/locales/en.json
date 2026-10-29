@@ -3016,6 +3016,7 @@
   "whats-new.continue": "Continue",
   "whats-new.next": "Next",
   "whats-new.title": "What's new in {{version}}",
+  "widget.expand": "Show the {{name}} widget",
   "widget.progress.in-progress": "In progress",
   "widgets.description": "Manage widgets on home screen",
   "widgets.edit.select-up-to-3-widgets": "Select up to 3 widgets",

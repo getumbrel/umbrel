@@ -1,6 +1,7 @@
 import {ReactNode, useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
+import {WidgetRow} from '@/modules/widgets/shared/widget-row'
 import {tw} from '@/utils/tw'
 
 import {AppGridGradientMasking} from '../desktop-misc'
@@ -19,7 +20,7 @@ export function AppGrid({
 	forceDesktop?: boolean
 }) {
 	const {t} = useTranslation()
-	const {pageInnerRef, pages, appsPerRow, hasMeasurement} = usePager({
+	const {pageInnerRef, pages, appsPerRow, hasMeasurement, widgetRow} = usePager({
 		apps,
 		widgets,
 		forceBreakpoint: forceDesktop ? 'M' : undefined,
@@ -64,7 +65,7 @@ export function AppGrid({
 							{noRoom && <div className='w-full text-center'>{t('desktop.not-enough-room')}</div>}
 							{pages[0]?.widgets.length > 0 && (
 								// NOTE: need to keep key
-								<div className={widgetRowClass}>{pages[0].widgets}</div>
+								<WidgetRow layout={widgetRow}>{pages[0].widgets}</WidgetRow>
 							)}
 							{pages[0]?.apps && pages[0]?.apps.length > 0 && (
 								<div className={appGridClass} style={appColumnsStyle}>
@@ -79,7 +80,7 @@ export function AppGrid({
 						pages.slice(1).map(({apps, widgets}, i) => (
 							<Page key={i} index={i + 1}>
 								<PageInner>
-									{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
+									{widgets.length > 0 && <WidgetRow layout={widgetRow}>{widgets}</WidgetRow>}
 									{apps && (
 										<div className={appGridClass} style={appColumnsStyle}>
 											{apps}
@@ -138,5 +139,4 @@ export function PageInner({children, innerRef}: {children?: ReactNode; innerRef?
 	)
 }
 
-const widgetRowClass = tw`flex gap-[var(--app-x-gap)] w-full justify-center`
 const appGridClass = tw`gap-x-[var(--app-x-gap)] gap-y-[var(--app-y-gap)] grid content-center justify-center`

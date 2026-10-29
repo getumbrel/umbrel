@@ -2,7 +2,14 @@ import {ReactNode, Ref, useLayoutEffect} from 'react'
 import {createBreakpoint, useMeasure} from 'react-use'
 import {chunk} from 'remeda'
 
+import type {WidgetRowLayout} from '@/modules/widgets/shared/widget-row'
+
 const useBreakpoint = createBreakpoint({S: 0, M: 640})
+
+/** Where widgets switch to their compact layout (`w-regular` in index.css) */
+const COMPACT_BELOW_PX = 140
+/** Space under a row without names, before the apps */
+const UNNAMED_ROW_GAP_PX = 6
 
 type PageT = {
 	widgets: ReactNode[]
@@ -25,6 +32,7 @@ export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpo
 	pageInnerRef: Ref<HTMLDivElement>
 	appsPerRow: number
 	hasMeasurement: boolean
+	widgetRow: WidgetRowLayout
 } {
 	// Using breakpoint instead of measure because max inner page width comes from breakpoint
 	const viewportBreakpoint = useBreakpoint()
@@ -58,6 +66,30 @@ export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpo
 	const appsInnerW = (appW + appXGap) * appsPerRowMax - appXGap
 	const appsMaxW = appsInnerW + paddingX * 2
 
+	function countAppsPerRow({pageW}: {pageW: number}) {
+		return Math.floor((pageW + appXGap) / (appW + appXGap))
+	}
+
+	const appsPerRow = countAppsPerRow({pageW})
+
+	// Widgets share the app grid's width, edge to edge with its columns, instead
+	// of each taking two columns. Up to three fit on any screen that holds them at
+	// their minimum width: a phone's four columns and a 640–930px window's four or
+	// five both fit three, which two-column widgets left a third on page 2.
+	const gridW = appsPerRow > 0 ? appsPerRow * appW + (appsPerRow - 1) * appXGap : pageW
+	const shareW = (n: number) => (gridW - (n - 1) * appXGap) / n
+	let widgetsPerPage = Math.max(1, widgets.length)
+	// Narrowest a widget gets before the row pages instead: compact on phones, regular from 640px
+	const minWidgetW = responsive([96, 160])
+	while (widgetsPerPage > 1 && shareW(widgetsPerPage) < minWidgetW) widgetsPerPage--
+	const rowWidgetW = Math.floor(Math.min(widgetW, shareW(widgetsPerPage)))
+	// Three on a phone: one at its regular size, two compact (see WidgetRow)
+	const accordion = breakpoint === 'S' && widgets.length === 3 && widgetsPerPage === 3
+	// A row with any compact widget names none of them, and drops the name line
+	const named = !accordion && rowWidgetW >= COMPACT_BELOW_PX
+	const rowH = named ? widgetLabeledH : widgetH + UNNAMED_ROW_GAP_PX
+	const widgetRow: WidgetRowLayout = {widgetW: rowWidgetW, focusW: widgetW, gridW, accordion, named, rowH}
+
 	// Putting on document so that app grid and widget selector both have access.
 	// Skip when forceBreakpoint is set (preview mode) to avoid overwriting
 	// the real desktop's values on document.documentElement.
@@ -74,15 +106,9 @@ export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpo
 		el.style.setProperty('--apps-padding-x', `${paddingX}px`)
 		el.style.setProperty('--widget-w', `${widgetW}px`)
 		el.style.setProperty('--widget-h', `${widgetH}px`)
-		el.style.setProperty('--widget-labeled-h', `${widgetLabeledH}px`)
+		el.style.setProperty('--widget-labeled-h', `${rowH}px`)
 		// All values depend on the breakpoint
-	}, [breakpoint, pageW, forceBreakpoint])
-
-	function countAppsPerRow({pageW}: {pageW: number}) {
-		return Math.floor((pageW + appXGap) / (appW + appXGap))
-	}
-
-	const appsPerRow = countAppsPerRow({pageW})
+	}, [breakpoint, pageW, forceBreakpoint, rowH])
 
 	const pages = groupIntoPages({apps, widgets, pageW, pageH})
 
@@ -97,20 +123,14 @@ export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpo
 		pageW: number
 		pageH: number
 	}): PageT[] {
-		function countWidgetsPerPage({pageW}: {pageW: number}) {
-			// Whole widgets only: chunk() slices at fractional offsets, which lands
-			// an extra widget on some pages. At least one so chunk() always advances.
-			return Math.max(1, Math.floor((pageW + appXGap) / (widgetW + appXGap)))
-		}
 		function countAppsPerCol({pageH}: {pageH: number}) {
 			return Math.floor((pageH + appYGap) / (appH + appYGap))
 		}
 		function countAppsPerColWhenWidgetRow({pageH}: {pageH: number}) {
-			const restH = pageH - widgetLabeledH - appYGap
+			const restH = pageH - rowH - appYGap
 			return Math.floor((restH + appYGap) / (appH + appYGap))
 		}
 
-		const widgetsPerPage = countWidgetsPerPage({pageW})
 		const appsPerCol = countAppsPerCol({pageH})
 		const appsPerColWhenWidgetRow = countAppsPerColWhenWidgetRow({pageH})
 		const appsPerRow = countAppsPerRow({pageW})
@@ -146,15 +166,16 @@ export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpo
 	}
 
 	// A widgets-only desktop (no apps yet) still pages its widgets
-	if (pageH < widgetLabeledH || (!apps.length && !widgets.length)) {
+	if (pageH < rowH || (!apps.length && !widgets.length)) {
 		// Don't show any apps or widgets
 		return {
 			pageInnerRef,
 			pages: [{widgets: [], apps: []}],
 			appsPerRow: 0,
 			hasMeasurement: pageH > 0 && pageW > 0,
+			widgetRow,
 		}
 	}
 
-	return {pageInnerRef, pages, appsPerRow, hasMeasurement: true}
+	return {pageInnerRef, pages, appsPerRow, hasMeasurement: true, widgetRow}
 }

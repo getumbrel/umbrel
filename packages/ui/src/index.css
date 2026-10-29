@@ -4,6 +4,33 @@
 @config '../tailwind.config.ts';
 
 /*
+  Widget size classes. A widget is a size container (`[container:widget/size]`
+  on its glass) and lays itself out from its own box, not the viewport, so the
+  same component works at whatever width the homescreen row hands it:
+  - base:        compact, under 140px wide (three across a phone)
+  - w-regular:   140px and wider (the phone widget, a third of a tablet row)
+  - w-tall:      130px and taller (every widget at the ≥640px scale)
+  - w-expanded:  240px and wider (the desktop widget)
+  Declared in that order on purpose: a desktop widget is tall and expanded, and
+  utilities follow variant order, so expanded overrides tall.
+*/
+@custom-variant w-regular {
+	@container widget (min-width: 140px) {
+		@slot;
+	}
+}
+@custom-variant w-tall {
+	@container widget (min-height: 130px) {
+		@slot;
+	}
+}
+@custom-variant w-expanded {
+	@container widget (min-width: 240px) {
+		@slot;
+	}
+}
+
+/*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
