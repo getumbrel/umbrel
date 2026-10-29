@@ -188,7 +188,7 @@ describe('CloudRclone', () => {
 		expect(dropboxArgs).not.toContain('--drive-skip-dangling-shortcuts')
 	})
 
-	test('ignores provider-reported sizes only for iCloud syncs', async () => {
+	test('ignores provider-reported sizes and downloads single-stream only for iCloud syncs', async () => {
 		const paths = await rclone.ensureAccountDirectory(ACCOUNT_ID)
 		await fsp.writeFile(paths.config, '[cloud]\ntype = iclouddrive\n', {mode: 0o600})
 
@@ -202,6 +202,7 @@ describe('CloudRclone', () => {
 		})
 		const icloudArgs = JSON.parse(await fsp.readFile(`${paths.config}.args`, 'utf8')) as string[]
 		expect(icloudArgs).toContain('--ignore-size')
+		expect(icloudArgs[icloudArgs.indexOf('--multi-thread-streams') + 1]).toBe('0')
 
 		await fsp.writeFile(paths.config, '[cloud]\ntype = dropbox\n')
 		await rclone.sync({
@@ -214,6 +215,7 @@ describe('CloudRclone', () => {
 		})
 		const dropboxArgs = JSON.parse(await fsp.readFile(`${paths.config}.args`, 'utf8')) as string[]
 		expect(dropboxArgs).not.toContain('--ignore-size')
+		expect(dropboxArgs).not.toContain('--multi-thread-streams')
 	})
 
 	test('excludes Personal Vault only from personal OneDrive root syncs', async () => {

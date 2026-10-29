@@ -51,12 +51,16 @@ const RCLONE_PROVIDER_TYPES: Record<Provider, string> = {
 // expose the hashes used by the default track-renames strategy.
 // iCloud reports the uncompressed size of package documents such as Pages
 // files, but serves them as smaller ZIP archives.
+// Verified against rclone v1.75.2: those ZIPs ignore Range requests, so a package
+// reported above the 256 MiB multi-thread cutoff gets the whole ZIP written into
+// each 64 MiB chunk and fails. rclone can't tell packages apart, so iCloud files
+// download as single streams.
 const RCLONE_SYNC_PROVIDER_FLAGS: Record<Provider, string[]> = {
 	'google-drive': ['--track-renames', '--drive-skip-dangling-shortcuts', '--tpslimit', '5', '--tpslimit-burst', '10'],
 	dropbox: ['--track-renames'],
 	onedrive: ['--track-renames'],
 	webdav: [],
-	icloud: ['--ignore-size'],
+	icloud: ['--ignore-size', '--multi-thread-streams', '0'],
 }
 
 type FileOwner = {userId: number; groupId: number}
