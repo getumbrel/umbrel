@@ -253,6 +253,17 @@ export function buildDomainXml({
 		: "<controller type='usb' model='qemu-xhci'/><input type='tablet' bus='usb'/><input type='keyboard' bus='ps2'/>"
 	// Passthrough devices share the xHCI controller, which legacy profiles lack
 	const usbHostdevs = modern ? usbDevices.map(buildUsbHostdevXml).join('') : ''
+	// QEMU's built-in vdagent carries the clipboard between the console and a
+	// guest running spice-vdagent, which the Fedora and Ubuntu desktops ship.
+	// Its virtio-serial controller is pinned to a root-bus slot because letting
+	// libvirt place it renumbers the disk and balloon of machines that already
+	// booted without it. The pointer stays on the USB tablet. Windows 7 has no
+	// virtio drivers and Windows on Arm no agent build, so they'd only gain an
+	// unknown device.
+	const clipboardChannel =
+		definition.platformProfile === 'modern-x86' || (definition.platformProfile === 'modern-arm64' && !windowsArm)
+			? "<controller type='virtio-serial' index='0'><address type='pci' domain='0x0000' bus='0x00' slot='0x0a' function='0x0'/></controller><channel type='qemu-vdagent'><source><clipboard copypaste='yes'/><mouse mode='server'/></source><target type='virtio' name='com.redhat.spice.0'/></channel>"
+			: ''
 
 	// Present every vCPU as a core on one socket. Without a topology libvirt
 	// gives each vCPU its own socket, and Windows client editions use at most two.
@@ -301,6 +312,7 @@ export function buildDomainXml({
     ${video}
     ${modern && !windows98 ? modernInputs : "<input type='mouse' bus='ps2'/><input type='keyboard' bus='ps2'/>"}
     ${usbHostdevs}
+    ${clipboardChannel}
     <serial type='file'><source path='${escapeXml(qemuLog)}'/><target port='0'/></serial>
     <console type='file'><source path='${escapeXml(qemuLog)}'/><target type='serial' port='0'/></console>
     <memballoon model='virtio' freePageReporting='on'/>

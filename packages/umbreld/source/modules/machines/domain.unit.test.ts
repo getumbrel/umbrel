@@ -152,6 +152,40 @@ describe('libvirt domain XML', () => {
 		expect(xml).not.toContain('id=umbrel-audio')
 	})
 
+	test('gives guests that can run a clipboard agent a vdagent channel on a pinned controller', () => {
+		const xmlFor = (overrides: Partial<MachineDefinition>) =>
+			buildDomainXml({
+				definition: definition(overrides),
+				machineDirectory: '/data/machines/clipboard',
+				runtimeDirectory: '/run/umbrel-machines/clipboard',
+				acceleration: 'kvm',
+				firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+			})
+		const channel = "<channel type='qemu-vdagent'><source><clipboard copypaste='yes'/><mouse mode='server'/></source>"
+
+		for (const xml of [
+			xmlFor({}),
+			xmlFor({osId: 'windows-11'}),
+			xmlFor({arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'}),
+		]) {
+			expect(xml).toContain(channel)
+			expect(xml).toContain("<target type='virtio' name='com.redhat.spice.0'/>")
+			// Placed by libvirt, the controller would shift existing machines' PCI devices
+			expect(xml).toContain(
+				"<controller type='virtio-serial' index='0'><address type='pci' domain='0x0000' bus='0x00' slot='0x0a' function='0x0'/></controller>",
+			)
+		}
+		for (const xml of [
+			xmlFor({osId: 'windows-11', arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'}),
+			xmlFor({platformProfile: 'windows-7-x86', firmware: 'bios'}),
+			xmlFor({platformProfile: 'legacy-x86', firmware: 'bios'}),
+			xmlFor({platformProfile: 'windows-98-x86', firmware: 'bios'}),
+		]) {
+			expect(xml).not.toContain('virtio-serial')
+			expect(xml).not.toContain('qemu-vdagent')
+		}
+	})
+
 	test('uses TCG maximum CPU for a cross-architecture ARM guest', () => {
 		const xml = buildDomainXml({
 			definition: definition({

@@ -1,7 +1,10 @@
 import type {WebSocket} from 'ws'
 
+// One close code for every socket that no longer belongs to the controlling
+// console, so browsers stop instead of retrying. Audio reopens with the console.
 export const MACHINE_CONSOLE_SUPERSEDED_CODE = 4001
 export const MACHINE_CONSOLE_SUPERSEDED_REASON = 'Superseded by another console'
+export const MACHINE_CONSOLE_RELEASED_REASON = 'Console closed'
 
 type MachineConsoleSession = {
 	id: string
@@ -30,7 +33,9 @@ export default class MachineConsoleSessions {
 		if (current?.id !== sessionId || current.console !== console) return
 		this.#sessions.delete(machineId)
 		const audio = current.audio
-		if (audio && audio.readyState === audio.OPEN) audio.close()
+		if (audio && audio.readyState === audio.OPEN) {
+			audio.close(MACHINE_CONSOLE_SUPERSEDED_CODE, MACHINE_CONSOLE_RELEASED_REASON)
+		}
 	}
 
 	hasConsole(machineId: string, sessionId: string) {

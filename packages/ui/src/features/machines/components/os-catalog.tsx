@@ -17,7 +17,7 @@ import {OsIcon, OsIconGlow} from '@/features/machines/components/os-icon'
 import {layoutMorphTransition, MACHINES_CONFIGURE_PATH} from '@/features/machines/constants'
 import {useOsImages} from '@/features/machines/hooks/use-machines'
 import type {OsImage} from '@/features/machines/types'
-import {prettyMb} from '@/features/machines/utils'
+import {osImageVersionLabel, prettyMb} from '@/features/machines/utils'
 import {useGlobalFiles} from '@/providers/global-files'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -55,7 +55,7 @@ function groupOsImages(osImages: CatalogImage[]): OsFamily[] {
 				key,
 				familyId: image.familyId,
 				name: image.name,
-				version: image.version,
+				version: osImageVersionLabel(image),
 				platform: image.platform!,
 				images: [],
 			}
@@ -372,7 +372,9 @@ function CatalogCard({
 				initial={{opacity: 0}}
 				animate={{opacity: 1}}
 				transition={contentTransition}
-				className='relative flex w-full flex-col items-center'
+				// Pinned to the bottom so buttons line up across a row even when a
+				// subtitle wraps
+				className='relative mt-auto flex w-full flex-col items-center'
 			>
 				{action}
 			</motion.div>

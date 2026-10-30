@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
@@ -10,6 +11,22 @@ import {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.ts'
 const setupKeyName = 'omarchy-setup-key'
 const setupPasswordName = 'omarchy-setup-password'
 const setupKeyComment = 'umbrel-omarchy-first-boot'
+
+const CLIPBOARD_BRIDGE = readFileSync(new URL('./omarchy-clipboard-bridge.sh', import.meta.url), 'utf8')
+const CLIPBOARD_BRIDGE_UNIT = `[Unit]
+Description=Mirror the clipboard for spice-vdagent
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/local/bin/umbrel-clipboard-bridge
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
+`
+const base64 = (text: string) => Buffer.from(text).toString('base64')
 
 // Omarchy 4.0.4's own configurator layout: a 2 GiB ESP and Btrfs with the
 // standard subvolumes. Leave LUKS disabled so host autostart needs no console
@@ -72,8 +89,10 @@ export function renderOmarchyConfiguration(hostname: string, diskSizeGb: number)
 
 export function renderOmarchySetupKey(publicKey: string, completionUrl: string) {
 	// The key cannot run arbitrary commands or forward ports. It can only ask
-	// the installed guest to configure its power button and call our first-boot
-	// endpoint. The sudo password arrives over SSH stdin, never on the seed CD.
+	// the installed guest to configure its power button and clipboard sharing and
+	// call our first-boot endpoint. The sudo password arrives over SSH stdin,
+	// never on the seed CD. Packages install in the background because each
+	// attempt at this script only gets a few seconds.
 	// Encoding keeps quoting independent of the user's login shell; fd 3 keeps
 	// SSH stdin separate from the pipe carrying the script to bash.
 	const script = `set -eu
@@ -84,6 +103,11 @@ sudo --stdin --prompt='' /bin/sh -ec '
 mkdir -p /etc/systemd/logind.conf.d
 printf "[Login]\\nHandlePowerKey=poweroff\\n" > /etc/systemd/logind.conf.d/90-umbrel-vm.conf
 systemctl reload systemd-logind.service
+echo ${base64(CLIPBOARD_BRIDGE)} | base64 --decode > /usr/local/bin/umbrel-clipboard-bridge
+chmod 0755 /usr/local/bin/umbrel-clipboard-bridge
+echo ${base64(CLIPBOARD_BRIDGE_UNIT)} | base64 --decode > /etc/systemd/user/umbrel-clipboard-bridge.service
+systemctl --global enable umbrel-clipboard-bridge.service
+systemd-run --no-block --collect --unit=umbrel-clipboard-packages --property=Restart=on-failure --property=RestartSec=30 /bin/sh -c "pacman --sync --refresh --noconfirm --needed spice-vdagent xclip clipnotify && systemctl start spice-vdagentd.socket" || true
 ' <&3
 if ! grep -Fxq 'hl.unbind("XF86PowerOff")' "$HOME/.config/hypr/bindings.lua"; then
   printf '\\n-- Let logind handle the virtual power button, including at the login screen.\\nhl.unbind("XF86PowerOff")\\n' >> "$HOME/.config/hypr/bindings.lua"
@@ -91,8 +115,7 @@ fi
 curl --fail --silent --show-error --max-time 5 --request POST '${completionUrl}'
 sed -i '/ ${setupKeyComment}$/d' "$HOME/.ssh/authorized_keys"
 `
-	const encoded = Buffer.from(script).toString('base64')
-	return `restrict,from="${MACHINE_GUEST_HOST_ADDRESS}",command="/bin/bash -c 'exec 3<&0; echo ${encoded} | base64 --decode | /bin/bash'" ${publicKey.trim()}\n`
+	return `restrict,from="${MACHINE_GUEST_HOST_ADDRESS}",command="/bin/bash -c 'exec 3<&0; echo ${base64(script)} | base64 --decode | /bin/bash'" ${publicKey.trim()}\n`
 }
 
 export async function prepareOmarchySeed(

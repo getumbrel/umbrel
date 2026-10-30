@@ -93,7 +93,13 @@ export default function createMachineConsoleWebSocketHandler({
 			display.on('close', () => ws.close())
 			ws.on('message', (data) => display?.write(data as Buffer))
 		} catch (error) {
-			logger.error(`Machine console socket`, error)
+			// Opening a console while the machine starts or stops is routine, and the
+			// browser retries with backoff, so only unexpected failures are errors
+			if (error instanceof Error && /\[machine-(not-running|console-unavailable)\]/.test(error.message)) {
+				logger.verbose(`Machine console ${machineId}: ${error.message}`)
+			} else {
+				logger.error(`Machine console ${machineId}`, error)
+			}
 			cleanup()
 			ws.close()
 		}

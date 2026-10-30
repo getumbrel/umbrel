@@ -44,6 +44,22 @@ describe('Windows unattended installers', () => {
 		expect(answer).toContain('powercfg.exe /hibernate off')
 	})
 
+	test('installs guest tools before reporting setup complete on x64', () => {
+		const command = 'C:\\Windows\\Setup\\Umbrel\\virtio-win-guest-tools.exe /install /quiet /norestart'
+		for (const installer of ['windows-11', 'windows-server-2025'] as const) {
+			const answer = renderWindowsUnattend({...common, installer})
+			expect(answer).toContain(`<Order>1</Order><Description>Install guest tools</Description><CommandLine>${command}`)
+			expect(answer).toContain('<Order>2</Order><Description>Complete Umbrel machine setup</Description>')
+		}
+	})
+
+	test('skips guest tools where no clipboard agent can run', () => {
+		const arm = renderWindowsUnattend({...common, installer: 'windows-11', arch: 'arm64'})
+		expect(arm).not.toContain('virtio-win-guest-tools')
+		expect(arm).toContain('<Order>1</Order><Description>Complete Umbrel machine setup</Description>')
+		expect(renderWindowsUnattend({...common, installer: 'windows-7'})).not.toContain('virtio-win-guest-tools')
+	})
+
 	test('selects the Desktop Experience image from Windows Server evaluation media', () => {
 		const answer = renderWindowsUnattend({...common, installer: 'windows-server-2025'})
 		expect(answer).toContain('<Key>/IMAGE/INDEX</Key><Value>2</Value>')

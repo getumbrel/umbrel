@@ -10,6 +10,7 @@ import pWaitFor from 'p-wait-for'
 import type Umbreld from '../../index.ts'
 import {
 	buildDomainXml,
+	isLegacyPlatformProfile,
 	MACHINE_NETWORK_NAME,
 	machineDiskTarget,
 	type MachineArchitecture,
@@ -213,6 +214,12 @@ export function buildWindows98Mbr(diskSizeBytes: number) {
 	mbr[510] = 0x55
 	mbr[511] = 0xaa
 	return mbr
+}
+
+// libvirt marks a virtio channel connected once the guest opens its port, so
+// for the vdagent channel this means a clipboard agent is listening
+export function isClipboardAgentConnected(domainXml: string) {
+	return /<target type='virtio' name='com\.redhat\.spice\.0' state='connected'\/>/.test(domainXml)
 }
 
 export default class Libvirt {
@@ -710,7 +717,12 @@ export default class Libvirt {
 
 		try {
 			if (definition.tpm) await this.#mountTpm(definition, machineDirectory)
-			const audio = await this.#allocateAudio(definition.id)
+			// Legacy profiles have no sound card to route, so they leave the scarce
+			// loopback slots to machines that do, and their consoles stay silent
+			// instead of capturing a loopback nothing plays into
+			const audio = isLegacyPlatformProfile(definition.platformProfile)
+				? undefined
+				: await this.#allocateAudio(definition.id)
 			const acceleration = resolveAcceleration(definition.arch, this.kvmAvailable)
 			// Render nodes are host runtime state, not part of the portable machine
 			// definition. Discover one for every start so a restored machine can move
@@ -811,6 +823,14 @@ export default class Libvirt {
 			timeout: 10_000,
 		})
 		return result.exitCode === 0 ? parseUsbHostdevAddresses(result.stdout) : []
+	}
+
+	async clipboardAgentConnected(id: string) {
+		const result = await execa('virsh', ['--connect', LIBVIRT_URI, 'dumpxml', this.domainName(id)], {
+			reject: false,
+			timeout: 10_000,
+		})
+		return result.exitCode === 0 && isClipboardAgentConnected(result.stdout)
 	}
 
 	async attachUsbDevice(id: string, address: UsbAddress) {

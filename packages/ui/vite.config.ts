@@ -72,5 +72,7 @@ export default defineConfig({
 		// Node.js 25+ defines its own localStorage global, which is undefined without
 		// --localstorage-file and hides jsdom's localStorage in Vitest 4.
 		execArgv: ['--no-experimental-webstorage'],
+		// noVNC only declares a `browser` entry, which Vitest's resolver ignores
+		alias: [{find: /^@novnc\/novnc$/, replacement: '@novnc/novnc/lib/rfb.js'}],
 	},
 })

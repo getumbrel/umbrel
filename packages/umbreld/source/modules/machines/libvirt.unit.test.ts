@@ -14,6 +14,7 @@ import Libvirt, {
 	buildWindows98Mbr,
 	createWithGraphicsFallback,
 	findGpuRenderNode,
+	isClipboardAgentConnected,
 	isMissingDomainError,
 	parseQemuImgProgress,
 	parseDomainResourceStats,
@@ -116,6 +117,19 @@ describe('virgl graphics', () => {
 
 		expect(create.mock.calls).toEqual([['/dev/dri/renderD128'], []])
 		expect(onFallback).toHaveBeenCalledWith(error)
+	})
+})
+
+describe('clipboard agent', () => {
+	test('reads whether the guest opened the vdagent port from the live domain XML', () => {
+		const channel = (state: string) =>
+			`<channel type='qemu-vdagent'><source><clipboard copypaste='yes'/><mouse mode='server'/></source><target type='virtio' name='com.redhat.spice.0' state='${state}'/><alias name='channel0'/></channel>`
+		const guestAgent =
+			"<channel type='unix'><target type='virtio' name='org.qemu.guest_agent.0' state='connected'/></channel>"
+
+		expect(isClipboardAgentConnected(`<devices>${channel('connected')}</devices>`)).toBe(true)
+		expect(isClipboardAgentConnected(`<devices>${channel('disconnected')}${guestAgent}</devices>`)).toBe(false)
+		expect(isClipboardAgentConnected('<devices></devices>')).toBe(false)
 	})
 })
 

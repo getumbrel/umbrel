@@ -213,6 +213,9 @@ export type OsImage = {
 	evaluation?: boolean
 	manualSetup?: boolean
 	requiresLicenseKey?: boolean
+	// Setup only accepts product keys from the licensing channel its media was
+	// built for, so a genuine retail key fails on OEM or Volume License media
+	licenseChannel?: 'oem' | 'volume'
 }
 
 type ImageResource = {id: string; url: string; sha256: string; fileName: string}
@@ -287,6 +290,7 @@ const catalogSchema = z.object({
 			fixedMemoryMb: z.number().int().min(128).max(1_048_576).optional(),
 			evaluation: z.boolean().optional(),
 			manualSetup: z.boolean().optional(),
+			licenseChannel: z.enum(['oem', 'volume']).optional(),
 			windows: z
 				.object({installer: z.enum(['windows-11', 'windows-server-2025', 'windows-7', 'windows-xp', 'windows-98'])})
 				.optional(),
@@ -337,7 +341,7 @@ printf '#!/bin/sh\\nexit 101\\n' > "$policy"
 chmod 0755 "$policy"
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y task-gnome-desktop
+DEBIAN_FRONTEND=noninteractive apt-get install -y task-gnome-desktop spice-vdagent
 
 cat > /etc/netplan/99-umbrel-desktop.yaml <<EOF
 network:
@@ -506,7 +510,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
-			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop'], graphical: true},
+			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop', 'spice-vdagent'], graphical: true},
 		},
 		{
 			id: 'ubuntu-26.04-server-amd64',
@@ -539,7 +543,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
-			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop'], graphical: true},
+			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop', 'spice-vdagent'], graphical: true},
 		},
 		{
 			id: 'ubuntu-26.04-server-arm64',
@@ -865,6 +869,8 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://archive.org/download/win_xp_pro_sp3_x86_205076/Windows%20XP%20Professional%20SP3%20x86.iso',
 			sha256: '0d224d350f58a80e3112934cf2ec6c4b9aa5a8c308179ef9d1dbb898a1e85b9a',
 			platformProfile: 'legacy-x86',
+			// SETUPP.INI Pid=76487270 on a GRTMPVOL_EN disc
+			licenseChannel: 'volume',
 			windows: {installer: 'windows-xp'},
 		},
 		{
@@ -881,6 +887,8 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '2adfb46df8a9c7bbd2f67bff07461cc2f9d9ec8e01f0e112cb044c9e3e62f607',
 			platformProfile: 'windows-98-x86',
 			fixedMemoryMb: 512,
+			// OEM full install: setuppp.inf ProductType=9 and the OEM license.txt
+			licenseChannel: 'oem',
 			windows: {installer: 'windows-98'},
 			resources: [
 				{
@@ -1901,6 +1909,12 @@ export default class Machines {
 		this.#agentPointers.delete(id)
 		this.#primedMachines.delete(id)
 		this.#clearAgentControl(id)
+	}
+
+	// Whether the guest is running a clipboard agent the console can share with
+	async clipboardSharing(id: string) {
+		await this.#definition(id)
+		return this.#libvirt.clipboardAgentConnected(id)
 	}
 
 	async audioCaptureSource(id: string) {

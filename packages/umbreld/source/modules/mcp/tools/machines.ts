@@ -329,7 +329,7 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 			{
 				title: 'List machine OS images',
 				description:
-					'List the operating systems a new machine can be created from, with download size, architecture, whether credentials or a license key are needed, and download state, plus what this host can virtualize.',
+					'List the operating systems a new machine can be created from, with download size, architecture, whether credentials or a license key (and from which licensing channel) are needed, and download state, plus what this host can virtualize.',
 				inputSchema: z.object({}),
 				annotations: {
 					readOnlyHint: true,
@@ -362,6 +362,7 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 							estimatedInstalledSizeMb: image.estimatedInstalledSizeMb,
 							requiresCredentials: image.requiresCredentials,
 							requiresLicenseKey: image.requiresLicenseKey ?? false,
+							...(image.licenseChannel ? {licenseChannel: image.licenseChannel} : {}),
 							manualSetup: image.manualSetup ?? false,
 							evaluation: image.evaluation ?? false,
 							state: image.state,
@@ -406,7 +407,9 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 							.string()
 							.regex(/^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$/i)
 							.optional()
-							.describe('Required by Windows XP and Windows 98 images only.'),
+							.describe(
+								"Required by Windows XP and Windows 98 images only. It must come from the image's licenseChannel: Setup rejects keys from any other channel, genuine retail keys included.",
+							),
 					})
 					.refine((input) => !!input.osId !== !!input.imagePath, {message: 'Provide exactly one of osId or imagePath'}),
 				annotations: {

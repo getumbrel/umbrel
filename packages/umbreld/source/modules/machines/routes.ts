@@ -127,6 +127,12 @@ export default router({
 	// who is at the controls
 	agentControls: privateProcedure.query(async ({ctx}) => ctx.umbreld.machines.agentControls()),
 
+	// Whether copy and paste reach the guest, so the console can type pasted text
+	// in when they don't
+	clipboardSharing: privateProcedure
+		.input(z.object({id: machineIdSchema}))
+		.query(async ({ctx, input}) => ctx.umbreld.machines.clipboardSharing(input.id)),
+
 	// The console as a still image, scaled for machine vision. Coordinates
 	// given to control refer to this image's pixels.
 	screenshot: privateProcedure

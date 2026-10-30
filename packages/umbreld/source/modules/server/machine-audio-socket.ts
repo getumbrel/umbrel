@@ -7,7 +7,7 @@ import type {WebSocket} from 'ws'
 
 import type Umbreld from '../../index.ts'
 import type createLogger from '../utilities/logger.ts'
-import type MachineConsoleSessions from './machine-console-sessions.ts'
+import {MACHINE_CONSOLE_SUPERSEDED_CODE, type default as MachineConsoleSessions} from './machine-console-sessions.ts'
 
 const MAX_BUFFERED_AUDIO_BYTES = 1024 * 1024
 
@@ -66,10 +66,26 @@ export default function createMachineAudioWebSocketHandler({
 			machineId = searchParams.get('machineId') ?? undefined
 			sessionId = searchParams.get('sessionId') ?? undefined
 			if (!machineId || !sessionId) throw new Error('Missing machineId or sessionId')
-			if (!sessions.hasConsole(machineId, sessionId)) throw new Error('No controlling console session')
-			const source = await umbreld.machines.audioCaptureSource(machineId)
-			if (!sessions.attachAudio(machineId, sessionId, ws)) throw new Error('Console session is no longer active')
-			if (ws.readyState !== ws.OPEN) throw new Error('Audio socket closed before capture started')
+			// Audio belongs to the tab that controls the console, and attaching it
+			// means the session closes it again on release or takeover. A tab that
+			// lost the console is told so with the superseded code, which every
+			// browser build treats as final rather than as a dropout to retry.
+			if (!sessions.attachAudio(machineId, sessionId, ws)) {
+				logger.verbose(`Machine audio ${machineId}: not the controlling console`)
+				ws.close(MACHINE_CONSOLE_SUPERSEDED_CODE, 'Not the controlling console')
+				return
+			}
+			const source = await umbreld.machines.audioCaptureSource(machineId).catch((error: Error) => {
+				// No sound device (the legacy Windows profiles) or a machine on its
+				// way down. Stay open and silent until the console goes, so there's
+				// nothing for the browser to retry.
+				if (/\[machine-(audio-unavailable|not-running)\]/.test(error.message)) {
+					logger.verbose(`Machine audio ${machineId}: ${error.message}`)
+					return undefined
+				}
+				throw error
+			})
+			if (!source || ws.readyState !== ws.OPEN) return
 			// snd-aloop does not transition QEMU's playback side from SETUP to
 			// RUNNING until its paired capture side is open. Start capture immediately
 			// and drain its pre-roll, then forward only after playback is running so
@@ -87,16 +103,15 @@ export default function createMachineAudioWebSocketHandler({
 			)
 			capture.on('error', (error) => {
 				logger.error(`Machine audio ${machineId}`, error)
-				ws.close()
+				ws.close(1011)
 			})
 			capture.on('close', () => ws.close())
 			playbackReady = await waitForMachineAudioPlayback(ws, source.playbackStatus)
 			if (!playbackReady) capture.kill()
 		} catch (error) {
-			logger.error('Machine audio socket', error)
+			logger.error(`Machine audio ${machineId}`, error)
 			capture?.kill()
-			if (machineId && sessionId) sessions.releaseAudio(machineId, sessionId, ws)
-			ws.close()
+			ws.close(1011)
 		}
 	}
 }

@@ -81,7 +81,7 @@ describe('machine console ownership', () => {
 		expect(active.attachAudio('machine-1', 'session-1', audio)).toBe(true)
 
 		active.releaseConsole('machine-1', 'session-1', console)
-		expect(audio.close).toHaveBeenCalledOnce()
+		expect(audio.close).toHaveBeenCalledWith(MACHINE_CONSOLE_SUPERSEDED_CODE, expect.any(String))
 	})
 })
 

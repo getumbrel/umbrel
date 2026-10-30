@@ -1,4 +1,4 @@
-import {ChevronDown, Eye, EyeOff, Pencil, TriangleAlert} from 'lucide-react'
+import {ChevronDown, Eye, EyeOff, Pencil} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {lazy, Suspense, useEffect, useId, useState} from 'react'
 import {FaLock} from 'react-icons/fa6'
@@ -26,7 +26,7 @@ import {
 } from '@/features/machines/constants'
 import {useMachineActions} from '@/features/machines/hooks/use-machine-actions'
 import {useMachineCapabilities, useMachines, useOsImages} from '@/features/machines/hooks/use-machines'
-import {stripDiskImageExtension} from '@/features/machines/utils'
+import {osImageVersionLabel, stripDiskImageExtension} from '@/features/machines/utils'
 import {useCpu} from '@/hooks/use-cpu'
 import {useMemory} from '@/hooks/use-memory'
 import {trpcReact} from '@/trpc/trpc'
@@ -136,13 +136,13 @@ export default function CreateMachine() {
 			: osImage.name
 		: stripDiskImageExtension(isoPath!.split('/').pop() ?? '')
 	const customSourceType = isoPath ? (/\.iso$/i.test(isoPath) ? 'installer' : 'disk-image') : undefined
-	const sourceVersion =
-		osImage?.version ??
-		(customSourceType === 'installer'
+	const sourceVersion = osImage
+		? osImageVersionLabel(osImage)
+		: customSourceType === 'installer'
 			? t('machines.custom-installer-iso')
 			: customSourceType === 'disk-image'
 				? t('machines.custom-disk-image')
-				: undefined)
+				: undefined
 	const sourceOsIconId = osImage && !osImage.custom ? osImage.familyId : 'custom'
 	const {color} = getOsVisuals(sourceOsIconId)
 	const isCustomSource = !!isoPath || !!osImage?.custom
@@ -504,7 +504,12 @@ export default function CreateMachine() {
 							</SpecRow>
 						)}
 						{requiresLicenseKey && (
-							<SpecRow label={t('machines.license-key')}>
+							<SpecRow
+								label={t('machines.license-key')}
+								note={
+									osImage?.licenseChannel && t(`machines.license-key-note.${osImage.licenseChannel}`, {os: sourceName})
+								}
+							>
 								<div className='flex w-42 flex-col gap-2 sm:w-44'>
 									<Input
 										value={licenseKey}
@@ -674,29 +679,16 @@ export default function CreateMachine() {
 				</motion.div>
 			</div>
 
-			{/* Footer: reassurance (or the manual-setup caveat) on the left,
-			    commitment on the right */}
+			{/* Footer: reassurance on the left, commitment on the right */}
 			<motion.div
 				initial={{opacity: 0}}
 				animate={{opacity: 1}}
 				transition={{delay: 0.2, duration: 0.35, ease: 'easeOut'}}
 				className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 sm:flex-row sm:items-center'
 			>
-				{manualSetup ? (
-					<div className='flex max-w-[480px] gap-3 rounded-12 border border-amber-400/20 bg-amber-400/10 p-3 text-left text-amber-100/90'>
-						<TriangleAlert className='mt-0.5 size-4 shrink-0' />
-						<div className='flex flex-col gap-0.5'>
-							<span className='text-13 font-medium'>{t('machines.manual-setup-title')}</span>
-							<span className='text-12 leading-snug -tracking-2 text-amber-100/70'>
-								{t('machines.manual-setup-description')}
-							</span>
-						</div>
-					</div>
-				) : (
-					<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-sm:hidden'}`}>
-						{t('machines.configure-installs-itself', {os: sourceName})}
-					</span>
-				)}
+				<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-sm:hidden'}`}>
+					{t('machines.configure-installs-itself', {os: sourceName})}
+				</span>
 				{/* Stacked with the primary on top below sm (dialog-size buttons are
 				    full-width there), a Cancel→Create row from sm up */}
 				<div className='flex shrink-0 flex-col-reverse gap-2.5 sm:flex-row sm:items-center'>

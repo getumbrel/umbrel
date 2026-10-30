@@ -74,7 +74,7 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 
 	return (
 		<>
-			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} />
+			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} omarchy={machine.osId === 'omarchy'} />
 			{machine.state === 'running' && machine.firstBootSetup && !showSetupConsole && (
 				<FirstBootSetupOverlay
 					osName={machine.osName}
