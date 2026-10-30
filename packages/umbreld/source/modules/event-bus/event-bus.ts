@@ -2,6 +2,7 @@ import Emittery from 'emittery'
 
 import type Umbreld from '../../index.ts'
 import type {AppState} from '../apps/app.ts'
+import type {ProgressStatus} from '../apps/schema.ts'
 import type {CloudSyncActivity} from '../files/cloud-types.ts'
 import type {FileChangeEvent} from '../files/watcher.ts'
 import type {OperationsInProgress} from '../files/files.ts'
@@ -79,9 +80,11 @@ export const events = [
 	'apps:member-shares:change',
 	'apps:settings:change',
 	'apps:state:change',
+	'apps:progress',
 	'backups:backup-progress',
 	'backups:restore-progress',
 	'system:disk:change',
+	'system:update-status',
 	'files:external-storage:change',
 	'files:network-storage:change',
 	'raid:expansion-progress',
@@ -123,6 +126,8 @@ export type EventTypes = {
 	// Fires when an app's lifecycle state changes, with 'not-installed' when
 	// an app disappears (uninstall or failed install)
 	'apps:state:change': {appId: string; state: AppState | 'not-installed'}
+	// Fires as an app's install or update progresses, with its current state
+	'apps:progress': {appId: string; state: AppState; progress: number}
 	// Fires repeatedly while backup operations are in progress
 	// with the current progress of each backup
 	'backups:backup-progress': BackupsInProgress
@@ -132,6 +137,8 @@ export type EventTypes = {
 	// Fires when the connected block devices change
 	// e.g attaching/removing a USB drive
 	'system:disk:change': undefined
+	// Fires whenever the umbrelOS update status changes, with the full status
+	'system:update-status': ProgressStatus
 	// Fires when the accessible external storage devices change
 	// e.g mounting/unmounting a USB drive
 	'files:external-storage:change': undefined

@@ -1,6 +1,36 @@
 import {execa} from 'execa'
 import bytes from 'bytes'
 
+import {floorToTenthPercent} from './progress.ts'
+
+// rsync only prints whole percents, which on a large copy can mean minutes between
+// updates. It calculates them as floor(100 * bytesCopied / totalBytes) against a fixed
+// total, so each sample bounds what that total can be. Within a percent or so the bounds
+// pin it down and we can report progress in 0.1% steps, clamped to rsync's own whole
+// percent so we never disagree with it.
+export function createRsyncProgressRefiner() {
+	let minTotalBytes = 0
+	let maxTotalBytes = Infinity
+	let previousProgress = 0
+
+	return (bytesCopied: number, percent: number) => {
+		if (!Number.isFinite(bytesCopied) || !Number.isFinite(percent) || percent >= 100) return percent
+
+		minTotalBytes = Math.max(minTotalBytes, (bytesCopied * 100) / (percent + 1))
+		if (percent > 0) maxTotalBytes = Math.min(maxTotalBytes, (bytesCopied * 100) / percent)
+
+		// Fall back to rsync's percent until we have an estimate, or if the samples ever
+		// contradict each other
+		if (!Number.isFinite(maxTotalBytes) || minTotalBytes > maxTotalBytes) return percent
+
+		// The estimate tightens as samples arrive, so don't let that nudge progress backwards
+		const totalBytes = (minTotalBytes + maxTotalBytes) / 2
+		const progress = floorToTenthPercent((bytesCopied / totalBytes) * 100)
+		previousProgress = Math.min(Math.max(progress, percent, previousProgress), (percent * 10 + 9) / 10)
+		return previousProgress
+	}
+}
+
 export async function copyWithProgress(
 	source: string,
 	destination: string,
@@ -35,6 +65,7 @@ export async function copyWithProgress(
 
 	// Process output from rsync to handle copy progress
 	if (onProgress) {
+		const refineProgress = createRsyncProgressRefiner()
 		rsync.stdout!.on('data', (chunk) => {
 			// Grab progress update from --info=progress2 output
 			const output = chunk.toString()
@@ -54,7 +85,7 @@ export async function copyWithProgress(
 				if (secondsRemaining === Infinity) secondsRemaining = undefined
 
 				// Emit the progress event
-				onProgress({progress: percent, bytesPerSecond, secondsRemaining})
+				onProgress({progress: refineProgress(bytesCopied, percent), bytesPerSecond, secondsRemaining})
 			}
 		})
 	}

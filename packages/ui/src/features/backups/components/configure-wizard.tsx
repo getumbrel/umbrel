@@ -146,12 +146,12 @@ function ConnectivityDot({connected}: {connected: boolean}) {
 
 // Indicator for in-progress backups
 function CircularProgress({percent, className}: {percent: number; className?: string}) {
-	const p = Math.max(0, Math.min(100, Math.floor(percent || 0)))
+	const p = Math.max(0, Math.min(100, percent || 0))
 	const radius = 7
 	const circumference = 2 * Math.PI * radius
 	const dashoffset = circumference - (p / 100) * circumference
 	return (
-		<svg viewBox='0 0 16 16' className={className} role='img' aria-label={`${p}%`}>
+		<svg viewBox='0 0 16 16' className={className} role='img' aria-label={`${Math.floor(p)}%`}>
 			<circle cx='8' cy='8' r={radius} stroke='currentColor' strokeWidth='2' fill='none' opacity='0.2' />
 			<circle
 				cx='8'

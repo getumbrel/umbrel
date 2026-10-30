@@ -4,6 +4,7 @@ import nodePath from 'node:path'
 import type DatabaseTypes from 'better-sqlite3'
 
 import {foldSearchName} from '../files/file-index/migrations.ts'
+import {floorToTenthPercent} from '../utilities/progress.ts'
 import PhotosIndexingStatus from './indexing-status.ts'
 import {photoLibraryCte as rawPhotoLibraryCte, photoSourceTypeSql, sourceScopeSql} from './library-sql.ts'
 import PhotosReadModel, {photoLibraryCte} from './read-model.ts'
@@ -1433,7 +1434,7 @@ export default class PhotosRepository {
 		const total = Number(counts.total)
 		const completed = Number(counts.completed)
 		const failures = Number(counts.failures)
-		const percentage = total === 0 ? 100 : Math.floor((completed / total) * 100)
+		const percentage = total === 0 ? 100 : floorToTenthPercent((completed / total) * 100)
 		if (root.state === 'degraded') {
 			return {phase: 'degraded', completed, total, percentage, ...(root.last_error ? {error: root.last_error} : {})}
 		}

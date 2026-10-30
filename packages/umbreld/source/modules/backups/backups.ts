@@ -409,9 +409,11 @@ export default class Backups {
 				this.restoreStatus.bytesPerSecond = progress.bytesPerSecond
 				this.restoreStatus.secondsRemaining = progress.secondsRemaining
 				this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreStatus)
-				if (previousProgress !== this.restoreStatus.progress) {
-					previousProgress = this.restoreStatus.progress
-					this.logger.log(`Restored ${this.restoreStatus.progress}% of backup`)
+				// Only log whole percents to avoid spamming the logs
+				const wholeProgress = Math.floor(this.restoreStatus.progress)
+				if (previousProgress !== wholeProgress) {
+					previousProgress = wholeProgress
+					this.logger.log(`Restored ${wholeProgress}% of backup`)
 				}
 			})
 			// rsync can exit successfully after its last parseable progress sample is 99%.

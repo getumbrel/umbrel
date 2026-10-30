@@ -35,7 +35,7 @@ export function EnrichmentIndicator() {
 	const state = indicatorState(status)
 	if (!state) return null
 
-	const label = t('photos-sidebar.preparing', {percentage: state.percentage})
+	const label = t('photos-sidebar.preparing', {percentage: Math.floor(state.percentage)})
 	// A sliver of arc even at 0% so the ring never looks inert
 	const arc = Math.max(state.percentage, 3) / 100
 

@@ -11,6 +11,7 @@ import {$} from 'execa'
 import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
 import pRetry from 'p-retry'
+import {throttle} from 'es-toolkit'
 
 import getDirectorySize from '../utilities/get-directory-size.ts'
 import {
@@ -22,6 +23,7 @@ import {
 } from '../hardware/gpu.ts'
 import {pullAll} from '../utilities/docker-pull.ts'
 import {copyWithProgress} from '../utilities/copy-with-progress.ts'
+import {floorToTenthPercent} from '../utilities/progress.ts'
 import {removeDurably, renameDurably, syncDirectoryTree, writeFileDurably} from '../utilities/durable-filesystem.ts'
 import FileStore from '../utilities/file-store.ts'
 import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.ts'
@@ -545,7 +547,13 @@ export default class App {
 	// Proxy lifetime follows container teardown/startup, independently of UI state
 	// and hooks that may still be running after the upstream starts listening.
 	appGatewayEnabled = true
-	stateProgress = 0
+	#stateProgress = 0
+	// Image pulls can report progress many times a second, so cap progress events
+	// at a few a second. They carry the current state too so a late event can't
+	// leave a client showing a transition that has already finished.
+	#emitProgress = throttle(() => {
+		this.#umbreld.eventBus.emit('apps:progress', {appId: this.id, state: this.state, progress: this.stateProgress})
+	}, 250)
 	store: FileStore<AppSettings>
 	// Set while setSettings() validates, persists, and applies a settings change
 	// so lifecycle operations cannot race compose regeneration or a restart.
@@ -576,6 +584,24 @@ export default class App {
 		if (state === this.#state) return
 		this.#state = state
 		this.#umbreld.eventBus.emit('apps:state:change', {appId: this.id, state})
+	}
+
+	get stateProgress() {
+		return this.#stateProgress
+	}
+
+	// Announce progress the same way as state so dashboards don't have to poll for it
+	set stateProgress(progress: number) {
+		if (progress === this.#stateProgress) return
+		this.#stateProgress = progress
+		this.#emitProgress()
+	}
+
+	// Drop a progress event that's still waiting on the throttle. Called once the
+	// app is removed so a late event can't show clients a transition for an app
+	// that no longer exists.
+	cancelPendingProgressEvent() {
+		this.#emitProgress.cancel()
 	}
 
 	readManifest() {
@@ -2315,9 +2341,14 @@ export default class App {
 		const images = Object.values(compose.services!)
 			.map((service) => service.image)
 			.filter(Boolean) as string[]
+		let loggedProgress = 0
 		await pullAll([...defaultImages, ...images], (progress) => {
-			this.stateProgress = Math.max(1, progress * 99)
-			this.logger.log(`Downloaded ${this.stateProgress}% of app ${this.id}`)
+			this.stateProgress = floorToTenthPercent(Math.max(1, progress * 99))
+			// Only log whole percents, Docker reports progress many times a second
+			if (Math.floor(this.stateProgress) > loggedProgress) {
+				loggedProgress = Math.floor(this.stateProgress)
+				this.logger.log(`Downloaded ${loggedProgress}% of app ${this.id}`)
+			}
 		})
 	}
 

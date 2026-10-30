@@ -1,6 +1,7 @@
 import {$} from 'execa'
 import type {ProgressStatus} from '../apps/schema.ts'
 import {detectDevice, isUmbrelOS} from './system.ts'
+import {floorToTenthPercent} from '../utilities/progress.ts'
 import Umbreld from '../../index.ts'
 
 type UpdateStatus = ProgressStatus
@@ -17,8 +18,9 @@ function resetUpdateStatus() {
 	}
 }
 
-function setUpdateStatus(properties: Partial<UpdateStatus>) {
+function setUpdateStatus(umbreld: Umbreld, properties: Partial<UpdateStatus>) {
 	updateStatus = {...updateStatus, ...properties}
+	umbreld.eventBus.emit('system:update-status', updateStatus)
 }
 
 export function getUpdateStatus() {
@@ -69,13 +71,13 @@ export async function getLatestRelease(umbreld: Umbreld) {
 }
 
 export async function performUpdate(umbreld: Umbreld) {
-	setUpdateStatus({running: true, progress: 0, description: 'Updating...', error: false})
+	setUpdateStatus(umbreld, {running: true, progress: 0, description: 'Updating...', error: false})
 
 	try {
 		const {updateScript} = await getLatestRelease(umbreld)
 
 		if (!updateScript) {
-			setUpdateStatus({error: 'No update script found'})
+			setUpdateStatus(umbreld, {error: 'No update script found'})
 			throw new Error('No update script found')
 		}
 
@@ -95,7 +97,7 @@ export async function performUpdate(umbreld: Umbreld) {
 				if (line.startsWith('umbrel-update: ')) {
 					try {
 						const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<UpdateStatus>
-						setUpdateStatus(status)
+						setUpdateStatus(umbreld, status)
 					} catch (error) {
 						// Don't kill update on JSON parse errors
 					}
@@ -106,12 +108,14 @@ export async function performUpdate(umbreld: Umbreld) {
 					const status = JSON.parse(line) as {event: 'UpdateProgress'; progress: number}
 					if (status.event !== 'UpdateProgress' || typeof status.progress !== 'number') throw new Error('Invalid event')
 
-					// Only log every integer progress increment to avoid spamming events
-					const progress = Math.floor(status.progress)
+					// Report progress in 0.1% steps but only log whole percents to avoid spamming the logs
+					const progress = floorToTenthPercent(status.progress)
 					if (progress > previousProgress) {
+						if (Math.floor(progress) > Math.floor(previousProgress)) {
+							umbreld.logger.log(`Update progress: ${Math.floor(progress)}%`)
+						}
 						previousProgress = progress
-						umbreld.logger.log(`Update progress: ${progress}%`)
-						setUpdateStatus({progress})
+						setUpdateStatus(umbreld, {progress})
 					}
 				} catch (error) {
 					// Ignore JSON parse errors
@@ -125,21 +129,21 @@ export async function performUpdate(umbreld: Umbreld) {
 		await process
 	} catch (error) {
 		// Don't overwrite a useful error message reported by the update script
-		if (!updateStatus.error) setUpdateStatus({error: 'Update failed'})
+		if (!updateStatus.error) setUpdateStatus(umbreld, {error: 'Update failed'})
 
 		// Reset the state back to running but leave the error message so ui polls
 		// can differentiate between a successful update after reboot and a failed
 		// update that didn't reboot.
 		const errorStatus = updateStatus.error
 		resetUpdateStatus()
-		setUpdateStatus({error: errorStatus})
+		setUpdateStatus(umbreld, {error: errorStatus})
 
 		umbreld.logger.error(`Update script failed`, error)
 
 		return false
 	}
 
-	setUpdateStatus({running: false, progress: 100, description: 'Restarting...'})
+	setUpdateStatus(umbreld, {running: false, progress: 100, description: 'Restarting...'})
 
 	return true
 }

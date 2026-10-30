@@ -3,7 +3,7 @@ import {useTranslation} from 'react-i18next'
 import {BarePage} from '@/layouts/bare/bare-page'
 import FailedLayout from '@/modules/bare/failed-layout'
 import {ProgressLayout} from '@/modules/bare/progress-layout'
-import {trpcReact} from '@/trpc/trpc'
+import {RouterOutput, trpcReact} from '@/trpc/trpc'
 
 export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
 	const updateVersionMut = trpcReact.system.update.useMutation({
@@ -19,9 +19,25 @@ export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSucce
 export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 	const {t} = useTranslation()
 	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
+	const utils = trpcReact.useUtils()
+	const isOwner = trpcReact.user.get.useQuery().data?.role === 'owner'
 	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
 		refetchInterval: 500,
 	})
+	// Events keep progress moving between polls. Polling stays as the fallback
+	// since the connection drops when the device reboots into the update, and an
+	// in-flight poll is cancelled so its older status can't land on top of an event.
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'system:update-status'},
+		{
+			enabled: isOwner,
+			onData: (data) => {
+				utils.system.updateStatus.cancel()
+				utils.system.updateStatus.setData(undefined, data as RouterOutput['system']['updateStatus'])
+			},
+			onError: (error) => console.error('system:update-status subscription error', error),
+		},
+	)
 	const latestVersion = latestVersionQ.data
 
 	if (!latestVersion) {

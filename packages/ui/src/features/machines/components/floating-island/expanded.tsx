@@ -75,19 +75,19 @@ export function ExpandedContent({machines}: {machines: Machine[]}) {
 			<ScrollArea className='flex-1 px-5 pb-2'>
 				<div className='space-y-3'>
 					{machines.map((machine) => {
-						const percent = Math.min(99, Math.round(machine.installProgress ?? 0))
+						const progress = Math.min(99, machine.installProgress ?? 0)
 						return (
 							<div key={machine.id} className='flex items-center gap-2.5'>
 								<OsIcon osId={machine.osId} state='installing' className='size-7 shrink-0' />
 								<div className='min-w-0 flex-1'>
 									<div className='mb-1 flex items-center justify-between gap-2'>
 										<span className='truncate text-xs text-white/90'>{machine.name}</span>
-										<span className='shrink-0 text-xs text-white/60 tabular-nums'>{percent}%</span>
+										<span className='shrink-0 text-xs text-white/60 tabular-nums'>{Math.round(progress)}%</span>
 									</div>
 									<div className='relative h-1 overflow-hidden rounded-full bg-white/20'>
 										<div
 											className='absolute top-0 left-0 h-full rounded-full bg-brand transition-all duration-300'
-											style={{width: `${percent}%`}}
+											style={{width: `${progress}%`}}
 										/>
 									</div>
 								</div>

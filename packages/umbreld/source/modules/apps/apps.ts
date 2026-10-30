@@ -1003,6 +1003,7 @@ export default class Apps {
 			await app.install({dependencies, folderAccess})
 		} catch (error) {
 			this.logger.error(`Failed to install app ${appId}`, error)
+			app.cancelPendingProgressEvent()
 			this.instances = this.instances.filter((app) => app.id !== appId)
 			this.#folderAccessSourcePaths.delete(appId)
 			this.#umbreld.eventBus.emit('apps:state:change', {appId, state: 'not-installed'})
@@ -1064,6 +1065,7 @@ export default class Apps {
 		const uninstalled = await app.uninstall()
 		if (uninstalled) {
 			// Remove app instance
+			app.cancelPendingProgressEvent()
 			this.instances = this.instances.filter((app) => app.id !== appId)
 			this.#dataRootLocations.delete(appId)
 			this.#folderAccessSourcePaths.delete(appId)

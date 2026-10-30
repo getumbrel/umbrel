@@ -27,7 +27,7 @@ export function OperationsIsland({operations}: {operations: OperationsInProgress
 		}
 	}
 
-	const totalProgress = operations.length > 0 ? Math.round(totalPercent / operations.length) : 100
+	const totalProgress = operations.length > 0 ? totalPercent / operations.length : 100
 	const eta = secondsToEta(maxSecondsRemaining)
 
 	// Nothing has been copied yet (e.g. an app storage transfer stopping the app

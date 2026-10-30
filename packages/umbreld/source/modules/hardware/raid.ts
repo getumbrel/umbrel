@@ -14,6 +14,7 @@ import FileStore from '../utilities/file-store.ts'
 import {reboot} from '../system/system.ts'
 import {setSystemStatus} from '../system/routes.ts'
 import runEvery from '../utilities/run-every.ts'
+import {floorToTenthPercent} from '../utilities/progress.ts'
 
 // Get the size of a block device or partition in bytes
 async function getDeviceSize(device: string): Promise<number> {
@@ -835,7 +836,7 @@ export default class Raid {
 			} else {
 				// We need to do some awkward handling here because stats.to_reflow keeps growing forever and messes up the calculations.
 				// Cap progress at 99 while expanding due to overflow bugs
-				const rawProgress = stats.to_reflow > 0 ? Math.floor((stats.reflowed / stats.to_reflow) * 100) : 0
+				const rawProgress = stats.to_reflow > 0 ? floorToTenthPercent((stats.reflowed / stats.to_reflow) * 100) : 0
 				const cappedProgress = Math.min(rawProgress, 99)
 				// Never let progress go backwards
 				progress = Math.max(cappedProgress, this.#lastExpansionProgress)
@@ -859,7 +860,7 @@ export default class Raid {
 				progress = state === 'finished' ? 100 : 0
 			} else {
 				// Calculate progress from issued vs to_examine
-				const rawProgress = stats.to_examine > 0 ? Math.floor((stats.issued / stats.to_examine) * 100) : 0
+				const rawProgress = stats.to_examine > 0 ? floorToTenthPercent((stats.issued / stats.to_examine) * 100) : 0
 				const cappedProgress = Math.min(rawProgress, 99)
 				// Never let progress go backwards
 				progress = Math.max(cappedProgress, this.#lastRebuildProgress)
@@ -882,7 +883,7 @@ export default class Raid {
 				this.#lastScrubProgress = 0
 				progress = state === 'finished' ? 100 : 0
 			} else {
-				const rawProgress = stats.to_examine > 0 ? Math.floor((stats.issued / stats.to_examine) * 100) : 0
+				const rawProgress = stats.to_examine > 0 ? floorToTenthPercent((stats.issued / stats.to_examine) * 100) : 0
 				const cappedProgress = Math.min(rawProgress, 99)
 				// Never let progress go backwards
 				progress = Math.max(cappedProgress, this.#lastScrubProgress)
@@ -1839,9 +1840,12 @@ export default class Raid {
 						const status = await this.getPoolStatus(poolName)
 						if (status.rebuild) {
 							const cappedProgress = status.rebuild.state === 'finished' ? 100 : Math.min(status.rebuild.progress, 99)
-							if (cappedProgress > (this.replaceStatus?.progress ?? 0)) {
+							const previousProgress = this.replaceStatus?.progress ?? 0
+							if (cappedProgress > previousProgress) {
 								this.replaceStatus = {state: 'rebuilding', progress: cappedProgress}
-								this.logger.log(`Replace progress: ${cappedProgress}%`)
+								if (Math.floor(cappedProgress) > Math.floor(previousProgress)) {
+									this.logger.log(`Replace progress: ${Math.floor(cappedProgress)}%`)
+								}
 								this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
 							}
 							if (status.rebuild.state === 'finished') break
@@ -2132,10 +2136,13 @@ export default class Raid {
 								if (migrationStatus.exists && estimatedSize > 0) {
 									const usedSpace = migrationStatus.usedSpace ?? 0
 									// Scale sync progress to 0-49% (first half of transition)
-									const rawProgress = Math.min(99, Math.floor((usedSpace / estimatedSize) * 100))
-									const progress = Math.floor((rawProgress / 100) * 49)
-									if (this.failsafeTransitionStatus && progress > this.failsafeTransitionStatus.progress) {
-										this.logger.log(`Sync progress: ${progress}%`)
+									const rawProgress = Math.min(99, (usedSpace / estimatedSize) * 100)
+									const progress = floorToTenthPercent((rawProgress / 100) * 49)
+									const previousProgress = this.failsafeTransitionStatus?.progress
+									if (previousProgress !== undefined && progress > previousProgress) {
+										if (Math.floor(progress) > Math.floor(previousProgress)) {
+											this.logger.log(`Sync progress: ${Math.floor(progress)}%`)
+										}
 										this.failsafeTransitionStatus = {state: 'syncing', progress}
 										this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 									}
@@ -2391,9 +2398,12 @@ export default class Raid {
 							const status = await this.getPoolStatus(pool.name)
 							if (status.rebuild) {
 								const cappedProgress = status.rebuild.state === 'finished' ? 100 : Math.min(status.rebuild.progress, 99)
-								if (cappedProgress > (this.failsafeTransitionStatus?.progress ?? 0)) {
+								const previousProgress = this.failsafeTransitionStatus?.progress ?? 0
+								if (cappedProgress > previousProgress) {
 									this.failsafeTransitionStatus = {state: 'rebuilding', progress: cappedProgress}
-									this.logger.log(`Mirror rebuild progress: ${cappedProgress}%`)
+									if (Math.floor(cappedProgress) > Math.floor(previousProgress)) {
+										this.logger.log(`Mirror rebuild progress: ${Math.floor(cappedProgress)}%`)
+									}
 									this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 								}
 								if (status.rebuild.state === 'finished') break
@@ -2505,11 +2515,14 @@ export default class Raid {
 
 				if (status.rebuild) {
 					// Scale rebuild progress to 51-99% (second half of transition)
-					const scaledProgress = 51 + Math.floor((status.rebuild.progress / 100) * 48)
+					const scaledProgress = floorToTenthPercent(51 + (status.rebuild.progress / 100) * 48)
 					const cappedProgress = Math.min(scaledProgress, 99)
-					if (cappedProgress > (this.failsafeTransitionStatus?.progress ?? 0)) {
+					const previousProgress = this.failsafeTransitionStatus?.progress ?? 0
+					if (cappedProgress > previousProgress) {
 						this.failsafeTransitionStatus = {state: 'rebuilding', progress: cappedProgress}
-						this.logger.log(`Rebuild progress: ${cappedProgress}%`)
+						if (Math.floor(cappedProgress) > Math.floor(previousProgress)) {
+							this.logger.log(`Rebuild progress: ${Math.floor(cappedProgress)}%`)
+						}
 						this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 					}
 				}

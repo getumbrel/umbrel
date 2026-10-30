@@ -112,9 +112,10 @@ describe('UpdatesDialogConnected', () => {
 		fixtures.progress = 42.4
 		await render()
 
+		// The label rounds but the background fills to the exact progress so it moves smoothly
 		const progressButton = button('app.updating 42%')
 		expect(progressButton?.disabled).toBe(true)
-		expect(progressButton?.style.getPropertyValue('--progress-button-progress')).toBe('42%')
+		expect(progressButton?.style.getPropertyValue('--progress-button-progress')).toBe('42.4%')
 		await act(async () => progressButton!.click())
 		expect(fixtures.mutate).not.toHaveBeenCalled()
 	})
