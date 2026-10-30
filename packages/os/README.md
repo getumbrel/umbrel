@@ -61,6 +61,30 @@ Once ZFS comes from backports, also check:
   doesn't enable features that would stop a pool importing after an OTA
   rollback. Existing pools aren't upgraded automatically.
 
+### Raspberry Pi
+
+The Raspberry Pi image takes only its boot and hardware support from the
+Raspberry Pi apt repo. An apt pin takes every package built from these source
+packages from it:
+
+- **Kernel:** `linux`, the Pi 4 (`rpi-v8`) and Pi 5 (`rpi-2712`) kernels.
+- **Boot firmware:** `raspi-firmware`, which also installs the kernels and
+  initramfs into the boot partition.
+- **Wi-Fi firmware:** `firmware-nonfree`, for `firmware-brcm80211`.
+- **initramfs:** `initramfs-tools`, patched to build an initramfs for every Pi
+  kernel flavour.
+- **WPA3:** `wpa`, for `wpasupplicant`. Debian's doesn't report SAE support on
+  the Pi's `brcmfmac` Wi-Fi, so NetworkManager can't join WPA3-only networks.
+
+Every other package from the Raspberry Pi repo is pinned out, so the rest of
+the system comes from the Debian snapshot as on other platforms. The Raspberry
+Pi repo rebuilds many Debian packages (glibc, ffmpeg, mesa, NetworkManager...)
+with higher versions, so without the pin they'd replace Debian's in every later
+build step. The pin persists in the image, so later build steps follow it too.
+
+The Raspberry Pi repo has no snapshots, so these packages are whatever it
+serves at build time.
+
 ## GPU acceleration
 
 The amd64 image keeps GPU userspace in application containers while providing
