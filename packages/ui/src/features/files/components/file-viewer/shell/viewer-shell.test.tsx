@@ -351,6 +351,7 @@ describe('ViewerShell saving', () => {
 		await edit('two')
 		await act(async () => closeButton().click())
 		await click('cancel')
+		await act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
 		expect(document.activeElement).toBe(fileElement())
 	})
 
@@ -362,6 +363,7 @@ describe('ViewerShell saving', () => {
 		await act(async () => closeButton().focus())
 		await act(async () => closeButton().click())
 		await click('cancel')
+		await act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
 		expect(document.activeElement).toBe(fileElement())
 	})
 
