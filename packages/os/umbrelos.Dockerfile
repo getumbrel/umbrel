@@ -348,6 +348,57 @@ RUN cp -a /home/linuxbrew/.linuxbrew /opt/linuxbrew && \
 
 
 #########################################################################
+# avahi build stage
+#########################################################################
+
+# Debian's avahi 0.8 publishes IPv6 addresses while they are still tentative,
+# before Duplicate Address Detection has finished. If another host on the LAN
+# already uses the address (e.g. a DHCPv6 server hands out an address that is
+# still in use), DAD fails, but avahi has already started probing a reverse
+# PTR record for it. The real owner defends that record and avahi treats it as
+# a host name conflict, so umbrel.local becomes umbrel-2.local. Clients keep
+# retrying the address, so the suffix keeps climbing (we've seen
+# umbrel-5582.local) until avahi is restarted.
+#
+# Upstream fixed this by ignoring tentative addresses, so we rebuild Debian's
+# avahi with that commit backported. This can be removed once Debian ships
+# avahi 0.9: https://github.com/avahi/avahi/pull/616
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS avahi-build
+
+ARG APT_SNAPSHOT_DATE
+
+COPY packages/os/build-steps /build-steps
+
+RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
+
+RUN apt-get install --yes dpkg-dev
+
+COPY packages/os/avahi-patches /avahi-patches
+
+# The build profiles skip the GTK and GObject introspection packages, which
+# umbrelOS doesn't install, and the test suite.
+WORKDIR /build
+RUN export DEB_BUILD_PROFILES="nogir pkg.avahi.nogui nocheck" DEB_BUILD_OPTIONS="nocheck" && \
+    apt-get source avahi && \
+    cd avahi-*/ && \
+    apt-get build-dep --yes ./ && \
+    for patch in /avahi-patches/*.patch; do \
+        cp "${patch}" debian/patches/ && \
+        basename "${patch}" >> debian/patches/series; \
+    done && \
+    { \
+        printf 'avahi (%s+umbrel1) %s; urgency=medium\n\n' "$(dpkg-parsechangelog --show-field Version)" "$(dpkg-parsechangelog --show-field Distribution)" && \
+        printf '  * Backport upstream fix to ignore tentative IPv6 addresses.\n\n' && \
+        printf ' -- umbrelOS <noreply@umbrel.com>  %s\n\n' "$(dpkg-parsechangelog --show-field Date)" && \
+        cat debian/changelog; \
+    } > debian/changelog.new && \
+    mv debian/changelog.new debian/changelog && \
+    dpkg-buildpackage --build=binary --no-sign && \
+    mkdir /debs && \
+    mv ../*.deb /debs/
+
+
+#########################################################################
 # umbrelos build stage
 #########################################################################
 
@@ -393,6 +444,19 @@ RUN apt-get install --yes systemd-zram-generator
 
 # Install essential networking services
 RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi-daemon avahi-discover avahi-utils libnss-mdns nftables
+
+# Replace Debian's avahi packages with our patched rebuild (see the avahi build stage)
+COPY --from=avahi-build /debs /tmp/avahi-debs
+RUN cd /tmp/avahi-debs && \
+    dpkg --install \
+        avahi-daemon_*.deb \
+        avahi-utils_*.deb \
+        libavahi-client3_*.deb \
+        libavahi-common-data_*.deb \
+        libavahi-common3_*.deb \
+        libavahi-core7_*.deb \
+        python3-avahi_*.deb && \
+    rm -rf /tmp/avahi-debs
 
 # Install bluetooth stack
 # The default configuration enables all bluetooth controllers/adapters present on boot and plugged in after boot
