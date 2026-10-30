@@ -64,8 +64,7 @@ Once ZFS comes from backports, also check:
 ### Raspberry Pi
 
 The Raspberry Pi image takes only its boot and hardware support from the
-Raspberry Pi apt repo. An apt pin takes every package built from these source
-packages from it:
+Raspberry Pi apt repo, the packages built from these source packages:
 
 - **Kernel:** `linux`, the Pi 4 (`rpi-v8`) and Pi 5 (`rpi-2712`) kernels.
 - **Boot firmware:** `raspi-firmware`, which also installs the kernels and
@@ -76,14 +75,20 @@ packages from it:
 - **WPA3:** `wpa`, for `wpasupplicant`. Debian's doesn't report SAE support on
   the Pi's `brcmfmac` Wi-Fi, so NetworkManager can't join WPA3-only networks.
 
-Every other package from the Raspberry Pi repo is pinned out, so the rest of
-the system comes from the Debian snapshot as on other platforms. The Raspberry
-Pi repo rebuilds many Debian packages (glibc, ffmpeg, mesa, NetworkManager...)
-with higher versions, so without the pin they'd replace Debian's in every later
-build step. The pin persists in the image, so later build steps follow it too.
+The rest of the system comes from the Debian snapshot as on other platforms.
+The Raspberry Pi repo rebuilds many Debian packages (glibc, ffmpeg, mesa,
+NetworkManager...) with higher versions, so if it were an apt source they'd
+replace Debian's in every later build step.
 
-The Raspberry Pi repo has no snapshots, so these packages are whatever it
-serves at build time.
+The Raspberry Pi repo has no snapshots and its index only lists the latest
+version of each package, so installing from it would make Pi builds take
+whatever it serves at build time. To keep them reproducible like the rest of
+the image, the build doesn't add it to apt. It installs the exact packages
+listed in `build-steps/setup-raspberrypi/packages.sha256` from the repo's
+pool, checked against their checksums. To update them, run
+`./update-raspberrypi-packages.sh`. It resolves the packages against the
+current repo, with `raspberrypi.pref` limiting which ones come from it, and
+rewrites the list.
 
 ## GPU acceleration
 

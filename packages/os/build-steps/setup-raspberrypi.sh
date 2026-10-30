@@ -2,44 +2,27 @@
 
 set -euo pipefail
 
-# Install GPG (required for dearmoring the key).
-apt-get install -y gpg
-
-
 # Remove any existing firmware and kernels.
 rm -rf /boot/firmware
 mkdir -p /boot/firmware
 
-# Configure APT with Raspberry Pi sources.
-install -m 644 "/build-steps/setup-raspberrypi/raspberrypi.list" "/etc/apt/sources.list.d/"
-sed -i "s/RELEASE/trixie/g" "/etc/apt/sources.list.d/raspberrypi.list"
-
-gpg --dearmor \
-    < "/build-steps/setup-raspberrypi/raspberrypi.gpg.key" \
-    > "/etc/apt/trusted.gpg.d/raspberrypi-archive-stable.gpg"
-
-chmod 644 "/etc/apt/trusted.gpg.d/raspberrypi-archive-stable.gpg"
-
-# Only take the boot and hardware support packages from the Raspberry Pi repo:
-# the kernel, boot firmware, Wi-Fi firmware, initramfs-tools (patched to build
-# an initramfs for every Pi kernel flavour), and wpasupplicant (patched to
-# report the Pi Wi-Fi's WPA3 support to NetworkManager). Everything else comes
-# from the Debian snapshot like on other platforms. Otherwise the Raspberry Pi
-# repo's rebuilds of Debian packages (glibc, ffmpeg, mesa, NetworkManager...)
-# silently replace Debian's in every later build step, unpinned by the snapshot
-# date. The pin persists in the image, so later build steps follow it too.
-install -m 644 "/build-steps/setup-raspberrypi/raspberrypi.pref" "/etc/apt/preferences.d/"
-
-apt-get update -y
-
-
-# Install kernel and firmware for Pi 4 and 5.
-apt-get install -y \
-    initramfs-tools \
-    raspi-firmware \
-    firmware-brcm80211 \
-    linux-image-rpi-v8 \
-    linux-image-rpi-2712
+# Install the kernel, firmware and other boot and hardware support packages from
+# the Raspberry Pi repo. Everything else comes from the Debian snapshot like on
+# other platforms.
+#
+# The Raspberry Pi repo has no snapshots and its index only lists the latest
+# version of each package, so to keep the build reproducible, rather than adding
+# it to apt, install the exact packages listed in packages.sha256 from its pool,
+# checked against their checksums. update-raspberrypi-packages.sh updates them.
+apt-get install -y curl ca-certificates
+mkdir -p /tmp/raspberrypi
+while read -r checksum package_path; do
+    package_file="$(basename "${package_path}")"
+    curl -fsSL "https://archive.raspberrypi.com/debian/${package_path}" -o "/tmp/raspberrypi/${package_file}"
+    echo "${checksum}  /tmp/raspberrypi/${package_file}" | sha256sum -c -
+done < /build-steps/setup-raspberrypi/packages.sha256
+apt-get install -y /tmp/raspberrypi/*.deb
+rm -rf /tmp/raspberrypi
 
 
 # Install boot configuration files.
