@@ -153,8 +153,11 @@ RUN set -e; \
 # containers. Use Debian's driver-library and Vulkan ICD package contracts so
 # all private compute, video, GLX, EGL, and Vulkan dependencies stay
 # version-matched.
+COPY packages/os/patches/nvidia-pci-resize.patch /tmp/nvidia-pci-resize.patch
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
+        apt-get install --yes --no-install-recommends patch; \
+        /build-steps/patch-nvidia-kernel.sh /tmp/nvidia-pci-resize.patch; \
         apt-get install --yes --no-install-recommends \
             nvidia-open-kernel-dkms \
             nvidia-driver-libs \
@@ -175,7 +178,8 @@ RUN set -e; \
         rm -f \
             /usr/share/vulkan/icd.d/nvidia_icd.json \
             /usr/share/vulkan/implicit_layer.d/nvidia_layers.json; \
-    fi
+    fi; \
+    rm -f /tmp/nvidia-pci-resize.patch
 
 # Keep the cross-hardware acceleration contract explicit. These options are
 # provided by Debian's generic amd64 kernel and expose /dev/dri for Vulkan plus

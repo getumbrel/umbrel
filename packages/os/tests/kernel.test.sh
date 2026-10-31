@@ -26,6 +26,11 @@ for image in /boot/vmlinuz-*; do
     test "$(dpkg-query -W -f='${Version}' "linux-headers-${kernel}")" = "${version}"
     modinfo -k "${kernel}" zfs >/dev/null
     dkms status -k "${kernel}" | grep -E '^zfs/.*: installed$'
+    if dpkg-query -W -f='${Status}' nvidia-open-kernel-dkms 2>/dev/null | grep -qx 'install ok installed'; then
+        modinfo -k "${kernel}" nvidia-current-open >/dev/null
+        dkms status -k "${kernel}" | grep -E '^nvidia-current-open/.*: installed$'
+        echo "PASS: ${kernel}: NVIDIA open module installed"
+    fi
     echo "PASS: ${kernel}: signed image, matching headers, initramfs and ZFS module"
 done
 

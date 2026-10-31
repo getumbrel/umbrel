@@ -28,6 +28,49 @@ use the in-tree `nouveau` driver with containerized Mesa/NVK instead. NVK cannot
 drive a GPU while that GPU is bound to the NVIDIA kernel driver.
 
 
+## NVIDIA PCI resize backport candidate
+
+`patches/nvidia-pci-resize.patch` is an unmodified extraction of
+`debian/patches/module/0075-backport-NV_PCI_RESIZE_RESOURCE_HAS_EXCLUDE_BARS_ARG.patch`
+from Debian source `nvidia-open-gpu-kernel-modules` **550.163.01-4.1**,
+[Debian bug #1143204](https://bugs.debian.org/1143204). Attribution is retained
+in the patch: cielavenir <cielartisan@gmail.com>, backport from 590.48.01.
+Source archive:
+<https://deb.debian.org/debian/pool/contrib/n/nvidia-open-gpu-kernel-modules/nvidia-open-gpu-kernel-modules_550.163.01-4.1.debian.tar.xz>.
+Archive SHA256: `2a8c66934e00e901e7ea9fb63eebf9b82beb7c0fcb3cfc48523fc3521aaf6b07`;
+patch SHA256: `0b296d1e884cfe9c2643f98acbda80b3daf60e32de771b43fd2404d3ced4691b`.
+The archive checksum was matched to sid `contrib/source/Sources.xz`, whose
+checksum was matched to `Release` verified from sid `InRelease` using `sqv`
+and the independently installed Debian image archive keyring. Verified signing
+fingerprints: `04B54C3CDCA79751B16BC6B5225629DF75B188BD` and
+`B8B80B5B623EAB6AD8775C45B7C5D7D6350947F8`.
+
+Integration is intentionally separate: in the amd64/CUDA build branch, install
+`patch`, copy the patch into the image, then invoke
+`/build-steps/patch-nvidia-kernel.sh /path/to/nvidia-pci-resize.patch`
+immediately before the existing NVIDIA apt install, in the same RUN layer.
+The helper requires root, bash, coreutils, awk, dpkg, apt and authenticated
+snapshot indices. It installs only the snapshot driver's dependencies first
+(`nvidia-installer-cleanup`, `firmware-nvidia-gsp=550.163.01-2`,
+`nvidia-open-kernel-support=550.163.01-2`, `dkms`, without recommends), then
+downloads/unpacks exactly `nvidia-open-kernel-dkms=550.163.01-2` and patches
+`/usr/src/nvidia-current-open-550.163.01` before its DKMS postinst. It rejects
+version drift, pre-existing driver sources and repeated execution. It neither
+changes repositories nor upgrades/disables the NVIDIA driver or userspace.
+Do not run this image-build helper on a deployed appliance.
+
+Disposable containers without host mounts or devices verified zero-fuzz patch
+dry-run, application and reverse dry-run against the actual -2 binary's source.
+An amd64 snapshot container also exercised the helper, verified the driver was
+still unpacked (not configured), rejected a repeat, and confirmed via apt
+simulation that the existing full NVIDIA install configures the driver without
+re-unpacking it. No compiler/native-build success is claimed. Diagnostic run
+`41228546036` subsequently completed with the exact cause confirmed:
+`nvidia/nv-pci.c:237:9: error: too few arguments to function 'pci_resize_resource'`,
+against `linux-headers-6.12.113+deb13-common/include/linux/pci.h:1435`.
+This remains a candidate pending native build and GPU validation; no installable
+-4.1 binary is assumed.
+
 ## Generic Debian kernel updates
 
 The generic amd64 and arm64 base images install a checksummed set of signed
