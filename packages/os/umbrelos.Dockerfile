@@ -135,8 +135,17 @@ RUN set -e; \
 # containers. Use Debian's driver-library and Vulkan ICD package contracts so
 # all private compute, video, GLX, EGL, and Vulkan dependencies stay
 # version-matched.
+#
+# Debian's 550.163.01 open kernel module doesn't build against trixie kernels
+# from 6.12.100, which added an argument to pci_resize_resource(). DKMS applies
+# NVIDIA's fix from 590.48.01, as backported in Debian unstable's
+# 550.163.01-4.1 (Debian bug #1143204), until that reaches trixie.
+COPY packages/os/nvidia/pci-resize-resource.patch /tmp/pci-resize-resource.patch
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
+        install -D --mode=644 /tmp/pci-resize-resource.patch \
+            /usr/src/nvidia-current-open-550.163.01/patches/pci-resize-resource.patch; \
+        echo 'PATCH[0]="pci-resize-resource.patch"' > /etc/dkms/nvidia-current-open.conf; \
         apt-get install --yes --no-install-recommends \
             nvidia-open-kernel-dkms \
             nvidia-driver-libs \
@@ -152,7 +161,8 @@ RUN set -e; \
         rm -f \
             /usr/share/vulkan/icd.d/nvidia_icd.json \
             /usr/share/vulkan/implicit_layer.d/nvidia_layers.json; \
-    fi
+    fi; \
+    rm /tmp/pci-resize-resource.patch
 
 # Keep the cross-hardware acceleration contract explicit. These options are
 # provided by Debian's generic amd64 kernel and expose /dev/dri for Vulkan plus
