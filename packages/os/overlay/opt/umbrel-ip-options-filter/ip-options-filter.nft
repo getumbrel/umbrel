@@ -1,0 +1,28 @@
+#!/usr/sbin/nft -f
+
+# Drops inbound IPv4 TCP packets that carry IP options.
+#
+# Mitigates CVE-2026-98432, a use-after-free in the kernel's handling of IP
+# options in TCP SYNs that allows remote code execution. Every way to trigger
+# it needs IP options in the SYN, and real TCP traffic doesn't use them.
+#
+# The table hooks prerouting, so it covers traffic to the host itself, to
+# containers through published ports, and from VMs and containers to the host.
+# It doesn't cover code inside a container connecting to its own loopback,
+# which never leaves the container's network namespace.
+#
+# Only TCP is filtered: IGMP packets always carry the Router Alert option, and
+# dropping them would stop the host answering multicast queries, which breaks
+# mDNS on networks with IGMP snooping.
+#
+# The empty table declaration makes the delete safe when the table doesn't
+# exist yet, so this file can be applied repeatedly.
+table ip umbrel_ip_options_filter
+delete table ip umbrel_ip_options_filter
+
+table ip umbrel_ip_options_filter {
+	chain prerouting {
+		type filter hook prerouting priority raw; policy accept;
+		ip protocol tcp ip hdrlength > 5 counter drop
+	}
+}

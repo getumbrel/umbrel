@@ -1,0 +1,14 @@
+[Unit]
+Description=Drop IPv4 TCP packets carrying IP options
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /opt/umbrel-ip-options-filter/ip-options-filter.nft
+
+[Install]
+WantedBy=multi-user.target
