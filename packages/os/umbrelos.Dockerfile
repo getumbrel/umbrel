@@ -162,7 +162,12 @@ RUN set -e; \
             libnvcuvid1 \
             libnvidia-encode1 \
             nvidia-smi \
-            nvidia-vulkan-icd; \
+            nvidia-vulkan-icd || { \
+                for build_log in /var/lib/dkms/nvidia*/*/build/make.log; do \
+                    if [ -f "${build_log}" ]; then cat "${build_log}"; fi; \
+                done; \
+                exit 1; \
+            }; \
         install --directory /etc/vulkan/icd.d; \
         cp /usr/share/vulkan/icd.d/nvidia_icd.json \
             /etc/vulkan/icd.d/nvidia_icd.json; \
