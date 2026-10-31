@@ -28,6 +28,37 @@ use the in-tree `nouveau` driver with containerized Mesa/NVK instead. NVK cannot
 drive a GPU while that GPU is bound to the NVIDIA kernel driver.
 
 
+## Generic Debian kernel updates
+
+The generic amd64 and arm64 base images install a checksummed set of signed
+Debian trixie-security kernel packages independently of `APT_SNAPSHOT_DATE`.
+`LINUX_VERSION=6.12.113-1` includes the fix for
+[CVE-2026-98432](https://security-tracker.debian.org/tracker/CVE-2026-98432).
+This does not update a running device; a rebuilt OS image/update bundle must
+be released, installed and booted. Raspberry Pi images use the Raspberry Pi
+archive kernels configured in `build-steps/setup-raspberrypi.sh`, not this set.
+
+When updating the kernel, update `LINUX_VERSION`, `LINUX_SNAPSHOT_DATE` and
+`linux-packages.sha256` together. Obtain the filenames and SHA256 values from
+the snapshot's authenticated `trixie-security/main/binary-{amd64,arm64}/Packages`
+indices. Include both architectures' image and header meta-packages, signed
+images, matching headers and kbuild, plus their shared common headers. Keep
+unrelated dependencies on the existing OS-wide APT snapshot.
+
+Build and check the kernel-bearing base stage for each architecture:
+
+```sh
+docker build --platform=linux/arm64 --target=umbrelos-base \
+  -f packages/os/umbrelos.Dockerfile -t umbrelos-kernel-test:arm64 .
+docker run --rm -i --platform=linux/arm64 umbrelos-kernel-test:arm64 \
+  bash < packages/os/tests/kernel.test.sh
+```
+
+Repeat with `amd64`. The test checks installed package versions, matching
+headers, initramfs generation and ZFS DKMS output without loading modules.
+The amd64 build also exercises the default NVIDIA and Realtek DKMS packages.
+Full image packaging, boot and hardware validation remain separate gates.
+
 ## Build Process
 
 The following diagram visualizes the build process and possible build artifacts:

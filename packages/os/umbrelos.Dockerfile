@@ -3,6 +3,8 @@ ARG DEBIAN_VERSION=trixie
 # and apt repositories independently.
 ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20260713
 ARG APT_SNAPSHOT_DATE=20260727
+ARG LINUX_VERSION=6.12.113-1
+ARG LINUX_SNAPSHOT_DATE=20261031T000000Z
 ARG BASE_VARIANT=""
 
 ARG DOCKER_VERSION=28.5.0
@@ -100,18 +102,34 @@ FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base
 ARG APT_SNAPSHOT_DATE
 ARG TARGETARCH
 ARG NVIDIA_CUDA_SUPPORT
+ARG LINUX_VERSION
+ARG LINUX_SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
 
-# Install Linux kernel, firmware, and ZFS
-RUN apt-get install --yes \
-    zfs-dkms \
-    zfsutils-linux \
-    linux-headers-${TARGETARCH} \
-    linux-image-${TARGETARCH} \
-    firmware-linux
+# Debian's trixie-security kernel fixes CVE-2026-98432. Keep its signed images,
+# matching headers, kbuild and meta-packages separate from the OS-wide snapshot.
+# The Raspberry Pi variant uses its own kernel provider in setup-raspberrypi.sh.
+COPY packages/os/linux-packages.sha256 /tmp/linux-packages.sha256
+RUN set -eu; \
+    apt-get install --yes ca-certificates curl; \
+    mkdir -p /tmp/linux; \
+    grep -E "_(${TARGETARCH}|all)\\.deb$" /tmp/linux-packages.sha256 > /tmp/linux/packages.sha256; \
+    while read -r checksum package_path; do \
+        package_file="/tmp/linux/${package_path##*/}"; \
+        curl -fsSL "https://snapshot.debian.org/archive/debian-security/${LINUX_SNAPSHOT_DATE}/${package_path}" -o "${package_file}"; \
+        echo "${checksum}  ${package_file}" | sha256sum -c -; \
+    done < /tmp/linux/packages.sha256; \
+    apt-get install --yes --no-remove /tmp/linux/*.deb; \
+    for package in linux-image-${TARGETARCH} linux-headers-${TARGETARCH}; do \
+        test "$(dpkg-query -W -f='${Version}' "${package}")" = "${LINUX_VERSION}"; \
+    done; \
+    rm -rf /tmp/linux /tmp/linux-packages.sha256
+
+# Configure the kernel headers and compiler before DKMS runs its build hooks.
+RUN apt-get install --yes zfs-dkms zfsutils-linux firmware-linux
 
 # Install amd64-specific microcode, firmware, and network drivers
 RUN set -e; \
