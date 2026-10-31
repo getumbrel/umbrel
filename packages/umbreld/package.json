@@ -1,8 +1,8 @@
 {
 	"name": "umbreld",
 	"type": "module",
-	"version": "2.0.0",
-	"versionName": "umbrelOS 2.0",
+	"version": "2.0.1",
+	"versionName": "umbrelOS 2.0.1",
 	"main": "./source/index.ts",
 	"bin": "./umbreld",
 	"license": "PolyForm Noncommercial License 1.0.0",
