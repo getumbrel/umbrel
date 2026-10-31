@@ -182,6 +182,11 @@ RUN set -e; \
         grep -q '^CONFIG_DRM_NOUVEAU=m$' /boot/config-*; \
     fi
 
+# Validate the actual generic kernel, initramfs, headers and ZFS integration in
+# every build, including the native amd64 and arm64 CI jobs.
+COPY packages/os/tests/kernel.test.sh /tmp/kernel.test.sh
+RUN bash /tmp/kernel.test.sh && rm /tmp/kernel.test.sh
+
 # Cleanup build steps.
 RUN rm -rf /build-steps
 

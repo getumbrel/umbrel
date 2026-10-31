@@ -45,6 +45,43 @@ indices. Include both architectures' image and header meta-packages, signed
 images, matching headers and kbuild, plus their shared common headers. Keep
 unrelated dependencies on the existing OS-wide APT snapshot.
 
+Verify the manifest offline with Python 3 (standard library only), `sqv` with
+cleartext verification support, and a trusted Debian archive keyring installed
+independently of the downloaded metadata (Debian's `debian-archive-keyring`
+package). Download public metadata into this layout first:
+
+```sh
+# Run from the repository root. Match LINUX_SNAPSHOT_DATE in umbrelos.Dockerfile.
+snapshot=20261031T000000Z
+metadata=linux-metadata
+base="https://snapshot.debian.org/archive/debian-security/${snapshot}/dists/trixie-security"
+mkdir -p "${metadata}"
+curl -fsSL "${base}/InRelease" -o "${metadata}/InRelease"
+for arch in amd64 arm64; do
+  mkdir -p "${metadata}/main/binary-${arch}"
+  curl -fsSL "${base}/main/binary-${arch}/Packages.xz" \
+    -o "${metadata}/main/binary-${arch}/Packages.xz"
+done
+python3 packages/os/tools/verify-linux-manifest.py "${metadata}" \
+  --keyring /usr/share/keyrings/debian-archive-keyring.gpg
+```
+
+The verifier performs no downloads. Manifest and Dockerfile paths default to
+this package's files, relative to the script, not the working directory.
+`--version`, `--snapshot` and `--codename` default to the Dockerfile's
+`LINUX_VERSION`, `LINUX_SNAPSHOT_DATE` and `DEBIAN_VERSION` + `-security`;
+`--manifest` and `--dockerfile` allow checking candidate replacements.
+
+Only the authenticated release body emitted by `sqv` is parsed. The verifier
+checks Debian security identity, codename and signed release validity at the
+selected snapshot time, then SHA256 and size for both compressed indices,
+then every manifest entry's SHA256, version and architecture. Shared `all`
+packages must match both indices. This checks provenance of listed packages,
+not dependency completeness or downloaded `.deb` contents (the build checks
+those against the manifest). Snapshot URLs/timestamps are not signed: the
+validity-window check does not prove which snapshot served the metadata.
+Historical metadata need not still be within `Valid-Until` today.
+
 Build and check the kernel-bearing base stage for each architecture:
 
 ```sh
