@@ -6,6 +6,7 @@ on:
       - 'packages/os/umbrelos.Dockerfile'
       - 'packages/os/linux-packages.sha256'
       - 'packages/os/build-steps/**'
+      - 'packages/os/patches/**'
       - 'packages/os/tests/kernel.test.sh'
       - '.github/workflows/kernel-base.yml'
   pull_request:
@@ -13,6 +14,7 @@ on:
       - 'packages/os/umbrelos.Dockerfile'
       - 'packages/os/linux-packages.sha256'
       - 'packages/os/build-steps/**'
+      - 'packages/os/patches/**'
       - 'packages/os/tests/kernel.test.sh'
       - '.github/workflows/kernel-base.yml'
   workflow_dispatch:
