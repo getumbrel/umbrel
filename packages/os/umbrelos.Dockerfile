@@ -144,7 +144,11 @@ RUN set -e; \
         linux-headers-${TARGETARCH} \
         linux-image-${TARGETARCH} \
         initramfs-tools \
-        firmware-linux
+        firmware-linux \
+        firmware-intel-graphics \
+        firmware-intel-misc \
+        firmware-mediatek \
+        firmware-nvidia-graphics
 
 # Install amd64-specific microcode and firmware
 RUN set -e; \
