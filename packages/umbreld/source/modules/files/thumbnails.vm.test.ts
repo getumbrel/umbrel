@@ -180,8 +180,11 @@ describe('content-addressed thumbnail index', () => {
 	})
 
 	test('ships the HEVC decoder with initialized HDR image planes', async () => {
-		const version = await umbreld.vm.ssh("dpkg-query -W -f='${Version}' libde265-0")
-		expect(version).toBe('1.1.1-1')
+		// The plane initialization fix landed in 1.1.1, trixie ships 1.0.15
+		const hasFix = await umbreld.vm.ssh(
+			`dpkg --compare-versions "$(dpkg-query -W -f='\${Version}' libde265-0)" ge 1.1.1-1 && printf yes`,
+		)
+		expect(hasFix).toBe('yes')
 	})
 
 	test('generates a genuine Apple HEIC thumbnail', async () => {
