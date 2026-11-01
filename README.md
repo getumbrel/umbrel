@@ -43,10 +43,19 @@ To achieve our vision, we're building a new kind of a home server OS. Just like 
   <img width="3840" height="2880" alt="bento 2 0" src="https://github.com/user-attachments/assets/a183106e-7d8a-4b84-bd7b-4cd06c9ff148" />
 </p>
 
-umbrelOS 2.0 is currently in beta, with the stable release planned for **September 22, 2026**. Try it out today:
+umbrelOS 2.0 is out now, and it's the biggest update to umbrelOS yet. [Watch the keynote](https://youtu.be/lBsKk_NNg2A) or read the [full release notes](https://github.com/getumbrel/umbrel/releases/tag/2.0.0).
 
-- **Fresh install:** download the 2.0 beta from [umbrel.com/downloads](https://umbrel.com/downloads).
-- **Already on umbrelOS:** update to umbrelOS 1.7.4 or later, then go to **Settings > Advanced settings** and turn on **umbrelOS beta program** to receive the 2.0 beta.
+- **Photos:** photos and videos on your Umbrel show up in the new Photos app, and [Umbrel for iPhone](https://link.umbrel.com/ios-app) backs up your entire camera roll automatically.
+- **Machines:** run Windows, Ubuntu, Debian, Android, and more right inside your Umbrel, with the full desktop in a browser tab.
+- **Multi-user:** everyone in your household gets their own account, home screen, and private home folder. Share only the apps and folders you choose.
+- **Storage Manager:** combine multiple internal drives into one space, or turn on FailSafe (RAID) to stay protected if a drive fails.
+- **AI agents:** connect any AI agent to the built-in MCP server to install apps, organize files, or troubleshoot issues, with only the access you allow.
+- **GPU acceleration:** apps like Ollama and Jellyfin can use NVIDIA, AMD, and Intel GPUs, including Thunderbolt eGPUs.
+- **Bring your cloud home:** import your files from Google Drive, Dropbox, OneDrive, iCloud, and more in one go, or keep them backing up continuously.
+- **New app settings:** point any app at folders on external or network drives, or move entire apps to an external drive.
+- **Umbrel for Mac:** the [Mac app](https://link.umbrel.com/macos-app) adds your Umbrel as a drive in Finder, at home or remotely over Tailscale.
+
+Already running umbrelOS? Update from **Settings > Software update**. Setting up a new device? See [Installing umbrelOS](#installing-umbrelos) below.
 
 
 ## Installing umbrelOS
