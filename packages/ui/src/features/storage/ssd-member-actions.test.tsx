@@ -33,7 +33,7 @@ vi.mock('@/components/ui/immersive-dialog', () => {
 		immersiveDialogTitleClass: '',
 	}
 })
-vi.mock('@radix-ui/react-dialog', async (importOriginal) => ({
+vi.mock('@/components/ui/dialog', async (importOriginal) => ({
 	...(await importOriginal<object>()),
 	DialogPortal: ({children}: PropsWithChildren) => children,
 	DialogTitle: ({children}: PropsWithChildren) => children,

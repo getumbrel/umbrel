@@ -205,7 +205,7 @@ export function AddSourceDialog() {
 		</Drawer>
 	) : (
 		<Dialog open={dialogProps.open} onOpenChange={dialogProps.onOpenChange}>
-			<DialogScrollableContent showClose>
+			<DialogScrollableContent>
 				<div className='flex flex-col gap-5 px-5 py-6'>
 					{header}
 					{body}

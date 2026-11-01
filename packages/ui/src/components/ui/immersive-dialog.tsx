@@ -1,8 +1,8 @@
-import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
+import {Dialog, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
 import {motion} from 'motion/react'
 import {Children, ComponentPropsWithoutRef, ReactNode, useEffect} from 'react'
-import {RiCloseLine} from 'react-icons/ri'
 
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {
 	dialogContentAnimationClass,
@@ -17,7 +17,8 @@ import {tw} from '@/utils/tw'
 
 import {IconTypes} from './icon'
 
-export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80`
+// Phones are narrow enough for a title to reach the close button
+export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80 pe-4`
 export const immersiveDialogDescriptionClass = tw`text-15 font-normal leading-tight -tracking-2 text-white/40`
 
 export function ImmersiveDialogSeparator() {
@@ -59,7 +60,7 @@ export function ImmersiveDialogContent({
 	short?: boolean
 	showScroll?: boolean
 	ref?: React.Ref<HTMLDivElement>
-} & ComponentPropsWithoutRef<typeof DialogContent>) {
+} & Omit<ComponentPropsWithoutRef<typeof DialogContent>, 'asChild'>) {
 	return (
 		<DialogContent
 			ref={ref}
@@ -99,7 +100,7 @@ export function ImmersiveDialogContent({
 				<div className={immersiveScrollAreaContentsClass}>{children}</div>
 			)}
 			<div className='umbrel-window-chrome umbrel-window-surface-all pointer-events-none absolute inset-0 z-50' />
-			<ImmersiveDialogClose />
+			<DialogCloseButton surface='immersive' />
 		</DialogContent>
 	)
 }
@@ -116,7 +117,7 @@ export function ImmersiveDialogSplitContent({
 	// Rendered below the scroll area so it stays visible however long the content is
 	footer?: React.ReactNode
 	ref?: React.Ref<HTMLDivElement>
-} & ComponentPropsWithoutRef<typeof DialogContent>) {
+} & Omit<ComponentPropsWithoutRef<typeof DialogContent>, 'asChild'>) {
 	return (
 		<DialogPortal>
 			<ImmersiveDialogOverlay />
@@ -148,14 +149,14 @@ export function ImmersiveDialogSplitContent({
 					{footer}
 				</section>
 				<div className='umbrel-window-chrome umbrel-window-surface-all pointer-events-none absolute inset-0 z-50' />
-				<ImmersiveDialogClose />
+				<DialogCloseButton surface='immersive' />
 			</DialogContent>
 		</DialogPortal>
 	)
 }
 
-const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[calc(100dvh-90px)]`
-const immersiveContentTallClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
+const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[calc(100dvh-40px)]`
+const immersiveContentTallClass = tw`max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-40px)]`
 const immersiveScrollAreaContentsClass = tw`flex h-full flex-col gap-6 px-6 py-4 md:p-8`
 
 export function ImmersiveDialogOverlay({ref}: {ref?: React.Ref<HTMLDivElement>}) {
@@ -164,19 +165,6 @@ export function ImmersiveDialogOverlay({ref}: {ref?: React.Ref<HTMLDivElement>})
 			ref={ref}
 			className={cn(dialogOverlayClass, 'transform-gpu bg-black/30 backdrop-blur-xl contrast-more:backdrop-blur-none')}
 		/>
-	)
-}
-
-function ImmersiveDialogClose() {
-	return (
-		<div className='absolute top-full left-1/2 mt-5 -translate-x-1/2'>
-			{/* Note, because this parent has a backdrop, this button won't have a backdrop */}
-			{/* Plain button rather than IconButton: the button variant's border and
-			    shadow utilities would override the settings-edge-material surface */}
-			<DialogClose className='settings-edge-material umbrel-material flex h-[36px] w-[36px] items-center justify-center rounded-full bg-white/6 text-white transition-[background-color,transform] duration-200 hover:bg-white/12 focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white/20 active:scale-90'>
-				<RiCloseLine className='size-5 opacity-90' />
-			</DialogClose>
-		</div>
 	)
 }
 

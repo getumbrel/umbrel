@@ -138,5 +138,5 @@ function SheetCloseButton() {
 	// A sticky header portals in its own close button
 	if (showStickyHeader) return null
 
-	return <DialogCloseButton className='absolute top-3 right-3 z-[60] sm:top-5 sm:right-5' />
+	return <DialogCloseButton surface='sheet' />
 }

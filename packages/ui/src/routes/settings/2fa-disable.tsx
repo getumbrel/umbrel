@@ -34,7 +34,7 @@ export default function TwoFactorDisableDialog({closeTo}: {closeTo?: string}) {
 		<Dialog {...dialogProps}>
 			<DialogContent className='flex flex-col items-center gap-5'>
 				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
+					<DialogTitle className='px-6 text-center'>{title}</DialogTitle>
 				</DialogHeader>
 				<Inner onCodeCheck={disable} />
 			</DialogContent>

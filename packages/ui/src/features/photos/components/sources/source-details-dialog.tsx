@@ -59,11 +59,7 @@ export function SourceDetailsDialog() {
 			{/* Same scrolling shell and close button as the Settings dialogs. Focus
 			    isn't handed back to the opener on close — the browser would paint
 			    its focus ring on a button that was only ever clicked */}
-			<DialogScrollableContent
-				showClose
-				onOpenAutoFocus={(e) => e.preventDefault()}
-				onCloseAutoFocus={(e) => e.preventDefault()}
-			>
+			<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
 				<DialogHeader className='sr-only'>
 					<DialogTitle>{source.name}</DialogTitle>
 					<DialogDescription>{sourceTypeLabel(source.type, t)}</DialogDescription>

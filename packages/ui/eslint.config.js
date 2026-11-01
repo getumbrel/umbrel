@@ -53,6 +53,50 @@ export default [
 			'@typescript-eslint/no-explicit-any': 'off',
 		},
 	},
+	// Windows draw their own close button, so they're built from the primitives that do
+	{
+		files: ['src/**/*.{ts,tsx}'],
+		ignores: [
+			'src/components/ui/alert-dialog.tsx',
+			'src/components/ui/command.tsx',
+			'src/components/ui/dialog-close-button.tsx',
+			'src/components/ui/dialog.tsx',
+			'src/components/ui/immersive-dialog.tsx',
+			'src/components/ui/sheet.tsx',
+			'src/features/files/components/file-viewer/shell/quick-look.tsx',
+			'src/features/files/components/file-viewer/shell/viewer-shell.tsx',
+			'src/features/files/components/rewind/index.tsx',
+			'src/features/photos/components/viewer/item-viewer.tsx',
+			'**/*.test.tsx',
+		],
+		rules: {
+			'@typescript-eslint/no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{
+							name: '@radix-ui/react-dialog',
+							message: 'Use the Dialog primitives in components/ui. They own the close button.',
+							allowTypeImports: true,
+						},
+					],
+				},
+			],
+		},
+	},
+	{
+		files: ['src/**/*.tsx'],
+		ignores: ['**/*.test.tsx'],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				{
+					selector: "JSXAttribute[name.name='closeButton'] > JSXExpressionContainer > Literal[value=false]",
+					message: 'Every window has a close button. Use AlertDialog for a decision, or a condition for a busy state.',
+				},
+			],
+		},
+	},
 	{
 		files: ['scripts/**/*.{js,mjs,cjs}'],
 		languageOptions: {

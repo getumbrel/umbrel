@@ -282,7 +282,7 @@ export default function SessionsDrawerOrDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogScrollableContent showClose>
+			<DialogScrollableContent>
 				<DialogHeader className='sr-only'>
 					<DialogTitle>{t('active-logins.title')}</DialogTitle>
 				</DialogHeader>

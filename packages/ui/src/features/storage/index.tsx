@@ -1,10 +1,10 @@
-import {DialogPortal, DialogTitle} from '@radix-ui/react-dialog'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbAlertTriangle, TbCircleCheckFilled, TbInfoCircle, TbPlus, TbRefreshDot} from 'react-icons/tb'
 import {TiInfoLarge} from 'react-icons/ti'
 import {useNavigate} from 'react-router-dom'
 
+import {DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -308,8 +308,8 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 					}}
 				>
 					<div className='flex h-full flex-col gap-6'>
-						<DialogTitle asChild>
-							<h1 className={immersiveDialogTitleClass}>{t('storage-manager')}</h1>
+						<DialogTitle asChild className={immersiveDialogTitleClass}>
+							<h1>{t('storage-manager')}</h1>
 						</DialogTitle>
 						<StorageOperationError />
 						<PoolDataErrorBanner errorCount={raidStatus?.dataErrors} />

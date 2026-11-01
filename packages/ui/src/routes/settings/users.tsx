@@ -1119,7 +1119,7 @@ export default function UsersDialog() {
 	return (
 		<>
 			<Dialog {...dialogProps}>
-				<DialogScrollableContent showClose>
+				<DialogScrollableContent>
 					<DialogHeader className='sr-only'>
 						<DialogTitle>{dialogTitle}</DialogTitle>
 						<DialogDescription>{dialogDescription}</DialogDescription>

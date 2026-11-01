@@ -4,6 +4,7 @@ import {Suspense, useRef, useState, type CSSProperties} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
 
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {ImmersiveDialog} from '@/components/ui/immersive-dialog'
 import {InfoCard} from '@/features/files/components/file-viewer/info-card-viewer'
 import {
@@ -138,7 +139,7 @@ export function QuickLook({item, viewer}: {item: FileSystemItem; viewer?: Viewer
 					<DialogPrimitive.Title
 						className={
 							viewer
-								? 'shrink-0 truncate px-6 text-center text-13 leading-11 font-medium -tracking-2 text-white/70'
+								? 'shrink-0 truncate px-10 text-center text-13 leading-11 font-medium -tracking-2 text-white/70'
 								: 'sr-only'
 						}
 					>
@@ -193,6 +194,7 @@ export function QuickLook({item, viewer}: {item: FileSystemItem; viewer?: Viewer
 							/>
 						</>
 					)}
+					<DialogCloseButton />
 				</DialogPrimitive.Content>
 			</DialogPrimitive.Portal>
 		</ImmersiveDialog>

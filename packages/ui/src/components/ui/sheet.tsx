@@ -2,6 +2,7 @@ import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {cn} from '@/lib/utils'
 import {useWallpaper, WallpaperAvifSource} from '@/providers/wallpaper'
 
@@ -46,7 +47,7 @@ function SheetContent({
 	className,
 	children,
 	backdrop,
-	closeButton = true,
+	closeButton = <DialogCloseButton surface='sheet' />,
 	ref,
 	...props
 }: SheetContentProps) {

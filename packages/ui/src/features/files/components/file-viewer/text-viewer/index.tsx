@@ -13,6 +13,7 @@ import {useMedia} from 'react-use'
 import {
 	AlertDialog,
 	AlertDialogAction,
+	AlertDialogCancel,
 	AlertDialogContent,
 	AlertDialogDescription,
 	AlertDialogFooter,
@@ -517,7 +518,7 @@ function TextEditor({item, mode, downloadUrl}: ViewerProps & {downloadUrl: strin
 				</div>
 			</div>
 
-			{/* App compose file dialog — Escape keeps the file open read-only */}
+			{/* App compose file dialog — Cancel or Escape keeps the file open read-only */}
 			{composeFile && (
 				<AlertDialog open={showComposeDialog} onOpenChange={setShowComposeDialog}>
 					<AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
@@ -545,6 +546,7 @@ function TextEditor({item, mode, downloadUrl}: ViewerProps & {downloadUrl: strin
 							>
 								{t('files-text-editor.compose-dialog.edit-anyway')}
 							</AlertDialogAction>
+							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				</AlertDialog>

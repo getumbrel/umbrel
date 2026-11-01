@@ -1,8 +1,8 @@
-import {DialogPortal} from '@radix-ui/react-dialog'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
+import {DialogPortal} from '@/components/ui/dialog'
 import {ImmersiveDialog, ImmersiveDialogOverlay} from '@/components/ui/immersive-dialog'
 import {AppDropdown, ImmersivePickerDialogContentInit, ImmersivePickerItem} from '@/modules/immersive-picker'
 import {usePickerTarget} from '@/modules/immersive-picker/target'

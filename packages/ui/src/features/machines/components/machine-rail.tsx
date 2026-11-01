@@ -163,7 +163,11 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 			<MachineMenu machine={machine} buttonClassName={machineRailButtonClass} tooltipSide='left' />
 			{onClose && (
 				<DarkTooltip label={t('close')} side='left'>
-					<button className={cn(machineRailButtonClass, 'hidden md:flex')} onClick={onClose} aria-label={t('close')}>
+					<button
+						className={cn(machineRailButtonClass, 'hidden md:flex xl:order-first')}
+						onClick={onClose}
+						aria-label={t('close')}
+					>
 						<X className='size-5' />
 					</button>
 				</DarkTooltip>

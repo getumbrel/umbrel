@@ -1,4 +1,3 @@
-import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbAlertTriangle, TbTrash} from 'react-icons/tb'
@@ -10,7 +9,14 @@ import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
 import {CopyButton} from '@/components/ui/copy-button'
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
-import {Dialog, DialogHeader, DialogPortal, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
+import {
+	Dialog,
+	DialogDescription,
+	DialogHeader,
+	DialogPortal,
+	DialogScrollableContent,
+	DialogTitle,
+} from '@/components/ui/dialog'
 import {AnimatedInputError, Input} from '@/components/ui/input'
 import {Spinner} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
@@ -91,7 +97,7 @@ export function CommunityAppStoreDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
-				<DialogScrollableContent showClose className='umbrel-app-store-modal'>
+				<DialogScrollableContent className='umbrel-app-store-modal'>
 					<div className='umbrel-dialog-fade-scroller umbrel-stable-gutter flex flex-col gap-y-5 overflow-y-auto px-5 py-6'>
 						<DialogHeader className='space-y-2'>
 							<DialogTitle>{title}</DialogTitle>

@@ -1,4 +1,4 @@
-import {DialogProps} from '@radix-ui/react-dialog'
+import type {DialogProps} from '@radix-ui/react-dialog'
 import {Fragment, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'

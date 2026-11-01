@@ -1,4 +1,3 @@
-import {DialogPortal, DialogTitle} from '@radix-ui/react-dialog'
 import {useEffect, useRef, useState, type ComponentType} from 'react'
 import {useTranslation} from 'react-i18next'
 import {IoLogoApple} from 'react-icons/io5'
@@ -14,6 +13,7 @@ import {
 	useCarouselSnaps,
 	type CarouselApi,
 } from '@/components/ui/carousel'
+import {DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,

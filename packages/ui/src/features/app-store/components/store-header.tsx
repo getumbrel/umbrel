@@ -155,7 +155,7 @@ function DesktopStoreHeader({
 			)}
 
 			<SheetStickyHeader visible={pinned} surfaceVisible={settled} animateContent={false} fadeSurface>
-				<DialogCloseButton className='pointer-events-auto absolute top-5 right-5' />
+				<DialogCloseButton surface='sheet' />
 			</SheetStickyHeader>
 		</>
 	)

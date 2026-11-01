@@ -98,7 +98,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogScrollableContent showClose>
+			<DialogScrollableContent>
 				<div className='space-y-5 px-5 py-6'>
 					<DialogHeader>
 						<div className='flex items-center gap-2'>

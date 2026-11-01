@@ -239,7 +239,7 @@ export function CloudDetailsDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className='flex flex-col'>
 				<DialogHeader>
-					<DialogTitle className='text-center'>{name}</DialogTitle>
+					<DialogTitle className='px-6 text-center'>{name}</DialogTitle>
 				</DialogHeader>
 				{body}
 				<DialogFooter />

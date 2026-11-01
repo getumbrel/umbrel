@@ -1,4 +1,3 @@
-import {DialogPortal} from '@radix-ui/react-dialog'
 import {useMutationState} from '@tanstack/react-query'
 import {getMutationKey} from '@trpc/react-query'
 import {MoreHorizontal} from 'lucide-react'
@@ -11,6 +10,7 @@ import {Area, AreaChart, ResponsiveContainer, XAxis, YAxis} from 'recharts'
 
 import {AppIcon} from '@/components/app-icon'
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
+import {DialogPortal} from '@/components/ui/dialog'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {

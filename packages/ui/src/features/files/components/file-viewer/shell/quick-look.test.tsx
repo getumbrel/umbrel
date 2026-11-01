@@ -90,15 +90,16 @@ describe('QuickLook', () => {
 	}
 	const closed = () => useFilesStore.getState().viewerItem === null
 
-	test('is a dialog named for the file, with no toolbar: the viewer’s tools aren’t shown, and only the edge arrows are buttons', async () => {
+	test('is a dialog named for the file, with no toolbar: the viewer’s tools aren’t shown, and only the edge arrows and the close are buttons', async () => {
 		await mount(fakeViewer)
 		const dialog = panel()!
 		expect(document.getElementById(dialog.getAttribute('aria-labelledby')!)?.textContent).toBe('a.txt')
 		expect(dialog.querySelector('[data-testid="stage"]')?.textContent).toBe('/Home/a.txt')
-		expect([...document.querySelectorAll('button, a')].map((button) => button.getAttribute('aria-label'))).toEqual([
-			'files-viewer.previous',
-			'files-viewer.next',
-		])
+		expect(
+			[...document.querySelectorAll('button, a')].map(
+				(button) => button.getAttribute('aria-label') ?? button.textContent,
+			),
+		).toEqual(['files-viewer.previous', 'files-viewer.next', 'close'])
 	})
 
 	test('something Files has no viewer for is its card, named once', async () => {

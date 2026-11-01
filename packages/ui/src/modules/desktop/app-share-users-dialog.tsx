@@ -3,7 +3,6 @@ import {useSearchParams} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
-import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useAppMemberShares} from '@/hooks/use-app-member-shares'
 import {MemberSharePicker} from '@/modules/user-sharing'
 import {trpcReact} from '@/trpc/trpc'
@@ -59,8 +58,7 @@ export function AppShareUsersDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogContent className='flex max-w-[420px] flex-col gap-5'>
-				<DialogCloseButton className='absolute top-2 right-2 z-50' />
+			<DialogContent className='flex flex-col gap-5'>
 				<DialogHeader>
 					<div className='flex items-center gap-3'>
 						<AppIcon size={44} src={appIcon} className='shrink-0 rounded-10' />

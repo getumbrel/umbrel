@@ -1,7 +1,7 @@
-import {DialogPortal, DialogTitle} from '@radix-ui/react-dialog'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
+import {DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -149,8 +149,8 @@ export default function SingleDriveStorageManager({devices}: {devices: StorageDe
 					}}
 				>
 					<div className='flex h-full flex-col gap-6'>
-						<DialogTitle asChild>
-							<h1 className={immersiveDialogTitleClass}>{t('storage-manager')}</h1>
+						<DialogTitle asChild className={immersiveDialogTitleClass}>
+							<h1>{t('storage-manager')}</h1>
 						</DialogTitle>
 
 						{/* Mode - full width above the drive/stats columns */}

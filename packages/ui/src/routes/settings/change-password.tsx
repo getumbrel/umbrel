@@ -30,7 +30,7 @@ export default function ChangePasswordDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
-				<DialogContent asChild>
+				<DialogContent>
 					<form onSubmit={handleSubmit}>
 						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>

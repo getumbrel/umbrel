@@ -1,9 +1,9 @@
 import {motion} from 'motion/react'
 import {Suspense, useCallback, useEffect, useState, type MouseEvent as ReactMouseEvent} from 'react'
-import {RiCloseCircleFill} from 'react-icons/ri'
 import {Outlet, useMatch, useNavigate, useParams} from 'react-router-dom'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
+import {CloseButton} from '@/components/ui/dialog-close-button'
 import {MachineRail} from '@/features/machines/components/machine-rail'
 import {MachinesTabBar} from '@/features/machines/components/machines-tab-bar'
 import {layoutMorphTransition, MACHINES_CONFIGURE_PATH, MACHINES_PATH} from '@/features/machines/constants'
@@ -11,7 +11,6 @@ import {useMachines} from '@/features/machines/hooks/use-machines'
 import {cn} from '@/lib/utils'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {usePauseWallpaperVideo} from '@/providers/wallpaper'
-import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 
 import {MachineViewerActionsProvider} from './components/machine-viewer-actions'
@@ -185,9 +184,7 @@ function MachinesLayoutContent() {
 							</div>
 						</div>
 						<DarkTooltip label={t('close')} side='left'>
-							<button onClick={close} aria-label={t('close')} className={dialogHeaderCircleButtonClass}>
-								<RiCloseCircleFill className='h-5 w-5 lg:h-6 lg:w-6' />
-							</button>
+							<CloseButton onClick={close} />
 						</DarkTooltip>
 					</motion.div>
 
@@ -237,7 +234,8 @@ function MachinesLayoutContent() {
 					</motion.div>
 					{machine && (
 						<div className='w-full shrink-0 xl:w-auto' onClick={stopImplicitDismiss}>
-							<MachineRail machine={machine} onClose={close} />
+							{/* The rail only takes over the close once the header has slid away */}
+							<MachineRail machine={machine} onClose={hideHeader ? close : undefined} />
 						</div>
 					)}
 				</div>

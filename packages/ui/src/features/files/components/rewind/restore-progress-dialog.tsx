@@ -12,7 +12,15 @@ import {OperationsInProgress, useGlobalFiles} from '@/providers/global-files'
 import {formatNumberI18n} from '@/utils/number'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
-export function RestoreProgressDialog({open, phase}: {open: boolean; phase: 'idle' | 'running' | 'success' | 'error'}) {
+export function RestoreProgressDialog({
+	open,
+	phase,
+	onDismiss,
+}: {
+	open: boolean
+	phase: 'idle' | 'running' | 'success' | 'error'
+	onDismiss: () => void
+}) {
 	const {t} = useTranslation()
 	const {operations} = useGlobalFiles()
 
@@ -25,12 +33,14 @@ export function RestoreProgressDialog({open, phase}: {open: boolean; phase: 'idl
 		})
 
 	return (
-		<Dialog open={open} onOpenChange={() => {}}>
-			<DialogContent className='flex flex-col'>
+		// A running restore can't be cancelled and success closes itself, so only a
+		// failure is the user's to dismiss
+		<Dialog open={open} onOpenChange={(isOpen) => !isOpen && phase === 'error' && onDismiss()}>
+			<DialogContent className='flex flex-col' closeButton={phase === 'error'}>
 				<div>
 					<div className='flex flex-col items-center space-y-2 text-center'>
 						<RewindIcon className='size-20' />
-						<DialogTitle className='text-center leading-none'>
+						<DialogTitle className='px-6 text-center leading-none'>
 							{phase === 'success' || phase === 'idle'
 								? t('rewind.restore-complete')
 								: phase === 'error'

@@ -474,7 +474,7 @@ export default function CloudAddDialog() {
 		</DrawerHeader>
 	) : (
 		<DialogHeader className={cn(headerHidden && 'sr-only', headerCentered && 'items-center text-center')}>
-			<DialogTitle>{title}</DialogTitle>
+			<DialogTitle className={cn(headerCentered && 'px-6 text-center')}>{title}</DialogTitle>
 			{description ? <DialogDescription>{description}</DialogDescription> : null}
 		</DialogHeader>
 	)
