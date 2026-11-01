@@ -1,0 +1,6 @@
+skia-pathops==0.8.0.post2
+fonttools==4.60.2
+# measure_pieces.py only
+numpy==2.0.2
+pillow==11.3.0
+scipy==1.13.1

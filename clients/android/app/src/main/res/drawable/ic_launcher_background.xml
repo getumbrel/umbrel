@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The iOS app icon's vertical gradient, sampled from its render, over the 72 dp the launcher
+     shows (the render's full height); beyond it the end colours continue. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="18"
+                android:endX="54"
+                android:endY="90">
+                    <item android:offset="0.0000" android:color="#7C7BFE" />
+                    <item android:offset="0.0625" android:color="#7B7AFE" />
+                    <item android:offset="0.1250" android:color="#7A78FD" />
+                    <item android:offset="0.1875" android:color="#7574FA" />
+                    <item android:offset="0.2500" android:color="#706FF7" />
+                    <item android:offset="0.3125" android:color="#6C6BF4" />
+                    <item android:offset="0.3750" android:color="#6766F1" />
+                    <item android:offset="0.4375" android:color="#6261EE" />
+                    <item android:offset="0.5000" android:color="#5D5DEB" />
+                    <item android:offset="0.5625" android:color="#5A59E8" />
+                    <item android:offset="0.6250" android:color="#5554E5" />
+                    <item android:offset="0.6875" android:color="#5252E4" />
+                    <item android:offset="0.7500" android:color="#5252E4" />
+                    <item android:offset="0.8125" android:color="#5252E4" />
+                    <item android:offset="0.8750" android:color="#5252E4" />
+                    <item android:offset="0.9375" android:color="#5252E4" />
+                    <item android:offset="1.0000" android:color="#5251E3" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -5,8 +5,11 @@ DerivedData/
 
 # Android
 android/.gradle/
-android/build/
-android/app/build/
+android/.kotlin/
+android/.idea/
+android/**/build/
+android/local.properties
+android/tools/symbols/.venv/
 *.apk
 
 # Windows

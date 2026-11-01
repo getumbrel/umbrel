@@ -11,6 +11,7 @@ jobs:
       ui-only: ${{ steps.check.outputs.ui-only }}
       ui-changed: ${{ steps.check.outputs.ui-changed }}
       apple-changed: ${{ steps.check.outputs.apple-changed }}
+      android-changed: ${{ steps.check.outputs.android-changed }}
       run-pi-tests: ${{ steps.pi.outputs.run-pi-tests }}
     steps:
       - uses: actions/checkout@v5
@@ -27,6 +28,7 @@ jobs:
             echo "ui-only=false" >> $GITHUB_OUTPUT
             echo "ui-changed=true" >> $GITHUB_OUTPUT
             echo "apple-changed=true" >> $GITHUB_OUTPUT
+            echo "android-changed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -51,6 +53,7 @@ jobs:
           UI_ONLY="true"
           UI_CHANGED="false"
           APPLE_CHANGED="false"
+          ANDROID_CHANGED="false"
           while IFS= read -r file; do
             if [[ -n "$file" && ! "$file" =~ ^packages/ui/ ]]; then
               UI_ONLY="false"
@@ -67,6 +70,12 @@ jobs:
                 APPLE_CHANGED="true"
                 ;;
             esac
+
+            case "$file" in
+              clients/android/*|.github/workflows/ci.yml)
+                ANDROID_CHANGED="true"
+                ;;
+            esac
           done <<< "$CHANGED_FILES"
 
           if [[ -z "$CHANGED_FILES" ]]; then
@@ -78,9 +87,11 @@ jobs:
           echo "UI only: $UI_ONLY"
           echo "UI changed: $UI_CHANGED"
           echo "Apple changed: $APPLE_CHANGED"
+          echo "Android changed: $ANDROID_CHANGED"
           echo "ui-only=$UI_ONLY" >> $GITHUB_OUTPUT
           echo "ui-changed=$UI_CHANGED" >> $GITHUB_OUTPUT
           echo "apple-changed=$APPLE_CHANGED" >> $GITHUB_OUTPUT
+          echo "android-changed=$ANDROID_CHANGED" >> $GITHUB_OUTPUT
       # The Pi VM tests boot the production Pi image in an emulated Raspberry
       # Pi 4. Emulation is TCG-only (no hardware acceleration exists for the
       # raspi4b machine) so they're the slowest jobs in CI and only run on
@@ -666,6 +677,32 @@ jobs:
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO
           build
+
+  # Run the Android app's unit tests and lint, and build its release bundle, which runs
+  # R8 and resource shrinking. The bundle is unsigned: Play uploads are signed with the
+  # upload key outside CI.
+  android:
+    name: Android client checks
+    needs: detect-changes
+    if: needs.detect-changes.outputs.android-changed == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: clients/android
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Test and lint
+        run: ./gradlew :umbrelkit:testDebugUnitTest :app:testDebugUnitTest lint
+      - name: Build release bundle
+        run: ./gradlew :app:bundleRelease
 
   # Run ui checks
   ui:

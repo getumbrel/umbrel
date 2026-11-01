@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and higher. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="database" path="photo-backup.sqlite" />
+        <exclude domain="database" path="photo-backup.sqlite-wal" />
+        <exclude domain="database" path="photo-backup.sqlite-shm" />
+        <exclude domain="sharedpref" path="photo_backup.xml" />
+        <exclude domain="root" path="app_webview/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="photo-backup.sqlite" />
+        <exclude domain="database" path="photo-backup.sqlite-wal" />
+        <exclude domain="database" path="photo-backup.sqlite-shm" />
+        <exclude domain="sharedpref" path="photo_backup.xml" />
+        <exclude domain="root" path="app_webview/" />
+    </device-transfer>
+</data-extraction-rules>

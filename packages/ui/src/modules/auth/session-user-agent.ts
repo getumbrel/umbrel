@@ -143,15 +143,17 @@ const umbrelNativeLabels: Record<string, string> = {
 export function parseSessionUserAgent(userAgent?: string): SessionClient {
 	if (!userAgent) return {deviceType: 'unknown'}
 
-	// Only the iPhone app sends this token: its in-app browser, and the login the app
-	// makes for that browser. Show them as the app itself, like its native session.
+	// Only the Umbrel phone apps send this token: their in-app browser, and the login the
+	// app makes for that browser. Show them as the app itself, like its native session. The
+	// Android app's token ends in "(Android)"; the iPhone app's is bare.
 	if (/\bUmbrelApp\//.test(userAgent)) {
+		const platform = /\bUmbrelApp\/\S+ \(Android\)/.test(userAgent) ? 'android' : 'ios'
 		return {
 			deviceType: 'mobile',
-			label: umbrelNativeLabels['ios:phone'],
+			label: umbrelNativeLabels[`${platform}:phone`],
 			clientIcon: '/assets/umbrel-ios.png',
-			os: nativePlatforms.ios.name,
-			osIcon: iconUrl('os', nativePlatforms.ios.icon),
+			os: nativePlatforms[platform].name,
+			osIcon: iconUrl('os', nativePlatforms[platform].icon),
 		}
 	}
 

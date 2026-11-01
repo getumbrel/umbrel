@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Files the in-app browser hands to other apps: downloads to share, and camera captures
+     a page asked for. Nothing else in the app's storage is reachable through the provider. -->
+<paths>
+    <cache-path name="downloads" path="Downloads/" />
+    <cache-path name="captures" path="Captures/" />
+</paths>
