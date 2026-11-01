@@ -6,7 +6,6 @@ import {
 	Globe,
 	Heart,
 	Image,
-	MapIcon,
 	RectangleHorizontal,
 	ScanLine,
 	Trash2,
@@ -49,11 +48,14 @@ export function Sidebar({className}: {className?: string}) {
 	const {remove} = useRemoveSource()
 	const openDetails = (source: PhotoSource) => navigate(linkToDialog('photos-source', {id: source.id}))
 
+	// The Map row is hidden for now. /photos/map still works, and the info panel's
+	// location card still opens it — restore the row and its icon (MapIcon) to
+	// bring it back.
 	const libraryItems: Item[] = [
 		{section: 'all', label: t('photos-sidebar.all'), icon: GalleryHorizontalEnd},
 		{section: 'albums', label: t('photos-sidebar.albums'), icon: Album},
 		{section: 'favorites', label: t('photos-sidebar.favorites'), icon: Heart},
-		{section: 'map', label: t('photos-sidebar.map'), icon: MapIcon},
+		// {section: 'map', label: t('photos-sidebar.map'), icon: MapIcon},
 		{section: 'photos', label: t('photos-sidebar.photos'), icon: Image},
 		{section: 'videos', label: t('photos-sidebar.videos'), icon: Video},
 		{section: 'deleted', label: t('photos-sidebar.deleted'), icon: Trash2},
