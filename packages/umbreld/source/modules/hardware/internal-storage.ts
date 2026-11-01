@@ -194,7 +194,7 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 	const {blockdevices} = JSON.parse(stdout) as {blockdevices: LsBlkDevice[]}
 
 	// Filter to internal disk devices by transport protocol
-	const supportedTransports = ['nvme', 'sata']
+	const supportedTransports = ['nvme', 'sata', 'sas']
 	const internalBlockDevices = blockdevices.filter(
 		(device) => device.type === 'disk' && supportedTransports.includes(device.tran ?? ''),
 	)
