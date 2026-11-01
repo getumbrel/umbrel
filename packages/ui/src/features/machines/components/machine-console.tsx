@@ -12,11 +12,13 @@ import {
 	sendClipboardShortcut,
 	sendDelayedPasteShortcut,
 	typeIntoConsole,
+	USER_COPY_WINDOW_MS,
 	writeLocalClipboard,
 } from '@/features/machines/console-clipboard'
+import {machineSocketUrl, reconnectDelay, SUPERSEDED_CLOSE_CODE} from '@/features/machines/console-socket'
+import {useConsoleAgent} from '@/features/machines/hooks/use-console-agent'
+import {useMachineAudio} from '@/features/machines/hooks/use-machine-audio'
 import {useMachineAudioPreference} from '@/features/machines/hooks/use-machine-audio-preference'
-import {useMachineAgentControls} from '@/features/machines/hooks/use-machines'
-import {createMachineAudioSink, type MachineAudioSink} from '@/features/machines/machine-audio'
 import {createBrowserUuid} from '@/features/machines/utils'
 import {cn} from '@/lib/utils'
 import {trpcClient} from '@/trpc/trpc'
@@ -24,16 +26,7 @@ import {isMac} from '@/utils/misc'
 
 import {setConsoleAgentOwnership} from './console-agent-ownership'
 
-const SUPERSEDED_CLOSE_CODE = 4001
 const LAYOUT_SETTLE_DELAY_MS = 350
-
-// Dropped sockets retry after 1 s, doubling to half a minute, so a tab left open
-// on a dead connection (a sleeping laptop, a restarted umbrelOS) stays quiet
-const reconnectDelay = (attempt: number) => Math.min(1_000 * 2 ** attempt, 30_000)
-
-// Browsers let a page write the clipboard only this soon after a keypress or
-// click, and a guest copy that late wasn't the user's anyway
-const USER_COPY_WINDOW_MS = 5_000
 const CLIPBOARD_NOTICE_MS = 8_000
 // Rechecked on console input, so an agent that starts with the guest is noticed
 // by the time someone pastes
@@ -43,12 +36,6 @@ const TYPING_NOTICE_MIN_LENGTH = 40
 
 type ConnectionState = 'connected' | 'disconnected' | 'superseded'
 type ClipboardNotice = {kind: 'copied' | 'typing' | 'too-long'; text: string}
-
-function machineSocketUrl(path: string, machineId: string, sessionId: string, ticket: string) {
-	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-	const port = window.location.port ? `:${window.location.port}` : ''
-	return `${protocol}//${window.location.hostname}${port}${path}?machineId=${encodeURIComponent(machineId)}&sessionId=${encodeURIComponent(sessionId)}&ticket=${encodeURIComponent(ticket)}`
-}
 
 export function MachineConsole({
 	machineId,
@@ -65,32 +52,17 @@ export function MachineConsole({
 	const [connectionState, setConnectionState] = useState<ConnectionState>('connected')
 	const [sessionId, setSessionId] = useState(createBrowserUuid)
 	const {muted} = useMachineAudioPreference(machineId)
-	const [audioContext, setAudioContext] = useState<AudioContext | undefined>()
-	const [audioBlocked, setAudioBlocked] = useState(false)
 	// This tab's console while noVNC is connected, and so holds the session
 	// audio is streamed to
 	const [liveConsole, setLiveConsole] = useState<RFB>()
+	const {audioBlocked} = useMachineAudio({machineId, sessionId, live: !!liveConsole, muted, gestureTarget: root})
 	const [clipboardNotice, setClipboardNotice] = useState<ClipboardNotice>()
 	const typing = useRef<AbortController>(undefined)
 
-	const [arrivalToken, setArrivalToken] = useState<string>()
-	const agentControl = useMachineAgentControls({
-		onArrival: (id, token) => {
-			if (id === machineId) setArrivalToken(token)
-		},
-	})[machineId]
-	const [takenOver, setTakenOver] = useState(false)
-	const agentOwned = !!agentControl && !takenOver
+	const {agentControl, arrivalToken, takenOver, takeOver, agentOwned} = useConsoleAgent(machineId)
 	const rfbRef = useRef<RFB | undefined>(undefined)
 	const agentOwnedRef = useRef(agentOwned)
 	agentOwnedRef.current = agentOwned
-
-	// A take-over lasts for the agent's turn; the next agent starts watched again
-	useEffect(() => {
-		if (agentControl) return
-		setArrivalToken(undefined)
-		setTakenOver(false)
-	}, [agentControl])
 
 	useEffect(() => {
 		if (rfbRef.current) setConsoleAgentOwnership(rfbRef.current, agentOwned)
@@ -330,114 +302,6 @@ export function MachineConsole({
 		rfb.focus()
 	}
 
-	useEffect(() => {
-		if (muted) {
-			setAudioBlocked(false)
-			return
-		}
-		let context: AudioContext
-		try {
-			// Construct eagerly so Chromium can reuse document-level sticky user
-			// activation from opening the machine window. A cold-loaded console will
-			// remain suspended until the genuine gesture handler below resumes it.
-			context = new AudioContext({sampleRate: 48_000})
-		} catch {
-			return
-		}
-		const syncState = () => setAudioBlocked(context.state !== 'running')
-		context.addEventListener('statechange', syncState)
-		setAudioContext(context)
-		syncState()
-		void context.resume().then(syncState).catch(syncState)
-		return () => {
-			context.removeEventListener('statechange', syncState)
-			setAudioContext((current) => (current === context ? undefined : current))
-			void context.close()
-		}
-	}, [muted])
-
-	useEffect(() => {
-		const element = root.current
-		if (!element || !audioContext || audioContext.state === 'running') return
-
-		// Browsers require user activation before audible Web Audio playback.
-		// Chromium usually honors the earlier click that opened this SPA view,
-		// while Safari requires resume() inside a real pointer/key handler. Keep
-		// this capture listener tied directly to the console gesture; moving the
-		// resume into a plain effect would silently break Safari cold loads.
-		const resume = () => {
-			element.removeEventListener('pointerdown', resume, true)
-			element.removeEventListener('keydown', resume, true)
-			void audioContext.resume()
-		}
-		element.addEventListener('pointerdown', resume, {capture: true})
-		element.addEventListener('keydown', resume, {capture: true})
-		return () => {
-			element.removeEventListener('pointerdown', resume, true)
-			element.removeEventListener('keydown', resume, true)
-		}
-	}, [audioContext])
-
-	useEffect(() => {
-		const context = audioContext
-		// umbreld only streams audio to the session that controls the console, so
-		// audio follows this tab's live console: it waits for noVNC to connect,
-		// and a dropped or superseded console takes its audio down with it.
-		if (!context || !liveConsole) return
-		let disposed = false
-		let sink: MachineAudioSink | undefined
-		let socket: WebSocket | undefined
-		let retry: ReturnType<typeof setTimeout> | undefined
-		let attempt = 0
-
-		const reconnect = () => {
-			if (disposed) return
-			retry = setTimeout(() => void connect(), reconnectDelay(attempt++))
-		}
-
-		const connect = async () => {
-			if (disposed || !sink) return
-			try {
-				const ticket = await trpcClient.user.createWebSocketTicket.mutate({target: 'machines'})
-				if (disposed || !sink) return
-				socket = new WebSocket(machineSocketUrl('/machines/audio', machineId, sessionId, ticket))
-				socket.binaryType = 'arraybuffer'
-				socket.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => {
-					attempt = 0
-					if (event.data instanceof ArrayBuffer) sink?.enqueue(event.data)
-				})
-				socket.addEventListener('close', (event) => {
-					// Superseded means another console owns audio now; this tab's next
-					// console reconnect opens a fresh stream
-					if (event.code !== SUPERSEDED_CLOSE_CODE) reconnect()
-				})
-			} catch {
-				reconnect()
-			}
-		}
-
-		void createMachineAudioSink(context)
-			.then((createdSink) => {
-				if (disposed) {
-					createdSink.disconnect()
-					return
-				}
-				sink = createdSink
-				void connect()
-			})
-			.catch(() => {
-				setAudioContext((current) => (current === context ? undefined : current))
-				void context.close()
-			})
-
-		return () => {
-			disposed = true
-			clearTimeout(retry)
-			socket?.close()
-			sink?.disconnect()
-		}
-	}, [audioContext, liveConsole, machineId, sessionId])
-
 	return (
 		<div
 			ref={root}
@@ -458,7 +322,7 @@ export function MachineConsole({
 					root={root}
 					screen={screen}
 					onTakeOver={() => {
-						setTakenOver(true)
+						takeOver()
 						rfbRef.current?.focus()
 					}}
 				/>

@@ -23,6 +23,10 @@ export const MAX_TYPED_PASTE_LENGTH = 10_000
 // to Wayland, where the guest's paste reads it from
 export const OMARCHY_PASTE_DELAY_MS = 250
 
+// Browsers let a page write the clipboard only this soon after a keypress or
+// click, and a guest copy that late wasn't the user's anyway
+export const USER_COPY_WINDOW_MS = 5_000
+
 export type ClipboardShortcut = {action: 'copy' | 'cut' | 'paste'; fromCommand: boolean}
 
 // Clipboard shortcuts the console handles before noVNC forwards them: the

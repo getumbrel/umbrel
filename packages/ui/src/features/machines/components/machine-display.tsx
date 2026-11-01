@@ -1,6 +1,6 @@
 import {Loader2, Power} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
-import {useEffect, useRef, useState} from 'react'
+import {lazy, Suspense, useEffect, useRef, useState} from 'react'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {Progress} from '@/components/ui/progress'
@@ -14,6 +14,13 @@ import {prettyMb, prettyMbPair} from '@/features/machines/utils'
 import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {secondsToEta} from '@/utils/seconds-to-eta'
+
+const TouchMachineConsole = lazy(() => import('@/features/machines/touch/touch-machine-console'))
+
+// Fingers get a console of their own, with a keyboard, a trackpad and a view that
+// can zoom and pan. A mouse and keyboard get the desktop console, which shows the
+// guest as it is.
+const prefersTouchConsole = () => window.matchMedia?.('(pointer: coarse)').matches ?? false
 
 // Shared "start" affordance on the stopped/error screens
 const screenActionButtonClass =
@@ -71,10 +78,11 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 	const isTextConsole = machine.osVariant === 'Server' || machine.osId === 'alpine'
 	const followsBrowserSize = !isTextConsole && machine.osId !== 'android'
 	const setupDelayed = machine.installationState === 'setup-delayed'
+	// Settled when the console opens: swapping consoles would drop the connection
+	const [touch] = useState(prefersTouchConsole)
 
-	return (
+	const overlays = (
 		<>
-			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} omarchy={machine.osId === 'omarchy'} />
 			{machine.state === 'running' && machine.firstBootSetup && !showSetupConsole && (
 				<FirstBootSetupOverlay
 					osName={machine.osName}
@@ -88,6 +96,23 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 					<span className='text-13 text-white/70'>{t('machines.shutting-down')}</span>
 				</div>
 			)}
+		</>
+	)
+
+	if (touch) {
+		return (
+			<Suspense>
+				<TouchMachineConsole machine={machine} resizeSession={followsBrowserSize} textConsole={isTextConsole}>
+					{overlays}
+				</TouchMachineConsole>
+			</Suspense>
+		)
+	}
+
+	return (
+		<>
+			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} omarchy={machine.osId === 'omarchy'} />
+			{overlays}
 		</>
 	)
 }
