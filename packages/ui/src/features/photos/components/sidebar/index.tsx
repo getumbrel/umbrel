@@ -195,16 +195,17 @@ function PhoneBackupCard() {
 							<div className='text-12 leading-snug text-white/50'>{t('photos-phone-backup.description')}</div>
 						</div>
 						<div className='flex flex-wrap gap-2'>
-							<Button asChild variant='primary' size='sm'>
+							<Button asChild size='sm' className='gap-1.5'>
 								<a href='https://link.umbrel.com/ios-app' target='_blank' rel='noopener noreferrer'>
 									<IoLogoApple className='size-3.5' />
 									{t('photos-phone-backup.ios')}
 								</a>
 							</Button>
-							{/* Android app isn't out yet */}
-							<Button size='sm' disabled>
-								<IoLogoAndroid className='size-3.5' />
-								{t('photos-phone-backup.android-coming-soon')}
+							<Button asChild size='sm' className='gap-1.5'>
+								<a href='https://link.umbrel.com/android-app' target='_blank' rel='noopener noreferrer'>
+									<IoLogoAndroid className='size-3.5' />
+									{t('photos-phone-backup.android')}
+								</a>
 							</Button>
 						</div>
 					</div>

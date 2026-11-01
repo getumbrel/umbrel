@@ -336,16 +336,17 @@ function WelcomeBento({
 						variant='tall'
 						action={
 							<>
-								<Button asChild variant='primary' className={cardButtonClass}>
+								<Button asChild className={cardButtonClass}>
 									<a href='https://link.umbrel.com/ios-app' target='_blank' rel='noopener noreferrer'>
 										<IoLogoApple className='size-3.5' />
 										{t('desktop.welcome.photos.ios')}
 									</a>
 								</Button>
-								{/* Android app isn't out yet */}
-								<Button disabled className={cardButtonClass}>
-									<IoLogoAndroid className='size-3.5' />
-									{t('desktop.welcome.photos.android')}
+								<Button asChild className={cardButtonClass}>
+									<a href='https://link.umbrel.com/android-app' target='_blank' rel='noopener noreferrer'>
+										<IoLogoAndroid className='size-3.5' />
+										{t('desktop.welcome.photos.android')}
+									</a>
 								</Button>
 							</>
 						}
