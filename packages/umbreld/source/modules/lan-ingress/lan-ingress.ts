@@ -15,6 +15,7 @@ import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
 import {getHostname, getIpAddresses} from '../system/system.js'
 import runEvery from '../utilities/run-every.js'
+import proxyStreamCleanup from '../utilities/proxy-stream-cleanup.js'
 import {forwardTcp} from './forward-tcp.js'
 import {readNativeTlsPrelude} from './native-tls-preread.js'
 import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.js'
@@ -1075,7 +1076,8 @@ export default class LanIngress {
 				warn: this.logger.log,
 				error: this.logger.error,
 			}),
-			onProxyReq: (proxyRequest, request) => {
+			onProxyReq: (proxyRequest, request, response) => {
+				proxyStreamCleanup(proxyRequest, response)
 				// The upstream target is always HTTP. Tell umbreld/app-auth/app-proxy
 				// whether the original browser request used HTTP or HTTPS.
 				proxyRequest.setHeader('x-forwarded-proto', originalProtocol)
