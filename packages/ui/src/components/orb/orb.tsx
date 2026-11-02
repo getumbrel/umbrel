@@ -57,7 +57,9 @@ export function Orb({
 		if (!host) return
 		let renderer: OrbRenderer | undefined
 		try {
-			renderer = createOrbRenderer(host, {dpr: Math.min(window.devicePixelRatio || 1, 2), seed})
+			// Full resolution up to a phone's 3x: the canvas is small, and an upscaled
+			// one softens the rim
+			renderer = createOrbRenderer(host, {dpr: Math.min(window.devicePixelRatio || 1, 3), seed})
 		} catch {
 			// A driver or context quirk must never take the desktop down with it
 			renderer = undefined
