@@ -13,6 +13,7 @@ import {systemAppsKeyed} from '@/providers/apps'
 import {useWallpaper} from '@/providers/wallpaper'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
+import {IS_IPHONE_BROWSER} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
@@ -20,7 +21,8 @@ import {useDockTuck} from './dock-tuck'
 import {homeFit} from './home-fit'
 import {prefetchRouteChunks} from './prefetch-route-chunks'
 
-const DOCK_BOTTOM_PADDING_PX = 10
+// Safari's bar floats just below the window on an iPhone, so the dock can sit lower there
+const DOCK_BOTTOM_PADDING_PX = IS_IPHONE_BROWSER ? 4 : 10
 const DOCK_SIDE_PADDING_PX = 12
 // The most items it holds, and the least space it leaves either side of the window
 const DOCK_MAX_ITEMS = 6

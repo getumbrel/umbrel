@@ -144,6 +144,8 @@ html {
 	/* Space above the sheet. Putting here because it's used in multiple places for calculations */
 	--sheet-top: 2vh;
 	--wallpaper-blur: 12px;
+	/* An iPhone sets the screen's height (see useWallpaperHeight) */
+	--wallpaper-height: 100lvh;
 
 	/* Keyboard focus ring. Single source of truth: consumed by the `:focus-visible`
 	   rule above and by the `ring` colour in tailwind.config.ts, which backs the
@@ -207,6 +209,15 @@ html {
 	html {
 		--page-top: clamp(12px, calc(12dvh - 32px), 48px);
 	}
+}
+
+/* Safari on an iPhone draws only the page itself under its bottom bar, not fixed
+   layers, so the wallpaper turns into page content to carry on under the bar
+   (see useWallpaperUnderBrowserBar). A modal's dimmed backdrop over Home stops at
+   the bar, so under one the wallpaper stays fixed and the band keeps the theme
+   colour, as before. */
+html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpaper-layer] {
+	position: absolute;
 }
 
 /* Window surfaces (sheet, drawer, immersive dialogs) tighten on mobile.

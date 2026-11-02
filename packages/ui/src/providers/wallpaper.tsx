@@ -17,7 +17,7 @@ import {Wallpaper23VideoSources} from '@/components/wallpaper-23-video-sources'
 import {useDocumentHidden} from '@/hooks/use-document-hidden'
 import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-import {keyBy} from '@/utils/misc'
+import {IS_IPHONE_BROWSER, keyBy} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
 import {wallpapers as wallpaperDefinitions, type WallpaperId} from '../../../umbreld/source/modules/user/wallpapers'
@@ -177,6 +177,7 @@ export function WallpaperProvider({
 	const prevId = usePreviousDistinct(wallpaper.id)
 
 	useWallpaperCssVars(wallpaper.id)
+	useWallpaperHeight()
 
 	useLayoutEffect(() => {
 		if (wallpaper.id === prevId) return
@@ -252,6 +253,28 @@ export function useWallpaperCssVars(wallpaperId?: WallpaperId) {
 	}, [brandColorHsl])
 }
 
+// Safari on an iPhone can show the wallpaper under its bottom bar (see
+// useWallpaperUnderBrowserBar), so there the wallpaper is as tall as the screen.
+// Everywhere else it covers the viewport with the browser's bars tucked away.
+function useWallpaperHeight() {
+	useLayoutEffect(() => {
+		if (!IS_IPHONE_BROWSER) return
+		const el = document.documentElement
+		const update = () => {
+			// The screen's sides stay put when the phone turns
+			const sideways = window.innerWidth > window.innerHeight
+			const height = sideways ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height)
+			el.style.setProperty('--wallpaper-height', `${height}px`)
+		}
+		update()
+		window.addEventListener('resize', update)
+		return () => {
+			window.removeEventListener('resize', update)
+			el.style.removeProperty('--wallpaper-height')
+		}
+	}, [])
+}
+
 /**
  * Get the wallpaper from the user's settings. However, we want to preserve the wallpaper after logout locally so they see it when they log in again.
  */
@@ -309,10 +332,11 @@ export function Wallpaper({
 				<FadeInImg
 					key={wallpaper.url + '-loading'}
 					src={wallpaper.url}
+					// Stays fixed under Safari's bar on Home (see index.css): scaled up, it would make the page wider than the window
 					className={cn(
 						'pointer-events-none fixed inset-0 w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-700',
 						isPreview && 'absolute h-full',
-						!isPreview && 'h-lvh',
+						!isPreview && 'h-(--wallpaper-height)',
 						className,
 					)}
 				/>
@@ -354,9 +378,11 @@ export function Wallpaper({
 						src={prevWallpaper.url}
 						alt=''
 						aria-hidden='true'
+						data-wallpaper-layer={isPreview ? undefined : ''}
 						className={cn(
-							'pointer-events-none fixed inset-0 size-full animate-out object-cover object-center duration-700 fill-mode-both fade-out zoom-out-125',
-							isPreview && 'absolute',
+							'pointer-events-none fixed inset-0 w-full animate-out object-cover object-center duration-700 fill-mode-both fade-out zoom-out-125',
+							isPreview && 'absolute h-full',
+							!isPreview && 'h-(--wallpaper-height)',
 							className,
 						)}
 					/>
@@ -409,12 +435,13 @@ function FullWallpaperImage({
 				ref={setImageRef}
 				src={wallpaper.url}
 				data-wallpaper-full=''
+				data-wallpaper-layer={isPreview ? undefined : ''}
 				className={cn(
 					// Opaque bg because sometimes we want to show the wallpaper before it's loaded, and over other elements.
 					// It's the theme color rather than black because Safari 26 tints its chrome from this layer's background.
 					tw`pointer-events-none fixed inset-0 w-full animate-in bg-[hsl(var(--wallpaper-theme-color,0_0%_0%))] object-cover object-center duration-700 fade-in`,
 					isPreview && 'absolute h-full',
-					!isPreview && 'h-lvh',
+					!isPreview && 'h-(--wallpaper-height)',
 					className,
 				)}
 				style={{
@@ -505,10 +532,11 @@ function FullWallpaperVideo(props: FullWallpaperImageProps & {paused: boolean}) 
 					alt=''
 					aria-hidden='true'
 					data-wallpaper-static-source=''
+					data-wallpaper-layer={isPreview ? undefined : ''}
 					className={cn(
 						'pointer-events-none fixed inset-0 w-full object-cover object-center opacity-0',
 						isPreview && 'absolute h-full',
-						!isPreview && 'h-lvh',
+						!isPreview && 'h-(--wallpaper-height)',
 						className,
 					)}
 				/>
@@ -524,11 +552,12 @@ function FullWallpaperVideo(props: FullWallpaperImageProps & {paused: boolean}) 
 				poster={wallpaper.url}
 				aria-hidden='true'
 				data-wallpaper-full=''
+				data-wallpaper-layer={isPreview ? undefined : ''}
 				className={cn(
 					// Theme color bg for the same Safari 26 chrome tinting as the image above
 					tw`pointer-events-none fixed inset-0 w-full animate-in bg-[hsl(var(--wallpaper-theme-color,0_0%_0%))] object-cover object-center opacity-100 transition-opacity duration-700 fade-in`,
 					isPreview && 'absolute h-full',
-					!isPreview && 'h-lvh',
+					!isPreview && 'h-(--wallpaper-height)',
 					className,
 				)}
 				style={{
