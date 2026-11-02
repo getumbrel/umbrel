@@ -287,30 +287,6 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 		pointer-events: auto;
 	}
 
-	/* Toasts are pinned to the top right, where a window's close button sits, and a
-	   window's top can land anywhere, so no top offset clears it at every height.
-	   They move sideways while a window is open: to the middle, or on a phone, where
-	   they span the width, short of the button. Sonner sets the offset inline. */
-	html:has([data-close-surface='modal'], [data-close-surface='immersive']) [data-sonner-toaster] {
-		--offset-right: calc(50vw - var(--width) / 2) !important;
-	}
-
-	@media (width <= 600px) {
-		html:has([data-close-surface='modal'], [data-close-surface='immersive']) [data-sonner-toaster] {
-			width: calc(100% - 52px) !important;
-		}
-	}
-
-	/* A sticky toast outlives the window that moved it, so it glides there and back.
-	   Sonner's transition is unlayered, and this has to keep its transform in the list. */
-	@media (prefers-reduced-motion: no-preference) {
-		[data-sonner-toaster] {
-			transition:
-				transform 400ms ease,
-				right 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-		}
-	}
-
 	/* Full-click toasts stretch their action button over the whole capsule on
 	   desktop. On touch devices that makes every gesture originate from a button,
 	   which Sonner deliberately excludes from swipe-to-dismiss. Let touches hit
