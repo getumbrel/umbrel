@@ -15,7 +15,7 @@ import {toast} from '@/components/ui/toast'
 import {machineIconSrc} from '@/features/machines/components/os-icon'
 import {useMachineCapabilities, useMachines} from '@/features/machines/hooks/use-machines'
 import type {Machine} from '@/features/machines/types'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {AnimatedRow, GrantSummary, RowChevron} from '@/modules/user-sharing'
 import {isStorageCategoryPath} from '@/modules/user-sharing/new-user-access'
@@ -65,7 +65,7 @@ function getMcpErrorMessage(message: string): string {
 // while the body height glides — the cloud wizard treatment.
 export default function McpDialog() {
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const reducedMotion = useReducedMotion() ?? false
 	const dialogProps = useSettingsDialogProps()
 	const utils = trpcReact.useUtils()
@@ -436,7 +436,7 @@ export default function McpDialog() {
 	// accessible name, but only the enabled main view shows one visually — so a
 	// constant hidden title carries the semantics, and the visible header is a
 	// plain heading that can crossfade in and out with its view.
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight className='px-0'>

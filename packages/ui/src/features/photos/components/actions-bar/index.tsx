@@ -2,6 +2,7 @@ import {Plus} from 'lucide-react'
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
+import {HiMenuAlt2} from 'react-icons/hi'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {FilterPills, PillButton} from '@/components/ui/edge-controls'
@@ -9,6 +10,7 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {CountText} from '@/features/photos/components/actions-bar/count-text'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
 import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
+import {MobileActions} from '@/features/photos/components/actions-bar/mobile-actions'
 import {PickingActions} from '@/features/photos/components/actions-bar/picking-actions'
 import {SelectionActions} from '@/features/photos/components/actions-bar/selection-actions'
 import {UploadButton} from '@/features/photos/components/actions-bar/upload-button'
@@ -65,7 +67,7 @@ const roll = (distance: string) => ({
 const titleRoll = roll('100%')
 const pillsRoll = roll('115%')
 
-export function ActionsBar() {
+export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
@@ -96,10 +98,21 @@ export function ActionsBar() {
 	return (
 		<nav
 			// The lg pull-up puts the bar in the sheet close button's row; xl's
-			// wider sheet padding clears the × on its own, lg needs the padding
-			className='umbrel-photos-actions relative z-10 flex h-11 w-full min-w-0 items-center gap-3 lg:-mt-[86px] lg:pr-5 xl:pr-0'
+			// wider sheet padding clears the × on its own, lg needs the padding.
+			// A phone on its side has no title row, so this is the top row there
+			className='umbrel-photos-actions relative z-10 flex h-11 w-full min-w-0 items-center gap-3 lg:-mt-[86px] lg:pr-5 xl:pr-0 phone-side:pr-9'
 			aria-label={t('photos-actions.navigation')}
 		>
+			{onOpenSidebar && (
+				<button
+					type='button'
+					onClick={onOpenSidebar}
+					aria-label={t('photos-sidebar.navigation')}
+					className='hidden shrink-0 self-center pl-1 phone-side:block'
+				>
+					<HiMenuAlt2 className='h-5 w-5 text-white/90' />
+				</button>
+			)}
 			{/* Left side: on a collection page how many it holds; on a timeline the
 			    section it is scrolled to — this row is where the grid's headers
 			    would pin, so the title lives here instead and slides in as sections
@@ -173,16 +186,23 @@ export function ActionsBar() {
 						</motion.div>
 					) : (
 						<motion.div key='page' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
-							{/* Phones: the page's controls live in the title row, so the
-							    date's row carries only the zoom steps, right over the grid
-							    they size (the slider folds to − / + below xl) — and on a
-							    touch screen not even those: the date has the row */}
-							{isTimeline && !pinchZooms && (
-								<div className='flex items-center md:hidden'>
-									<ZoomSlider />
-								</div>
-							)}
-							<div className='hidden items-center gap-2 md:flex'>
+							{/* Phones and tablets: the page's controls live in the title row,
+							    so the date's row carries only what sizes the grid beneath it —
+							    the grouping where there's room, and the zoom steps for a mouse
+							    (the slider folds to − / + below xl): on a touch screen the
+							    date has the row. A phone on its side has no title row, so the
+							    controls come here */}
+							<div className='flex items-center gap-2 lg:hidden'>
+								{isTimeline && (
+									<div className='hidden md:flex'>
+										<GroupingPills />
+									</div>
+								)}
+								{isTimeline && !pinchZooms && <ZoomSlider />}
+								{/* While a search is on, the title row is back with its field */}
+								{!searchEngaged && <MobileActions className='hidden phone-side:flex' />}
+							</div>
+							<div className='hidden items-center gap-2 lg:flex'>
 								{/* Most of the page's controls step aside while the search has
 								    the stage; the zoom stays — narrowing the grid and resizing
 								    its tiles go together — and everything returns when the

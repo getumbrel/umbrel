@@ -17,7 +17,7 @@ import {Loading} from '@/components/ui/loading'
 import {PinInput} from '@/components/ui/pin-input'
 import {Separator} from '@/components/ui/separator'
 import {use2fa} from '@/hooks/use-2fa'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {tw} from '@/utils/tw'
 
@@ -26,14 +26,14 @@ export default function TwoFactorEnableDialog({closeTo}: {closeTo?: string}) {
 	const title = t('2fa.enable.title')
 	const scanThisMessage = t('2fa.enable.scan-this')
 
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const dialogProps = useSettingsDialogProps({closeTo})
 
 	// const dialogProps = useDialogOpenProps('2fa-enable')
 	const {enable, totpUri, generateTotpUri} = use2fa(() => dialogProps.onOpenChange(false))
 	useEffect(generateTotpUri, [generateTotpUri])
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>

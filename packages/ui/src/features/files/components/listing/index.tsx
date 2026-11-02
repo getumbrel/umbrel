@@ -65,7 +65,7 @@ function ListingContent({
 	const {t, i18n} = useTranslation()
 	const selectedItems = useFilesStore((s) => s.selectedItems)
 	return (
-		<Card className='relative min-h-0 flex-1 rounded-24 bg-white/4 !p-0 !pt-4'>
+		<Card className='relative min-h-0 flex-1 rounded-24 bg-white/4 !p-0 !pt-4 phone-side:!pt-2'>
 			{(() => {
 				if (isLoading) return <LoadingView />
 				if (error) return <ErrorView error={error} />
@@ -85,7 +85,7 @@ function ListingContent({
 
 			{/* Display total item count (or truncated count) when no items are selected */}
 			{totalItems && !selectedItems.length ? (
-				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60 phone-side:hidden'>
 					{truncatedAt
 						? t('files-listing.item-count-truncated', {
 								formattedCount: formatNumberI18n({n: truncatedAt, showDecimals: false, locale: i18n.language}),
@@ -99,7 +99,7 @@ function ListingContent({
 
 			{/* Display selected count vs total (or truncated count) when items are selected */}
 			{selectedItems.length > 0 && (
-				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60 phone-side:hidden'>
 					{truncatedAt
 						? t('files-listing.selected-count-truncated', {
 								selectedCount: selectedItems.length,
@@ -161,7 +161,9 @@ export function Listing({
 				'flex flex-col',
 				isEmbedded
 					? 'h-[calc(100svh-214px)] lg:h-[calc(100vh-300px)]'
-					: 'h-[calc(100svh-209px)] lg:h-[calc(100vh-262px)]',
+					: // Two panes: the sheet, the page's top space, the title row and the dock's clearance.
+						// On a phone on its side the card runs under the dock, which tucks away on scroll.
+						'h-[calc(100svh-209px)] lg:h-[calc(100vh-262px)] panes:h-[calc(100svh-var(--sheet-top)-var(--page-top)-146px)] phone-side:h-[calc(100svh-var(--sheet-top)-var(--page-top)-46px)]',
 			)}
 		>
 			{topBanner}

@@ -5,6 +5,9 @@ export const MACHINES_PATH = '/machines'
 export const MACHINES_ADD_PATH = '/machines/new'
 export const MACHINES_CONFIGURE_PATH = '/machines/new/configure'
 
+// The `rail-side` variant in index.css, for the sums that CSS can't do
+export const MACHINES_RAIL_SIDE_QUERY = '(width >= 1280px), (min-aspect-ratio: 13/10)'
+
 export const machinePath = (machineId: string) => `${MACHINES_PATH}/${machineId}`
 export const machineFullscreenPath = (machineId: string) => `${MACHINES_PATH}/${machineId}/fullscreen`
 
@@ -182,12 +185,13 @@ export const machineRowButtonClass = cn(
 	tw`size-10 bg-white/6 hover:bg-white/12 disabled:opacity-50`,
 )
 
-// Machine view rail: fixed 48px, same minimal surface as the row buttons plus
-// the settings-card edge material, whose inset top shine separates the
-// floating buttons from the dark canvas behind them
+// Machine view rail: 48px, or 40px where seven won't fit a row or a short
+// column. Same minimal surface as the row buttons plus the settings-card edge
+// material, whose inset top shine separates the floating buttons from the dark
+// canvas behind them
 export const machineRailButtonClass = cn(
 	machineControlButtonClass,
-	tw`settings-edge-material size-12 bg-white/6 hover:bg-white/12 disabled:opacity-40`,
+	tw`settings-edge-material size-10 bg-white/6 hover:bg-white/12 disabled:opacity-40 sm:size-12 [@media(height<660px)]:size-10`,
 )
 
 // Repeated feature color: stop/error red (#f63636). Arbitrary-value Tailwind

@@ -38,7 +38,7 @@ import {MemoryCardContent} from './memory-card-content'
 import {createSettingsCatalog, getSettingsPage, SettingsPageItem} from './settings-catalog'
 import {SettingsFilterPills, SettingsItemsGroup} from './settings-page-controls'
 import {SettingsFilterId, useSettingsFilterLabels} from './settings-taxonomy'
-import {SettingsAccountAvatar} from './shared'
+import {SettingsAccountAvatar, settingsPanesGridClass, settingsSidePaneClass} from './shared'
 import {SoftwareUpdateListRow} from './software-update-list-row'
 import {StorageCardContent} from './storage-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
@@ -366,13 +366,18 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 
 	return (
 		<div className='relative h-full min-h-0 animate-in fade-in lg:flex-1'>
-			<div className='grid h-full min-h-0 w-full items-start gap-[34px] lg:grid-cols-[286px_minmax(0,1fr)]'>
-				<aside className='min-h-0 lg:-ml-4 lg:h-full lg:w-[calc(100%+50px)]'>
+			<div
+				className={cn(
+					'grid h-full min-h-0 w-full items-start gap-[34px] lg:grid-cols-[286px_minmax(0,1fr)]',
+					settingsPanesGridClass,
+				)}
+			>
+				<aside className={cn('min-h-0 min-w-0 lg:-ml-4 lg:h-full lg:w-[calc(100%+50px)]', settingsSidePaneClass)}>
 					<FadeScroller
 						ref={sidebarScrollRef}
 						direction='y'
 						data-testid='settings-sidebar-scroller'
-						className='umbrel-hide-scrollbar min-h-0 overscroll-contain lg:h-full lg:overflow-y-auto lg:pr-[34px] lg:pb-24 lg:pl-4'
+						className='umbrel-hide-scrollbar min-h-0 overscroll-contain lg:h-full lg:overflow-y-auto lg:pr-[34px] lg:pb-24 lg:pl-4 panes:-mx-3 panes:px-3'
 					>
 						<div className='flex flex-col gap-3'>
 							<div className='flex shrink-0 flex-col items-center gap-5'>
@@ -474,7 +479,7 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 					<div
 						data-testid='settings-controls-rail'
 						className={cn(
-							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2',
+							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2 panes:flex-wrap panes:pt-0',
 							isMember && 'justify-end',
 						)}
 					>
@@ -484,9 +489,16 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								labels={filterLabels}
 								ariaLabel={t('settings.filters-label')}
 								onSelect={handleFilterSelect}
+								className='lg:shrink-0 low:hidden'
 							/>
 						)}
-						<SearchField value={searchQuery} onChange={handleSearchChange} label={t('search')} />
+						{/* The pills are the row's fixed part from lg, the search takes what's left */}
+						<SearchField
+							value={searchQuery}
+							onChange={handleSearchChange}
+							label={t('search')}
+							className='lg:min-w-0 lg:shrink panes:w-full'
+						/>
 					</div>
 
 					<FadeScroller

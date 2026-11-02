@@ -56,7 +56,7 @@ export function AppIcon({
 		<motion.button
 			onClick={onClick}
 			className={cn(
-				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-hidden',
+				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-[var(--app-pad)] focus:outline-hidden',
 			)}
 			layout
 			initial={{
@@ -79,7 +79,7 @@ export function AppIcon({
 		>
 			<div
 				className={cn(
-					'relative aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
+					'relative aspect-square w-[var(--app-icon)] shrink-0 overflow-hidden rounded-[var(--app-icon-radius)] bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6',
 				)}
 			>
 				{appIconSrc && (
@@ -123,7 +123,7 @@ export function AppIcon({
 					</div>
 				)}
 			</div>
-			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
+			<div className='max-w-full text-[length:var(--app-label)] leading-normal drop-shadow-desktop-label'>
 				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
 					<AppLabel state={state} label={label} />
 				</div>

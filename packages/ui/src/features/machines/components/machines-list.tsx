@@ -25,14 +25,14 @@ export default function MachinesList({machines}: {machines: Machine[]}) {
 	const running = machines.filter((machine) => machine.state === 'running').length
 
 	return (
-		<div className='flex flex-col gap-3 p-6 md:p-12'>
-			<div className='flex items-baseline justify-between'>
+		<div className='flex flex-col gap-3 p-3 sm:p-6 md:p-8 lg:p-12 low:p-3'>
+			<div className='flex items-baseline justify-between px-2 pt-1 sm:p-0 low:px-2'>
 				<h2 className='text-17 font-semibold -tracking-2 text-white/85'>{t('machines.all-machines')}</h2>
 				<span className='text-13 -tracking-2 text-white/35 tabular-nums'>
 					{t('machines.running-summary', {running, total: machines.length})}
 				</span>
 			</div>
-			<div className='grid grid-cols-1 gap-3 lg:grid-cols-2'>
+			<div className='grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 low:grid-cols-2 low:gap-2'>
 				<AnimatePresence mode='popLayout' initial={true}>
 					{machines.map((machine, i) => (
 						<MachineRow key={machine.id} machine={machine} index={i} />
@@ -118,39 +118,35 @@ function MachineRow({machine, index}: {machine: Machine; index: number}) {
 			transition={{delay: index * 0.02, duration: 0.2, ease: 'easeOut', ...layoutMorphTransition}}
 			className={cn(
 				// settings-edge-material: same card surface as the Settings page tiles.
-				// Below sm the row becomes a centered column — monitor on top, copy
-				// beneath, controls at the bottom — since the horizontal layout can't
-				// fit a name, status, and two controls on a phone-width card.
-				'settings-edge-material relative flex flex-col items-center gap-3 rounded-24 bg-white/5 p-5 transition-colors duration-300 hover:bg-white/8 sm:flex-row sm:gap-4 sm:p-4',
+				// Below sm the monitor shrinks and the specs step aside, so a phone
+				// shows a screenful of machines rather than one and a half. Where two
+				// columns leave too little width beside the monitor for a name, a row
+				// becomes a tile (machine-tile in index.css): the copy goes under the
+				// monitor and the controls take the corner.
+				'settings-edge-material relative flex items-center gap-2 rounded-24 bg-white/5 p-3 transition-colors duration-300 [container:machine-row/inline-size] hover:bg-white/8 sm:gap-4 sm:p-4 low:gap-2 low:p-3',
 				isError && 'border border-[#f63636]/40 bg-[#f63636]/[0.08] hover:bg-[#f63636]/[0.12]',
 			)}
 		>
 			<button
 				type='button'
 				onClick={() => navigate(machinePath(machine.id))}
-				className='flex w-full min-w-0 cursor-pointer flex-col items-center gap-3 text-center after:absolute after:inset-0 after:rounded-24 focus:outline-hidden focus-visible:after:ring-3 focus-visible:after:ring-white/20 sm:flex-1 sm:flex-row sm:gap-4 sm:text-left'
+				className='flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left after:absolute after:inset-0 after:rounded-24 focus:outline-hidden focus-visible:after:ring-3 focus-visible:after:ring-white/20 sm:gap-4 low:gap-3 machine-tile:flex-col machine-tile:items-start machine-tile:gap-3'
 			>
 				<div className='relative shrink-0'>
 					<MonitorGlow machine={machine} />
-					<OsIcon osId={machine.osId} state={iconState} className='relative size-24 sm:size-20' />
-					{/* Mobile only: the catalog tiles' monitor reflection off the card
-					    surface (the copy column below is `relative` to paint above it) */}
-					<div
-						aria-hidden
-						className='pointer-events-none absolute top-24 left-1/2 h-14 w-24 -translate-x-1/2 sm:hidden'
-					>
-						<div className='[mask-image:linear-gradient(to_bottom,black,transparent_75%)] opacity-[0.08] blur-[2px]'>
-							<OsIcon osId={machine.osId} state={iconState} className='size-24 -scale-y-100' />
-						</div>
-					</div>
+					<OsIcon
+						osId={machine.osId}
+						state={iconState}
+						className='relative size-14 sm:size-20 low:size-14 machine-tile:size-16'
+					/>
 				</div>
-				<div className='relative flex w-full min-w-0 flex-col items-center gap-1.5 sm:flex-1 sm:items-start'>
+				<div className='relative flex w-full min-w-0 flex-1 flex-col items-start gap-1 sm:gap-1.5 low:gap-1'>
 					{/* No state pill: the artwork, glow, detail line and power button
 					    already tell the whole story */}
 					<span className='max-w-full min-w-0 truncate text-15 font-medium -tracking-2 text-white'>{machine.name}</span>
 					{/* Truncate the whole line: a non-shrinking status can otherwise
 					    paint outside the copy column and underneath the controls. */}
-					<div className='w-full min-w-0 truncate text-center text-12 -tracking-2 text-white/40 sm:text-left'>
+					<div className='w-full min-w-0 truncate text-12 -tracking-2 text-white/40'>
 						{machine.osVersion}
 						{statusLabel && (
 							<>
@@ -159,10 +155,12 @@ function MachineRow({machine, index}: {machine: Machine; index: number}) {
 							</>
 						)}
 					</div>
-					{/* Detail slot: quiet specs everywhere (installing included, for
-					    consistency across the grid — the island carries the progress);
-					    only error narrates here */}
-					<div className='flex h-5 w-full items-center justify-center overflow-hidden sm:justify-start'>
+					{/* Detail slot: quiet specs (installing included, for consistency
+					    across the grid — the island carries the progress), where the row
+					    has room for them; only error narrates here, at any size */}
+					<div
+						className={cn('h-5 w-full items-center overflow-hidden', isError ? 'flex' : 'hidden sm:flex low:hidden')}
+					>
 						{isError ? (
 							<span className='min-w-0 truncate text-12 -tracking-2 text-[#f63636]/80'>
 								{machine.errorMessage ? getMachinesErrorMessage(machine.errorMessage) : t('machines.error-title')}
@@ -178,7 +176,7 @@ function MachineRow({machine, index}: {machine: Machine; index: number}) {
 			</button>
 			{/* Two controls, not three: restart lives in the menu. The reclaimed
 			    width goes to the name and detail line. */}
-			<div className='relative z-10 flex shrink-0 items-center gap-2 sm:gap-1.5'>
+			<div className='relative z-10 flex shrink-0 items-center gap-2 sm:gap-1.5 machine-tile:absolute machine-tile:top-4 machine-tile:right-4'>
 				<MachineMenu machine={machine} withRestart />
 				<MachinePowerButton machine={machine} />
 			</div>

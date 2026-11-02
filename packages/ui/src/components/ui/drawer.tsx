@@ -44,7 +44,7 @@ function DrawerContent({
 			<DrawerPrimitive.Content
 				ref={ref}
 				className={cn(
-					'umbrel-window-shadow umbrel-window-surface-top fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col gap-5 bg-[#0A0A0A] p-5 outline-hidden',
+					'umbrel-window-shadow umbrel-window-surface-top fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col gap-5 bg-[#0A0A0A] p-5 outline-hidden low:mt-3 low:max-h-[calc(100%-12px)]',
 					fullHeight && 'top-0',
 					className,
 				)}

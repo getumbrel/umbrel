@@ -204,10 +204,11 @@ export default function Login() {
 			<>
 				<Wallpaper stayBlurred />
 				<div className='fixed inset-0 bg-black/20' />
-				<div className='relative z-10 flex w-full flex-1 animate-in flex-col items-center justify-center gap-5 duration-300 fade-in'>
+				<div className='relative z-10 flex w-full flex-1 animate-in flex-col items-center justify-center gap-5 duration-300 fade-in low:gap-3'>
 					{/* A lone account's avatar says nothing the greeting doesn't —
-					    show the Umbrel logo instead, like the multi-user picker */}
-					<UmbrelLogo className='mb-4 w-32 shrink-0' />
+					    show the Umbrel logo instead, like the multi-user picker.
+					    A phone on its side has room for the form only with a smaller one */}
+					<UmbrelLogo className='mb-4 w-32 shrink-0 low:mb-0 low:w-20' />
 					<LoginForm
 						account={account}
 						password={password}
@@ -261,18 +262,18 @@ export default function Login() {
 					// lens mid-screen. The dock clamps the lens inside the viewport
 					// itself, which is what keeps scrollbars away.
 					'relative z-10 flex w-full flex-1 flex-col items-center justify-center transition-transform duration-500',
-					!chosen && '-translate-y-10',
+					!chosen && '-translate-y-10 low:translate-y-0',
 				)}
 			>
 				<AnimatePresence initial={false}>
 					{!chosen && (
 						<motion.div
 							key='logo'
-							className='mb-24 overflow-visible'
+							className='mb-24 overflow-visible low:mb-6'
 							exit={{opacity: 0, y: -28, height: 0, marginBottom: 0}}
 							transition={{duration: 0.2}}
 						>
-							<UmbrelLogo className='w-32 shrink-0' />
+							<UmbrelLogo className='w-32 shrink-0 low:w-20' />
 						</motion.div>
 					)}
 				</AnimatePresence>

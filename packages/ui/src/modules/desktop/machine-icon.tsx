@@ -22,7 +22,7 @@ export function MachineIcon({machine}: {machine: Machine}) {
 			<ContextMenuTrigger className='group'>
 				<motion.button
 					onClick={() => navigate(machinePath(machine.id))}
-					className='group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-hidden'
+					className='group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-[var(--app-pad)] focus:outline-hidden'
 					layout
 					initial={{opacity: 1, scale: 0.8}}
 					animate={{opacity: 1, scale: 1}}
@@ -32,9 +32,9 @@ export function MachineIcon({machine}: {machine: Machine}) {
 					<MachineAppIcon
 						osId={machine.osId}
 						state={machine.state}
-						className='w-12 rounded-10 ring-white/25 transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15'
+						className='w-[var(--app-icon)] rounded-[var(--app-icon-radius)] ring-white/25 transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6'
 					/>
-					<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
+					<div className='max-w-full text-[length:var(--app-label)] leading-normal drop-shadow-desktop-label'>
 						<div className='truncate contrast-more:bg-black contrast-more:px-1'>{machine.name}</div>
 					</div>
 				</motion.button>

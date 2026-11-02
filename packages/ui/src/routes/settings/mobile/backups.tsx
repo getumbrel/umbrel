@@ -6,16 +6,18 @@ import {TbHistory, TbSettings} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
-import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {DrawerFooter} from '@/components/ui/drawer'
+import {useDrawerOrDialog} from '@/components/ui/drawer-or-dialog'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import backupsIcon from '@/features/backups/assets/backups-icon.png'
 import {useBackups} from '@/features/backups/hooks/use-backups'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 
-export function BackupsMobileDrawer() {
+export function BackupsDrawerOrDialog() {
 	const {t} = useTranslation()
 	const dialogProps = useSettingsDialogProps()
+	const {Root, Content, Header, Title, Description} = useDrawerOrDialog()
 	const navigate = useNavigate()
 	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups()
 
@@ -28,15 +30,15 @@ export function BackupsMobileDrawer() {
 	}, [navigate])
 
 	return (
-		<Drawer {...dialogProps}>
-			<DrawerContent>
-				<DrawerHeader className='flex flex-col items-center text-center'>
+		<Root {...dialogProps}>
+			<Content withScroll>
+				<Header className='flex flex-col items-center text-center'>
 					<div className='py-5'>
 						<FadeInImg src={backupsIcon} width={67} height={67} alt='' />
 					</div>
-					<DrawerTitle>{t('backups')}</DrawerTitle>
-					<DrawerDescription>{t('backups-description')}</DrawerDescription>
-				</DrawerHeader>
+					<Title className='pe-0 text-center'>{t('backups')}</Title>
+					<Description className='text-center'>{t('backups-description')}</Description>
+				</Header>
 				<DrawerFooter>
 					{/* There are 2 buttons (Set up/Configure, Restore) */}
 					{/* We always render the "Restore" dropdown with Full Restore and Rewind options */}
@@ -82,7 +84,7 @@ export function BackupsMobileDrawer() {
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</DrawerFooter>
-			</DrawerContent>
-		</Drawer>
+			</Content>
+		</Root>
 	)
 }

@@ -104,7 +104,7 @@ vi.mock('@/features/files/hooks/use-home-path', () => ({useHomePath: () => '/Hom
 vi.mock('@/features/files/hooks/use-member-shares', () => ({useMemberShares: () => ({sharedWithMe: undefined})}))
 vi.mock('@/features/files/hooks/use-navigate', () => ({useNavigate: () => ({navigateToDirectory: vi.fn()})}))
 vi.mock('@/features/files/utils/error-messages', () => ({getFilesErrorMessage: (message: string) => message}))
-vi.mock('@/hooks/use-is-mobile', () => ({useIsMobile: () => false}))
+vi.mock('@/hooks/use-is-mobile', () => ({useIsMobile: () => false, useIsPhone: () => false}))
 vi.mock('@/hooks/use-query-params', () => ({useQueryParams: () => ({params: mocks.params})}))
 vi.mock('@/trpc/trpc', () => ({
 	trpcReact: {

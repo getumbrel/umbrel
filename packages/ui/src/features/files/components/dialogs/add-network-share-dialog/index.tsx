@@ -23,7 +23,7 @@ import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
 import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 
@@ -71,7 +71,7 @@ export default function AddNetworkShareDialog(props?: {
 		open: props?.open ?? internalDialog.open,
 		onOpenChange: props?.onOpenChange ?? internalDialog.onOpenChange,
 	}
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 
 	// wizard vs manual entry
 	const [mode, setMode] = useState<'wizard' | 'manual'>('wizard')
@@ -194,7 +194,7 @@ export default function AddNetworkShareDialog(props?: {
 			// Discover step
 			case Step.Discover:
 				footer = (
-					<DialogFooter className={`${isMobile ? 'flex flex-col items-stretch' : 'flex items-center'} gap-2 pt-4`}>
+					<DialogFooter className={`${isPhone ? 'flex flex-col items-stretch' : 'flex items-center'} gap-2 pt-4`}>
 						<Button
 							variant='primary'
 							size='dialog'
@@ -243,7 +243,7 @@ export default function AddNetworkShareDialog(props?: {
 		switch (manualStep) {
 			case ManualStep.Credentials:
 				footer = (
-					<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
+					<DialogFooter className={`gap-2 pt-4 ${isPhone ? 'flex-col-reverse' : ''}`}>
 						<Button size='dialog' onClick={() => setMode('wizard')}>
 							{t('files-add-network-share.back')}
 						</Button>
@@ -255,7 +255,7 @@ export default function AddNetworkShareDialog(props?: {
 				break
 			case ManualStep.SelectShare:
 				footer = (
-					<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
+					<DialogFooter className={`gap-2 pt-4 ${isPhone ? 'flex-col-reverse' : ''}`}>
 						<Button size='dialog' onClick={manualBack}>
 							{t('files-add-network-share.back')}
 						</Button>
@@ -270,7 +270,7 @@ export default function AddNetworkShareDialog(props?: {
 
 	const header = (
 		<>
-			{isMobile ? (
+			{isPhone ? (
 				<DrawerHeader>
 					<DrawerTitle>{t('files-add-network-share.title')}</DrawerTitle>
 					<DrawerDescription>{t('files-add-network-share.description')}</DrawerDescription>
@@ -397,7 +397,7 @@ export default function AddNetworkShareDialog(props?: {
 		</div>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer open={dialogProps.open} onOpenChange={dialogProps.onOpenChange}>
 				<DrawerContent fullHeight>
@@ -411,7 +411,8 @@ export default function AddNetworkShareDialog(props?: {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogContent className='flex min-h-[480px] flex-col'>
+			{/* Keeps its height as its steps change, short of a window with the keyboard up */}
+			<DialogContent className='flex min-h-[min(480px,calc(100%-16px))] flex-col'>
 				{header}
 				{body}
 				{footer}

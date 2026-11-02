@@ -2,23 +2,17 @@ import {useRef} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useMount} from 'react-use'
 
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerHeader,
-	DrawerScroller,
-	DrawerTitle,
-} from '@/components/ui/drawer'
+import {useDrawerOrDialog} from '@/components/ui/drawer-or-dialog'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {cn} from '@/lib/utils'
 import {useWallpaper, WallpaperAvifSource, WallpaperId, wallpapers, type Wallpaper} from '@/providers/wallpaper'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 
-export function WallpaperDrawer() {
+export function WallpaperDrawerOrDialog() {
 	const {t} = useTranslation()
 	const title = t('wallpaper')
 	const dialogProps = useSettingsDialogProps()
+	const {Root, Content, Header, Title, Description, Scroller} = useDrawerOrDialog()
 
 	const {wallpaper, setWallpaperId} = useWallpaper()
 
@@ -27,13 +21,13 @@ export function WallpaperDrawer() {
 	}
 
 	return (
-		<Drawer {...dialogProps}>
-			<DrawerContent fullHeight>
-				<DrawerHeader>
-					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{t('wallpaper-description')}</DrawerDescription>
-				</DrawerHeader>
-				<DrawerScroller>
+		<Root {...dialogProps}>
+			<Content fullHeight>
+				<Header>
+					<Title>{title}</Title>
+					<Description>{t('wallpaper-description')}</Description>
+				</Header>
+				<Scroller>
 					<div className='grid grid-cols-2 gap-2.5'>
 						{wallpapers.map((w, i) => (
 							<WallpaperItem
@@ -48,9 +42,9 @@ export function WallpaperDrawer() {
 							/>
 						))}
 					</div>
-				</DrawerScroller>
-			</DrawerContent>
-		</Drawer>
+				</Scroller>
+			</Content>
+		</Root>
 	)
 }
 

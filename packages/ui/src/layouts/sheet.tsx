@@ -8,6 +8,7 @@ import {ScrollArea} from '@/components/ui/sheet-scroll-area'
 import {useScrollRestoration} from '@/hooks/use-scroll-restoration'
 import {cn} from '@/lib/utils'
 import {DockSpacer} from '@/modules/desktop/dock'
+import {useTuckDockOnScroll} from '@/modules/desktop/dock-tuck'
 import {SheetFixedTarget} from '@/modules/sheet-top-fixed'
 import {SheetStickyHeaderProvider, SheetStickyHeaderTarget, useSheetStickyHeader} from '@/providers/sheet-sticky-header'
 import {usePauseWallpaperVideo} from '@/providers/wallpaper'
@@ -34,6 +35,7 @@ export function SheetLayout() {
 	}, [])
 
 	useScrollRestoration(scrollRef, getSheetScrollRestorationAction)
+	useTuckDockOnScroll(scrollElement)
 
 	const isSettingsRoute = /^\/settings(\/|$)/.test(location.pathname)
 	const isAppStoreRoute = /^\/(?:community-)?app-store(\/|$)/.test(location.pathname)
@@ -106,9 +108,15 @@ export function SheetLayout() {
 						>
 							<div
 								className={cn(
-									'flex flex-col gap-5 px-3 pt-6 md:px-[40px] md:pt-12',
+									'flex flex-col gap-5 px-3 md:px-[40px]',
+									isAppStoreRoute || isSettingsRoute || isFilesRoute
+										? 'pt-(--page-top)'
+										: // Photos' desktop bar is placed against the 48px above it
+											isPhotosRoute
+											? 'pt-(--page-top) lg:pt-12'
+											: 'pt-6 md:pt-12',
 									isSettingsRoute
-										? 'lg:h-full lg:min-h-0 lg:gap-0 lg:pt-0 xl:px-[60px]'
+										? 'lg:h-full lg:min-h-0 lg:gap-0 lg:pt-0 xl:px-[60px] low:gap-3'
 										: isFullHeightFeatureRoute
 											? 'xl:px-[60px]'
 											: 'xl:px-[70px]',
@@ -121,7 +129,13 @@ export function SheetLayout() {
 								    clearance inside its own scrollers, so a spacer here would only
 								    hold its listings short of the sheet's bottom edge */}
 								<DockSpacer
-									className={cn('mt-4', (isSettingsRoute || isFilesRoute) && 'lg:hidden', isPhotosRoute && 'hidden')}
+									className={cn(
+										'mt-4',
+										(isSettingsRoute || isFilesRoute) && 'lg:hidden',
+										// Files' two panes and its layout on a phone on its side size themselves
+										isFilesRoute && 'panes:hidden phone-side:hidden',
+										isPhotosRoute && 'hidden',
+									)}
 								/>
 							</div>
 						</ScrollArea>

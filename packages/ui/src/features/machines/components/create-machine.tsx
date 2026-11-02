@@ -239,12 +239,12 @@ export default function CreateMachine() {
 		// No page-level fade: the hero monitor glides in from the catalog card
 		// via its shared layoutId, and a fading ancestor would hide it mid-flight.
 		// Each section settles on its own beat around the landing instead.
-		<div className='flex flex-col gap-8 px-4 py-6 md:p-12'>
-			<div className='flex flex-col gap-10 md:flex-row md:gap-10 lg:gap-14'>
+		<div className='flex flex-col gap-8 px-3 py-5 sm:px-4 sm:py-6 md:p-12 low:gap-4 low:p-3'>
+			<div className='flex flex-col gap-10 sm:flex-row sm:gap-8 md:gap-10 lg:gap-14 low:gap-6'>
 				{/* Identity: the machine is the hero, its name editable in place. The
 				    column stays lean at md so the spec rows get the width, and
 				    stretches back out from lg up. */}
-				<div className='flex flex-col items-center gap-4 pt-4 md:w-[200px] md:shrink-0 md:pt-6 lg:w-[280px]'>
+				<div className='flex flex-col items-center gap-4 pt-4 sm:w-[224px] sm:shrink-0 md:pt-6 lg:w-[280px] low:gap-2 low:pt-0'>
 					<div className='relative'>
 						{/* Glow blooms once the monitor has landed */}
 						<motion.div
@@ -264,7 +264,7 @@ export default function CreateMachine() {
 							transition={layoutMorphTransition}
 							className='relative'
 						>
-							<OsIcon osId={sourceOsIconId} className='size-32 lg:size-36' />
+							<OsIcon osId={sourceOsIconId} className='size-24 sm:size-32 lg:size-36 low:size-20' />
 						</motion.div>
 						{/* The catalog tiles' reflection materializes after landing */}
 						<motion.div
@@ -272,10 +272,10 @@ export default function CreateMachine() {
 							initial={{opacity: 0}}
 							animate={{opacity: 1}}
 							transition={{delay: 0.35, duration: 0.5, ease: 'easeOut'}}
-							className='pointer-events-none absolute top-32 left-1/2 h-16 w-32 -translate-x-1/2 lg:top-36 lg:w-36'
+							className='pointer-events-none absolute top-24 left-1/2 h-16 w-24 -translate-x-1/2 sm:top-32 sm:w-32 lg:top-36 lg:w-36 low:hidden'
 						>
 							<div className='[mask-image:linear-gradient(to_bottom,black,transparent_75%)] opacity-[0.08] blur-[2px]'>
-								<OsIcon osId={sourceOsIconId} className='size-32 -scale-y-100 lg:size-36' />
+								<OsIcon osId={sourceOsIconId} className='size-24 -scale-y-100 sm:size-32 lg:size-36' />
 							</div>
 						</motion.div>
 					</div>

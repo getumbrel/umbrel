@@ -24,11 +24,28 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import {cn} from '@/lib/utils'
 import {focusRingClass} from '@/utils/element-classes'
 
+// Turns tapping into selecting, for screens with no mouse to select with
+export function SelectToggle({className}: {className?: string}) {
+	const {t} = useTranslation()
+	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
+	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
+
+	return (
+		<Button
+			className={cn('h-[1.9rem] rounded-full px-3 text-13', className)}
+			variant={isSelectingOnMobile ? 'secondary' : 'default'}
+			size='default'
+			aria-label={t('files-action.select')}
+			onClick={() => setIsSelectingOnMobile(!isSelectingOnMobile)}
+		>
+			{isSelectingOnMobile ? t('done') : t('files-action.select')}
+		</Button>
+	)
+}
+
 export function MobileActions({DropdownItems = null}: {DropdownItems?: React.ReactNode}) {
 	const {t} = useTranslation()
 	const {preferences, setView, setSortBy} = usePreferences()
-	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
-	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 	const {hideSearch, mobilePrimaryAction} = useActionsBarConfig()
 	const isReadOnly = useIsFilesReadOnly()
 
@@ -39,17 +56,7 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 
 			{/* Select toggle button, or the listing's own primary action where
 			    selection is meaningless */}
-			{mobilePrimaryAction ?? (
-				<Button
-					className='h-[1.9rem] rounded-full px-3 text-13'
-					variant={isSelectingOnMobile ? 'secondary' : 'default'}
-					size='default'
-					aria-label={t('files-action.select')}
-					onClick={() => setIsSelectingOnMobile(!isSelectingOnMobile)}
-				>
-					{isSelectingOnMobile ? t('done') : t('files-action.select')}
-				</Button>
-			)}
+			{mobilePrimaryAction ?? <SelectToggle />}
 
 			<DropdownMenu>
 				<DropdownMenuTrigger className={cn('-m-0.5 rounded-full p-0.5', focusRingClass)}>

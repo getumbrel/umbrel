@@ -15,6 +15,7 @@ import {useWidgets} from '@/hooks/use-widgets'
 import {cn} from '@/lib/utils'
 import {ArrowButton, PaginatorPills} from '@/modules/desktop/app-grid/paginator'
 import {DockSpacer} from '@/modules/desktop/dock'
+import {useTuckDockOnScroll} from '@/modules/desktop/dock-tuck'
 import {ExampleWidget, Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 
@@ -257,6 +258,10 @@ function WidgetSheet({
 	selectedCssHeight: string
 }) {
 	const {t} = useTranslation()
+	// A phone on its side keeps a sliver of sheet under the widgets row, so the
+	// dock steps out of the way as the widgets scroll
+	const [scroller, setScroller] = useState<HTMLDivElement | null>(null)
+	useTuckDockOnScroll(scroller)
 	return (
 		<BackdropBlurVariantContext value='default'>
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
@@ -268,10 +273,10 @@ function WidgetSheet({
 					}}
 					backdrop={<div className='fixed inset-0 z-30' onClick={() => onOpenChange(false)} />}
 				>
-					<ScrollArea className='umbrel-window-surface-top h-full'>
+					<ScrollArea className='umbrel-window-surface-top h-full' viewportRef={setScroller}>
 						<div
 							className={cn(
-								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-8 md:px-[80px] md:pt-12',
+								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-8 md:px-[80px] md:pt-12 low:gap-4 low:pt-4',
 								'animate-in opacity-100 duration-100 fade-in',
 							)}
 						>

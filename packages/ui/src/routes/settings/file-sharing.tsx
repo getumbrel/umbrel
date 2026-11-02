@@ -25,7 +25,7 @@ import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-na
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {trpcReact} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
@@ -34,7 +34,7 @@ export default function FileSharingDrawerOrDialog() {
 	const {t} = useTranslation()
 	const title = t('settings.file-sharing')
 	const dialogProps = useSettingsDialogProps()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const homeDirectoryName = useHomeDirectoryName()
 	// The account's home root: /Home for the owner, /Users/<slug> for members
 	const homePath = useHomePath()
@@ -344,7 +344,7 @@ export default function FileSharingDrawerOrDialog() {
 		</>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>

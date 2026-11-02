@@ -55,7 +55,7 @@ export function MobileSidebarWrapper({children, isOpen, onClose}: MobileSidebarP
 						<div className='absolute top-4 right-3'>
 							<ChevronLeft role='button' className='h-4 w-4 text-white/60 transition-colors' onClick={onClose} />
 						</div>
-						<div className='h-12 sm:h-16 md:h-20' /> {/* Spacer for top padding */}
+						<div className='h-12 sm:h-16 md:h-20 low:h-10' /> {/* Spacer for top padding */}
 						{/* The actual <Sidebar /> component will be passed in as children */}
 						{children}
 						{/* Full height drag area with centered visual handle */}

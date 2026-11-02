@@ -26,6 +26,12 @@ const prefersTouchConsole = () => window.matchMedia?.('(pointer: coarse)').match
 const screenActionButtonClass =
 	'flex h-[30px] items-center rounded-full border-hpx border-white/20 bg-white/10 px-4 text-13 font-medium text-white transition-[background-color,transform] duration-200 hover:bg-white/15 active:scale-95'
 
+// What a machine shows when it has no console. On a phone on its side the
+// screen is short, and floating islands sit over the bottom of it, so its
+// content starts at the top and tightens up.
+const statusScreenClass =
+	'absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black low:justify-start low:gap-2 low:pt-3'
+
 // The VM "screen": renders whatever the machine would be showing for its
 // current state, crossfading between states. Fills its (relatively
 // positioned) parent.
@@ -237,7 +243,7 @@ function InstallingScreen({machine}: {machine: Machine}) {
 	}
 
 	return (
-		<div className='absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black md:gap-5'>
+		<div className={cn(statusScreenClass, 'md:gap-5')}>
 			<OsIcon osId={machine.osId} state={machine.state} className='size-12 md:size-16' />
 			<div className='flex flex-col items-center gap-3'>
 				<div className='w-32'>
@@ -253,7 +259,7 @@ function StoppedScreen({machine}: {machine: Machine}) {
 	const {start} = useMachineActions()
 
 	return (
-		<div className='absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black'>
+		<div className={statusScreenClass}>
 			<Power className='size-8 text-white/25' />
 			<span className='text-13 -tracking-2 text-white/40'>{t('machines.machine-off')}</span>
 			<button onClick={() => start({id: machine.id})} className={screenActionButtonClass}>
@@ -271,7 +277,7 @@ function ErrorScreen({machine}: {machine: Machine}) {
 	const retryingInstall = machine.installPending
 
 	return (
-		<div className='absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black px-6 text-center'>
+		<div className={cn(statusScreenClass, 'px-6 text-center')}>
 			<TbAlertTriangleFilled className={cn('size-8', machineStopTextClass)} />
 			<div className='flex flex-col gap-1.5'>
 				<span className='text-15 font-medium -tracking-2 text-white'>{t('machines.error-title')}</span>

@@ -16,8 +16,8 @@ import {create} from 'zustand'
 
 // Space between Search and the first island, and between islands
 export const LANE_GAP = 8
-// How far Search sits above the dock: desktop-content.tsx's pt-6 under it
-export const SEARCH_DOCK_GAP = 24
+// How far Search sits above the dock
+export const SEARCH_DOCK_GAP = 8
 // Search's pill height; islands are 40px, so the lane sits a pixel lower to
 // share Search's centre line
 export const SEARCH_HEIGHT = 38

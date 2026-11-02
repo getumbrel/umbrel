@@ -54,7 +54,8 @@ export function DeviceInfoContent({
 	const navigate = useNavigate()
 
 	return (
-		<div className='space-y-6'>
+		// On a phone on its side the device sits beside its details, so they're on screen
+		<div className='space-y-6 low:grid low:grid-cols-[200px_minmax(0,1fr)] low:items-start low:gap-5 low:space-y-0'>
 			<div className={cn('flex justify-center', umbrelHostEnvironment !== 'umbrel-pro' && 'py-2')}>
 				<HostEnvironmentIcon
 					environment={umbrelHostEnvironment}

@@ -98,7 +98,9 @@ export function Search({onClick, visible = true}: {onClick?: () => void; visible
 				<span className='flex items-center gap-2 pl-2 whitespace-nowrap'>
 					{t('search')}
 					{/* TODO: ideally, centralize shortcut preview and shortcut event listener so always in sync */}
-					{platform() !== 'other' && !isMobile && <span className='text-white/40'>{cmdOrCtrl()}K</span>}
+					{platform() !== 'other' && !isMobile && (
+						<span className='text-white/40 pointer-coarse:hidden'>{cmdOrCtrl()}K</span>
+					)}
 				</span>
 			</motion.span>
 		</motion.button>

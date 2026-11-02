@@ -38,7 +38,7 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {useMemberShares} from '@/features/files/hooks/use-member-shares'
 import {useAppMemberShares} from '@/hooks/use-app-member-shares'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {AccountAvatar} from '@/modules/auth/account-avatar'
 import {AccountAvatarEditor} from '@/modules/auth/account-avatar-editor'
@@ -173,7 +173,7 @@ export default function UsersDialog() {
 	const dialogProps = useSettingsDialogProps()
 	const utils = trpcReact.useUtils()
 	const homeDirectoryName = useHomeDirectoryName()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const [searchParams, setSearchParams] = useSearchParams()
 	const [localView, setLocalView] = useState<LocalView>({view: 'list'})
 	const ownerPanel = searchParams.get('ownerPanel')
@@ -676,7 +676,7 @@ export default function UsersDialog() {
 		<>
 			<ShareSection
 				kind='apps'
-				compactShareAllLabel={isMobile}
+				compactShareAllLabel={isPhone}
 				shareAll={shareAllAppsOn}
 				disabled={isAddingUser ? undefined : shareControlsDisabled}
 				onShareAllChange={handleToggleAllApps}
@@ -688,7 +688,7 @@ export default function UsersDialog() {
 
 			<ShareSection
 				kind='folders'
-				compactShareAllLabel={isMobile}
+				compactShareAllLabel={isPhone}
 				shareAll={shareAllFoldersOn}
 				showAdditionalSharesWhenSharingAll
 				disabled={isAddingUser ? undefined : shareControlsDisabled}
@@ -723,7 +723,7 @@ export default function UsersDialog() {
 	// still manage their own account if app or folder sharing is unavailable.
 	const content = loadFailed ? (
 		<div className='flex flex-col gap-5'>
-			{!isMobile && (
+			{!isPhone && (
 				<DialogHeader>
 					<h2 className='text-17 leading-snug font-semibold -tracking-2'>{t('users')}</h2>
 					<p className='text-13 leading-tight text-white/40'>{t('users.description')}</p>
@@ -735,7 +735,7 @@ export default function UsersDialog() {
 		<>
 			{showListView && (
 				<div className='flex flex-col gap-5'>
-					{isMobile ? (
+					{isPhone ? (
 						<p className='text-13 leading-tight -tracking-2 text-white/40 opacity-100'>{t('users.description')}</p>
 					) : (
 						<DialogHeader>
@@ -934,7 +934,7 @@ export default function UsersDialog() {
 					<div className='flex flex-col gap-5'>
 						<div className='flex flex-col gap-3'>
 							<BackButton onClick={returnToList}>{t('users')}</BackButton>
-							<div className={cn('flex gap-4 pt-2', isMobile ? 'flex-wrap' : 'items-center')}>
+							<div className={cn('flex gap-4 pt-2', isPhone ? 'flex-wrap' : 'items-center')}>
 								<AccountAvatarEditor account={editingMember} size={72} />
 								<div className='min-w-0 flex-1'>
 									<h2 className='text-20 truncate leading-snug font-semibold -tracking-2'>{editingMember.name}</h2>
@@ -942,7 +942,7 @@ export default function UsersDialog() {
 										{t('users.member')}
 									</p>
 								</div>
-								<div className={cn('flex shrink-0 items-center gap-2', isMobile && 'w-full justify-end')}>
+								<div className={cn('flex shrink-0 items-center gap-2', isPhone && 'w-full justify-end')}>
 									<Button size='default' className='shrink-0' onClick={() => setIsManagingSessions(true)}>
 										{t('active-logins.title')}
 									</Button>
@@ -1098,7 +1098,7 @@ export default function UsersDialog() {
 								: t('account')
 						: t('users.description')
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<>
 				<Drawer {...dialogProps}>

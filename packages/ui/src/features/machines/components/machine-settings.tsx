@@ -215,18 +215,22 @@ export default function MachineSettings() {
 			initial={{opacity: 0}}
 			animate={{opacity: 1}}
 			transition={{duration: 0.2, ease: 'easeOut'}}
-			className='flex flex-col gap-8 px-4 py-6 md:p-12'
+			className='flex flex-col gap-8 px-3 py-5 sm:px-4 sm:py-6 md:p-12 low:gap-4 low:p-3'
 		>
-			<div className='flex flex-col gap-10 md:flex-row md:gap-10 lg:gap-14'>
+			<div className='flex flex-col gap-10 sm:flex-row sm:gap-8 md:gap-10 lg:gap-14 low:gap-6'>
 				{/* Identity: the machine is the hero, its name editable in place */}
-				<div className='flex flex-col items-center gap-4 pt-4 md:w-[200px] md:shrink-0 md:pt-6 lg:w-[280px]'>
+				<div className='flex flex-col items-center gap-4 pt-4 sm:w-[224px] sm:shrink-0 md:pt-6 lg:w-[280px] low:gap-2 low:pt-0'>
 					<div className='relative'>
 						<div
 							aria-hidden
 							className='absolute inset-2 rounded-full opacity-50 blur-3xl'
 							style={{backgroundColor: color}}
 						/>
-						<OsIcon osId={machine.osId} state={machine.state} className='relative size-32 lg:size-36' />
+						<OsIcon
+							osId={machine.osId}
+							state={machine.state}
+							className='relative size-24 sm:size-32 lg:size-36 low:size-20'
+						/>
 					</div>
 					{editingName ? (
 						<input

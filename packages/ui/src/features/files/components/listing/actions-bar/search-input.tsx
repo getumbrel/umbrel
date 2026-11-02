@@ -97,12 +97,12 @@ export function SearchInput() {
 	}
 
 	return (
-		<div className='relative rounded-full focus-within:border-1 focus-within:border-neutral-600 focus-within:border-white/20 md:border-[0.5px] md:border-neutral-800 md:border-white/6 md:bg-white/5 md:shadow-button-highlight-soft-hpx md:ring-white/6 md:focus-within:bg-white/10'>
+		<div className='relative rounded-full focus-within:border-1 focus-within:border-neutral-600 focus-within:border-white/20 lg:border-[0.5px] lg:border-neutral-800 lg:border-white/6 lg:bg-white/5 lg:shadow-button-highlight-soft-hpx lg:ring-white/6 lg:focus-within:bg-white/10'>
 			<Input
 				className={cn(
-					'h-7 w-0 !border-none !bg-transparent px-4 text-xs !ring-0 !outline-hidden transition-all duration-300 focus:w-[calc(100vw-11rem)] focus:pl-8 md:w-28 md:pr-0 md:pl-8 md:focus:w-36',
+					'h-7 w-0 !border-none !bg-transparent px-4 text-xs !ring-0 !outline-hidden transition-all duration-300 focus:w-[calc(100vw-11rem)] focus:pl-8 lg:w-28 lg:pr-0 lg:pl-8 lg:focus:w-36 panes:focus:w-52 phone-side:focus:w-52',
 					{
-						'w-[calc(100vw-11rem)] pr-7 pl-8 md:w-36 md:pr-7': query.length > 0,
+						'w-[calc(100vw-11rem)] pr-7 pl-8 lg:w-36 lg:pr-7 panes:w-52 phone-side:w-52': query.length > 0,
 					},
 				)}
 				ref={inputRef}

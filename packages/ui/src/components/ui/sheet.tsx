@@ -122,7 +122,7 @@ function SheetTitle({
 	return (
 		<SheetPrimitive.Title
 			ref={ref}
-			className={cn('text-24 font-bold -tracking-3 text-white/75 md:text-48', className)}
+			className={cn('text-24 font-bold -tracking-3 text-white/75 md:text-48 low:text-24', className)}
 			{...props}
 		/>
 	)

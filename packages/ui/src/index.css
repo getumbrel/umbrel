@@ -14,6 +14,31 @@
   Declared in that order on purpose: a desktop widget is tall and expanded, and
   utilities follow variant order, so expanded overrides tall.
 */
+/* Wide enough for Machines' controls to sit beside the screen, not under it.
+   In a block because the one-line form splits on the comma. */
+@custom-variant rail-side {
+	@media (width >= 1280px), (min-aspect-ratio: 13/10) {
+		@slot;
+	}
+}
+/* Windows too short for Home's regular scale: phones on their side */
+@custom-variant low (@media (height < 500px));
+/* Tablets, inner displays and phones on their side: room for two panes, below the desktop layout */
+@custom-variant panes (@media (640px <= width < 1024px));
+/* Phones on their side: too short for a page title above a toolbar */
+@custom-variant phone-side (@media (height < 500px) and (width < 1024px));
+
+/* A Machines list row too narrow for its monitor, copy and controls side by side:
+   the two columns of a tablet. 368px is inside the row's padding, so a 400px row.
+   Phones have their own compact row, on their side too. */
+@custom-variant machine-tile {
+	@media (width >= 640px) and (height >= 500px) {
+		@container machine-row (width < 368px) {
+			@slot;
+		}
+	}
+}
+
 @custom-variant w-regular {
 	@container widget (min-width: 140px) {
 		@slot;
@@ -155,6 +180,26 @@ html {
 	   static blur — keep their radius on its own knob so retuning the (free)
 	   sheet blur can never inflate a per-frame filter. */
 	--immersive-blur: 0px;
+}
+
+/* Home's header and spacing follow the window's height as well as its width,
+   so a short screen spends its height on apps (see modules/desktop/home-fit.ts).
+   The desktop preview pins these to their desktop values. */
+html {
+	--home-title: clamp(19px, min(5vw, 5.2dvh), 48px);
+	--home-logo: clamp(58px, min(18vw, 9dvh), 96px);
+	--home-gap: clamp(8px, calc(4dvh - 8px), 32px);
+	--home-pills: clamp(4px, calc(3.2dvh - 8px), 24px);
+	/* Space above the App Store's and Settings' content, which short screens spend on content */
+	--page-top: clamp(12px, calc(12dvh - 32px), 24px);
+	/* The same for Settings' desktop layout, whose sheet already sits 60px down */
+	--settings-top: clamp(20px, calc((100dvh - 560px) / 6), 48px);
+}
+
+@media (width >= 768px) {
+	html {
+		--page-top: clamp(12px, calc(12dvh - 32px), 48px);
+	}
 }
 
 /* Window surfaces (sheet, drawer, immersive dialogs) tighten on mobile.

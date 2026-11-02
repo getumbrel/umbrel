@@ -6,6 +6,7 @@ import {useMachines} from '@/features/machines/hooks/use-machines'
 import type {Machine} from '@/features/machines/types'
 import {useShortcuts, type Shortcut} from '@/hooks/use-shortcuts'
 import {useWidgets} from '@/hooks/use-widgets'
+import {SEARCH_DOCK_GAP} from '@/modules/floating-island/lane'
 import {Widget} from '@/modules/widgets'
 import {WidgetContainer} from '@/modules/widgets/shared/shared'
 import {WidgetSlot} from '@/modules/widgets/shared/widget-row'
@@ -17,6 +18,7 @@ import {AppIconConnected, AppLabel} from './app-icon'
 import {Search} from './desktop-misc'
 import {DockSpacer} from './dock'
 import {Header} from './header'
+import {useHomeFit} from './home-fit'
 import {MachineIcon} from './machine-icon'
 import {ShortcutIcon} from './shortcut-icon'
 
@@ -80,6 +82,7 @@ export function desktopWidgetNode(widget: ReturnType<typeof useWidgets>['selecte
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const variant = useDesktopVariant()
+	const fit = useHomeFit()
 
 	const getQuery = trpcReact.user.get.useQuery()
 	const name = getQuery.data?.name
@@ -140,9 +143,9 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 				initial={{opacity: 1}}
 				transition={{duration: 0.15, ease: 'easeOut'}}
 			>
-				<div className='pt-6 md:pt-8' />
-				<Header userName={name} />
-				<div className='pt-6 md:pt-8' />
+				<div style={{paddingTop: 'var(--home-gap)'}} />
+				<Header userName={name} inline={fit.inlineHeader} />
+				<div style={{paddingTop: 'var(--home-gap)'}} />
 				<div className='flex w-full grow overflow-hidden'>
 					<AppGrid
 						widgets={widgets.selected.map(desktopWidgetNode)}
@@ -180,8 +183,8 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 					/>
 				</div>
 				<Search onClick={onSearchClick} visible={variant === 'default'} />
-				{/* The floating islands' row mirrors this gap (SEARCH_DOCK_GAP in floating-island/lane.ts) */}
-				<div className='pt-6' />
+				{/* The floating islands' row shares this gap */}
+				<div style={{paddingTop: SEARCH_DOCK_GAP}} />
 				<DockSpacer />
 			</motion.div>
 		</>

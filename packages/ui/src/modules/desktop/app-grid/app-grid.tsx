@@ -61,7 +61,7 @@ export function AppGrid({
 				>
 					{/* Default page for calculating size */}
 					<Page index={0}>
-						<PageInner innerRef={pageInnerRef}>
+						<PageInner innerRef={pageInnerRef} appsOnly={!pages[0]?.widgets.length}>
 							{noRoom && <div className='w-full text-center'>{t('desktop.not-enough-room')}</div>}
 							{pages[0]?.widgets.length > 0 && (
 								// NOTE: need to keep key
@@ -79,7 +79,7 @@ export function AppGrid({
 					{!onlyFirstPage &&
 						pages.slice(1).map(({apps, widgets}, i) => (
 							<Page key={i} index={i + 1}>
-								<PageInner>
+								<PageInner appsOnly={!widgets.length}>
 									{widgets.length > 0 && <WidgetRow layout={widgetRow}>{widgets}</WidgetRow>}
 									{apps && (
 										<div className={appGridClass} style={appColumnsStyle}>
@@ -104,7 +104,7 @@ export function AppGrid({
 			{showMasking && <AppGridGradientMasking />}
 			{/* NOTE: always leave space for pills to avoid layout thrashing */}
 			{/* Adding margin bottom so pills are clickable */}
-			<div className='mt-6 mb-6'>
+			<div style={{marginBlock: 'var(--home-pills)'}}>
 				<PaginatorPills total={pageCount} current={page} onCurrentChange={toPage} />
 			</div>
 		</div>
@@ -114,7 +114,7 @@ export function AppGrid({
 function ArrowButtonWrapper({side, children}: {side: 'left' | 'right'; children: ReactNode}) {
 	return (
 		<div
-			className='absolute top-1/2 z-10 hidden lg:block'
+			className='absolute top-1/2 z-10 hidden lg:pointer-fine:block'
 			style={{
 				[side]: 'calc((100% - var(--page-w)) / 2 - var(--apps-padding-x))',
 				transform: `translateX(${side === 'left' ? '-100%' : '100%'}) translateY(-50%)`,
@@ -125,13 +125,25 @@ function ArrowButtonWrapper({side, children}: {side: 'left' | 'right'; children:
 	)
 }
 
-export function PageInner({children, innerRef}: {children?: ReactNode; innerRef?: React.Ref<HTMLDivElement>}) {
+// A page without widgets spaces its rows of apps by its own gap (see usePager)
+const appsOnlyStyle = {'--app-y-gap': 'var(--app-y-gap-apps)'} as React.CSSProperties
+
+export function PageInner({
+	children,
+	innerRef,
+	appsOnly = false,
+}: {
+	children?: ReactNode
+	innerRef?: React.Ref<HTMLDivElement>
+	appsOnly?: boolean
+}) {
 	return (
 		// Size the container to fill parent so we can later calculate what can fit inside it
-		<div className='flex h-full w-full items-stretch justify-center pt-2'>
+		<div className='flex h-full w-full items-stretch justify-center' style={{paddingTop: 'calc(var(--home-gap) / 4)'}}>
 			<div
 				ref={innerRef}
 				className='flex w-full max-w-[var(--apps-max-w)] flex-col content-start items-center gap-y-[var(--app-y-gap)] px-[var(--apps-padding-x)]'
+				style={appsOnly ? appsOnlyStyle : undefined}
 			>
 				{children}
 			</div>

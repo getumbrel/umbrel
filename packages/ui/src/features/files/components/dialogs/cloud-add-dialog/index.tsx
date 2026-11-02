@@ -31,7 +31,7 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import type {FileSystemItem} from '@/features/files/types'
 import {CLOUD_WEBDAV_FLAVORS, isValidCloudDestination, type CloudWebDavFlavorId} from '@/features/files/utils/cloud'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {trpcReact, type RouterError} from '@/trpc/trpc'
@@ -55,7 +55,7 @@ const CLOUD_BROWSE_ROOT = '/cloud'
 
 export default function CloudAddDialog() {
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const dialogProps = useDialogOpenProps('files-cloud-add')
 	const {params} = useQueryParams()
 	const {navigateToDirectory} = useNavigate()
@@ -467,7 +467,7 @@ export default function CloudAddDialog() {
 	const headerHidden = step === Step.Source && sourceView !== 'picker'
 	const headerCentered = step === Step.Connect || step === Step.CloudFolder
 
-	const header = isMobile ? (
+	const header = isPhone ? (
 		<DrawerHeader className={cn(headerHidden && 'sr-only', headerCentered && 'text-center')}>
 			<DrawerTitle>{title}</DrawerTitle>
 			{description ? <DrawerDescription>{description}</DrawerDescription> : null}
@@ -606,7 +606,7 @@ export default function CloudAddDialog() {
 
 	return (
 		<>
-			{isMobile ? (
+			{isPhone ? (
 				<Drawer open={wizardOpen} onOpenChange={handleDialogOpenChange}>
 					<DrawerContent fullHeight>
 						{header}

@@ -1,5 +1,6 @@
 import type {ReactNode} from 'react'
 
+import {useSearchEngaged} from '@/features/photos/components/search'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 
@@ -54,6 +55,8 @@ export type Frame = {inset: number; fadeFrom: number; fadeTo: number; handoff: n
 export function ListingSurface({bleed = false, children}: {bleed?: boolean; children: (frame: Frame) => ReactNode}) {
 	const isMobile = useIsMobile()
 	const drop = useBarDrop()
+	// A phone on its side gives the title row to the listing, until a search takes it back
+	const searching = useSearchEngaged()
 	const barBottom = (isMobile ? BAR_TOP.mobile : BAR_TOP.desktop) + BAR_HEIGHT
 	// Content is hidden up to the pinned bar's top and fades in through the
 	// bar (so the glass controls have something to frost), complete just
@@ -73,9 +76,11 @@ export function ListingSurface({bleed = false, children}: {bleed?: boolean; chil
 			    edge, beneath the dock — a box past it makes the sheet's own
 			    ScrollArea scrollable, and its scrollbar lands on top of the
 			    grid's. Mobile: the sheet is 100dvh−(--sheet-top), bottom-anchored,
-			    and above the box sit the column's pt-6, the 44px title row, the
-			    gap-5 and the grid's mt-[-0.5rem] (80px; md's pt-12 and text-48
-			    title add 28), plus the pull-up → 136/164. Desktop: sheet
+			    and above the box sit the column's --page-top, the 44px title row,
+			    the gap-5 and the grid's mt-[-0.5rem], plus the 56px pull-up → 112
+			    on top of --page-top; a phone on its side has no title row (its
+			    header is out of the flow, so no gap either) nor the pull-up → 56.
+			    Desktop: sheet
 			    100vh−60px, the box starts
 			    66px down (bar 10+44, gap 12) plus the pull-up → 134. The right
 			    margins mirror the sheet's md/xl padding (layouts/sheet.tsx), and
@@ -83,7 +88,11 @@ export function ListingSurface({bleed = false, children}: {bleed?: boolean; chil
 			    md:px-[40px]). */}
 			<div
 				className={cn(
-					'-mt-(--umbrel-photos-inset) h-[calc(100dvh-var(--sheet-top)-136px+var(--umbrel-photos-inset))] md:h-[calc(100dvh-var(--sheet-top)-164px+var(--umbrel-photos-inset))] lg:-mr-10 lg:h-[calc(100vh-134px+var(--umbrel-photos-inset))] xl:-mr-[60px]',
+					'-mt-(--umbrel-photos-inset) h-[calc(100dvh-var(--sheet-top)-var(--page-top)-112px+var(--umbrel-photos-inset))] lg:-mr-10 lg:h-[calc(100vh-134px+var(--umbrel-photos-inset))] xl:-mr-[60px]',
+					// While a search has the title row back, the grid keeps its pull-up off
+					searching
+						? 'phone-side:h-[calc(100dvh-var(--sheet-top)-var(--page-top)-120px+var(--umbrel-photos-inset))]'
+						: 'phone-side:h-[calc(100dvh-var(--sheet-top)-var(--page-top)-56px+var(--umbrel-photos-inset))]',
 					bleed &&
 						'max-lg:-mx-3 max-lg:[--umbrel-photos-gutter:12px] md:max-lg:-mx-10 md:max-lg:[--umbrel-photos-gutter:40px]',
 				)}

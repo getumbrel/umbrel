@@ -26,13 +26,13 @@ import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-na
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function ShareInfoDialog() {
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const homeDirectoryName = useHomeDirectoryName()
 	const homePath = useHomePath()
 	const [searchParams] = useSearchParams()
@@ -141,7 +141,7 @@ export default function ShareInfoDialog() {
 		</div>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>

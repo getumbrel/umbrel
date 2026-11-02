@@ -202,7 +202,7 @@ export function InstallButtonConnectedView() {
 
 	return (
 		<div className='flex flex-col gap-1.5'>
-			<div className='flex items-center gap-3 max-sm:flex-col max-sm:items-stretch md:gap-4'>
+			<div className='flex items-center gap-3 max-sm:gap-2 max-sm:*:min-w-0 max-sm:*:flex-1 md:gap-4'>
 				<InstallButton
 					key={controller.app.id}
 					installSize={controller.installSize}

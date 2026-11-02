@@ -412,7 +412,8 @@ function CarouselArrows({
 	className?: string
 }) {
 	return (
-		<div className={cn('flex items-center gap-2', className)}>
+		// Touch screens swipe, so only a pointer gets arrows
+		<div className={cn('flex items-center gap-2 pointer-coarse:hidden', className)}>
 			{/* Chevrons, matching the spotlight banners' View pill */}
 			<button aria-label='Previous slide' onClick={onPrev} disabled={disablePrev} className={carouselArrowClass}>
 				<TbChevronLeft className='h-4 w-4' />

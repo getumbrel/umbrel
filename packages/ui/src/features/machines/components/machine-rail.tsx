@@ -33,9 +33,10 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 
 	return (
 		<div
-			// Beside the display (xl+) the rail slides in from the right; when it
-			// wraps below the display on smaller screens it just fades in
-			className='flex w-full shrink-0 animate-in flex-row flex-wrap justify-center gap-3 delay-150 duration-300 fill-mode-backwards fade-in xl:w-auto xl:flex-col xl:flex-nowrap xl:justify-start xl:slide-in-from-right-6'
+			// Beside the display the rail slides in from the right; when it wraps
+			// below the display on narrower screens it just fades in. A phone on its
+			// side has no height for a column, so it's a block of three across.
+			className='flex w-full shrink-0 animate-in flex-row flex-wrap justify-center gap-1.5 delay-150 duration-300 fill-mode-backwards fade-in sm:gap-3 rail-side:w-auto rail-side:flex-col rail-side:flex-nowrap rail-side:justify-start rail-side:slide-in-from-right-6 low:grid low:w-[136px] low:grid-cols-3 [@media(height<660px)]:gap-2'
 		>
 			<DarkTooltip label={t('machines.open-fullscreen')} side='left'>
 				<a
@@ -164,7 +165,7 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 			{onClose && (
 				<DarkTooltip label={t('close')} side='left'>
 					<button
-						className={cn(machineRailButtonClass, 'hidden md:flex xl:order-first')}
+						className={cn(machineRailButtonClass, 'rail-side:order-first')}
 						onClick={onClose}
 						aria-label={t('close')}
 					>

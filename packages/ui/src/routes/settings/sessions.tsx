@@ -9,7 +9,7 @@ import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/comp
 import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '@/components/ui/drawer'
 import {Loading} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {finishBrowserLogout} from '@/modules/auth/logout'
 import {parseNativeSessionClient, parseSessionUserAgent, SessionClient} from '@/modules/auth/session-user-agent'
@@ -260,12 +260,12 @@ function SessionsView({
 export default function SessionsDrawerOrDialog() {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const dialogProps = useSettingsDialogProps()
 	const onBack = () => navigate('/settings')
 	const panel = <SessionsPanel onBack={onBack} backLabel={t('settings')} />
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>

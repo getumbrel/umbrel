@@ -74,12 +74,11 @@ export function MachinesTabBar({machines}: {machines: Machine[]}) {
 			ref={navRef}
 			// py-1/-mt-1 reserve focus-ring room inside the scroll clip without
 			// shifting layout; -mb-3 tightens the layout's gap-5 below the pills
-			// to a visual 12px. pr-2 keeps the last pill off the clip edge when
-			// scrolled fully right (below md the column edge is the viewport edge,
-			// so a negative right margin here would overflow the page sideways)
+			// to a visual 12px. Below md the pills run off the screen's edges, past
+			// the column's px-3, so they read as a row that scrolls
 			className={cn(
 				scrollerClass,
-				'-mt-1 -mb-3 flex scroll-px-6 items-center gap-2 overflow-x-auto py-1 pr-2 [scrollbar-width:none] md:pr-0 [&::-webkit-scrollbar]:hidden',
+				'-mx-3 -mt-1 -mb-3 flex min-w-0 flex-1 scroll-px-6 items-center gap-2 overflow-x-auto px-3 py-1 [scrollbar-width:none] md:mx-0 md:px-0 low:mr-0 low:pr-2 [&::-webkit-scrollbar]:hidden',
 			)}
 		>
 			<DarkTooltip label={t('machines.all-machines')} side='bottom'>

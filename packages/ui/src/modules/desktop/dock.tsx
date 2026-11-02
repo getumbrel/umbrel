@@ -1,6 +1,7 @@
-import {motion, useMotionValue} from 'motion/react'
-import React from 'react'
+import {motion, useMotionValue, useReducedMotion} from 'motion/react'
+import React, {useLayoutEffect, useState} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
+import {useWindowSize} from 'react-use'
 
 import {Glass} from '@/components/ui/glass'
 import {getLastFilesPath} from '@/features/files/utils/last-files-path'
@@ -15,9 +16,15 @@ import {useLinkToDialog} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
+import {useDockTuck} from './dock-tuck'
+import {homeFit} from './home-fit'
 import {prefetchRouteChunks} from './prefetch-route-chunks'
 
 const DOCK_BOTTOM_PADDING_PX = 10
+const DOCK_SIDE_PADDING_PX = 12
+// The most items it holds, and the least space it leaves either side of the window
+const DOCK_MAX_ITEMS = 6
+const DOCK_MIN_WINDOW_MARGIN_PX = 8
 
 const DOCK_DIMENSIONS_PX = {
 	preview: {
@@ -42,19 +49,46 @@ type DockDimensionsPx = {
 	iconSizeZoomed: number
 	padding: number
 	dockHeight: number
+	gap: number
+	/** Space under the dock */
+	bottom: number
+}
+
+// The window's bottom safe area: on an iPhone on its side, what Safari keeps
+// clear for the home indicator. Only CSS can read it, so ask a throwaway element.
+function useSafeAreaBottom() {
+	const {width, height} = useWindowSize()
+	const [safeAreaBottom, setSafeAreaBottom] = useState(0)
+	useLayoutEffect(() => {
+		const probe = document.createElement('div')
+		probe.style.cssText = 'position:fixed;visibility:hidden;padding-bottom:env(safe-area-inset-bottom)'
+		document.body.append(probe)
+		setSafeAreaBottom(parseFloat(getComputedStyle(probe).paddingBottom) || 0)
+		probe.remove()
+	}, [width, height])
+	return safeAreaBottom
 }
 
 function useDockDimensions(options?: {isPreview?: boolean}): DockDimensionsPx {
 	const isMobile = useIsMobile()
+	const windowSize = useWindowSize()
+	const bottom = Math.max(DOCK_BOTTOM_PADDING_PX, useSafeAreaBottom())
 
 	if (options?.isPreview) {
 		const {iconSize, iconSizeZoomed, padding} = DOCK_DIMENSIONS_PX.preview
-		return {iconSize, iconSizeZoomed, padding, dockHeight: iconSize + padding * 2}
+		return {iconSize, iconSizeZoomed, padding, dockHeight: iconSize + padding * 2, gap: 10, bottom}
 	}
 
-	const dimensions = isMobile ? DOCK_DIMENSIONS_PX.mobile : DOCK_DIMENSIONS_PX.desktop
-	const {iconSize, iconSizeZoomed, padding} = dimensions
-	return {iconSize, iconSizeZoomed, padding, dockHeight: iconSize + padding * 2}
+	// A phone on its side is wider than the mobile breakpoint, but it's still a phone
+	const compact = isMobile || homeFit(windowSize).phoneScale
+	const dimensions = compact ? DOCK_DIMENSIONS_PX.mobile : DOCK_DIMENSIONS_PX.desktop
+	const {iconSizeZoomed, padding} = dimensions
+	const gap = compact ? 8 : 10
+	// Icons give way on the narrowest outer displays so the dock stays on screen
+	const roomForIcons =
+		windowSize.width - (DOCK_MIN_WINDOW_MARGIN_PX + DOCK_SIDE_PADDING_PX) * 2 - gap * (DOCK_MAX_ITEMS - 1)
+	const iconSize = Math.min(dimensions.iconSize, Math.floor(roomForIcons / DOCK_MAX_ITEMS))
+	return {iconSize, iconSizeZoomed, padding, dockHeight: iconSize + padding * 2, gap, bottom}
 }
 
 export function Dock() {
@@ -64,9 +98,10 @@ export function Dock() {
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
 	const {appsWithUpdates} = useAppsWithUpdates()
-	const isMobile = useIsMobile()
-	const {iconSize, iconSizeZoomed, padding, dockHeight} = useDockDimensions()
+	const {iconSize, iconSizeZoomed, padding, dockHeight, gap, bottom} = useDockDimensions()
 	const {wallpaperImgRef} = useWallpaper()
+	const tucked = useDockTuck((state) => state.tucked)
+	const reduceMotion = useReducedMotion()
 
 	// Members browse the app store read-only, updates are owner-only
 	const {data: user} = trpcReact.user.get.useQuery()
@@ -95,81 +130,88 @@ export function Dock() {
 			onPointerLeave={() => mouseX.set(Infinity)}
 			className='shrink-0 transform-gpu will-change-transform'
 		>
-			<Glass
-				{...dockGlassProps}
-				// Only on the bare desktop: the WebGL fallback lens sees just the
-				// wallpaper, and on other routes page content scrolls under the dock
-				refractionTarget={pathname === '/' ? wallpaperImgRef : undefined}
-				className={cn(dockClass, isMobile && 'gap-2')}
-				style={{
-					height: dockHeight,
-					paddingBottom: padding,
-				}}
+			<motion.div
+				animate={{y: tucked ? dockHeight + bottom : 0}}
+				initial={false}
+				transition={reduceMotion ? {duration: 0} : dockTuckSpring}
 			>
-				<DockItem
-					iconSize={iconSize}
-					iconSizeZoomed={iconSizeZoomed}
-					to={systemAppsKeyed['UMBREL_files'].systemAppTo}
-					onClick={navigateToLastFilesPath}
-					open={pathname.startsWith('/files')}
-					bg={systemAppsKeyed['UMBREL_files'].icon}
-					label={systemAppsKeyed['UMBREL_files'].name}
-					mouseX={mouseX}
-				/>
-				<DockItem
-					iconSize={iconSize}
-					iconSizeZoomed={iconSizeZoomed}
-					to={systemAppsKeyed['UMBREL_photos'].systemAppTo}
-					open={pathname.startsWith(systemAppsKeyed['UMBREL_photos'].systemAppTo)}
-					bg={systemAppsKeyed['UMBREL_photos'].icon}
-					label={systemAppsKeyed['UMBREL_photos'].name}
-					mouseX={mouseX}
-				/>
-				<DockItem
-					iconSize={iconSize}
-					iconSizeZoomed={iconSizeZoomed}
-					to={systemAppsKeyed['UMBREL_app-store'].systemAppTo}
-					open={
-						pathname.startsWith(systemAppsKeyed['UMBREL_app-store'].systemAppTo) ||
-						// Community stores live outside /app-store but are still the App Store
-						pathname.startsWith('/community-app-store')
-					}
-					bg={systemAppsKeyed['UMBREL_app-store'].icon}
-					label={systemAppsKeyed['UMBREL_app-store'].name}
-					notificationCount={isMember ? undefined : appUpdateCount}
-					mouseX={mouseX}
-				/>
-				{isOwner && (
+				<Glass
+					{...dockGlassProps}
+					// Only on the bare desktop: the WebGL fallback lens sees just the
+					// wallpaper, and on other routes page content scrolls under the dock
+					refractionTarget={pathname === '/' ? wallpaperImgRef : undefined}
+					className={dockClass}
+					style={{
+						height: dockHeight,
+						paddingBottom: padding,
+						gap,
+					}}
+				>
 					<DockItem
 						iconSize={iconSize}
 						iconSizeZoomed={iconSizeZoomed}
-						to={systemAppsKeyed['UMBREL_machines'].systemAppTo}
-						open={pathname.startsWith(systemAppsKeyed['UMBREL_machines'].systemAppTo)}
-						bg={systemAppsKeyed['UMBREL_machines'].icon}
-						label={systemAppsKeyed['UMBREL_machines'].name}
+						to={systemAppsKeyed['UMBREL_files'].systemAppTo}
+						onClick={navigateToLastFilesPath}
+						open={pathname.startsWith('/files')}
+						bg={systemAppsKeyed['UMBREL_files'].icon}
+						label={systemAppsKeyed['UMBREL_files'].name}
 						mouseX={mouseX}
 					/>
-				)}
-				<DockItem
-					iconSize={iconSize}
-					iconSizeZoomed={iconSizeZoomed}
-					to={systemAppsKeyed['UMBREL_settings'].systemAppTo}
-					open={pathname.startsWith(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
-					bg={systemAppsKeyed['UMBREL_settings'].icon}
-					label={systemAppsKeyed['UMBREL_settings'].name}
-					notificationCount={settingsNotificationCount}
-					mouseX={mouseX}
-				/>
-				<DockItem
-					iconSize={iconSize}
-					iconSizeZoomed={iconSizeZoomed}
-					to={linkToDialog('live-usage')}
-					open={pathname.startsWith(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)}
-					bg={systemAppsKeyed['UMBREL_live-usage'].icon}
-					label={systemAppsKeyed['UMBREL_live-usage'].name}
-					mouseX={mouseX}
-				/>
-			</Glass>
+					<DockItem
+						iconSize={iconSize}
+						iconSizeZoomed={iconSizeZoomed}
+						to={systemAppsKeyed['UMBREL_photos'].systemAppTo}
+						open={pathname.startsWith(systemAppsKeyed['UMBREL_photos'].systemAppTo)}
+						bg={systemAppsKeyed['UMBREL_photos'].icon}
+						label={systemAppsKeyed['UMBREL_photos'].name}
+						mouseX={mouseX}
+					/>
+					<DockItem
+						iconSize={iconSize}
+						iconSizeZoomed={iconSizeZoomed}
+						to={systemAppsKeyed['UMBREL_app-store'].systemAppTo}
+						open={
+							pathname.startsWith(systemAppsKeyed['UMBREL_app-store'].systemAppTo) ||
+							// Community stores live outside /app-store but are still the App Store
+							pathname.startsWith('/community-app-store')
+						}
+						bg={systemAppsKeyed['UMBREL_app-store'].icon}
+						label={systemAppsKeyed['UMBREL_app-store'].name}
+						notificationCount={isMember ? undefined : appUpdateCount}
+						mouseX={mouseX}
+					/>
+					{isOwner && (
+						<DockItem
+							iconSize={iconSize}
+							iconSizeZoomed={iconSizeZoomed}
+							to={systemAppsKeyed['UMBREL_machines'].systemAppTo}
+							open={pathname.startsWith(systemAppsKeyed['UMBREL_machines'].systemAppTo)}
+							bg={systemAppsKeyed['UMBREL_machines'].icon}
+							label={systemAppsKeyed['UMBREL_machines'].name}
+							mouseX={mouseX}
+						/>
+					)}
+					<DockItem
+						iconSize={iconSize}
+						iconSizeZoomed={iconSizeZoomed}
+						to={systemAppsKeyed['UMBREL_settings'].systemAppTo}
+						open={pathname.startsWith(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
+						bg={systemAppsKeyed['UMBREL_settings'].icon}
+						label={systemAppsKeyed['UMBREL_settings'].name}
+						notificationCount={settingsNotificationCount}
+						mouseX={mouseX}
+					/>
+					<DockItem
+						iconSize={iconSize}
+						iconSizeZoomed={iconSizeZoomed}
+						to={linkToDialog('live-usage')}
+						open={pathname.startsWith(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)}
+						bg={systemAppsKeyed['UMBREL_live-usage'].icon}
+						label={systemAppsKeyed['UMBREL_live-usage'].name}
+						mouseX={mouseX}
+					/>
+				</Glass>
+			</motion.div>
 		</motion.div>
 	)
 }
@@ -230,8 +272,8 @@ export function DockPreview() {
 // How much of the bottom of the screen the dock takes, in px: what content
 // that runs beneath it must leave clear to scroll fully into view
 export function useDockClearance() {
-	const {dockHeight} = useDockDimensions()
-	return dockHeight + DOCK_BOTTOM_PADDING_PX
+	const {dockHeight, bottom} = useDockDimensions()
+	return dockHeight + bottom
 }
 
 export function DockSpacer({className}: {className?: string}) {
@@ -240,15 +282,19 @@ export function DockSpacer({className}: {className?: string}) {
 }
 
 export function DockBottomPositioner({children}: {children: React.ReactNode}) {
+	const {bottom} = useDockDimensions()
 	return (
-		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: DOCK_BOTTOM_PADDING_PX}}>
+		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: bottom}}>
 			{children}
 		</div>
 	)
 }
 
+// Critically damped: the dock leaves and returns without bouncing
+const dockTuckSpring = {type: 'spring' as const, stiffness: 400, damping: 40}
+
 // Clearer glass than the widget defaults: barely any blur or tint, hard refraction
 const dockGlassProps = {blur: 1.5, saturate: 1.4, brightness: 0.9, scale: 70, chroma: 0.24, bevel: 1.0} as const
 
-const dockClass = tw`mx-auto flex items-end gap-2.5 rounded-2xl contrast-more:bg-neutral-700 px-3 shadow-dock-drop shrink-0`
+const dockClass = tw`mx-auto flex items-end rounded-2xl contrast-more:bg-neutral-700 px-3 shadow-dock-drop shrink-0`
 const dockPreviewClass = tw`mx-auto flex items-end gap-4 rounded-2xl px-3 shadow-dock-drop shrink-0`

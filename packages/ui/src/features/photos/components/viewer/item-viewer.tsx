@@ -612,7 +612,7 @@ export function ItemViewer() {
 
 					<div className='relative flex h-full flex-col'>
 						{/* Chrome */}
-						<header className='flex items-start justify-between gap-4 px-4 pt-4 md:px-6 md:pt-5'>
+						<header className='flex items-start justify-between gap-4 px-4 pt-4 md:px-6 md:pt-5 phone-side:pt-3'>
 							{/* The lines keep their boxes while a step's detail (the file name)
 							    is still on its way: the stage below is sized from what's left,
 							    so a collapsing header would resize the picture mid-swipe */}
@@ -620,8 +620,10 @@ export function ItemViewer() {
 								<p className='min-h-[1lh] truncate text-15 font-semibold -tracking-2 text-white/95'>{takenOn}</p>
 								<p className='min-h-[1lh] truncate text-12 text-white/50'>{item?.fileName}</p>
 							</div>
-							{/* Desktop: actions ride the header's right edge */}
-							<div className={cn('hidden md:block', chrome('top'))}>{actions}</div>
+							{/* Desktop: actions ride the header's right edge. So do a phone's
+							    on its side, where a toolbar under the strip would leave the
+							    picture a third of the height */}
+							<div className={cn('hidden md:block phone-side:block', chrome('top'))}>{actions}</div>
 						</header>
 
 						{/* Stage: the picture, fitted by CSS (a size container, so it can be
@@ -849,7 +851,10 @@ export function ItemViewer() {
 
 						{/* Phones: the actions are a toolbar under the strip. It floats over
 						    the info sheet's foot, so Info closes what it opened. */}
-						<div ref={toolbarRef} className={cn('relative z-30 flex justify-center pb-3 md:hidden', chrome('bottom'))}>
+						<div
+							ref={toolbarRef}
+							className={cn('relative z-30 flex justify-center pb-3 md:hidden phone-side:hidden', chrome('bottom'))}
+						>
 							{/* Its floor over the info sheet, faded in as the sheet passes
 							    under it (--sheet-under, see useInfoSheet) */}
 							<div

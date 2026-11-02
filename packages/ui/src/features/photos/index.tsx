@@ -17,6 +17,7 @@ import {UploadDropZone} from '@/features/photos/components/upload-drop-zone'
 import {PhotosViewProvider} from '@/features/photos/components/view-context'
 import {usePhotosEvents} from '@/features/photos/hooks/use-photos-events'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 import {HttpUrlAuthorizerProvider} from '@/modules/auth/http-url-authorizer'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -24,7 +25,8 @@ import {trpcReact} from '@/trpc/trpc'
 // search is on, the field and its Cancel take the row (the way the desktop
 // field takes the actions bar), and the title returns when it ends. Kept
 // never shorter than the pills that share it, so their coming and going
-// can't move what's below.
+// can't move what's below. A phone on its side gives the row to the grid
+// (the actions bar takes its controls) until a search needs it.
 function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () => void}) {
 	const searching = useSearchEngaged() && isMobile
 	const reduceMotion = useReducedMotion() ?? false
@@ -38,23 +40,31 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 					transition: {duration: 0.2, ease: [0.215, 0.61, 0.355, 1] as const},
 				}
 	return (
-		// Above the listing: the map runs up beneath it on phones
-		<div className='relative z-10 flex min-h-11 items-center'>
-			<AnimatePresence initial={false} mode='popLayout'>
-				{searching ? (
-					<motion.div key='search' className='mr-5 flex min-w-0 flex-1' {...swap(1)}>
-						<MobileSearch />
-					</motion.div>
-				) : (
-					<motion.div key='title' className='flex min-w-0 flex-1 items-center gap-2' {...swap(-1)}>
-						{isMobile ? <HiMenuAlt2 role='button' className='h-5 w-5 text-white/90' onClick={openSidebar} /> : null}
-						<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36'>Photos</SheetTitle>
-						{/* Phones: the page's controls, clear of the sheet's close button */}
-						<MobileActions className='mr-5 ml-auto md:hidden' />
-					</motion.div>
-				)}
-			</AnimatePresence>
-		</div>
+		<SheetHeader
+			className={cn('flex flex-col gap-4 md:flex-row md:items-center md:gap-0', !searching && 'phone-side:absolute')}
+		>
+			{/* Above the listing: the map runs up beneath it on phones */}
+			<div className='relative z-10 flex min-h-11 w-full items-center'>
+				<AnimatePresence initial={false} mode='popLayout'>
+					{searching ? (
+						<motion.div key='search' className='mr-5 flex min-w-0 flex-1 phone-side:mr-9' {...swap(1)}>
+							<MobileSearch />
+						</motion.div>
+					) : (
+						<motion.div key='title' className='flex min-w-0 flex-1 items-center gap-2' {...swap(-1)}>
+							{isMobile ? (
+								<HiMenuAlt2 role='button' className='h-5 w-5 text-white/90 phone-side:hidden' onClick={openSidebar} />
+							) : null}
+							<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36 panes:text-36 phone-side:sr-only'>
+								Photos
+							</SheetTitle>
+							{/* Phones and tablets: the page's controls, clear of the sheet's close button */}
+							<MobileActions className='mr-5 ml-auto lg:hidden phone-side:hidden' />
+						</motion.div>
+					)}
+				</AnimatePresence>
+			</div>
+		</SheetHeader>
 	)
 }
 
@@ -102,18 +112,16 @@ export default function PhotosLayout() {
 			<PhotosSelectionProvider>
 				{/* One token query for every thumbnail on the surface */}
 				<HttpUrlAuthorizerProvider>
-					<SheetHeader className='flex flex-col gap-4 md:flex-row md:items-center md:gap-0'>
-						<TitleRow isMobile={isMobile} openSidebar={() => setIsMobileSidebarOpen(true)} />
-					</SheetHeader>
+					<TitleRow isMobile={isMobile} openSidebar={() => setIsMobileSidebarOpen(true)} />
 					<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 						{/* minmax(0,…): a fr column's implicit min is its content's
 						    min-content, so a crowded actions bar would push the whole
 						    column past the sheet's edge instead of compressing */}
-						<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_minmax(0,1fr)]'>
+						<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_minmax(0,1fr)] phone-side:mt-0'>
 							{/* Sidebar */}
 							{isMobile ? (
 								<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
-									<Sidebar className='h-[calc(100svh-140px)]' />
+									<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
 								</MobileSidebarWrapper>
 							) : (
 								// Above the listing: the map runs on beneath it
@@ -129,7 +137,7 @@ export default function PhotosLayout() {
 									className='umbrel-photos-column flex flex-col gap-3 lg:gap-3'
 									style={{['--umbrel-photos-drop' as string]: `${barDrop}px`}}
 								>
-									<ActionsBar />
+									<ActionsBar onOpenSidebar={isMobile ? () => setIsMobileSidebarOpen(true) : undefined} />
 									{/* Renders the listing for the current section */}
 									<Outlet />
 								</div>

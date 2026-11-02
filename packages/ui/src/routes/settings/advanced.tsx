@@ -14,7 +14,7 @@ import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {cn} from '@/lib/utils'
@@ -44,7 +44,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 
 	const isBetaChannel = useIsBetaChannel()
 
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 
 	// Umbrel Home and Umbrel Pro have no Thunderbolt ports, so the panel is inert there.
 	const {isHomeOrPro} = useIsHomeOrPro()
@@ -176,7 +176,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 		)
 	const showOverview = activePanel === 'overview'
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>

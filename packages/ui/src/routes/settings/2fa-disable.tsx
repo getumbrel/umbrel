@@ -5,19 +5,19 @@ import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/components/ui/
 import {PinInput} from '@/components/ui/pin-input'
 import {Separator} from '@/components/ui/separator'
 import {use2fa} from '@/hooks/use-2fa'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 
 export default function TwoFactorDisableDialog({closeTo}: {closeTo?: string}) {
 	const {t} = useTranslation()
 	const title = t('2fa.disable.title')
 
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const dialogProps = useSettingsDialogProps({closeTo})
 
 	const {disable} = use2fa(() => dialogProps.onOpenChange(false))
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>

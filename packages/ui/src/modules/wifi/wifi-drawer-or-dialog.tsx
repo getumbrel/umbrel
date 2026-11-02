@@ -22,7 +22,7 @@ import {Loading} from '@/components/ui/loading'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {Switch} from '@/components/ui/switch'
 import {useAutoHeightAnimation} from '@/hooks/use-auto-height-animation'
-import {useIsSmallMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
 import {RouterOutput, trpcReact, WifiNetwork, WifiStatus, WifiStatusUi} from '@/trpc/trpc'
@@ -120,8 +120,8 @@ export function WifiDrawerOrDialogContent() {
 }
 
 export function WifiDrawerOrDialog(props: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-	const isMobile = useIsSmallMobile()
-	const Wrapper = isMobile ? Drawer : Dialog
+	const isPhone = useIsPhone()
+	const Wrapper = isPhone ? Drawer : Dialog
 
 	return <Wrapper {...props} />
 }
@@ -130,12 +130,12 @@ export function DrawerOrDialogContent({header, children}: {header?: ReactNode; c
 	const {t} = useTranslation()
 	const title = t('wifi')
 
-	const isMobile = useIsSmallMobile()
+	const isPhone = useIsPhone()
 
-	const Content = isMobile ? DrawerContent : DialogContent
-	const Header = isMobile ? DrawerHeader : DialogHeader
-	const Title = isMobile ? DrawerTitle : DialogTitle
-	const Description = isMobile ? DrawerDescription : DialogDescription
+	const Content = isPhone ? DrawerContent : DialogContent
+	const Header = isPhone ? DrawerHeader : DialogHeader
+	const Title = isPhone ? DrawerTitle : DialogTitle
+	const Description = isPhone ? DrawerDescription : DialogDescription
 
 	return (
 		<Content className='mx-auto px-[20px] py-[30px] sm:max-w-[560px]'>

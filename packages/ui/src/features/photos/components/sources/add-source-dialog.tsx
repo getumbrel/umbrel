@@ -28,7 +28,7 @@ import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {UmbrelScopeSettings} from '@/features/photos/components/sources/source-settings'
 import {sourcePath} from '@/features/photos/constants'
 import {usePhotoSourceActions, usePhotoSources, type SourceSettings} from '@/features/photos/hooks/use-photo-sources'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useDialogOpenProps} from '@/utils/dialog'
 
 type Step = 'kind' | 'umbrel'
@@ -42,7 +42,7 @@ export function AddSourceDialog() {
 	const homePath = useHomePath()
 	const dialogProps = useDialogOpenProps('photos-add-source')
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const navigate = useNavigate()
 	const {updateSettings} = usePhotoSourceActions()
 	// This Umbrel is a permanent source; its card opens that source's scope
@@ -184,7 +184,7 @@ export function AddSourceDialog() {
 		</div>
 	)
 
-	const header = isMobile ? (
+	const header = isPhone ? (
 		<DrawerHeader>
 			<DrawerTitle>{title}</DrawerTitle>
 			{description ? <DrawerDescription>{description}</DrawerDescription> : null}
@@ -196,7 +196,7 @@ export function AddSourceDialog() {
 		</DialogHeader>
 	)
 
-	return isMobile ? (
+	return isPhone ? (
 		<Drawer open={dialogProps.open} onOpenChange={dialogProps.onOpenChange}>
 			<DrawerContent fullHeight>
 				{header}

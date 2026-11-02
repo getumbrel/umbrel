@@ -19,7 +19,7 @@ import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-naviga
 import {useWatcherRefetch} from '@/features/files/hooks/use-watcher-refetch'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhoneNow} from '@/hooks/use-is-mobile'
 import {HttpUrlAuthorizerProvider} from '@/modules/auth/http-url-authorizer'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -40,8 +40,11 @@ export default function FilesLayout() {
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 	const {currentPath} = useFilesNavigate()
 
-	const isMobile = useIsMobile()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+	// Tablets and inner displays keep the sidebar beside the listing. Phones, and
+	// anything too short for it, open it as a drawer. It follows the keyboard, as
+	// the layout's `phone-side` variant does.
+	const hasSidebarDrawer = useIsPhoneNow()
 	const isReadOnly = useIsFilesReadOnly()
 	const {data: user} = trpcReact.user.get.useQuery()
 	const canManageSambaShares = user?.role === 'owner' || user?.sambaEnabled === true
@@ -78,35 +81,40 @@ export default function FilesLayout() {
 			<HttpUrlAuthorizerProvider>
 				<FilesDndWrapper>
 					<RewindOverlayProvider>
-						<SheetHeader className='flex flex-col gap-4 md:flex-row md:items-center md:gap-0'>
+						{/* On a phone on its side the title gives its row to the listing, and
+						    the sidebar button moves into the actions bar */}
+						<SheetHeader className='flex flex-col gap-4 md:flex-row md:items-center md:gap-0 phone-side:absolute'>
 							<div className='flex items-center gap-4'>
-								{isMobile ? (
+								{hasSidebarDrawer ? (
 									<HiMenuAlt2
 										role='button'
-										className='h-5 w-5 text-white/90'
+										className='h-5 w-5 text-white/90 phone-side:hidden'
 										onClick={() => setIsMobileSidebarOpen(true)}
 									/>
 								) : null}
-								<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36'>{t('files')}</SheetTitle>
+								<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36 panes:text-36 phone-side:sr-only'>
+									{t('files')}
+								</SheetTitle>
 							</div>
 						</SheetHeader>
 						<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 							{/* FileViewer renders the viewerItem from the store */}
 							<FileViewer />
 
-							<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_1fr]'>
+							<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_1fr] panes:grid-cols-[192px_minmax(0,1fr)] phone-side:mt-0 phone-side:grid-cols-1'>
 								{/* Sidebar */}
-								{isMobile ? (
+								{hasSidebarDrawer ? (
 									<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
-										<Sidebar className='h-[calc(100svh-140px)]' />
+										<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
 									</MobileSidebarWrapper>
 								) : (
-									<Sidebar className='h-[calc(100vh-176px)]' />
+									// Ends with the listing, so Trash and Rewind stay above the dock
+									<Sidebar className='h-[calc(100vh-176px)] panes:h-[calc(100svh-var(--sheet-top)-var(--page-top)-146px)]' />
 								)}
 
-								<div className='flex flex-col gap-3 lg:gap-5'>
+								<div className='flex min-w-0 flex-col gap-3 lg:gap-5 phone-side:gap-2'>
 									<ActionsBarProvider>
-										<ActionsBar />
+										<ActionsBar onOpenSidebar={hasSidebarDrawer ? () => setIsMobileSidebarOpen(true) : undefined} />
 										{/* Renders either DirectoryListing, AppsListing, RecentsListing, or TrashListing */}
 										<Outlet />
 									</ActionsBarProvider>
