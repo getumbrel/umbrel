@@ -72,10 +72,13 @@ export function AppGallery({gallery, galleryId}: {gallery: string[]; galleryId: 
 								rel='noreferrer'
 								draggable={false}
 							>
+								{/* Out of flow so the slide's width comes from its height and aspect ratio
+								    alone: Safari sizes a basis-auto slide to an in-flow screenshot's
+								    natural width (2000px+), spreading the slides a screen apart */}
 								<FadeInImg
 									src={src}
 									loading={i > 2 ? 'lazy' : undefined}
-									className='h-full w-full object-cover group-focus-visible:opacity-80'
+									className='absolute inset-0 h-full w-full object-cover group-focus-visible:opacity-80'
 									alt=''
 									draggable={false}
 								/>

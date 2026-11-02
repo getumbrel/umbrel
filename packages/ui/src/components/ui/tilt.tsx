@@ -42,7 +42,12 @@ export function useTilt({maxTiltDeg = 7, perspectivePx = 900}: TiltOptions = {})
 	const apply = useCallback(() => {
 		const host = hostRef.current
 		if (!host) return
-		host.style.transform = `perspective(${perspectivePx}px) rotateX(${rotateX.get()}deg) rotateY(${rotateY.get()}deg)`
+		const x = rotateX.get()
+		const y = rotateY.get()
+		// Settled flat: drop the transform rather than leave a flat card in a 3D
+		// perspective context, which keeps it on its own compositing surface
+		// (and Firefox re-rendering it through that surface) long after the hover
+		host.style.transform = x === 0 && y === 0 ? '' : `perspective(${perspectivePx}px) rotateX(${x}deg) rotateY(${y}deg)`
 	}, [perspectivePx, rotateX, rotateY])
 
 	useMotionValueEvent(rotateX, 'change', apply)

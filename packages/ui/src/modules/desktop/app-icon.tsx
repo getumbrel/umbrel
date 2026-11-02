@@ -77,9 +77,11 @@ export function AppIcon({
 				damping: 30,
 			}}
 		>
+			{/* The backdrop blur only shows until the opaque icon loads. Firefox redraws
+			    it on every frame of the hover scale, so it goes without there. */}
 			<div
 				className={cn(
-					'relative aspect-square w-[var(--app-icon)] shrink-0 overflow-hidden rounded-[var(--app-icon-radius)] bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6',
+					'relative aspect-square w-[var(--app-icon)] shrink-0 overflow-hidden rounded-[var(--app-icon-radius)] bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-[scale,box-shadow] duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 firefox:backdrop-blur-none',
 				)}
 			>
 				{appIconSrc && (
