@@ -300,6 +300,14 @@ export function SwapDialog({
 							</div>
 						</div>
 
+						{/* Erase warning for devices without physical slots (the drive may have been used elsewhere before) */}
+						{selectedDevice && !selectedDevice.slot && (
+							<p className='text-[13px] text-yellow-500'>
+								<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
+								{t('storage-manager.add-drive-erase-warning')}
+							</p>
+						)}
+
 						{/* What happens next */}
 						<div className='flex flex-col gap-2'>
 							<span className='text-13 font-medium text-white/60'>{t('storage-manager.swap.what-happens-next')}</span>

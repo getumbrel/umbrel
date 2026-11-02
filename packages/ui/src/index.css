@@ -734,10 +734,13 @@ html {
 
 .umbrel-fade-scroller-y {
 	mask-image: linear-gradient(to bottom, transparent, red var(--distance1) calc(100% - var(--distance2)), transparent);
+	/* On a fractional pixel the tile would repeat, drawing a sharp line past the fade */
+	mask-repeat: no-repeat;
 }
 
 .umbrel-fade-scroller-x {
 	mask-image: linear-gradient(to right, transparent, red var(--distance1) calc(100% - var(--distance2)), transparent);
+	mask-repeat: no-repeat;
 }
 
 .umbrel-wallpaper-fade-scroller {

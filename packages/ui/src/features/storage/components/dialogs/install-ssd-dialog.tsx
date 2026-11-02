@@ -31,6 +31,9 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro, isHdd = false
 	// Check if a RAID operation is already in progress
 	const activeOperation = useActiveRaidOperation()
 	const isOperationInProgress = !!activeOperation
+	// Most operations pick up where they left off after a restart. A FailSafe transition
+	// can't until its data has finished copying, so shutting down would abandon it.
+	const mustWaitToShutDown = activeOperation?.type === 'failsafe-transition' && activeOperation.state === 'syncing'
 
 	// Reset state when dialog closes
 	useEffect(() => {
@@ -80,10 +83,12 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro, isHdd = false
 							</div>
 						)}
 
-						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
+						{isOperationInProgress && (
+							<OperationInProgressBanner variant={mustWaitToShutDown ? 'wait' : 'shutdown-safe'} />
+						)}
 
 						<DialogFooter>
-							<Button variant='primary' onClick={() => setShowShutdownConfirmation(true)}>
+							<Button variant='primary' disabled={mustWaitToShutDown} onClick={() => setShowShutdownConfirmation(true)}>
 								{t('shut-down')}
 							</Button>
 							<Button variant='default' onClick={() => onOpenChange(false)}>

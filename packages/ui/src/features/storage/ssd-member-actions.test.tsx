@@ -38,6 +38,7 @@ vi.mock('@/components/ui/dialog', async (importOriginal) => ({
 	DialogPortal: ({children}: PropsWithChildren) => children,
 	DialogTitle: ({children}: PropsWithChildren) => children,
 }))
+vi.mock('@/components/ui/scroll-area', () => ({ScrollArea: ({children}: PropsWithChildren) => <div>{children}</div>}))
 vi.mock('@/features/storage/components/dialogs/replace-failed-drive-dialog', () => ({
 	ReplaceFailedDriveDialog: (props: React.ComponentProps<typeof ReplaceFailedDriveDialog>) => {
 		replacement = props
@@ -198,6 +199,101 @@ test('an unmapped failed member prefers a fitting spare over in-place repair', a
 	await click('storage-manager.replace')
 	expect(replacement.newDevice?.id).toBe('new-spare')
 	expect(replacement.failedDevice?.id).toBe(device.id)
+})
+
+test('a healthy spare is chosen ahead of a failing one', async () => {
+	failFirstMember()
+	fixture.devices.push({...ssd(3), id: 'failing-spare', smartStatus: 'unhealthy'}, {...ssd(4), id: 'healthy-spare'})
+	await render()
+	await click('storage-manager.replace')
+	expect(replacement.newDevice?.id).toBe('healthy-spare')
+})
+
+test('a safe in-place repair is chosen ahead of a failing spare, which stays free', async () => {
+	const device = failFirstMember()
+	fixture.devices.push({...ssd(3), id: 'failing-spare', smartStatus: 'unhealthy'})
+	await render()
+	expect(host.textContent).not.toContain('storage-manager.ready-to-replace')
+	await click('storage-manager.replace')
+	expect(replacement.newDevice?.id).toBe(device.id)
+})
+
+test('a missing member leads the list on hardware without a tray', async () => {
+	fixture.host = 'custom'
+	fixture.pool.status = 'DEGRADED'
+	Object.assign(fixture.pool.devices![1], {status: 'REMOVED', size: 2e12})
+	const missingId = fixture.pool.devices![1].id
+	fixture.devices = [fixture.devices[0], {...ssd(3), id: 'new-spare'}]
+	await render()
+	const text = host.textContent!
+	expect(text.indexOf('storage-status.not-detected')).toBeGreaterThan(-1)
+	expect(text.indexOf('storage-status.not-detected')).toBeLessThan(text.indexOf('Test SSD'))
+	await click('storage-manager.replace')
+	expect(replacement.failedDevice?.id).toBe(missingId)
+	expect(replacement.newDevice?.id).toBe('new-spare')
+})
+
+test('a failing spare is still offered when nothing else fits', async () => {
+	failFirstMember().smartStatus = 'unhealthy'
+	fixture.devices.push({...ssd(3), id: 'failing-spare', smartStatus: 'unhealthy'})
+	await render()
+	await click('storage-manager.replace')
+	expect(replacement.newDevice?.id).toBe('failing-spare')
+})
+
+test('a missing member is sized by what the pool remembers of it, not the drives left', async () => {
+	fixture.pool.status = 'DEGRADED'
+	Object.assign(fixture.pool.devices![1], {status: 'REMOVED', size: 9.9e11})
+	fixture.devices = [fixture.devices[0], {...ssd(3), id: 'small-spare', size: 1e12, roundedSize: 1e12}]
+	await render()
+	await click('storage-manager.replace')
+	expect(replacement.newDevice?.id).toBe('small-spare')
+	expect(replacement.minRoundedDriveSize).toBe(9.9e11)
+})
+
+test.each<[string, () => void]>([
+	[
+		'on a pool without redundancy',
+		() => {
+			fixture.pool.raidType = 'storage'
+			fixture.pool.topology = 'stripe'
+		},
+	],
+	['while ZFS is still using the drive', () => (fixture.pool.devices![0].status = 'DEGRADED')],
+	['when the drive itself is failing', () => (fixture.devices[0].smartStatus = 'unhealthy')],
+	['when the surviving drive is failing', () => (fixture.devices[1].smartStatus = 'unhealthy')],
+])('in-place repair is not offered %s', async (_, arrange) => {
+	failFirstMember()
+	arrange()
+	await render()
+	await click('storage-manager.replace')
+	expect(replacement.open).toBe(false)
+	expect(swap.open).toBe(true)
+})
+
+test('old error counts on the surviving drive do not block in-place repair', async () => {
+	const device = failFirstMember()
+	fixture.pool.devices![1].readErrors = 2
+	await render()
+	await click('storage-manager.replace')
+	expect(replacement.newDevice?.id).toBe(device.id)
+})
+
+test('the replace dialog closes rather than retargeting another failed drive', async () => {
+	fixture.pool.status = 'DEGRADED'
+	for (const member of fixture.pool.devices!) member.status = 'FAULTED'
+	fixture.devices.push({...ssd(3), id: 'new-spare'})
+	await render()
+	await click('storage-manager.replace')
+	const target = replacement.failedDevice!.id
+	expect(replacement.open).toBe(true)
+
+	fixture.pool.devices!.find((member) => member.id === target)!.status = 'ONLINE'
+	await act(async () => {
+		await vi.advanceTimersByTimeAsync(16_000)
+	})
+	expect(replacement.open).toBe(false)
+	expect(replacement.failedDevice).toBeNull()
 })
 
 test('a missing member without a spare receives physical insertion instructions', async () => {

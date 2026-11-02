@@ -14,8 +14,14 @@ import {
 import {Spinner} from '@/components/ui/loading'
 import {StorageOperationError} from '@/features/storage/components/storage-operation-error'
 
-import {RaidDeviceStatus, StorageDevice, useStorage} from '../../hooks/use-storage'
-import {formatStorageSize, planFailsafeTransition, planMirrorAdditions} from '../../utils'
+import {pickReplacementDrive, RaidDeviceStatus, StorageDevice, useStorage} from '../../hooks/use-storage'
+import {
+	canRepairInPlace,
+	formatStorageSize,
+	getRememberedMemberSize,
+	planFailsafeTransition,
+	planMirrorAdditions,
+} from '../../utils'
 import {AddAcceleratorDialog} from '../dialogs/add-accelerator-dialog'
 import {AddMirrorDialog} from '../dialogs/add-mirror-dialog'
 import {AddToRaidDialog} from '../dialogs/add-to-raid-dialog'
@@ -122,39 +128,39 @@ export function ListStorageManager() {
 		minSize: number
 	} | null>(null)
 
-	// Replacement candidates: largest unpooled drive of the right type
-	const replacementHdd = [...availableHdds].sort((a, b) => b.roundedSize - a.roundedSize)[0]
-	const replacementSsd = [...availableSsds].sort((a, b) => b.roundedSize - a.roundedSize)[0]
+	// Replacement candidates: unpooled drives of the right type, largest first
+	const spareHdds = [...availableHdds].sort((a, b) => b.roundedSize - a.roundedSize)
+	const spareSsds = [...availableSsds].sort((a, b) => b.roundedSize - a.roundedSize)
 
 	// Missing physical devices can't be cross-checked against the pool device type, so data
 	// drives use the pool's type for their replacement candidate
-	const dataReplacementCandidate = isHddPool ? replacementHdd : replacementSsd
+	const dataSpares = isHddPool ? spareHdds : spareSsds
 
 	// A failed member whose physical drive is still attached but no longer recognised by
 	// the pool (wiped or corrupted labels) can be replaced with its own disk in place -
 	// availableDevices excludes it because its id matches a pool member, so look it up
-	// directly. A fresh unpooled drive is preferred when one is attached.
-	const selfReplacementFor = (member: {id: string; status?: RaidDeviceStatus}, type: 'hdd' | 'ssd') => {
-		const isFailed = member.status !== undefined && member.status !== 'ONLINE'
-		if (!isFailed) return undefined
-		return allDevices.find((device) => device.id === member.id && device.type === type && !device.isSystemDrive)
-	}
+	// directly. It erases the disk, so canRepairInPlace decides whether that's safe.
+	const selfReplacementFor = (member: {id: string; status?: RaidDeviceStatus}, type: 'hdd' | 'ssd') =>
+		canRepairInPlace(raidStatus, member, allDevices)
+			? allDevices.find((device) => device.id === member.id && device.type === type && !device.isSystemDrive)
+			: undefined
 	// Candidates must be large enough for the member they'd replace - a fresh drive is
 	// preferred, but a too-small fresh drive doesn't shadow a viable self-replacement.
 	// Members with no usable candidate fall back to the physical-swap instructions.
 	const dataCandidateFor = (member: {id: string; status?: RaidDeviceStatus}) =>
-		[dataReplacementCandidate, selfReplacementFor(member, isHddPool ? 'hdd' : 'ssd')].find(
-			(candidate): candidate is StorageDevice => !!candidate && candidate.roundedSize >= minReplacementSize(member.id),
+		pickReplacementDrive(
+			dataSpares,
+			minReplacementSize(member.id),
+			selfReplacementFor(member, isHddPool ? 'hdd' : 'ssd'),
 		)
 	const acceleratorCandidateFor = (member: {id: string; status?: RaidDeviceStatus}) =>
-		[replacementSsd, selfReplacementFor(member, 'ssd')].find(
-			(candidate): candidate is StorageDevice => !!candidate && candidate.roundedSize >= minReplacementSize(member.id),
-		)
+		pickReplacementDrive(spareSsds, minReplacementSize(member.id), selfReplacementFor(member, 'ssd'))
 
 	// Minimum size the replacement drive must have: the failed member's own size when we still
-	// know it, otherwise the smallest pool drive. A missing accelerator member is sized from
-	// its surviving partner instead - the backend partitions the replacement to mirror the
-	// partner, so the data-pool (HDD) sizes are irrelevant for it.
+	// know it, from the disk or what the pool remembers of it, otherwise the smallest pool drive.
+	// A missing accelerator member is sized from its surviving partner instead - the backend
+	// partitions the replacement to mirror the partner, so the data-pool (HDD) sizes are
+	// irrelevant for it.
 	const minReplacementSize = (failedId: string) => {
 		const failedDevice = allDevices.find((d) => d.id === failedId)
 		if (failedDevice) return failedDevice.roundedSize
@@ -163,6 +169,8 @@ export function ListStorageManager() {
 			// No surviving partner to size against - let the backend's own validation decide
 			return partner?.device?.roundedSize ?? 0
 		}
+		const rememberedSize = getRememberedMemberSize(raidStatus, failedId)
+		if (rememberedSize) return rememberedSize
 		const poolSizes = raidDevices.map((d) => d.roundedSize)
 		return poolSizes.length > 0 ? Math.min(...poolSizes) : 0
 	}
@@ -600,6 +608,7 @@ export function ListStorageManager() {
 				device={deviceToAdd}
 				canChooseMode={!isHddPool && (canChooseMode ?? false)}
 				raidType={raidType}
+				poolStatus={raidStatus?.status}
 				raidDevices={raidDevices}
 				addDeviceAsync={addDeviceAsync}
 				transitionToFailsafeAsync={transitionToFailsafeAsync}

@@ -1,6 +1,13 @@
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {TbAlertTriangle, TbCircleCheckFilled, TbInfoCircle, TbPlus, TbRefreshDot} from 'react-icons/tb'
+import {
+	TbAlertTriangle,
+	TbAlertTriangleFilled,
+	TbCircleCheckFilled,
+	TbInfoCircle,
+	TbPlus,
+	TbRefreshDot,
+} from 'react-icons/tb'
 import {TiInfoLarge} from 'react-icons/ti'
 import {useNavigate} from 'react-router-dom'
 
@@ -12,6 +19,7 @@ import {
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
 import {Spinner} from '@/components/ui/loading'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {StorageOperationError} from '@/features/storage/components/storage-operation-error'
 import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {useTemperatureUnit} from '@/hooks/use-temperature-unit'
@@ -28,6 +36,8 @@ import {DriveActionButton} from './components/list-manager/drive-card'
 import {OtherDrives, StorageMigrationDescription} from './components/other-drives'
 import {PoolDataErrorBanner} from './components/pool-data-error-banner'
 import SingleDriveStorageManager from './components/single-drive'
+import {SsdCard} from './components/ssd-card'
+import {SsdRow} from './components/ssd-row'
 import {SsdShape} from './components/ssd-shape'
 import {StorageDeviceCard} from './components/storage-device-card'
 import {StorageDonutChart} from './components/storage-donut-chart'
@@ -36,8 +46,8 @@ import {StorageNotice} from './components/storage-page'
 import {StorageStats} from './components/storage-stats'
 import {StorageUnavailable} from './components/storage-unavailable'
 import {UsbDrives} from './components/usb-drives'
-import {getDeviceHealth, RaidStatus, StorageDevice, useStorage} from './hooks/use-storage'
-import {formatStorageSize, getPoolDeviceType, hasRaidErrors} from './utils'
+import {getDeviceHealth, pickReplacementDrive, RaidStatus, StorageDevice, useStorage} from './hooks/use-storage'
+import {canRepairInPlace, formatStorageSize, getPoolDeviceType, getRememberedMemberSize, hasRaidErrors} from './utils'
 
 // Umbrel Pro has 4 SSD slots
 const SLOT_INDICES = [0, 1, 2, 3] as const
@@ -163,32 +173,49 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 
 	// Minimum size a replacement must have: the failed member's own size when its device is
 	// still attached (the backend partitions each drive at its own rounded size, so ZFS needs
-	// at least that much), otherwise the smallest pool drive as a lower bound
+	// at least that much), otherwise the size the pool remembers for it, and failing that the
+	// smallest pool drive as a lower bound
 	const replacementSizeFor = (failedId: string | undefined) => {
 		const failedDevice = failedId ? allDevices.find((d) => d.id === failedId) : undefined
-		return failedDevice?.roundedSize ?? minRoundedDriveSize
+		return failedDevice?.roundedSize ?? getRememberedMemberSize(raidStatus, failedId) ?? minRoundedDriveSize
 	}
+
+	const repairDriveFor = (member: {id: string; status?: string}) =>
+		pickReplacementDrive(
+			availableSsds,
+			replacementSizeFor(member.id),
+			canRepairInPlace(raidStatus, member, allDevices) ? allDevices.find((d) => d.id === member.id) : undefined,
+		)
 
 	// One clear repair path when the pool is degraded and a new SSD is attached: the failed
 	// drive's Replace opens the replace dialog with this candidate pre-selected, while the
-	// new SSD itself just advertises that it's ready (no second button). An undersized SSD
-	// is never reserved - it keeps its normal Add flow instead.
+	// new SSD itself just advertises that it's ready (no second button). An SSD that won't be
+	// used for the repair is never reserved - it keeps its normal Add flow instead.
 	const primaryFailed = failedRaidDevices[0]
-	const replacementCandidate = canReplaceFailedSsd
-		? availableSsds.find((d) => (d.roundedSize ?? d.size) >= replacementSizeFor(primaryFailed?.id))
-		: undefined
+	const primaryRepairDrive = canReplaceFailedSsd && primaryFailed ? repairDriveFor(primaryFailed) : undefined
+	const replacementCandidate = availableSsds.find((drive) => drive.id === primaryRepairDrive?.id)
+	// The member the replace dialog is working on. It can recover or be repaired while the dialog
+	// is open, and the dialog must then close rather than quietly retarget another failed drive.
+	const replacementTarget = failedRaidDevices.find((rd) => rd.id === failedIdForReplacement) ?? null
+	const closeReplaceDialog = () => {
+		setIsReplaceFailedDialogOpen(false)
+		setDeviceForReplacement(null)
+		setFailedIdForReplacement(null)
+	}
+	useEffect(() => {
+		if (isReplaceFailedDialogOpen && !replacementTarget) closeReplaceDialog()
+	}, [isReplaceFailedDialogOpen, replacementTarget])
+
 	const proSlotFor = (device?: StorageDevice) =>
 		isUmbrelPro && device?.slot && device.slot >= 1 && device.slot <= 4 ? device.slot : null
 	const failedDeviceSlot = proSlotFor(allDevices.find((d) => d.id === primaryFailed?.id))
 
 	// Every member has one repair entry point, whether it appears in the tray or
-	// a fallback card. Prefer a fitting spare, then repair an attached failed disk
-	// in place (for example, after its labels were lost). Missing disks need insertion.
+	// a fallback card. Prefer a healthy spare, then repair an attached failed disk
+	// in place where that's safe (for example, after its labels were lost). Anything
+	// else needs a new drive inserting.
 	const openMemberAction = (member: NonNullable<RaidStatus['devices']>[number], device?: StorageDevice) => {
-		const candidate =
-			member.status !== 'ONLINE'
-				? (availableSsds.find((drive) => (drive.roundedSize ?? drive.size) >= replacementSizeFor(member.id)) ?? device)
-				: undefined
+		const candidate = member.status !== 'ONLINE' ? repairDriveFor(member) : undefined
 		if (candidate) {
 			setDeviceForReplacement(candidate)
 			setFailedIdForReplacement(member.id)
@@ -214,9 +241,47 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 		return {device, slotNumber, isReadyToAdd, isInRaid, raidDevice, isFailedDrive, hasWarning}
 	})
 
-	const renderSsdAction = (state: (typeof ssdStates)[number], fullWidth = false) => {
+	// With no physical layout to mirror, the drives that need the user come first so they're never
+	// scrolled away. Temperature doesn't count: a drive hovering at its limit would keep swapping
+	// rows on each poll, moving buttons out from under the pointer.
+	const ssdUrgency = ({device, raidDevice, isFailedDrive, isReadyToAdd}: (typeof ssdStates)[number]) => {
+		if (!device) return 3
+		const {smartUnhealthy, lifeWarning} = getDeviceHealth(device)
+		if (isFailedDrive || smartUnhealthy) return 0
+		if (isReadyToAdd) return 1
+		return lifeWarning || hasRaidErrors(raidDevice) ? 2 : 3
+	}
+	const ssdRows = isUmbrelPro ? ssdStates : [...ssdStates].sort((a, b) => ssdUrgency(a) - ssdUrgency(b))
+
+	// Pool members with no place in the tray or list: a missing drive, or one in an unknown Pro slot
+	const unplacedMembers = (raidStatus?.devices ?? []).filter((member) => {
+		const device = allDevices.find((candidate) => candidate.id === member.id)
+		return !device || (isUmbrelPro && (!device.slot || device.slot < 1 || device.slot > 4))
+	})
+	const renderUnplacedAction = (
+		member: NonNullable<RaidStatus['devices']>[number],
+		device: StorageDevice | undefined,
+		className: string,
+	) => (
+		<DriveActionButton
+			icon={TbRefreshDot}
+			variant={member.status === 'ONLINE' ? 'default' : 'destructive'}
+			className={className}
+			onClick={() => openMemberAction(member, device)}
+		>
+			{t(member.status === 'ONLINE' ? 'storage-manager.swap' : 'storage-manager.replace')}
+		</DriveActionButton>
+	)
+
+	// Compact fits under a tray slot, wide fills the phone list's fixed column, and regular sits in an SSD row
+	const renderSsdAction = (state: (typeof ssdStates)[number], size: 'compact' | 'wide' | 'regular') => {
 		const {device, isReadyToAdd, isInRaid, isFailedDrive} = state
-		const sizeClass = fullWidth ? 'w-full justify-center py-1 text-[12px]' : 'px-2 py-1 text-[11px]'
+		const fullWidth = size !== 'compact'
+		const sizeClass = {
+			compact: 'px-2 py-1 text-[11px]',
+			wide: 'w-full justify-center py-1 text-[12px]',
+			regular: 'justify-center px-3 py-1 text-[12px]',
+		}[size]
 
 		if (isInRaid && device) {
 			const member = raidStatus?.devices?.find((member) => member.id === device.id)
@@ -300,6 +365,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 				<ImmersiveDialogContent
 					aria-describedby={undefined}
 					size='md'
+					short={!isUmbrelPro}
 					showScroll
 					style={{
 						backgroundColor: 'rgba(8, 8, 8, 0.5)',
@@ -343,10 +409,34 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 							</div>
 						)}
 
-						<div className='flex flex-col gap-6 md:flex-1 md:flex-row md:items-stretch md:px-6'>
+						<div className={cn('flex flex-col gap-6 md:flex-1 md:flex-row md:items-stretch', isUmbrelPro && 'md:px-6')}>
 							<div
 								className={cn('flex min-w-0 flex-col gap-6', isUmbrelPro ? 'md:w-[480px] md:shrink-0' : 'md:flex-1')}
 							>
+								{/* A missing drive has no row in the list, and it's the one that needs the user most.
+								    The negative margin closes the column's gap so it reads as the top of the list. */}
+								{!isStorageLoading && !isUmbrelPro && unplacedMembers.length > 0 && (
+									<div className='flex flex-col gap-2.5 md:-mb-3.5'>
+										{unplacedMembers.map((member) => {
+											const rememberedSize = getRememberedMemberSize(raidStatus, member.id)
+											return (
+												<SsdCard
+													key={member.id}
+													size={rememberedSize ? formatStorageSize(rememberedSize) : ''}
+													model={member.id}
+													variant='critical'
+													status={
+														<span className='flex items-center gap-1 text-[12px] font-semibold whitespace-nowrap text-white'>
+															<TbAlertTriangleFilled className='size-3.5' />
+															{t('storage-status.not-detected')}
+														</span>
+													}
+													action={renderUnplacedAction(member, undefined, 'justify-center gap-1 px-3 py-1 text-[12px]')}
+												/>
+											)
+										})}
+									</div>
+								)}
 								{/* Mobile: SSD List Card */}
 								<div className='flex flex-col gap-6 md:hidden'>
 									<div className='flex flex-col rounded-xl bg-white/5 p-3'>
@@ -398,6 +488,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 														<button
 															type='button'
 															onClick={() => healthDialog.openDialog(device, slotNumber)}
+															aria-label={t('storage-status.drive-details', {name: device.name})}
 															className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1'
 														>
 															<TiInfoLarge className='size-4 text-white/60' />
@@ -411,7 +502,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 													)}
 
 													{/* Action button - fixed width container for alignment */}
-													<div className='w-[76px]'>{renderSsdAction(ssdStates[i], true)}</div>
+													<div className='w-[76px]'>{renderSsdAction(ssdStates[i], 'wide')}</div>
 												</div>
 											</div>
 										))}
@@ -540,7 +631,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 														width: '15%',
 													}}
 												>
-													{renderSsdAction(state)}
+													{renderSsdAction(state, 'compact')}
 												</div>
 											))}
 										</div>
@@ -548,96 +639,70 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 									</div>
 
 									{!isUmbrelPro && (
-										<div className='relative min-w-0 flex-1 self-center rounded-[32px] border-[3px] border-transparent bg-[radial-gradient(78%_100%_at_50%_0%,_rgba(255,255,255,0.12)_0%,_rgba(255,255,255,0.04)_100%)] bg-clip-padding'>
-											{/* Gradient border overlay */}
-											<div
-												className='pointer-events-none absolute -inset-[3px] z-10 rounded-[32px] p-[3px]'
-												style={{
-													background:
-														'linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%)',
-													WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-													WebkitMaskComposite: 'xor',
-													maskComposite: 'exclude',
-												}}
-											/>
-											{isStorageLoading && (
-												<div className='absolute inset-0 z-10 flex items-center justify-center rounded-[29px] bg-black/30'>
-													<Spinner size='8' />
-												</div>
-											)}
-											<div className='umbrel-hide-scrollbar w-full overflow-x-auto'>
-												<div className='flex w-max min-w-full items-start justify-center gap-3 px-4 py-7'>
-													{ssdStates.map((state) => {
+										<div className='flex min-w-0 flex-1 flex-col gap-2.5'>
+											{/* The list is capped at four drives and a peek of the fifth, less on short windows. Its scrollbar
+											    hangs in the gutter beside it, so drives keep their width whether or not it's needed. */}
+											<ScrollArea
+												type='always'
+												className='-mr-3.5 max-h-[clamp(240px,calc(100dvh-400px),372px)] [&>[data-radix-scroll-area-viewport]]:max-h-[inherit]'
+											>
+												<div className='flex flex-col gap-2.5 pr-3.5'>
+													{ssdRows.map((state) => {
 														const {device, raidDevice, isReadyToAdd} = state
 														if (!device) return null
 
 														return (
-															<div key={device.id} className='flex w-[120px] shrink-0 flex-col items-center gap-2'>
-																<SsdShape
-																	device={device}
-																	onHealthClick={() => healthDialog.openDialog(device)}
-																	minRoundedDriveSize={minRoundedDriveSize}
-																	raidType={raidType}
-																	temperatureUnit={temperatureUnit}
-																	isReadyToAdd={isReadyToAdd}
-																	readyToAddLabel={
-																		replacementCandidate && device.id === replacementCandidate.id
-																			? failedDriveLabel
-																				? t('storage-manager.ready-to-replace-ssd', {ssd: failedDriveLabel})
-																				: t('storage-manager.ready-to-replace')
-																			: undefined
-																	}
-																	verticalName={device.name}
-																	raidDevice={raidDevice}
-																/>
-																{renderSsdAction(state)}
-															</div>
+															<SsdRow
+																key={device.id}
+																device={device}
+																raidDevice={raidDevice}
+																minRoundedDriveSize={minRoundedDriveSize}
+																raidType={raidType}
+																temperatureUnit={temperatureUnit}
+																isReadyToAdd={isReadyToAdd}
+																readyToAddLabel={
+																	replacementCandidate && device.id === replacementCandidate.id
+																		? failedDriveLabel
+																			? t('storage-manager.ready-to-replace-ssd', {ssd: failedDriveLabel})
+																			: t('storage-manager.ready-to-replace')
+																		: undefined
+																}
+																onHealthClick={() => healthDialog.openDialog(device)}
+																action={renderSsdAction(state, 'regular')}
+															/>
 														)
 													})}
-													{/* Ghost slot inviting another SSD - aligned with the SSD bodies */}
-													<button
-														type='button'
-														onClick={() => setIsInstallSsdDialogOpen(true)}
-														className='mt-4 flex h-[340px] w-[85px] shrink-0 flex-col items-center justify-center gap-2.5 rounded-[6px] border border-dashed border-white/15 text-white/50 transition-colors hover:border-white/30 hover:text-white/80'
-													>
-														<span className='flex size-8 items-center justify-center rounded-full bg-white/10'>
-															<TbPlus className='size-4' strokeWidth={2.5} />
-														</span>
-														<span className='text-13 font-medium'>{t('storage-manager.add')}</span>
-													</button>
 												</div>
-											</div>
+											</ScrollArea>
+											{/* Empty slot inviting another SSD. Pinned under the list, so it's reachable however many are attached */}
+											<button
+												type='button'
+												onClick={() => setIsInstallSsdDialogOpen(true)}
+												className='flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-white/50 transition-colors hover:border-white/30 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-hidden'
+											>
+												<TbPlus className='size-4' strokeWidth={2.5} />
+												<span className='text-13 font-medium'>{t('storage-manager.add')}</span>
+											</button>
 										</div>
 									)}
 								</div>
 								{!isStorageLoading &&
-									raidStatus?.devices
-										?.filter((member) => {
-											const device = allDevices.find((candidate) => candidate.id === member.id)
-											return !device || (isUmbrelPro && (!device.slot || device.slot < 1 || device.slot > 4))
-										})
-										.map((member) => {
-											const device = allDevices.find((candidate) => candidate.id === member.id)
-											return (
-												<div key={member.id} className='flex min-w-0 flex-col gap-2'>
-													<StorageDeviceCard
-														device={device}
-														fallbackType={isUmbrelPro ? 'ssd' : undefined}
-														identifier={member.id}
-														status={t(device ? 'storage-status.slot-unknown' : 'storage-status.not-detected')}
-														onDetails={device ? () => healthDialog.openDialog(device) : undefined}
-													/>
-													<DriveActionButton
-														icon={TbRefreshDot}
-														variant={member.status === 'ONLINE' ? 'default' : 'destructive'}
-														className='self-end'
-														onClick={() => openMemberAction(member, device)}
-													>
-														{t(member.status === 'ONLINE' ? 'storage-manager.swap' : 'storage-manager.replace')}
-													</DriveActionButton>
-												</div>
-											)
-										})}
+									isUmbrelPro &&
+									unplacedMembers.map((member) => {
+										const device = allDevices.find((candidate) => candidate.id === member.id)
+										return (
+											<div key={member.id} className='flex min-w-0 flex-col gap-2'>
+												<StorageDeviceCard
+													device={device}
+													fallbackType='ssd'
+													identifier={member.id}
+													status={t(device ? 'storage-status.slot-unknown' : 'storage-status.not-detected')}
+													onDetails={device ? () => healthDialog.openDialog(device) : undefined}
+												/>
+												{renderUnplacedAction(member, device, 'self-end')}
+											</div>
+										)
+									})}
 								{!isStorageLoading && replacementCandidate && (
 									<p className='text-13 leading-relaxed text-white/50'>
 										<span className='text-white/80'>
@@ -674,7 +739,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 							<div
 								className={cn(
 									'relative flex flex-col items-center gap-4',
-									isUmbrelPro ? 'justify-center md:flex-1' : 'md:w-[240px] md:shrink-0 md:pt-6',
+									isUmbrelPro ? 'justify-center md:flex-1' : 'md:w-[240px] md:shrink-0',
 								)}
 							>
 								<StorageDonutChart
@@ -728,6 +793,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 				device={deviceToAdd}
 				canChooseMode={canChooseMode ?? false}
 				raidType={raidType}
+				poolStatus={raidStatus?.status}
 				raidDevices={raidDevices}
 				addDeviceAsync={addDeviceAsync}
 				transitionToFailsafeAsync={transitionToFailsafeAsync}
@@ -766,21 +832,13 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 			<ReplaceFailedDriveDialog
 				open={isReplaceFailedDialogOpen}
 				onOpenChange={(open) => {
-					setIsReplaceFailedDialogOpen(open)
-					if (!open) {
-						setDeviceForReplacement(null)
-						setFailedIdForReplacement(null)
-					}
+					if (!open) closeReplaceDialog()
 				}}
 				newDevice={deviceForReplacement}
 				raidType={raidType}
-				failedDevice={failedRaidDevices.find((rd) => rd.id === failedIdForReplacement) ?? primaryFailed ?? null}
-				failedSlot={
-					failedIdForReplacement
-						? proSlotFor(allDevices.find((d) => d.id === failedIdForReplacement))
-						: failedDeviceSlot
-				}
-				minRoundedDriveSize={replacementSizeFor(failedIdForReplacement ?? primaryFailed?.id)}
+				failedDevice={replacementTarget}
+				failedSlot={proSlotFor(allDevices.find((d) => d.id === failedIdForReplacement))}
+				minRoundedDriveSize={replacementSizeFor(failedIdForReplacement ?? undefined)}
 				replaceDeviceAsync={replaceDeviceAsync}
 			/>
 		</ImmersiveDialog>
