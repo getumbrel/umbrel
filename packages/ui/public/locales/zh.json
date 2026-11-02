@@ -1222,7 +1222,7 @@
   "files-type.tar": "TAR 压缩包",
   "files-type.tiff": "TIFF 图片",
   "files-type.toml": "TOML 文件",
-  "files-type.ts": "TS 视频",
+  "files-type.ts": "TS 文件",
   "files-type.txt": "文本文件",
   "files-type.umbrel-backup": "Umbrel 备份",
   "files-type.wav": "WAV 音频",
