@@ -32,6 +32,7 @@ import {attachPinch} from '@/features/photos/components/listing/pinch'
 import {ReflowMotion} from '@/features/photos/components/listing/reflow-motion'
 import {isWholeLibrary} from '@/features/photos/components/listing/route-filter'
 import type {Frame} from '@/features/photos/components/listing/surface'
+import {useSwipeSelect} from '@/features/photos/components/listing/swipe-select'
 import {ThumbnailQueue} from '@/features/photos/components/listing/thumbnail-queue'
 import {TileLayer} from '@/features/photos/components/listing/tile-layer'
 import {createTileLift} from '@/features/photos/components/listing/tile-lift'
@@ -168,7 +169,9 @@ type Slot = {index: number; item: Item; x: number; y: number; size: number}
 // Selection (see PhotosSelectionProvider) is picked here: a click on a
 // tile's circle, or on any tile while selecting, toggles it; shift extends
 // from the last one toggled; a mouse drag over the grid draws a box
-// (useMarquee); ⌘A takes every loaded item and Escape leaves.
+// (useMarquee), and a finger swiped sideways across it in selection mode
+// selects the run it covers (useSwipeSelect); ⌘A takes every loaded item and
+// Escape leaves.
 export function TimelineGrid({
 	items,
 	total,
@@ -587,6 +590,16 @@ export function TimelineGrid({
 		rangeAnchor.current = item.id
 	}
 	const marquee = useMarquee({scrollerRef, viewRef, selectionRef, heldRef, onSelect: selection.set})
+	// A finger swiped across the tiles in selection mode selects the run it
+	// covers. Not while choosing a cover, which takes a single tap.
+	const swipe = useSwipeSelect({
+		scrollerRef,
+		viewRef,
+		selectionRef,
+		enabled: selection.selecting && !selection.coveringFor,
+		edges: {top: frame.fadeTo, bottom: endSpacer},
+		onSelect: selection.set,
+	})
 
 	// ── Zoom ──
 	//
@@ -831,6 +844,7 @@ export function TimelineGrid({
 		anchorRef.current = findAnchor(committed.layout, scroller.scrollTop, at) ?? null
 	}, [])
 	const marqueeEnd = marquee.end
+	const swipeEnd = swipe.end
 	useEffect(() => {
 		const scroller = scrollerRef.current
 		if (!scroller) return
@@ -839,8 +853,9 @@ export function TimelineGrid({
 		if (fixed) return attachPinch(scroller, {start() {}, move() {}, end() {}})
 		const detach = attachPinch(scroller, {
 			start: (focal) => {
-				// A zoom and a box drag cannot both own the pointer
+				// A zoom and a box drag or swipe cannot both own the pointer
 				marqueeEnd()
+				swipeEnd()
 				panned.current = 0
 				takeAnchor(focal)
 				gesture.begin(focal)
@@ -861,7 +876,7 @@ export function TimelineGrid({
 			frameRef.current = 0
 			gesture.cancel()
 		}
-	}, [gesture, pump, marqueeEnd, takeAnchor, fixed])
+	}, [gesture, pump, marqueeEnd, swipeEnd, takeAnchor, fixed])
 
 	// Every committed view, and every change of selection, reaches the canvas
 	// here; a hover reaches it from the pointer handler below, and a live
