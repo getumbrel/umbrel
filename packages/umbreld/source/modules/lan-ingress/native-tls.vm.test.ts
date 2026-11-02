@@ -96,8 +96,8 @@ describe.sequential('Installed apps with native TLS', () => {
 		port: umbreld.vm.getHostPort(port),
 		ca: umbrelCa,
 		servername,
-		// Unknown/no SNI intentionally gets Umbrel's certificate. Validate its
-		// actual identity independently of the hostname supplied for routing.
+		// Unknown SNI, and absent SNI without opt-in, get Umbrel's certificate.
+		// Validate its actual identity independently of the routing hostname.
 		expectedIdentity: 'umbrel.local',
 	})
 	const expectEcho = (connection: Connection, encrypted: boolean) =>
@@ -153,6 +153,7 @@ describe.sequential('Installed apps with native TLS', () => {
 		const echo = JSON.parse(response.body) as Echo
 		expect(echo.encrypted).toBe(false)
 		await expectEcho(umbrelConnection(nativeHostname), false)
+		await expectEcho(umbrelConnection(''), false)
 	})
 
 	test('activates native TLS through a package update and verifies its certificate and hostname', async () => {
@@ -163,12 +164,15 @@ describe.sequential('Installed apps with native TLS', () => {
 		// LAN classification. Those still require a claimed Plex server.
 		expect(JSON.parse(response.body).peer).toBe('127.0.0.1')
 		await expectEcho(nativeConnection('native.example'), true)
+		// Apple's network stack omits SNI when native clients connect by IP.
+		const withoutSni = await expectEcho({...nativeConnection(''), expectedIdentity: nativeHostname}, true)
+		expect(withoutSni.fingerprint).toBe(nativeFingerprint)
 	})
 
 	test('keeps HTTP, Umbrel HTTPS, and WebSockets working on the same public port', async () => {
 		const plain = {port: umbreld.vm.getHostPort(appPort)}
 		await expectEcho(plain, false)
-		for (const hostname of ['umbrel.local', 'unrelated.example', 'evilnative.example', 'native.example.evil', '']) {
+		for (const hostname of ['umbrel.local', 'unrelated.example', 'evilnative.example', 'native.example.evil']) {
 			const response = await expectEcho(umbrelConnection(hostname), false)
 			expect(response.fingerprint).not.toBe(nativeFingerprint)
 		}
@@ -233,6 +237,7 @@ describe.sequential('Installed apps with native TLS', () => {
 
 		await updateMetadata(undefined)
 		await expectEcho(umbrelConnection('changed.example'), false)
+		await expectEcho(umbrelConnection(''), false)
 		await expectEcho({port: umbreld.vm.getHostPort(appPort)}, false)
 		expect((await request({port: umbreld.vm.getHostPort(gatewayPort)})).body).toBe('Hello world')
 	})

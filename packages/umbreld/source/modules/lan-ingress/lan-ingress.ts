@@ -939,7 +939,10 @@ export default class LanIngress {
 			const forward = (chunks: Buffer[], tls: boolean, hostname?: string, release = () => {}) => {
 				if (socket.destroyed) return release()
 				let port = httpPort
-				if (tls && !(nativeTls && matchesNativeTlsHostname(hostname, nativeTls))) {
+				// The app owns TLS on this port, so it also gets ClientHellos without
+				// SNI, such as Apple's native clients send when connecting by IP.
+				const native = nativeTls && (hostname === undefined || matchesNativeTlsHostname(hostname, nativeTls))
+				if (tls && !native) {
 					const address = getHttpsProxyServer()?.address()
 					if (!address || typeof address === 'string') {
 						release()
