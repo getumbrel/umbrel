@@ -120,7 +120,7 @@ build_os_image() {
   then
     cache_to=""
   fi
-  docker buildx build --cache-from type=gha,scope=umbrelos-amd64 ${cache_to} --load --file packages/os/umbrelos.Dockerfile --tag "${INSTANCE_ID}" .
+  docker buildx build --cache-from type=gha,scope=umbrelos-amd64 ${cache_to} --load --file packages/os/umbrelos.Dockerfile --target umbrelos --tag "${INSTANCE_ID}" .
 }
 
 create_instance() {

@@ -1,0 +1,14 @@
+454998e47186869c1dae0858e9f167a68e47eba7df5794b7206cc845615aeeba  amd64/containerd.io_2.4.2-3~debian.13~trixie_amd64.deb
+ae22c3ed03f89492233bd506b6dc33e54765bf0155f51cfd1f964c16fb05d9db  amd64/docker-buildx-plugin_0.38.1-1~debian.13~trixie_amd64.deb
+5971507b332598b0867e005adbe05117f7f97489c0f698d1f19581aa58992a18  amd64/docker-ce_29.9.2-1~debian.13~trixie_amd64.deb
+6a266cb8acafa475e87ce2414387707024b55fb169d6ca1fb6c3132f234d4cf1  amd64/docker-ce-cli_29.9.2-1~debian.13~trixie_amd64.deb
+3c02bdb8bee82bb6786497574b90094109ec43f8418d1b0047fe74494b07ac03  amd64/docker-ce-rootless-extras_29.9.2-1~debian.13~trixie_amd64.deb
+a27659da6d27a7177a69c4822a1be09e58cab342a68c9264a13b9914202ff667  amd64/docker-compose-plugin_5.6.1-1~debian.13~trixie_amd64.deb
+ace53ba6b471682702909f0bcbb4d0b68c3e84b8edcb84d701e35872e653c7db  amd64/docker-model-plugin_1.2.9-1~debian.13~trixie_amd64.deb
+fca3f3a279c0d2675e4a97eae4f0b192632d52c962c8f142fc4a77d3455c9e06  arm64/containerd.io_2.4.2-3~debian.13~trixie_arm64.deb
+d58f8151519b4349cdc3b1f5df3d2d0220300fa7eed16097ca8f82198bde1b9e  arm64/docker-buildx-plugin_0.38.1-1~debian.13~trixie_arm64.deb
+4007107183bd9f9e36fc2efb599fecb4202666d7bb6cf1a0bb23ce57bfb47f8f  arm64/docker-ce_29.9.2-1~debian.13~trixie_arm64.deb
+57d51835bd8fd02b3f83492aff3ffe1f4990e77effbd4fc81d64a3f1c59eccbf  arm64/docker-ce-cli_29.9.2-1~debian.13~trixie_arm64.deb
+137b593c947c54b282483e932210f823accfdfa9b3407fec615a4c01e4073e42  arm64/docker-ce-rootless-extras_29.9.2-1~debian.13~trixie_arm64.deb
+2afa72712ea87271ea59b93e893d4addc78356ff295cee07ccadd319ff3bd1fe  arm64/docker-compose-plugin_5.6.1-1~debian.13~trixie_arm64.deb
+da86ae1952555e7d23d1ba015181b07f4eff6d5a92bce89df57bbb292aa4f6e3  arm64/docker-model-plugin_1.2.9-1~debian.13~trixie_arm64.deb

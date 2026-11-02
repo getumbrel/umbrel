@@ -1,14 +1,23 @@
 ARG DEBIAN_VERSION=trixie
 # Debian Docker image tags lag behind snapshot.debian.org, so pin the base image
-# and apt repositories independently.
+# and apt repositories independently. Base images are also pinned by digest
+# because tags can be re-pushed, which would silently change the build. Pin
+# every stage's base image this way.
 ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20261027
+ARG DEBIAN_IMAGE_DIGEST=sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1
 ARG APT_SNAPSHOT_DATE=20261031
 # amd64 and generic arm64 take their kernel, ZFS, and firmware from trixie-backports (see umbrelos-base below), pinned to their own snapshot
 ARG KERNEL_BACKPORTS_SNAPSHOT_DATE=20261028T000000Z
 ARG BASE_VARIANT=""
 
-ARG DOCKER_VERSION=29.9.2
-ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
+# Build tools that record the current time (user creation in package scripts,
+# initramfs, DKMS) read it from SOURCE_DATE_EPOCH instead, so the build doesn't
+# depend on when it runs. Any fixed value works. Keep it fixed rather than
+# passing the commit time, which would invalidate the layer cache on every
+# commit. build.sh sets the timestamps of the exported root filesystem to the
+# commit time separately. Declare `ARG SOURCE_DATE_EPOCH` in every stage that
+# runs such tools, since stages don't see it otherwise.
+ARG SOURCE_DATE_EPOCH=1792627200
 
 ARG NVIDIA_CUDA_SUPPORT=true
 ARG NVIDIA_DRIVER_VERSION=595.91.07
@@ -23,6 +32,7 @@ ARG YQ_SHA256_amd64=8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702
 ARG YQ_SHA256_arm64=189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b
 
 ARG NODE_VERSION=26.12.1
+ARG NODE_IMAGE_DIGEST=sha256:88e480776c6149ff1d098cd304f44bf18057fb5d284a3329b78162d29821e28c
 ARG NODE_SHA256_amd64=0fd1eb7770598f52a21995edf6ed35fc690400fa437c2386af329519e9143132
 ARG NODE_SHA256_arm64=a6c01af459dd8972ab3fb08ee5da81244d26ba8c4944a62d5bbba8c597ae154f
 
@@ -40,18 +50,41 @@ ARG LIBDE265_SHA256_amd64=36115188a321806ac797218cb878be15e8df7584fc65b10ea50d52
 ARG LIBDE265_SHA256_arm64=36c69add16a79fdffd85f284501b8f9ddd7128ccb8e078598818beb3e50109ec
 
 #########################################################################
+# source stage
+#########################################################################
+
+# Files copied from the build context keep the modes and mtimes they have in the
+# checkout, which depend on the umask and on when each file was checked out.
+# Normalize the ones that end up in the OS so the result doesn't depend on the
+# checkout: Git only tracks the executable bit, and every mtime is set to
+# SOURCE_DATE_EPOCH.
+FROM --platform=$BUILDPLATFORM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS source
+
+ARG SOURCE_DATE_EPOCH
+
+COPY packages/ui /source/ui
+COPY packages/umbreld /source/umbreld
+COPY packages/os/overlay /source/overlay
+COPY packages/os/overlay-pi /source/overlay-pi
+RUN find /source -type d -exec chmod 0755 {} + && \
+    find /source -type f -perm /0111 -exec chmod 0755 {} + && \
+    find /source -type f ! -perm /0111 -exec chmod 0644 {} + && \
+    find /source -exec touch --no-dereference --date="@${SOURCE_DATE_EPOCH}" {} +
+
+
+#########################################################################
 # ui build stage
 #########################################################################
 
 # The UI output is architecture-independent, so build it on the builder's native
 # architecture. This also avoids running esbuild's Go binary under emulation.
-FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-bookworm-slim AS ui-build
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-bookworm-slim@${NODE_IMAGE_DIGEST} AS ui-build
 
 # Set the working directory
 WORKDIR /app
 
 # Copy the package.json and package-lock.json
-COPY packages/ui/ .
+COPY --from=source /source/ui/ .
 
 # The ui-build stage only has 'packages/ui' in '/app', but the ui imports runtime values
 # via a relative path ('../../../umbreld/source/modules/server/trpc/common') that resolves outside '/app'.
@@ -78,8 +111,9 @@ RUN npm run build
 # Pull the target-architecture images with a native skopeo binary. Go binaries
 # can fail under cross-architecture user-mode emulation, and skopeo is only
 # needed while building these archives—not in the shipped OS.
-FROM --platform=$BUILDPLATFORM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS bundled-images
+FROM --platform=$BUILDPLATFORM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS bundled-images
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
 ARG TARGETARCH
 
@@ -94,8 +128,9 @@ RUN skopeo copy --override-arch "${TARGETARCH}" docker://ghcr.io/getumbrel/tor@s
 # umbrelos-base build stage (amd64 and generic arm64)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS umbrelos-base
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
 ARG KERNEL_BACKPORTS_SNAPSHOT_DATE
 ARG TARGETARCH
@@ -105,6 +140,13 @@ ARG NVIDIA_DRIVER_VERSION
 COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
+
+# DKMS signs the modules it builds with a key it generates on the fly, which
+# would make every build differ and ship the private key in the image. umbrelOS
+# doesn't use Secure Boot, so nothing checks module signatures. Point DKMS at a
+# signing tool that doesn't exist so it leaves the modules unsigned.
+RUN mkdir -p /etc/dkms/framework.conf.d && \
+    echo 'sign_file=/nonexistent' > /etc/dkms/framework.conf.d/umbrel-no-module-signing.conf
 
 # Install Linux kernel, firmware, and ZFS.
 #
@@ -151,6 +193,12 @@ RUN set -e; \
         firmware-nvidia-graphics
 
 # Install amd64-specific microcode and firmware
+#
+# Both microcode packages add their updates to the initramfs, which loads them
+# early in boot. amd64-microcode only does so when the machine building the
+# image has an AMD CPU, so AMD devices would only get microcode updates if the
+# image happened to be built on one. Always include them, like intel-microcode
+# already does for generic initramfs images.
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ]; then \
     apt-get install --yes \
@@ -159,6 +207,7 @@ RUN set -e; \
         firmware-realtek \
         firmware-iwlwifi \
         firmware-atheros; \
+    echo 'AMD64UCODE_INITRAMFS=early' >> /etc/default/amd64-microcode; \
     fi
 
 # The Debian kernel and firmware already provide the in-tree amdgpu/KFD and
@@ -187,6 +236,9 @@ RUN set -e; \
 # node. On systems with an iGPU, the NVIDIA node can then take renderD128, which
 # VA-API/QSV apps assume is the iGPU. CUDA, NVENC/NVDEC, and NVIDIA Vulkan only
 # need /dev/nvidia*, so blacklist the autoload and keep NVIDIA GPUs off /dev/dri.
+#
+# NVIDIA's module build embeds the output of $(DATE), which defaults to `date`,
+# so point it at SOURCE_DATE_EPOCH.
 COPY packages/os/nvidia-driver-packages.sha256 /tmp/nvidia-driver-packages.sha256
 RUN set -eu; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
@@ -196,7 +248,8 @@ RUN set -eu; \
             curl -fsSL "https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/${package_file}" -o "/tmp/nvidia-driver/${package_file}"; \
             echo "${checksum}  /tmp/nvidia-driver/${package_file}" | sha256sum -c -; \
         done < /tmp/nvidia-driver-packages.sha256; \
-        apt-get install --yes --no-install-recommends --no-remove /tmp/nvidia-driver/*.deb; \
+        DATE="date --utc --date=@${SOURCE_DATE_EPOCH}" \
+            apt-get install --yes --no-install-recommends --no-remove /tmp/nvidia-driver/*.deb; \
         systemctl disable nvidia-persistenced.service; \
         echo 'blacklist nvidia_drm' > /etc/modprobe.d/nvidia-drm.conf; \
         module_built=false; \
@@ -234,8 +287,9 @@ RUN rm -rf /build-steps
 # umbrelos-base-pi build stage (Raspberry Pi)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base-pi
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS umbrelos-base-pi
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
@@ -248,7 +302,7 @@ RUN /build-steps/setup-raspberrypi.sh
 RUN rm -rf /build-steps
 
 # Copy Pi-specific filesystem overlay
-COPY packages/os/overlay-pi /
+COPY --from=source /source/overlay-pi /
 
 
 #########################################################################
@@ -261,8 +315,9 @@ COPY packages/os/overlay-pi /
 # We install Watchman through Homebrew because it gives us prebuilt bottles
 # for both arm64 and amd64. Building Watchman from source takes ages, and
 # upstream only provides prebuilt binaries for amd64.
-FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS watchman-build
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS watchman-build
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
 ARG WATCHMAN_VERSION=2026.05.11.00
 ARG HOMEBREW_BREW_COMMIT=76ca8d74e4a180badad438bf245ddfc740d68a8e
@@ -350,6 +405,11 @@ RUN cp -a /home/linuxbrew/.linuxbrew /opt/linuxbrew && \
     mv /home/linuxbrew /home/linuxbrew.build-only && \
     /opt/linuxbrew/bin/watchman -v
 
+# Only Watchman runs in the OS, so drop Homebrew itself, along with the install
+# receipts and SBOMs it writes with the time each package was poured.
+RUN rm -rf /opt/linuxbrew/Homebrew /opt/linuxbrew/bin/brew && \
+    find /opt/linuxbrew/Cellar -mindepth 3 -maxdepth 3 \( -name INSTALL_RECEIPT.json -o -name sbom.spdx.json \) -delete
+
 
 #########################################################################
 # avahi build stage
@@ -367,7 +427,7 @@ RUN cp -a /home/linuxbrew/.linuxbrew /opt/linuxbrew && \
 # Upstream fixed this by ignoring tentative addresses, so we rebuild Debian's
 # avahi with that commit backported. This can be removed once Debian ships
 # avahi 0.9: https://github.com/avahi/avahi/pull/616
-FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS avahi-build
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS avahi-build
 
 ARG APT_SNAPSHOT_DATE
 
@@ -412,9 +472,8 @@ RUN export DEB_BUILD_PROFILES="nogir pkg.avahi.nogui nocheck" DEB_BUILD_OPTIONS=
 FROM umbrelos-base${BASE_VARIANT} AS umbrelos
 
 # We need to duplicate this such that we can also use the argument below.
+ARG SOURCE_DATE_EPOCH
 ARG TARGETARCH
-ARG DOCKER_VERSION
-ARG DOCKER_INSTALL_SCRIPT_COMMIT
 ARG NVIDIA_CUDA_SUPPORT
 ARG NVIDIA_CONTAINER_TOOLKIT_VERSION
 ARG LIBNVIDIA_CONTAINER1_SHA256_amd64
@@ -573,9 +632,10 @@ RUN YQ_SHA256=$(eval echo \$YQ_SHA256_${TARGETARCH}) && \
     echo "${YQ_SHA256} /usr/bin/yq" | sha256sum -c && \
     chmod +x /usr/bin/yq
 
-# Create the runtime user.
+# Create the runtime user with the password "umbrel". Set it from a fixed hash,
+# since chpasswd salts it randomly on every build.
 RUN adduser --gecos "" --disabled-password umbrel
-RUN echo "umbrel:umbrel" | chpasswd
+RUN usermod --password '$y$j9T$DVr8q3Zyf9OtCMowT3Q/K1$UNSCQ/Ev7h65gu36ePxQHpvbyUrvBJBQ5PxtinaXtuB' umbrel
 RUN usermod -aG sudo umbrel
 
 # Install the rclone release used by Cloud.
@@ -596,9 +656,24 @@ RUN RCLONE_SHA256=$(eval echo \$RCLONE_SHA256_${TARGETARCH}) && \
 #   existing devices already use.
 # - The minimum API version rose from 1.24 to 1.40, which would break apps
 #   that talk to the host Docker socket with older clients. Keep 1.24.
-RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_INSTALL_SCRIPT_COMMIT}/install.sh -o /tmp/install-docker.sh
-RUN sh /tmp/install-docker.sh --version v${DOCKER_VERSION}
-RUN rm /tmp/install-docker.sh
+#
+# Docker's repository isn't archived by snapshot.debian.org and moves on as new
+# versions are released, so install the same packages Docker's install script
+# would, pinned by checksum, and keep the repository out of the image's apt
+# sources. To update Docker, take the Filename (minus `dists/trixie/pool/stable/`)
+# and SHA256 of each of these packages from
+# https://download.docker.com/linux/debian/dists/trixie/stable/binary-<arch>/Packages
+# for amd64 and arm64.
+COPY packages/os/docker-packages.sha256 /tmp/docker-packages.sha256
+RUN set -eu; \
+    mkdir -p /tmp/docker; \
+    grep "_${TARGETARCH}.deb\$" /tmp/docker-packages.sha256 | while read -r checksum package_path; do \
+        package_file="$(basename "${package_path}")"; \
+        curl -fsSL "https://download.docker.com/linux/debian/dists/trixie/pool/stable/${package_path}" -o "/tmp/docker/${package_file}"; \
+        echo "${checksum}  /tmp/docker/${package_file}" | sha256sum -c -; \
+    done; \
+    apt-get install --yes /tmp/docker/*.deb; \
+    rm -rf /tmp/docker /tmp/docker-packages.sha256
 
 # Install the NVIDIA Container Toolkit directly from pinned, checksummed
 # packages. The toolkit exposes the matching CUDA and Vulkan driver userspace
@@ -656,7 +731,7 @@ RUN usermod -aG umbrel libvirt-qemu
 COPY --from=bundled-images /images /images
 
 # Install umbreld
-COPY packages/umbreld /opt/umbreld
+COPY --from=source /source/umbreld /opt/umbreld
 COPY --from=ui-build /app/dist /opt/umbreld/ui
 WORKDIR /opt/umbreld
 RUN rm -rf node_modules || true
@@ -664,7 +739,7 @@ RUN npm clean-install --omit dev && npm link
 WORKDIR /
 
 # Copy in filesystem overlay
-COPY packages/os/overlay /
+COPY --from=source /source/overlay /
 
 # The common overlay is shared with arm64 builds, so add the NVIDIA runtime
 # after copying it and only when the runtime binary exists on amd64. The
@@ -690,6 +765,28 @@ RUN set -e; \
 # regenerate every installed kernel's initramfs.
 RUN update-initramfs -u -k all
 
+# Remove build-time state that would differ between otherwise identical builds:
+# logs, caches, and IDs generated at random while installing packages.
+# - Each device generates its own SSH host keys on first boot
+#   (umbrel-ssh-host-key-hydration).
+# - Rugix Ctrl gives each device its own machine ID at boot, which D-Bus reads
+#   from /etc/machine-id.
+# - Every device running a given build already shared the generated ZFS host
+#   ID and NVMe host NQN, so give them fixed values instead. umbrelOS imports
+#   pools with --force, so the host ID only needs to be stable.
+# - Homebrew's Python writes sitecustomize.py when it's poured, and build steps
+#   that run Python afterwards compile it with that time embedded.
+RUN rm -f /etc/ssh/ssh_host_*_key* /var/lib/dbus/machine-id /var/cache/ldconfig/aux-cache && \
+    truncate -s 0 /etc/machine-id && \
+    if command -v zgenhostid > /dev/null; then zgenhostid -f 756d6272; fi && \
+    if [ -d /etc/nvme ]; then \
+        echo "a4b0c2a6-4e3c-4f6b-9d38-4b5f0e1c7a21" > /etc/nvme/hostid && \
+        echo "nqn.2014-08.org.nvmexpress:uuid:a4b0c2a6-4e3c-4f6b-9d38-4b5f0e1c7a21" > /etc/nvme/hostnqn; \
+    fi && \
+    rm -rf /var/lib/dkms/*/*/*/*/log /root/.npm /tmp/node-compile-cache && \
+    find /opt/linuxbrew/Cellar -path '*/__pycache__/sitecustomize.*.pyc' -delete && \
+    find /var/log -type f -delete
+
 # Move persistant locations to /data to be bind mounted over the OS.
 # /data will exist on a seperate partition that survives OS updates.
 # This step should always be last so things like /var/log/apt/
@@ -700,3 +797,24 @@ RUN update-initramfs -u -k all
 RUN mkdir -p /data/umbrel-os/var
 RUN mv /var/log     /data/umbrel-os/var/log
 RUN mv /home        /data/umbrel-os/home
+
+
+#########################################################################
+# Docker image stage
+#########################################################################
+
+# Publish the multi-arch Docker image as a single layer holding the finished
+# filesystem. Every build step's layer also captures the logs and caches it
+# wrote, which would make the image differ on every build even though the
+# filesystem it adds up to doesn't. Keep the config the umbrelos stage ends up
+# with.
+#
+# This stage has to come after umbrelos to copy from it, which makes it the
+# default target, so everything that builds the OS itself passes
+# `--target umbrelos`.
+FROM scratch AS umbrelos-docker
+
+COPY --from=umbrelos / /
+ENV PATH=/opt/linuxbrew/bin:/opt/linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WORKDIR /
+CMD ["bash"]

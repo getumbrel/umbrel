@@ -150,6 +150,86 @@ graph TD
     pi-tryboot --> pi-tryboot-rugixb([pi.rugixb])
 ```
 
+### Reproducible Builds
+
+Building the same commit produces bit-for-bit identical amd64, arm64 and
+Raspberry Pi images (`umbrelos-amd64.img`, `umbrelos-arm64.img`,
+`umbrelos-pi.img`, `umbrelos-pi4.img`), update bundles (`umbrelos-amd64.update`,
+`umbrelos-arm64.update`, `umbrelos-pi.update`) and multi-arch Docker image, on
+any machine. Anyone can rebuild a release and check it against the published
+`SHA256SUMS`:
+
+```sh
+git clone https://github.com/getumbrel/umbrel.git && cd umbrel
+git checkout <version>
+cd packages/os
+npm run build:amd64 <version>
+shasum -a 256 build/umbrelos-amd64.img build/umbrelos-amd64.update
+```
+
+And the Docker image against the digest in the release's `docker-umbrelos-<version>`:
+
+```sh
+SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true \
+    DOCKER_IMAGE_OUTPUT=type=oci,dest=build/umbrelos-docker.tar ./build.sh
+tar -xOf build/umbrelos-docker.tar index.json | jq -r '.manifests[0].digest'
+```
+
+Building from a clean checkout matters: untracked files in the repo end up in
+the build context. To build from a source archive without Git history, set
+`SOURCE_DATE_EPOCH` to the release commit's time (`git log -1 --format=%ct
+<version>`), which the build otherwise reads from Git.
+
+Raspberry Pi builds also need the Raspberry Pi repo to still serve the exact
+packages they pin (see [Raspberry Pi](#raspberry-pi)). It has kept old packages
+in its pool so far, but it isn't an archive like snapshot.debian.org.
+
+How the build stays reproducible:
+
+- **Inputs are pinned.** Base images by digest, apt packages by
+  snapshot.debian.org date, everything downloaded from elsewhere (including
+  the Raspberry Pi kernel and firmware) by checksum, and BuildKit and Rugix
+  Bakery by digest.
+- **Time is fixed.** Build steps see a fixed `SOURCE_DATE_EPOCH` (set in
+  `umbrelos.Dockerfile`), so tools that record the current time, like user
+  creation and initramfs generation, record that instead. Exported files are
+  dated by the commit time. Keep the Dockerfile value fixed and in the past:
+  changing it invalidates the layer cache, and the Docker image export only
+  clamps timestamps newer than it.
+- **The checkout doesn't leak in.** The `source` stage normalizes the modes and
+  mtimes of files copied from the repo, which otherwise depend on the umask
+  and on when each file was checked out.
+- **Generated state is removed or fixed.** Logs, caches, SSH host keys,
+  machine and host IDs, and DKMS's module signing key (modules are left
+  unsigned, umbrelOS doesn't use Secure Boot) would otherwise differ on every
+  build.
+- **Nothing depends on the build machine.** Its CPU, kernel and filesystem
+  differ between machines (Rosetta on Apple Silicon reports an ARM CPU to
+  amd64 builds), so build steps mustn't look at them. For example, the AMD
+  microcode is always included in the initramfs rather than only when building
+  on an AMD CPU.
+- **The Docker image is a single layer** holding the finished filesystem
+  (the `umbrelos-docker` stage). The build steps' own layers also capture the
+  logs and caches each step wrote, so they differ between builds even though
+  the filesystem doesn't. Root filesystem builds target the `umbrelos` stage.
+- **Rugix Bakery's output is fixed up.** Bakery randomizes the disk and
+  partition GUIDs and FAT serial numbers, and fills FAT filesystems (the
+  config partition, and the Raspberry Pi boot partition) in the order the host
+  filesystem lists files. Its `mkfs.ext4` marks filesystems with the directory
+  hash signedness of the CPU it runs on, and records how many bytes it wrote,
+  which depends on the host filesystem.
+  [`fix-umbrelos-reproducible.sh`](./rugix/fix-umbrelos-reproducible.sh)
+  derives or normalizes all of that. Ext4 filesystems get fixed UUIDs and hash
+  seeds, and the system partitions have fixed sizes, since Bakery's computed
+  size depends on the host filesystem's directory sizes.
+
+To check a change keeps the build reproducible, build the same commit twice
+with separate BuildKit caches and compare the checksums. That doesn't catch
+dependence on the build machine, so also compare a local `npm run
+build:amd64:rugix` against the checksums CI's VM image job prints for the same
+commit. The nightly Reproducibility workflow also rebuilds staging from scratch
+and fails if the result differs from CI's cached build.
+
 ### OS Variants
 
 There are three main umbrelOS *variants*:

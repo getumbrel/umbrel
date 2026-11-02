@@ -1,0 +1,48 @@
+name: Reproducibility
+
+# Check every night that building staging from scratch gives the same OS image
+# and update bundle as building it with CI's cache. If they differ, something in
+# the build stopped being reproducible. See "Reproducible Builds" in
+# packages/os/README.md.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  amd64:
+    name: Check the amd64 build is reproducible
+    runs-on: ubicloud-standard-16-ubuntu-2404
+    defaults:
+      run:
+        working-directory: packages/os
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
+      - name: Build with CI's cache
+        run: |
+          SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
+          sha256sum build/umbrelos-amd64.img build/umbrelos-amd64.update | tee cached.sha256
+          sudo rm -rf build rugix/build rugix/.rugix
+      # Start from an empty BuildKit builder and Rugix cache, and hide the
+      # Actions cache from BuildKit.
+      - name: Build from scratch
+        env:
+          ACTIONS_CACHE_URL: ''
+          ACTIONS_RESULTS_URL: ''
+          ACTIONS_RUNTIME_TOKEN: ''
+        run: |
+          docker buildx ls --format json | jq -r '.Name' | grep '^umbrelos-buildkit-' | xargs -r -n 1 docker buildx rm
+          docker volume rm --force rugix-build-cache
+          npm run build:amd64:rugix
+          sha256sum build/umbrelos-amd64.img build/umbrelos-amd64.update | tee scratch.sha256
+      - name: Compare
+        run: diff cached.sha256 scratch.sha256
