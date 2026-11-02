@@ -3,6 +3,7 @@ import {Check, ChevronRight, Circle} from 'lucide-react'
 import * as React from 'react'
 
 import {cn} from '@/lib/utils'
+import {allowsNativeContextMenu} from '@/utils/native-context-menu'
 
 import {dropdownClasses} from './shared/menu'
 
@@ -52,9 +53,9 @@ function DropdownMenuSubContent({
 			ref={ref}
 			className={cn(dropdownClasses.content, className)}
 			{...props}
-			// Prevent right-clicks within subcontent from triggering parent context menus
+			// Keep right-clicks inside from opening an ancestor's context menu, while text fields keep the browser's own
 			onContextMenu={(e) => {
-				e.preventDefault() // Prevent default browser context menu
+				if (!allowsNativeContextMenu(e.target)) e.preventDefault()
 				e.stopPropagation()
 			}}
 		/>
@@ -76,9 +77,9 @@ function DropdownMenuContent({
 				sideOffset={sideOffset}
 				className={cn(dropdownClasses.content, className)}
 				{...props}
-				// Prevent right-clicks within content from triggering parent context menus
+				// Keep right-clicks inside from opening an ancestor's context menu, while text fields keep the browser's own
 				onContextMenu={(e) => {
-					e.preventDefault() // Prevent default browser context menu
+					if (!allowsNativeContextMenu(e.target)) e.preventDefault()
 					e.stopPropagation()
 				}}
 			/>

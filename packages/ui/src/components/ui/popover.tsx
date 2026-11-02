@@ -2,6 +2,7 @@ import * as PopoverPrimitive from '@radix-ui/react-popover'
 import * as React from 'react'
 
 import {cn} from '@/lib/utils'
+import {allowsNativeContextMenu} from '@/utils/native-context-menu'
 
 import {floatingContentAnimationClass, materialSurfaceClasses} from './shared/material'
 
@@ -35,9 +36,9 @@ function PopoverContent({
 					className,
 				)}
 				{...props}
-				// Prevent right-clicks within content from triggering parent context menus
+				// Keep right-clicks inside from opening an ancestor's context menu, while text fields keep the browser's own
 				onContextMenu={(e) => {
-					e.preventDefault() // Prevent default browser context menu
+					if (!allowsNativeContextMenu(e.target)) e.preventDefault()
 					e.stopPropagation()
 				}}
 			/>

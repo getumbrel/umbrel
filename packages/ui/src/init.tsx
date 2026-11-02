@@ -13,14 +13,15 @@ import {RootErrorFallback} from '@/components/ui/root-error-fallback'
 import {Toaster} from '@/components/ui/toast'
 import {TooltipProvider} from '@/components/ui/tooltip'
 import {monkeyPatchConsoleLog} from '@/utils/logs'
+import {allowsNativeContextMenu} from '@/utils/native-context-menu'
 
 monkeyPatchConsoleLog()
 
-// Keep the browser context menu available in explicitly opted-in text surfaces.
+// Disable the browser context menu for a native OS feel, except on text fields and opted-in surfaces
 document.addEventListener(
 	'contextmenu',
 	(event) => {
-		if (event.target instanceof Element && event.target.closest('[data-native-context-menu]')) return
+		if (allowsNativeContextMenu(event.target)) return
 		event.preventDefault()
 		return false
 	},
