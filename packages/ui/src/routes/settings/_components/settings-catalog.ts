@@ -327,7 +327,7 @@ export function createSettingsCatalog(
 			to: '/settings/mcp',
 			keywords: [
 				'mcp',
-				t('mcp-connected-agents'),
+				t('mcp-agents'),
 				t('mcp-permissions'),
 				t('mcp-apps'),
 				t('mcp-folders'),

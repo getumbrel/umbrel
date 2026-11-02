@@ -388,7 +388,10 @@ type HandoffResponse = {
 function submitHandoff(data: HandoffResponse) {
 	const form = document.createElement('form')
 	form.method = 'POST'
-	form.action = data.url
+	// The app's own fragment (e.g. a key it was opened with) came through the
+	// proxy's redirect to this page. Carrying it on the action lets the browser
+	// keep it through the handoff's redirect too, still never sent to a server.
+	form.action = data.url + document.location.hash
 	form.style.display = 'none'
 	for (const [key, value] of Object.entries(data.params)) {
 		const input = document.createElement('input')

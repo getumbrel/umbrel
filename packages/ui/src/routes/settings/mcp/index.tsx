@@ -1,7 +1,8 @@
-import {formatDistanceToNowStrict} from 'date-fns'
+import {formatDistanceStrict} from 'date-fns'
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
+import {useInterval} from 'react-use'
 
 import {AnimatedHeight} from '@/components/ui/animated-height'
 import {BetaPill} from '@/components/ui/beta-pill'
@@ -17,7 +18,7 @@ import {useMachineCapabilities, useMachines} from '@/features/machines/hooks/use
 import type {Machine} from '@/features/machines/types'
 import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
-import {AnimatedRow, GrantSummary, RowChevron} from '@/modules/user-sharing'
+import {AnimatedRow, GrantSummary, RowChevron, RowRemoveButton} from '@/modules/user-sharing'
 import {isStorageCategoryPath} from '@/modules/user-sharing/new-user-access'
 import {useConfirmation} from '@/providers/confirmation'
 import {BackButton, SectionLabel, useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -33,7 +34,6 @@ import {ConnectView} from '@/routes/settings/mcp/connect'
 import {AgentLogoPlate} from '@/routes/settings/mcp/constellation'
 import {IntroView} from '@/routes/settings/mcp/intro'
 import {McpStatusCard} from '@/routes/settings/mcp/status-card'
-import {TokensDetail} from '@/routes/settings/mcp/tokens'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
 import {languageCodeToDateLocale} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
@@ -59,10 +59,12 @@ function getMcpErrorMessage(message: string): string {
 
 // Settings → MCP. Owner-only dialog whose moments flow into one another: the
 // first-run pitch (agents orbiting the umbrel) morphs into the agent picker,
-// picking a tile collapses the dialog into the status card while the token is
-// minted, the connect ceremony expands around that same card, and the enabled
-// steady state is simply the permission grants. Every transition crossfades
-// while the body height glides — the cloud wizard treatment.
+// picking a tile opens the permission grants so the agent's access is settled
+// before it ever gets a token, continuing collapses the dialog into the status
+// card while the token is minted, the connect ceremony expands around that
+// same card, and the enabled steady state is simply the permission grants.
+// Every transition crossfades while the body height glides — the cloud wizard
+// treatment.
 export default function McpDialog() {
 	const {t} = useTranslation()
 	const isPhone = useIsPhone()
@@ -79,7 +81,7 @@ export default function McpDialog() {
 	const permissions = settings?.permissions
 	const tokens = tokensQ.data ?? []
 
-	const [view, setView] = useState<'main' | 'apps' | 'files' | 'machines' | 'tokens'>('main')
+	const [view, setView] = useState<'main' | 'apps' | 'files' | 'machines'>('main')
 
 	// The token is only returned when it is created and never persisted or
 	// re-fetchable — same principle as the created-member-password view in users.tsx.
@@ -89,8 +91,13 @@ export default function McpDialog() {
 	// already tailored to it.
 	const [selectedAgent, setSelectedAgent] = useState<McpAgentId | 'generic'>('claude-code')
 
+	// The agent picked on first run while its permissions are being chosen —
+	// MCP stays off and no token exists until the user continues past them
+	const [setupAgent, setSetupAgent] = useState<McpAgentId | 'generic' | null>(null)
+
 	const revealToken = (credential: McpCredential) => {
 		setRevealedCredential(credential)
+		setSetupAgent(null)
 		setView('main')
 		utils.mcp.getSettings.invalidate()
 		utils.mcp.listTokens.invalidate()
@@ -119,19 +126,26 @@ export default function McpDialog() {
 		onError: toastError,
 	})
 
-	// Picking an agent starts a short "Enabling MCP server…" beat: the picker
-	// collapses into the status card, and only after both the token is minted
-	// and the beat has played out does the connect view expand around it. The
-	// mutation itself is near-instant; the pause is what makes the moment land.
+	// Picking an agent on first run opens its permissions; going back from
+	// there remounts the intro as the picker, not the pitch
+	const introDefaultView = useRef<'pitch' | 'picker'>('pitch')
+	const chooseSetupAgent = (agent: McpAgentId | 'generic') => {
+		setSelectedAgent(agent)
+		introDefaultView.current = 'picker'
+		setSetupAgent(agent)
+	}
+
+	// Continuing past the permissions starts a short "Enabling MCP server…"
+	// beat: the dialog collapses into the status card, and only after both the
+	// token is minted and the beat has played out does the connect view expand
+	// around it. The mutation itself is near-instant; the pause is what makes
+	// the moment land. If enabling fails, the permissions come back so
+	// retrying is one click.
 	const [showEnabling, setShowEnabling] = useState(false)
 	const enablingTimer = useRef<number | undefined>(undefined)
-	const introDefaultView = useRef<'pitch' | 'picker'>('pitch')
 	useEffect(() => () => window.clearTimeout(enablingTimer.current), [])
 
 	const startEnable = (agent: McpAgentId | 'generic') => {
-		setSelectedAgent(agent)
-		// If enabling fails, the intro remounts as the picker, not the pitch
-		introDefaultView.current = 'picker'
 		setShowEnabling(true)
 		window.clearTimeout(enablingTimer.current)
 		enablingTimer.current = window.setTimeout(() => setShowEnabling(false), 2000)
@@ -185,14 +199,18 @@ export default function McpDialog() {
 		}
 	}
 
-	const handleRevokeToken = async (id: string) => {
+	// Each agent is exactly one token, so removing the agent is revoking it
+	const handleRevokeToken = async (token: McpToken) => {
 		if (revokeTokenMut.isPending) return
+		const knownAgent = MCP_AGENTS.find(({id}) => id === token.agentType)
 		try {
 			const result = await confirm({
-				title: t('mcp-tokens-revoke-confirm-title'),
-				message: t('mcp-tokens-revoke-confirm-message'),
+				title: knownAgent
+					? t('mcp-remove-agent-confirm-title', {name: knownAgent.name})
+					: t('mcp-remove-agent-confirm-title-generic'),
+				message: t('mcp-remove-agent-confirm-message'),
 				actions: [
-					{label: t('mcp-tokens-revoke-confirm-action'), value: 'confirm', variant: 'destructive'},
+					{label: t('mcp-remove-agent-confirm-action'), value: 'confirm', variant: 'destructive'},
 					{label: t('cancel'), value: 'cancel', variant: 'default'},
 				],
 			})
@@ -200,7 +218,7 @@ export default function McpDialog() {
 		} catch {
 			return
 		}
-		await revokeTokenMut.mutateAsync({id}).catch(() => {})
+		await revokeTokenMut.mutateAsync({id: token.id}).catch(() => {})
 	}
 
 	// The device is reachable however the user is reaching it right now — LAN
@@ -347,13 +365,13 @@ export default function McpDialog() {
 				<IntroView connecting={createTokenMut.isPending} defaultView='picker' onSelect={startCreateToken} />
 			</div>
 		)
-	} else if (!settings.enabled) {
+	} else if (!settings.enabled && (tokens.length > 0 || !setupAgent)) {
 		contentKey = 'intro'
 		content =
 			tokens.length > 0 ? (
 				<IntroView connecting={enableMut.isPending} onResume={resume} />
 			) : (
-				<IntroView connecting={false} defaultView={introDefaultView.current} onSelect={startEnable} />
+				<IntroView connecting={false} defaultView={introDefaultView.current} onSelect={chooseSetupAgent} />
 			)
 	} else if (permissions && view === 'apps') {
 		contentKey = 'apps'
@@ -363,16 +381,6 @@ export default function McpDialog() {
 				installedApps={installedApps}
 				busy={setPermissionsMut.isPending}
 				onUpdate={updatePermissions}
-				onBack={() => setView('main')}
-			/>
-		)
-	} else if (view === 'tokens' && tokens.length > 0) {
-		contentKey = 'tokens'
-		content = (
-			<TokensDetail
-				tokens={tokens}
-				busy={revokeTokenMut.isPending}
-				onRevoke={handleRevokeToken}
 				onBack={() => setView('main')}
 			/>
 		)
@@ -397,6 +405,26 @@ export default function McpDialog() {
 				onBack={() => setView('main')}
 			/>
 		)
+	} else if (permissions && !settings.enabled && setupAgent) {
+		// First run, right after the agent is picked: the drill-ins above open
+		// from here and return here, and MCP turns on only on continue
+		contentKey = 'setup-permissions'
+		content = (
+			<PermissionsSetupView
+				agent={setupAgent}
+				permissions={permissions}
+				installedApps={installedApps}
+				machines={machines}
+				machinesAvailable={machinesAvailable}
+				busy={setPermissionsMut.isPending}
+				onUpdate={updatePermissions}
+				onShowApps={() => setView('apps')}
+				onShowFiles={() => setView('files')}
+				onShowMachines={() => setView('machines')}
+				onBack={() => setSetupAgent(null)}
+				onContinue={() => startEnable(setupAgent)}
+			/>
+		)
 	} else if (permissions) {
 		showHeader = true
 		contentKey = 'main'
@@ -409,10 +437,11 @@ export default function McpDialog() {
 				machinesAvailable={machinesAvailable}
 				busy={setPermissionsMut.isPending}
 				disabling={disableMut.isPending}
+				revoking={revokeTokenMut.isPending}
 				onUpdate={updatePermissions}
 				onDisable={handleDisable}
 				onConnectNewAgent={() => setAddingAgent(true)}
-				onShowTokens={() => setView('tokens')}
+				onRevokeToken={handleRevokeToken}
 				onShowApps={() => setView('apps')}
 				onShowFiles={() => setView('files')}
 				onShowMachines={() => setView('machines')}
@@ -488,10 +517,11 @@ export default function McpDialog() {
 }
 
 // ─── Enabled steady state ───────────────────────────────────────────
-// Managing MCP is managing what agents can touch, so the view opens straight
-// into the permission grants — Apps and Folders one drill-in deep, App Store
-// and Manage umbrelOS as inline switches — with the off switch as a quiet
-// action at the bottom.
+// Managing MCP is managing who can reach the device and what they can touch:
+// the agents up top, each one its own token and removable in place, then the
+// permission grants — Apps and Folders one drill-in deep, App Store and
+// Manage umbrelOS as inline switches — with the off switch as a quiet action
+// at the bottom.
 
 function EnabledView({
 	tokens,
@@ -501,10 +531,11 @@ function EnabledView({
 	machinesAvailable,
 	busy,
 	disabling,
+	revoking,
 	onUpdate,
 	onDisable,
 	onConnectNewAgent,
-	onShowTokens,
+	onRevokeToken,
 	onShowApps,
 	onShowFiles,
 	onShowMachines,
@@ -516,10 +547,133 @@ function EnabledView({
 	machinesAvailable: boolean
 	busy: boolean
 	disabling: boolean
+	revoking: boolean
 	onUpdate: (patch: Partial<McpPermissions>) => void
 	onDisable: () => void
 	onConnectNewAgent: () => void
-	onShowTokens: () => void
+	onRevokeToken: (token: McpToken) => void
+	onShowApps: () => void
+	onShowFiles: () => void
+	onShowMachines: () => void
+}) {
+	const {t} = useTranslation()
+
+	return (
+		<div className='flex flex-col gap-y-5'>
+			<section className='flex flex-col gap-2'>
+				<div className='flex items-center justify-between gap-3'>
+					<SectionLabel>{t('mcp-agents')}</SectionLabel>
+					<Button size='sm' onClick={onConnectNewAgent}>
+						{t('mcp-connect-new-agent')}
+					</Button>
+				</div>
+				<p className='-mt-1 text-12 leading-tight text-white/50'>{t('mcp-agents-description')}</p>
+				<div className={listClass}>
+					<ConnectionStatus tokens={tokens} revoking={revoking} onRevoke={onRevokeToken} />
+				</div>
+			</section>
+
+			<PermissionsSection
+				permissions={permissions}
+				installedApps={installedApps}
+				machines={machines}
+				machinesAvailable={machinesAvailable}
+				busy={busy}
+				onUpdate={onUpdate}
+				onShowApps={onShowApps}
+				onShowFiles={onShowFiles}
+				onShowMachines={onShowMachines}
+			/>
+
+			<div className='flex flex-wrap justify-end gap-2'>
+				<Button disabled={disabling} className={cn(disabling && 'umbrel-pulse')} onClick={onDisable}>
+					{t('mcp-disable')}
+				</Button>
+			</div>
+		</div>
+	)
+}
+
+// ─── First-run permissions ──────────────────────────────────────────
+// The step between picking an agent and connecting it: the same grants as
+// the steady state, settled while MCP is still off, so the first token is
+// minted for an agent whose access the user has already decided.
+
+function PermissionsSetupView({
+	agent,
+	onBack,
+	onContinue,
+	...permissionsProps
+}: {
+	agent: McpAgentId | 'generic'
+	permissions: McpPermissions
+	installedApps: InstalledApp[]
+	machines: Machine[]
+	machinesAvailable: boolean
+	busy: boolean
+	onUpdate: (patch: Partial<McpPermissions>) => void
+	onShowApps: () => void
+	onShowFiles: () => void
+	onShowMachines: () => void
+	onBack: () => void
+	onContinue: () => void
+}) {
+	const {t} = useTranslation()
+	const knownAgent = MCP_AGENTS.find(({id}) => id === agent)
+
+	return (
+		<div className='flex flex-col gap-y-5'>
+			<BackButton onClick={onBack}>{t('back')}</BackButton>
+
+			<div className='flex flex-col items-center gap-3 text-center'>
+				<AgentLogoPlate agent={knownAgent ?? OTHER_AGENT} size={48} morph />
+				<div className='space-y-1'>
+					<h3 className='text-19 font-semibold -tracking-2'>
+						{knownAgent
+							? t('mcp-setup-permissions-title', {name: knownAgent.name})
+							: t('mcp-setup-permissions-title-generic')}
+					</h3>
+					<p className='text-13 leading-tight text-white/70'>{t('mcp-setup-permissions-description')}</p>
+				</div>
+			</div>
+
+			<PermissionsSection {...permissionsProps} />
+
+			{/* Continuing waits out a permission write still in flight, so a
+			    failed write shows up here rather than after the agent has its token */}
+			<Button
+				variant='primary'
+				size='dialog'
+				className='md:w-full'
+				disabled={permissionsProps.busy}
+				onClick={onContinue}
+			>
+				{t('continue')}
+			</Button>
+		</div>
+	)
+}
+
+// The grants themselves — Apps, Folders and Machines one drill-in deep, App
+// Store, machine creation and Manage umbrelOS as inline switches — shared by
+// the first-run step and the enabled steady state
+function PermissionsSection({
+	permissions,
+	installedApps,
+	machines,
+	machinesAvailable,
+	busy,
+	onUpdate,
+	onShowApps,
+	onShowFiles,
+	onShowMachines,
+}: {
+	permissions: McpPermissions
+	installedApps: InstalledApp[]
+	machines: Machine[]
+	machinesAvailable: boolean
+	busy: boolean
+	onUpdate: (patch: Partial<McpPermissions>) => void
 	onShowApps: () => void
 	onShowFiles: () => void
 	onShowMachines: () => void
@@ -571,144 +725,108 @@ function EnabledView({
 			: t('mcp-none')
 
 	return (
-		<div className='flex flex-col gap-y-5'>
-			<section className='flex flex-col gap-2'>
-				<div className='flex items-center justify-between gap-3'>
-					<SectionLabel>{t('mcp-connected-agents')}</SectionLabel>
-					<Button size='sm' onClick={onConnectNewAgent}>
-						{t('mcp-connect-new-agent')}
-					</Button>
-				</div>
-				<div className={listClass}>
-					<ConnectionStatus tokens={tokens} />
-				</div>
-			</section>
-
-			<section className='flex flex-col gap-2'>
-				<SectionLabel>{t('mcp-permissions')}</SectionLabel>
-				<p className='-mt-1 text-12 leading-tight text-white/50'>{t('mcp-always-available-description')}</p>
-				<div className={listClass}>
+		<section className='flex flex-col gap-2'>
+			<SectionLabel>{t('mcp-permissions')}</SectionLabel>
+			<p className='-mt-1 text-12 leading-tight text-white/50'>{t('mcp-always-available-description')}</p>
+			<div className={listClass}>
+				<button
+					type='button'
+					onClick={onShowApps}
+					className='group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/4'
+				>
+					<span className='min-w-0 flex-1'>
+						<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>{t('mcp-apps')}</span>
+						<span className='block text-12 leading-tight text-white/50'>{t('mcp-apps-summary')}</span>
+					</span>
+					<GrantSummary icons={summaryAppIcons} label={appsSummaryLabel} />
+					<RowChevron />
+				</button>
+				<button
+					type='button'
+					onClick={onShowFiles}
+					className='group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/4'
+				>
+					<span className='min-w-0 flex-1'>
+						<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>{t('mcp-folders')}</span>
+						<span className='block text-12 leading-tight text-white/50'>{t('mcp-folders-summary')}</span>
+					</span>
+					<GrantSummary folder={allFolders || folderGrants.length > 0} label={filesSummaryLabel} />
+					<RowChevron />
+				</button>
+				{machinesAvailable && (
 					<button
 						type='button'
-						onClick={onShowApps}
+						onClick={onShowMachines}
 						className='group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/4'
 					>
 						<span className='min-w-0 flex-1'>
-							<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>{t('mcp-apps')}</span>
-							<span className='block text-12 leading-tight text-white/50'>{t('mcp-apps-summary')}</span>
+							<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>{t('mcp-machines')}</span>
+							<span className='block text-12 leading-tight text-white/50'>{t('mcp-machines-summary')}</span>
 						</span>
-						<GrantSummary icons={summaryAppIcons} label={appsSummaryLabel} />
+						<GrantSummary icons={summaryMachineIcons} label={machinesSummaryLabel} />
 						<RowChevron />
 					</button>
-					<button
-						type='button'
-						onClick={onShowFiles}
-						className='group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/4'
-					>
-						<span className='min-w-0 flex-1'>
-							<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>{t('mcp-folders')}</span>
-							<span className='block text-12 leading-tight text-white/50'>{t('mcp-folders-summary')}</span>
-						</span>
-						<GrantSummary folder={allFolders || folderGrants.length > 0} label={filesSummaryLabel} />
-						<RowChevron />
-					</button>
-					{machinesAvailable && (
-						<button
-							type='button'
-							onClick={onShowMachines}
-							className='group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/4'
-						>
-							<span className='min-w-0 flex-1'>
-								<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>
-									{t('mcp-machines')}
-								</span>
-								<span className='block text-12 leading-tight text-white/50'>{t('mcp-machines-summary')}</span>
-							</span>
-							<GrantSummary icons={summaryMachineIcons} label={machinesSummaryLabel} />
-							<RowChevron />
-						</button>
-					)}
+				)}
+				<PermissionToggleRow
+					title={t('mcp-app-store')}
+					description={t('mcp-app-store-description')}
+					checked={permissions.appStore}
+					disabled={busy}
+					onCheckedChange={(checked) => onUpdate({appStore: checked})}
+				/>
+				{machinesAvailable && (
 					<PermissionToggleRow
-						title={t('mcp-app-store')}
-						description={t('mcp-app-store-description')}
-						checked={permissions.appStore}
+						title={t('mcp-create-machines')}
+						description={t('mcp-create-machines-description')}
+						checked={permissions.createMachines}
 						disabled={busy}
-						onCheckedChange={(checked) => onUpdate({appStore: checked})}
+						onCheckedChange={(checked) => onUpdate({createMachines: checked})}
 					/>
-					{machinesAvailable && (
-						<PermissionToggleRow
-							title={t('mcp-create-machines')}
-							description={t('mcp-create-machines-description')}
-							checked={permissions.createMachines}
-							disabled={busy}
-							onCheckedChange={(checked) => onUpdate({createMachines: checked})}
-						/>
-					)}
-					<PermissionToggleRow
-						title={t('mcp-manage-system')}
-						description={t('mcp-manage-system-description')}
-						checked={permissions.manageSystem}
-						disabled={busy}
-						onCheckedChange={(checked) => onUpdate({manageSystem: checked})}
-					/>
-				</div>
-			</section>
-
-			{tokens.length > 0 && (
-				<section className='flex flex-col gap-2'>
-					<SectionLabel>{t('mcp-tokens')}</SectionLabel>
-					<p className='-mt-1 text-12 leading-tight text-white/40'>{t('mcp-tokens-description')}</p>
-					<div className={listClass}>
-						<button
-							type='button'
-							onClick={onShowTokens}
-							className='group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/4'
-						>
-							<span className='min-w-0 flex-1'>
-								<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>
-									{t('mcp-tokens-manage')}
-								</span>
-								<span className='block text-12 leading-tight text-white/40'>{t('mcp-tokens-manage-description')}</span>
-							</span>
-							<span className='shrink-0 text-12 text-white/60'>{t('mcp-token-count', {count: tokens.length})}</span>
-							<RowChevron />
-						</button>
-					</div>
-				</section>
-			)}
-
-			<div className='flex flex-wrap justify-end gap-2'>
-				<Button disabled={disabling} className={cn(disabling && 'umbrel-pulse')} onClick={onDisable}>
-					{t('mcp-disable')}
-				</Button>
+				)}
+				<PermissionToggleRow
+					title={t('mcp-manage-system')}
+					description={t('mcp-manage-system-description')}
+					checked={permissions.manageSystem}
+					disabled={busy}
+					onCheckedChange={(checked) => onUpdate({manageSystem: checked})}
+				/>
 			</div>
-		</div>
+		</section>
 	)
 }
 
 // One row per owner-created credential. The label is trusted because the owner
 // selected it; protocol clientInfo remains display-only telemetry within that
 // credential and cannot impersonate another row.
-function ConnectionStatus({tokens}: {tokens: McpToken[]}) {
+function ConnectionStatus({
+	tokens,
+	revoking,
+	onRevoke,
+}: {
+	tokens: McpToken[]
+	revoking: boolean
+	onRevoke: (token: McpToken) => void
+}) {
 	const {t} = useTranslation()
+	// The rows' relative times and live dots depend on the clock, which the
+	// compiler-memoized rows only see as a prop. A slow tick keeps them current,
+	// and a poll can bring timestamps newer than the last tick.
+	const [clock, setClock] = useState(() => Date.now())
+	useInterval(() => setClock(Date.now()), 10_000)
+	const now = Math.max(clock, ...tokens.map((token) => token.lastRequestAt ?? token.createdAt))
 
 	return (
 		<AnimatePresence initial={false}>
 			{tokens.length > 0 ? (
 				tokens.map((token) => (
 					<AnimatedRow key={token.id} reorder>
-						<TokenConnectionRow token={token} />
+						<TokenConnectionRow token={token} now={now} revoking={revoking} onRevoke={() => onRevoke(token)} />
 					</AnimatedRow>
 				))
 			) : (
-				<AnimatedRow key='waiting' reorder>
-					<div className='flex items-center gap-3 p-3'>
-						<span className='grid size-8 shrink-0 place-items-center'>
-							<span className='size-2 rounded-full bg-white/20' />
-						</span>
-						<span className='min-w-0 flex-1 truncate text-13 font-medium -tracking-2 text-white/90'>
-							{t('mcp-connect-waiting')}
-						</span>
+				<AnimatedRow key='empty' reorder>
+					<div className='grid min-h-16 place-items-center px-4 py-5 text-center text-13 text-white/40'>
+						{t('mcp-no-agents')}
 					</div>
 				</AnimatedRow>
 			)}
@@ -720,35 +838,53 @@ function ConnectionStatus({tokens}: {tokens: McpToken[]}) {
 // several rows, "which of these is at work right now" is the glanceable question
 const CLIENT_ACTIVE_WINDOW_MS = 5 * 60 * 1000
 
-function TokenConnectionRow({token}: {token: McpToken}) {
+function TokenConnectionRow({
+	token,
+	now,
+	revoking,
+	onRevoke,
+}: {
+	token: McpToken
+	now: number
+	revoking: boolean
+	onRevoke: () => void
+}) {
 	const {t, i18n} = useTranslation()
 
 	const reportedClient = token.clients[0]
 	const agent = MCP_AGENTS.find(({id}) => id === token.agentType) ?? matchAgent(reportedClient?.name)
-	const relativeTime =
-		token.lastRequestAt === null
-			? null
-			: formatDistanceToNowStrict(new Date(token.lastRequestAt), {
-					addSuffix: true,
-					locale: languageCodeToDateLocale[i18n.language as keyof typeof languageCodeToDateLocale],
-				})
-	const active = token.lastRequestAt !== null && Date.now() - token.lastRequestAt < CLIENT_ACTIVE_WINDOW_MS
+	const relative = (timestamp: number) =>
+		formatDistanceStrict(timestamp, now, {
+			addSuffix: true,
+			locale: languageCodeToDateLocale[i18n.language as keyof typeof languageCodeToDateLocale],
+		})
+	const active = token.lastRequestAt !== null && now - token.lastRequestAt < CLIENT_ACTIVE_WINDOW_MS
+	// Connecting the same agent from two machines gives two rows with the same
+	// name and logo — when each was added is what tells them apart
+	const added = t('mcp-agent-added', {time: relative(token.createdAt)})
+	const activity =
+		token.lastRequestAt === null ? t('mcp-agent-waiting') : t('mcp-last-request', {time: relative(token.lastRequestAt)})
 
 	return (
 		<div className='flex items-center gap-3 p-3'>
 			<AgentLogoPlate agent={agent ?? OTHER_AGENT} size={32} className='shrink-0' />
 			<span className='min-w-0 flex-1'>
-				<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>{token.label}</span>
+				<span className='flex items-center gap-2'>
+					<span className='truncate text-13 font-medium -tracking-2 text-white/90'>{token.label}</span>
+					<span
+						className={cn(
+							'size-1.5 shrink-0 rounded-full',
+							active ? 'bg-green-400 shadow-[0_0_6px] shadow-green-400/60' : 'bg-white/15',
+						)}
+					/>
+				</span>
+				{/* On narrow screens the line breaks between its two halves, never
+				    inside one */}
 				<span className='block text-12 leading-tight text-white/40'>
-					{relativeTime ? t('mcp-last-request', {time: relativeTime}) : t('mcp-connect-waiting')}
+					<span className='whitespace-nowrap'>{added} ·</span> <span className='whitespace-nowrap'>{activity}</span>
 				</span>
 			</span>
-			<span
-				className={cn(
-					'size-2 shrink-0 rounded-full',
-					active ? 'bg-green-400 shadow-[0_0_6px] shadow-green-400/60' : 'bg-white/15',
-				)}
-			/>
+			<RowRemoveButton label={t('mcp-remove-agent', {name: token.label})} disabled={revoking} onClick={onRevoke} />
 		</div>
 	)
 }

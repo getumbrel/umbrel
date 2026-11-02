@@ -5,6 +5,7 @@ import {useCopyToClipboard} from 'react-use'
 
 import {Button} from '@/components/ui/button'
 import {cn} from '@/lib/utils'
+import {useUserApp} from '@/providers/apps'
 import {
 	cursorDeeplink,
 	genericSnippet,
@@ -17,7 +18,7 @@ import {
 } from '@/routes/settings/mcp/agents'
 import {AgentLogoPlate} from '@/routes/settings/mcp/constellation'
 import {McpStatusCard} from '@/routes/settings/mcp/status-card'
-import {sleep} from '@/utils/misc'
+import {appToUrl, sleep} from '@/utils/misc'
 
 // Everything needed to finish the job in one sitting: a paste-ready setup per
 // agent (each snippet carries the show-once token), a plain-language message
@@ -49,6 +50,7 @@ export function ConnectView({
 	// OpenClaw app installed, the user may still be connecting an OpenClaw on
 	// their laptop, which needs the dashboard host, not the container gateway
 	const [connectingElsewhere, setConnectingElsewhere] = useState(false)
+	const {app: murmurApp} = useUserApp('murmur')
 
 	const selectAgent = (id: McpAgentId | 'generic') => {
 		setSelected(id)
@@ -75,6 +77,7 @@ export function ConnectView({
 		cursor: t('mcp-connect-hint-cursor'),
 		openclaw: t('mcp-connect-hint-openclaw'),
 		hermes: t('mcp-connect-hint-hermes'),
+		murmur: t('mcp-connect-hint-murmur'),
 		generic: t('mcp-connect-hint-generic'),
 	}
 	// The standard hints point at "your terminal" / "your dotfiles" — the wrong
@@ -82,13 +85,20 @@ export function ConnectView({
 	const installedHintByAgent: Partial<Record<McpAgentId | 'generic', string>> = {
 		openclaw: t('mcp-connect-hint-openclaw-installed'),
 		hermes: t('mcp-connect-hint-hermes-installed'),
+		murmur: t('mcp-connect-hint-murmur-installed'),
 	}
 	const hint = (onThisUmbrel ? installedHintByAgent[selected] : undefined) ?? hintByAgent[selected]
 
 	// lastRequestAt resets server-side on every enable/regenerate, so any value
 	// at all means this very token has already been used successfully
 	const connected = lastRequestAt !== null
-	const connectedAgent = matchAgent(client?.name)
+	// Murmur's agents run in its own Hermes, which says hello as Hermes, so a
+	// key made for Murmur greets as Murmur when Hermes is the one using it
+	const reportedAgent = matchAgent(client?.name)
+	const connectedAgent =
+		initialAgent === 'murmur' && reportedAgent?.id === 'hermes'
+			? MCP_AGENTS.find(({id}) => id === 'murmur')
+			: reportedAgent
 	const connectedName = connectedAgent?.name ?? client?.title ?? client?.name
 
 	return (
@@ -123,6 +133,26 @@ export function ConnectView({
 							<a href={cursorDeeplink(endpointUrl, token)}>{t('mcp-connect-add-to-cursor')}</a>
 						</Button>
 					)}
+					{/* Murmur on this Umbrel takes the key from the fragment of its own
+					    settings page (never sent to a server), clears it from the
+					    address bar and connects when the user taps Connect. Opened
+					    directly: launching the app the usual way would put the key in
+					    umbrelOS's own URL. */}
+					{selected === 'murmur' && onThisUmbrel && murmurApp && (
+						<Button
+							size='sm'
+							className='self-start'
+							onClick={() =>
+								window.open(
+									`${appToUrl(murmurApp)}/settings/umbrel#token=${encodeURIComponent(token)}`,
+									'_blank',
+									'noopener',
+								)
+							}
+						>
+							{t('mcp-connect-open-murmur')}
+						</Button>
+					)}
 					<CopyCard display={snippet(maskedToken)} value={snippet(token)} />
 					{agentInstalled && agent && (
 						<button
@@ -137,14 +167,17 @@ export function ConnectView({
 					)}
 				</div>
 
-				<div className='flex flex-col gap-2.5'>
-					<h3 className='text-13 font-medium -tracking-2 text-white/90'>{t('mcp-connect-message-label')}</h3>
-					<CopyCard
-						display={t('mcp-connect-message', {url: endpointUrl, token: maskedToken})}
-						value={t('mcp-connect-message', {url: endpointUrl, token})}
-						mono={false}
-					/>
-				</div>
+				{/* Murmur is connected from its own settings, not by its agents */}
+				{selected !== 'murmur' && (
+					<div className='flex flex-col gap-2.5'>
+						<h3 className='text-13 font-medium -tracking-2 text-white/90'>{t('mcp-connect-message-label')}</h3>
+						<CopyCard
+							display={t('mcp-connect-message', {url: endpointUrl, token: maskedToken})}
+							value={t('mcp-connect-message', {url: endpointUrl, token})}
+							mono={false}
+						/>
+					</div>
+				)}
 
 				{/* The tip stays out of the way when the agent lives on this very
 				    Umbrel — the container gateway URL above works regardless of
@@ -156,7 +189,7 @@ export function ConnectView({
 
 			<div className='px-5'>
 				<Button className='w-full' onClick={onDone}>
-					{t('mcp-connect-next')}
+					{t('done')}
 				</Button>
 			</div>
 		</div>
