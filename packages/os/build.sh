@@ -128,6 +128,15 @@ function main() {
         dev="true"
     fi
 
+    # Pull the Rugix Bakery image while the root filesystems build, rather than
+    # after. run-bakery still pulls it again, which is quick once it's here, and
+    # reports the error if this pull failed.
+    local bakery_pull_pid=""
+    if [ -z "${SKIP_RUGIX_ARTIFACTS:-}" ] && [ "${RUGIX_DEV:-false}" = "false" ]; then
+        docker pull --quiet "${RUGIX_BAKERY_IMAGE}" > /dev/null 2>&1 &
+        bakery_pull_pid=$!
+    fi
+
     # Enable QEMU/binfmt-based multi-platform support for building arm64 on
     # amd64 or vice versa, e.g., to build for Pi 5 on an x86 system. Skipped when
     # the host already runs both architectures well, since installing the QEMU
@@ -157,6 +166,9 @@ function main() {
     fi
 
     if [ -z "${SKIP_RUGIX_ARTIFACTS:-}" ]; then
+        if [ -n "${bakery_pull_pid}" ]; then
+            wait "${bakery_pull_pid}" || true
+        fi
         build_rugix_artifacts "${release}" "${dev}"
     fi
 
@@ -273,8 +285,9 @@ function build_rugix_artifacts() {
 
     # Make sure that the Rugix build directory exists.
     mkdir -p rugix/build/umbrelos-root
-    # Copy the root filesystems previously build with Docker.
-    cp build/*.tar rugix/build/umbrelos-root
+    # Hard link the root filesystems previously built with Docker. Copying them
+    # takes a while, they're several GB each, and Rugix Bakery only reads them.
+    ln -f build/*.tar rugix/build/umbrelos-root
     # Copy `/etc/hostname` and `/etc/hosts` such that Rugix can fix them.
     cp overlay/etc/{hostname,hosts} rugix/recipes/fix-overlay/files
     
