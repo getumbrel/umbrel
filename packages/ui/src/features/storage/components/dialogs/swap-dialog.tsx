@@ -533,6 +533,18 @@ export function SwapDialog({
 		t('storage-manager.swap.step-power-on', {deviceName}),
 		dv('storage-manager.swap.step-return-to-storage-manager'),
 	]
+	// A larger replacement only adds space once the drives sharing its data are larger too:
+	// the other drive of an HDD pair, or every SSD in the pool, since FailSafe uses the
+	// smallest SSD's size on all of them. Accelerator SSDs add no storage space.
+	const isDataMember = raidStatus?.devices?.some((member) => member.id === targetId)
+	const largerDriveNote =
+		isMissingMember || !isDataMember
+			? null
+			: raidStatus?.topology === 'mirror'
+				? t('storage-manager.swap.larger-drives-pair')
+				: raidStatus?.topology === 'raidz'
+					? t('storage-manager.swap.larger-ssds')
+					: null
 
 	return (
 		<>
@@ -594,6 +606,8 @@ export function SwapDialog({
 								))}
 							</div>
 						)}
+
+						{largerDriveNote && <p className='text-13 leading-relaxed text-white/50'>{largerDriveNote}</p>}
 
 						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
