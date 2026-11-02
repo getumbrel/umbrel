@@ -1,0 +1,53 @@
+name: Native amd64 kernel base
+
+on:
+  push:
+    paths:
+      - 'packages/os/umbrelos.Dockerfile'
+      - 'packages/os/linux-packages.sha256'
+      - 'packages/os/build-steps/**'
+      - 'packages/os/patches/**'
+      - 'packages/os/tests/kernel.test.sh'
+      - '.github/workflows/kernel-base.yml'
+  pull_request:
+    paths:
+      - 'packages/os/umbrelos.Dockerfile'
+      - 'packages/os/linux-packages.sha256'
+      - 'packages/os/build-steps/**'
+      - 'packages/os/patches/**'
+      - 'packages/os/tests/kernel.test.sh'
+      - '.github/workflows/kernel-base.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kernel-base:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build native amd64 base with default drivers
+        shell: bash
+        run: |
+          set -o pipefail
+          test "$(uname -m)" = x86_64
+          docker build --progress=plain --platform=linux/amd64 \
+            --target=umbrelos-base -t umbrel-kernel-ci:amd64 \
+            -f packages/os/umbrelos.Dockerfile . 2>&1 | tee native-kernel-build.log
+      - name: Check installed kernel and ZFS
+        run: |
+          docker run --rm --network=none --cap-drop=ALL \
+            --security-opt=no-new-privileges -i umbrel-kernel-ci:amd64 \
+            bash < packages/os/tests/kernel.test.sh
+      - name: Preserve build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-amd64-kernel-build
+          path: native-kernel-build.log
+          if-no-files-found: ignore
+          retention-days: 7

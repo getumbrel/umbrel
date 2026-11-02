@@ -3,6 +3,8 @@ ARG DEBIAN_VERSION=trixie
 # and apt repositories independently.
 ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20260713
 ARG APT_SNAPSHOT_DATE=20260727
+ARG LINUX_VERSION=6.12.113-1
+ARG LINUX_SNAPSHOT_DATE=20261031T000000Z
 ARG BASE_VARIANT=""
 
 ARG DOCKER_VERSION=28.5.0
@@ -100,18 +102,34 @@ FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base
 ARG APT_SNAPSHOT_DATE
 ARG TARGETARCH
 ARG NVIDIA_CUDA_SUPPORT
+ARG LINUX_VERSION
+ARG LINUX_SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
 
-# Install Linux kernel, firmware, and ZFS
-RUN apt-get install --yes \
-    zfs-dkms \
-    zfsutils-linux \
-    linux-headers-${TARGETARCH} \
-    linux-image-${TARGETARCH} \
-    firmware-linux
+# Debian's trixie-security kernel fixes CVE-2026-98432. Keep its signed images,
+# matching headers, kbuild and meta-packages separate from the OS-wide snapshot.
+# The Raspberry Pi variant uses its own kernel provider in setup-raspberrypi.sh.
+COPY packages/os/linux-packages.sha256 /tmp/linux-packages.sha256
+RUN set -eu; \
+    apt-get install --yes ca-certificates curl; \
+    mkdir -p /tmp/linux; \
+    grep -E "_(${TARGETARCH}|all)\\.deb$" /tmp/linux-packages.sha256 > /tmp/linux/packages.sha256; \
+    while read -r checksum package_path; do \
+        package_file="/tmp/linux/${package_path##*/}"; \
+        curl -fsSL "https://snapshot.debian.org/archive/debian-security/${LINUX_SNAPSHOT_DATE}/${package_path}" -o "${package_file}"; \
+        echo "${checksum}  ${package_file}" | sha256sum -c -; \
+    done < /tmp/linux/packages.sha256; \
+    apt-get install --yes --no-remove /tmp/linux/*.deb; \
+    for package in linux-image-${TARGETARCH} linux-headers-${TARGETARCH}; do \
+        test "$(dpkg-query -W -f='${Version}' "${package}")" = "${LINUX_VERSION}"; \
+    done; \
+    rm -rf /tmp/linux /tmp/linux-packages.sha256
+
+# Configure the kernel headers and compiler before DKMS runs its build hooks.
+RUN apt-get install --yes zfs-dkms zfsutils-linux firmware-linux
 
 # Install amd64-specific microcode, firmware, and network drivers
 RUN set -e; \
@@ -135,8 +153,11 @@ RUN set -e; \
 # containers. Use Debian's driver-library and Vulkan ICD package contracts so
 # all private compute, video, GLX, EGL, and Vulkan dependencies stay
 # version-matched.
+COPY packages/os/patches/nvidia-pci-resize.patch /tmp/nvidia-pci-resize.patch
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
+        apt-get install --yes --no-install-recommends patch; \
+        /build-steps/patch-nvidia-kernel.sh /tmp/nvidia-pci-resize.patch; \
         apt-get install --yes --no-install-recommends \
             nvidia-open-kernel-dkms \
             nvidia-driver-libs \
@@ -144,7 +165,12 @@ RUN set -e; \
             libnvcuvid1 \
             libnvidia-encode1 \
             nvidia-smi \
-            nvidia-vulkan-icd; \
+            nvidia-vulkan-icd || { \
+                for build_log in /var/lib/dkms/nvidia*/*/build/make.log; do \
+                    if [ -f "${build_log}" ]; then cat "${build_log}"; fi; \
+                done; \
+                exit 1; \
+            }; \
         install --directory /etc/vulkan/icd.d; \
         cp /usr/share/vulkan/icd.d/nvidia_icd.json \
             /etc/vulkan/icd.d/nvidia_icd.json; \
@@ -152,7 +178,8 @@ RUN set -e; \
         rm -f \
             /usr/share/vulkan/icd.d/nvidia_icd.json \
             /usr/share/vulkan/implicit_layer.d/nvidia_layers.json; \
-    fi
+    fi; \
+    rm -f /tmp/nvidia-pci-resize.patch
 
 # Keep the cross-hardware acceleration contract explicit. These options are
 # provided by Debian's generic amd64 kernel and expose /dev/dri for Vulkan plus
@@ -163,6 +190,11 @@ RUN set -e; \
         grep -q '^CONFIG_HSA_AMD=y$' /boot/config-*; \
         grep -q '^CONFIG_DRM_NOUVEAU=m$' /boot/config-*; \
     fi
+
+# Validate the actual generic kernel, initramfs, headers and ZFS integration in
+# every build, including the native amd64 and arm64 CI jobs.
+COPY packages/os/tests/kernel.test.sh /tmp/kernel.test.sh
+RUN bash /tmp/kernel.test.sh && rm /tmp/kernel.test.sh
 
 # Cleanup build steps.
 RUN rm -rf /build-steps
