@@ -116,6 +116,8 @@ function main() {
     # override the Dockerfile's fixed value.
     source_date_epoch="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || date +%s)}"
     unset SOURCE_DATE_EPOCH
+    source_date="$(date -u -d "@${source_date_epoch}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+        || date -u -r "${source_date_epoch}" +%Y-%m-%dT%H:%M:%SZ)"
 
     release="${1:-}"
     dev="false"
@@ -315,6 +317,9 @@ function build_rugix_artifacts() {
         # for the Raspberry Pi bootloader.
         DOCKER_FLAGS="--entrypoint /project/fix-umbrelos-pi-gpt.sh" run_bakery
         maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.img" "../build/umbrelos-pi.img"
+        # Date the image by the commit time too, since the release zips it and
+        # zip records its modification time.
+        maybe_sudo touch -d "${source_date}" "../build/umbrelos-pi.img"
         maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.rugixb" "../build/umbrelos-pi.rugixb"
     fi
     if [ -z "${SKIP_PI:-}" ] && [ -z "${SKIP_PI_MBR:-}" ]; then
@@ -381,9 +386,6 @@ function bake_rugix_image() {
     local system="$1"
     local release="$2"
 
-    local source_date
-    source_date="$(date -u -d "@${source_date_epoch}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
-        || date -u -r "${source_date_epoch}" +%Y-%m-%dT%H:%M:%SZ)"
     run_bakery bake image --release-version "$release" --source-date "$source_date" "$system"
 
     # Rugix Bakery's images vary between builds and build machines, so fix

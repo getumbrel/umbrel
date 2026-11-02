@@ -155,8 +155,10 @@ graph TD
 Building the same commit produces bit-for-bit identical amd64, arm64 and
 Raspberry Pi images (`umbrelos-amd64.img`, `umbrelos-arm64.img`,
 `umbrelos-pi.img`, `umbrelos-pi4.img`), update bundles (`umbrelos-amd64.update`,
-`umbrelos-arm64.update`, `umbrelos-pi.update`) and multi-arch Docker image, on
-any machine. Anyone can rebuild a release and check it against the published
+`umbrelos-arm64.update`, `umbrelos-pi.update`), compressed images
+(`umbrelos-amd64.img.xz`, `umbrelos-pi.img.zip`), USB installer
+(`umbrelos-amd64-usb-installer.iso`) and multi-arch Docker image, on any
+machine. Anyone can rebuild a release and check it against the published
 `SHA256SUMS`:
 
 ```sh
@@ -173,6 +175,21 @@ And the Docker image against the digest in the release's `docker-umbrelos-<versi
 SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true \
     DOCKER_IMAGE_OUTPUT=type=oci,dest=build/umbrelos-docker.tar ./build.sh
 tar -xOf build/umbrelos-docker.tar index.json | jq -r '.manifests[0].digest'
+```
+
+The compressed images and USB installer are made from the images, the same way
+the release job makes them. Build the installer with an empty Nix store, since
+one left by an older build may hold store paths built without Nix's sandbox,
+which differ:
+
+```sh
+npm run build:pi <version>
+(cd build && TZ=UTC zip -X umbrelos-pi.img.zip umbrelos-pi.img)
+npm run build:amd64:usb-installer:prepare # Writes build/umbrelos-amd64.img.xz
+docker volume rm umbrelos-usb-installer-nix
+npm run build:amd64:usb-installer
+shasum -a 256 build/umbrelos-pi.img.zip build/umbrelos-amd64.img.xz \
+    build/umbrelos-amd64-usb-installer.iso
 ```
 
 Building from a clean checkout matters: untracked files in the repo end up in
@@ -222,6 +239,13 @@ How the build stays reproducible:
   derives or normalizes all of that. Ext4 filesystems get fixed UUIDs and hash
   seeds, and the system partitions have fixed sizes, since Bakery's computed
   size depends on the host filesystem's directory sizes.
+- **Release files record no build metadata.** xz records none. zip records
+  the image's modification time, owner and access time, so `build.sh` dates
+  the Pi image by the commit time and the release job zips it with `-X` in
+  UTC. The USB installer's Nix builds run in Nix's sandbox, since otherwise
+  they build in randomly named directories that systemd's hwdb records. The
+  files extracted to re-master the ISO are dated by the commit time, which
+  xorriso also takes the ISO's own dates and IDs from.
 
 To check a change keeps the build reproducible, build the same commit twice
 with separate BuildKit caches and compare the checksums. That doesn't catch

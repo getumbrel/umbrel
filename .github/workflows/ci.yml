@@ -864,10 +864,13 @@ jobs:
           wait $pid3 || exit 1
       # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
       - name: Compress release assets
-        # Awkward hack to run in parallel but correctly handle errors
+        # Awkward hack to run in parallel but correctly handle errors.
+        # zip -X leaves out the image's owner and access time, and TZ=UTC stops
+        # the runner's timezone changing the recorded modification time, so the
+        # zip is reproducible.
         run: |
           cd build
-          zip umbrelos-pi.img.zip umbrelos-pi.img &
+          TZ=UTC zip -X umbrelos-pi.img.zip umbrelos-pi.img &
           pid1=$!
           sudo xz --keep --threads=0 umbrelos-amd64.img &
           pid2=$!
