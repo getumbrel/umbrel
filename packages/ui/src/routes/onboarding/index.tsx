@@ -11,7 +11,7 @@ import {cn} from '@/lib/utils'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {useOnboardingDevice} from '@/routes/onboarding/use-onboarding-device'
 import {trpcReact} from '@/trpc/trpc'
-import {supportedLanguageCodes} from '@/utils/language'
+import {matchBrowserLanguage} from '@/utils/language'
 
 // Attempt to auto-select a suitable language from the user's browser preferences
 function useAutoDetectLanguage() {
@@ -27,16 +27,11 @@ function useAutoDetectLanguage() {
 		const {languages: browserLanguageCodes} = navigator
 		if (!Array.isArray(browserLanguageCodes)) return
 
-		// Try to find a supported language code
-		for (const languageCode of browserLanguageCodes) {
-			const baseCode = languageCode.split('-')[0] // eg. 'en'
-
-			// If we support the language, set it
-			if ((supportedLanguageCodes as readonly string[]).includes(baseCode)) {
-				setLang(baseCode as any)
-				sessionStorage.setItem('temporary-language', baseCode)
-				break
-			}
+		// If we support one of them, set it
+		const languageCode = matchBrowserLanguage(browserLanguageCodes)
+		if (languageCode) {
+			setLang(languageCode)
+			sessionStorage.setItem('temporary-language', languageCode)
 		}
 	}, [])
 }

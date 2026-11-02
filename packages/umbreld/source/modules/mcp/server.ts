@@ -86,6 +86,10 @@ function instructionsFor(permissions: McpPermissions, baseUrl: string) {
 		`System management: ${permissions.manageSystem ? 'granted' : 'not granted'}.`,
 		`Machine control access: ${machineAccess}.`,
 		`Machine creation: ${permissions.createMachines ? 'granted' : 'not granted'}.`,
+		// Ungranted tools are never registered, so the permission errors that
+		// point to Settings never reach the agent. Without this it only knows it
+		// lacks a tool, and tells the user the request is impossible.
+		`When the user asks for something that needs access you have not been granted, tell them it can be turned on rather than that it is impossible. ${MCP_PERMISSION_REMEDIATION} Newly granted tools appear once the client reconnects.`,
 		hasMachineGrants
 			? 'Granted machines can be started, stopped, reconfigured, deleted, watched through get_machine_screenshot, and driven with keyboard and mouse through control_machine, which returns a fresh screenshot after every action. Deleting a machine permanently deletes its virtual disk.'
 			: '',

@@ -191,7 +191,10 @@ export function AppCardCompact({app, status}: {app: RegistryApp; status?: AppSto
 					<img src={app.icon} alt='' className='absolute inset-0 h-full w-full mix-blend-color' draggable={false} />
 				</div>
 			</div>
-			<div className='relative flex flex-col items-center gap-2'>
+			{/* w-full caps this column at the card's width: under the card's
+			    items-center it would otherwise size to its content, so a long
+			    name would widen it past the card instead of truncating */}
+			<div className='relative flex w-full min-w-0 flex-col items-center gap-2'>
 				{/* NOTE: AppIcon's size prop sets inline width/height, so responsive
 				    size classes would silently lose — keep every copy at exactly 72 */}
 				<AppIcon

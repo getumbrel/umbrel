@@ -346,6 +346,23 @@ test('instructions are regenerated from the current grants', async () => {
 	}
 })
 
+test('without grants the instructions say where access is turned on', async () => {
+	const client = new Client({name: 'umbreld-no-grants-test', version: '1.0.0'})
+	try {
+		await client.connect(transport())
+		const instructions = client.getInstructions()
+		// The tools are absent, so their permission errors can never point the
+		// agent to Settings; the instructions have to
+		expect((await client.listTools()).tools.map(({name}) => name)).not.toContain('restart_device')
+		expect(instructions).toContain('System management: not granted')
+		expect(instructions).toContain('tell them it can be turned on rather than that it is impossible')
+		expect(instructions).toContain('Settings → AI agents (MCP)')
+		expect(instructions).toContain('Newly granted tools appear once the client reconnects')
+	} finally {
+		await client.close()
+	}
+})
+
 test('transfer URLs honor the forwarded scheme and host from ingress', async () => {
 	permissions = {...noPermissions, files: ['/Home/Shared']}
 	const client = new Client({name: 'umbreld-forwarded-test', version: '1.0.0'})
