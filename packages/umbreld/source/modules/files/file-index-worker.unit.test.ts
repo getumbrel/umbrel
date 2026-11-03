@@ -9,6 +9,7 @@ import pRetry from 'p-retry'
 import {afterEach, expect, test, vi} from 'vitest'
 
 import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {Blake3Hasher} from './blake3.ts'
 import FileIndex, {type FileIndexRoot} from './file-index.ts'
 import type {
 	FileIndexRequestMethod,
@@ -136,6 +137,66 @@ test('routes the complete Photos repository surface through the worker boundary'
 		name: 'Worker album',
 	})
 	snapshot.close()
+})
+
+test('carries backup receipts, matches and cloud identities across the worker boundary', async () => {
+	const {homeDirectory, index} = await fixture()
+	await index.start()
+	await index.reconcileRoot('/Home', 'backup-worker')
+	await index.initializePhotos('owner')
+	// The new phone continues the old phone's source, so both keys are its
+	const phone = 'iphone:phone'
+	const otherPhone = 'iphone:other-phone'
+	const oldKey = 'a'.repeat(64)
+	const newKey = 'b'.repeat(64)
+	const identity = {cloudIdentifier: 'asset-1', role: 'photo'}
+	await index.photosUpsertBackupSource('owner', phone, 'iPhone', 1)
+	await index.photosUpsertBackupSource('owner', otherPhone, 'iPhone (2)', 2)
+	const systemPath = nodePath.join(homeDirectory, 'Photos', 'iPhone', 'aa', `${oldKey}.heic`)
+	await fse.outputFile(systemPath, 'photo')
+	const stats = await fse.lstat(systemPath, {bigint: true})
+	const hasher = new Blake3Hasher()
+	hasher.update(Buffer.from('photo'))
+	const hash = hasher.digestBuffer()
+	await index.photosRegisterBackupResource(
+		'owner',
+		phone,
+		oldKey,
+		systemPath,
+		hash,
+		{
+			inode: stats.ino.toString(),
+			size: Number(stats.size),
+			modifiedNs: stats.mtimeNs.toString(),
+			ctimeNs: stats.ctimeNs.toString(),
+		},
+		'IMG_0001.HEIC',
+		undefined,
+		identity,
+	)
+
+	// A Buffer comes back from the worker as a plain Uint8Array unless converted
+	const [receipt] = await index.photosConfirmedBackupResources('owner', phone, [oldKey])
+	expect(Buffer.isBuffer(receipt!.contentHash) && receipt!.contentHash.equals(hash)).toBe(true)
+	const [match] = await index.photosBackupCloudIdentityMatches('owner', phone, [identity])
+	expect(Buffer.isBuffer(match!.contentHash) && match!.contentHash.equals(hash)).toBe(true)
+	expect(match).toMatchObject({...identity, originalFilename: 'IMG_0001.HEIC', locations: [{bytes: 5}]})
+	await expect(index.photosBackupCloudIdentityMatches('owner', otherPhone, [identity])).resolves.toStrictEqual([])
+	await expect(index.photosBackupSourceContentLocations('owner', phone, hash)).resolves.toMatchObject([
+		{path: `/Home/Photos/iPhone/aa/${oldKey}.heic`, bytes: 5},
+	])
+	await expect(index.photosBackupSourceContentLocations('owner', otherPhone, hash)).resolves.toStrictEqual([])
+	await expect(
+		index.photosRecordMatchedBackupResources('owner', phone, [{resourceKey: newKey, hash, cloud: identity}]),
+	).resolves.toStrictEqual([newKey])
+	await expect(
+		index.photosAttachBackupCloudIdentities('owner', phone, [
+			{resourceKey: newKey, cloudIdentifier: 'asset-2', role: 'photo'},
+		]),
+	).resolves.toBe(1)
+	await expect(index.photosConfirmedBackupResources('owner', phone, [newKey])).resolves.toMatchObject([
+		{resourceKey: newKey, path: `/Home/Photos/iPhone/aa/${oldKey}.heic`, bytes: 5},
+	])
 })
 
 test('keeps the main event loop responsive during CPU-heavy fuzzy searches', async () => {

@@ -95,6 +95,7 @@ describe('photo backup API', () => {
 			revision: {inode: string; size: number; modifiedNs: string; ctimeNs: string},
 			_originalFilename?: string,
 			_sourceCreationDate?: number,
+			_cloud?: {cloudIdentifier: string; role: string},
 		) => {
 			const receipt = {
 				resourceKey,
@@ -151,6 +152,37 @@ describe('photo backup API', () => {
 			return {receipt, revision}
 		},
 	)
+	// Another receipt in this source already holds the bytes: record the new
+	// key against its location without publishing a second copy.
+	const registerSourceDuplicateBackupResource = vi.fn(
+		async (
+			_source: typeof source,
+			resourceKey: string,
+			hash: Buffer,
+			_originalFilename: string,
+			_sourceCreationDate?: number,
+			_cloud?: {cloudIdentifier: string; role: string},
+		) => {
+			for (const registered of [...registeredResources.values()]) {
+				if (!registered.hash.equals(hash)) continue
+				if (!(await backupResourceRevisionIsCurrent('0', registered.receipt.path, registered.revision))) continue
+				const receipt = {...registered.receipt, resourceKey}
+				registeredResources.set(resourceKey, {hash: Buffer.from(hash), receipt, revision: registered.revision})
+				return {receipt, revision: registered.revision}
+			}
+		},
+	)
+	const claimBackupResources = vi.fn(
+		async ({
+			resources,
+		}: {
+			accountId: string
+			sourceId: string
+			createdAt: number
+			resources: Array<{resourceKey: string}>
+		}): Promise<Array<{resourceKey: string; bytes: number}> | undefined> =>
+			resources.map(({resourceKey}) => ({resourceKey, bytes: 5})),
+	)
 	const backupResourceRevisionIsCurrent = vi.fn(
 		async (
 			_accountId: string,
@@ -192,7 +224,9 @@ describe('photo backup API', () => {
 				`/Home/Photos/${source.directoryName}/${resourceKey.slice(0, 2)}/${resourceKey}.${fileExtension.toLowerCase()}`,
 			registerBackupResource,
 			registerMatchingBackupResource,
+			registerSourceDuplicateBackupResource,
 			backupResourceRevisionIsCurrent,
+			claimBackupResources,
 		}
 		const files = {
 			virtualToSystemPath: async (path: string) => path.replace('/Home', mediaDirectory),
@@ -240,7 +274,9 @@ describe('photo backup API', () => {
 		fileDurability.failSyncPath = undefined
 		registerBackupResource.mockClear()
 		registerMatchingBackupResource.mockClear()
+		registerSourceDuplicateBackupResource.mockClear()
 		backupResourceRevisionIsCurrent.mockClear()
+		claimBackupResources.mockClear()
 		getBackupSource.mockClear()
 		withBackupSource.mockClear()
 		sourceActive = true
@@ -287,10 +323,94 @@ describe('photo backup API', () => {
 
 	test.each([
 		['POST', '/api/photos/upload'],
+		['POST', '/api/photos/claim'],
 		['GET', '/api/photos/future-route'],
 	] as const)('%s %s is denied before its handler runs', async (method, path) => {
 		const response = await got(`${origin}${path}`, {method, throwHttpErrors: false})
 		expect(response.statusCode).toBe(401)
+		expect(claimBackupResources).not.toHaveBeenCalled()
+	})
+
+	function claim(resources: unknown, grant = 'photo-grant', body: Record<string, unknown> = {}) {
+		return got(`${origin}/api/photos/claim`, {
+			method: 'POST',
+			headers: {Authorization: `Bearer ${grant}`},
+			json: {...body, resources},
+			throwHttpErrors: false,
+		})
+	}
+
+	test("claims a bounded batch of resources for the grant's own backup", async () => {
+		const resource = {resourceKey: RESOURCE_KEY, fileExtension: 'heic', cloudIdentifier: 'asset-1', role: 'photo'}
+		// The grant names the account and backup; the body can't
+		const response = await claim([resource], 'photo-grant', {accountId: 'Alice', sourceId: 'other'})
+		expect(response.statusCode).toBe(200)
+		expect(JSON.parse(response.body)).toEqual([{resourceKey: RESOURCE_KEY, bytes: 5}])
+		expect(claimBackupResources).toHaveBeenCalledWith({
+			accountId: '0',
+			sourceId: SOURCE_ID,
+			createdAt: source.createdAt,
+			resources: [resource],
+		})
+		// Without an identity, a resource is only confirmed by its key
+		const keyOnly = {resourceKey: RESOURCE_KEY, fileExtension: 'heic'}
+		expect((await claim([keyOnly])).statusCode).toBe(200)
+		expect(claimBackupResources).toHaveBeenLastCalledWith({
+			accountId: '0',
+			sourceId: SOURCE_ID,
+			createdAt: source.createdAt,
+			resources: [keyOnly],
+		})
+
+		expect((await claim([resource], 'invalid-grant')).statusCode).toBe(401)
+		for (const invalid of [
+			{...resource, role: 'Photo'},
+			{...resource, role: ''},
+			{...resource, cloudIdentifier: ''},
+			{...resource, cloudIdentifier: 'x'.repeat(1025)},
+			{...resource, cloudIdentifier: 'asset\n1'},
+			// Both or neither
+			{resourceKey: RESOURCE_KEY, fileExtension: 'heic', cloudIdentifier: 'asset-1'},
+			{resourceKey: RESOURCE_KEY, fileExtension: 'heic', role: 'photo'},
+		]) {
+			expect((await claim([invalid])).statusCode).toBe(400)
+		}
+		const tooMany = Array.from({length: 257}, (_, index) => ({
+			...resource,
+			resourceKey: index.toString(16).padStart(64, '0'),
+		}))
+		expect((await claim(tooMany)).statusCode).toBe(400)
+		expect(claimBackupResources).toHaveBeenCalledTimes(2)
+	})
+
+	test('answers a body it cannot read without a server error', async () => {
+		const malformed = await got(`${origin}/api/photos/claim`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer photo-grant', 'Content-Type': 'application/json'},
+			body: '{"resources": [',
+			throwHttpErrors: false,
+		})
+		expect(malformed.statusCode).toBe(400)
+		const oversized = await claim(['x'.repeat(2 * 1024 * 1024)])
+		expect(oversized.statusCode).toBe(413)
+		expect(claimBackupResources).not.toHaveBeenCalled()
+	})
+
+	test("refuses a claim for a backup that's removed or was created again", async () => {
+		const resource = {resourceKey: RESOURCE_KEY, fileExtension: 'heic'}
+		getBackupSource.mockResolvedValueOnce(undefined as never)
+		expect((await claim([resource])).statusCode).toBe(401)
+		expect(claimBackupResources).not.toHaveBeenCalled()
+
+		// Removed, or replaced under the same id, while the body arrived
+		claimBackupResources.mockResolvedValueOnce(undefined)
+		expect((await claim([resource])).statusCode).toBe(401)
+	})
+
+	test('answers a failed claim with a server error', async () => {
+		claimBackupResources.mockRejectedValueOnce(new Error('index unavailable'))
+		const response = await claim([{resourceKey: RESOURCE_KEY, fileExtension: 'heic'}])
+		expect(response.statusCode).toBe(500)
 	})
 
 	test('distinguishes invalid upload metadata from an invalid grant', async () => {
@@ -411,6 +531,96 @@ describe('photo backup API', () => {
 		)
 	})
 
+	test('answers with the normal receipt and stores no second copy when this backup already has the bytes', async () => {
+		// The old phone's receipt and file, in the backup this phone took over
+		const oldKey = '5'.repeat(64)
+		const oldSystemPath = `${mediaDirectory}/Photos/iPhone/${oldKey.slice(0, 2)}/${oldKey}.heic`
+		await fse.outputFile(oldSystemPath, 'same photo')
+		const stats = await fse.stat(oldSystemPath, {bigint: true})
+		const revision = {
+			inode: stats.ino.toString(),
+			size: Number(stats.size),
+			modifiedNs: stats.mtimeNs.toString(),
+			ctimeNs: stats.ctimeNs.toString(),
+		}
+		const oldReceipt = {
+			resourceKey: oldKey,
+			path: `/Home/Photos/iPhone/${oldKey.slice(0, 2)}/${oldKey}.heic`,
+			bytes: 10,
+		}
+		registeredResources.set(oldKey, {hash: blake3('same photo'), receipt: oldReceipt, revision})
+
+		const response = await got(`${origin}/api/photos/upload`, {
+			method: 'POST',
+			headers: {
+				Authorization: 'Bearer photo-grant',
+				'X-Umbrel-Photo-Backup-Key': RESOURCE_KEY,
+				'X-Umbrel-Photo-Backup-Extension': 'heic',
+				'X-Umbrel-Photo-Cloud-Identifier-Base64': Buffer.from('asset-1').toString('base64'),
+				'X-Umbrel-Photo-Resource-Role': 'photo',
+				...filenameHeader(),
+			},
+			body: 'same photo',
+			throwHttpErrors: false,
+		})
+
+		expect(response.statusCode).toBe(200)
+		expect(response.headers['x-umbrel-photo-backup-key']).toBe(RESOURCE_KEY)
+		expect(response.headers['x-umbrel-upload-bytes']).toBe('10')
+		expect(JSON.parse(response.body)).toEqual({resourceKey: RESOURCE_KEY, bytes: 10})
+		expect(registerSourceDuplicateBackupResource).toHaveBeenCalledWith(
+			source,
+			RESOURCE_KEY,
+			blake3('same photo'),
+			ORIGINAL_FILENAME,
+			undefined,
+			{cloudIdentifier: 'asset-1', role: 'photo'},
+		)
+		expect(registerBackupResource).not.toHaveBeenCalled()
+		await expectNoUploadArtifacts(RESOURCE_KEY)
+		await expect(fse.readFile(oldSystemPath, 'utf8')).resolves.toBe('same photo')
+	})
+
+	test('records the PhotoKit cloud identity sent with an upload and rejects a malformed or partial one', async () => {
+		const identity = {
+			'X-Umbrel-Photo-Cloud-Identifier-Base64': Buffer.from('8A1B…/L0/001:asset').toString('base64'),
+			'X-Umbrel-Photo-Resource-Role': 'live-photo-motion',
+		}
+		const send = (resourceKey: string, headers: Record<string, string>) =>
+			got(`${origin}/api/photos/upload`, {
+				method: 'POST',
+				headers: {
+					Authorization: 'Bearer photo-grant',
+					'X-Umbrel-Photo-Backup-Key': resourceKey,
+					'X-Umbrel-Photo-Backup-Extension': 'mov',
+					...filenameHeader('IMG_1234.MOV'),
+					...headers,
+				},
+				body: 'motion',
+				throwHttpErrors: false,
+			})
+
+		const accepted = await send('6'.repeat(64), identity)
+		expect(accepted.statusCode).toBe(200)
+		expect(registerBackupResource.mock.calls[0]?.[7]).toEqual({
+			cloudIdentifier: '8A1B…/L0/001:asset',
+			role: 'live-photo-motion',
+		})
+
+		for (const headers of [
+			{'X-Umbrel-Photo-Resource-Role': 'photo'} as Record<string, string>,
+			{'X-Umbrel-Photo-Cloud-Identifier-Base64': identity['X-Umbrel-Photo-Cloud-Identifier-Base64']},
+			{...identity, 'X-Umbrel-Photo-Resource-Role': 'Photo'},
+			{...identity, 'X-Umbrel-Photo-Cloud-Identifier-Base64': 'not base64!'},
+			{...identity, 'X-Umbrel-Photo-Cloud-Identifier-Base64': Buffer.from('asset\n1').toString('base64')},
+		]) {
+			const rejected = await send('7'.repeat(64), headers)
+			expect(rejected.statusCode).toBe(400)
+			expect(JSON.parse(rejected.body)).toEqual({error: 'invalid photo backup request'})
+		}
+		expect(registerBackupResource).toHaveBeenCalledTimes(1)
+	})
+
 	test('keeps user-edited resource bytes when the phone re-uploads its version', async () => {
 		const first = await upload(RESOURCE_KEY, 'heic', 'phone original')
 		const shard = RESOURCE_KEY.slice(0, 2)
@@ -449,6 +659,7 @@ describe('photo backup API', () => {
 			expect.any(Buffer),
 			expect.any(Object),
 			originalFilename,
+			undefined,
 			undefined,
 		)
 		await expect(
@@ -492,6 +703,7 @@ describe('photo backup API', () => {
 			expect.any(Buffer),
 			expect.objectContaining({size: 7}),
 			ORIGINAL_FILENAME,
+			undefined,
 			undefined,
 		)
 		await expect(

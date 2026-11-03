@@ -15,9 +15,11 @@ member). Resource files are sharded below that folder by the first byte of their
 64-character resource key, for example `ab/abcdef….heic`, so a large library
 does not create one oversized directory. The folder layout is presentation and
 upload-routing state, not identity.
-`umbrel.db` relates each PhotoKit resource to its content using exactly
-`(account_id, source_id, resource_key, content_hash)`; the disposable file index
-resolves that hash to whichever accessible path currently contains the bytes.
+`umbrel.db` relates each PhotoKit resource to its content as
+`(account_id, source_id, resource_key, content_hash)`, plus the asset's iCloud
+identity when the client sends it (see iPhone backup below); the disposable
+file index resolves that hash to whichever accessible path currently contains
+the bytes.
 The client must assign a distinct resource key to every resource within a
 source, including separate keys for a Live Photo's still and motion resources.
 New uploads also carry the original filename because the resource-key storage
@@ -32,9 +34,11 @@ Moving or renaming an uploaded media file therefore does not lose its iPhone
 source attribution or backup receipt. Before returning a receipt, the server
 reopens the indexed path and verifies that it is still the exact indexed file
 revision; an index row alone is never treated as proof that the bytes remain on
-disk. Exact upload retries reuse matching bytes. If the same resource key later
-contains different bytes, or the user edited its ordinary Home file, publication
-uses Files' keep-both naming instead of overwriting either version.
+disk. Exact upload retries reuse matching bytes, and an upload whose bytes its
+backup already has is answered from that copy (see iPhone backup below). If
+the same resource key later contains different bytes, or the user edited its
+ordinary Home file, publication uses Files' keep-both naming instead of
+overwriting either version.
 
 Client receipts contain only the stable resource key and byte count. Filesystem
 paths remain an internal implementation detail because users can move or rename
@@ -348,8 +352,14 @@ new hash and deliberately does not inherit old state.
   moves its items to Recently Deleted so the ordinary Home index cannot
   immediately re-import them as Umbrel items. If the same bytes exist at more
   than one visible Home path, removal preserves the logical item as an Umbrel
-  item rather than risking deletion of an independently kept duplicate. The
-  `umbrel` source refuses removal.
+  item rather than risking deletion of an independently kept duplicate. It
+  also keeps bytes another iPhone's receipt names. The `umbrel` source refuses
+  removal.
+- `removalItemCount({id})` → `number` — for the remove dialog, how many of a
+  phone's items `keepItems: false` would move to Recently Deleted, counted as
+  `list` counts them: the ones nowhere else in Home and named by no other
+  phone's receipt. It reads the index as it stands, while removal rescans Home
+  first. NOT_FOUND for anything but one of the account's phones.
 
 Errors: plain tRPC errors (NOT_FOUND etc.) — the UI shows generic toasts, no
 special error-code vocabulary.
@@ -467,6 +477,88 @@ the same day's planet included). In memory umbreld holds only the
 answer from api.umbrel.com and, for an archive, up to 8 of its directories
 (some 5 MB each). With no connection, or with api.umbrel.com or the planet
 down, the UI draws the Natural Earth atlas it bundles.
+
+## iPhone backup
+
+The native apps back up PhotoKit resources with `POST /api/photos/upload` and
+a source-bound grant from `photos.createBackupGrant`. Each request carries
+`X-Umbrel-Photo-Backup-Key` (the resource key), `X-Umbrel-Photo-Backup-Extension`,
+`X-Umbrel-Photo-Original-Filename-Base64` and optionally
+`X-Umbrel-Photo-Creation-Date-Ms`. Newer apps also send
+`X-Umbrel-Photo-Cloud-Identifier-Base64` (the UTF-8 of
+`PHCloudIdentifier.stringValue`, at most 1024 bytes) and
+`X-Umbrel-Photo-Resource-Role` (the resource's part of the asset, such as
+`photo`, `live-photo-motion` or `video`; lowercase letters, digits and
+`.`, `_`, `:`, `-`). Both or neither; anything else is a 400. The answer is
+200 with `{resourceKey, bytes}` and the `X-Umbrel-Photo-Backup-Key` and
+`X-Umbrel-Upload-Bytes` headers, whether or not the bytes were stored again.
+
+**One copy per backup.** After the upload is staged and hashed, an exact
+retry of the same resource key reuses its receipt. Otherwise, if another
+receipt in this source already has the same BLAKE3 as a visible Home file,
+the server records the new receipt against that file, discards the staged
+bytes and answers normally. That covers a phone that took over this source
+sending something the old phone already sent, and two phones on one source
+sending the same photo. Only bytes this source has a receipt for are matched,
+never bytes only another source received, though like any receipt (below)
+the file recorded against can be any Home copy of them. Two uploads of the
+same new bytes at the same moment can still store two copies.
+
+**Receipts.** `photos.confirmedBackupResources({sourceId, resources:
+[{resourceKey, fileExtension}]})` returns `{resourceKey, bytes}[]` for the
+receipts that are still satisfied. A receipt is satisfied by any visible Home
+file with its bytes: the copy this source uploaded, wherever the user moved
+it, or another source's copy. Each indexed location counts once its revision
+is found unchanged on disk; when none is, the server hashes the resource's own
+upload path and each indexed location. Trash never satisfies a receipt.
+
+**Restored or new phones.** A phone restored from an old one (or moved over
+by Quick Start) continues the old phone's backup by using its source id (from
+`photos.backupSources`) as its own, so its uploads go to the same folder. Its
+first grant passes `continuing: true`, which renames the backup to its
+`suggestedName`, so the backup isn't mistaken for the old phone's and removed.
+Without it, a grant never renames an existing backup. The folder keeps its
+name, as for any rename. Any other phone starts a backup of its own and uploads
+everything. Before it uploads each batch, a phone claims what its own backup
+already has. A cloud identifier names an asset across devices on one iCloud
+Photos library, not a version of its bytes.
+`POST /api/photos/claim` with the source's backup grant as the bearer and a
+JSON body `{resources: [{resourceKey, fileExtension, cloudIdentifier?,
+role?}]}` (at most 256; the cloud identity is both fields or neither) returns
+the same shape as `confirmedBackupResources`, without any upload. The grant
+names the source. A removed source answers 401, as an upload does, and a body
+the server can't read answers 400 (413 when too large). umbrelOS without the
+route answers 401, and the client then uploads as before:
+
+- A resource that already has a satisfied receipt in this source returns it,
+  and the receipt records the cloud identity. This is how a phone that backed
+  up before identities existed becomes ready for a later restore.
+- Otherwise, if this source's receipts recorded exactly one content hash for
+  that cloud identifier and role, and those bytes are in Home, the server
+  records a receipt for the new resource key and returns it. Another source's
+  receipts are never matched.
+- A resource without a cloud identity is only confirmed by its key, as when
+  the app is installed again on the same phone and has lost its own record.
+- Anything else is absent and must be uploaded. Content matching on upload
+  then avoids a second copy when the bytes match.
+
+Unedited originals are the reliable case: their bytes are the same on every
+device. An asset edited after its first backup has receipts with two hashes
+and is never claimed. An asset edited after its only backup still has one
+hash, so the server cannot tell the new rendition from the old: clients should
+claim only resources of assets without adjustments and upload the rest. A
+Live Photo's still and motion are separate roles of one asset and are claimed
+independently, each by its own role. Receipts from before cloud identities
+can't be claimed until the phone that made them claims (and so names) them.
+
+`photos.backupSources()` → `{capabilities: 'continue-source'[], sources: {id,
+name, createdAt, lastImportAt?, lastSeenAt?, platform?, stats: {photos, videos,
+sizeBytes}}[]}` lists the account's backup sources by the client's source id,
+so a phone can continue one.
+`lastSeenAt` is when the source last got an upload grant, and `platform` is what
+its app reported then (`ios` or `android`), so a phone only continues its own
+platform's backups. Clients detect support with it: 2.0.0 answers 404 and has
+none of these capabilities.
 
 ## Events
 

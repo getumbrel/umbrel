@@ -3394,6 +3394,269 @@ test('restores iPhone attribution only after its source relation is freshly regi
 	await expect(index.photosGetItem('owner', item.id)).resolves.toMatchObject({source: {id: sourceId, type: 'iphone'}})
 })
 
+function blake3Of(contents: string) {
+	const hasher = new Blake3Hasher()
+	hasher.update(Buffer.from(contents))
+	return hasher.digestBuffer()
+}
+
+async function registerBackupFile(
+	index: FileIndex,
+	homeDirectory: string,
+	sourceId: string,
+	resourceKey: string,
+	relativePath: string,
+	contents: string,
+	cloud?: {cloudIdentifier: string; role: string},
+) {
+	const systemPath = nodePath.join(homeDirectory, relativePath)
+	await fse.outputFile(systemPath, contents)
+	const hash = blake3Of(contents)
+	await index.photosRegisterBackupResource(
+		'owner',
+		sourceId,
+		resourceKey,
+		systemPath,
+		hash,
+		await contentRevision(systemPath),
+		nodePath.basename(relativePath),
+		undefined,
+		cloud,
+	)
+	return {systemPath, hash}
+}
+
+test("confirms a continued source's receipt from the old phone's copy after a move, but not from Trash", async () => {
+	const {index, homeDirectory, trashDirectory, dataDirectory} = await fixture(undefined, {includeTrash: true})
+	await index.initializePhotos('owner')
+	// The new phone took over the old phone's source, so both keys are its
+	const phone = 'iphone:phone'
+	const oldKey = '1'.repeat(64)
+	const newKey = '2'.repeat(64)
+	await index.photosUpsertBackupSource('owner', phone, 'iPhone', 1)
+	const {systemPath, hash} = await registerBackupFile(
+		index,
+		homeDirectory,
+		phone,
+		oldKey,
+		`Photos/iPhone/11/${oldKey}.heic`,
+		'same photo',
+	)
+	const uploadedPath = `/Home/Photos/iPhone/11/${oldKey}.heic`
+	const bytes = Buffer.byteLength('same photo')
+
+	await expect(index.photosBackupSourceContentLocations('owner', phone, hash)).resolves.toStrictEqual([
+		{path: uploadedPath, bytes, revision: await indexedContentRevision(systemPath)},
+	])
+	await expect(
+		index.photosRecordMatchedBackupResources('owner', phone, [
+			{resourceKey: newKey, hash, cloud: {cloudIdentifier: 'asset-1', role: 'photo'}},
+		]),
+	).resolves.toStrictEqual([newKey])
+	await expect(index.photosConfirmedBackupResources('owner', phone, [newKey])).resolves.toStrictEqual([
+		{
+			resourceKey: newKey,
+			contentHash: hash,
+			path: uploadedPath,
+			bytes,
+			revision: await indexedContentRevision(systemPath),
+		},
+	])
+	const durable = new BetterSqlite3(nodePath.join(dataDirectory, 'umbrel.db'))
+	expect(
+		durable
+			.prepare(
+				`SELECT resource_key, cloud_identifier, resource_role FROM photos_source_resources
+				ORDER BY resource_key`,
+			)
+			.all(),
+	).toStrictEqual([
+		{resource_key: oldKey, cloud_identifier: null, resource_role: null},
+		{resource_key: newKey, cloud_identifier: 'asset-1', resource_role: 'photo'},
+	])
+	durable.close()
+
+	const moved = nodePath.join(homeDirectory, 'Trips', 'Iceland.heic')
+	await fse.move(systemPath, moved)
+	await index.movePath(systemPath, moved)
+	await expect(index.photosConfirmedBackupResources('owner', phone, [newKey])).resolves.toStrictEqual([
+		{
+			resourceKey: newKey,
+			contentHash: hash,
+			path: '/Home/Trips/Iceland.heic',
+			bytes,
+			revision: await indexedContentRevision(moved),
+		},
+	])
+
+	const trashed = nodePath.join(trashDirectory, 'Iceland.heic')
+	await fse.move(moved, trashed)
+	await index.movePath(moved, trashed)
+	await expect(index.photosConfirmedBackupResources('owner', phone, [newKey])).resolves.toStrictEqual([
+		{resourceKey: newKey, contentHash: hash},
+	])
+	await expect(index.photosBackupSourceContentLocations('owner', phone, hash)).resolves.toStrictEqual([])
+	await expect(
+		index.photosRecordMatchedBackupResources('owner', phone, [{resourceKey: '3'.repeat(64), hash}]),
+	).resolves.toStrictEqual([])
+})
+
+test('lists every Home copy of a receipt, so any current one can satisfy it', async () => {
+	const {index, homeDirectory} = await fixture()
+	await index.initializePhotos('owner')
+	const phone = 'iphone:phone'
+	const resourceKey = '4'.repeat(64)
+	await index.photosUpsertBackupSource('owner', phone, 'iPhone', 1)
+	const {systemPath, hash} = await registerBackupFile(
+		index,
+		homeDirectory,
+		phone,
+		resourceKey,
+		`Photos/iPhone/44/${resourceKey}.heic`,
+		'photo',
+	)
+	const copy = nodePath.join(homeDirectory, 'Albums', 'copy.heic')
+	await fse.outputFile(copy, 'photo')
+	await index.photosRegisterUpload('owner', copy, hash, await contentRevision(copy))
+
+	await expect(index.photosConfirmedBackupResources('owner', phone, [resourceKey])).resolves.toStrictEqual([
+		{
+			resourceKey,
+			contentHash: hash,
+			path: '/Home/Albums/copy.heic',
+			bytes: 5,
+			revision: await indexedContentRevision(copy),
+		},
+		{
+			resourceKey,
+			contentHash: hash,
+			path: `/Home/Photos/iPhone/44/${resourceKey}.heic`,
+			bytes: 5,
+			revision: await indexedContentRevision(systemPath),
+		},
+	])
+})
+
+test("never matches another phone's bytes or a library copy, so each backup keeps its own files", async () => {
+	const {index, homeDirectory} = await fixture()
+	await index.initializePhotos('owner')
+	const oldPhone = 'iphone:old-phone'
+	const newPhone = 'iphone:new-phone'
+	const oldKey = '5'.repeat(64)
+	await index.photosUpsertBackupSource('owner', oldPhone, 'iPhone', 1)
+	await index.photosUpsertBackupSource('owner', newPhone, 'iPhone (2)', 2)
+	const identity = {cloudIdentifier: 'asset-shared', role: 'photo'}
+	const {systemPath, hash} = await registerBackupFile(
+		index,
+		homeDirectory,
+		oldPhone,
+		oldKey,
+		`Photos/iPhone/55/${oldKey}.heic`,
+		'shared photo',
+		identity,
+	)
+	await expect(index.photosBackupSourceContentLocations('owner', newPhone, hash)).resolves.toStrictEqual([])
+	await expect(index.photosBackupCloudIdentityMatches('owner', newPhone, [identity])).resolves.toStrictEqual([])
+	// The old phone's file is its own, so removing it can move the file to Trash
+	await expect(index.photosSourceRemovalFiles('owner', oldPhone)).resolves.toMatchObject([
+		{path: `/Home/Photos/iPhone/55/${oldKey}.heic`},
+	])
+	expect(await fse.pathExists(systemPath)).toBe(true)
+
+	const download = nodePath.join(homeDirectory, 'Downloads', 'IMG_0001.HEIC')
+	await fse.outputFile(download, 'downloaded photo')
+	const downloaded = blake3Of('downloaded photo')
+	await index.photosRegisterUpload('owner', download, downloaded, await contentRevision(download))
+	await expect(index.photosBackupSourceContentLocations('owner', newPhone, downloaded)).resolves.toStrictEqual([])
+})
+
+test("counts the items removing a phone's backup moves to Trash, agreeing with the files it moves", async () => {
+	const enrichmentRuntime = {
+		hashFile: async (path: string) => blake3Of(await fse.readFile(path, 'utf8')),
+		generateThumbnail: async (_source: string, destination: string) => fse.outputFile(destination, 'thumbnail'),
+		extractMediaMetadata: async () => ({kind: 'photo' as const, takenAt: 1, createdAt: 1, width: 1, height: 1}),
+	}
+	const {index, homeDirectory} = await fixture(undefined, {enrichmentRuntime})
+	await index.initializePhotos('owner')
+	const oldPhone = 'iphone:old-phone'
+	const newPhone = 'iphone:new-phone'
+	await index.photosUpsertBackupSource('owner', oldPhone, 'iPhone', 1)
+	await index.photosUpsertBackupSource('owner', newPhone, 'iPhone (2)', 2)
+	// Also the new phone's own copy, only the old phone's, and only the old phone's but copied elsewhere in Home
+	await registerBackupFile(index, homeDirectory, oldPhone, 'a'.repeat(64), 'Photos/iPhone/aa/a.heic', 'a')
+	await registerBackupFile(index, homeDirectory, newPhone, 'd'.repeat(64), 'Photos/iPhone (2)/dd/d.heic', 'a')
+	await registerBackupFile(index, homeDirectory, oldPhone, 'b'.repeat(64), 'Photos/iPhone/bb/b.heic', 'b')
+	await registerBackupFile(index, homeDirectory, oldPhone, 'c'.repeat(64), 'Photos/iPhone/cc/c.heic', 'c')
+	await fse.outputFile(nodePath.join(homeDirectory, 'Trips', 'c.heic'), 'c')
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+
+	await expect(index.photosSourceRemovalItemCount('owner', oldPhone)).resolves.toBe(1)
+	await expect(index.photosSourceRemovalFiles('owner', oldPhone)).resolves.toMatchObject([
+		{path: '/Home/Photos/iPhone/bb/b.heic'},
+	])
+	await expect(index.photosSourceRemovalItemCount('owner', newPhone)).resolves.toBe(0)
+	await expect(index.photosSourceRemovalItemCount('someone-else', oldPhone)).resolves.toBe(0)
+})
+
+test('matches receipts by cloud identifier and role, and only while the asset has one version', async () => {
+	const {index, homeDirectory} = await fixture()
+	await index.initializePhotos('owner')
+	const oldPhone = 'iphone:old-phone'
+	await index.photosUpsertBackupSource('owner', oldPhone, 'iPhone', 1)
+	const live = {cloudIdentifier: 'asset-live', role: 'photo'}
+	const still = await registerBackupFile(index, homeDirectory, oldPhone, 'a'.repeat(64), 'still.heic', 'still', live)
+	await registerBackupFile(index, homeDirectory, oldPhone, 'b'.repeat(64), 'motion.mov', 'motion', {
+		...live,
+		role: 'live-photo-motion',
+	})
+	// A retry without the identity keeps the one already recorded
+	await index.photosRegisterBackupResource(
+		'owner',
+		oldPhone,
+		'a'.repeat(64),
+		still.systemPath,
+		still.hash,
+		await contentRevision(still.systemPath),
+	)
+
+	await expect(
+		index.photosBackupCloudIdentityMatches('owner', oldPhone, [
+			live,
+			{...live, role: 'video'},
+			{cloudIdentifier: 'unknown-asset', role: 'photo'},
+		]),
+	).resolves.toStrictEqual([
+		{
+			...live,
+			contentHash: still.hash,
+			originalFilename: 'still.heic',
+			locations: [{path: '/Home/still.heic', bytes: 5, revision: await indexedContentRevision(still.systemPath)}],
+		},
+	])
+
+	// Edited after its first backup: two versions, so neither is claimed
+	await registerBackupFile(index, homeDirectory, oldPhone, 'c'.repeat(64), 'edited.heic', 'edited still', live)
+	await expect(index.photosBackupCloudIdentityMatches('owner', oldPhone, [live])).resolves.toStrictEqual([])
+
+	const unnamed = await registerBackupFile(index, homeDirectory, oldPhone, 'd'.repeat(64), 'unnamed.heic', 'unnamed')
+	const identity = {cloudIdentifier: 'asset-unnamed', role: 'photo'}
+	await expect(
+		index.photosAttachBackupCloudIdentities('owner', oldPhone, [{resourceKey: 'd'.repeat(64), ...identity}]),
+	).resolves.toBe(1)
+	await expect(
+		index.photosAttachBackupCloudIdentities('owner', oldPhone, [{resourceKey: 'd'.repeat(64), ...identity}]),
+	).resolves.toBe(0)
+	await expect(index.photosBackupCloudIdentityMatches('owner', oldPhone, [identity])).resolves.toMatchObject([
+		{...identity, contentHash: unnamed.hash, locations: [{path: '/Home/unnamed.heic'}]},
+	])
+	await expect(index.photosBackupCloudIdentityMatches('someone-else', oldPhone, [identity])).resolves.toStrictEqual([])
+})
+
 test('paginates and combines Photos filters without duplicates or unstable offsets', async () => {
 	const {index, homeDirectory} = await fixture(undefined, {
 		enrichmentRuntime: {

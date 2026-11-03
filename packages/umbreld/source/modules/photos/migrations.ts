@@ -2,7 +2,7 @@ import type BetterSqlite3 from 'better-sqlite3'
 
 import {photosReadModelDirtySchema, photosReadModelDurableTriggers} from './read-model-schema.ts'
 
-export const PHOTOS_SCHEMA_VERSION = 10
+export const PHOTOS_SCHEMA_VERSION = 11
 export const PHOTOS_MIGRATION_MODULE = 'photos'
 
 export class UnsupportedPhotosSchemaError extends Error {}
@@ -236,6 +236,30 @@ export function migratePhotos(database: BetterSqlite3.Database) {
 			database.exec(photosReadModelDurableTriggers())
 			database
 				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 10, ?)')
+				.run(PHOTOS_MIGRATION_MODULE, Date.now())
+		}
+		if (version < 11) {
+			// A receipt can name the PhotoKit asset it came from, so a new or
+			// restored phone that continues this backup on the same iCloud Photos
+			// library can claim it without uploading.
+			const sourceResourceColumns = new Set(
+				(database.prepare("PRAGMA table_info('photos_source_resources')").all() as Array<{name: string}>).map(
+					({name}) => name,
+				),
+			)
+			if (!sourceResourceColumns.has('cloud_identifier')) {
+				database.exec('ALTER TABLE photos_source_resources ADD COLUMN cloud_identifier TEXT')
+			}
+			if (!sourceResourceColumns.has('resource_role')) {
+				database.exec('ALTER TABLE photos_source_resources ADD COLUMN resource_role TEXT')
+			}
+			database.exec(`
+				CREATE INDEX IF NOT EXISTS photos_source_resources_by_cloud_identifier
+					ON photos_source_resources(account_id, cloud_identifier, resource_role)
+					WHERE cloud_identifier IS NOT NULL;
+			`)
+			database
+				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 11, ?)')
 				.run(PHOTOS_MIGRATION_MODULE, Date.now())
 		}
 	})

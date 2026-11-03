@@ -6,7 +6,10 @@
 //   GET  /api/photos/live/:id
 //   GET  /api/photos/download?ticket=…
 //   POST /api/photos/upload?name=IMG_1234.jpg&album=<id>&lastModified=<ms> (browser import)
-//   POST /api/photos/upload + X-Umbrel-Photo-Backup-* headers (PhotoKit backup)
+//   POST /api/photos/upload + X-Umbrel-Photo-Backup-* headers (PhotoKit backup;
+//        optional X-Umbrel-Photo-Cloud-Identifier-Base64 + X-Umbrel-Photo-Resource-Role)
+//   POST /api/photos/claim {resources} (PhotoKit backup; marks files its backup
+//        already has as backed up instead of uploading them)
 //   GET  /api/photos/map/points?filter=…
 //   GET  /api/photos/map/tiles/:z/:x/:y
 //
@@ -25,8 +28,14 @@ import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.ts'
 import type {ThumbnailVariant} from '../files/thumbnail-support.ts'
 import {OWNER_USER_ID} from '../user/constants.ts'
 
-import {PHOTO_FILE_EXTENSION_PATTERN, PHOTO_ORIGINAL_FILENAME_MAX_BYTES, PHOTO_RESOURCE_KEY_PATTERN} from './photos.ts'
-import {filterSchema} from './routes.ts'
+import {
+	PHOTO_CLOUD_IDENTIFIER_MAX_BYTES,
+	PHOTO_FILE_EXTENSION_PATTERN,
+	PHOTO_ORIGINAL_FILENAME_MAX_BYTES,
+	PHOTO_RESOURCE_KEY_PATTERN,
+	PHOTO_RESOURCE_ROLE_PATTERN,
+} from './photos.ts'
+import {backupResourceClaimsInput, filterSchema} from './routes.ts'
 import {supportsPhotos} from './types.ts'
 
 // A build of the basemap never changes, so a tile asked for under the build
@@ -55,17 +64,29 @@ function isInsufficientStorageError(error: unknown) {
 
 class InactivePhotoBackupSourceError extends Error {}
 
-function decodeOriginalFilename(encoded: string | undefined) {
+function decodeHeaderText(encoded: string | undefined, maxBytes: number) {
 	if (!encoded) return
 	const bytes = Buffer.from(encoded, 'base64')
-	if (bytes.length === 0 || bytes.length > PHOTO_ORIGINAL_FILENAME_MAX_BYTES || bytes.toString('base64') !== encoded) {
-		return
-	}
-	const filename = bytes.toString('utf8')
-	if (!Buffer.from(filename, 'utf8').equals(bytes) || /[\u0000-\u001f\u007f]/.test(filename)) {
-		return
-	}
-	return filename
+	if (bytes.length === 0 || bytes.length > maxBytes || bytes.toString('base64') !== encoded) return
+	const text = bytes.toString('utf8')
+	if (!Buffer.from(text, 'utf8').equals(bytes) || /[\u0000-\u001f\u007f]/.test(text)) return
+	return text
+}
+
+function decodeOriginalFilename(encoded: string | undefined) {
+	return decodeHeaderText(encoded, PHOTO_ORIGINAL_FILENAME_MAX_BYTES)
+}
+
+// Newer clients name the PhotoKit asset a resource came from: its
+// PHCloudIdentifier archival string and the resource's role within the asset.
+// Both or neither; older clients send neither.
+function decodeCloudIdentity(request: express.Request) {
+	const encoded = request.get('X-Umbrel-Photo-Cloud-Identifier-Base64')
+	const role = request.get('X-Umbrel-Photo-Resource-Role')
+	if (encoded === undefined && role === undefined) return {}
+	const cloudIdentifier = decodeHeaderText(encoded, PHOTO_CLOUD_IDENTIFIER_MAX_BYTES)
+	if (!cloudIdentifier || !role || !PHOTO_RESOURCE_ROLE_PATTERN.test(role)) return {invalid: true as const}
+	return {cloud: {cloudIdentifier, role}}
 }
 
 async function receivePhotoBackupUpload(
@@ -81,7 +102,9 @@ async function receivePhotoBackupUpload(
 	const sourceCreationDate = rawSourceCreationDate === undefined ? undefined : Number(rawSourceCreationDate)
 	const rawContentLength = request.get('Content-Length')
 	const contentLength = Number(rawContentLength)
+	const {cloud, invalid: invalidCloudIdentity} = decodeCloudIdentity(request)
 	if (
+		invalidCloudIdentity ||
 		!resourceKey ||
 		!PHOTO_RESOURCE_KEY_PATTERN.test(resourceKey) ||
 		!originalFilename ||
@@ -149,15 +172,26 @@ async function receivePhotoBackupUpload(
 						// later source lifecycle that happens to reuse the same source id.
 						if (source.createdAt !== stagedSource.createdAt) throw new InactivePhotoBackupSourceError()
 						activeSource = source
+						// An exact retry of this resource first, then the same bytes
+						// already in this source. Either one is answered without a second copy.
 						matchingResource = staged.blake3
-							? await umbreld.photos.registerMatchingBackupResource(
+							? ((await umbreld.photos.registerMatchingBackupResource(
 									source,
 									resourceKey,
 									virtualPath,
 									staged.blake3,
 									originalFilename,
 									sourceCreationDate,
-								)
+									cloud,
+								)) ??
+								(await umbreld.photos.registerSourceDuplicateBackupResource(
+									source,
+									resourceKey,
+									staged.blake3,
+									originalFilename,
+									sourceCreationDate,
+									cloud,
+								)))
 							: undefined
 						return publish()
 					},
@@ -175,6 +209,7 @@ async function receivePhotoBackupUpload(
 					published.revision,
 					originalFilename,
 					sourceCreationDate,
+					cloud,
 				)
 			},
 		})
@@ -250,7 +285,8 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 	api.use((request, response, next) => {
 		const path = request.path.replace(/\/+$/, '') || '/'
 		if (request.method === 'OPTIONS' && path === '/upload') return next()
-		if (request.method === 'POST' && path === '/upload' && request.get('X-Umbrel-Photo-Backup-Key')) {
+		const isBackupUpload = path === '/upload' && request.get('X-Umbrel-Photo-Backup-Key')
+		if (request.method === 'POST' && (isBackupUpload || path === '/claim')) {
 			return authorizePhotoBackupRequest(umbreld, request)
 				.then((principal) => {
 					response.locals.photoBackupPrincipal = principal
@@ -275,6 +311,43 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 				next()
 			})
 			.catch(() => response.status(401).json({error: 'unauthorized'}))
+	})
+
+	// A phone asks which files its backup already has before it uploads them: ones
+	// it sent before the app was installed again, or ones the phone it was restored
+	// from sent. The answer names the files it doesn't need to send.
+	const parseClaimBody = express.json({limit: '1mb'})
+	api.post('/claim', async (request, response) => {
+		const principal = response.locals.photoBackupPrincipal as PhotoBackupPrincipal
+		// Before the body arrives, as for an upload, so a request authenticated before
+		// removal can't claim into a later source that reuses the same id
+		const stagedSource = await umbreld.photos.getBackupSource(principal.accountId, principal.sourceId)
+		if (!stagedSource) {
+			response.setHeader('Connection', 'close')
+			return response.status(401).json({error: 'unauthorized'})
+		}
+		const bodyError = await new Promise<{type?: string} | undefined>((resolve) =>
+			parseClaimBody(request, response, resolve),
+		)
+		if (bodyError) {
+			const status = bodyError.type === 'entity.too.large' ? 413 : 400
+			return response.status(status).json({error: 'invalid photo backup request'})
+		}
+		const input = backupResourceClaimsInput.safeParse(request.body)
+		if (!input.success) return response.status(400).json({error: 'invalid photo backup request'})
+		try {
+			const receipts = await umbreld.photos.claimBackupResources({
+				accountId: principal.accountId,
+				sourceId: principal.sourceId,
+				createdAt: stagedSource.createdAt,
+				resources: input.data.resources,
+			})
+			if (!receipts) return response.status(401).json({error: 'unauthorized'})
+			return response.json(receipts)
+		} catch (error) {
+			umbreld.logger.error('Failed to claim photo backup resources', error)
+			return response.status(500).json({error: 'claim failed'})
+		}
 	})
 
 	// Apple probes for a resumable upload protocol before falling back to the

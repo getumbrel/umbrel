@@ -54,6 +54,16 @@ test('creates a source-bound grant only after validating the native session', as
 		platform: 'android',
 	})
 	expect(context.response!.set).toHaveBeenCalledWith('Cache-Control', 'no-store')
+
+	// A phone taking the backup over from another says so
+	await caller.createBackupGrant({sourceId: source.id, suggestedName: source.name, continuing: true})
+	expect(createBackupGrant).toHaveBeenLastCalledWith({
+		principal,
+		sourceId: source.id,
+		suggestedName: source.name,
+		continuing: true,
+		platform: 'android',
+	})
 })
 
 test('rejects browser sessions before registering a backup source', async () => {
@@ -131,4 +141,37 @@ test('rejects oversized resource receipt batches before touching storage', async
 		}),
 	).rejects.toMatchObject({code: 'BAD_REQUEST'})
 	expect(confirmedBackupResources).not.toHaveBeenCalled()
+})
+
+test("lists the signed-in account's backup sources with the server's backup capabilities", async () => {
+	const answer = {
+		capabilities: ['continue-source'],
+		sources: [
+			{
+				id: '11111111-1111-4111-8111-111111111111',
+				name: 'iPhone',
+				createdAt: 1,
+				lastImportAt: 2,
+				lastSeenAt: 3,
+				stats: {photos: 1, videos: 0, sizeBytes: 5},
+			},
+		],
+	}
+	const backupSources = vi.fn(async () => answer)
+	const caller = routes.createCaller(contextFor({}, {backupSources}))
+
+	await expect(caller.backupSources()).resolves.toEqual(answer)
+	expect(backupSources).toHaveBeenCalledWith('Alice')
+})
+
+test("counts what removing one of the signed-in account's phone backups would move to Trash", async () => {
+	const sourceRemovalItemCount = vi.fn(async (_accountId: string, id: string) =>
+		id === 'iphone:abc' ? 120 : undefined,
+	)
+	const caller = routes.createCaller(contextFor({}, {sourceRemovalItemCount}))
+
+	await expect(caller.sources.removalItemCount({id: 'iphone:abc'})).resolves.toBe(120)
+	expect(sourceRemovalItemCount).toHaveBeenCalledWith('Alice', 'iphone:abc')
+	// Another account's, or the built-in Umbrel source
+	await expect(caller.sources.removalItemCount({id: 'umbrel:Alice'})).rejects.toMatchObject({code: 'NOT_FOUND'})
 })

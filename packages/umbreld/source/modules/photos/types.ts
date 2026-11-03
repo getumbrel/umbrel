@@ -158,6 +158,19 @@ export type PhotoIndexingState =
 
 export type PhotoIndexingProgress = {accountId: string; state: PhotoIndexingState}
 
+// PhotoKit's iCloud identifier names an asset, not its bytes. The role names the
+// asset's component (for example a Live Photo's still or motion), so one asset
+// can back several receipts.
+export type PhotoBackupCloudIdentity = {cloudIdentifier: string; role: string}
+
+// A currently indexed Home location of a receipt's bytes, with the revision a
+// caller must find on disk before trusting it.
+export type PhotoBackupLocation = {
+	path: string
+	bytes: number
+	revision: {device: string; inode: string; size: number; modifiedNs: string; ctimeNs: string}
+}
+
 export type PhotoSummary = {
 	counts: {items: number; favorites: number; photos: number; videos: number; deleted: number}
 	sizeBytes: number

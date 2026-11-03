@@ -13,7 +13,13 @@ import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index
 import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.ts'
 import {readDatabase, type ReadSql} from './file-index/read-database.ts'
 import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
-import {supportsPhotos, type PhotoFilter, type PhotoIndexingProgress, type PhotoScopeMode} from '../photos/types.ts'
+import {
+	supportsPhotos,
+	type PhotoBackupCloudIdentity,
+	type PhotoFilter,
+	type PhotoIndexingProgress,
+	type PhotoScopeMode,
+} from '../photos/types.ts'
 import FileIndexEnrichment, {
 	BACKGROUND_QUIET_PERIOD_MS,
 	assertPublishedRevision,
@@ -1829,6 +1835,7 @@ export default class FileIndexEngine {
 		expectedRevision: PublishedFileRevision,
 		originalFilename?: string,
 		sourceCreationDate?: number,
+		cloud?: PhotoBackupCloudIdentity,
 	) {
 		this.#requirePhotos()
 		await this.reconcilePath(systemPath)
@@ -1858,10 +1865,56 @@ export default class FileIndexEngine {
 					hash,
 					originalFilename,
 					sourceCreationDate,
+					cloud,
 				),
 			)
 			return register.immediate()
 		})
+	}
+
+	async photosRecordMatchedBackupResources(
+		accountId: string,
+		sourceId: string,
+		matches: Array<{
+			resourceKey: string
+			hash: Buffer
+			originalFilename?: string
+			sourceCreationDate?: number
+			cloud?: PhotoBackupCloudIdentity
+		}>,
+	) {
+		this.#requirePhotos()
+		return this.#mutate((database) => {
+			const record = database.transaction(() =>
+				this.#photos.recordMatchedBackupResources(this.#photosDatabase(database), accountId, sourceId, matches),
+			)
+			return record.immediate()
+		})
+	}
+
+	async photosBackupSourceContentLocations(accountId: string, sourceId: string, hash: Buffer) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.backupSourceContentLocations(this.#photosDatabase(database), accountId, sourceId, hash),
+		)
+	}
+
+	async photosBackupCloudIdentityMatches(accountId: string, sourceId: string, identities: PhotoBackupCloudIdentity[]) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.backupCloudIdentityMatches(this.#photosDatabase(database), accountId, sourceId, identities),
+		)
+	}
+
+	async photosAttachBackupCloudIdentities(
+		accountId: string,
+		sourceId: string,
+		resources: Array<PhotoBackupCloudIdentity & {resourceKey: string}>,
+	) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.attachBackupCloudIdentities(this.#photosDatabase(database), accountId, sourceId, resources),
+		)
 	}
 
 	async photosConfirmedBackupResources(accountId: string, sourceId: string, resourceKeys: string[]) {
@@ -2116,6 +2169,15 @@ export default class FileIndexEngine {
 		)
 		await this.#recoverBackupResourceIdentities(accountId, resourceHashes)
 		return this.#mutate((database) => this.#photos.sourceRemovalFiles(this.#photosDatabase(database), accountId, id))
+	}
+
+	// For the removal dialog, from the index as it stands. Removal itself rescans
+	// Home first, so a copy made moments before can still change the answer.
+	async photosSourceRemovalItemCount(accountId: string, id: string) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.sourceRemovalItemCount(this.#photosDatabase(database), accountId, id),
+		)
 	}
 
 	async photosRemoveSource(accountId: string, id: string, keepItems: boolean) {

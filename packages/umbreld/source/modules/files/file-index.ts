@@ -16,6 +16,8 @@ import type {PublishedFileRevision, ThumbnailReference} from './file-index-enric
 import {PHOTOS_THUMBNAIL_VARIANTS, type ThumbnailVariant} from './thumbnail-support.ts'
 import type {
 	PhotoAlbum,
+	PhotoBackupCloudIdentity,
+	PhotoBackupLocation,
 	PhotoFilter,
 	PhotoIndexingProgress,
 	PhotoIndexingState,
@@ -410,6 +412,7 @@ export default class FileIndex {
 		expectedRevision: PublishedFileRevision,
 		originalFilename?: string,
 		sourceCreationDate?: number,
+		cloud?: PhotoBackupCloudIdentity,
 	) {
 		return this.#request<{resourceKey: string; path: string; bytes: number}>('photosRegisterBackupResource', [
 			accountId,
@@ -420,19 +423,61 @@ export default class FileIndex {
 			expectedRevision,
 			originalFilename,
 			sourceCreationDate,
+			cloud,
 		])
 	}
 
+	async photosRecordMatchedBackupResources(
+		accountId: string,
+		sourceId: string,
+		matches: Array<{
+			resourceKey: string
+			hash: Buffer
+			originalFilename?: string
+			sourceCreationDate?: number
+			cloud?: PhotoBackupCloudIdentity
+		}>,
+	) {
+		return this.#request<string[]>('photosRecordMatchedBackupResources', [accountId, sourceId, matches])
+	}
+
+	async photosBackupSourceContentLocations(accountId: string, sourceId: string, hash: Buffer) {
+		return this.#request<PhotoBackupLocation[]>('photosBackupSourceContentLocations', [accountId, sourceId, hash])
+	}
+
+	async photosBackupCloudIdentityMatches(accountId: string, sourceId: string, identities: PhotoBackupCloudIdentity[]) {
+		const matches = await this.#request<
+			Array<
+				PhotoBackupCloudIdentity & {
+					contentHash: Uint8Array
+					originalFilename?: string
+					locations: PhotoBackupLocation[]
+				}
+			>
+		>('photosBackupCloudIdentityMatches', [accountId, sourceId, identities])
+		return matches.map((match) => ({...match, contentHash: Buffer.from(match.contentHash)}))
+	}
+
+	async photosAttachBackupCloudIdentities(
+		accountId: string,
+		sourceId: string,
+		resources: Array<PhotoBackupCloudIdentity & {resourceKey: string}>,
+	) {
+		return this.#request<number>('photosAttachBackupCloudIdentities', [accountId, sourceId, resources])
+	}
+
 	async photosConfirmedBackupResources(accountId: string, sourceId: string, resourceKeys: string[]) {
-		return this.#request<
+		const resources = await this.#request<
 			Array<{
 				resourceKey: string
-				contentHash: Buffer
+				contentHash: Uint8Array
 				path?: string
 				bytes?: number
 				revision?: {device: string; inode: string; size: number; modifiedNs: string; ctimeNs: string}
 			}>
 		>('photosConfirmedBackupResources', [accountId, sourceId, resourceKeys])
+		// A Buffer crosses the worker boundary as a plain Uint8Array
+		return resources.map((resource) => ({...resource, contentHash: Buffer.from(resource.contentHash)}))
 	}
 
 	async photosPrepareUpload(accountId: string, hash: Buffer, albumId?: string) {
@@ -542,6 +587,10 @@ export default class FileIndex {
 
 	async photosUpdateSource(accountId: string, id: string, scope?: {mode: PhotoScopeMode; paths: string[]}) {
 		return this.#request<PhotoSource | undefined>('photosUpdateSource', [accountId, id, scope])
+	}
+
+	async photosSourceRemovalItemCount(accountId: string, id: string) {
+		return this.#request<number>('photosSourceRemovalItemCount', [accountId, id])
 	}
 
 	async photosSourceRemovalFiles(accountId: string, id: string) {

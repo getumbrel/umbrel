@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto'
 import nodePath from 'node:path'
 
 import fse from 'fs-extra'
@@ -101,7 +102,8 @@ describe('Photos backup storage', () => {
 			suggestedName: 'Pixel 9',
 			platform: 'android',
 		})
-		expect(source).toEqual({...before, platform: 'android'})
+		// The grant also records when the phone was last seen
+		expect(source).toEqual({...before, platform: 'android', lastSeenAt: expect.any(Number)})
 		await expect(umbreld.store.get('photos.backupSources')).resolves.toEqual([source])
 		expect(umbreld.files.fileIndex.photosUpsertBackupSource).toHaveBeenLastCalledWith(
 			'0',
@@ -123,7 +125,7 @@ describe('Photos backup storage', () => {
 
 		await expect(
 			umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'Pixel 9'}),
-		).resolves.toEqual(source)
+		).resolves.toEqual({...source, lastSeenAt: expect.any(Number)})
 		expect(umbreld.files.fileIndex.photosUpsertBackupSource).toHaveBeenLastCalledWith(
 			'0',
 			expect.stringMatching(/^iphone:/),
@@ -131,6 +133,43 @@ describe('Photos backup storage', () => {
 			before.createdAt,
 			'android',
 		)
+	})
+
+	test('renames a backup only for a phone continuing it', async () => {
+		vi.spyOn(umbreld.auth, 'issuePhotoBackupGrant').mockResolvedValue({token: 'photo-grant'})
+		const principal = {sessionId: 'native-session', accountId: '0', actor: 'account'} as const
+		const original = await umbreld.photos.registerBackupSource({
+			accountId: '0',
+			sourceId: SOURCE_ID,
+			suggestedName: "Nate's iPhone 12",
+		})
+
+		// A reconnect, or the app installed again, keeps the backup's name
+		const {source: reconnected} = await umbreld.photos.createBackupGrant({
+			principal,
+			sourceId: SOURCE_ID,
+			suggestedName: "Nate's iPhone 16",
+		})
+		expect(reconnected.name).toBe("Nate's iPhone 12")
+
+		const emit = vi.spyOn(umbreld.eventBus, 'emit')
+		const {source} = await umbreld.photos.createBackupGrant({
+			principal,
+			sourceId: SOURCE_ID,
+			suggestedName: "Nate's iPhone 16",
+			continuing: true,
+		})
+		// The folder keeps the old phone's name
+		expect(source).toEqual({...original, name: "Nate's iPhone 16", lastSeenAt: expect.any(Number)})
+		await expect(umbreld.store.get('photos.backupSources')).resolves.toEqual([source])
+		expect(umbreld.files.fileIndex.photosUpsertBackupSource).toHaveBeenLastCalledWith(
+			'0',
+			expect.stringMatching(/^iphone:/),
+			"Nate's iPhone 16",
+			original.createdAt,
+			undefined,
+		)
+		expect(emit).toHaveBeenCalledWith('photos:change', {accountIds: ['0']})
 	})
 
 	test("names an Android phone's fallback folder after Android", async () => {
@@ -246,6 +285,7 @@ describe('Photos backup storage', () => {
 			targetPath,
 			blake3('raw photo'),
 			expect.objectContaining({size: 9}),
+			undefined,
 			undefined,
 			undefined,
 		)
@@ -495,6 +535,274 @@ describe('Photos backup storage', () => {
 		).resolves.toEqual([{resourceKey, bytes: Buffer.byteLength(contents)}])
 	})
 
+	test('confirms a receipt from any current Home copy of its bytes', async () => {
+		await umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'iPhone (2)'})
+		const resourceKey = 'f'.repeat(64)
+		const contentHash = blake3('photo')
+		const gonePath = '/Home/Photos/iPhone/ff/gone.heic'
+		const goneSystemPath = umbreld.files.virtualToSystemPathUnsafe(gonePath)
+		await fse.outputFile(goneSystemPath, 'photo')
+		const goneRevision = await indexedRevision(goneSystemPath)
+		await fse.remove(goneSystemPath)
+		// Another copy of the same bytes, such as one the user made in Files
+		const otherPhonePath = '/Home/Photos/iPhone/ff/kept.heic'
+		const otherPhoneSystemPath = umbreld.files.virtualToSystemPathUnsafe(otherPhonePath)
+		await fse.outputFile(otherPhoneSystemPath, 'photo')
+		vi.spyOn(umbreld.files.fileIndex, 'photosConfirmedBackupResources').mockResolvedValue([
+			{resourceKey, contentHash, path: gonePath, bytes: 5, revision: goneRevision},
+			{resourceKey, contentHash, path: otherPhonePath, bytes: 5, revision: await indexedRevision(otherPhoneSystemPath)},
+		])
+
+		await expect(
+			umbreld.photos.confirmedBackupResources({
+				accountId: '0',
+				sourceId: SOURCE_ID,
+				resources: [{resourceKey, fileExtension: 'heic'}],
+			}),
+		).resolves.toEqual([{resourceKey, bytes: 5}])
+	})
+
+	test('confirms an indexed copy outside the source folder by hash while its index row lags', async () => {
+		await umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'iPhone (2)'})
+		const resourceKey = 'e'.repeat(64)
+		const path = '/Home/Albums/photo.heic'
+		const systemPath = umbreld.files.virtualToSystemPathUnsafe(path)
+		await fse.outputFile(systemPath, 'photo')
+		const revision = await indexedRevision(systemPath)
+		await fse.utimes(systemPath, new Date(1_000), new Date(1_000))
+		vi.spyOn(umbreld.files.fileIndex, 'photosConfirmedBackupResources').mockResolvedValue([
+			{resourceKey, contentHash: blake3('photo'), path, bytes: 5, revision},
+		])
+		const confirm = () =>
+			umbreld.photos.confirmedBackupResources({
+				accountId: '0',
+				sourceId: SOURCE_ID,
+				resources: [{resourceKey, fileExtension: 'heic'}],
+			})
+
+		await expect(confirm()).resolves.toEqual([{resourceKey, bytes: 5}])
+		await fse.writeFile(systemPath, 'edited')
+		await expect(confirm()).resolves.toEqual([])
+	})
+
+	test("records an upload against a current copy of the same bytes in this source's backup", async () => {
+		const source = await umbreld.photos.registerBackupSource({
+			accountId: '0',
+			sourceId: SOURCE_ID,
+			suggestedName: 'iPhone (2)',
+		})
+		const librarySourceId = vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mock.calls[0]![1]
+		const resourceKey = 'd'.repeat(64)
+		const hash = blake3('photo')
+		const gonePath = '/Home/Photos/iPhone/dd/gone.heic'
+		const goneSystemPath = umbreld.files.virtualToSystemPathUnsafe(gonePath)
+		await fse.outputFile(goneSystemPath, 'photo')
+		const goneRevision = await indexedRevision(goneSystemPath)
+		await fse.remove(goneSystemPath)
+		const keptPath = '/Home/Photos/iPhone/dd/kept.heic'
+		const keptSystemPath = umbreld.files.virtualToSystemPathUnsafe(keptPath)
+		await fse.outputFile(keptSystemPath, 'photo')
+		const keptRevision = await indexedRevision(keptSystemPath)
+		const locations = vi.spyOn(umbreld.files.fileIndex, 'photosBackupSourceContentLocations').mockResolvedValue([
+			{path: gonePath, bytes: 5, revision: goneRevision},
+			{path: keptPath, bytes: 5, revision: keptRevision},
+		])
+		const record = vi
+			.spyOn(umbreld.files.fileIndex, 'photosRecordMatchedBackupResources')
+			.mockImplementation(async (_accountId, _sourceId, matches) => matches.map((match) => match.resourceKey))
+		const emit = vi.spyOn(umbreld.eventBus, 'emit')
+		const cloud = {cloudIdentifier: 'asset-1', role: 'photo'}
+
+		await expect(
+			umbreld.photos.registerSourceDuplicateBackupResource(source, resourceKey, hash, 'IMG_1234.HEIC', 123, cloud),
+		).resolves.toEqual({receipt: {resourceKey, path: keptPath, bytes: 5}, revision: keptRevision})
+		// Only this source's bytes are looked for
+		expect(locations).toHaveBeenCalledWith('0', librarySourceId, hash)
+		expect(record).toHaveBeenCalledWith('0', librarySourceId, [
+			{resourceKey, hash, originalFilename: 'IMG_1234.HEIC', sourceCreationDate: 123, cloud},
+		])
+		expect(emit).toHaveBeenCalledWith('photos:change', {accountIds: ['0']})
+
+		record.mockClear()
+		await fse.remove(keptSystemPath)
+		await expect(
+			umbreld.photos.registerSourceDuplicateBackupResource(source, resourceKey, hash, 'IMG_1234.HEIC'),
+		).resolves.toBeUndefined()
+		expect(record).not.toHaveBeenCalled()
+	})
+
+	test('claims resources by cloud identifier within this source and names the asset behind its receipts', async () => {
+		const {createdAt} = await umbreld.photos.registerBackupSource({
+			accountId: '0',
+			sourceId: SOURCE_ID,
+			suggestedName: 'iPhone (2)',
+		})
+		const librarySourceId = vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mock.calls[0]![1]
+		const owned = '1'.repeat(64)
+		const claimed = '2'.repeat(64)
+		const stale = '3'.repeat(64)
+		const unknown = '4'.repeat(64)
+		const reinstalled = '5'.repeat(64)
+		const missing = '6'.repeat(64)
+		const file = async (path: string, contents: string) => {
+			const systemPath = umbreld.files.virtualToSystemPathUnsafe(path)
+			await fse.outputFile(systemPath, contents)
+			return {path, bytes: Buffer.byteLength(contents), revision: await indexedRevision(systemPath)}
+		}
+		// The old phone's files, in the source the new phone has taken over
+		const ownedLocation = await file(`/Home/Photos/iPhone (2)/11/${owned}.heic`, 'owned')
+		const claimedLocation = await file('/Home/Photos/iPhone (2)/22/old-phone.heic', 'claimed photo')
+		const staleLocation = await file('/Home/Photos/iPhone (2)/33/old-phone.heic', 'stale')
+		await fse.writeFile(umbreld.files.virtualToSystemPathUnsafe(staleLocation.path), 'edited since')
+		// An edited photo this phone sent before the app was installed again
+		const reinstalledLocation = await file(`/Home/Photos/iPhone (2)/55/${reinstalled}.heic`, 'edited')
+		vi.spyOn(umbreld.files.fileIndex, 'photosConfirmedBackupResources').mockResolvedValue([
+			{resourceKey: owned, contentHash: blake3('owned'), ...ownedLocation},
+			{resourceKey: reinstalled, contentHash: blake3('edited'), ...reinstalledLocation},
+		])
+		const attach = vi.spyOn(umbreld.files.fileIndex, 'photosAttachBackupCloudIdentities').mockResolvedValue(1)
+		const matches = vi.spyOn(umbreld.files.fileIndex, 'photosBackupCloudIdentityMatches').mockResolvedValue([
+			{
+				cloudIdentifier: 'asset-claimed',
+				role: 'photo',
+				contentHash: blake3('claimed photo'),
+				originalFilename: 'IMG_0002.HEIC',
+				locations: [claimedLocation],
+			},
+			{cloudIdentifier: 'asset-stale', role: 'photo', contentHash: blake3('stale'), locations: [staleLocation]},
+		])
+		const record = vi
+			.spyOn(umbreld.files.fileIndex, 'photosRecordMatchedBackupResources')
+			.mockImplementation(async (_accountId, _sourceId, matches) => matches.map((match) => match.resourceKey))
+		const resource = (resourceKey: string, cloudIdentifier: string) => ({
+			resourceKey,
+			fileExtension: 'heic',
+			cloudIdentifier,
+			role: 'photo',
+		})
+
+		await expect(
+			umbreld.photos.claimBackupResources({
+				accountId: '0',
+				sourceId: SOURCE_ID,
+				createdAt,
+				resources: [
+					resource(owned, 'asset-owned'),
+					resource(claimed, 'asset-claimed'),
+					resource(stale, 'asset-stale'),
+					resource(unknown, 'asset-unknown'),
+					// Without an identity, only found by its own key
+					{resourceKey: reinstalled, fileExtension: 'heic'},
+					{resourceKey: missing, fileExtension: 'heic'},
+				],
+			}),
+		).resolves.toEqual([
+			{resourceKey: owned, bytes: 5},
+			{resourceKey: reinstalled, bytes: Buffer.byteLength('edited')},
+			{resourceKey: claimed, bytes: Buffer.byteLength('claimed photo')},
+		])
+		expect(attach).toHaveBeenCalledWith('0', librarySourceId, [
+			{resourceKey: owned, cloudIdentifier: 'asset-owned', role: 'photo'},
+		])
+		expect(matches).toHaveBeenCalledWith('0', librarySourceId, [
+			{cloudIdentifier: 'asset-claimed', role: 'photo'},
+			{cloudIdentifier: 'asset-stale', role: 'photo'},
+			{cloudIdentifier: 'asset-unknown', role: 'photo'},
+		])
+		expect(record).toHaveBeenCalledWith('0', librarySourceId, [
+			{
+				resourceKey: claimed,
+				hash: blake3('claimed photo'),
+				originalFilename: 'IMG_0002.HEIC',
+				cloud: {cloudIdentifier: 'asset-claimed', role: 'photo'},
+			},
+		])
+
+		await expect(
+			umbreld.photos.claimBackupResources({
+				accountId: 'Alice',
+				sourceId: SOURCE_ID,
+				createdAt,
+				resources: [resource(claimed, 'asset-claimed')],
+			}),
+		).resolves.toBeUndefined()
+		// A request authenticated against an earlier source with the same id claims nothing
+		record.mockClear()
+		await expect(
+			umbreld.photos.claimBackupResources({
+				accountId: '0',
+				sourceId: SOURCE_ID,
+				createdAt: createdAt - 1,
+				resources: [resource(claimed, 'asset-claimed')],
+			}),
+		).resolves.toBeUndefined()
+		expect(record).not.toHaveBeenCalled()
+		for (const invalid of [
+			{...resource(claimed, 'asset-claimed'), role: 'Photo'},
+			resource(claimed, ''),
+			resource(claimed, 'asset\u0000'),
+			// Both or neither
+			{resourceKey: claimed, fileExtension: 'heic', cloudIdentifier: 'asset-claimed'},
+			{resourceKey: claimed, fileExtension: 'heic', role: 'photo'},
+		]) {
+			await expect(
+				umbreld.photos.claimBackupResources({accountId: '0', sourceId: SOURCE_ID, createdAt, resources: [invalid]}),
+			).rejects.toThrow('Invalid photo backup cloud identity')
+		}
+	})
+
+	test("lists the account's backup sources with when each was last seen, its platform, and the backup capabilities", async () => {
+		vi.spyOn(umbreld.auth, 'issuePhotoBackupGrant').mockResolvedValue({token: 'photo-grant'} as never)
+		const before = Date.now()
+		const {source: seen} = await umbreld.photos.createBackupGrant({
+			principal: {sessionId: 'native-session', accountId: '0', actor: 'account'},
+			sourceId: SOURCE_ID,
+			suggestedName: 'iPhone',
+			platform: 'ios',
+		})
+		expect(seen.lastSeenAt).toBeGreaterThanOrEqual(before)
+		const otherSourceId = '22222222-2222-4222-8222-222222222222'
+		const unseen = await umbreld.photos.registerBackupSource({
+			accountId: '0',
+			sourceId: otherSourceId,
+			suggestedName: 'iPhone (2)',
+		})
+		await umbreld.photos.registerBackupSource({accountId: 'Alice', sourceId: SOURCE_ID, suggestedName: 'Alice phone'})
+		const seenLibraryId = vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mock.calls[0]![1]
+		vi.spyOn(umbreld.files.fileIndex, 'photosListSources').mockResolvedValue([
+			{id: 'umbrel:0', type: 'umbrel', name: 'Umbrel', createdAt: 1, stats: {photos: 9, videos: 0, sizeBytes: 90}},
+			{
+				id: seenLibraryId,
+				type: 'iphone',
+				name: 'iPhone',
+				lastImportAt: 5,
+				createdAt: seen.createdAt,
+				stats: {photos: 2, videos: 1, sizeBytes: 30},
+			},
+		])
+
+		await expect(umbreld.photos.backupSources('0')).resolves.toStrictEqual({
+			capabilities: ['continue-source'],
+			sources: [
+				{
+					id: SOURCE_ID,
+					name: 'iPhone',
+					createdAt: seen.createdAt,
+					lastImportAt: 5,
+					lastSeenAt: seen.lastSeenAt,
+					platform: 'ios',
+					stats: {photos: 2, videos: 1, sizeBytes: 30},
+				},
+				{
+					id: otherSourceId,
+					name: 'iPhone (2)',
+					createdAt: unseen.createdAt,
+					stats: {photos: 0, videos: 0, sizeBytes: 0},
+				},
+			],
+		})
+	})
+
 	test('deletes one account source records without deleting Home outside the Files lifecycle', async () => {
 		const owner = await umbreld.photos.registerBackupSource({
 			accountId: '0',
@@ -530,6 +838,28 @@ describe('Photos backup storage', () => {
 				suggestedName: 'New registration',
 			}),
 		).resolves.toMatchObject({name: 'New registration'})
+	})
+
+	test("counts what removing one of the account's phone backups moves to Trash, and only theirs", async () => {
+		const libraryId = (accountId: string, sourceId: string) =>
+			`iphone:${createHash('sha256').update(accountId).update('\0').update(sourceId).digest('hex')}`
+		const removedSourceId = '33333333-3333-4333-8333-333333333333'
+		await umbreld.photos.registerBackupSource({accountId: '0', sourceId: SOURCE_ID, suggestedName: 'Old iPhone'})
+		await umbreld.photos.registerBackupSource({accountId: '0', sourceId: removedSourceId, suggestedName: 'Gone'})
+		await umbreld.store.set('photos.backupSourceRemovals', [
+			{accountId: '0', sourceId: removedSourceId, keepItems: true, createdAt: 1},
+		])
+		const count = vi.spyOn(umbreld.files.fileIndex, 'photosSourceRemovalItemCount').mockResolvedValue(120)
+
+		await expect(umbreld.photos.sourceRemovalItemCount('0', libraryId('0', SOURCE_ID))).resolves.toBe(120)
+		expect(count).toHaveBeenCalledWith('0', libraryId('0', SOURCE_ID))
+		// Never another account's, the built-in Umbrel source, or one already being removed
+		await expect(umbreld.photos.sourceRemovalItemCount('Alice', libraryId('0', SOURCE_ID))).resolves.toBeUndefined()
+		await expect(umbreld.photos.sourceRemovalItemCount('0', 'umbrel:0')).resolves.toBeUndefined()
+		await expect(umbreld.photos.sourceRemovalItemCount('0', libraryId('0', removedSourceId))).resolves.toBeUndefined()
+		expect(count).toHaveBeenCalledTimes(1)
+		vi.spyOn(umbreld.files.fileIndex, 'photosListSources').mockResolvedValue([])
+		expect((await umbreld.photos.backupSources('0')).sources.map(({id}) => id)).toStrictEqual([SOURCE_ID])
 	})
 
 	test('removing an iPhone source drops its registry entry and every matching upload grant', async () => {

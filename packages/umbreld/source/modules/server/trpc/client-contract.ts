@@ -49,6 +49,7 @@ type _userMethod = Expect<IsQuery<Procedures['user']['get']>>
 type _createPhotoBackupGrantMethod = Expect<IsMutation<Procedures['photos']['createBackupGrant']>>
 type _revokePhotoBackupGrantMethod = Expect<IsMutation<Procedures['photos']['revokeBackupGrant']>>
 type _confirmedPhotoBackupResourcesMethod = Expect<IsMutation<Procedures['photos']['confirmedBackupResources']>>
+type _photoBackupSourcesMethod = Expect<IsQuery<Procedures['photos']['backupSources']>>
 type _photoSourcesMethod = Expect<IsQuery<Procedures['photos']['sources']['list']>>
 type _appsMethod = Expect<IsQuery<Procedures['apps']['list']>>
 type _hideCredentialsMethod = Expect<IsMutation<Procedures['apps']['hideCredentialsBeforeOpen']>>
@@ -192,7 +193,7 @@ type _user = Expect<
 // MARK: - Photo backup grants
 
 type _createPhotoBackupGrantInput = Expect<
-	ServerAccepts<Inputs['photos']['createBackupGrant'], {sourceId: string; suggestedName: string}>
+	ServerAccepts<Inputs['photos']['createBackupGrant'], {sourceId: string; suggestedName: string; continuing?: boolean}>
 >
 type _createPhotoBackupGrantOutput = Expect<
 	ServerProvides<
@@ -210,14 +211,36 @@ type _confirmedPhotoBackupResourcesInput = Expect<
 type _confirmedPhotoBackupResourcesOutput = Expect<
 	ServerProvides<Outputs['photos']['confirmedBackupResources'], Array<{resourceKey: string; bytes: number}>>
 >
-// Before starting a new backup source, the iOS app checks whether the account already
-// has iPhone backups that a new or restored iPhone would store again. It also finds its
-// own source by id, to show the name it has in Photos after a rename there. It derives
-// that id itself (backupLibrarySourceId), which a type can't pin; a unit test does.
+// On umbrelOS without backupSources, the iOS app reads the account's iPhone backups here
+// to give a new one a name none of them has. It also finds its own source by id, to show
+// the name it has in Photos after a rename there. It derives that id itself
+// (backupLibrarySourceId), which a type can't pin; a unit test does.
 type _photoSourcesOutput = Expect<
 	ServerProvides<
 		Outputs['photos']['sources']['list'],
 		Array<{id: string; type: string; name: string; lastImportAt?: number; stats: {photos: number; videos: number}}>
+	>
+>
+
+// An iPhone restored from another, or moved over by Quick Start, continues its
+// backup without uploading what that backup already has. Clients detect support
+// through backupSources: a server without it answers 404 and has none of its
+// capabilities.
+type _photoBackupSources = Expect<
+	ServerProvides<
+		Outputs['photos']['backupSources'],
+		{
+			capabilities: string[]
+			sources: Array<{
+				id: string
+				name: string
+				createdAt: number
+				lastImportAt?: number
+				lastSeenAt?: number
+				platform?: string
+				stats: {photos: number; videos: number; sizeBytes: number}
+			}>
+		}
 	>
 >
 

@@ -4,7 +4,13 @@ import z from 'zod'
 import {NativeSessionRequiredError, type Principal} from '../auth/auth.ts'
 import {privateProcedureWithMembers, router} from '../server/trpc/trpc.ts'
 
-import {PHOTO_BACKUP_SOURCE_ID_PATTERN, PHOTO_FILE_EXTENSION_PATTERN, PHOTO_RESOURCE_KEY_PATTERN} from './photos.ts'
+import {
+	isPhotoCloudIdentifier,
+	PHOTO_BACKUP_SOURCE_ID_PATTERN,
+	PHOTO_FILE_EXTENSION_PATTERN,
+	PHOTO_RESOURCE_KEY_PATTERN,
+	PHOTO_RESOURCE_ROLE_PATTERN,
+} from './photos.ts'
 import {PHOTO_KINDS, PHOTO_SCOPE_MODES, PHOTO_SUB_KINDS} from './types.ts'
 
 const backupSourceInput = z.object({
@@ -15,6 +21,8 @@ const backupSourceInput = z.object({
 		.min(1)
 		.max(100)
 		.regex(/^[^\u0000-\u001f\u007f]*$/),
+	// This phone is taking the backup over from another, so it takes this name
+	continuing: z.boolean().optional(),
 })
 
 const backupResourceReceiptsInput = z.object({
@@ -25,6 +33,23 @@ const backupResourceReceiptsInput = z.object({
 				resourceKey: z.string().regex(PHOTO_RESOURCE_KEY_PATTERN),
 				fileExtension: z.string().regex(PHOTO_FILE_EXTENSION_PATTERN),
 			}),
+		)
+		.max(256),
+})
+
+// The body of POST /api/photos/claim, which a backup grant authorizes
+export const backupResourceClaimsInput = z.object({
+	resources: z
+		.array(
+			z
+				.object({
+					resourceKey: z.string().regex(PHOTO_RESOURCE_KEY_PATTERN),
+					fileExtension: z.string().regex(PHOTO_FILE_EXTENSION_PATTERN),
+					// Both or neither. Without them a resource is only confirmed by its key.
+					cloudIdentifier: z.string().refine(isPhotoCloudIdentifier).optional(),
+					role: z.string().regex(PHOTO_RESOURCE_ROLE_PATTERN).optional(),
+				})
+				.refine((resource) => (resource.cloudIdentifier === undefined) === (resource.role === undefined)),
 		)
 		.max(256),
 })
@@ -96,6 +121,10 @@ export default router({
 				...input,
 			})
 		}),
+
+	// A server without this procedure (2.0.0) answers 404, which is how clients
+	// learn it has none of the listed capabilities.
+	backupSources: privateProcedureWithMembers.query(({ctx}) => ctx.umbreld.photos.backupSources(accountId(ctx))),
 
 	library: router({
 		summary: privateProcedureWithMembers.query(({ctx}) => ctx.umbreld.photos.summary(accountId(ctx))),
@@ -218,6 +247,13 @@ export default router({
 				if (!source) throw new TRPCError({code: 'NOT_FOUND'})
 				return source
 			}),
+		// For the remove dialog: how many of a phone's items would go to Trash
+		removalItemCount: privateProcedureWithMembers.input(z.object({id: z.string()})).query(async ({ctx, input}) => {
+			const count = await ctx.umbreld.photos.sourceRemovalItemCount(accountId(ctx), input.id)
+			if (count === undefined) throw new TRPCError({code: 'NOT_FOUND', message: 'No such phone backup'})
+			return count
+		}),
+
 		remove: privateProcedureWithMembers
 			.input(z.object({id: z.string(), keepItems: z.boolean().default(true)}))
 			.mutation(async ({ctx, input}) => {

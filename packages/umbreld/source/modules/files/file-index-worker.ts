@@ -1,6 +1,6 @@
 import {parentPort, threadId, workerData} from 'node:worker_threads'
 
-import type {PhotoFilter, PhotoScopeMode} from '../photos/types.ts'
+import type {PhotoBackupCloudIdentity, PhotoFilter, PhotoScopeMode} from '../photos/types.ts'
 import FileIndexEngine, {type FileIndexRoot, type WatcherChange} from './file-index-engine.ts'
 import {
 	isFileIndexRoot,
@@ -130,6 +130,60 @@ function contentFingerprintArg(args: unknown[], index: number): PublishedFileRev
 	return value as PublishedFileRevision
 }
 
+function isCloudIdentity(value: unknown): value is PhotoBackupCloudIdentity {
+	const identity = value as Partial<PhotoBackupCloudIdentity> | undefined
+	return (
+		!!identity &&
+		typeof identity === 'object' &&
+		typeof identity.cloudIdentifier === 'string' &&
+		typeof identity.role === 'string'
+	)
+}
+
+function optionalCloudIdentityArg(args: unknown[], index: number) {
+	const value = args[index]
+	if (value === undefined) return
+	if (!isCloudIdentity(value)) throw new TypeError(`Expected optional cloud identity argument ${index}`)
+	return {cloudIdentifier: value.cloudIdentifier, role: value.role}
+}
+
+function cloudIdentitiesArg(args: unknown[], index: number) {
+	const value = args[index]
+	if (!Array.isArray(value) || !value.every(isCloudIdentity)) {
+		throw new TypeError(`Expected cloud identity array argument ${index}`)
+	}
+	return value.map(({cloudIdentifier, role}) => ({cloudIdentifier, role}))
+}
+
+function keyedCloudIdentitiesArg(args: unknown[], index: number) {
+	const value = args[index]
+	if (
+		!Array.isArray(value) ||
+		!value.every((item) => isCloudIdentity(item) && typeof (item as {resourceKey?: unknown}).resourceKey === 'string')
+	) {
+		throw new TypeError(`Expected keyed cloud identity array argument ${index}`)
+	}
+	return (value as Array<PhotoBackupCloudIdentity & {resourceKey: string}>).map(
+		({resourceKey, cloudIdentifier, role}) => ({resourceKey, cloudIdentifier, role}),
+	)
+}
+
+function backupMatchesArg(args: unknown[], index: number) {
+	const value = args[index]
+	if (!Array.isArray(value)) throw new TypeError(`Expected backup match array argument ${index}`)
+	return value.map((item, position) => {
+		if (!item || typeof item !== 'object') throw new TypeError(`Expected backup match ${position}`)
+		const {resourceKey, hash, originalFilename, sourceCreationDate, cloud} = item as Record<string, unknown>
+		return {
+			resourceKey: stringArg([resourceKey]),
+			hash: bufferArg([hash], 0),
+			originalFilename: optionalStringArg([originalFilename], 0),
+			sourceCreationDate: optionalNumberArg([sourceCreationDate], 0),
+			cloud: optionalCloudIdentityArg([cloud], 0),
+		}
+	})
+}
+
 function objectArg<T>(args: unknown[], index: number): T {
 	const value = args[index]
 	if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -210,9 +264,22 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 				contentFingerprintArg(args, 5),
 				optionalStringArg(args, 6),
 				optionalNumberArg(args, 7),
+				optionalCloudIdentityArg(args, 8),
 			)
 		case 'photosConfirmedBackupResources':
 			return index.photosConfirmedBackupResources(stringArg(args), stringArg(args, 1), stringsArg(args, 2))
+		case 'photosRecordMatchedBackupResources':
+			return index.photosRecordMatchedBackupResources(stringArg(args), stringArg(args, 1), backupMatchesArg(args, 2))
+		case 'photosBackupSourceContentLocations':
+			return index.photosBackupSourceContentLocations(stringArg(args), stringArg(args, 1), bufferArg(args, 2))
+		case 'photosBackupCloudIdentityMatches':
+			return index.photosBackupCloudIdentityMatches(stringArg(args), stringArg(args, 1), cloudIdentitiesArg(args, 2))
+		case 'photosAttachBackupCloudIdentities':
+			return index.photosAttachBackupCloudIdentities(
+				stringArg(args),
+				stringArg(args, 1),
+				keyedCloudIdentitiesArg(args, 2),
+			)
 		case 'getExistingThumbnail':
 			return index.getExistingThumbnail(stringArg(args), thumbnailVariantArg(args, 1))
 		case 'enableThumbnailVariants': {
@@ -274,6 +341,8 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 			)
 		case 'photosSourceRemovalFiles':
 			return index.photosSourceRemovalFiles(stringArg(args), stringArg(args, 1))
+		case 'photosSourceRemovalItemCount':
+			return index.photosSourceRemovalItemCount(stringArg(args), stringArg(args, 1))
 		case 'photosRemoveSource':
 			return index.photosRemoveSource(stringArg(args), stringArg(args, 1), booleanArg(args, 2))
 		case 'matchesThumbnail':
