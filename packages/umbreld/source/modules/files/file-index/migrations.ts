@@ -549,6 +549,23 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 			`)
 		},
 	},
+	{
+		version: 25,
+		up: (database) => {
+			// Small facts about the index itself, such as the umbreld release that
+			// last retried enrichment that gave up. Transient thumbnails get the same
+			// retry schedule as content ones; existing failures are due now.
+			database.exec(`
+				CREATE TABLE index_state (
+					key TEXT PRIMARY KEY,
+					value TEXT NOT NULL
+				) WITHOUT ROWID;
+
+				ALTER TABLE transient_thumbnail_variants ADD COLUMN retry_at INTEGER;
+				UPDATE transient_thumbnail_variants SET retry_at = 0 WHERE state = 'failed';
+			`)
+		},
+	},
 ]
 
 export const FILE_INDEX_SCHEMA_VERSION = fileIndexMigrations.at(-1)?.version ?? 0

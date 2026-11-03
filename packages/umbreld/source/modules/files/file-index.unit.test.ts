@@ -77,12 +77,15 @@ async function fixture(
 			| 'onPhotosChange'
 			| 'onPhotosIndexingProgress'
 			| 'isHidden'
+			| 'release'
 		>
-	> & {includeTrash?: boolean} = {},
+	> & {includeTrash?: boolean; extraRoots?: FileIndexRoot[]; rootDirectory?: string; dataDirectory?: string} = {},
 ) {
-	const {enrichmentRuntime, includeTrash = false, ...engineOptions} = options
-	const rootDirectory = await temporary.create()
-	const dataDirectory = await temporary.create()
+	const {enrichmentRuntime, includeTrash = false, extraRoots = [], ...engineOptions} = options
+	const rootDirectory = options.rootDirectory ?? (await temporary.create())
+	const dataDirectory = options.dataDirectory ?? (await temporary.create())
+	delete engineOptions.rootDirectory
+	delete engineOptions.dataDirectory
 	const homeDirectory = nodePath.join(rootDirectory, 'home')
 	const trashDirectory = nodePath.join(rootDirectory, 'trash')
 	await Promise.all([fse.ensureDir(homeDirectory), fse.ensureDir(trashDirectory)])
@@ -127,7 +130,7 @@ async function fixture(
 		kind: 'trash',
 		searchEnabled: false,
 	}
-	await index.setRoots(includeTrash ? [root, trashRoot] : [root])
+	await index.setRoots([...(includeTrash ? [root, trashRoot] : [root]), ...extraRoots])
 	return {index, root, trashRoot, rootDirectory, dataDirectory, homeDirectory, trashDirectory}
 }
 
@@ -5559,6 +5562,335 @@ test('persists hash and thumbnail failures and lets an on-demand retry recover i
 		last_error: null,
 	})
 	database.close()
+})
+
+// Pretends each pending retry is due, as if its backoff had elapsed.
+function skipRetryWait(dataDirectory: string, table = 'thumbnail_variants') {
+	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+	database.prepare(`UPDATE ${table} SET retry_at = 1 WHERE state = 'failed' AND retry_at IS NOT NULL`).run()
+	database.close()
+}
+
+// Fails an on-demand thumbnail through every retry step until it gives up.
+async function exhaustThumbnailRetries(
+	index: FileIndex,
+	dataDirectory: string,
+	systemPath: string,
+	table = 'thumbnail_variants',
+) {
+	for (let attempt = 0; attempt < 4; attempt++) {
+		skipRetryWait(dataDirectory, table)
+		await expect(index.ensureThumbnail(systemPath)).rejects.toThrow()
+	}
+}
+
+test('gives up decoding content after a minute, an hour and a day of retries', async () => {
+	const generateThumbnail = vi.fn(async () => {
+		throw new Error('no decode delegate for this image format')
+	})
+	const {index, homeDirectory, dataDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {hashFile: async () => Buffer.alloc(32, 0x84), generateThumbnail},
+	})
+	const image = nodePath.join(homeDirectory, 'broken.png')
+	await writeFile(image, 'not an image')
+	const variant = () => {
+		const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+		try {
+			return database.prepare('SELECT state, failure_count, retry_at FROM thumbnail_variants').get() as {
+				state: string
+				failure_count: number
+				retry_at: number | null
+			}
+		} finally {
+			database.close()
+		}
+	}
+
+	for (const [failures, delay] of [
+		[1, 60_000],
+		[2, 60 * 60 * 1000],
+		[3, 24 * 60 * 60 * 1000],
+	]) {
+		const before = Date.now()
+		await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+		const row = variant()
+		expect(row).toMatchObject({state: 'failed', failure_count: failures})
+		expect(row.retry_at! - before).toBeGreaterThanOrEqual(delay)
+		expect(row.retry_at! - Date.now()).toBeLessThanOrEqual(delay)
+
+		// Viewing it again before the retry is due decodes again but doesn't
+		// bring giving up any closer
+		await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+		expect(variant()).toStrictEqual(row)
+		skipRetryWait(dataDirectory)
+	}
+	await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+	expect(variant()).toStrictEqual({state: 'failed', failure_count: 4, retry_at: null})
+	expect(generateThumbnail).toHaveBeenCalledTimes(7)
+
+	// Viewing the file again reports the failure without decoding it
+	await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+	await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+	expect(generateThumbnail).toHaveBeenCalledTimes(7)
+
+	// Nor does background enrichment pick it up again
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect((await index.status()).enrichment.pendingHashes).toBe(0), {
+		retries: 100,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	await new Promise((resolve) => setTimeout(resolve, 200))
+	expect(generateThumbnail).toHaveBeenCalledTimes(7)
+	expect(variant()).toStrictEqual({state: 'failed', failure_count: 4, retry_at: null})
+})
+
+test('never gives up on failures that say nothing about the content', async () => {
+	const failures = [
+		Object.assign(new Error('no space left on device'), {code: 'ENOSPC'}),
+		Object.assign(new Error('Command timed out after 60000 milliseconds'), {timedOut: true}),
+		Object.assign(new Error('Command was killed with SIGKILL'), {signal: 'SIGKILL'}),
+		new Error('convert: time limit exceeded `/home/broken.png'),
+		Object.assign(new Error('database or disk is full'), {code: 'SQLITE_FULL'}),
+	]
+	const generateThumbnail = vi.fn(async () => {
+		throw failures[(generateThumbnail.mock.calls.length - 1) % failures.length]
+	})
+	const {index, homeDirectory, dataDirectory} = await fixture(undefined, {enrichmentRuntime: {generateThumbnail}})
+	const image = nodePath.join(homeDirectory, 'busy.png')
+	await writeFile(image, 'a good image on a struggling device')
+	for (let attempt = 0; attempt < failures.length * 2; attempt++) {
+		skipRetryWait(dataDirectory)
+		await expect(index.ensureThumbnail(image)).rejects.toThrow()
+	}
+	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+	const row = database.prepare('SELECT failure_count, retry_at FROM thumbnail_variants').get() as {
+		failure_count: number
+		retry_at: number
+	}
+	database.close()
+	expect(row.failure_count).toBe(failures.length * 2)
+	expect(row.retry_at).toBeGreaterThan(Date.now())
+})
+
+test('a changed file gets a fresh set of decode attempts', async () => {
+	const generateThumbnail = vi.fn(async (source: string, destination: string) => {
+		if ((await readFile(source, 'utf8')) === 'not an image') throw new Error('no decode delegate')
+		await fse.outputFile(destination, 'thumbnail')
+	})
+	const {index, homeDirectory, dataDirectory} = await fixture(undefined, {enrichmentRuntime: {generateThumbnail}})
+	const image = nodePath.join(homeDirectory, 'fixed-later.png')
+	await writeFile(image, 'not an image')
+	await exhaustThumbnailRetries(index, dataDirectory, image)
+	await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+	expect(generateThumbnail).toHaveBeenCalledTimes(4)
+
+	await writeFile(image, 'a real image now')
+	await index.reconcilePath(image)
+	await expect(index.ensureThumbnail(image)).resolves.toMatchObject({kind: 'content'})
+	expect(generateThumbnail).toHaveBeenCalledTimes(5)
+})
+
+test('stops extracting media metadata after the last retry', async () => {
+	const extractMediaMetadata = vi.fn(async () => {
+		throw new Error('Photo has no valid image dimensions')
+	})
+	const {index, homeDirectory, dataDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile: async () => Buffer.alloc(32, 0x85),
+			generateThumbnail: async (_source: string, destination: string) => fse.outputFile(destination, 'thumbnail'),
+			extractMediaMetadata,
+		},
+	})
+	const image = nodePath.join(homeDirectory, 'no-dimensions.png')
+	await writeFile(image, 'image')
+	index.startBackgroundReconciliation()
+	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+	const media = () => database.prepare('SELECT state, failure_count, retry_at FROM media_metadata').get()
+	await pRetry(async () => expect(media()).toMatchObject({state: 'failed', failure_count: 1}), {
+		retries: 100,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+
+	// Skip ahead to the last retry, a day later
+	database.prepare('UPDATE media_metadata SET failure_count = 3, retry_at = ?').run(Date.now() + 100)
+	await index.reconcileRoot('/Home', 'wake')
+	await pRetry(async () => expect(media()).toStrictEqual({state: 'failed', failure_count: 4, retry_at: null}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	expect(extractMediaMetadata).toHaveBeenCalledTimes(2)
+	await index.reconcileRoot('/Home', 'wake')
+	await new Promise((resolve) => setTimeout(resolve, 200))
+	expect(extractMediaMetadata).toHaveBeenCalledTimes(2)
+	database.close()
+})
+
+test('still wakes for due retries when other content has given up', async () => {
+	const generateThumbnail = vi.fn(async (source: string, destination: string) => {
+		if (nodePath.basename(source) === 'given-up.png') throw new Error('no decode delegate')
+		if (generateThumbnail.mock.calls.filter(([path]) => path === source).length === 1) {
+			throw new Error('injected thumbnail failure')
+		}
+		await fse.outputFile(destination, 'thumbnail')
+	})
+	const {index, homeDirectory, dataDirectory} = await fixture(undefined, {enrichmentRuntime: {generateThumbnail}})
+	const givenUp = nodePath.join(homeDirectory, 'given-up.png')
+	const retry = nodePath.join(homeDirectory, 'retry.png')
+	await Promise.all([writeFile(givenUp, 'broken'), writeFile(retry, 'image')])
+	await exhaustThumbnailRetries(index, dataDirectory, givenUp)
+	await expect(index.ensureThumbnail(retry)).rejects.toThrow('injected thumbnail failure')
+	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+	expect(database.prepare('SELECT COUNT(*) AS count FROM thumbnail_variants WHERE retry_at IS NULL').get()).toEqual({
+		count: 1,
+	})
+	database.prepare('UPDATE thumbnail_variants SET retry_at = ? WHERE retry_at IS NOT NULL').run(Date.now() + 150)
+	database.close()
+
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.getExistingThumbnail(retry)).toMatchObject({kind: 'content'}), {
+		retries: 150,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	expect(generateThumbnail.mock.calls.filter(([path]) => path === givenUp)).toHaveLength(4)
+})
+
+test('stops decoding a broken transient thumbnail source after the last retry', async () => {
+	const generateThumbnail = vi.fn(async () => {
+		throw new Error('no decode delegate')
+	})
+	const {index, rootDirectory, dataDirectory} = await fixture(undefined, {enrichmentRuntime: {generateThumbnail}})
+	const externalDirectory = nodePath.join(rootDirectory, 'external')
+	const image = nodePath.join(externalDirectory, 'broken.png')
+	await fse.outputFile(image, 'external image')
+	await index.addRoot({
+		virtualPath: '/External',
+		systemPath: externalDirectory,
+		ownerId: 'owner',
+		kind: 'apps',
+		searchEnabled: false,
+		scanEnabled: false,
+	})
+
+	await exhaustThumbnailRetries(index, dataDirectory, image, 'transient_thumbnail_variants')
+	await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+	await expect(index.ensureThumbnail(image)).rejects.toThrow('no decode delegate')
+	expect(generateThumbnail).toHaveBeenCalledTimes(4)
+})
+
+test('gives content that gave up one more attempt, spread over a day, after each update', async () => {
+	const generateThumbnail = vi.fn(async () => {
+		throw new Error('no decode delegate')
+	})
+	const extractMediaMetadata = vi.fn(async () => {
+		throw new Error('Photo has no valid image dimensions')
+	})
+	const enrichmentRuntime = {hashFile: async () => Buffer.alloc(32, 0x86), generateThumbnail, extractMediaMetadata}
+	const rootDirectory = await temporary.create()
+	const external = nodePath.join(rootDirectory, 'external', 'broken.png')
+	await fse.outputFile(external, 'not an image either')
+	const extraRoots: FileIndexRoot[] = [
+		{
+			virtualPath: '/External',
+			systemPath: nodePath.dirname(external),
+			ownerId: 'owner',
+			kind: 'apps',
+			searchEnabled: false,
+			scanEnabled: false,
+		},
+	]
+	const first = await fixture(undefined, {release: '2.0.1', enrichmentRuntime, rootDirectory, extraRoots})
+	const {dataDirectory, homeDirectory} = first
+	const image = nodePath.join(homeDirectory, 'broken.png')
+	await writeFile(image, 'not an image')
+	await exhaustThumbnailRetries(first.index, dataDirectory, image)
+	await exhaustThumbnailRetries(first.index, dataDirectory, external, 'transient_thumbnail_variants')
+	const content = await first.index.getEntryBySystemPath(image)
+	await first.index.stop()
+	const readState = () => {
+		const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+		try {
+			return {
+				variant: database.prepare('SELECT failure_count, retry_at FROM thumbnail_variants').get(),
+				transient: database.prepare('SELECT failure_count, retry_at FROM transient_thumbnail_variants').get(),
+				media: database.prepare('SELECT failure_count, retry_at FROM media_metadata').get(),
+				release: database.prepare(`SELECT value FROM index_state WHERE key = 'enrichment_release'`).get(),
+			} as Record<string, {failure_count: number; retry_at: number | null} | {value: string}>
+		} finally {
+			database.close()
+		}
+	}
+	// Give up on the metadata too, without a background pass
+	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+	database.prepare(`UPDATE media_metadata SET state = 'failed', failure_count = 4, retry_at = NULL`).run()
+	database.close()
+	expect(content).toBeDefined()
+	const givenUp = {failure_count: 4, retry_at: null}
+	expect(readState()).toStrictEqual({
+		variant: givenUp,
+		transient: givenUp,
+		media: givenUp,
+		release: {value: '2.0.1'},
+	})
+
+	// Restarting the same release leaves it alone
+	const restarted = await fixture(undefined, {
+		release: '2.0.1',
+		enrichmentRuntime,
+		rootDirectory,
+		dataDirectory,
+		extraRoots,
+	})
+	await restarted.index.stop()
+	expect(readState()).toStrictEqual({
+		variant: givenUp,
+		transient: givenUp,
+		media: givenUp,
+		release: {value: '2.0.1'},
+	})
+
+	// An update schedules exactly one more attempt for each, within the next day
+	const before = Date.now()
+	const updated = await fixture(undefined, {
+		release: '2.0.2',
+		enrichmentRuntime,
+		rootDirectory,
+		dataDirectory,
+		extraRoots,
+	})
+	const after = Date.now()
+	const state = readState() as Record<string, {failure_count: number; retry_at: number}>
+	expect(state.release).toStrictEqual({value: '2.0.2'})
+	for (const kind of ['variant', 'media']) {
+		expect(state[kind].failure_count).toBe(3)
+		expect(state[kind].retry_at).toBeGreaterThanOrEqual(before)
+		expect(state[kind].retry_at).toBeLessThan(after + 24 * 60 * 60 * 1000)
+	}
+	// A content's sizes and metadata share a slot, so its sizes share one decode
+	expect(state.variant.retry_at).toBe(state.media.retry_at)
+	expect(state.transient.failure_count).toBe(3)
+	expect(state.transient.retry_at).toBeGreaterThanOrEqual(before)
+	expect(state.transient.retry_at).toBeLessThanOrEqual(after)
+
+	await expect(updated.index.ensureThumbnail(external)).rejects.toThrow('no decode delegate')
+	await expect(updated.index.ensureThumbnail(external)).rejects.toThrow('no decode delegate')
+	expect(generateThumbnail).toHaveBeenCalledTimes(9)
+
+	skipRetryWait(dataDirectory)
+	skipRetryWait(dataDirectory, 'media_metadata')
+	updated.index.startBackgroundReconciliation()
+	await pRetry(
+		async () => {
+			const {variant, media, transient} = readState()
+			expect({variant, media, transient}).toStrictEqual({variant: givenUp, media: givenUp, transient: givenUp})
+		},
+		{retries: 200, minTimeout: 10, maxTimeout: 20},
+	)
+	expect(generateThumbnail).toHaveBeenCalledTimes(10)
+	expect(extractMediaMetadata).toHaveBeenCalledOnce()
 })
 
 test('backs off artifact-side ENOENT failures instead of treating the source as stale', async () => {

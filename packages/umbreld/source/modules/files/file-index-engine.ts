@@ -23,6 +23,7 @@ import {
 import FileIndexEnrichment, {
 	BACKGROUND_QUIET_PERIOD_MS,
 	assertPublishedRevision,
+	retryGivenUpEnrichmentAfterUpdate,
 	type FileIndexEnrichmentRuntime,
 	type PublishedFileRevision,
 	type ThumbnailReference,
@@ -180,6 +181,7 @@ export type FileIndexEngineOptions = {
 	recoveryRetryMs?: number
 	watcherBulkThreshold?: number
 	batchSize?: number
+	release?: string
 	walkTree?: WalkTree
 	enrichmentRuntime?: FileIndexEnrichmentRuntime
 	readerPoolOptions?: FileIndexReaderPoolOptions
@@ -339,6 +341,7 @@ export default class FileIndexEngine {
 	#recoveryRetryMs: number
 	#watcherBulkThreshold: number
 	#batchSize: number
+	#release?: string
 	#walkTree: WalkTree
 	#enrichment: FileIndexEnrichment
 
@@ -353,6 +356,7 @@ export default class FileIndexEngine {
 		recoveryRetryMs = DEFAULT_RECOVERY_RETRY_MS,
 		watcherBulkThreshold = DEFAULT_WATCHER_BULK_THRESHOLD,
 		batchSize = DEFAULT_BATCH_SIZE,
+		release,
 		walkTree = walkFileTree,
 		enrichmentRuntime,
 		readerPoolOptions,
@@ -368,6 +372,7 @@ export default class FileIndexEngine {
 		this.#recoveryRetryMs = recoveryRetryMs
 		this.#watcherBulkThreshold = watcherBulkThreshold
 		this.#batchSize = batchSize
+		this.#release = release
 		this.#walkTree = walkTree
 		this.#readerPoolOptions = readerPoolOptions
 		this.#enrichment = new FileIndexEnrichment(
@@ -507,6 +512,19 @@ export default class FileIndexEngine {
 			throw new UnsupportedFileIndexSchemaError(
 				`Unsupported file index schema v${this.#schemaVersion}; expected v${FILE_INDEX_SCHEMA_VERSION}`,
 			)
+		}
+		if (this.#release) {
+			let retried: ReturnType<typeof retryGivenUpEnrichmentAfterUpdate> | undefined
+			try {
+				retried = retryGivenUpEnrichmentAfterUpdate(this.#database, this.#release)
+			} catch (error) {
+				this.logger.error('Failed to schedule retries of failed thumbnails and metadata after updating', error)
+			}
+			if (retried?.rows) {
+				this.logger.log(
+					`Retrying ${retried.rows} failed thumbnails and metadata over the next day after updating${retried.previous ? ` from v${retried.previous}` : ''}`,
+				)
+			}
 		}
 		this.#directorySizes = new DirectorySizes(this.#database)
 		this.#directorySizes.sync()

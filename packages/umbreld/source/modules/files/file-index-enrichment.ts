@@ -31,6 +31,12 @@ type Database = DatabaseTypes.Database
 const HASH_RETRY_BASE_MS = 30_000
 const THUMBNAIL_RETRY_BASE_MS = 60_000
 const MAX_RETRY_MS = 24 * 60 * 60 * 1000
+// Content that fails to decode is retried after a minute, an hour and a day,
+// then left alone until its bytes change or umbreld is updated. Unreadable
+// sources keep the open-ended backoff because they cost no decoding.
+const CONTENT_RETRY_DELAYS_MS = [60_000, 60 * 60 * 1000, 24 * 60 * 60 * 1000]
+const MAX_CONTENT_FAILURES = CONTENT_RETRY_DELAYS_MS.length + 1
+const RELEASE_RETRY_SPREAD_MS = 24 * 60 * 60 * 1000
 const IDLE_RECHECK_MS = 60_000
 const INFRASTRUCTURE_RETRY_MS = 60_000
 const REFERENCE_FAILURE_PREFIX = '[source-reference] '
@@ -935,10 +941,8 @@ export default class FileIndexEnrichment {
 		const refreshing = current.state === 'ready' && !onDemand && Boolean(current.refresh)
 		if (current.state === 'ready' && !refreshing) return
 		if (
-			!onDemand &&
 			current.state === 'failed' &&
-			current.retry_at !== null &&
-			current.retry_at > Date.now() &&
+			(current.retry_at === null || (!onDemand && current.retry_at > Date.now())) &&
 			!(freshReference && referenceFailureMessage(current.last_error))
 		)
 			return
@@ -1074,22 +1078,16 @@ export default class FileIndexEnrichment {
 	async #recordMediaMetadataFailure(contentId: number, error: unknown, priority: number, referenceFailure = false) {
 		await this.#withDatabase((database) => {
 			const current = database
-				.prepare('SELECT failure_count FROM media_metadata WHERE content_id = ?')
-				.get(contentId) as {failure_count: number} | undefined
+				.prepare('SELECT state, failure_count, retry_at FROM media_metadata WHERE content_id = ?')
+				.get(contentId) as FailureState | undefined
 			if (!current) return
-			const failureCount = Number(current.failure_count) + 1
+			const {failureCount, retryAt} = nextFailureState(current, error, referenceFailure)
 			database
 				.prepare(
 					`UPDATE media_metadata SET state = 'failed', failure_count = ?, retry_at = ?, last_error = ?, updated_at = ?
 					WHERE content_id = ?`,
 				)
-				.run(
-					failureCount,
-					Date.now() + retryDelay(THUMBNAIL_RETRY_BASE_MS, failureCount),
-					persistedFailureMessage(error, referenceFailure),
-					Date.now(),
-					contentId,
-				)
+				.run(failureCount, retryAt, persistedFailureMessage(error, referenceFailure), Date.now(), contentId)
 		}, priority)
 	}
 
@@ -1142,7 +1140,7 @@ export default class FileIndexEnrichment {
 						SELECT attempt_at FROM (
 							SELECT retry_at AS attempt_at
 							FROM thumbnail_variants AS failed INDEXED BY thumbnail_variants_failed_work
-							WHERE variant IN (${variants.map(() => '?').join(', ')}) AND state = 'failed'
+							WHERE variant IN (${variants.map(() => '?').join(', ')}) AND state = 'failed' AND retry_at IS NOT NULL
 								AND EXISTS (SELECT 1 FROM entries
 									JOIN index_roots ON index_roots.id = entries.root_id
 									WHERE entries.content_id = failed.content_id AND ${BACKGROUND_ENRICHMENT_ROOT_SQL})
@@ -1153,7 +1151,7 @@ export default class FileIndexEnrichment {
 						SELECT attempt_at FROM (
 							SELECT retry_at AS attempt_at
 							FROM media_metadata AS failed_media INDEXED BY media_metadata_failed_work
-							WHERE state = 'failed'
+							WHERE state = 'failed' AND retry_at IS NOT NULL
 								AND EXISTS (SELECT 1 FROM entries
 									JOIN index_roots ON index_roots.id = entries.root_id
 									WHERE entries.content_id = failed_media.content_id AND ${BACKGROUND_ENRICHMENT_ROOT_SQL})
@@ -1388,7 +1386,8 @@ export default class FileIndexEnrichment {
 			return (
 				row?.state === 'pending' ||
 				(row?.state === 'failed' &&
-					((row.retry_at ?? 0) <= now || (freshReference && referenceFailureMessage(row.last_error))))
+					((row.retry_at !== null && row.retry_at <= now) ||
+						(freshReference && referenceFailureMessage(row.last_error))))
 			)
 		})
 	}
@@ -1426,12 +1425,14 @@ export default class FileIndexEnrichment {
 					const existing = states.get(candidate)
 					if (existing?.state === 'ready' && (await this.#thumbnailIsUsable(destination))) continue
 					if (
-						!onDemand &&
 						existing?.state === 'failed' &&
-						existing.retry_at !== null &&
-						existing.retry_at > Date.now() &&
+						(existing.retry_at === null || (!onDemand && existing.retry_at > Date.now())) &&
 						!(freshReference && referenceFailureMessage(existing.last_error))
 					) {
+						// Opening a folder must not restart decoding that has given up.
+						if (onDemand && candidate === variant) {
+							throw new PersistedEnrichmentFailure(new Error(existing.last_error ?? 'Thumbnail generation failed'))
+						}
 						continue
 					}
 					work.push({variant: candidate, destination})
@@ -1571,10 +1572,17 @@ export default class FileIndexEnrichment {
 				async (database) =>
 					(await database
 						.prepare(
-							`SELECT artifact_key, state FROM transient_thumbnail_variants
+							`SELECT artifact_key, state, retry_at, last_error FROM transient_thumbnail_variants
 							WHERE entry_id = ? AND variant = ?`,
 						)
-						.get(candidate.id, variant)) as {artifact_key: string; state: 'pending' | 'ready' | 'failed'} | undefined,
+						.get(candidate.id, variant)) as
+						| {
+								artifact_key: string
+								state: 'pending' | 'ready' | 'failed'
+								retry_at: number | null
+								last_error: string | null
+						  }
+						| undefined,
 				ON_DEMAND_DATABASE_PRIORITY,
 			)
 			if (
@@ -1583,6 +1591,11 @@ export default class FileIndexEnrichment {
 				(await this.#thumbnailIsUsable(destination))
 			) {
 				return
+			}
+			// Transient thumbnails are only made on demand, so this is what stops
+			// every folder view decoding the same broken file again.
+			if (existing?.artifact_key === identity.key && existing.state === 'failed' && existing.retry_at === null) {
+				throw new PersistedEnrichmentFailure(new Error(existing.last_error ?? 'Thumbnail generation failed'))
 			}
 
 			const temporary = `${destination}.tmp-${randomUUID()}.${THUMBNAIL_FORMAT}`
@@ -1693,28 +1706,22 @@ export default class FileIndexEnrichment {
 				if (!current) throw new StaleFileRevisionError('File changed while generating thumbnail')
 				const existing = database
 					.prepare(
-						`SELECT failure_count FROM transient_thumbnail_variants
+						`SELECT state, failure_count, retry_at FROM transient_thumbnail_variants
 						WHERE entry_id = ? AND variant = ? AND artifact_key = ?`,
 					)
-					.get(candidate.id, variant, artifactKey) as {failure_count: number} | undefined
+					.get(candidate.id, variant, artifactKey) as FailureState | undefined
+				const {failureCount, retryAt} = nextFailureState(existing, error, false)
 				database
 					.prepare(
 						`INSERT INTO transient_thumbnail_variants(
-							entry_id, variant, artifact_key, state, failure_count, last_error, updated_at
-						) VALUES (?, ?, ?, 'failed', ?, ?, ?)
+							entry_id, variant, artifact_key, state, failure_count, retry_at, last_error, updated_at
+						) VALUES (?, ?, ?, 'failed', ?, ?, ?, ?)
 						ON CONFLICT(entry_id, variant) DO UPDATE SET
 							artifact_key = excluded.artifact_key, state = 'failed',
-							failure_count = excluded.failure_count, last_error = excluded.last_error,
-							updated_at = excluded.updated_at`,
+							failure_count = excluded.failure_count, retry_at = excluded.retry_at,
+							last_error = excluded.last_error, updated_at = excluded.updated_at`,
 					)
-					.run(
-						candidate.id,
-						variant,
-						artifactKey,
-						Number(existing?.failure_count ?? 0) + 1,
-						errorMessage(error),
-						Date.now(),
-					)
+					.run(candidate.id, variant, artifactKey, failureCount, retryAt, errorMessage(error), Date.now())
 			})
 			record.immediate()
 		}, ON_DEMAND_DATABASE_PRIORITY)
@@ -1819,9 +1826,9 @@ export default class FileIndexEnrichment {
 	) {
 		await this.#withDatabase((database) => {
 			const existing = database
-				.prepare('SELECT failure_count FROM thumbnail_variants WHERE content_id = ? AND variant = ?')
-				.get(contentId, variant) as {failure_count: number} | undefined
-			const failureCount = Number(existing?.failure_count ?? 0) + 1
+				.prepare('SELECT state, failure_count, retry_at FROM thumbnail_variants WHERE content_id = ? AND variant = ?')
+				.get(contentId, variant) as FailureState | undefined
+			const {failureCount, retryAt} = nextFailureState(existing, error, referenceFailure)
 			database
 				.prepare(
 					`INSERT INTO thumbnail_variants(
@@ -1832,14 +1839,7 @@ export default class FileIndexEnrichment {
 						retry_at = excluded.retry_at, last_error = excluded.last_error,
 						updated_at = excluded.updated_at`,
 				)
-				.run(
-					contentId,
-					variant,
-					failureCount,
-					Date.now() + retryDelay(THUMBNAIL_RETRY_BASE_MS, failureCount),
-					persistedFailureMessage(error, referenceFailure),
-					Date.now(),
-				)
+				.run(contentId, variant, failureCount, retryAt, persistedFailureMessage(error, referenceFailure), Date.now())
 		}, priority)
 	}
 
@@ -3042,6 +3042,75 @@ async function syncDirectory(systemPath: string) {
 
 function retryDelay(base: number, failureCount: number) {
 	return Math.min(base * 2 ** Math.max(0, failureCount - 1), MAX_RETRY_MS)
+}
+
+type FailureState = {state: 'pending' | 'ready' | 'failed'; failure_count: number; retry_at: number | null}
+
+// The failure count and next attempt after a failed thumbnail or metadata
+// extraction, with a null retry once it has given up. A failure while a retry
+// is still pending (an on-demand request) doesn't advance the schedule, so
+// giving up always takes a minute, an hour and a day.
+function nextFailureState(existing: FailureState | undefined, error: unknown, referenceFailure: boolean) {
+	const now = Date.now()
+	if (existing?.state === 'failed' && existing.retry_at !== null && existing.retry_at > now) {
+		return {failureCount: Number(existing.failure_count), retryAt: existing.retry_at}
+	}
+	const failureCount = Number(existing?.failure_count ?? 0) + 1
+	if (referenceFailure || !isDecodeFailure(error)) {
+		return {failureCount, retryAt: now + retryDelay(THUMBNAIL_RETRY_BASE_MS, failureCount)}
+	}
+	const delay = CONTENT_RETRY_DELAYS_MS[failureCount - 1]
+	return {failureCount, retryAt: delay === undefined ? null : now + delay}
+}
+
+// Whether a decoder ran and rejected the file. System errors (a full disk, an
+// unreadable file), SQLite errors, timeouts and killed processes say nothing
+// about the content, so they never give up.
+function isDecodeFailure(error: unknown) {
+	if (!(error instanceof Error)) return true
+	const {code, timedOut, signal} = error as {code?: unknown; timedOut?: boolean; signal?: unknown}
+	if (typeof code === 'string' || timedOut || signal) return false
+	return !/time limit exceeded/i.test(error.message)
+}
+
+// A release may fix what made content undecodable (a newer ImageMagick,
+// ExifTool or FFmpeg, or a pipeline fix), so each umbreld version gives
+// content that gave up one more attempt. Attempts are spread over a day so an
+// update doesn't start with a burst of decoding. Each content's slot comes from
+// its id, so its thumbnail sizes and metadata are retried together and the
+// sizes share one decode.
+export function retryGivenUpEnrichmentAfterUpdate(database: Database, release: string) {
+	const stored = database.prepare(`SELECT value FROM index_state WHERE key = 'enrichment_release'`).get() as
+		| {value: string}
+		| undefined
+	if (stored?.value === release) return
+	const retry = database.transaction(() => {
+		const now = Date.now()
+		let rows = 0
+		for (const table of ['thumbnail_variants', 'media_metadata']) {
+			rows += database
+				.prepare(
+					`UPDATE ${table} SET failure_count = ?, retry_at = ? + (content_id * 2654435761) % ?
+					WHERE state = 'failed' AND retry_at IS NULL`,
+				)
+				.run(MAX_CONTENT_FAILURES - 1, now, RELEASE_RETRY_SPREAD_MS).changes
+		}
+		// Transient thumbnails are only made on demand, so the next view retries.
+		rows += database
+			.prepare(
+				`UPDATE transient_thumbnail_variants SET failure_count = ?, retry_at = ?
+				WHERE state = 'failed' AND retry_at IS NULL`,
+			)
+			.run(MAX_CONTENT_FAILURES - 1, now).changes
+		database
+			.prepare(
+				`INSERT INTO index_state(key, value) VALUES ('enrichment_release', ?)
+				ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+			)
+			.run(release)
+		return rows
+	})
+	return {previous: stored?.value, rows: retry.immediate()}
 }
 
 function errorMessage(error: unknown) {

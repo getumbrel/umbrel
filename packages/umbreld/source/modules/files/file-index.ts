@@ -55,6 +55,8 @@ export type FileIndexOptions = {
 	recoveryRetryMs?: number
 	watcherBulkThreshold?: number
 	batchSize?: number
+	// The running umbreld version. Enrichment that gave up is retried once per release.
+	release?: string
 	onPhotosChange?: (accountIds: string[]) => void
 	onPhotosIndexingProgress?: (progress: PhotoIndexingProgress[]) => void
 }
@@ -120,6 +122,7 @@ export default class FileIndex {
 			recoveryRetryMs,
 			watcherBulkThreshold = DEFAULT_WATCHER_BULK_THRESHOLD,
 			batchSize,
+			release,
 			onPhotosChange,
 			onPhotosIndexingProgress,
 		}: FileIndexOptions,
@@ -142,6 +145,7 @@ export default class FileIndex {
 			recoveryRetryMs,
 			watcherBulkThreshold,
 			batchSize,
+			release,
 		}
 		this.#createWorker = createWorker
 		this.#workerRestartDelayMs = workerRestartDelayMs

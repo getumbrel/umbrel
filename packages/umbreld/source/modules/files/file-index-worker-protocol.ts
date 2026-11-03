@@ -9,6 +9,7 @@ export type FileIndexWorkerData = {
 	recoveryRetryMs?: number
 	watcherBulkThreshold?: number
 	batchSize?: number
+	release?: string
 }
 
 export type FileIndexRequestMethod =

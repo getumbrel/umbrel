@@ -198,6 +198,7 @@ export default class Files {
 			logger: umbreld.logger.createChildLogger('files:file-index'),
 			hiddenFiles: this.hiddenFiles,
 			hiddenExtensions: this.hiddenExtensions,
+			release: umbreld.version,
 			onPhotosChange: (accountIds) => this.#umbreld.eventBus.emit('photos:change', {accountIds}),
 			onPhotosIndexingProgress: (progress) => {
 				for (const update of progress) this.#umbreld.eventBus.emit('photos:indexing-progress', update)

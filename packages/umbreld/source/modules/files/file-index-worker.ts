@@ -39,6 +39,7 @@ const index = new FileIndexEngine({
 	recoveryRetryMs: options.recoveryRetryMs,
 	watcherBulkThreshold: options.watcherBulkThreshold,
 	batchSize: options.batchSize,
+	release: options.release,
 })
 
 function rootsArg(args: unknown[]) {
