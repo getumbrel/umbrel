@@ -52,7 +52,16 @@ export const VIDEO_EXTENSIONS = new Set([
 	'.insv',
 ])
 
+// macOS writes an AppleDouble `._<name>` sidecar next to a file when it copies
+// it to a volume that can't store extended attributes (FAT32/exFAT, SMB/NFS
+// shares, archives). It keeps the original's extension but only ever holds
+// Finder info, xattrs and the resource fork, never media.
+export function isAppleDouble(name: string) {
+	return nodePath.basename(name).startsWith('._')
+}
+
 export function photoKind(name: string): PhotoKind | undefined {
+	if (isAppleDouble(name)) return
 	const extension = nodePath.extname(name).toLowerCase()
 	if (PHOTO_EXTENSIONS.has(extension)) return 'photo'
 	if (VIDEO_EXTENSIONS.has(extension)) return 'video'

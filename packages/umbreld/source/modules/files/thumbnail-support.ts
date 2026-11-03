@@ -1,6 +1,6 @@
 import nodePath from 'node:path'
 
-import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.ts'
+import {isAppleDouble, PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.ts'
 
 export const SUPPORTED_THUMBNAIL_EXTENSIONS = new Set([...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS])
 
@@ -39,7 +39,7 @@ export type ThumbnailIdentity = {
 const THUMBNAIL_KEY_PATTERN = /^[a-f0-9]{64}$/
 
 export function supportsThumbnail(name: string) {
-	return SUPPORTED_THUMBNAIL_EXTENSIONS.has(nodePath.extname(name).toLowerCase())
+	return !isAppleDouble(name) && SUPPORTED_THUMBNAIL_EXTENSIONS.has(nodePath.extname(name).toLowerCase())
 }
 
 export function isThumbnailVariant(value: string): value is ThumbnailVariant {

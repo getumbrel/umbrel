@@ -76,6 +76,7 @@ async function fixture(
 			| 'enrichmentRuntime'
 			| 'onPhotosChange'
 			| 'onPhotosIndexingProgress'
+			| 'isHidden'
 		>
 	> & {includeTrash?: boolean} = {},
 ) {
@@ -807,6 +808,102 @@ describe('file index migrations', () => {
 		database.close()
 	})
 
+	test('drops the content identity of already-indexed AppleDouble sidecars', async () => {
+		const database = new BetterSqlite3(':memory:')
+		await migrateFileIndex(
+			database,
+			fileIndexMigrations.filter(({version}) => version < 24),
+		)
+		database
+			.prepare(
+				`INSERT INTO index_roots(
+					virtual_path, system_path, owner_id, kind, search_enabled, created_at, updated_at
+				) VALUES ('/Home', '/data/home', 'owner', 'home', 1, 1, 1),
+					('/Apps', '/data/app-data', 'owner', 'apps', 0, 1, 1)`,
+			)
+			.run()
+		const insertContent = database.prepare('INSERT INTO contents(blake3, size, created_at) VALUES (?, 4096, 1)')
+		const sidecarContent = Number(insertContent.run(Buffer.alloc(32, 0xa1)).lastInsertRowid)
+		const photoContent = Number(insertContent.run(Buffer.alloc(32, 0xa2)).lastInsertRowid)
+		const insertEntry = database.prepare(
+			`INSERT INTO entries(
+				root_id, relative_path, name, search_name, search_name_folded, type, size, modified_ms, hidden,
+				thumbnail_identity_kind, content_id, hash_failure_count, hash_retry_at, hash_error
+			) VALUES (?, ?, ?, ?, ?, 'file', 4096, 1, 0, ?, ?, ?, ?, ?)`,
+		)
+		const entry = (
+			rootId: number,
+			name: string,
+			kind: string | null,
+			contentId: number | null,
+			hash: [number, number | null, string | null] = [0, null, null],
+		) => insertEntry.run(rootId, `Documents/${name}`, name, name, name.toLowerCase(), kind, contentId, ...hash)
+		entry(1, '._IMG_0001.HEIC', 'content', sidecarContent)
+		entry(1, '._IMG_0002.HEIC', 'content', null, [3, 123, 'unreadable'])
+		entry(1, 'IMG_0001.HEIC', 'content', photoContent)
+		entry(1, '._notes.txt', null, null)
+		const transientSidecar = Number(entry(2, '._clip.mov', 'transient', null).lastInsertRowid)
+		database
+			.prepare(
+				`INSERT INTO transient_thumbnail_variants(entry_id, variant, artifact_key, state, updated_at)
+				VALUES (?, ?, ?, 'failed', 1)`,
+			)
+			.run(transientSidecar, THUMBNAIL_VARIANT, 'a'.repeat(64))
+		for (const contentId of [sidecarContent, photoContent]) {
+			database
+				.prepare(
+					`INSERT INTO thumbnail_variants(content_id, variant, state, failure_count, retry_at, updated_at)
+					VALUES (?, ?, 'failed', 5, 1, 1)`,
+				)
+				.run(contentId, THUMBNAIL_VARIANT)
+		}
+		database.exec('DELETE FROM photos_read_model_dirty_contents')
+
+		await expect(migrateFileIndex(database)).resolves.toBe(FILE_INDEX_SCHEMA_VERSION)
+		expect(
+			database
+				.prepare(
+					`SELECT name, thumbnail_identity_kind, content_id, hash_failure_count, hash_retry_at, hash_error
+					FROM entries ORDER BY name`,
+				)
+				.all(),
+		).toStrictEqual([
+			...['._IMG_0001.HEIC', '._IMG_0002.HEIC', '._clip.mov', '._notes.txt'].map((name) => ({
+				name,
+				thumbnail_identity_kind: null,
+				content_id: null,
+				hash_failure_count: 0,
+				hash_retry_at: null,
+				hash_error: null,
+			})),
+			{
+				name: 'IMG_0001.HEIC',
+				thumbnail_identity_kind: 'content',
+				content_id: photoContent,
+				hash_failure_count: 0,
+				hash_retry_at: null,
+				hash_error: null,
+			},
+		])
+		// Nothing references the sidecar's failed thumbnail any more, so it is no
+		// longer retried and asset maintenance can reclaim it.
+		const referencedFailures = database
+			.prepare(
+				`SELECT content_id FROM thumbnail_variants
+				WHERE state = 'failed' AND EXISTS (SELECT 1 FROM entries WHERE entries.content_id = thumbnail_variants.content_id)`,
+			)
+			.all()
+		expect(referencedFailures).toStrictEqual([{content_id: photoContent}])
+		expect(database.prepare('SELECT COUNT(*) AS count FROM transient_thumbnail_variants').get()).toStrictEqual({
+			count: 0,
+		})
+		// Photos is told to re-project the sidecar's old content.
+		expect(
+			database.prepare('SELECT account_id, content_hash FROM photos_read_model_dirty_contents').all(),
+		).toStrictEqual([{account_id: 'owner', content_hash: Buffer.alloc(32, 0xa1)}])
+		database.close()
+	})
+
 	test('normalizes populated schema v4 filenames when adding the search index', async () => {
 		const database = new BetterSqlite3(':memory:')
 		await migrateFileIndex(database, fileIndexMigrations.slice(0, 4))
@@ -1407,6 +1504,53 @@ test('keeps invalid duplicate media on backoff as new references are discovered'
 		maxTimeout: 20,
 	})
 	expect(extractMediaMetadata).toHaveBeenCalledOnce()
+})
+
+test('indexes macOS AppleDouble sidecars without hashing, thumbnailing, or publishing them to Photos', async () => {
+	const hashFile = vi.fn(async (_systemPath: string) => Buffer.alloc(32, 0x34))
+	const generateThumbnails = vi.fn(async (_source: string, outputs: Array<{destination: string; variant: string}>) => {
+		await Promise.all(outputs.map(({destination}) => fse.outputFile(destination, 'thumbnail')))
+	})
+	const extractMediaMetadata = vi.fn(async (_systemPath: string) => ({kind: 'photo' as const, width: 100, height: 50}))
+	// Files only hides its own metadata names, so `._` sidecars stay visible.
+	const {index, homeDirectory, trashDirectory} = await fixture(undefined, {
+		includeTrash: true,
+		isHidden: (name) => name === '.DS_Store',
+		enrichmentRuntime: {hashFile, generateThumbnails, extractMediaMetadata},
+	})
+	const photo = nodePath.join(homeDirectory, 'Documents', 'IMG_0001.HEIC')
+	const sidecars = [
+		nodePath.join(homeDirectory, 'Documents', '._IMG_0001.HEIC'),
+		nodePath.join(homeDirectory, 'Documents', '._IMG_0002.MOV'),
+		nodePath.join(trashDirectory, '._IMG_0003.JPG'),
+	]
+	await fse.outputFile(photo, 'image')
+	await Promise.all(sidecars.map((sidecar) => fse.outputFile(sidecar, 'Mac OS X AppleDouble')))
+	await index.reconcileRoot('/Home', 'appledouble-sidecars')
+	await index.reconcileRoot('/Trash', 'appledouble-sidecars')
+	await index.initializePhotos('owner')
+	index.startBackgroundReconciliation()
+
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	await expect(index.status()).resolves.toMatchObject({
+		enrichment: {eligibleEntries: 1, hashedEntries: 1, pendingHashes: 0, thumbnailFailures: 0, mediaFailures: 0},
+	})
+	expect(hashFile.mock.calls.map(([systemPath]) => systemPath)).toStrictEqual([photo])
+	expect(generateThumbnails.mock.calls.map(([systemPath]) => systemPath)).toStrictEqual([photo])
+	expect(extractMediaMetadata.mock.calls.map(([systemPath]) => systemPath)).toStrictEqual([photo])
+	await expect(index.photosListItems('owner', {}, undefined, 10)).resolves.toMatchObject({total: 1})
+
+	// The sidecars are still ordinary indexed files that Files search finds
+	expect(await candidateNames(index, 'IMG_000')).toStrictEqual(['._IMG_0001.HEIC', '._IMG_0002.MOV', 'IMG_0001.HEIC'])
+
+	// … but browsing one never decodes it on demand either
+	await expect(index.ensureThumbnail(sidecars[0])).rejects.toThrow('Unsupported or missing thumbnail source')
+	expect(hashFile).toHaveBeenCalledOnce()
+	expect(generateThumbnails).toHaveBeenCalledOnce()
 })
 
 test('background-enriches Home and Trash while leaving other indexed roots on demand', async () => {

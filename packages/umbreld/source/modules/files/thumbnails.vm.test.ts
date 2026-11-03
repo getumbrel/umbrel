@@ -391,6 +391,39 @@ describe('content-addressed thumbnail index', () => {
 		expect(listing.files[0].thumbnail).toBeUndefined()
 	})
 
+	test('never decodes the macOS AppleDouble sidecar copied next to a photo', async () => {
+		// macOS writes `._<name>` beside every file it copies to FAT/exFAT drives or
+		// network shares. The fixture is a real one, from copying the HEIC fixture
+		// to a FAT32 volume. It keeps the photo's extension but holds no image.
+		const directory = `${suiteRoot}/appledouble`
+		const photo = `${directory}/IMG_0001.HEIC`
+		const sidecar = `${directory}/._IMG_0001.HEIC`
+		const since = await umbreld.vm.sshAsRoot('date +%s')
+		await uploadFixture(photo, 'apple-encoded-image.heic')
+		await uploadFixture(sidecar, 'appledouble-sidecar.bin')
+
+		await expect(umbreld.client.files.getThumbnail.mutate({path: sidecar})).rejects.toThrow(
+			'Unsupported or missing thumbnail source',
+		)
+
+		// Background enrichment reaches the photo but leaves the sidecar alone,
+		// which stays listed like any other file
+		await pRetry(
+			async () => {
+				const {files} = await umbreld.client.files.list.query({path: directory})
+				expect(Object.fromEntries(files.map(({name, thumbnail}) => [name, typeof thumbnail]))).toStrictEqual({
+					'._IMG_0001.HEIC': 'undefined',
+					'IMG_0001.HEIC': 'string',
+				})
+			},
+			{retries: 240, factor: 1, minTimeout: 250, maxTimeout: 250},
+		)
+		const sidecarLogs = await umbreld.vm.sshAsRoot(
+			`journalctl -u umbrel --since @${since} --no-pager | grep -F '._IMG_0001.HEIC' || true`,
+		)
+		expect(sidecarLogs).toBe('')
+	})
+
 	test('converges a large out-of-band event burst while background generation remains responsive', async () => {
 		const count = 160
 		const path = `${suiteRoot}/churn`

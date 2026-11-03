@@ -534,6 +534,21 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 			`)
 		},
 	},
+	{
+		version: 24,
+		up: (database) => {
+			// macOS AppleDouble `._<name>` sidecars are no longer treated as media.
+			// Rescans keep an unchanged file's content identity, so drop the ones
+			// already indexed here. Their failed thumbnails and metadata stop being
+			// retried, Photos drops them, and asset maintenance reclaims the content.
+			database.exec(`
+				UPDATE entries SET
+					thumbnail_identity_kind = NULL, content_id = NULL,
+					hash_failure_count = 0, hash_retry_at = NULL, hash_error = NULL
+				WHERE name GLOB '._*' AND thumbnail_identity_kind IS NOT NULL;
+			`)
+		},
+	},
 ]
 
 export const FILE_INDEX_SCHEMA_VERSION = fileIndexMigrations.at(-1)?.version ?? 0

@@ -238,18 +238,21 @@ const FileItemIconContent = ({
 	}
 
 	const {extension} = splitFileName(item.name)
+	// macOS AppleDouble `._<name>` sidecars keep the original's extension but
+	// never hold media, so the backend never thumbnails them
+	const isAppleDouble = item.name.startsWith('._')
 	const fallback = DefaultThumbnail ? (
 		<DefaultThumbnail className={className} />
 	) : (
 		<UnknownFileThumbnail type={item.type || ''} className={className} />
 	)
 	// Image file
-	if (extension && IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
+	if (!isAppleDouble && extension && IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
 		return <ImageThumbnail item={item} fallback={fallback} className={className} />
 	}
 
 	// Video file
-	if (extension && VIDEO_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
+	if (!isAppleDouble && extension && VIDEO_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
 		return <VideoThumbnail item={item} fallback={fallback} className={className} />
 	}
 
