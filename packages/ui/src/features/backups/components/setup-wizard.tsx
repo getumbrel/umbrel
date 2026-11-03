@@ -288,7 +288,8 @@ export function BackupsSetupWizard() {
 						const h = headerMetaForStep(step)
 						return (
 							<>
-								<h2 className='text-24 font-medium text-white'>{h.title}</h2>
+								{/* Like immersive dialog titles, wraps short of the window's close button */}
+								<h2 className='pe-4 text-24 font-medium text-white'>{h.title}</h2>
 								{h.subtitle ? <span className='text-13 text-white/60'>{h.subtitle}</span> : null}
 							</>
 						)

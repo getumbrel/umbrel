@@ -113,8 +113,8 @@ export function NavigationControls() {
 	const canGoForward = Boolean(navigation.paths[navigation.currentPathIndex + 1])
 
 	return (
-		// Spaced wider on touch so neither's touch target reaches over the other's glyph
-		<div className='flex items-center gap-2 pointer-coarse:gap-4'>
+		// Spaced 44px apart on touch, so their touch targets meet without overlapping
+		<div className='flex items-center gap-2 pointer-coarse:gap-6'>
 			<motion.button
 				onClick={handleBack}
 				disabled={!canGoBack}

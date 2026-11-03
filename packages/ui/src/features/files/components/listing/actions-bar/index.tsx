@@ -34,15 +34,16 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			)}
 			aria-label={t('files-view.actions')}
 		>
-			{/* Left side: Navigation and Path. Clipped sideways only, so the buttons' touch targets reach past the 32px row */}
-			<div className='flex min-w-0 flex-1 items-center gap-2 overflow-x-clip'>
+			{/* Left side: Navigation and Path. Unclipped, so the buttons' touch targets reach past the row's
+			    edges; the path truncates or scrolls within itself */}
+			<div className='flex min-w-0 flex-1 items-center gap-2'>
 				{onOpenSidebar && (
 					<button
 						type='button'
 						onClick={onOpenSidebar}
 						aria-label={t('files-sidebar.navigation')}
-						// The padding past the glyph keeps Back's touch target off it
-						className={cn(touchTargetClass, 'hidden shrink-0 px-1 phone-side:block')}
+						// On touch the margin puts Back 44px along, so their touch targets meet without overlapping
+						className={cn(touchTargetClass, 'hidden shrink-0 px-1 pointer-coarse:me-3 phone-side:block')}
 					>
 						<HiMenuAlt2 className='h-5 w-5 text-white/90' />
 					</button>
