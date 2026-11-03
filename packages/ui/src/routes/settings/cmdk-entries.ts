@@ -42,7 +42,7 @@ export function useSettingsCmdkEntries(): CmdkEntry[] {
 		return getSettingsCommandItems(catalog).map((item) => ({
 			id: `settings:${item.id}`,
 			title: item.title,
-			subtitle: `${t('generic-in')} ${t('settings')}`,
+			subtitle: t('cmdk.in-settings'),
 			keywords: [item.description, ...(item.keywords ?? [])].filter((keyword) => keyword !== undefined),
 			default: defaultItems.has(item),
 			icon: systemAppsKeyed['UMBREL_settings'].icon,

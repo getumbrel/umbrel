@@ -1,5 +1,7 @@
 import {useEffect, useImperativeHandle, useRef, useState, type Ref} from 'react'
 
+import {t} from '@/utils/i18n'
+
 import type {Controller} from './controller'
 import {XK} from './keysyms'
 
@@ -99,7 +101,7 @@ export function KeyboardSink({controller, ref}: {controller: Controller; ref: Re
 	return (
 		<textarea
 			ref={input}
-			aria-label='Machine keyboard'
+			aria-label={t('machines.touch-keyboard')}
 			autoCapitalize='off'
 			autoComplete='off'
 			autoCorrect='off'

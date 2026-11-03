@@ -3,11 +3,13 @@ import {useEffect, useMemo, useState} from 'react'
 import {useBackups, useMountBackup, useRepositoryBackups, useUnmountBackup} from '@/features/backups/hooks/use-backups'
 import type {Backup, BackupRepository} from '@/features/backups/hooks/use-backups'
 import {useFilesStore} from '@/features/files/store/use-files-store'
+import {useLanguage} from '@/hooks/use-language'
 import {trpcReact} from '@/trpc/trpc'
 
 type ViewState = 'preflight' | 'browsing' | 'switching-snapshot' | 'restoring'
 
 export function useRewind({overlayOpen, repoOpen}: {overlayOpen: boolean; repoOpen: boolean}) {
+	const [languageCode] = useLanguage()
 	const [view, setView] = useState<ViewState>('preflight')
 	const [mountedDir, setMountedDir] = useState<string | null>(null)
 	const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null)
@@ -39,12 +41,12 @@ export function useRewind({overlayOpen, repoOpen}: {overlayOpen: boolean; repoOp
 	)
 	const earliestDateLabel = useMemo(() => {
 		if (!backupsRaw.length) return null
-		return new Date(backupsRaw[0].time).toLocaleDateString(undefined, {
+		return new Date(backupsRaw[0].time).toLocaleDateString(languageCode, {
 			year: 'numeric',
 			month: 'short',
 			day: 'numeric',
 		})
-	}, [backupsRaw])
+	}, [backupsRaw, languageCode])
 
 	// preflight dialog auto-select
 	useEffect(() => {

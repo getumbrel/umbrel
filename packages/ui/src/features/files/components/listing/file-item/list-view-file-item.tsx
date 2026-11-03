@@ -12,6 +12,7 @@ import type {FileSystemItem} from '@/features/files/types'
 import {fileTypeLabel} from '@/features/files/utils/file-type-label'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {formatUploadPercent} from '@/features/files/utils/format-upload-percent'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
@@ -76,7 +77,9 @@ export function ListViewFileItem({
 								: isUploading
 									? uploadingProgress === 0
 										? t('files-state.waiting')
-										: `${t('files-state.uploading')} ${(uploadingProgress ?? 0).toFixed(2)}%`
+										: t('files-state.uploading-percent', {
+												percent: formatUploadPercent(uploadingProgress ?? 0, languageCode),
+											})
 									: item.modified
 										? formatFilesystemDate(item.modified, languageCode)
 										: '—'}

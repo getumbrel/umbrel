@@ -5,6 +5,7 @@ import {useNavigate} from 'react-router-dom'
 import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
 import {ImmersiveDialogBody, ImmersiveDialogIconMessageKeyValue} from '@/components/ui/immersive-dialog'
+import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
@@ -62,7 +63,11 @@ export function ReviewData() {
 				<ImmersiveDialogIconMessageKeyValue
 					icon={TbShoppingBag}
 					k={t('factory-reset.review.apps')}
-					v={t('factory-reset.review.installed-apps', {count: installedAppCount})}
+					v={
+						installedAppCount === undefined
+							? LOADING_DASH
+							: t('factory-reset.review.installed-apps', {count: installedAppCount})
+					}
 				/>
 				<ImmersiveDialogIconMessageKeyValue icon={TbServer} k={t('factory-reset.review.total-data')} v={used} />
 			</ImmersiveDialogBody>

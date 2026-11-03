@@ -1,7 +1,7 @@
 import {ChevronRight, Loader2} from 'lucide-react'
 import {motion, useReducedMotion} from 'motion/react'
 import {Fragment, ReactNode, useEffect, useMemo, useRef, useState} from 'react'
-import {useTranslation} from 'react-i18next'
+import {Trans, useTranslation} from 'react-i18next'
 import {Link, useNavigate, useParams} from 'react-router-dom'
 
 import {ChevronDown} from '@/components/chevron-down'
@@ -119,7 +119,6 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 		: t('storage-manager.health.title-drive')
 	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 	const ownerFirstName = userQ.data?.name ? firstNameFromFullName(userQ.data.name) : ''
-	const ownerHeading = ownerFirstName ? `${ownerFirstName}’s ${t('umbrel')}` : t('umbrel')
 
 	const settingsCatalog = useMemo(
 		() =>
@@ -407,13 +406,22 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 										/>
 									)}
 								</div>
-								<h2
-									title={ownerHeading}
-									aria-label={ownerHeading}
-									className='flex w-full min-w-0 items-center justify-center gap-1 overflow-hidden py-2 text-24 leading-none font-semibold -tracking-4'
-								>
-									{ownerFirstName && <span className='min-w-0 truncate'>{ownerFirstName}’s</span>}
-									<span className='shrink-0 text-white/45'>{t('umbrel')}</span>
+								{/* Wraps instead of truncating, so a language that puts a long phrase
+								    around the name ("Umbrel пользователя …") still shows the name */}
+								<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-[30px] font-semibold -tracking-4 text-balance break-words text-white/45'>
+									{ownerFirstName ? (
+										<Trans
+											t={t}
+											i18nKey='settings.owner-heading'
+											values={{name: ownerFirstName}}
+											components={{name: <span className='text-white' />}}
+											// The name is the user's own text: escaped, so a "<" in it isn't read as a tag
+											tOptions={{interpolation: {escapeValue: true}}}
+											shouldUnescape
+										/>
+									) : (
+										t('umbrel')
+									)}
 								</h2>
 							</div>
 

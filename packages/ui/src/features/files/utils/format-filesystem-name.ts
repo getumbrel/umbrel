@@ -1,6 +1,7 @@
 // TODO: this is mostly just a placeholder for now.
 // We need to implement this robustly. Look into css truncation.
 import type {FileSystemItem} from '@/features/files/types'
+import {splitCharacters} from '@/utils/characters'
 
 // Formats file/folder names for display, including truncation
 export function formatItemName({name, maxLength = 30}: {name: FileSystemItem['name']; maxLength?: number}) {
@@ -8,7 +9,7 @@ export function formatItemName({name, maxLength = 30}: {name: FileSystemItem['na
 	const {name: fileName, extension} = splitFileName(name)
 
 	// Account for extension length when truncating so that truncated files with extensions vs no extensions have the same length
-	const nameMaxLength = extension ? maxLength - Array.from(extension).length : maxLength
+	const nameMaxLength = extension ? maxLength - textWidth(extension) : maxLength
 	const truncatedName = truncateName(fileName, nameMaxLength)
 	return extension ? `${truncatedName}${extension}` : truncatedName
 }
@@ -42,21 +43,48 @@ export function splitFileName(fileName: string): {name: string; extension: strin
 	}
 }
 
+// Chinese, Japanese and Korean characters, fullwidth forms and emoji are about
+// twice as wide as Latin letters, so they count double. Otherwise a 30-character
+// Japanese name still fills four lines of an icon label, and the label's own
+// clamp cuts off its end, extension and all.
+const WIDE_CHARACTER =
+	/[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6\u{20000}-\u{3FFFD}]|\p{Emoji_Presentation}|\uFE0F/u
+
+function characterWidth(character: string) {
+	return WIDE_CHARACTER.test(character) ? 2 : 1
+}
+
+function textWidth(text: string) {
+	let width = 0
+	for (const character of splitCharacters(text)) width += characterWidth(character)
+	return width
+}
+
+// How many characters from the start of `characters` fit in `width`
+function countFitting(characters: string[], width: number) {
+	let used = 0
+	let count = 0
+	for (const character of characters) {
+		used += characterWidth(character)
+		if (used > width) break
+		count++
+	}
+	return count
+}
+
 // Truncates a name while preserving meaningful parts
 // Example: "very-long-document-name" -> "very-long…name"
 function truncateName(name: string, maxLength: number): string {
-	// Count and cut characters, not UTF-16 units, so an emoji is never split in two
-	const characters = Array.from(name)
-	if (characters.length <= maxLength) return name
+	if (textWidth(name) <= maxLength) return name
 
-	// Reserve 1 character for the ellipsis
+	// Reserve 1 character for the ellipsis, and keep at least the first one
 	const availableLength = Math.max(maxLength - 1, 1)
 	const startLength = Math.ceil(availableLength * 0.6) // Keep more characters at start
 	const endLength = availableLength - startLength // Keep remaining at end
 
-	const start = characters.slice(0, startLength).join('')
-	// slice(-0) would keep the whole name
-	const end = endLength > 0 ? characters.slice(-endLength).join('') : ''
+	const characters = splitCharacters(name)
+	const start = characters.slice(0, countFitting(characters, startLength))
+	const end = characters.slice(characters.length - countFitting([...characters].reverse(), endLength))
 
-	return `${start}…${end}`
+	return `${start.join('')}…${end.join('')}`
 }

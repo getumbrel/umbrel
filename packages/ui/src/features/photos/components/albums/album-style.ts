@@ -1,3 +1,5 @@
+import {capitalizeDate} from '@/utils/date-time'
+
 // The typographic personality of an album's cover: a small curated set of
 // display faces, one chosen per album by hashing its id. Deterministic and
 // stateless, so the same album looks the same on every device and after
@@ -78,7 +80,7 @@ export function formatAlbumDates(from: number | undefined, to: number | undefine
 	const year = format({year: 'numeric'})
 	const month = format({month: 'short'})
 	const monthYear = format({month: 'short', year: 'numeric'})
-	const span = (first: string, last: string) => `${first}\u2009–\u2009${last}`
+	const span = (first: string, last: string) => `${capitalizeDate(first, language)}\u2009–\u2009${last}`
 	if (a.getUTCFullYear() !== b.getUTCFullYear()) return span(year.format(a), year.format(b))
 	const months = b.getUTCMonth() - a.getUTCMonth() + 1
 	if (months > RANGE_MAX_MONTHS) return year.format(a)
@@ -87,6 +89,7 @@ export function formatAlbumDates(from: number | undefined, to: number | undefine
 		const yearFirst = parts.indexOf('year') < parts.indexOf('month')
 		return yearFirst ? span(monthYear.format(a), month.format(b)) : span(month.format(a), monthYear.format(b))
 	}
-	if (a.getUTCDate() !== b.getUTCDate()) return format({month: 'long', year: 'numeric'}).format(a)
+	if (a.getUTCDate() !== b.getUTCDate())
+		return capitalizeDate(format({month: 'long', year: 'numeric'}).format(a), language)
 	return format({day: 'numeric', month: 'short', year: 'numeric'}).format(a)
 }

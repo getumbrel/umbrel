@@ -57,6 +57,8 @@ export function WindowsInstructions({smbUrl, username, password}: WindowsInstruc
 							t={t}
 							i18nKey='files-share.instructions.windows.enter-url'
 							values={{smbUrl}}
+							tOptions={{interpolation: {escapeValue: true}}}
+							shouldUnescape
 							components={{
 								field: <InlineCopyableField value={smbUrl} />,
 							}}
@@ -67,6 +69,8 @@ export function WindowsInstructions({smbUrl, username, password}: WindowsInstruc
 							t={t}
 							i18nKey='files-share.instructions.windows.enter-username'
 							values={{username}}
+							tOptions={{interpolation: {escapeValue: true}}}
+							shouldUnescape
 							components={{
 								field: <InlineCopyableField value={username} />,
 							}}
@@ -77,6 +81,8 @@ export function WindowsInstructions({smbUrl, username, password}: WindowsInstruc
 							t={t}
 							i18nKey='files-share.instructions.windows.enter-password'
 							values={{password}}
+							tOptions={{interpolation: {escapeValue: true}}}
+							shouldUnescape
 							components={{
 								field: <InlineCopyableField value={password} />,
 							}}

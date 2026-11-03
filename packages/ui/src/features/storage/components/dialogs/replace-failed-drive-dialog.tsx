@@ -102,10 +102,9 @@ export function ReplaceFailedDriveDialog({
 			<DialogScrollableContent>
 				<div className='flex flex-col gap-5 p-5'>
 					<DialogHeader>
-						{/* "SSD" slot labels are not translated - they match the physical device markings */}
 						<DialogTitle>
 							{failedSlot
-								? `${t('storage-manager.replace')} SSD ${failedSlot}`
+								? t('storage-manager.replace-failed.title-slot', {slot: failedSlot})
 								: isHdd
 									? t('storage-manager.replace-failed.title-drive')
 									: t('storage-manager.replace-failed.title')}

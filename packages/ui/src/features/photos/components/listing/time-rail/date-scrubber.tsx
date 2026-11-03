@@ -33,6 +33,7 @@ import {
 import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
 import type {Layout} from '@/features/photos/components/listing/timeline-rows'
 import {cn} from '@/lib/utils'
+import {capitalizeDate} from '@/utils/date-time'
 
 // The handle shows while the grid scrolls and rests this long after
 const HIDE_AFTER_MS = 1500
@@ -112,7 +113,7 @@ export function DateScrubber({
 	const scale = useMemo(() => buildScale(buckets, trackHeight), [buckets, trackHeight])
 	const monthLabel = useMemo(() => {
 		const format = new Intl.DateTimeFormat(i18n.language, {month: 'long', year: 'numeric', timeZone: 'UTC'})
-		return (key: MonthKey) => format.format(monthStartUtc(key))
+		return (key: MonthKey) => capitalizeDate(format.format(monthStartUtc(key)), i18n.language)
 	}, [i18n.language])
 
 	// Where a month sits for this scrubber: where the rail would put it, but

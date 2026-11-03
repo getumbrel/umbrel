@@ -10,11 +10,13 @@ import {useAppStorageFolderTags} from '@/features/files/hooks/use-app-storage-fo
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import type {FileSystemItem} from '@/features/files/types'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {formatUploadPercent} from '@/features/files/utils/format-upload-percent'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import type {Machine} from '@/features/machines/types'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useLanguage} from '@/hooks/use-language'
 import {cn} from '@/lib/utils'
 
 interface IconsViewFileItemProps {
@@ -33,6 +35,7 @@ export const IconsViewFileItem = ({
 	fadedContent,
 }: IconsViewFileItemProps) => {
 	const {t} = useTranslation()
+	const [languageCode] = useLanguage()
 	const displayName = machine?.name ?? item.name
 	const isUploading = 'isUploading' in item && item.isUploading
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
@@ -90,7 +93,7 @@ export const IconsViewFileItem = ({
 						: isUploading
 							? uploadingProgress === 0
 								? t('files-state.waiting')
-								: `${(uploadingProgress ?? 0).toFixed(2)}%`
+								: formatUploadPercent(uploadingProgress ?? 0, languageCode)
 							: item.type === 'directory'
 								? isDirectoryAnExternalDrivePartition(item.path)
 									? t('files-type.external-drive')

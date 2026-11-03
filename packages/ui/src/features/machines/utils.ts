@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import prettyBytes from 'pretty-bytes'
 
 import {EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
@@ -9,7 +10,7 @@ export const isMachineStartable = (state: MachineState) =>
 	state === 'stopped' || state === 'suspended' || state === 'error'
 
 // OS image sizes are modelled in MB (SI)
-export const prettyMb = (mb: number) => prettyBytes(roundForPrettyBytes(mb * 1e6))
+export const prettyMb = (mb: number) => prettyBytes(roundForPrettyBytes(mb * 1e6), {locale: i18next.language})
 
 // The edition line under an OS name. Media that only accepts product keys from
 // one licensing channel names it up front, before anyone types a key Setup

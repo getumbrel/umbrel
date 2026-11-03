@@ -1,6 +1,8 @@
 import type {FileSystemItem, ViewPreferences} from '@/features/files/types'
 
-// Static comparison utility for fast sorting
+// English rules on purpose, not the UI language's: umbreld sorts and pages folder
+// listings with an en-US collator, and loaded pages are merged in this order, so
+// the two must match or items jump around as more pages load
 const collator = new Intl.Collator('en-US', {sensitivity: 'base', numeric: true})
 
 const compareByName = (a: FileSystemItem, b: FileSystemItem) => collator.compare(a.name, b.name)

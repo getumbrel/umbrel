@@ -14,6 +14,8 @@ export type SearchablePickerItem = {
 	label: string
 	keywords?: string[]
 	icon?: ReactNode
+	// The item's language when it isn't the UI's, such as a language's own name
+	lang?: string
 }
 
 type Props = {
@@ -230,6 +232,7 @@ function PickerOptions({
 				<div
 					key={item.value}
 					id={optionId(item.value)}
+					lang={item.lang}
 					role='option'
 					aria-selected={item.value === value}
 					data-active={item.value === activeValue || undefined}

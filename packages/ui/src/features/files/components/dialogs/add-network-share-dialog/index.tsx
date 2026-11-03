@@ -3,7 +3,7 @@ import {Check, ChevronDown, ChevronUp, Loader, Loader2, RotateCcw} from 'lucide-
 import {AnimatePresence, motion} from 'motion/react'
 import {startTransition, useEffect, useState} from 'react'
 import {useForm, useFormContext} from 'react-hook-form'
-import {useTranslation} from 'react-i18next'
+import {Trans, useTranslation} from 'react-i18next'
 import {z} from 'zod'
 
 import {Button} from '@/components/ui/button'
@@ -501,7 +501,15 @@ function CredentialsStep() {
 	return (
 		<div className='space-y-4 py-2'>
 			<p className='text-sm font-medium'>
-				{t('Add credentials for')} <span className='text-brand'>{form.watch('host')}</span>
+				<Trans
+					t={t}
+					i18nKey='files-add-network-share.add-credentials-for'
+					values={{host: form.watch('host')}}
+					components={{host: <span className='text-brand' />}}
+					// The host is typed by the user: escaped, so a "<" in it isn't read as a tag
+					tOptions={{interpolation: {escapeValue: true}}}
+					shouldUnescape
+				/>
 			</p>
 
 			{(['username', 'password'] as const).map((field) => {

@@ -710,6 +710,8 @@ function FolderPickerStep({
 						t={t}
 						i18nKey='backups.choose-folder-within-device'
 						values={{device: selectedName || ''}}
+						tOptions={{interpolation: {escapeValue: true}}}
+						shouldUnescape
 						components={{
 							bold: <span className='font-bold text-brand-lightest' />,
 						}}
@@ -875,17 +877,9 @@ function ReviewStep({values}: {values: FormValues}) {
 					{filteredIgnoredPaths.length > 0 || excludedAppsCount > 0
 						? [
 								filteredIgnoredPaths.length > 0
-									? t('{{count}} {{fileFolderText}} excluded', {
-											count: filteredIgnoredPaths.length,
-											fileFolderText: filteredIgnoredPaths.length === 1 ? t('file/folder') : t('files/folders'),
-										})
+									? t('backups.excluded-paths', {count: filteredIgnoredPaths.length})
 									: null,
-								excludedAppsCount > 0
-									? t('{{count}} {{appText}} excluded', {
-											count: excludedAppsCount,
-											appText: excludedAppsCount === 1 ? t('app') : t('apps'),
-										})
-									: null,
+								excludedAppsCount > 0 ? t('backups.excluded-apps', {count: excludedAppsCount}) : null,
 							]
 								.filter(Boolean)
 								.join(' · ')

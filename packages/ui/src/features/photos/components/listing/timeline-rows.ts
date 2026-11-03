@@ -17,6 +17,7 @@
 // whole list whether it is mounted or not.
 
 import type {Item} from '@/features/photos/hooks/use-items'
+import {capitalizeDate} from '@/utils/date-time'
 
 export type Zoom = 'years' | 'months' | 'days'
 
@@ -200,14 +201,17 @@ function groupKey(takenAt: number, zoom: Zoom): number {
 function groupTitle(takenAt: number, zoom: Zoom, language: string): string {
 	const date = new Date(takenAt)
 	if (zoom === 'years') return String(date.getUTCFullYear())
-	if (zoom === 'months') return date.toLocaleDateString(language, {month: 'long', year: 'numeric', timeZone: 'UTC'})
-	return date.toLocaleDateString(language, {
-		weekday: 'short',
-		month: 'long',
-		day: 'numeric',
-		year: 'numeric',
-		timeZone: 'UTC',
-	})
+	const title =
+		zoom === 'months'
+			? date.toLocaleDateString(language, {month: 'long', year: 'numeric', timeZone: 'UTC'})
+			: date.toLocaleDateString(language, {
+					weekday: 'short',
+					month: 'long',
+					day: 'numeric',
+					year: 'numeric',
+					timeZone: 'UTC',
+				})
+	return capitalizeDate(title, language)
 }
 
 // One date group: a run of the (newest-first) list, and the title its header

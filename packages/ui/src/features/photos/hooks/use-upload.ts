@@ -372,7 +372,10 @@ export function useUpload() {
 			if (media.length > 0) photosUploads.enqueue(media, albumId)
 			if (others.length > 0) {
 				confirm({
-					title: t('photos-upload.not-media-title', {count: others.length, name: others[0]!.name}),
+					title:
+						others.length === 1
+							? t('photos-upload.not-media-title-single', {name: others[0]!.name})
+							: t('photos-upload.not-media-title', {count: others.length}),
 					message: [
 						// Lead with reassurance when the rest of the drop is going up
 						...(media.length > 0 ? [t('photos-upload.not-media-rest')] : []),

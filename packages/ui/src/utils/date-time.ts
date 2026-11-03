@@ -80,3 +80,10 @@ export function duration(seconds: number | undefined, languageCode: SupportedLan
 	}
 	return formatDistanceStrict(0, seconds * 1000, {locale: languageCodeToDateLocale[languageCode]})
 }
+
+// A date shown on its own, as a heading or a label, starts with a capital, as
+// at the start of a sentence. Intl writes month and weekday names the way they
+// read mid-sentence, which is lowercase in many languages ("октябрь 2026 г.").
+export function capitalizeDate(text: string, locale: string) {
+	return text.replace(/^\p{Ll}/u, (letter) => letter.toLocaleUpperCase(locale))
+}

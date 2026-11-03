@@ -94,8 +94,18 @@ export function SwapDialog({
 	// dv('storage-manager.swap.foo') resolves to 'storage-manager.swap.foo-drive' when generic.
 	const isGenericDrive = !slot && (oldDevice ? oldDevice.type !== 'ssd' : missingDeviceType !== 'ssd')
 	const dv = (key: string) => t(isGenericDrive ? `${key}-drive` : key)
+	// Whole titles rather than a verb and a label, since languages order them differently ("SSD 2 tauschen")
+	const swapTitle = slot
+		? t('storage-manager.swap.title-slot', {slot})
+		: isGenericDrive
+			? t('storage-manager.swap.title-drive')
+			: t('storage-manager.swap.title')
+	const replaceTitle = slot
+		? t('storage-manager.replace-failed.title-slot', {slot})
+		: isGenericDrive
+			? t('storage-manager.replace-failed.title-drive')
+			: t('storage-manager.replace-failed.title')
 	// "SSD" slot labels are not translated - they match the physical device markings
-	const swappedLabel = slot ? `SSD ${slot}` : isGenericDrive ? t('storage-manager.swap.drive-label') : 'SSD'
 	const swappedLabelDefinite = slot
 		? `SSD ${slot}`
 		: isGenericDrive
@@ -207,9 +217,7 @@ export function SwapDialog({
 				<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
 					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
-							<DialogTitle>
-								{actionLabel} {swappedLabel}
-							</DialogTitle>
+							<DialogTitle>{oldDeviceFailed ? replaceTitle : swapTitle}</DialogTitle>
 							<DialogDescription>{dv('storage-manager.swap.description-replace')}</DialogDescription>
 						</DialogHeader>
 
@@ -371,9 +379,7 @@ export function SwapDialog({
 					<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
 						<div className='flex flex-col gap-5 p-5'>
 							<DialogHeader>
-								<DialogTitle>
-									{oldDeviceFailed ? t('storage-manager.replace') : t('storage-manager.swap')} {swappedLabel}
-								</DialogTitle>
+								<DialogTitle>{oldDeviceFailed ? replaceTitle : swapTitle}</DialogTitle>
 								<DialogDescription>{t('storage-manager.swap.description-full-storage')}</DialogDescription>
 							</DialogHeader>
 
@@ -481,9 +487,9 @@ export function SwapDialog({
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
 					<DialogHeader>
-						{/* "SSD" slot labels are not translated - they match the physical device markings */}
+						{/* SSD wording even without a slot, like the steps below */}
 						<DialogTitle>
-							{t('storage-manager.swap')} {slot ? `SSD ${slot}` : 'SSD'}
+							{slot ? t('storage-manager.swap.title-slot', {slot}) : t('storage-manager.swap.title')}
 						</DialogTitle>
 						<DialogDescription>{t('storage-manager.swap.description-no-free-slot')}</DialogDescription>
 					</DialogHeader>
@@ -554,10 +560,7 @@ export function SwapDialog({
 				<DialogScrollableContent>
 					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
-							<DialogTitle>
-								{oldDeviceFailed || isMissingMember ? t('storage-manager.replace') : t('storage-manager.swap')}{' '}
-								{swappedLabel}
-							</DialogTitle>
+							<DialogTitle>{oldDeviceFailed || isMissingMember ? replaceTitle : swapTitle}</DialogTitle>
 							<DialogDescription>{t('storage-manager.swap.description-failsafe')}</DialogDescription>
 						</DialogHeader>
 

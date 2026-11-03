@@ -1,5 +1,6 @@
 import {motion} from 'motion/react'
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {ChevronLeftIcon} from '@/features/files/assets/chevron-left'
@@ -18,6 +19,7 @@ import {focusRingClass} from '@/utils/element-classes'
  * dialog re-renders during back/forward navigation.
  */
 export function NavigationControls() {
+	const {t} = useTranslation()
 	const location = useLocation()
 	const navigate = useNavigate()
 	const {uiPath, navigateToDirectory} = useFilesNavigate()
@@ -119,7 +121,7 @@ export function NavigationControls() {
 					'opacity-50': !canGoBack,
 				})}
 				whileTap={{scale: 0.85}}
-				aria-label='Go back'
+				aria-label={t('back')}
 			>
 				<ChevronLeftIcon className='h-5 w-5' />
 			</motion.button>
@@ -130,7 +132,7 @@ export function NavigationControls() {
 					'opacity-50': !canGoForward,
 				})}
 				whileTap={{scale: 0.85}}
-				aria-label='Go forward'
+				aria-label={t('forward')}
 			>
 				<ChevronRightIcon className='h-5 w-5' />
 			</motion.button>

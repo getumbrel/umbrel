@@ -133,6 +133,7 @@ export default function HddRaidSetup() {
 					<Trans
 						t={t}
 						i18nKey='onboarding.account-created.by-clicking-button-you-agree'
+						values={{button: t('onboarding.launch-umbrelos')}}
 						components={{
 							linked: <Link to={links.legal.tos} className={linkClass} target='_blank' />,
 						}}

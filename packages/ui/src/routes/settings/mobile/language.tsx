@@ -34,7 +34,8 @@ export function LanguageDrawerOrDialog() {
 									checked={activeCode === code}
 									onSelect={() => setActiveCode(code)}
 								>
-									<span className='flex items-center gap-3'>
+									{/* Each name is in its own language, so it's drawn and read out as such */}
+									<span lang={code} className='flex items-center gap-3'>
 										<span className='flex h-6 w-6 shrink-0 items-center justify-center rounded-5 bg-white/10 text-12 leading-none font-semibold'>
 											{glyph}
 										</span>

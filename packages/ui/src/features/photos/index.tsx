@@ -1,6 +1,7 @@
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {lazy, Suspense, useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {HiMenuAlt2} from 'react-icons/hi'
 import {Outlet, useLocation} from 'react-router-dom'
 
@@ -28,6 +29,7 @@ import {trpcReact} from '@/trpc/trpc'
 // can't move what's below. A phone on its side gives the row to the grid
 // (the actions bar takes its controls) until a search needs it.
 function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () => void}) {
+	const {t} = useTranslation()
 	const searching = useSearchEngaged() && isMobile
 	const reduceMotion = useReducedMotion() ?? false
 	const swap = (direction: 1 | -1) =>
@@ -56,7 +58,7 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 								<HiMenuAlt2 role='button' className='h-5 w-5 text-white/90 phone-side:hidden' onClick={openSidebar} />
 							) : null}
 							<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36 panes:text-36 phone-side:sr-only'>
-								Photos
+								{t('photos')}
 							</SheetTitle>
 							{/* Phones and tablets: the page's controls, clear of the sheet's close button */}
 							<MobileActions className='mr-5 ml-auto lg:hidden phone-side:hidden' />

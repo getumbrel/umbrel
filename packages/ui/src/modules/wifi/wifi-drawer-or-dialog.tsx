@@ -446,7 +446,7 @@ export function Connect({
 					<span>{t('wifi-connect-insecure-message')}</span>
 				</div>
 				<Button type='submit' variant='primary' size='input-short' autoFocus>
-					Connect
+					{t('connect')}
 				</Button>
 			</form>
 		)

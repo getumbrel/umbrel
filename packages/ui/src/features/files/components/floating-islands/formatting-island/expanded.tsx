@@ -118,7 +118,7 @@ export function ExpandedContent({devices}: {devices: FormattingDevice[]}) {
 								delay: 0.25,
 							}}
 						>
-							<img src={externalStorageIcon} alt='External Storage' className='size-11' draggable={false} />
+							<img src={externalStorageIcon} alt='' className='size-11' draggable={false} />
 						</motion.div>
 					</motion.div>
 				</motion.div>
@@ -141,7 +141,7 @@ export function ExpandedContent({devices}: {devices: FormattingDevice[]}) {
 				<div className='space-y-3'>
 					{devices.map((device) => (
 						<div key={device.id} className='flex items-center gap-3'>
-							<img src={externalStorageIcon} alt='External Storage' className='size-7 shrink-0' draggable={false} />
+							<img src={externalStorageIcon} alt='' className='size-7 shrink-0' draggable={false} />
 							<div className='min-w-0 flex-1'>
 								<div className='flex items-center justify-between text-xs text-white/70'>
 									<span className='truncate'>{device.name}</span>

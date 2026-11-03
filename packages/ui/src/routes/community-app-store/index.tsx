@@ -79,7 +79,9 @@ export default function CommunityAppStoreHome() {
 						<CommunityBadge className='self-start' />
 						{/* Search sits on its own full-width row on mobile, beside the title on desktop */}
 						<div className='flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between'>
-							<SheetTitle className='leading-none'>{`${appStoreName} app store`}</SheetTitle>
+							<SheetTitle className='leading-none'>
+								{t('community-app-store.page-title', {name: appStoreName})}
+							</SheetTitle>
 							<StoreSearchInput
 								className='max-w-none md:max-w-[200px]'
 								inputRef={search.setActiveInput}

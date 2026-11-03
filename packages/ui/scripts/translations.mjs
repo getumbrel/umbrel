@@ -40,6 +40,51 @@ function hasMatchingTokens(source, translation) {
 	return stack.length === 0
 }
 
+// i18next picks a count string's form with the target language's CLDR plural rules, so a
+// language needs every category those rules use, not just English's _one and _other:
+// Polish adds _few and _many, Slovenian _two. A missing form falls back to English.
+const pluralCategories = ['zero', 'one', 'two', 'few', 'many', 'other']
+const pluralSuffix = new RegExp(`_(${pluralCategories.join('|')})$`)
+// English's "one" is exactly 1. These tell apart a "one" that also covers 0 (French),
+// 21 (Russian) or 101 (Slovenian), whose form must show the count.
+const oneProbes = [0, 1, 2, 11, 21, 101]
+
+function pluralBase(english, key) {
+	const match = key.match(pluralSuffix)
+	if (!match) return undefined
+	const base = key.slice(0, -match[0].length)
+	return Object.hasOwn(english, `${base}_other`) ? base : undefined
+}
+
+// The keys a locale needs, each with the English key its translation is written from.
+// A plural form English doesn't have is written from the English plural (_other).
+export function localeKeys(english, language) {
+	const rules = new Intl.PluralRules(language)
+	// In CLDR order (one, few, many, other), which older engines don't keep, so a
+	// message's forms reach the model in the same order on every Node version
+	const categories = rules
+		.resolvedOptions()
+		.pluralCategories.sort((a, b) => pluralCategories.indexOf(a) - pluralCategories.indexOf(b))
+	const oneIsOnlyOne = oneProbes.every((n) => (rules.select(n) === 'one') === (n === 1))
+	const keys = {}
+	for (const key of Object.keys(english)) {
+		const base = pluralBase(english, key)
+		if (!base) {
+			keys[key] = {source: key}
+			continue
+		}
+		if (key !== `${base}_other`) continue
+		for (const category of categories) {
+			const own = `${base}_${category}`
+			const writtenFromOwn = Object.hasOwn(english, own) && (category !== 'one' || oneIsOnlyOne)
+			keys[own] = {source: writtenFromOwn ? own : key, group: base}
+		}
+		// i18next looks up an explicit _zero for a count of 0 in every language
+		if (Object.hasOwn(english, `${base}_zero`)) keys[`${base}_zero`] = {source: `${base}_zero`, group: base}
+	}
+	return keys
+}
+
 export async function loadTranslations(directory = defaultDirectory) {
 	const read = async (relativePath) => {
 		const data = JSON.parse(await fs.readFile(path.join(directory, relativePath), 'utf8'))
@@ -71,19 +116,28 @@ export function planTranslations({english, snapshot, locales}) {
 	const changed = Object.keys(english).filter((key) => !Object.hasOwn(snapshot, key) || snapshot[key] !== english[key])
 	const deleted = Object.keys(snapshot).filter((key) => !Object.hasOwn(english, key))
 	const changedSet = new Set(changed)
+	const changedGroups = new Set(changed.map((key) => pluralBase(english, key)).filter(Boolean))
 	const languages = Object.fromEntries(
-		Object.entries(locales).map(([language, translations]) => [
-			language,
-			{
-				pending: Object.keys(english).filter(
-					(key) =>
-						changedSet.has(key) ||
-						!Object.hasOwn(translations, key) ||
-						!hasMatchingTokens(english[key], translations[key]),
-				),
-				obsolete: Object.keys(translations).filter((key) => !Object.hasOwn(english, key)),
-			},
-		]),
+		Object.entries(locales).map(([language, translations]) => {
+			const keys = localeKeys(english, language)
+			const stale = (key) =>
+				(keys[key].group ? changedGroups.has(keys[key].group) : changedSet.has(key)) ||
+				!Object.hasOwn(translations, key) ||
+				!hasMatchingTokens(english[keys[key].source], translations[key])
+			// A plural form is translated together with its siblings, so the forms read alike
+			const staleGroups = new Set(
+				Object.keys(keys)
+					.filter((key) => keys[key].group && stale(key))
+					.map((key) => keys[key].group),
+			)
+			return [
+				language,
+				{
+					pending: Object.keys(keys).filter((key) => staleGroups.has(keys[key].group) || stale(key)),
+					obsolete: Object.keys(translations).filter((key) => !Object.hasOwn(keys, key)),
+				},
+			]
+		}),
 	)
 	return {
 		changed,
@@ -106,12 +160,14 @@ export function validateTranslations(state, {requireFresh = false} = {}) {
 	}
 	// Development allows missing keys and old wording. Once a source value has been
 	// translated, hand-edited translations must continue to preserve its tokens.
+	// Plural forms written from another English form are regenerated instead.
 	for (const [language, translations] of Object.entries(state.locales)) {
-		for (const [key, source] of Object.entries(state.english)) {
+		for (const [key, {source}] of Object.entries(localeKeys(state.english, language))) {
 			if (
-				state.snapshot[key] === source &&
+				source === key &&
+				state.snapshot[key] === state.english[key] &&
 				Object.hasOwn(translations, key) &&
-				!hasMatchingTokens(source, translations[key])
+				!hasMatchingTokens(state.english[key], translations[key])
 			) {
 				throw new Error(`${language}.json: ${key} has mismatched interpolation variables or component tags`)
 			}
@@ -130,6 +186,24 @@ function validateGenerated(source, result, language) {
 			throw new Error(`${language} response: ${key} has mismatched interpolation variables or component tags`)
 		}
 	}
+}
+
+// Splits pending keys into batches of about batchSize without splitting a plural group,
+// so the model writes all of a message's forms at once
+function batches(pending, keys, batchSize) {
+	const result = []
+	let batch = []
+	for (const [index, key] of pending.entries()) {
+		const group = keys[key].group
+		const startsUnit = !group || keys[pending[index - 1]]?.group !== group
+		if (startsUnit && batch.length >= batchSize) {
+			result.push(batch)
+			batch = []
+		}
+		batch.push(key)
+	}
+	if (batch.length) result.push(batch)
+	return result
 }
 
 function serialize(data, indent = 2) {
@@ -163,13 +237,11 @@ export async function updateTranslations({
 			while (!controller.signal.aborted && next < languages.length) {
 				const language = languages[next++]
 				const existing = state.locales[language]
-				const result = Object.fromEntries(Object.entries(existing).filter(([key]) => Object.hasOwn(state.english, key)))
-				const pending = plan.languages[language].pending
-				for (let offset = 0; offset < pending.length; offset += batchSize) {
+				const keys = localeKeys(state.english, language)
+				const result = Object.fromEntries(Object.entries(existing).filter(([key]) => Object.hasOwn(keys, key)))
+				for (const batch of batches(plan.languages[language].pending, keys, batchSize)) {
 					controller.signal.throwIfAborted()
-					const source = Object.fromEntries(
-						pending.slice(offset, offset + batchSize).map((key) => [key, state.english[key]]),
-					)
+					const source = Object.fromEntries(batch.map((key) => [key, state.english[keys[key].source]]))
 					const generated = await generate({
 						english: state.english,
 						source,
@@ -244,10 +316,13 @@ async function generateWithOpenAI({english, source, language, existing, signal})
 			/replace_input_example|replace_output_example|replace_target_language|replace_text_to_translate/g,
 			(key) => replacements[key],
 		)
+	const plurals = Object.keys(source).some((key) => pluralBase(english, key))
+		? `\nKeys ending in _zero, _one, _two, _few, _many or _other are the forms of one count message, picked by the CLDR plural rules for ${languageMapping[language]}. Write each in the grammatical form its category needs. Each form is given the English form that covers the same numbers, or else the English plural.`
+		: ''
 	const response = await client.responses.create(
 		{
 			model: process.env.TRANSLATIONS_OPENAI_MODEL,
-			instructions: `${render(process.env.TRANSLATIONS_SYSTEM_PROMPT)}\nReturn a JSON object containing exactly the requested keys and nonempty string values. Preserve all {{interpolation}} variables and <component> tags exactly. Do not translate keys.`,
+			instructions: `${render(process.env.TRANSLATIONS_SYSTEM_PROMPT)}\nReturn a JSON object containing exactly the requested keys and nonempty string values. Preserve all {{interpolation}} variables and <component> tags exactly. Do not translate keys.${plurals}`,
 			input: render(process.env.TRANSLATIONS_USER_PROMPT),
 			reasoning: {effort: 'medium'},
 			text: {format: {type: 'json_object'}},

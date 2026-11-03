@@ -2,6 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {DialogProps} from '@radix-ui/react-dialog'
 import {Command as CommandPrimitive} from 'cmdk'
 import * as React from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiCloseCircleFill} from 'react-icons/ri'
 import {mergeRefs} from 'react-merge-refs'
 
@@ -236,9 +237,12 @@ function BlurOverlay({ref}: {ref?: React.Ref<HTMLDivElement>}) {
 	)
 }
 
-const CommandCloseButton = () => (
-	<DialogPrimitive.Close className='rounded-full opacity-30 ring-white/60 outline-hidden transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
-		<RiCloseCircleFill className='h-[18px] w-[18px] md:h-5 md:w-5' />
-		<span className='sr-only'>Close</span>
-	</DialogPrimitive.Close>
-)
+const CommandCloseButton = () => {
+	const {t} = useTranslation()
+	return (
+		<DialogPrimitive.Close className='rounded-full opacity-30 ring-white/60 outline-hidden transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
+			<RiCloseCircleFill className='h-[18px] w-[18px] md:h-5 md:w-5' />
+			<span className='sr-only'>{t('close')}</span>
+		</DialogPrimitive.Close>
+	)
+}

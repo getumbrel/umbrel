@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import prettyBytes from 'pretty-bytes'
 
 import {roundForPrettyBytes} from '../../utils/round-for-pretty-bytes.ts'
@@ -135,13 +136,14 @@ export function getPoolDeviceType(
 // e.g., "4.5TB", "45.2GB", "256GB" - only 256.1GB gets rounded because 256 >= 100
 export const formatStorageSize = (bytes: number) => {
 	// First format with 1 decimal to determine the numeric value
-	const formatted = prettyBytes(roundForPrettyBytes(bytes), {maximumFractionDigits: 1})
+	const locale = i18next.language // "4,5TB" in German
+	const formatted = prettyBytes(roundForPrettyBytes(bytes), {maximumFractionDigits: 1, locale})
 	const numericValue = parseFloat(formatted)
 
 	// If 3+ digits (>=100), round to integer to keep string short
 	const fractionDigits = numericValue >= 100 ? 0 : 1
 
-	return prettyBytes(roundForPrettyBytes(bytes), {maximumFractionDigits: fractionDigits}).replace(' ', '')
+	return prettyBytes(roundForPrettyBytes(bytes), {maximumFractionDigits: fractionDigits, locale}).replace(' ', '')
 }
 
 // Pair up unpooled drives for adding to a mirror FailSafe array.

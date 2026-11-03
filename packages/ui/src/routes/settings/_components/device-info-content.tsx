@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import {useTranslation} from 'react-i18next'
 import {TbChevronRight, TbQuestionMark} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
@@ -24,10 +25,14 @@ export function formatDeviceSpecs(data?: {
 	const cpu = data?.cpu || ''
 	const memorySize = data?.memorySize
 	const memoryType = data?.memoryType || ''
-	const memory = memorySize ? `${maybePrettyBytes(memorySize)}${memoryType ? ` ${memoryType}` : ''}` : ''
+	const memory = memorySize
+		? `${maybePrettyBytes(memorySize, i18next.language)}${memoryType ? ` ${memoryType}` : ''}`
+		: ''
 	const storageSize = data?.storageSize
 	const storageType = data?.storageType || ''
-	const storage = storageSize ? `${maybePrettyBytes(storageSize)}${storageType ? ` ${storageType}` : ''}` : ''
+	const storage = storageSize
+		? `${maybePrettyBytes(storageSize, i18next.language)}${storageType ? ` ${storageType}` : ''}`
+		: ''
 	return {cpu, memory, storage}
 }
 

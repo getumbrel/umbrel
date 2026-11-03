@@ -31,7 +31,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 				'flex h-8 w-full min-w-0 gap-3 phone-side:pr-9',
 				!isEmbedded && 'lg:-mt-11 panes:-mt-11 phone-side:mt-0',
 			)}
-			aria-label='File browser actions'
+			aria-label={t('files-view.actions')}
 		>
 			{/* Left side: Navigation and Path */}
 			<div className='flex min-w-0 flex-1 items-center gap-2 overflow-hidden'>

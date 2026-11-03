@@ -50,6 +50,7 @@ import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {useSharedAuthorizedHttpUrl} from '@/modules/auth/http-url-authorizer'
 import {useConfirmation} from '@/providers/confirmation/use-confirmation'
+import {capitalizeDate} from '@/utils/date-time'
 import {useDialogOpenProps, useLinkToDialog} from '@/utils/dialog'
 import {formatNumberI18n} from '@/utils/number'
 import {tw} from '@/utils/tw'
@@ -490,13 +491,14 @@ export function ItemViewer() {
 	const takenOn = shown
 		? (() => {
 				const clock = takenAtClock(shown.takenAt, shown.takenAtOffsetMinutes)
-				return clock.date.toLocaleDateString(i18n.language, {
+				const date = clock.date.toLocaleDateString(i18n.language, {
 					weekday: 'short',
 					month: 'long',
 					day: 'numeric',
 					year: 'numeric',
 					timeZone: clock.timeZone,
 				})
+				return capitalizeDate(date, i18n.language)
 			})()
 		: ''
 	// While a dismissal is being dragged the chrome steps aside, and comes

@@ -59,7 +59,7 @@ function getHealthWarningMessage(device: StorageDevice, t: TFunction): string | 
 // Format bytes, but if 0, use the same unit as the reference value (e.g., "0TB" instead of "0B")
 const formatSizeWithUnit = (bytes: number, referenceBytes: number) => {
 	if (bytes === 0 && referenceBytes > 0) {
-		const unit = formatSize(referenceBytes).replace(/[\d.]/g, '')
+		const unit = formatSize(referenceBytes).replace(/[^A-Za-z]/g, '') // "1,5TB" → "TB"
 		return `0${unit}`
 	}
 	return formatSize(bytes)
@@ -613,6 +613,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 					<Trans
 						t={t}
 						i18nKey='onboarding.account-created.by-clicking-button-you-agree'
+						values={{button: t('onboarding.launch-umbrelos')}}
 						components={{
 							linked: <Link to={links.legal.tos} className={linkClass} target='_blank' />,
 						}}

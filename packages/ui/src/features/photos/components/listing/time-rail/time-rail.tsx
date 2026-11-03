@@ -38,6 +38,7 @@ import {
 } from '@/features/photos/components/listing/time-rail/use-landing'
 import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
 import {cn} from '@/lib/utils'
+import {capitalizeDate} from '@/utils/date-time'
 import {formatNumberI18n} from '@/utils/number'
 
 // When the rail earns its edge: when scrolling the listing is actual work.
@@ -148,12 +149,13 @@ export function TimeRail({
 	}, [scale])
 	const monthLabel = useMemo(() => {
 		const format = new Intl.DateTimeFormat(i18n.language, {month: 'long', year: 'numeric', timeZone: 'UTC'})
-		return (key: MonthKey) => format.format(monthStartUtc(key))
+		return (key: MonthKey) => capitalizeDate(format.format(monthStartUtc(key)), i18n.language)
 	}, [i18n.language])
 	const monthMarkLabel = useMemo(() => {
 		const short = new Intl.DateTimeFormat(i18n.language, {month: 'short', timeZone: 'UTC'})
 		const shortYear = new Intl.DateTimeFormat(i18n.language, {month: 'short', year: 'numeric', timeZone: 'UTC'})
-		return (key: MonthKey, withYear: boolean) => (withYear ? shortYear : short).format(monthStartUtc(key))
+		return (key: MonthKey, withYear: boolean) =>
+			capitalizeDate((withYear ? shortYear : short).format(monthStartUtc(key)), i18n.language)
 	}, [i18n.language])
 	// A short-span pill names the day under the pointer — on a ten-week
 	// listing every spot is the same two month names, and the day is the
@@ -167,7 +169,7 @@ export function TimeRail({
 			timeZone: 'UTC',
 			...(crossesYears ? {year: 'numeric'} : {}),
 		})
-		return (takenAt: number) => day.format(takenAt)
+		return (takenAt: number) => capitalizeDate(day.format(takenAt), i18n.language)
 	}, [i18n.language, crossesYears])
 	const pillLabel = (key: MonthKey, fraction: number) => {
 		if (dayPill) {

@@ -30,6 +30,8 @@ export function LanguageDropdown({
 				value: language.code,
 				label: language.name,
 				keywords: [language.englishName],
+				// Each name is in its own language, so it's drawn and read out as such
+				lang: language.code,
 				icon: (
 					<span className='flex size-6 items-center justify-center rounded-6 bg-white/10 text-12 leading-none font-semibold'>
 						{language.glyph}

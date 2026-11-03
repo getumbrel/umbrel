@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import prettyBytes from 'pretty-bytes'
 import {createContext, useContext, useImperativeHandle, useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -141,7 +142,9 @@ export function InstallButtonConnectedController({
 		updateApp.update()
 	}
 
-	const installSize = app.installSize ? prettyBytes(roundForPrettyBytes(app.installSize)) : undefined
+	const installSize = app.installSize
+		? prettyBytes(roundForPrettyBytes(app.installSize), {locale: i18next.language})
+		: undefined
 	const controller: InstallController = ready
 		? {
 				status: 'ready',

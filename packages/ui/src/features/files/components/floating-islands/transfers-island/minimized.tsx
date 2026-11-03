@@ -37,7 +37,7 @@ export function MinimizedContent({view}: {view: TransfersView}) {
 			)
 		label = running?.name ?? t('files-transfers.queued')
 		if (primary?.secondsRemaining !== undefined && primary.secondsRemaining > 0) {
-			detail = secondsToEta(primary.secondsRemaining)
+			detail = secondsToEta(primary.secondsRemaining, {compact: true})
 		} else if (counts.queued > 0) {
 			detail = t('files-transfers.queued-count', {count: counts.queued})
 		}

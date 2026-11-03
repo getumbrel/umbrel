@@ -1,5 +1,6 @@
 import {motion, useMotionValue, useReducedMotion} from 'motion/react'
 import React, {useLayoutEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 import {useWindowSize} from 'react-use'
 
@@ -94,6 +95,7 @@ function useDockDimensions(options?: {isPreview?: boolean}): DockDimensionsPx {
 }
 
 export function Dock() {
+	const {t} = useTranslation()
 	const {pathname} = useLocation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
@@ -156,7 +158,7 @@ export function Dock() {
 						onClick={navigateToLastFilesPath}
 						open={pathname.startsWith('/files')}
 						bg={systemAppsKeyed['UMBREL_files'].icon}
-						label={systemAppsKeyed['UMBREL_files'].name}
+						label={t('files')}
 						mouseX={mouseX}
 					/>
 					<DockItem
@@ -165,7 +167,7 @@ export function Dock() {
 						to={systemAppsKeyed['UMBREL_photos'].systemAppTo}
 						open={pathname.startsWith(systemAppsKeyed['UMBREL_photos'].systemAppTo)}
 						bg={systemAppsKeyed['UMBREL_photos'].icon}
-						label={systemAppsKeyed['UMBREL_photos'].name}
+						label={t('photos')}
 						mouseX={mouseX}
 					/>
 					<DockItem
@@ -178,7 +180,7 @@ export function Dock() {
 							pathname.startsWith('/community-app-store')
 						}
 						bg={systemAppsKeyed['UMBREL_app-store'].icon}
-						label={systemAppsKeyed['UMBREL_app-store'].name}
+						label={t('app-store.title')}
 						notificationCount={isMember ? undefined : appUpdateCount}
 						mouseX={mouseX}
 					/>
@@ -189,7 +191,7 @@ export function Dock() {
 							to={systemAppsKeyed['UMBREL_machines'].systemAppTo}
 							open={pathname.startsWith(systemAppsKeyed['UMBREL_machines'].systemAppTo)}
 							bg={systemAppsKeyed['UMBREL_machines'].icon}
-							label={systemAppsKeyed['UMBREL_machines'].name}
+							label={t('machines')}
 							mouseX={mouseX}
 						/>
 					)}
@@ -199,7 +201,7 @@ export function Dock() {
 						to={systemAppsKeyed['UMBREL_settings'].systemAppTo}
 						open={pathname.startsWith(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
 						bg={systemAppsKeyed['UMBREL_settings'].icon}
-						label={systemAppsKeyed['UMBREL_settings'].name}
+						label={t('settings')}
 						notificationCount={settingsNotificationCount}
 						mouseX={mouseX}
 					/>
@@ -209,7 +211,7 @@ export function Dock() {
 						to={linkToDialog('live-usage')}
 						open={pathname.startsWith(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)}
 						bg={systemAppsKeyed['UMBREL_live-usage'].icon}
-						label={systemAppsKeyed['UMBREL_live-usage'].name}
+						label={t('live-usage')}
 						mouseX={mouseX}
 					/>
 				</Glass>

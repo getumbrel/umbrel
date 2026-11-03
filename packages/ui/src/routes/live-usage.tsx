@@ -1031,7 +1031,7 @@ function useResolveApp() {
 		() =>
 			(id: string): {name: string; icon?: string; systemApp?: boolean} => {
 				if (id === 'umbreld-system') {
-					return {name: systemAppsKeyed.UMBREL_system.name, icon: systemAppsKeyed.UMBREL_system.icon, systemApp: true}
+					return {name: t('live-usage.system'), icon: systemAppsKeyed.UMBREL_system.icon, systemApp: true}
 				}
 				if (id === 'umbreld-files') {
 					return {name: systemAppsKeyed.UMBREL_files.name, icon: systemAppsKeyed.UMBREL_files.icon, systemApp: true}
@@ -1321,6 +1321,7 @@ function AppRowStatus({appId}: {appId: string}) {
 }
 
 export function AppListSkeleton({systemApps}: {systemApps?: Array<AppT>}) {
+	const {t} = useTranslation()
 	const {userApps} = useApps()
 	// Show a list of user-installed and system apps
 	// with no values
@@ -1330,7 +1331,8 @@ export function AppListSkeleton({systemApps}: {systemApps?: Array<AppT>}) {
 				return (
 					<AppListRow
 						key={app.id}
-						title={app.name}
+						// Named as in the loaded list
+						title={app.id === systemAppsKeyed.UMBREL_system.id ? t('live-usage.system') : app.name}
 						icon={app.icon}
 						systemApp={'systemApp' in app && app.systemApp}
 						value=''

@@ -1,6 +1,7 @@
 import {useState} from 'react'
 
 import {cn} from '@/lib/utils'
+import {firstCharacter} from '@/utils/characters'
 
 // Every account always has this deterministic gradient fallback. An uploaded
 // image, when available, is layered on top without changing the layout.
@@ -67,7 +68,7 @@ export function AccountAvatar({
 	className?: string
 }) {
 	const background = MESHES[hashString(userId) % MESHES.length]
-	const initial = name.trim().charAt(0).toUpperCase()
+	const initial = firstCharacter(name.trim()).toUpperCase()
 
 	return (
 		<div

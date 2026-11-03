@@ -126,6 +126,21 @@ body {
 	@apply -tracking-3 text-white/90;
 }
 
+/* Japanese lines break between phrases rather than between any two
+   characters, and Korean lines between words, as each language is typeset.
+   Set on the root and inherited, so text that breaks its own way (paths,
+   code) still does. Browsers without auto-phrase keep breaking anywhere,
+   which Japanese allows. A Korean word too long for its line, or Chinese or
+   Japanese text in the Korean UI, still breaks rather than overflowing. */
+html:lang(ja) {
+	word-break: auto-phrase;
+}
+
+html:lang(ko) {
+	word-break: keep-all;
+	overflow-wrap: break-word;
+}
+
 /* Prevent image and link dragging for native OS feel */
 img,
 a {

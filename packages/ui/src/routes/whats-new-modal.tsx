@@ -331,7 +331,7 @@ export default function WhatsNewModal() {
 									type='button'
 									onClick={handlePrevious}
 									className={cn(arrowButtonClass, 'left-4 md:left-6')}
-									aria-label='Previous slide'
+									aria-label={t('carousel.previous')}
 								>
 									<TbChevronLeft className='size-6' />
 								</button>
@@ -342,7 +342,7 @@ export default function WhatsNewModal() {
 									type='button'
 									onClick={handleNext}
 									className={cn(arrowButtonClass, 'right-4 md:right-6')}
-									aria-label='Next slide'
+									aria-label={t('carousel.next')}
 								>
 									<TbChevronRight className='size-6' />
 								</button>

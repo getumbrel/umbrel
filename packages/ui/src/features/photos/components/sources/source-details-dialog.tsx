@@ -103,8 +103,14 @@ function SourceDetailsBody({source}: {source: PhotoSource}) {
 						<PhoneSourceName source={source} />
 						<p className='mt-1 text-12 text-white/50'>
 							{t('photos-source.fact-items-value', {
-								photos: number(source.stats.photos),
-								videos: number(source.stats.videos),
+								photos: t('photos-source.photo-count', {
+									count: source.stats.photos,
+									formattedCount: number(source.stats.photos),
+								}),
+								videos: t('photos-source.video-count', {
+									count: source.stats.videos,
+									formattedCount: number(source.stats.videos),
+								}),
 							})}
 						</p>
 						{source.lastImportAt && (

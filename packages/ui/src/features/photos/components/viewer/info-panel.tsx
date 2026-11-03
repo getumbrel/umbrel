@@ -16,6 +16,7 @@ import {usePhotoSource} from '@/features/photos/hooks/use-photo-sources'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
 import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {capitalizeDate} from '@/utils/date-time'
 import {formatNumberI18n} from '@/utils/number'
 import {tw} from '@/utils/tw'
 
@@ -129,7 +130,10 @@ export function InfoPanel({
 					{/* When it was taken, on the clock it was taken by */}
 					<div>
 						<p className='text-15 font-semibold -tracking-2 text-white/95'>
-							{clock.date.toLocaleDateString(i18n.language, {dateStyle: 'full', timeZone: clock.timeZone})}
+							{capitalizeDate(
+								clock.date.toLocaleDateString(i18n.language, {dateStyle: 'full', timeZone: clock.timeZone}),
+								i18n.language,
+							)}
 						</p>
 						<p className='text-12 text-white/55'>
 							{clock.date.toLocaleTimeString(i18n.language, {timeStyle: 'short', timeZone: clock.timeZone})}

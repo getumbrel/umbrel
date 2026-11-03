@@ -60,12 +60,12 @@ export function UninstallTheseFirstDialog({
 						))}
 					</div>
 					<AlertDialogDescription>
-						{/* i18n-ally-key-missing expected, but the key exists */}
-						{t('app.uninstall.deps.used-by.description', {
-							count: toUninstallApps.length,
-							app: appName,
-							firstAppToUninstall: toUninstallApps[0].name,
-						})}
+						{toUninstallApps.length === 1
+							? t('app.uninstall.deps.used-by.description-single', {
+									app: appName,
+									firstAppToUninstall: toUninstallApps[0].name,
+								})
+							: t('app.uninstall.deps.used-by.description-multiple', {app: appName})}
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

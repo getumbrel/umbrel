@@ -61,6 +61,8 @@ export function MacOSInstructions({smbUrl, username, password, name}: MacOSInstr
 							t={t}
 							i18nKey='files-share.instructions.macos.enter-url'
 							values={{smbUrl}}
+							tOptions={{interpolation: {escapeValue: true}}}
+							shouldUnescape
 							components={{
 								field: <InlineCopyableField value={smbUrl} />,
 							}}
@@ -72,6 +74,8 @@ export function MacOSInstructions({smbUrl, username, password, name}: MacOSInstr
 							t={t}
 							i18nKey='files-share.instructions.macos.enter-username'
 							values={{username}}
+							tOptions={{interpolation: {escapeValue: true}}}
+							shouldUnescape
 							components={{
 								field: <InlineCopyableField value={username} />,
 							}}
@@ -82,6 +86,8 @@ export function MacOSInstructions({smbUrl, username, password, name}: MacOSInstr
 							t={t}
 							i18nKey='files-share.instructions.macos.enter-password'
 							values={{password}}
+							tOptions={{interpolation: {escapeValue: true}}}
+							shouldUnescape
 							components={{
 								field: <InlineCopyableField value={password} />,
 							}}

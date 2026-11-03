@@ -58,7 +58,13 @@ export function UmbrelOSInstructions({username, password, sharename}: Props) {
 				</InstructionItem>
 				{sharename ? (
 					<InstructionItem>
-						<Trans t={t} i18nKey='files-share.instructions.umbrelos.select-sharename' values={{sharename}} />
+						<Trans
+							t={t}
+							i18nKey='files-share.instructions.umbrelos.select-sharename'
+							values={{sharename}}
+							tOptions={{interpolation: {escapeValue: true}}}
+							shouldUnescape
+						/>
 					</InstructionItem>
 				) : null}
 			</InstructionContainer>
@@ -92,7 +98,7 @@ export function UmbrelOSInstructions({username, password, sharename}: Props) {
 								<Trans
 									t={t}
 									i18nKey='files-share.instructions.umbrelos.backup.select-add'
-									values={{addUmbrelOrNas: t('backups-add-umbrel-or-nas', {defaultValue: 'Add Umbrel or NAS'})}}
+									values={{addUmbrelOrNas: t('backups.add-umbrel-or-nas')}}
 								/>
 							</InstructionItem>
 							<InstructionItem>
