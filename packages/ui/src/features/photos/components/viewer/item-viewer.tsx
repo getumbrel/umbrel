@@ -30,6 +30,7 @@ import {PANE_GAP, useStageGestures} from '@/features/photos/components/viewer/st
 import {
 	itemOriginalUrl,
 	itemThumbnailUrl,
+	itemVideoUrl,
 	useItem,
 	useItemActions,
 	useItemNeighbors,
@@ -194,7 +195,7 @@ export function ItemViewer() {
 	// 1280 rendition — the true original is only ever downloaded, and videos
 	// stream it through the player (range requests).
 	const restingUrl = useAuthorizedHttpUrl(id ? itemThumbnailUrl(id, 1280) : undefined)
-	const videoUrl = useAuthorizedHttpUrl(id && isVideo ? itemOriginalUrl(id) : undefined)
+	const videoUrl = useAuthorizedHttpUrl(id && isVideo ? itemVideoUrl(id) : undefined)
 	const downloadUrl = useAuthorizedHttpUrl(id ? itemOriginalUrl(id, {download: true}) : undefined)
 	// The seed — the rendition the item's tile has on screen, already decoded,
 	// else the 192 (see useSeedRenditions) — is what flies in, sits under the

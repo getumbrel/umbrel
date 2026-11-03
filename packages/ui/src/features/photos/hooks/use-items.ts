@@ -18,6 +18,7 @@ export type ThumbSize = 192 | 512 | 1280
 export const itemThumbnailUrl = (id: string, size: ThumbSize) => `/api/photos/thumb/${encodeURIComponent(id)}?s=${size}`
 export const itemOriginalUrl = (id: string, {download = false} = {}) =>
 	`/api/photos/original/${encodeURIComponent(id)}${download ? '?download' : ''}`
+export const itemVideoUrl = (id: string) => `/api/photos/video/${encodeURIComponent(id)}`
 // A live pair's motion clip — only answers for items with subKind 'live'
 export const itemLiveUrl = (id: string) => `/api/photos/live/${encodeURIComponent(id)}`
 export const itemsDownloadUrl = (ticket: string) => `/api/photos/download?ticket=${encodeURIComponent(ticket)}`

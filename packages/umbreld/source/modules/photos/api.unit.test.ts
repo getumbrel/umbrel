@@ -28,6 +28,8 @@ describe('Photos HTTP account boundaries', () => {
 			writeFile(nodePath.join(directory, 'member.jpg'), 'member-original'),
 			writeFile(nodePath.join(directory, 'member.mov'), 'member-live'),
 			writeFile(nodePath.join(directory, 'member.insv'), 'member-360-video'),
+			writeFile(nodePath.join(directory, 'member.avi'), 'member-legacy-avi'),
+			writeFile(nodePath.join(directory, 'member-transcoded.mp4'), 'member-transcoded-video'),
 			writeFile(nodePath.join(directory, 'member.webp'), 'member-thumbnail'),
 		])
 		const principal = (accountId: string) => ({sessionId: accountId, accountId, actor: 'system' as const})
@@ -35,6 +37,7 @@ describe('Photos HTTP account boundaries', () => {
 			if (accountId === 'owner' && id === 'owner-item') return {id, path: '/Home/owner.jpg'}
 			if (accountId === 'member' && id === 'member-item') return {id, path: '/Users/member/member.jpg'}
 			if (accountId === 'member' && id === 'member-video') return {id, path: '/Users/member/member.insv'}
+			if (accountId === 'member' && id === 'member-transcoded-video') return {id, path: '/Users/member/member.avi'}
 		}
 		const umbreld = {
 			auth: {
@@ -48,6 +51,12 @@ describe('Photos HTTP account boundaries', () => {
 					accountId === 'member' && id === 'member-item'
 						? {id: 'member-motion', path: '/Users/member/member.mov'}
 						: undefined,
+				resolvePlayableVideo: async (systemPath: string, id: string) => {
+					if (id === 'member-transcoded-video') {
+						return {type: 'transcoded' as const, systemPath: nodePath.join(directory, 'member-transcoded.mp4')}
+					}
+					return {type: 'original' as const}
+				},
 				consumeDownloadTicket: (accountId: string, ticket: string) => {
 					if (accountId === 'member' && ticket === 'member-download') return ['member-item']
 					if (accountId === 'member' && ticket === 'mixed-download') return ['member-item', 'owner-item']
@@ -65,6 +74,8 @@ describe('Photos HTTP account boundaries', () => {
 						return nodePath.join(directory, 'member.mov')
 					if (accountId === 'member' && path === '/Users/member/member.insv')
 						return nodePath.join(directory, 'member.insv')
+					if (accountId === 'member' && path === '/Users/member/member.avi')
+						return nodePath.join(directory, 'member.avi')
 					if (accountId === 'member' && path.startsWith('/Users/member/Photos/')) {
 						return nodePath.join(directory, 'member-home', 'Photos', nodePath.basename(path))
 					}
@@ -123,6 +134,7 @@ describe('Photos HTTP account boundaries', () => {
 	test.each([
 		['GET', '/api/photos/thumb/member-item?s=192'],
 		['GET', '/api/photos/original/member-item'],
+		['GET', '/api/photos/video/member-item'],
 		['GET', '/api/photos/live/member-item'],
 		['GET', '/api/photos/download?ticket=member-download'],
 		['POST', '/api/photos/upload?name=photo.jpg'],
@@ -135,6 +147,7 @@ describe('Photos HTTP account boundaries', () => {
 	test.each([
 		['/api/photos/thumb/member-item?s=192'],
 		['/api/photos/original/member-item'],
+		['/api/photos/video/member-item'],
 		['/api/photos/live/member-item'],
 		['/api/photos/download?ticket=member-download'],
 	] as const)('an owner credential cannot resolve a member media URL: %s', async (path) => {
@@ -186,6 +199,26 @@ describe('Photos HTTP account boundaries', () => {
 		})
 		expect(response.headers['content-type']).toBe('video/mp4')
 		expect(response.body).toBe('member-360-video')
+	})
+
+	test('serves browser-safe video directly from authorized original file', async () => {
+		const response = await got(`${origin}/api/photos/video/member-video`, {
+			headers: {Authorization: 'Bearer member'},
+		})
+		expect(response.headers['content-type']).toBe('video/mp4')
+		expect(response.headers['cache-control']).toBe('private, max-age=31536000, immutable')
+		expect(response.body).toBe('member-360-video')
+	})
+
+	test('serves transcoded video stream with range requests when transcoding is needed', async () => {
+		const response = await got(`${origin}/api/photos/video/member-transcoded-video`, {
+			headers: {Authorization: 'Bearer member', Range: 'bytes=0-5'},
+		})
+		expect(response.statusCode).toBe(206)
+		expect(response.headers['content-type']).toBe('video/mp4')
+		expect(response.headers['content-range']).toBe('bytes 0-5/23')
+		expect(response.headers['cache-control']).toBe('private, max-age=31536000, immutable')
+		expect(response.body).toBe('member')
 	})
 
 	test('a member cannot combine its item with an owner item in one download', async () => {
