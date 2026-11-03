@@ -20,7 +20,7 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 	const {t} = useTranslation()
 	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
 	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
-		refetchInterval: 500,
+		refetchInterval: 2500,
 	})
 	const latestVersion = latestVersionQ.data
 
