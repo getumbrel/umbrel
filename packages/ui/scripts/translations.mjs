@@ -219,9 +219,10 @@ export async function updateTranslations({
 	generate = generateWithOpenAI,
 	concurrency = 4,
 	batchSize = 100,
+	attempts = 3,
 } = {}) {
-	if (!Number.isInteger(concurrency) || concurrency < 1 || !Number.isInteger(batchSize) || batchSize < 1) {
-		throw new Error('concurrency and batchSize must be positive integers')
+	for (const [name, value] of Object.entries({concurrency, batchSize, attempts})) {
+		if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`)
 	}
 	const state = await loadTranslations(directory)
 	const plan = planTranslations(state)
@@ -242,15 +243,25 @@ export async function updateTranslations({
 				for (const batch of batches(plan.languages[language].pending, keys, batchSize)) {
 					controller.signal.throwIfAborted()
 					const source = Object.fromEntries(batch.map((key) => [key, state.english[keys[key].source]]))
-					const generated = await generate({
-						english: state.english,
-						source,
-						language,
-						existing,
-						signal: controller.signal,
-					})
-					validateGenerated(source, generated, language)
-					Object.assign(result, generated)
+					// The model occasionally drops or renames a placeholder, so ask again
+					// before failing every language over one bad string
+					for (let attempt = 1; ; attempt++) {
+						const generated = await generate({
+							english: state.english,
+							source,
+							language,
+							existing,
+							signal: controller.signal,
+						})
+						try {
+							validateGenerated(source, generated, language)
+							Object.assign(result, generated)
+							break
+						} catch (error) {
+							if (attempt >= attempts) throw error
+							console.warn(`${error.message}. Retrying (${attempt + 1}/${attempts}).`)
+						}
+					}
 				}
 				results[language] = result
 			}

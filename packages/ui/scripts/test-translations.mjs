@@ -161,10 +161,25 @@ for (const [name, generate] of Object.entries({
 				generate: (request) => (++calls === 1 ? translate(request) : generate(request)),
 			}),
 		)
-		assert.equal(calls, 2)
+		// A bad response is retried before failing; an API error is not
+		assert.equal(calls, name === 'API failure' ? 2 : 4)
 		assert.deepEqual(await f.contents(), before)
 	})
 }
+
+test('a response with a broken placeholder is retried instead of failing the run', async (t) => {
+	const f = await fixture(t, {snapshot: {}})
+	const failed = new Set()
+	await updateTranslations({
+		directory: f.directory,
+		generate: async (request) => {
+			if (failed.has(request.language)) return translate(request)
+			failed.add(request.language)
+			return {...request.source, message: 'Hi {{someoneElse}}'}
+		},
+	})
+	validateTranslations(await loadTranslations(f.directory), {requireFresh: true})
+})
 
 test('uses bounded concurrency and batches a large source without losing keys', async (t) => {
 	const english = Object.fromEntries(Array.from({length: 5}, (_, index) => [`key${index}`, `Text ${index}`]))
