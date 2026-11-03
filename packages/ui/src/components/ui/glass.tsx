@@ -35,6 +35,15 @@ function subscribeContrast(onChange: () => void) {
 	return () => CONTRAST_QUERY.removeEventListener('change', onChange)
 }
 
+/**
+ * Whether WebGL lenses re-aim with their host's own transform. In Firefox a
+ * lens redrawn on every frame of a widget's hover tilt and scale keeps the GPU
+ * busy for as long as the cursor moves (reported above 50% on a desktop GPU,
+ * against ~10% in Chromium), so there the resting view rides along with the
+ * card instead: nothing is redrawn until the card's layout changes.
+ */
+const LENS_FOLLOWS_HOST_TRANSFORM = !/\bFirefox\//.test(navigator.userAgent)
+
 const FROSTED =
 	(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)')) &&
 	!REDUCED &&
@@ -315,6 +324,7 @@ export function Glass({
 			// Lost context (e.g. evicted when many glass surfaces are live): show
 			// the CSS backdrop fallback until the lens redraws after restoration
 			() => setCanvasLens(false),
+			{followHostTransform: LENS_FOLLOWS_HOST_TRANSFORM},
 		)
 		if (!detach) return
 		return () => {

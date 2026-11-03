@@ -3,11 +3,11 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {afterEach, expect, test} from 'vitest'
 
-import temporaryDirectory from '../../utilities/temporary-directory.js'
-import DirectorySizes from './directory-sizes.js'
-import {fileIndexMigrations, migrateFileIndex} from './migrations.js'
-import {fileIndexQueries} from './queries.js'
-import type {IndexedDirectorySize} from '../file-index-engine.js'
+import temporaryDirectory from '../../utilities/temporary-directory.ts'
+import DirectorySizes from './directory-sizes.ts'
+import {fileIndexMigrations, migrateFileIndex} from './migrations.ts'
+import {fileIndexQueries} from './queries.ts'
+import type {IndexedDirectorySize} from '../file-index-engine.ts'
 
 const temporary = temporaryDirectory()
 const databases: BetterSqlite3.Database[] = []
@@ -325,9 +325,14 @@ test('coalesces old and new identities inside repeated entry upserts', async () 
 
 test('bulk backfill and subtree deletion produce the same totals as incremental changes', async () => {
 	const {database, totals} = await fixture()
-	totals.sync()
 	database.transaction(() => {
-		for (let i = 0; i < 4200; i++) put(database, `a/b/${i}`, i % 37, String(i % 200))
+		for (let i = 0; i < 20_000; i++) put(database, `c/unrelated-${i}`, 5)
+		totals.sync()
+	})()
+	const unrelated = () => database.prepare("SELECT id, size FROM directory_sizes WHERE relative_path = 'c'").get()
+	const before = unrelated()
+	database.transaction(() => {
+		for (let i = 0; i < 9000; i++) put(database, `a/b/${i}`, i % 37, String(i % 200))
 		totals.sync()
 	})()
 	check(database)
@@ -336,7 +341,25 @@ test('bulk backfill and subtree deletion produce the same totals as incremental 
 		totals.sync()
 	})()
 	check(database)
-	expect(database.prepare('SELECT * FROM directory_size_identities').all()).toEqual([])
+	// Large journals adjust the changed directories instead of rebuilding the root
+	expect(unrelated()).toStrictEqual(before)
+	expect(
+		database.prepare("SELECT * FROM directory_size_identities WHERE identity NOT LIKE 'inode:2049:c/%'").all(),
+	).toEqual([])
+})
+
+test('rebuilds a root once most of its files change in one transaction', async () => {
+	const {database, totals} = await fixture()
+	put(database, 'c/unrelated', 5)
+	totals.sync()
+	const unrelated = () => database.prepare("SELECT id FROM directory_sizes WHERE relative_path = 'c'").get()
+	const before = unrelated()
+	database.transaction(() => {
+		for (let i = 0; i < 5000; i++) put(database, `a/b/${i}`, i % 37, String(i % 200))
+		totals.sync()
+	})()
+	check(database)
+	expect(unrelated()).not.toStrictEqual(before)
 })
 
 test('mixed out-of-order batches stay equivalent to the original query', async () => {

@@ -61,6 +61,8 @@
 	<string>6WS1H6oCszBQj8boE9u4jM3RPTyKjWLfWeqUIYfSwuA=</string>
 	<key>SURequireSignedFeed</key>
 	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>21600</integer>
 	<key>SUVerifyUpdateBeforeExtraction</key>
 	<true/>
 </dict>

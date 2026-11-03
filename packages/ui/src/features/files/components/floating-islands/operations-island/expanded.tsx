@@ -47,7 +47,7 @@ export function ExpandedContent({
 						formattedCount: formatNumberI18n({n: count, showDecimals: false, locale: i18n.language}),
 						count,
 					})}{' '}
-					&bull; {isPreparing ? t('files-operations-island.preparing') : `${progress}%`}
+					&bull; {isPreparing ? t('files-operations-island.preparing') : `${Math.round(progress)}%`}
 				</span>
 				{!isPreparing && <span className='text-xs text-white/60'>{formatFilesystemSize(speed)}/s</span>}
 			</div>

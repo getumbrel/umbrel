@@ -3,12 +3,12 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterAll, beforeAll, beforeEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import getLiveDirectorySize from '../utilities/get-directory-size.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import Files, {type File} from './files.js'
+import type Umbreld from '../../index.ts'
+import getLiveDirectorySize from '../utilities/get-directory-size.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import Files, {type File} from './files.ts'
 
-vi.mock('../utilities/get-directory-size.js', () => ({default: vi.fn()}))
+vi.mock('../utilities/get-directory-size.ts', () => ({default: vi.fn()}))
 
 const temporary = temporaryDirectory()
 

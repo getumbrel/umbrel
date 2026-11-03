@@ -1,4 +1,3 @@
-import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbAlertTriangle, TbTrash} from 'react-icons/tb'
@@ -10,13 +9,21 @@ import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
 import {CopyButton} from '@/components/ui/copy-button'
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
-import {Dialog, DialogHeader, DialogPortal, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
+import {
+	Dialog,
+	DialogDescription,
+	DialogHeader,
+	DialogPortal,
+	DialogScrollableContent,
+	DialogTitle,
+} from '@/components/ui/dialog'
 import {AnimatedInputError, Input} from '@/components/ui/input'
 import {Spinner} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
 import {UMBREL_APP_STORE_ID} from '@/constants/app-store'
 import {cn} from '@/lib/utils'
 import {systemAppsKeyed} from '@/providers/apps'
+import {useConfirmation} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 
@@ -46,9 +53,6 @@ export function CommunityAppStoreDialog() {
 			appStoresQ.refetch()
 			utils.appStore.registry.invalidate()
 		},
-		onError: (err) => {
-			toast.error(t('community-app-store.add-error', {message: err.message}), {area: 'app-store'})
-		},
 	})
 
 	const removeAppStoreMut = trpcReact.appStore.removeRepository.useMutation({
@@ -61,6 +65,20 @@ export function CommunityAppStoreDialog() {
 		},
 	})
 
+	// Apps installed from a store stay, but lose its page and its updates, so removing asks first
+	const confirm = useConfirmation()
+	const removeAppStore = async ({url, name}: {url: string; name: string}) => {
+		const result = await confirm({
+			title: t('community-app-stores.remove-confirm-title', {name}),
+			message: t('community-app-stores.remove-confirm-message'),
+			actions: [
+				{label: t('community-app-store.remove-button'), value: 'remove', variant: 'destructive'},
+				{label: t('cancel'), value: 'cancel', variant: 'default'},
+			],
+		}).catch(() => undefined)
+		if (result?.actionValue === 'remove') removeAppStoreMut.mutate({url})
+	}
+
 	// handlers
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -68,14 +86,22 @@ export function CommunityAppStoreDialog() {
 		// So setLocalError('') is not batched
 		await setLocalError('')
 		e.preventDefault()
-		if (!url.trim()) {
+		const trimmedUrl = url.trim()
+		if (!trimmedUrl) {
 			setLocalError(t('community-app-stores.url-required'))
 			return
 		}
-		addAppStoreMut.mutate({url: url.trim()})
+		if (appStoresQ.data?.some((store) => store?.url === trimmedUrl)) {
+			setLocalError(t('community-app-stores.already-added'))
+			return
+		}
+		addAppStoreMut.mutate({url: trimmedUrl})
 	}
 
-	const remoteFormError = !addAppStoreMut.error?.data?.zodError && addAppStoreMut.error?.message
+	// Shown under the field only, not also as a toast. The backend's reasons are raw URL and git
+	// errors (a repository that doesn't exist reports "HTTP Error: 401 Unauthorized"), so any
+	// failure gets one plain message.
+	const remoteFormError = addAppStoreMut.error ? t('community-app-stores.add-failed') : ''
 	const formError = localError || remoteFormError
 
 	const nonUmbrelAppStores = (appStoresQ.data ?? [])
@@ -91,7 +117,7 @@ export function CommunityAppStoreDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
-				<DialogScrollableContent showClose className='umbrel-app-store-modal'>
+				<DialogScrollableContent className='umbrel-app-store-modal'>
 					<div className='umbrel-dialog-fade-scroller umbrel-stable-gutter flex flex-col gap-y-5 overflow-y-auto px-5 py-6'>
 						<DialogHeader className='space-y-2'>
 							<DialogTitle>{title}</DialogTitle>
@@ -194,7 +220,7 @@ export function CommunityAppStoreDialog() {
 														size='dialog'
 														text='destructive'
 														disabled={removing}
-														onClick={() => removeAppStoreMut.mutate({url})}
+														onClick={() => removeAppStore({url, name: meta.name})}
 													>
 														{removing ? <Spinner /> : removeLabel}
 													</Button>
@@ -209,7 +235,7 @@ export function CommunityAppStoreDialog() {
 															type='button'
 															aria-label={removeLabel}
 															disabled={removing}
-															onClick={() => removeAppStoreMut.mutate({url})}
+															onClick={() => removeAppStore({url, name: meta.name})}
 															className='flex size-[25px] items-center justify-center rounded-full text-white/40 transition-colors duration-300 hover:bg-destructive2/20 hover:text-destructive2-lightest focus:outline-hidden focus-visible:bg-destructive2/20 focus-visible:text-destructive2-lightest'
 														>
 															{removing ? <Spinner /> : <TbTrash className='size-4' />}

@@ -196,7 +196,7 @@ export function StorageModeDisplay({
 					</div>
 
 					<DialogFooter>
-						<Button variant='default' onClick={() => setInfoDialogOption(null)}>
+						<Button variant='default' size='dialog' onClick={() => setInfoDialogOption(null)}>
 							{t('done')}
 						</Button>
 					</DialogFooter>

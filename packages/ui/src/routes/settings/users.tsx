@@ -1,6 +1,6 @@
 import {Loader2, PlusCircle} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
-import {lazy, Suspense, useRef, useState} from 'react'
+import {lazy, Suspense, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbCheck, TbCopy, TbInfoCircle, TbTrash} from 'react-icons/tb'
 import {useSearchParams} from 'react-router-dom'
@@ -38,7 +38,7 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {useMemberShares} from '@/features/files/hooks/use-member-shares'
 import {useAppMemberShares} from '@/hooks/use-app-member-shares'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {AccountAvatar} from '@/modules/auth/account-avatar'
 import {AccountAvatarEditor} from '@/modules/auth/account-avatar-editor'
@@ -173,7 +173,7 @@ export default function UsersDialog() {
 	const dialogProps = useSettingsDialogProps()
 	const utils = trpcReact.useUtils()
 	const homeDirectoryName = useHomeDirectoryName()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const [searchParams, setSearchParams] = useSearchParams()
 	const [localView, setLocalView] = useState<LocalView>({view: 'list'})
 	const ownerPanel = searchParams.get('ownerPanel')
@@ -198,6 +198,19 @@ export default function UsersDialog() {
 	const [resetPassword, setResetPassword] = useState('')
 	const [resetPasswordError, setResetPasswordError] = useState('')
 	const deleteInFlightRef = useRef(false)
+
+	// Every view takes its turn in the same scroller. Open each one at its top, as a
+	// new page would, instead of wherever the previous view was left scrolled to.
+	const scrollerRef = useRef<HTMLDivElement>(null)
+	const viewKey =
+		view.view === 'edit'
+			? `edit:${view.userId}:${isManagingSessions}`
+			: view.view === 'owner'
+				? `owner:${view.panel}`
+				: view.view
+	useLayoutEffect(() => {
+		scrollerRef.current?.scrollTo({top: 0})
+	}, [viewKey])
 
 	const setOwnerPanel = (panel: OwnerPanel | null) => {
 		const nextSearchParams = new URLSearchParams(searchParams)
@@ -676,7 +689,7 @@ export default function UsersDialog() {
 		<>
 			<ShareSection
 				kind='apps'
-				compactShareAllLabel={isMobile}
+				compactShareAllLabel={isPhone}
 				shareAll={shareAllAppsOn}
 				disabled={isAddingUser ? undefined : shareControlsDisabled}
 				onShareAllChange={handleToggleAllApps}
@@ -688,7 +701,7 @@ export default function UsersDialog() {
 
 			<ShareSection
 				kind='folders'
-				compactShareAllLabel={isMobile}
+				compactShareAllLabel={isPhone}
 				shareAll={shareAllFoldersOn}
 				showAdditionalSharesWhenSharingAll
 				disabled={isAddingUser ? undefined : shareControlsDisabled}
@@ -723,7 +736,7 @@ export default function UsersDialog() {
 	// still manage their own account if app or folder sharing is unavailable.
 	const content = loadFailed ? (
 		<div className='flex flex-col gap-5'>
-			{!isMobile && (
+			{!isPhone && (
 				<DialogHeader>
 					<h2 className='text-17 leading-snug font-semibold -tracking-2'>{t('users')}</h2>
 					<p className='text-13 leading-tight text-white/40'>{t('users.description')}</p>
@@ -735,7 +748,7 @@ export default function UsersDialog() {
 		<>
 			{showListView && (
 				<div className='flex flex-col gap-5'>
-					{isMobile ? (
+					{isPhone ? (
 						<p className='text-13 leading-tight -tracking-2 text-white/40 opacity-100'>{t('users.description')}</p>
 					) : (
 						<DialogHeader>
@@ -934,15 +947,20 @@ export default function UsersDialog() {
 					<div className='flex flex-col gap-5'>
 						<div className='flex flex-col gap-3'>
 							<BackButton onClick={returnToList}>{t('users')}</BackButton>
-							<div className={cn('flex gap-4 pt-2', isMobile ? 'flex-wrap' : 'items-center')}>
-								<AccountAvatarEditor account={editingMember} size={72} />
-								<div className='min-w-0 flex-1'>
-									<h2 className='text-20 truncate leading-snug font-semibold -tracking-2'>{editingMember.name}</h2>
-									<p className='text-13 leading-normal tracking-normal text-white/40 opacity-100'>
-										{t('users.member')}
-									</p>
+							{/* The buttons sit beside the name while the whole name fits next to
+							    them; otherwise (a long name, a phone, a longer language) they move
+							    to a row of their own, at its end */}
+							<div className='flex flex-wrap items-center gap-x-4 gap-y-3 pt-2'>
+								<div className='flex min-w-0 flex-auto items-center gap-4'>
+									<AccountAvatarEditor account={editingMember} size={72} />
+									<div className='min-w-0'>
+										<h2 className='text-20 truncate leading-snug font-semibold -tracking-2'>{editingMember.name}</h2>
+										<p className='text-13 leading-normal tracking-normal text-white/40 opacity-100'>
+											{t('users.member')}
+										</p>
+									</div>
 								</div>
-								<div className={cn('flex shrink-0 items-center gap-2', isMobile && 'w-full justify-end')}>
+								<div className='ml-auto flex shrink-0 items-center gap-2'>
 									<Button size='default' className='shrink-0' onClick={() => setIsManagingSessions(true)}>
 										{t('active-logins.title')}
 									</Button>
@@ -1098,7 +1116,7 @@ export default function UsersDialog() {
 								: t('account')
 						: t('users.description')
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<>
 				<Drawer {...dialogProps}>
@@ -1107,7 +1125,7 @@ export default function UsersDialog() {
 							<DrawerTitle>{dialogTitle}</DrawerTitle>
 							<DrawerDescription className='sr-only'>{dialogDescription}</DrawerDescription>
 						</DrawerHeader>
-						<DrawerScroller>{content}</DrawerScroller>
+						<DrawerScroller ref={scrollerRef}>{content}</DrawerScroller>
 					</DrawerContent>
 				</Drawer>
 				{folderPicker}
@@ -1119,7 +1137,7 @@ export default function UsersDialog() {
 	return (
 		<>
 			<Dialog {...dialogProps}>
-				<DialogScrollableContent showClose>
+				<DialogScrollableContent viewportRef={scrollerRef}>
 					<DialogHeader className='sr-only'>
 						<DialogTitle>{dialogTitle}</DialogTitle>
 						<DialogDescription>{dialogDescription}</DialogDescription>

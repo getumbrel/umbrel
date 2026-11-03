@@ -98,6 +98,51 @@ final class PhotoBackupConfigurationTests: XCTestCase {
 		}
 	}
 
+	func testConfigurationSavedBeforeRoutesIsTailscale() throws {
+		let json = #"{"deviceId":"device","uploadBaseURL":"http://100.90.0.1","source":{"id":"source","accountId":"0","name":"iPhone"},"includePhotos":true,"includeVideos":false,"allowsCellularAccess":false}"#
+		let configuration = try JSONDecoder().decode(PhotoBackupConfiguration.self, from: Data(json.utf8))
+
+		XCTAssertEqual(configuration.route, .tailscale)
+		XCTAssertTrue(configuration.hasValidRoute)
+		let appRoute = PhotoBackupConfiguration(
+			deviceId: "device",
+			route: .app,
+			uploadBaseURL: "",
+			source: source,
+			includePhotos: true,
+			includeVideos: true
+		)
+		XCTAssertEqual(
+			try JSONDecoder().decode(PhotoBackupConfiguration.self, from: JSONEncoder().encode(appRoute)),
+			appRoute
+		)
+	}
+
+	func testAppRouteNeverGivesPhotoKitADestination() {
+		let configuration = PhotoBackupConfiguration(
+			deviceId: "device",
+			route: .app,
+			uploadBaseURL: "",
+			source: source,
+			includePhotos: true,
+			includeVideos: true
+		)
+		var request = URLRequest(url: URL(string: "http://100.90.0.1/api/photos/upload")!)
+		request.allowsCellularAccess = false
+		request.setValue("Bearer current-grant", forHTTPHeaderField: "Authorization")
+
+		XCTAssertTrue(configuration.hasValidRoute)
+		XCTAssertFalse(configuration.isTailscaleDestination)
+		XCTAssertFalse(configuration.matchesUploadDestination(request, grant: "current-grant"))
+		XCTAssertNil(configuration.retargetUploadDestination(request))
+		// A Tailscale address on the app route, or none on the Tailscale route, is invalid
+		XCTAssertFalse(PhotoBackupConfiguration(
+			deviceId: "device", route: .app, uploadBaseURL: "http://100.90.0.1", source: source,
+			includePhotos: true, includeVideos: true
+		).hasValidRoute)
+		XCTAssertFalse(makeConfiguration(base: "").hasValidRoute)
+	}
+
 	func testPresentationIsOffForDormantRememberedIntent() {
 		XCTAssertEqual(
 			presentation(intentEnabled: true, targetActive: false),

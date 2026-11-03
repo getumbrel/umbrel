@@ -4,7 +4,7 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const ownerPassword = 'moneyprintergobrrr'
 const memberPassword = 'member-password'

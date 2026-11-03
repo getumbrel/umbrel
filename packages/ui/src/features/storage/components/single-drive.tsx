@@ -1,7 +1,7 @@
-import {DialogPortal, DialogTitle} from '@radix-ui/react-dialog'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
+import {DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -118,9 +118,10 @@ export default function SingleDriveStorageManager({devices}: {devices: StorageDe
 				<div className='truncate text-[15px] font-medium text-white'>
 					{bootDrive ? bootDrive.name : t('storage-manager.boot-storage')}
 				</div>
+				{/* The drive's own size, like every drive card, and the same size as its chip.
+				    The usable capacity is in the stats below. */}
 				<div className='truncate text-13 text-white/50'>
-					{storageSizeLabel}
-					{bootDrive && ` · ${bootDrive.serial}`}
+					{bootDrive ? `${formatStorageSize(bootDrive.size)} · ${bootDrive.serial}` : storageSizeLabel}
 				</div>
 			</div>
 		</div>
@@ -149,8 +150,8 @@ export default function SingleDriveStorageManager({devices}: {devices: StorageDe
 					}}
 				>
 					<div className='flex h-full flex-col gap-6'>
-						<DialogTitle asChild>
-							<h1 className={immersiveDialogTitleClass}>{t('storage-manager')}</h1>
+						<DialogTitle asChild className={immersiveDialogTitleClass}>
+							<h1>{t('storage-manager')}</h1>
 						</DialogTitle>
 
 						{/* Mode - full width above the drive/stats columns */}

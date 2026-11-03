@@ -8,9 +8,12 @@ they use native toolchains.
 | `apple/UmbrelKit/` | Shared Swift package for discovery, authentication, and API access |
 | `apple/macos/` | macOS menu bar app |
 | `apple/ios/` | iOS app |
+| `windows/Umbrel.Core/` | .NET port of UmbrelKit for the Windows app |
+| `windows/Umbrel/` | Windows notification-area app (WPF) |
 
 [`UmbrelKit`](apple/UmbrelKit) owns discovery, native API transport, authentication,
-saved devices, and Keychain storage for both Apple apps. Native clients update
+saved devices, and Keychain storage for both Apple apps. The Windows app carries its
+own C# port of it with the same behavior and wire shapes. Native clients update
 independently of umbrelOS, so their server contracts must remain compatible. The
 server's
 [`client-contract.ts`](../packages/umbreld/source/modules/server/trpc/client-contract.ts)

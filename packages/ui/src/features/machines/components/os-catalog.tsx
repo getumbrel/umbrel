@@ -17,7 +17,8 @@ import {OsIcon, OsIconGlow} from '@/features/machines/components/os-icon'
 import {layoutMorphTransition, MACHINES_CONFIGURE_PATH} from '@/features/machines/constants'
 import {useOsImages} from '@/features/machines/hooks/use-machines'
 import type {OsImage} from '@/features/machines/types'
-import {prettyMb} from '@/features/machines/utils'
+import {osImageVersionLabel, prettyMb} from '@/features/machines/utils'
+import {cn} from '@/lib/utils'
 import {useGlobalFiles} from '@/providers/global-files'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -55,7 +56,7 @@ function groupOsImages(osImages: CatalogImage[]): OsFamily[] {
 				key,
 				familyId: image.familyId,
 				name: image.name,
-				version: image.version,
+				version: osImageVersionLabel(image),
 				platform: image.platform!,
 				images: [],
 			}
@@ -135,7 +136,7 @@ export default function OsCatalog({intro: introRequested = false}: {intro?: bool
 	}
 
 	return (
-		<div className='flex flex-col gap-8 px-4 py-6 md:p-12'>
+		<div className='flex flex-col gap-8 px-3 py-5 sm:px-4 sm:py-6 md:p-12 low:gap-4 low:p-3'>
 			{isLoading ? (
 				<>
 					{/* Placeholder groups mirror the amd64 catalog — the fullest — with
@@ -191,7 +192,7 @@ function CatalogGroup({
 	)
 }
 
-const catalogGridClass = tw`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4`
+const catalogGridClass = tw`grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-2 sm:gap-3 lg:grid-cols-4 low:grid-cols-4 low:gap-2`
 
 // The card is split into a shell (layout, spacing) and a fill layer (surface,
 // border, hover tint, and the clipped glow) so the intro handoff can fade the
@@ -199,8 +200,10 @@ const catalogGridClass = tw`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4
 // nested in a fading card would be invisible for most of its flight, and a
 // clipping shell would crop it mid-glide. Interactive content must sit in a
 // positioned wrapper (e.g. `relative`) to paint and click above the fill.
-const osCardClass = tw`group relative flex flex-col items-center gap-4 rounded-24 p-4 pt-6 md:p-6`
+const osCardClass = tw`group relative flex flex-col items-center gap-4 rounded-24 p-3 pt-6 sm:p-4 sm:pt-6 md:p-6 low:gap-3 low:p-3 low:pt-4`
 // settings-edge-material: same card surface as the Settings page tiles
+// Fills a narrow tile on a phone, and is a fixed width from there up
+const osCardButtonClass = tw`w-full max-w-44 justify-between whitespace-nowrap sm:min-w-44`
 const osCardFillClass = tw`settings-edge-material absolute inset-0 overflow-hidden rounded-24 bg-white/5`
 
 // The intro→catalog handoff glide: monitors stream into their tiles one after
@@ -372,7 +375,9 @@ function CatalogCard({
 				initial={{opacity: 0}}
 				animate={{opacity: 1}}
 				transition={contentTransition}
-				className='relative flex w-full flex-col items-center'
+				// Pinned to the bottom so buttons line up across a row even when a
+				// subtitle wraps
+				className='relative mt-auto flex w-full flex-col items-center'
 			>
 				{action}
 			</motion.div>
@@ -399,7 +404,7 @@ function OsCard({family, index, introMorph}: {family: OsFamily; index: number; i
 function CreateMachineMenuTrigger() {
 	return (
 		<DropdownMenuTrigger asChild>
-			<Button size='md' className='group min-w-44 justify-between whitespace-nowrap'>
+			<Button size='md' className={cn('group', osCardButtonClass)}>
 				{t('machines.install')}
 				<ChevronDown className='-mr-1 size-3.5 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-180' />
 			</Button>
@@ -422,9 +427,9 @@ function OsCardAction({family}: {family: OsFamily}) {
 	if (family.images.length === 1) {
 		const image = family.images[0]
 		return (
-			<Button size='md' className='min-w-44 justify-between whitespace-nowrap' onClick={() => goToConfigure(image.id)}>
+			<Button size='md' className={osCardButtonClass} onClick={() => goToConfigure(image.id)}>
 				{t('machines.install')}
-				<span className='text-11 -tracking-2 text-white/35 tabular-nums'>
+				<span className='text-11 -tracking-2 text-white/35 tabular-nums max-sm:hidden low:hidden'>
 					{prettyMb(image.estimatedInstalledSizeMb ?? image.sizeMb)}
 				</span>
 			</Button>

@@ -95,11 +95,11 @@ export default function CreateAccount() {
 			}
 			if (path) {
 				setIsNavigating(true)
-				const credentials: AccountCredentials = {name, password, language}
+				const credentials: AccountCredentials = {name: name.trim(), password, language}
 				navigate(path, {state: {credentials}})
 				return
 			}
-			registerMut.mutate({name, password, language})
+			registerMut.mutate({name: name.trim(), password, language})
 		} catch {
 			setLocalError(t('storage-status.check-failed'))
 		} finally {
@@ -107,14 +107,22 @@ export default function CreateAccount() {
 		}
 	}
 
+	// An error is about what was submitted, so it goes as soon as a field changes
+	const clearErrors = () => {
+		setLocalError('')
+		registerMut.reset()
+	}
+	const onFieldChange = (setValue: (value: string) => void) => (value: string) => {
+		setValue(value)
+		clearErrors()
+	}
+
 	const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
+		clearErrors()
 
-		// Reset errors
-		registerMut.reset()
-		setLocalError('')
-
-		if (!name) {
+		// A name of only spaces would leave the account blank everywhere it's shown
+		if (!name.trim()) {
 			setLocalError(t('onboarding.create-account.failed.name-required'))
 			return
 		}
@@ -153,18 +161,18 @@ export default function CreateAccount() {
 							placeholder={t('onboarding.create-account.name.input-placeholder')}
 							autoFocus
 							value={name}
-							onValueChange={setName}
+							onValueChange={onFieldChange(setName)}
 						/>
 						<PasswordInput
 							label={t('onboarding.create-account.password.input-label')}
 							value={password}
-							onValueChange={setPassword}
+							onValueChange={onFieldChange(setPassword)}
 							error={registerMut.error?.data?.zodError?.fieldErrors['password']?.join('. ')}
 						/>
 						<PasswordInput
 							label={t('onboarding.create-account.confirm-password.input-label')}
 							value={confirmPassword}
-							onValueChange={setConfirmPassword}
+							onValueChange={onFieldChange(setConfirmPassword)}
 						/>
 					</div>
 

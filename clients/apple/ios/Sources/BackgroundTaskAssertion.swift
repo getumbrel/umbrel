@@ -9,14 +9,18 @@ import UIKit
 final class BackgroundTaskAssertion {
 	private var identifier: UIBackgroundTaskIdentifier = .invalid
 
-	init(name: String) {
+	init(name: String, onExpiration: (() -> Void)? = nil) {
 		identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
 			// Runs on the main thread shortly before background time expires. Ending the
 			// task here keeps an overrunning write from becoming an unbalanced assertion,
 			// which the system also punishes with termination.
+			onExpiration?()
 			self?.end()
 		}
 	}
+
+	// False when iOS gave no time, as when the app's time is already up
+	var isValid: Bool { identifier != .invalid }
 
 	func end() {
 		guard identifier != .invalid else { return }

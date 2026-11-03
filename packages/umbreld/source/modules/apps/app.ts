@@ -11,21 +11,23 @@ import {$} from 'execa'
 import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
 import pRetry from 'p-retry'
+import {throttle} from 'es-toolkit'
 
-import getDirectorySize from '../utilities/get-directory-size.js'
+import getDirectorySize from '../utilities/get-directory-size.ts'
 import {
 	applyGpuAccelerationToService,
 	getGpuAcceleration,
 	removeGpuAccelerationFromService,
 	removeLegacyDriDeviceMappingsFromService,
 	type AppliedGpuAcceleration,
-} from '../hardware/gpu.js'
-import {pullAll} from '../utilities/docker-pull.js'
-import {copyWithProgress} from '../utilities/copy-with-progress.js'
-import {removeDurably, renameDurably, syncDirectoryTree, writeFileDurably} from '../utilities/durable-filesystem.js'
-import FileStore from '../utilities/file-store.js'
-import {fillSelectedDependencies} from '../utilities/dependencies.js'
-import type Umbreld from '../../index.js'
+} from '../hardware/gpu.ts'
+import {pullAll} from '../utilities/docker-pull.ts'
+import {copyWithProgress} from '../utilities/copy-with-progress.ts'
+import {floorToTenthPercent} from '../utilities/progress.ts'
+import {removeDurably, renameDurably, syncDirectoryTree, writeFileDurably} from '../utilities/durable-filesystem.ts'
+import FileStore from '../utilities/file-store.ts'
+import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.ts'
+import type Umbreld from '../../index.ts'
 import {
 	AppCustomMountSchema,
 	AppCustomEnvironmentVariableSchema,
@@ -45,10 +47,10 @@ import {
 	type AppManifestEnvironmentVariable,
 	type AppFolderAccessSelection,
 	type AppSettings,
-} from './schema.js'
-import appScript from './legacy-compat/app-script.js'
-import {readAppGatewayConfig} from '../app-gateway/app-gateway.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+} from './schema.ts'
+import appScript from './legacy-compat/app-script.ts'
+import {readAppGatewayConfig} from '../app-gateway/app-gateway.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
@@ -545,7 +547,13 @@ export default class App {
 	// Proxy lifetime follows container teardown/startup, independently of UI state
 	// and hooks that may still be running after the upstream starts listening.
 	appGatewayEnabled = true
-	stateProgress = 0
+	#stateProgress = 0
+	// Image pulls can report progress many times a second, so cap progress events
+	// at a few a second. They carry the current state too so a late event can't
+	// leave a client showing a transition that has already finished.
+	#emitProgress = throttle(() => {
+		this.#umbreld.eventBus.emit('apps:progress', {appId: this.id, state: this.state, progress: this.stateProgress})
+	}, 250)
 	store: FileStore<AppSettings>
 	// Set while setSettings() validates, persists, and applies a settings change
 	// so lifecycle operations cannot race compose regeneration or a restart.
@@ -576,6 +584,24 @@ export default class App {
 		if (state === this.#state) return
 		this.#state = state
 		this.#umbreld.eventBus.emit('apps:state:change', {appId: this.id, state})
+	}
+
+	get stateProgress() {
+		return this.#stateProgress
+	}
+
+	// Announce progress the same way as state so dashboards don't have to poll for it
+	set stateProgress(progress: number) {
+		if (progress === this.#stateProgress) return
+		this.#stateProgress = progress
+		this.#emitProgress()
+	}
+
+	// Drop a progress event that's still waiting on the throttle. Called once the
+	// app is removed so a late event can't show clients a transition for an app
+	// that no longer exists.
+	cancelPendingProgressEvent() {
+		this.#emitProgress.cancel()
 	}
 
 	readManifest() {
@@ -2123,34 +2149,15 @@ export default class App {
 				this.store.get('dependencies'),
 			])
 			const resolvedDependencies =
-				dependencies !== undefined ? fillSelectedDependencies(manifest.dependencies, dependencies) : undefined
-			if (dependencies !== undefined) {
-				const declaredDependencies = new Set(manifest.dependencies ?? [])
-				for (const dependencyId of Object.keys(dependencies)) {
-					if (!declaredDependencies.has(dependencyId)) {
-						throw new Error(
-							`[apps-settings-dependency-unsupported] App '${this.id}' does not declare '${dependencyId}'`,
-						)
-					}
-				}
-				const previousSelections = fillSelectedDependencies(manifest.dependencies, previousDependencies)
-				for (const [dependencyId, providerId] of Object.entries(resolvedDependencies!)) {
-					// Existing selections can outlive a provider or its implementation.
-					// Only validate changes so those stale choices remain repairable.
-					if (providerId === previousSelections[dependencyId]) continue
-					const provider = this.#umbreld.apps.instances.find((app) => app.id === providerId)
-					if (!provider || provider.state === 'installing' || provider.state === 'uninstalling') {
-						throw new Error(
-							`[apps-settings-dependency-not-installed] Dependency provider '${providerId}' is not installed`,
-						)
-					}
-					if (providerId !== dependencyId && !(await provider.readManifest()).implements?.includes(dependencyId)) {
-						throw new Error(
-							`[apps-settings-dependency-incompatible] App '${providerId}' does not implement '${dependencyId}'`,
-						)
-					}
-				}
-			}
+				dependencies !== undefined
+					? await resolveSelectedDependencies({
+							appId: this.id,
+							dependencies: manifest.dependencies,
+							selectedDependencies: dependencies,
+							previousSelections: fillSelectedDependencies(manifest.dependencies, previousDependencies),
+							providers: this.#umbreld.apps.instances,
+						})
+					: undefined
 			const dependencyDataRootPaths = resolvedDependencies
 				? await this.#umbreld.apps.getDataRootPathsForApps(Object.values(resolvedDependencies))
 				: []
@@ -2328,15 +2335,20 @@ export default class App {
 
 	async pull() {
 		const defaultImages = [
-			'ghcr.io/getumbrel/tor:0.4.9.11@sha256:e382b8629c0dfef6ceb396b062622d4e4e955b19d6f16b883fd2c0723ad5671a',
+			'ghcr.io/getumbrel/tor:0.4.9.14@sha256:7663d18fe37b3edd97c859aa36bb5eeaa328d86c57729db0433dff430e8abd8d',
 		]
 		const compose = await this.readCompose()
 		const images = Object.values(compose.services!)
 			.map((service) => service.image)
 			.filter(Boolean) as string[]
+		let loggedProgress = 0
 		await pullAll([...defaultImages, ...images], (progress) => {
-			this.stateProgress = Math.max(1, progress * 99)
-			this.logger.log(`Downloaded ${this.stateProgress}% of app ${this.id}`)
+			this.stateProgress = floorToTenthPercent(Math.max(1, progress * 99))
+			// Only log whole percents, Docker reports progress many times a second
+			if (Math.floor(this.stateProgress) > loggedProgress) {
+				loggedProgress = Math.floor(this.stateProgress)
+				this.logger.log(`Downloaded ${loggedProgress}% of app ${this.id}`)
+			}
 		})
 	}
 
@@ -2865,8 +2877,17 @@ export default class App {
 	async #setSelectedDependencies(selectedDependencies: Record<string, string>) {
 		this.#assertNoSettingsInProgress()
 		this.#assertSettingsChangeAllowed()
-		const {dependencies} = await this.readManifest()
-		const filledSelectedDependencies = fillSelectedDependencies(dependencies, selectedDependencies)
+		const [{dependencies}, previousDependencies] = await Promise.all([
+			this.readManifest(),
+			this.store.get('dependencies'),
+		])
+		const filledSelectedDependencies = await resolveSelectedDependencies({
+			appId: this.id,
+			dependencies,
+			selectedDependencies,
+			previousSelections: fillSelectedDependencies(dependencies, previousDependencies),
+			providers: this.#umbreld.apps.instances,
+		})
 		const success = await this.store.set('dependencies', filledSelectedDependencies)
 		if (success) await this.applySettingsChange()
 		return success

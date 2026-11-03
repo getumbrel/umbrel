@@ -1,6 +1,6 @@
 import {useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
-import {TbArrowRight, TbCircleCheckFilled, TbPlus} from 'react-icons/tb'
+import {TbAlertTriangle, TbArrowRight, TbCircleCheckFilled, TbPlus} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
 import {
@@ -65,10 +65,7 @@ export function EnableFailsafeDialog({
 		}).catch((error) => {
 			clearPendingOperation()
 			setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-			toast.error(t('storage-manager.enable-failsafe.failed'), {
-				area: 'settings',
-				description: error instanceof Error ? error.message : t('unknown-error'),
-			})
+			toast.error(t('storage-manager.enable-failsafe.failed'), {area: 'settings'})
 		})
 	}
 
@@ -162,16 +159,24 @@ export function EnableFailsafeDialog({
 							{t('storage-manager.enable-failsafe.info-capacity', {available: formatStorageSize(availableBytes)})}
 						</p>
 						<p className='text-[13px] text-white/50'>{t('storage-manager.enable-failsafe.info-background')}</p>
-						<p className='text-[13px] text-yellow-500'>{t('storage-manager.add-drives-erase-warning')}</p>
+						<p className='text-[13px] text-yellow-500'>
+							<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
+							{t('storage-manager.add-drives-erase-warning')}
+						</p>
 					</div>
 
 					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 
 					<DialogFooter>
-						<Button variant='primary' onClick={handleEnable} disabled={!plan.satisfied || isOperationInProgress}>
+						<Button
+							variant='primary'
+							size='dialog'
+							onClick={handleEnable}
+							disabled={!plan.satisfied || isOperationInProgress}
+						>
 							{t('storage-manager.enable-failsafe.enable')}
 						</Button>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('cancel')}
 						</Button>
 					</DialogFooter>

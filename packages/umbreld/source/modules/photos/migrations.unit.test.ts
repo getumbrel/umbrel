@@ -1,14 +1,14 @@
 import BetterSqlite3 from 'better-sqlite3'
 import {expect, test} from 'vitest'
 
-import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.js'
+import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.ts'
 
 import {
 	migratePhotos,
 	PHOTOS_MIGRATION_MODULE,
 	PHOTOS_SCHEMA_VERSION,
 	UnsupportedPhotosSchemaError,
-} from './migrations.js'
+} from './migrations.ts'
 
 test('creates and idempotently migrates the durable Photos schema', () => {
 	const database = new BetterSqlite3(':memory:')
@@ -43,6 +43,8 @@ test('creates and idempotently migrates the durable Photos schema', () => {
 		{module: PHOTOS_MIGRATION_MODULE, version: 7},
 		{module: PHOTOS_MIGRATION_MODULE, version: 8},
 		{module: PHOTOS_MIGRATION_MODULE, version: 9},
+		{module: PHOTOS_MIGRATION_MODULE, version: 10},
+		{module: PHOTOS_MIGRATION_MODULE, version: 11},
 	])
 	expect(
 		database
@@ -59,6 +61,7 @@ test('creates and idempotently migrates the durable Photos schema', () => {
 		{name: 'photos_read_model_dirty_accounts'},
 		{name: 'photos_read_model_dirty_contents'},
 		{name: 'photos_source_resources'},
+		{name: 'photos_source_resources_by_cloud_identifier'},
 		{name: 'photos_source_resources_by_content'},
 		{name: 'photos_sources'},
 		{name: 'photos_sources_one_umbrel_per_account'},
@@ -253,13 +256,23 @@ test('migrates v3 by discarding derived Live Photo pairs without touching backup
 		{version: 7},
 		{version: 8},
 		{version: 9},
+		{version: 10},
+		{version: 11},
 	])
 	expect(
 		database
 			.prepare('PRAGMA table_info(photos_source_resources)')
 			.all()
 			.map((column: any) => column.name),
-	).toStrictEqual(['account_id', 'source_id', 'resource_key', 'content_hash', 'original_filename'])
+	).toStrictEqual([
+		'account_id',
+		'source_id',
+		'resource_key',
+		'content_hash',
+		'original_filename',
+		'cloud_identifier',
+		'resource_role',
+	])
 	database.close()
 })
 
@@ -322,7 +335,15 @@ test('migrates staging v4 by adding managed backup presentation metadata', () =>
 			.prepare('PRAGMA table_info(photos_source_resources)')
 			.all()
 			.map((column: any) => column.name),
-	).toStrictEqual(['account_id', 'source_id', 'resource_key', 'content_hash', 'original_filename'])
+	).toStrictEqual([
+		'account_id',
+		'source_id',
+		'resource_key',
+		'content_hash',
+		'original_filename',
+		'cloud_identifier',
+		'resource_role',
+	])
 	expect(
 		database.prepare('SELECT source_id, imported_at, source_created_at FROM photos_content_state').get(),
 	).toStrictEqual({source_id: 'source', imported_at: 2, source_created_at: null})
@@ -341,6 +362,8 @@ test('migrates staging v4 by adding managed backup presentation metadata', () =>
 		{version: 7},
 		{version: 8},
 		{version: 9},
+		{version: 10},
+		{version: 11},
 	])
 	database.close()
 })
@@ -357,7 +380,15 @@ test('migrates an upstream v2 database by adding the durable backup resource ide
 			.prepare('PRAGMA table_info(photos_source_resources)')
 			.all()
 			.map((column: any) => column.name),
-	).toStrictEqual(['account_id', 'source_id', 'resource_key', 'content_hash', 'original_filename'])
+	).toStrictEqual([
+		'account_id',
+		'source_id',
+		'resource_key',
+		'content_hash',
+		'original_filename',
+		'cloud_identifier',
+		'resource_role',
+	])
 	database.close()
 })
 
@@ -433,6 +464,8 @@ test('keeps Photos migration versions independent from other umbrel.db modules',
 		{module: PHOTOS_MIGRATION_MODULE, version: 7},
 		{module: PHOTOS_MIGRATION_MODULE, version: 8},
 		{module: PHOTOS_MIGRATION_MODULE, version: 9},
+		{module: PHOTOS_MIGRATION_MODULE, version: 10},
+		{module: PHOTOS_MIGRATION_MODULE, version: 11},
 	])
 	database.close()
 })
@@ -441,7 +474,7 @@ test('upgrades the v8 source trigger so renames are cheap while scope changes st
 	const database = new BetterSqlite3(':memory:')
 	try {
 		migratePhotos(database)
-		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version=9;
+		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version>=9;
 			DROP TRIGGER photos_read_model_photos_sources_update;
 			CREATE TRIGGER photos_read_model_photos_sources_update AFTER UPDATE OF name ON photos_sources
 			WHEN old.name IS NOT new.name BEGIN
@@ -459,6 +492,54 @@ test('upgrades the v8 source trigger so renames are cheap while scope changes st
 		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([{account_id: 'owner'}])
 		migratePhotos(database)
 		expect(database.prepare('SELECT name FROM photos_sources').get()).toEqual({name: 'After'})
+	} finally {
+		database.close()
+	}
+})
+
+test('adds a platform to phone sources without rebuilding them or their backups', () => {
+	const database = new BetterSqlite3(':memory:')
+	try {
+		migratePhotos(database)
+		// Back to v9: no platform column, and the source trigger v9 installed.
+		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version>=10;
+			DROP TRIGGER photos_read_model_photos_sources_update;
+			ALTER TABLE photos_sources DROP COLUMN platform;
+			CREATE TRIGGER photos_read_model_photos_sources_update
+			AFTER UPDATE OF account_id, type, scope_mode, scope_paths ON photos_sources
+			WHEN old.account_id IS NOT new.account_id OR old.type IS NOT new.type
+				OR old.scope_mode IS NOT new.scope_mode OR old.scope_paths IS NOT new.scope_paths BEGIN
+				INSERT INTO photos_read_model_dirty_accounts VALUES(new.account_id) ON CONFLICT DO NOTHING;
+			END;
+			INSERT INTO photos_sources(id,account_id,type,name,created_at) VALUES('iphone:phone','alice','iphone','Pixel',1);`)
+		const hash = Buffer.alloc(32, 1)
+		database
+			.prepare(
+				"INSERT INTO photos_content_state(account_id, content_hash, source_id, imported_at) VALUES ('alice', ?, 'iphone:phone', 2)",
+			)
+			.run(hash)
+		database
+			.prepare(
+				"INSERT INTO photos_source_resources(account_id, source_id, resource_key, content_hash) VALUES ('alice', 'iphone:phone', ?, ?)",
+			)
+			.run('a'.repeat(64), hash)
+		database.exec('DELETE FROM photos_read_model_dirty_accounts; DELETE FROM photos_read_model_dirty_contents;')
+
+		expect(migratePhotos(database)).toBe(PHOTOS_SCHEMA_VERSION)
+		expect(database.prepare('SELECT id, type, name, platform FROM photos_sources').all()).toEqual([
+			{id: 'iphone:phone', type: 'iphone', name: 'Pixel', platform: null},
+		])
+		expect(database.prepare('SELECT source_id FROM photos_content_state').all()).toEqual([{source_id: 'iphone:phone'}])
+		expect(database.prepare('SELECT source_id FROM photos_source_resources').all()).toEqual([
+			{source_id: 'iphone:phone'},
+		])
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([])
+
+		// A rename stays cheap; learning the phone runs Android changes how its items show.
+		database.exec("UPDATE photos_sources SET name='Pixel 8a' WHERE id='iphone:phone'")
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([])
+		database.exec("UPDATE photos_sources SET platform='android' WHERE id='iphone:phone'")
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([{account_id: 'alice'}])
 	} finally {
 		database.close()
 	}
@@ -499,4 +580,48 @@ test('rejects a database created by a newer Photos version before changing it', 
 	expect(() => migratePhotos(database)).toThrow(UnsupportedPhotosSchemaError)
 	expect(database.prepare("SELECT name FROM sqlite_schema WHERE name = 'items'").get()).toBeUndefined()
 	database.close()
+})
+
+test('upgrades v10 backup receipts with no cloud identity', () => {
+	const database = new BetterSqlite3(':memory:')
+	try {
+		migratePhotos(database)
+		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version=11;
+			DROP INDEX photos_source_resources_by_cloud_identifier;
+			ALTER TABLE photos_source_resources DROP COLUMN resource_role;
+			ALTER TABLE photos_source_resources DROP COLUMN cloud_identifier;
+			INSERT INTO photos_sources(id,account_id,type,name,created_at) VALUES('phone','owner','iphone','iPhone',1);`)
+		database
+			.prepare(
+				`INSERT INTO photos_source_resources(account_id,source_id,resource_key,content_hash,original_filename)
+				VALUES('owner','phone',?,?,'IMG_0001.HEIC')`,
+			)
+			.run('a'.repeat(64), Buffer.alloc(32, 1))
+
+		expect(migratePhotos(database)).toBe(PHOTOS_SCHEMA_VERSION)
+		expect(
+			database
+				.prepare('SELECT resource_key, original_filename, cloud_identifier, resource_role FROM photos_source_resources')
+				.all(),
+		).toStrictEqual([
+			{
+				resource_key: 'a'.repeat(64),
+				original_filename: 'IMG_0001.HEIC',
+				cloud_identifier: null,
+				resource_role: null,
+			},
+		])
+		const plan = database
+			.prepare(
+				`EXPLAIN QUERY PLAN SELECT content_hash FROM photos_source_resources
+					INDEXED BY photos_source_resources_by_cloud_identifier
+				WHERE account_id = ? AND cloud_identifier = ? AND resource_role = ?`,
+			)
+			.all('owner', 'asset', 'photo') as Array<{detail: string}>
+		expect(plan.map(({detail}) => detail)).toStrictEqual([
+			'SEARCH photos_source_resources USING INDEX photos_source_resources_by_cloud_identifier (account_id=? AND cloud_identifier=? AND resource_role=?)',
+		])
+	} finally {
+		database.close()
+	}
 })

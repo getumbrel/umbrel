@@ -1,4 +1,5 @@
 import React, {useEffect, useId, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {
 	AlertDialog,
@@ -26,6 +27,7 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 	onResolve,
 	onReject,
 }) => {
+	const {t} = useTranslation()
 	const [applyToAllChecked, setApplyToAllChecked] = useState(false)
 	const checkboxId = useId()
 
@@ -73,18 +75,17 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 				</AlertDialogHeader>
 
 				{/* Action Buttons */}
-				<div className='flex flex-col justify-center gap-y-2 md:flex-row md:gap-x-2 md:gap-y-0'>
-					{actions.map((action, index) => (
+				<AlertDialogFooter>
+					{actions.map((action) => (
 						<AlertDialogAction
 							key={action.label}
 							variant={action.variant || 'default'}
-							className='px-6'
 							onClick={() => handleActionClick(action.value)}
 						>
 							{action.label}
 						</AlertDialogAction>
 					))}
-				</div>
+				</AlertDialogFooter>
 
 				{/* "Apply to all" checkbox (only if enabled) */}
 				{showApplyToAll && (
@@ -97,7 +98,7 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 								className='h-4 w-4 rounded-4'
 							/>
 							<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-12 text-white/40')}>
-								Apply to all
+								{t('apply-to-all')}
 							</label>
 						</div>
 					</AlertDialogFooter>

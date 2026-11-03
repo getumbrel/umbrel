@@ -59,10 +59,7 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 			.catch((error) => {
 				clearPendingOperation()
 				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-				toast.error(t('storage-manager.add-mirror.failed'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				toast.error(t('storage-manager.add-mirror.failed'), {area: 'settings'})
 			})
 	}
 
@@ -129,10 +126,10 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 
 					<DialogFooter>
-						<Button variant='primary' onClick={handleAdd} disabled={isOperationInProgress}>
+						<Button variant='primary' size='dialog' onClick={handleAdd} disabled={isOperationInProgress}>
 							{t('storage-manager.add-mirror.add-drives')}
 						</Button>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('cancel')}
 						</Button>
 					</DialogFooter>

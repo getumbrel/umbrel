@@ -39,7 +39,7 @@ export function MigratingCover({onRetry}: {onRetry: () => void}) {
 			{error && (
 				<FailedLayout
 					title={t('migrate.failed.title')}
-					description={<>Error: {error}</>}
+					description={error}
 					buttonText={t('migrate.failed.retry')}
 					buttonOnClick={onRetry}
 				/>
@@ -63,7 +63,7 @@ export function useSoftwareUpdate({
 	onMutate?: () => void
 	onSuccess?: (didWork: boolean) => void
 }) {
-	const updateVersionMut = trpcReact.system.update.useMutation({
+	const updateVersionMut = trpcReact.update.install.useMutation({
 		onMutate,
 		onSuccess,
 	})

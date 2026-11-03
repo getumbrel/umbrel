@@ -5,8 +5,8 @@ import {expect} from 'vitest'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {RestoreStatus} from './backups.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import type {RestoreStatus} from './backups.ts'
 
 export const externalPath = '/External/SanDisk'
 export const repositoryPassword = 'test-password'
@@ -73,7 +73,9 @@ export async function waitForBackupsKopiaReady(
 			} catch (error) {
 				if (
 					error instanceof Error &&
-					(error.message.includes('[shutting-down]') || error.message.includes('Invalid path'))
+					(error.message.includes('[backups-starting]') ||
+						error.message.includes('[shutting-down]') ||
+						error.message.includes('Invalid path'))
 				) {
 					throw error
 				}
@@ -82,7 +84,9 @@ export async function waitForBackupsKopiaReady(
 
 			throw new Error('Unexpectedly connected to startup probe repository')
 		},
-		{retries: 60, factor: 1, minTimeout: 1000, maxTimeout: 1000},
+		// Backups starts last during umbreld startup, which can take well over a
+		// minute on a loaded CI runner
+		{retries: 300, factor: 1, minTimeout: 1000, maxTimeout: 1000},
 	)
 }
 

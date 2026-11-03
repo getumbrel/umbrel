@@ -1,7 +1,7 @@
-import {DialogPortal, DialogTitle} from '@radix-ui/react-dialog'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
+import {DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -75,8 +75,8 @@ export function StorageUnavailable({
 					}}
 				>
 					<div className='flex min-h-[300px] flex-col gap-6'>
-						<DialogTitle asChild>
-							<h1 className={immersiveDialogTitleClass}>{t('storage-manager')}</h1>
+						<DialogTitle asChild className={immersiveDialogTitleClass}>
+							<h1>{t('storage-manager')}</h1>
 						</DialogTitle>
 						{loading ? (
 							<div className='h-56' aria-busy='true' aria-label={t('loading')} />

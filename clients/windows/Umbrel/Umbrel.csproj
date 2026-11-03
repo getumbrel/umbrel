@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Windows notification-area app. Why WPF and not WinUI 3: see README.md. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Umbrel</RootNamespace>
+    <AssemblyName>Umbrel</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Umbrel.ico</ApplicationIcon>
+    <!-- Marketing version and build number, mirroring MARKETING_VERSION and
+         CURRENT_PROJECT_VERSION in the Apple project.yml files. The MSIX identity
+         version in Package.appxmanifest must be kept equal to AssemblyVersion. -->
+    <Version>0.1.3</Version>
+    <AssemblyVersion>0.1.3.4</AssemblyVersion>
+    <FileVersion>0.1.3.4</FileVersion>
+    <InformationalVersion>0.1.3</InformationalVersion>
+    <Company>Umbrel, Inc.</Company>
+    <Product>Umbrel</Product>
+    <Copyright>Umbrel, Inc.</Copyright>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Source-generated P/Invoke (LibraryImport) with fixed-size buffers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Umbrel.Core\Umbrel.Core.csproj" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Loaded from the Assets folder next to the exe, so a single-file build leaves
+         them on disk instead of packing them into Umbrel.exe. -->
+    <Content Include="Assets\*.ico;Assets\*.png" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="Package.appxmanifest;Umbrel.appinstaller" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Inter 4.1 (github.com/rsms/inter): the hinted static TTFs for the three weights
+         the UI uses, built into the assembly so nothing needs installing. The OFL asks
+         for its license to ship with the fonts. -->
+    <Resource Include="Fonts\*.ttf" />
+    <Content Include="Fonts\Inter-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+</Project>

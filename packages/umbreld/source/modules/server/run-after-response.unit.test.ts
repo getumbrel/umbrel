@@ -2,7 +2,7 @@ import {EventEmitter} from 'node:events'
 
 import {describe, expect, test, vi} from 'vitest'
 
-import {runAfterResponse} from './run-after-response.js'
+import {runAfterResponse} from './run-after-response.ts'
 
 describe('runAfterResponse', () => {
 	test('waits for the response to finish', () => {

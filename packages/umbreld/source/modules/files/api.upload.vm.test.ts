@@ -4,7 +4,7 @@ import {Readable} from 'node:stream'
 import {expect, beforeAll, afterAll, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // The entire upload API runs end-to-end here, including the disk-full write
 // error case which is triggered by genuinely filling a filesystem (a tiny
@@ -144,7 +144,7 @@ test('POST /api/files/upload succeeds with matching dashboard and browser creden
 
 	// Assert the response is correct
 	expect(response.statusCode).toBe(200)
-	expect(response.body).toEqual({path: '/Home/new-file.txt'})
+	expect(response.body).toEqual({path: '/Home/new-file.txt', revision: expect.stringMatching(/^\d+-16-\d+-\d+$/)})
 
 	// Verify the file was created with the right content
 	await expect(readGuestFile(`${guestHome}/new-file.txt`)).resolves.toBe('uploaded content')
@@ -232,9 +232,10 @@ test('POST /api/files/upload creates file with correct permissions', async () =>
 	// Assert the response is correct
 	expect(response.statusCode).toBe(200)
 
-	// Check ownership is the umbrel user and group (low-level OS fact via SSH)
-	const stat = await umbreld.vm.ssh(`stat --format '%u %g' ${guestHome}/permissions-upload.txt`)
-	expect(stat.trim()).toBe('1000 1000')
+	// Check ownership is the umbrel user and group, and only they can access it
+	// (low-level OS fact via SSH)
+	const stat = await umbreld.vm.ssh(`stat --format '%u %g %a' ${guestHome}/permissions-upload.txt`)
+	expect(stat.trim()).toBe('1000 1000 600')
 })
 
 test('POST /api/files/upload correctly handles streaming data in chunks', async () => {
@@ -445,7 +446,10 @@ test('POST /api/files/upload with collision=keep-both creates uniquely named fil
 
 	// Assert the response is correct
 	expect(response.statusCode).toBe(200)
-	expect(response.body).toEqual({path: '/Home/keep-both-test (2).txt'})
+	expect(response.body).toEqual({
+		path: '/Home/keep-both-test (2).txt',
+		revision: expect.stringMatching(/^\d+-11-\d+-\d+$/),
+	})
 
 	// Verify both files exist with correct content
 	await expect(readGuestFile(`${guestHome}/keep-both-test.txt`)).resolves.toBe('original content')
@@ -478,7 +482,10 @@ test('POST /api/files/upload with collision=keep-both increments number for mult
 
 	// Assert the response is correct
 	expect(response.statusCode).toBe(200)
-	expect(response.body).toEqual({path: '/Home/multiple-test (3).txt'})
+	expect(response.body).toEqual({
+		path: '/Home/multiple-test (3).txt',
+		revision: expect.stringMatching(/^\d+-16-\d+-\d+$/),
+	})
 
 	// Verify all files exist with correct content
 	await expect(readGuestFile(`${guestHome}/multiple-test.txt`)).resolves.toBe('original content')
@@ -497,10 +504,140 @@ test('POST /api/files/upload with collision=replace overwrites existing file', a
 
 	// Assert the response is correct
 	expect(response.statusCode).toBe(200)
-	expect(response.body).toEqual({path: '/Home/replace-test.txt'})
+	expect(response.body).toEqual({path: '/Home/replace-test.txt', revision: expect.stringMatching(/^\d+-19-\d+-\d+$/)})
 
 	// Verify file exists with new content
 	await expect(readGuestFile(`${guestHome}/replace-test.txt`)).resolves.toBe('replacement content')
+})
+
+test('POST /api/files/upload with collision=replace keeps the replaced file permissions and owner', async () => {
+	// A file owned by someone else, readable by others and setuid (seeded over
+	// SSH: no product surface sets owners or modes)
+	await umbreld.api.post('files/upload?path=/Home/replace-keeps-mode.sh', {body: 'echo original'})
+	await umbreld.vm.sshAsRoot(
+		`chown 1234:1234 '${guestHome}/replace-keeps-mode.sh' && chmod 4754 '${guestHome}/replace-keeps-mode.sh'`,
+	)
+
+	// Replace it
+	const response = await umbreld.api.post('files/upload?path=/Home/replace-keeps-mode.sh&collision=replace', {
+		body: 'echo edited',
+	})
+	expect(response.statusCode).toBe(200)
+
+	// The owner and permission bits carry over, but setuid does not
+	const stat = await umbreld.vm.ssh(`stat --format '%u %g %a' '${guestHome}/replace-keeps-mode.sh'`)
+	expect(stat.trim()).toBe('1234 1234 754')
+	await expect(readGuestFile(`${guestHome}/replace-keeps-mode.sh`)).resolves.toBe('echo edited')
+})
+
+test('POST /api/files/upload with collision=replace saves over the revision named by If-Match', async () => {
+	// Create a file and read its revision the way the file viewer does
+	await umbreld.api.post('files/upload?path=/Home/if-match.txt', {body: 'original'})
+	const view = await umbreld.api.get('files/view?path=/Home/if-match.txt', {responseType: 'text'})
+
+	// Save over it with that revision
+	const saved = await umbreld.api.post('files/upload?path=/Home/if-match.txt&collision=replace', {
+		body: 'first edit',
+		headers: {'If-Match': view.headers.etag},
+	})
+	expect(saved.statusCode).toBe(200)
+	expect(saved.body).toEqual({path: '/Home/if-match.txt', revision: expect.stringMatching(/^\d+-10-\d+-\d+$/)})
+	expect(saved.headers.etag).toBe(`"${(saved.body as unknown as {revision: string}).revision}"`)
+	await expect(readGuestFile(`${guestHome}/if-match.txt`)).resolves.toBe('first edit')
+
+	// The answered revision is current, so the next save can name it
+	const savedAgain = await umbreld.api.post('files/upload?path=/Home/if-match.txt&collision=replace', {
+		body: 'second edit',
+		headers: {'If-Match': saved.headers.etag},
+	})
+	expect(savedAgain.statusCode).toBe(200)
+	await expect(readGuestFile(`${guestHome}/if-match.txt`)).resolves.toBe('second edit')
+})
+
+test('POST /api/files/upload refuses a stale If-Match revision with 412 before staging the body', async () => {
+	// Read a file's revision, then change the file in place as an SMB client or
+	// app would (seeded over SSH: no product surface writes in place)
+	await umbreld.api.post('files/upload?path=/Home/stale-if-match.txt', {body: 'original'})
+	const view = await umbreld.api.get('files/view?path=/Home/stale-if-match.txt', {responseType: 'text'})
+	await umbreld.vm.ssh(`printf ' changed elsewhere' >> '${guestHome}/stale-if-match.txt'`)
+
+	// Saving with the stale revision is refused
+	const error = await umbreld.api
+		.post('files/upload?path=/Home/stale-if-match.txt&collision=replace', {
+			body: 'my edit',
+			headers: {'If-Match': view.headers.etag},
+		})
+		.catch((error) => error)
+	expect(error.response.statusCode).toBe(412)
+	expect(error.response.headers.connection).toBe('close')
+	expect(error.response.body).toEqual({error: '[revision-mismatch]'})
+
+	// The other change survives and nothing was staged
+	await expect(readGuestFile(`${guestHome}/stale-if-match.txt`)).resolves.toBe('original changed elsewhere')
+	await expect(guestUploadTemporaryFiles(guestHome, 'stale-if-match.txt')).resolves.toEqual([])
+})
+
+test('POST /api/files/upload refuses If-Match for a file that does not exist', async () => {
+	for (const ifMatch of ['"1-7-1"', '*']) {
+		const error = await umbreld.api
+			.post('files/upload?path=/Home/if-match-missing.txt&collision=replace', {
+				body: 'my edit',
+				headers: {'If-Match': ifMatch},
+			})
+			.catch((error) => error)
+		expect(error.response.statusCode).toBe(412)
+		expect(error.response.body).toEqual({error: '[revision-mismatch]'})
+	}
+	await expect(guestPathExists(`${guestHome}/if-match-missing.txt`)).resolves.toBe(false)
+})
+
+test('POST /api/files/upload checks If-Match again once the body has arrived', async () => {
+	// Start saving with the current revision
+	await umbreld.api.post('files/upload?path=/Home/if-match-race.txt', {body: 'original'})
+	const view = await umbreld.api.get('files/view?path=/Home/if-match-race.txt', {responseType: 'text'})
+	const uploadStream = umbreld.api.stream.post('files/upload?path=/Home/if-match-race.txt&collision=replace', {
+		headers: {'If-Match': view.headers.etag},
+		throwHttpErrors: false,
+	})
+
+	try {
+		// Another save lands while this body is still being staged
+		uploadStream.write(Buffer.from('my edit'))
+		await pWaitFor(async () => (await guestUploadTemporaryFiles(guestHome, 'if-match-race.txt')).length === 1, {
+			interval: 500,
+			timeout: 60_000,
+		})
+		await umbreld.api.post('files/upload?path=/Home/if-match-race.txt&collision=replace', {body: 'their edit'})
+
+		// Finishing the stale save is refused without publishing it
+		uploadStream.end()
+		const [response] = await once(uploadStream, 'response')
+		expect(response.statusCode).toBe(412)
+		await expect(readGuestFile(`${guestHome}/if-match-race.txt`)).resolves.toBe('their edit')
+		await pWaitFor(async () => (await guestUploadTemporaryFiles(guestHome, 'if-match-race.txt')).length === 0, {
+			interval: 500,
+			timeout: 60_000,
+		})
+	} finally {
+		if (!uploadStream.destroyed) uploadStream.destroy()
+	}
+})
+
+test('POST /api/files/upload refuses If-Match with collision modes that never overwrite', async () => {
+	await umbreld.api.post('files/upload?path=/Home/if-match-copy.txt', {body: 'original'})
+	const view = await umbreld.api.get('files/view?path=/Home/if-match-copy.txt', {responseType: 'text'})
+
+	for (const collision of ['error', 'keep-both']) {
+		const error = await umbreld.api
+			.post(`files/upload?path=/Home/if-match-copy.txt&collision=${collision}`, {
+				body: 'copy',
+				headers: {'If-Match': view.headers.etag},
+			})
+			.catch((error) => error)
+		expect(error.response.statusCode).toBe(400)
+		expect(error.response.body).toEqual({error: 'If-Match requires collision=replace'})
+	}
+	await expect(guestPathExists(`${guestHome}/if-match-copy (2).txt`)).resolves.toBe(false)
 })
 
 test('POST /api/files/upload with invalid collision parameter returns 400 error', async () => {

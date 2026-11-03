@@ -50,7 +50,7 @@ type Step = 'results' | 'failsafe' | 'accelerate'
 // Format bytes, but if 0, use the same unit as the reference value (e.g., "0TB" instead of "0B")
 const formatSizeWithUnit = (bytes: number, referenceBytes: number) => {
 	if (bytes === 0 && referenceBytes > 0) {
-		const unit = formatSize(referenceBytes).replace(/[\d.]/g, '')
+		const unit = formatSize(referenceBytes).replace(/[^A-Za-z]/g, '') // "1,5TB" → "TB"
 		return `0${unit}`
 	}
 	return formatSize(bytes)
@@ -426,7 +426,6 @@ export default function HddRaidOnboarding() {
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					<AlertDialogAction
 						onClick={() => {
 							if (!pendingConfig) return
@@ -435,6 +434,7 @@ export default function HddRaidOnboarding() {
 					>
 						{t('onboarding.raid.recovery.set-up-new-dialog.confirm')}
 					</AlertDialogAction>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

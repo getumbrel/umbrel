@@ -27,7 +27,7 @@ type PowerAction = {status: PowerActionStatus; phase: 'pending' | 'accepted'}
 const GlobalSystemStateContext = createContext<{
 	shutdown: () => void
 	restart: () => void
-	update: () => void
+	update: (manifestHash?: string) => void
 	migrate: () => void
 	reset: (password: string) => void
 	getError(): RouterError | null
@@ -347,7 +347,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case 'updating': {
 			return (
 				<>
-					<UpdatingCover onRetry={update} />
+					<UpdatingCover onRetry={() => update()} />
 					{debugInfo}
 				</>
 			)

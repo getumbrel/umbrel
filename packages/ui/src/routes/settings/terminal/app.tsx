@@ -14,7 +14,7 @@ export function App({appId}: {appId: string}) {
 
 	return (
 		<ImmersivePickerDialogContent>
-			<div className='flex w-full items-center justify-between'>
+			<div className='flex w-full flex-wrap items-center justify-between gap-2 pe-6'>
 				<TerminalTitleBackLink />
 				<AppDropdown appId={appId} setAppId={setAppId} />
 			</div>

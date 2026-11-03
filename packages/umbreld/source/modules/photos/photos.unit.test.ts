@@ -1,7 +1,7 @@
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import Photos from './photos.js'
+import type Umbreld from '../../index.ts'
+import Photos from './photos.ts'
 
 test('moves every resolved Home copy to Files Trash', async () => {
 	const revision = {inode: '1', size: 1, modifiedNs: '2', ctimeNs: '3'}

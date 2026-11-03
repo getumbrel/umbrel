@@ -146,3 +146,63 @@ test('a server-reported scrub still allows insertion for a missing member', asyn
 	await render({poolOperation: {scrub: {state: 'scrubbing'}} as Partial<RaidStatus>})
 	expect(host.textContent).toContain('storage-manager.swap.step-insert-new-ssd-drive')
 })
+
+async function renderHealthySwap(topology: 'mirror' | 'raidz', target: string, {pro = false} = {}) {
+	const type = topology === 'mirror' ? 'hdd' : 'ssd'
+	const pool = {
+		exists: true,
+		status: 'ONLINE',
+		raidType: 'failsafe',
+		topology,
+		devices: [member('a'), member('b'), ...(topology === 'raidz' ? [member('c')] : [])],
+		...(topology === 'mirror'
+			? {mirrors: [['a', 'b']], accelerator: {exists: true, devices: [member('ssd-1'), member('ssd-2')]}}
+			: {}),
+	} as RaidStatus
+	const devices = [
+		...(pool.devices ?? []).map((poolMember) => drive(poolMember.id, type)),
+		...(pool.accelerator?.devices ?? []).map((acceleratorMember) => drive(acceleratorMember.id, 'ssd')),
+	]
+	await act(async () =>
+		root.render(
+			<SwapDialog
+				open
+				onOpenChange={() => {}}
+				raidType='failsafe'
+				oldDeviceId={target}
+				isUmbrelPro={pro}
+				raidStatus={pool}
+				allDevices={devices}
+				availableDevices={[]}
+				replaceDeviceAsync={replace}
+			/>,
+		),
+	)
+}
+
+test('an HDD pair swap allows a larger drive and says when its space arrives', async () => {
+	await renderHealthySwap('mirror', 'a')
+	expect(host.textContent).toContain('storage-manager.swap.step-swap-ssd')
+	expect(host.textContent).toContain('storage-manager.swap.larger-drives-pair')
+	expect(host.textContent).not.toContain('storage-manager.swap.larger-ssds')
+})
+
+test.each([false, true])(
+	'an SSD pool swap explains larger SSDs without the HDD pair wording (Pro: %s)',
+	async (pro) => {
+		await renderHealthySwap('raidz', 'a', {pro})
+		expect(host.textContent).toContain('storage-manager.swap.larger-ssds')
+		expect(host.textContent).not.toContain('storage-manager.swap.larger-drives-pair')
+	},
+)
+
+test('an accelerator SSD swap promises no extra storage space', async () => {
+	await renderHealthySwap('mirror', 'ssd-1')
+	expect(host.textContent).toContain('storage-manager.swap.step-swap-ssd')
+	expect(host.textContent).not.toContain('storage-manager.swap.larger-')
+})
+
+test('inserting a replacement for a missing member skips the larger-drive note', async () => {
+	await render()
+	expect(host.textContent).not.toContain('storage-manager.swap.larger-')
+})

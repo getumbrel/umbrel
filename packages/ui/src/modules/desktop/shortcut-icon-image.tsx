@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 
 import {cn} from '@/lib/utils'
+import {firstCharacter} from '@/utils/characters'
 
 import {sampleEdgeColor} from './sample-edge-color'
 
@@ -137,7 +138,7 @@ export function ShortcutIconImage({
 				</>
 			) : (
 				<div className='flex h-full w-full items-center justify-center text-[40cqw] font-bold text-white/60'>
-					{title ? title.charAt(0).toUpperCase() : '?'}
+					{firstCharacter(title).toUpperCase() || '?'}
 				</div>
 			)}
 		</div>

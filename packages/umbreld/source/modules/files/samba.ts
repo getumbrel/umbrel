@@ -5,13 +5,13 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import PQueue from 'p-queue'
 
-import randomToken from '../utilities/random-token.js'
+import randomToken from '../utilities/random-token.ts'
 
-import type Umbreld from '../../index.js'
-import type {FileChangeEvent} from './watcher.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import AsyncBurstCache from '../utilities/async-burst-cache.js'
-import AppDirectoryMonitor from './app-directory-monitor.js'
+import type Umbreld from '../../index.ts'
+import type {FileChangeEvent} from './watcher.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import AsyncBurstCache from '../utilities/async-burst-cache.ts'
+import AppDirectoryMonitor from './app-directory-monitor.ts'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 const OWNER_SAMBA_USERNAME = 'umbrel'
@@ -128,10 +128,7 @@ export default class Samba {
 			this.logger.error('Failed to apply shares', error)
 		})
 
-		this.#removeFileChangeListener = this.#umbreld.eventBus.on(
-			'files:watcher:change',
-			this.#handleFileChange.bind(this),
-		)
+		this.#removeFileChangeListener = this.#umbreld.eventBus.onFileChanges(this.#handleFileChanges.bind(this))
 
 		this.#removeExternalStorageChangeListener = this.#umbreld.eventBus.on('files:external-storage:change', () => {
 			this.applyShares().catch((error) => this.logger.error('Failed to reapply shares', error))
@@ -581,14 +578,34 @@ export default class Samba {
 		if (!member?.sambaPassword) throw new Error('[samba-access-disabled]')
 	}
 
-	async #handleFileChange(event: FileChangeEvent) {
-		if (event.type !== 'delete') return
+	// Remove shares whose directory was deleted
+	async #handleFileChanges(events: readonly FileChangeEvent[]) {
+		const deletions = events.filter((event) => event.type === 'delete')
+		if (deletions.length === 0) return
 		const shares = await this.#watcherShares.get()
-		const virtualDeletedPath = this.#umbreld.files.systemToVirtualPath(event.path)
-		const deletedShares = shares.filter(
-			(share) => share.path === virtualDeletedPath || share.path.startsWith(virtualDeletedPath + '/'),
+		if (shares.length === 0) return
+		const removals: string[] = []
+		for (const {path} of deletions) {
+			try {
+				const virtualDeletedPath = this.#umbreld.files.systemToVirtualPath(path)
+				if (
+					shares.some((share) => share.path === virtualDeletedPath || share.path.startsWith(`${virtualDeletedPath}/`))
+				) {
+					removals.push(virtualDeletedPath)
+				}
+			} catch (error) {
+				this.logger.error(`Failed to handle the deletion of '${path}'`, error)
+			}
+		}
+		// Remove them independently, so one that stalls (in its listeners, say)
+		// can't hold up the others
+		await Promise.all(
+			removals.map((path) =>
+				this.removeSharesWithin(path).catch((error) =>
+					this.logger.error(`Failed to remove shares within '${path}'`, error),
+				),
+			),
 		)
-		if (deletedShares.length > 0) await this.removeSharesWithin(virtualDeletedPath)
 	}
 
 	async listShares(userId: string = OWNER_USER_ID) {

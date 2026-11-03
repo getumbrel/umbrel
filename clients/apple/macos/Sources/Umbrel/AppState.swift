@@ -24,6 +24,7 @@ import UserNotifications
 final class AppState {
 	enum AddressConnectionResult {
 		case device(String)
+		case unverified(Umbreld.UnverifiedDevice)
 		case updateRequired(host: String)
 	}
 
@@ -44,6 +45,10 @@ final class AppState {
 
 	// The snapshot the UI renders from
 	private(set) var devices: [Device] = []
+	// Current Umbrels at a fallback hostname that couldn't prove their identity
+	private(set) var unverifiedDevices: [Umbreld.UnverifiedDevice] = []
+	// Hosts whose "Couldn't connect" card is asking again
+	private(set) var retryingHosts: Set<String> = []
 	private(set) var updateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 	private(set) var configStorageIssue: Config.StorageIssue?
 	// Read the service directly whenever the context menu opens so a decision made
@@ -69,12 +74,17 @@ final class AppState {
 	private var config: Config
 	private var mdnsIdentifiedCandidates: [IdentifiedDevice] = []
 	private var manuallyIdentifiedCandidates: [String: IdentifiedDevice] = [:]
+	private var fallbackIdentifiedCandidates: [IdentifiedDevice] = []
+	private var fallbackUnverifiedDevices: [Umbreld.UnverifiedDevice] = []
 	private var fallbackUpdateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 	private var fallbackDiscoveryGeneration = 0
 	private var pendingNativeHosts: Set<String> = []
 	private var candidateIdentificationTask: Task<Void, Never>?
+	@ObservationIgnored private var setupRefreshTask: Task<Void, Never>?
 	private var explicitlyClaimedDeviceIds = Set<String>()
 	private var initialDiscoveryWindowElapsed = false
+	// The first fallback scan, which the first search waits for like Bonjour's candidates
+	private var initialFallbackPending = true
 	private var probes: [String: ProbeRecord] = [:] // deviceId -> latest identity probe
 	private var probesInFlight: Set<String> = [] // device ids
 	private var connectionHosts: [String: String] = [:] // actual endpoint selected by UmbrelKit
@@ -101,10 +111,9 @@ final class AppState {
 
 	private var mountsInProgress: Set<String> = [] // per-device lock: connect flow vs health check
 	private var foregroundMounts: Set<String> = [] // user-initiated mounts (excludes silent health checks)
-	// Exact paths returned by successful NetFS calls in this process. Unlike paths
-	// recovered after launch, these retain enough provenance to manage safely when
-	// their old network route is temporarily unreachable.
-	private var processCreatedMountPaths: [String: Set<String>] = [:]
+	// Mounts this process created or gave a share row, with the host and share each
+	// holds (see isKnownMount).
+	private var knownMounts: [String: [Mounter.MountedShare]] = [:]
 	private var notifiedExpired: Set<String> = []
 	private var healthCheckRunning = false
 	private let discovery = Discovery()
@@ -122,7 +131,11 @@ final class AppState {
 	private let probeCooldown: TimeInterval = 30
 
 	private var identifiedCandidates: [IdentifiedDevice] {
-		var byId = Dictionary(uniqueKeysWithValues: mdnsIdentifiedCandidates.map { ($0.id, $0) })
+		var byId = Dictionary(fallbackIdentifiedCandidates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+		// Bonjour's record for an Umbrel both sources found carries its addresses
+		for device in mdnsIdentifiedCandidates {
+			byId[device.id] = device
+		}
 		// Prefer an explicitly checked endpoint when both sources identify the same
 		// Umbrel; it may be the Tailscale route the user needs right now.
 		for (id, device) in manuallyIdentifiedCandidates {
@@ -173,7 +186,7 @@ final class AppState {
 			reloadUnavailableSessions()
 			await self.probeSweep()
 			completedInitialReachabilityCheck = true
-			publishUpdateRequiredDevices()
+			publishFallbackHints()
 			rebuild()
 		}
 		Task {
@@ -183,10 +196,8 @@ final class AppState {
 			// period—controls when the searching state ends.
 			try? await Task.sleep(for: .seconds(2))
 			initialDiscoveryWindowElapsed = true
-			if candidateIdentificationTask == nil {
-				initialDiscoveryInProgress = false
-			}
-			publishUpdateRequiredDevices()
+			finishInitialDiscoveryIfIdle()
+			publishFallbackHints()
 		}
 		startHealthLoop()
 		startNetworkPathMonitor()
@@ -235,7 +246,10 @@ final class AppState {
 				addresses: saved.addresses,
 				model: saved.model,
 				userName: saved.userName,
-				reachability: probes[id] != nil || completedInitialReachabilityCheck
+				// Opening the panel at launch can start the first probe before the initial
+				// sweep, which then skips it as in flight. Until it answers, nothing is known.
+				reachability: probes[id] != nil
+					|| (completedInitialReachabilityCheck && !probesInFlight.contains(id))
 					? .offline : .unverified,
 				saved: true,
 				connection: connectionState(id: id),
@@ -333,14 +347,12 @@ final class AppState {
 		if list.isEmpty {
 			candidateIdentificationTask = nil
 			mdnsIdentifiedCandidates = []
-			if initialDiscoveryWindowElapsed {
-				initialDiscoveryInProgress = false
-			}
-			publishUpdateRequiredDevices()
+			finishInitialDiscoveryIfIdle()
+			publishFallbackHints()
 			rebuild()
 			return
 		}
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 
 		candidateIdentificationTask = Task { [weak self] in
 			guard let self else { return }
@@ -363,8 +375,8 @@ final class AppState {
 			candidateIdentificationTask = nil
 			pendingNativeHosts = []
 			mdnsIdentifiedCandidates = identified
-			initialDiscoveryInProgress = false
-			publishUpdateRequiredDevices()
+			finishInitialDiscoveryIfIdle()
+			publishFallbackHints()
 
 			// A matching API response, never its TXT hint, authorizes remembering the
 			// route that answered. The authenticated address API later replaces this
@@ -386,34 +398,100 @@ final class AppState {
 		}
 	}
 
-	// Older umbrelOS releases do not advertise the native discovery service. Keep
-	// their public version responses separate from trusted devices: they can offer an
-	// update link, but can never enter authentication or persistence.
+	// Older umbrelOS releases do not advertise the native discovery service, and some
+	// networks filter Bonjour browsing. Current Umbrels at the common hostnames are
+	// identified like Bonjour candidates. The rest stay separate from trusted devices:
+	// they can offer a retry or a browser link, but can never enter authentication or
+	// persistence.
 	private func refreshFallbackDiscovery() async {
 		fallbackDiscoveryGeneration += 1
+		retryingHosts = []
 		let generation = fallbackDiscoveryGeneration
-		let devices = await Umbreld.discoverFallbackHosts()
+		let knownDeviceIds = Set(config.savedDevices.keys).union(explicitlyClaimedDeviceIds)
+		let result = await Umbreld.discoverFallbackHosts(knownDeviceIds: knownDeviceIds) { [weak self] updateRequired in
+			// Older Umbrels show as soon as their version answers
+			await self?.showFallbackUpdateHints(updateRequired, generation: generation)
+		}
+		// Any finished scan ends the first search, so network changes while Wi-Fi and
+		// Tailscale settle at login can't keep it searching
+		initialFallbackPending = false
+		guard generation == fallbackDiscoveryGeneration else {
+			finishInitialDiscoveryIfIdle()
+			return
+		}
+		adoptFallbackDevices(result.devices)
+		fallbackUnverifiedDevices = result.unverified
+		fallbackUpdateRequiredDevices = result.updateRequired
+		finishInitialDiscoveryIfIdle()
+		publishFallbackHints()
+		rebuild()
+	}
+
+	private func showFallbackUpdateHints(_ updateRequired: [Umbreld.UpdateRequiredDevice], generation: Int) {
 		guard generation == fallbackDiscoveryGeneration else { return }
-		fallbackUpdateRequiredDevices = devices
-		publishUpdateRequiredDevices()
+		fallbackUpdateRequiredDevices = updateRequired
+		publishFallbackHints()
+	}
+
+	// Unsaved Umbrels found at the common hostnames become candidates. Saved ones were
+	// proven against their pin, so they join the normal reachability probes instead,
+	// which keep their online state current after this one-off scan.
+	// The device list is keyed by id, so the scan's records for one id under different
+	// certificates collapse to the first.
+	private func adoptFallbackDevices(_ devices: [IdentifiedDevice]) {
+		var seenIds = Set<String>()
+		fallbackIdentifiedCandidates = devices.filter {
+			config.savedDevices[$0.id] == nil && seenIds.insert($0.id).inserted
+		}
+		for device in devices where config.savedDevices[device.id] != nil {
+			adoptSavedFallbackDevice(device)
+		}
+	}
+
+	// The scan proved this route against the saved pin. Remember it, as Connect by
+	// address does, so probes and connections reach the Umbrel when Bonjour misses it.
+	private func adoptSavedFallbackDevice(_ device: IdentifiedDevice) {
+		guard var saved = config.savedDevices[device.id] else { return }
+		saved.rememberConnectionCandidates([device.host] + device.addresses)
+		if saved != config.savedDevices[device.id] {
+			do {
+				try config.save(saved)
+			} catch {
+				reportConfigStorageIssue(error)
+			}
+		}
+		probeCompleted(deviceId: device.id, host: device.host, identity: device.discoveryInfo)
+	}
+
+	// The first search ends once Bonjour has had its window and both its candidates and
+	// the first fallback scan have finished verifying
+	private func finishInitialDiscoveryIfIdle() {
+		guard initialDiscoveryWindowElapsed, candidateIdentificationTask == nil, !initialFallbackPending else { return }
+		initialDiscoveryInProgress = false
 	}
 
 	private func invalidateFallbackDiscovery() {
 		fallbackDiscoveryGeneration += 1
+		retryingHosts = []
+		fallbackIdentifiedCandidates = []
+		fallbackUnverifiedDevices = []
 		fallbackUpdateRequiredDevices = []
+		unverifiedDevices = []
 		updateRequiredDevices = []
+		rebuild()
 	}
 
-	private func publishUpdateRequiredDevices() {
+	private func publishFallbackHints() {
 		guard !initialDiscoveryInProgress, completedInitialReachabilityCheck, !scanning else {
+			unverifiedDevices = []
 			updateRequiredDevices = []
 			return
 		}
-		let previouslyVisible = Set(updateRequiredDevices.map { normalizedDiscoveryHost($0.host) })
 		// Keep every verified route when suppressing legacy update hints. The rendered
 		// candidate prefers a manually entered endpoint for the same device id, but that
 		// must not make its verified Bonjour hostname look like a second, older Umbrel.
-		let allIdentifiedCandidates = mdnsIdentifiedCandidates + Array(manuallyIdentifiedCandidates.values)
+		let allIdentifiedCandidates = mdnsIdentifiedCandidates + fallbackIdentifiedCandidates
+			+ Array(manuallyIdentifiedCandidates.values)
 		let verifiedHosts = Set((
 			allIdentifiedCandidates.flatMap { [$0.host, $0.discoveryHost] + $0.addresses }
 				+ probes.flatMap { deviceId, probe -> [String] in
@@ -424,17 +502,58 @@ final class AppState {
 					return [probe.host].compactMap { $0 } + saved.connectionHosts
 				}
 		).map(normalizedDiscoveryHost))
-		fallbackUpdateRequiredDevices.removeAll {
-			verifiedHosts.contains(normalizedDiscoveryHost($0.host))
+		// A failed name that resolves to a verified Umbrel's address is that Umbrel by
+		// another name
+		fallbackUnverifiedDevices.removeAll {
+			([$0.host] + $0.addresses).contains { verifiedHosts.contains(normalizedDiscoveryHost($0)) }
 		}
-		let updatesByHost = Dictionary(
-			fallbackUpdateRequiredDevices.map { (normalizedDiscoveryHost($0.host), $0) },
+		fallbackUpdateRequiredDevices.removeAll { verifiedHosts.contains(normalizedDiscoveryHost($0.host)) }
+		unverifiedDevices = visibleHints(fallbackUnverifiedDevices, shown: unverifiedDevices, host: \.host)
+		updateRequiredDevices = visibleHints(fallbackUpdateRequiredDevices, shown: updateRequiredDevices, host: \.host)
+	}
+
+	// One card per host, hidden while its Bonjour candidate is being verified unless
+	// it's already showing
+	private func visibleHints<Hint>(_ hints: [Hint], shown: [Hint], host: (Hint) -> String) -> [Hint] {
+		let previouslyVisible = Set(shown.map { normalizedDiscoveryHost(host($0)) })
+		let byHost = Dictionary(
+			hints.map { (normalizedDiscoveryHost(host($0)), $0) },
 			uniquingKeysWith: { first, _ in first }
 		)
-		updateRequiredDevices = updatesByHost.values.filter {
-			let host = normalizedDiscoveryHost($0.host)
-			return !pendingNativeHosts.contains(host) || previouslyVisible.contains(host)
-		}.sorted { $0.host < $1.host }
+		return byHost.filter { normalizedHost, _ in
+			!pendingNativeHosts.contains(normalizedHost) || previouslyVisible.contains(normalizedHost)
+		}.values.sorted { host($0) < host($1) }
+	}
+
+	// Try again on a "Couldn't connect" card. A device that now proves its identity
+	// replaces the card; otherwise the card stays, with the latest reason. An answer
+	// that arrives after a rescan or network change belongs to the old scan and is
+	// dropped.
+	func retry(_ device: Umbreld.UnverifiedDevice) async {
+		guard retryingHosts.insert(device.host).inserted else { return }
+		let generation = fallbackDiscoveryGeneration
+		let knownDeviceIds = Set(config.savedDevices.keys).union(explicitlyClaimedDeviceIds)
+		let identification = await Umbreld.identify(device, knownDeviceIds: knownDeviceIds)
+		guard generation == fallbackDiscoveryGeneration else { return }
+		retryingHosts.remove(device.host)
+		fallbackUnverifiedDevices.removeAll { $0.host == device.host }
+		switch identification {
+		case .device(let identified):
+			if config.savedDevices[identified.id] != nil {
+				adoptSavedFallbackDevice(identified)
+			} else {
+				// Keyed by id here, unlike iOS: one record per id
+				fallbackIdentifiedCandidates.removeAll { $0.id == identified.id }
+				fallbackIdentifiedCandidates.append(identified)
+			}
+		case .unverified(let unverified):
+			fallbackUnverifiedDevices.append(unverified)
+		case .savedIdentityChanged:
+			// Left to the saved device's own handling; trying again can't fix it
+			break
+		}
+		publishFallbackHints()
+		rebuild()
 	}
 
 	// Saved hosts need periodic liveness probes when no identified mDNS candidate
@@ -454,12 +573,14 @@ final class AppState {
 		invalidateFallbackDiscovery()
 		discovery.stop()
 		discovery.start()
-		async let fallback: Void = refreshFallbackDiscovery()
+		// A slow Umbrel can keep the fallback scan busy for a while. Its results publish
+		// whenever they land, and the generation check drops a superseded scan.
+		Task { await refreshFallbackDiscovery() }
 		async let savedDeviceProbes: Void = probeSweep(force: true)
 		try? await Task.sleep(for: .seconds(2))
-		_ = await (fallback, savedDeviceProbes)
+		await savedDeviceProbes
 		scanning = false
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 	}
 
 	// Connect-by-address is a navigation flow, not another discovery source. A verified
@@ -494,10 +615,12 @@ final class AppState {
 				// Keep the candidate only while it is needed to drive first sign-in.
 				manuallyIdentifiedCandidates[device.id] = device
 				connectionHosts[device.id] = device.host
-				publishUpdateRequiredDevices()
+				publishFallbackHints()
 				rebuild()
 			}
 			return .device(device.id)
+		case .unverified(let device):
+			return .unverified(device)
 		case .updateRequired(let device):
 			return .updateRequired(host: device.host)
 		}
@@ -510,6 +633,7 @@ final class AppState {
 		config.savedDevices[deviceId] == nil
 			&& manuallyIdentifiedCandidates[deviceId] != nil
 			&& !mdnsIdentifiedCandidates.contains(where: { $0.id == deviceId })
+			&& !fallbackIdentifiedCandidates.contains(where: { $0.id == deviceId })
 	}
 
 	func discardUnsavedManualDevice(_ deviceId: String) {
@@ -517,7 +641,7 @@ final class AppState {
 		manuallyIdentifiedCandidates[deviceId] = nil
 		connectionHosts[deviceId] = nil
 		let discardedClaim = explicitlyClaimedDeviceIds.remove(deviceId) != nil
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 		rebuild()
 		if discardedClaim {
 			Task { await Umbreld.forgetLocalHTTPSIdentity(deviceId: deviceId) }
@@ -527,6 +651,61 @@ final class AppState {
 	// force skips the cooldown for explicit user refreshes; in-flight probes still dedupe
 	func probeSweep(force: Bool = false) async {
 		await probeDevices(probeTargetIds, force: force)
+	}
+
+	// Refresh liveness whenever the panel opens. An Umbrel set up in a browser advertises
+	// nothing new afterwards, so while the panel is open, Umbrels still waiting for setup
+	// are also asked again every few seconds. Reopening the panel after setup then moves
+	// the card and its page on to sign-in.
+	func panelDidOpen() {
+		Task { await probeSweep() }
+		setupRefreshTask?.cancel()
+		setupRefreshTask = Task { [weak self] in
+			while !Task.isCancelled {
+				await self?.refreshDevicesAwaitingSetup()
+				try? await Task.sleep(for: .seconds(3), tolerance: .milliseconds(300))
+			}
+		}
+	}
+
+	func panelDidClose() {
+		setupRefreshTask?.cancel()
+		setupRefreshTask = nil
+	}
+
+	private func refreshDevicesAwaitingSetup() async {
+		let awaitingSetup = (mdnsIdentifiedCandidates + fallbackIdentifiedCandidates + manuallyIdentifiedCandidates.values)
+			.filter { !$0.onboarded && config.savedDevices[$0.id] == nil }
+		guard !awaitingSetup.isEmpty else { return }
+		let finished = await withTaskGroup(of: (IdentifiedDevice, IdentifiedDevice)?.self) { group in
+			for device in awaitingSetup {
+				group.addTask {
+					guard let current = await Umbreld.reidentify(device), current.onboarded else { return nil }
+					return (device, current)
+				}
+			}
+			var finished: [(IdentifiedDevice, IdentifiedDevice)] = []
+			for await result in group {
+				if let result { finished.append(result) }
+			}
+			return finished
+		}
+		guard !finished.isEmpty else { return }
+		// Discovery or a manual connection may have replaced a record while it was being
+		// asked. Update only the exact record that was checked and leave a replacement to
+		// the next check.
+		for (checked, current) in finished {
+			if let index = mdnsIdentifiedCandidates.firstIndex(of: checked) {
+				mdnsIdentifiedCandidates[index] = current
+			}
+			if let index = fallbackIdentifiedCandidates.firstIndex(of: checked) {
+				fallbackIdentifiedCandidates[index] = current
+			}
+			if manuallyIdentifiedCandidates[checked.id] == checked {
+				manuallyIdentifiedCandidates[checked.id] = current
+			}
+		}
+		rebuild()
 	}
 
 	private func probeDevices(_ deviceIds: Set<String>, force: Bool) async {
@@ -541,7 +720,12 @@ final class AppState {
 
 		await withTaskGroup(of: (String, String?, Umbreld.DiscoveryInfo?).self) { group in
 			for deviceId in due {
-				guard let saved = config.savedDevices[deviceId] else { continue }
+				// A device forgotten after it was scheduled gets no probe, so clear it here;
+				// otherwise it would count as in flight for the rest of the run.
+				guard let saved = config.savedDevices[deviceId] else {
+					probesInFlight.remove(deviceId)
+					continue
+				}
 				group.addTask {
 					let result = await Self.firstReachableEndpoint(for: saved)
 					return (deviceId, result?.host, result?.identity)
@@ -573,7 +757,7 @@ final class AppState {
 		} else {
 			connectionHosts[deviceId] = nil
 		}
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 		rebuild()
 	}
 
@@ -664,6 +848,14 @@ final class AppState {
 				deviceId: deviceId,
 				host: connectionHosts[deviceId] ?? manualDevice.host,
 				identity: manualDevice.discoveryInfo
+			)
+		}
+		if let fallbackDevice = fallbackIdentifiedCandidates.first(where: { $0.id == deviceId }) {
+			fallbackIdentifiedCandidates.removeAll { $0.id == deviceId }
+			probeCompleted(
+				deviceId: deviceId,
+				host: connectionHosts[deviceId] ?? fallbackDevice.host,
+				identity: fallbackDevice.discoveryInfo
 			)
 		}
 
@@ -814,12 +1006,18 @@ final class AppState {
 	// A server-reported address is only a candidate. Before treating a Finder
 	// volume as this Umbrel's, its SMB remount host must prove the same pinned
 	// device identity or already be the endpoint verified during this process.
+	// Known mounts count too, even while their route is down.
 	private func verifiedMountedShares(
 		for deviceId: String,
 		additionallyTrusting additionalHosts: Set<String> = []
 	) async throws -> [Mounter.MountedShare] {
 		try Task.checkCancellation()
-		let candidates = await Mounter.mountedShares(hosts: knownHosts(for: deviceId))
+		// Known mounts are included whatever their host: the Umbrel's name or address can
+		// change while they stay mounted from the old one.
+		let searchedHosts = Set(knownHosts(for: deviceId).map(Self.mountHostKey))
+		let candidates = await Mounter.mountedShares().filter {
+			searchedHosts.contains(Self.mountHostKey($0.host)) || isKnownMount($0, deviceId: deviceId)
+		}
 		try Task.checkCancellation()
 		guard !candidates.isEmpty else { return [] }
 
@@ -833,8 +1031,10 @@ final class AppState {
 					? Self.mountHostKey(share.host) : nil
 			}
 		)
+		// Known mounts need no check, so an old host that no longer answers isn't waited on.
 		let hostsToVerify = Dictionary(
-			candidates.map { (Self.mountHostKey($0.host), $0.host) },
+			candidates.filter { !isKnownMount($0, deviceId: deviceId) }
+				.map { (Self.mountHostKey($0.host), $0.host) },
 			uniquingKeysWith: { first, _ in first }
 		).filter { !verifiedHostKeys.contains($0.key) }
 
@@ -855,8 +1055,27 @@ final class AppState {
 		return Mounter.shares(
 			candidates,
 			ownedByHosts: verifiedHostKeys,
-			orCreatedPaths: processCreatedMountPaths[deviceId] ?? []
+			orKnown: knownMounts[deviceId] ?? []
 		)
+	}
+
+	// A mount this process created, or one it gave a share row after its host proved
+	// this Umbrel's identity. Either stays its own while its route is down: the dead
+	// volume stays in the mount table until macOS drops it, and Disconnect or a route
+	// change must still be able to release it. The host and share must match as well as
+	// the path, because macOS reuses /Volumes names.
+	private func isKnownMount(_ share: Mounter.MountedShare, deviceId: String) -> Bool {
+		(knownMounts[deviceId] ?? []).contains { Mounter.isSameMount($0, share) }
+	}
+
+	private func remember(_ mount: Mounter.MountedShare, deviceId: String) {
+		if !isKnownMount(mount, deviceId: deviceId) {
+			knownMounts[deviceId, default: []].append(mount)
+		}
+	}
+
+	private func forgetMount(at path: String, deviceId: String) {
+		knownMounts[deviceId]?.removeAll { $0.path == path }
 	}
 
 	private nonisolated static func mountHostKey(_ host: String) -> String {
@@ -899,7 +1118,7 @@ final class AppState {
 			do {
 				try await Mounter.unmount(path: path)
 				if !Mounter.isMounted(at: path) {
-					processCreatedMountPaths[deviceId]?.remove(path)
+					forgetMount(at: path, deviceId: deviceId)
 				}
 			} catch {
 				// The system call is synchronous, but verify the kernel mount table before
@@ -1164,7 +1383,7 @@ final class AppState {
 			do {
 				try await Mounter.unmount(path: share.path)
 				if !Mounter.isMounted(at: share.path) {
-					processCreatedMountPaths[deviceId]?.remove(share.path)
+					forgetMount(at: share.path, deviceId: deviceId)
 				}
 			} catch {
 				let nsError = error as NSError
@@ -1177,28 +1396,28 @@ final class AppState {
 		mountedShares.removeAll { !Mounter.isMounted(at: $0.path) }
 
 		// A route change may make a mount's original host unverifiable even though the
-		// Umbrel is now reachable elsewhere. Only mounts created by this process retain
-		// enough provenance to release in that state; inherited Finder mounts remain
-		// untouched unless their host can still prove the pinned device identity.
-		let createdPaths = processCreatedMountPaths[deviceId] ?? []
-		let alternateCreatedHosts = Set(
+		// Umbrel is now reachable elsewhere. A known mount is released here and mounted
+		// again below on the verified route, rather than waiting for macOS to drop the
+		// dead volume. Other Finder mounts stay unless their host still proves the pinned
+		// device identity.
+		let alternateHosts = Set(
 			mountedShares.compactMap { share in
-				createdPaths.contains(share.path)
+				isKnownMount(share, deviceId: deviceId)
 					&& !Mounter.hostsMatch(share.host, connectionHost) ? share.host : nil
 			}
 		)
-		var unavailableCreatedHosts = Set<String>()
-		for host in alternateCreatedHosts {
+		var unavailableHosts = Set<String>()
+		for host in alternateHosts {
 			let available = await Umbreld.isKnownEndpointAvailable(host: host, deviceId: deviceId)
 			guard isCurrentSession(session, deviceId: deviceId) else { return }
-			if !available { unavailableCreatedHosts.insert(host) }
+			if !available { unavailableHosts.insert(host) }
 		}
-		for share in mountedShares where createdPaths.contains(share.path)
-			&& unavailableCreatedHosts.contains(share.host) {
+		for share in mountedShares where isKnownMount(share, deviceId: deviceId)
+			&& unavailableHosts.contains(share.host) {
 			do {
 				try await Mounter.unmount(path: share.path)
 				if !Mounter.isMounted(at: share.path) {
-					processCreatedMountPaths[deviceId]?.remove(share.path)
+					forgetMount(at: share.path, deviceId: deviceId)
 				}
 			} catch {
 				if Mounter.isMounted(at: share.path) {
@@ -1238,13 +1457,16 @@ final class AppState {
 					forceNewSession: needsFreshSession,
 					silent: silent
 				)
-				processCreatedMountPaths[deviceId, default: []].insert(path)
+				remember(
+					Mounter.MountedShare(host: connectionHost, sharename: share.sharename, path: path),
+					deviceId: deviceId
+				)
 				needsFreshSession = false
 				guard isCurrentSession(session, deviceId: deviceId) else {
 					// This mount completed for an account that is no longer active.
 					try? await Mounter.unmount(path: path)
 					if !Mounter.isMounted(at: path) {
-						processCreatedMountPaths[deviceId]?.remove(path)
+						forgetMount(at: path, deviceId: deviceId)
 					}
 					return
 				}
@@ -1278,9 +1500,11 @@ final class AppState {
 		await Mounter.primeNetworkVolumeAccess(path: path)
 	}
 
-	// Map API shares into Share state, preserving known mount paths. The kernel mount
-	// table is authoritative: never carry an old `.unmounted` status forward once its
-	// volume is present.
+	// Map API shares into Share state from the verified mounts, keeping a row's path
+	// while it still holds that share. The SMB remount URL gives the exact share: a
+	// path alone can belong to an unrelated volume with the same Finder name. The kernel
+	// mount table is authoritative: never carry an old `.unmounted` status forward once
+	// its volume is present.
 	private func mergeShares(
 		_ deviceId: String,
 		_ apiShares: [Umbreld.Share],
@@ -1288,19 +1512,10 @@ final class AppState {
 	) {
 		let existing = deviceShares[deviceId] ?? []
 		deviceShares[deviceId] = apiShares.map { api in
-			let old = existing.first { $0.sharename == api.sharename }
-			if let old, let path = old.mountPath, Mounter.isMounted(at: path) {
-				return Share(
-					name: api.name,
-					path: api.path,
-					sharename: api.sharename,
-					mountPath: old.mountPath,
-					status: .mounted
-				)
-			}
-			// Recover the exact path from the SMB remount URL. A path-only check can
-			// mistake an unrelated volume with the same Finder name for this Umbrel.
-			if let mounted = mountedShares.first(where: { $0.sharename == api.sharename }) {
+			let oldPath = existing.first { $0.sharename == api.sharename }?.mountPath
+			let mounts = mountedShares.filter { $0.sharename == api.sharename }
+			if let mounted = mounts.first(where: { $0.path == oldPath }) ?? mounts.first {
+				remember(mounted, deviceId: deviceId)
 				return Share(
 					name: api.name,
 					path: api.path,
@@ -1363,14 +1578,12 @@ final class AppState {
 		// (for example when Tailscale updates its routes). Likewise, keep the last bounded
 		// fallback snapshot visible until the replacement probe completes instead of
 		// briefly clearing every legacy device. The generation check in
-		// refreshFallbackDiscovery ensures only the newest path refresh can publish.
-		async let fallback: Void = refreshFallbackDiscovery()
+		// refreshFallbackDiscovery ensures only the newest path refresh can publish, so
+		// a slow scan isn't awaited here.
+		Task { await refreshFallbackDiscovery() }
 		let savedDevices = Array(config.savedDevices.values)
 		let deviceIds = Set(savedDevices.map(\.id))
-		guard !deviceIds.isEmpty else {
-			await fallback
-			return
-		}
+		guard !deviceIds.isEmpty else { return }
 
 		while !probesInFlight.isDisjoint(with: deviceIds) {
 			do {
@@ -1386,7 +1599,6 @@ final class AppState {
 		for deviceId in deviceIds where sessions[deviceId] != nil {
 			mountAllInBackground(deviceId, silent: true)
 		}
-		await fallback
 	}
 
 	private func startHealthLoop() {

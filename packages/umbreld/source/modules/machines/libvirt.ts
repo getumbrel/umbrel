@@ -1,5 +1,6 @@
 import fsp from 'node:fs/promises'
 import nodePath from 'node:path'
+import {setTimeout} from 'node:timers/promises'
 
 import {execa} from 'execa'
 import fse from 'fs-extra'
@@ -7,15 +8,18 @@ import PQueue from 'p-queue'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 import {
 	buildDomainXml,
+	buildInterfaceXml,
+	isLegacyPlatformProfile,
+	MACHINE_LAN_BRIDGE,
 	MACHINE_NETWORK_NAME,
 	machineDiskTarget,
 	type MachineArchitecture,
 	type MachineDefinition,
 	resolveAcceleration,
-} from './domain.js'
+} from './domain.ts'
 import {
 	buildMachineNetworkXml,
 	buildMachinePortForwardNftables,
@@ -26,16 +30,23 @@ import {
 	machineDhcpLeases,
 	parseActiveMachineLeaseAddresses,
 	parseMachineDhcpLeases,
-} from './machine-network.js'
+} from './machine-network.ts'
+import {buildUsbHostdevXml, parseUsbHostdevAddresses, type UsbAddress} from './usb-devices.ts'
 import {
 	installCommandOptions,
 	MACHINE_INSTALL_COMMAND_TIMEOUT_MS,
 	MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS,
-} from './install-command.js'
+} from './install-command.ts'
 
-export {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.js'
+export {MACHINE_GUEST_HOST_ADDRESS} from './machine-network.ts'
 
 const LIBVIRT_URI = 'qemu:///system'
+const LAN_INTERFACE_WAIT_MS = 30_000
+const MANAGED_DOCKER_USER_RULE_TARGET = ['-m', 'comment', '--comment', 'umbrel-machines', '-j', 'ACCEPT']
+// Docker loads br_netfilter, which sends frames crossing any bridge through
+// iptables' FORWARD chain, where Docker's DROP policy discards them. Let traffic
+// between bridged machines, Umbrel and the rest of the LAN pass the bridge.
+const LAN_BRIDGE_DOCKER_USER_RULE = ['-i', MACHINE_LAN_BRIDGE, '-o', MACHINE_LAN_BRIDGE]
 const LIBVIRT_SWTPM_STATE_ROOT = '/var/lib/libvirt/swtpm'
 const GPU_RENDER_NODE_ROOT = '/dev/dri'
 const VIRGL_LINUX_FAMILIES = new Set(['ubuntu', 'fedora', 'debian', 'android', 'omarchy'])
@@ -214,11 +225,19 @@ export function buildWindows98Mbr(diskSizeBytes: number) {
 	return mbr
 }
 
+// libvirt marks a virtio channel connected once the guest opens its port, so
+// for the vdagent channel this means a clipboard agent is listening
+export function isClipboardAgentConnected(domainXml: string) {
+	return /<target type='virtio' name='com\.redhat\.spice\.0' state='connected'\/>/.test(domainXml)
+}
+
 export default class Libvirt {
 	#runtimeRoot: string
 	#audioQueue = new PQueue({concurrency: 1})
 	#networkQueue = new PQueue({concurrency: 1})
 	#nextFirewallCheckAt = 0
+	// The interface port forwards were last bound to
+	#firewallLanInterface?: string
 	logger: Umbreld['logger']
 	available = false
 	kvmAvailable = false
@@ -342,8 +361,18 @@ export default class Libvirt {
 			definition.portForwards.map((forward) => ({...forward, ipAddress: definition.ipAddress!})),
 		)
 		const needsLan = forwards.length > 0
-		const lanInterface = needsLan ? await this.#lanInterface() : undefined
-		if (needsLan && !lanInterface) throw new Error('[machine-lan-interface-unavailable]')
+		let lanInterface: string | undefined
+		if (needsLan) {
+			// Umbrel briefly has no default route while its address moves on or off
+			// the bridge bridged machines join the LAN through, or while a static IP
+			// change reconnects, so give it a moment to come back
+			await pWaitFor(async () => !!(lanInterface = await this.#lanInterface()), {
+				interval: 250,
+				timeout: LAN_INTERFACE_WAIT_MS,
+			}).catch(() => {})
+			if (!lanInterface) throw new Error('[machine-lan-interface-unavailable]')
+		}
+		this.#firewallLanInterface = lanInterface
 
 		await execa('nft', ['delete', 'table', 'ip', 'umbrel_machines'], {reject: false, timeout: 10_000})
 		await execa('nft', ['-f', '-'], {
@@ -351,15 +380,32 @@ export default class Libvirt {
 			timeout: 10_000,
 		})
 
-		await this.#removeManagedNftRules('filter', 'DOCKER-USER')
+		await this.#removeManagedDockerUserRules()
 		await this.#removeManagedNftRules('libvirt_network', 'guest_input')
 		await this.#removeManagedNftRules('libvirt_network', 'guest_cross')
+		// Written with iptables rather than nft so `iptables -nL` can still read the
+		// filter table. iptables-nft can't decode conntrack matches written by nft,
+		// and Docker-in-Docker images fall back to legacy iptables when that listing
+		// fails, which leaves their containers behind the nftables FORWARD drop.
+		// Any other rule added to Docker's tables needs the same care, and
+		// machines.vm.test.ts checks every table stays readable.
 		for (const rule of [
-			`iifname ${JSON.stringify(MACHINE_NETWORK_BRIDGE)} counter accept comment "umbrel-machines"`,
-			`oifname ${JSON.stringify(MACHINE_NETWORK_BRIDGE)} ct state related,established counter accept comment "umbrel-machines"`,
-			`oifname ${JSON.stringify(MACHINE_NETWORK_BRIDGE)} ct status dnat counter accept comment "umbrel-machines"`,
+			['-i', MACHINE_NETWORK_BRIDGE],
+			['-o', MACHINE_NETWORK_BRIDGE, '-m', 'conntrack', '--ctstate', 'RELATED,ESTABLISHED'],
+			['-o', MACHINE_NETWORK_BRIDGE, '-m', 'conntrack', '--ctstate', 'DNAT'],
+			LAN_BRIDGE_DOCKER_USER_RULE,
 		]) {
-			await execa('nft', ['insert', 'rule', 'ip', 'filter', 'DOCKER-USER', ...rule.split(' ')], {timeout: 10_000})
+			await execa('iptables', ['-w', '-I', 'DOCKER-USER', ...rule, ...MANAGED_DOCKER_USER_RULE_TARGET], {
+				timeout: 10_000,
+			})
+		}
+		// Docker only filters forwarded IPv6 when it manages ip6tables
+		if (await this.#removeManagedDockerUserRules('ip6tables')) {
+			await execa(
+				'ip6tables',
+				['-w', '-I', 'DOCKER-USER', ...LAN_BRIDGE_DOCKER_USER_RULE, ...MANAGED_DOCKER_USER_RULE_TARGET],
+				{timeout: 10_000},
+			)
 		}
 		await execa(
 			'nft',
@@ -403,6 +449,29 @@ export default class Libvirt {
 		this.#nextFirewallCheckAt = Date.now() + 5_000
 	}
 
+	// Returns whether the chain exists. Docker always creates the IPv4 one.
+	async #removeManagedDockerUserRules(command: 'iptables' | 'ip6tables' = 'iptables') {
+		let stdout: string
+		if (command === 'iptables') {
+			// Older versions wrote these rules with nft, which also stops iptables
+			// listing the chain, so remove those first.
+			await this.#removeManagedNftRules('filter', 'DOCKER-USER')
+			// Throws if iptables still can't read the chain, rather than stacking up
+			// duplicate rules on every check.
+			stdout = (await execa(command, ['-w', '-S', 'DOCKER-USER'], {timeout: 10_000})).stdout
+		} else {
+			const result = await execa(command, ['-w', '-S', 'DOCKER-USER'], {reject: false, timeout: 10_000})
+			if (result.exitCode !== 0) return false
+			stdout = result.stdout
+		}
+		// Splitting on spaces is safe because none of our rule arguments contain any.
+		for (const rule of stdout.split('\n')) {
+			if (!rule.startsWith('-A DOCKER-USER ') || !rule.includes('--comment umbrel-machines')) continue
+			await execa(command, ['-w', '-D', ...rule.split(' ').slice(1)], {timeout: 10_000})
+		}
+		return true
+	}
+
 	async #removeManagedNftRules(table: string, chain: string) {
 		const current = await execa('nft', ['-a', 'list', 'chain', 'ip', table, chain], {reject: false, timeout: 10_000})
 		for (const match of current.stdout.matchAll(/comment "umbrel-machines"[^\n]*# handle (\d+)/g)) {
@@ -434,9 +503,12 @@ export default class Libvirt {
 		if (Date.now() < this.#nextFirewallCheckAt) return
 		await this.#networkQueue.add(async () => {
 			if (Date.now() < this.#nextFirewallCheckAt) return
-			const [natTable, dockerUser, libvirtInput, libvirtCross] = await Promise.all([
+			const [natTable, dockerUser, dockerUser6, libvirtInput, libvirtCross] = await Promise.all([
 				execa('nft', ['list', 'table', 'ip', 'umbrel_machines'], {reject: false, timeout: 10_000}),
-				execa('nft', ['list', 'chain', 'ip', 'filter', 'DOCKER-USER'], {reject: false, timeout: 10_000}),
+				// Fails while older nft-written rules are still in the chain, which
+				// counts as missing rules and triggers a reconcile that replaces them.
+				execa('iptables', ['-w', '-S', 'DOCKER-USER'], {reject: false, timeout: 10_000}),
+				execa('ip6tables', ['-w', '-S', 'DOCKER-USER'], {reject: false, timeout: 10_000}),
 				execa('nft', ['list', 'chain', 'ip', 'libvirt_network', 'guest_input'], {
 					reject: false,
 					timeout: 10_000,
@@ -446,9 +518,19 @@ export default class Libvirt {
 					timeout: 10_000,
 				}),
 			])
+			// Forwards only match traffic arriving on the LAN interface, so rebind
+			// them when Umbrel's default route moves, like onto the bridge bridged
+			// machines join the LAN through, or from Ethernet to Wi-Fi
+			const lanInterface = definitions.some((definition) => definition.portForwards.length > 0)
+				? await this.#lanInterface().catch(() => undefined)
+				: undefined
+			// While the address is moving there's briefly no default route at all
+			const lanInterfaceChanged = lanInterface !== undefined && lanInterface !== this.#firewallLanInterface
 			if (
+				lanInterfaceChanged ||
 				natTable.exitCode !== 0 ||
-				(dockerUser.stdout.match(/comment "umbrel-machines"/g)?.length ?? 0) !== 3 ||
+				(dockerUser.stdout.match(/--comment umbrel-machines/g)?.length ?? 0) !== 4 ||
+				(dockerUser6.exitCode === 0 && (dockerUser6.stdout.match(/--comment umbrel-machines/g)?.length ?? 0) !== 1) ||
 				(libvirtInput.stdout.match(/comment "umbrel-machines"/g)?.length ?? 0) !== 1 ||
 				(libvirtCross.stdout.match(/comment "umbrel-machines"/g)?.length ?? 0) !== 1
 			) {
@@ -462,7 +544,8 @@ export default class Libvirt {
 	async cleanupNetwork() {
 		await this.#networkQueue.add(async () => {
 			await execa('nft', ['delete', 'table', 'ip', 'umbrel_machines'], {reject: false, timeout: 10_000})
-			await this.#removeManagedNftRules('filter', 'DOCKER-USER')
+			await this.#removeManagedDockerUserRules()
+			await this.#removeManagedDockerUserRules('ip6tables')
 			await this.#removeManagedNftRules('libvirt_network', 'guest_input')
 			await this.#removeManagedNftRules('libvirt_network', 'guest_cross')
 			await execa('virsh', ['--connect', LIBVIRT_URI, 'net-destroy', MACHINE_NETWORK_NAME], {
@@ -651,7 +734,13 @@ export default class Libvirt {
 		await execa('mount', ['--bind', persistent, runtime])
 	}
 
-	async start(definition: MachineDefinition, machineDirectory: string, diskPath: string) {
+	async start(
+		definition: MachineDefinition,
+		machineDirectory: string,
+		diskPath: string,
+		usbDevices: UsbAddress[] = [],
+		{joinLan}: {joinLan?: boolean} = {},
+	) {
 		if (!this.available) throw new Error('[virtualization-unavailable]')
 		if ((await this.state(definition.id)) !== 'stopped') throw new Error('[machine-not-stopped]')
 
@@ -678,7 +767,12 @@ export default class Libvirt {
 
 		try {
 			if (definition.tpm) await this.#mountTpm(definition, machineDirectory)
-			const audio = await this.#allocateAudio(definition.id)
+			// Legacy profiles have no sound card to route, so they leave the scarce
+			// loopback slots to machines that do, and their consoles stay silent
+			// instead of capturing a loopback nothing plays into
+			const audio = isLegacyPlatformProfile(definition.platformProfile)
+				? undefined
+				: await this.#allocateAudio(definition.id)
 			const acceleration = resolveAcceleration(definition.arch, this.kvmAvailable)
 			// Render nodes are host runtime state, not part of the portable machine
 			// definition. Discover one for every start so a restored machine can move
@@ -697,6 +791,8 @@ export default class Libvirt {
 					firmwareCode,
 					graphicsRenderNode: renderNode,
 					audioPlaybackDevice: audio?.playback,
+					usbDevices,
+					joinLan,
 				})
 				await fsp.writeFile(xmlPath, xml, {encoding: 'utf8', mode: 0o600})
 				// A rapid destroy/create can briefly race systemd removing libvirt's old
@@ -770,9 +866,63 @@ export default class Libvirt {
 		await this.#releaseAudio(id)
 	}
 
+	// USB devices passed through to a running machine. A device that was
+	// unplugged keeps its stale entry until it is detached.
+	async attachedUsbDevices(id: string) {
+		const result = await execa('virsh', ['--connect', LIBVIRT_URI, 'dumpxml', this.domainName(id)], {
+			reject: false,
+			timeout: 10_000,
+		})
+		return result.exitCode === 0 ? parseUsbHostdevAddresses(result.stdout) : []
+	}
+
+	async clipboardAgentConnected(id: string) {
+		const result = await execa('virsh', ['--connect', LIBVIRT_URI, 'dumpxml', this.domainName(id)], {
+			reject: false,
+			timeout: 10_000,
+		})
+		return result.exitCode === 0 && isClipboardAgentConnected(result.stdout)
+	}
+
+	async attachUsbDevice(id: string, address: UsbAddress) {
+		await this.#changeUsbDevice('attach-device', id, address)
+	}
+
+	async detachUsbDevice(id: string, address: UsbAddress) {
+		await this.#changeUsbDevice('detach-device', id, address)
+	}
+
+	async #changeUsbDevice(command: 'attach-device' | 'detach-device', id: string, address: UsbAddress) {
+		const xmlPath = nodePath.join(this.runtimeDirectory(id), `usb-${address.bus}-${address.device}.xml`)
+		await fsp.writeFile(xmlPath, buildUsbHostdevXml(address), {encoding: 'utf8', mode: 0o600})
+		try {
+			await execa('virsh', ['--connect', LIBVIRT_URI, command, this.domainName(id), xmlPath, '--live'], {
+				timeout: MACHINE_SHORT_CONTROL_TIMEOUT_MS,
+			})
+		} finally {
+			await fse.remove(xmlPath)
+		}
+	}
+
 	async restart(id: string) {
 		if ((await this.state(id)) !== 'running') throw new Error('[machine-not-running]')
 		await execa('virsh', ['--connect', LIBVIRT_URI, 'reboot', this.domainName(id)], {timeout: 10_000})
+	}
+
+	// Move a running machine's network card onto the LAN bridge, then unplug
+	// and replug its cable so the guest asks the router for a new address
+	async joinLan(definition: MachineDefinition) {
+		if ((await this.state(definition.id)) !== 'running') return
+		const path = nodePath.join(this.runtimeDirectory(definition.id), 'interface.xml')
+		await fsp.writeFile(path, buildInterfaceXml(definition, true), {encoding: 'utf8', mode: 0o600})
+		const domain = this.domainName(definition.id)
+		await execa('virsh', ['--connect', LIBVIRT_URI, 'update-device', domain, path, '--live'], {timeout: 30_000})
+		for (const state of ['down', 'up']) {
+			await execa('virsh', ['--connect', LIBVIRT_URI, 'domif-setlink', domain, definition.macAddress, state], {
+				timeout: 10_000,
+			})
+			if (state === 'down') await setTimeout(2_000)
+		}
 	}
 
 	async ejectInstallMedia(definition: MachineDefinition) {

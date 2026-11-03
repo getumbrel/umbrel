@@ -66,7 +66,7 @@ export function CloudAccountsListing() {
 	}, [])
 
 	return (
-		<Card className='h-[calc(100svh-209px)] rounded-24 bg-white/4 !p-0 !pt-4 lg:h-[calc(100vh-262px)]'>
+		<Card className='h-full rounded-24 bg-white/4 !p-0 !pt-4'>
 			{isLoading ? (
 				<div className='flex h-full items-center justify-center'>
 					<Loader2 className='size-5 animate-spin opacity-60' />

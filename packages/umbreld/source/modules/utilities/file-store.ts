@@ -5,7 +5,7 @@ import yaml from 'js-yaml'
 import {getProperty, setProperty, deleteProperty} from 'dot-prop'
 import PQueue from 'p-queue'
 
-import {writeFileDurably} from './durable-filesystem.js'
+import {writeFileDurably} from './durable-filesystem.ts'
 
 type DotProp<T, P extends string> = P extends `${infer K}.${infer R}`
 	? K extends keyof T

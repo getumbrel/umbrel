@@ -1,4 +1,4 @@
-import {ChevronDown, Eye, EyeOff, Pencil, TriangleAlert} from 'lucide-react'
+import {ChevronDown, Eye, EyeOff, Pencil} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {lazy, Suspense, useEffect, useId, useState} from 'react'
 import {FaLock} from 'react-icons/fa6'
@@ -7,6 +7,7 @@ import {Navigate, useNavigate, useSearchParams} from 'react-router-dom'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {Spinner} from '@/components/ui/loading'
+import {MachineNetworkModeRow, type MachineNetworkMode} from '@/features/machines/components/machine-network-mode'
 import {OsIcon} from '@/features/machines/components/os-icon'
 import {SpecRow, Stepper} from '@/features/machines/components/spec-form'
 import {
@@ -20,13 +21,14 @@ import {
 	machinePath,
 	MACHINES_ADD_PATH,
 	MACHINES_PATH,
+	machineSegmentButtonClass,
 	MAX_DISK_SIZE_GB,
 	MIN_MEMORY_GB,
 	recommendedCores,
 } from '@/features/machines/constants'
 import {useMachineActions} from '@/features/machines/hooks/use-machine-actions'
 import {useMachineCapabilities, useMachines, useOsImages} from '@/features/machines/hooks/use-machines'
-import {stripDiskImageExtension} from '@/features/machines/utils'
+import {osImageVersionLabel, stripDiskImageExtension} from '@/features/machines/utils'
 import {useCpu} from '@/hooks/use-cpu'
 import {useMemory} from '@/hooks/use-memory'
 import {trpcReact} from '@/trpc/trpc'
@@ -98,6 +100,7 @@ export default function CreateMachine() {
 	const [firmware, setFirmware] = useState<'uefi' | 'bios'>('uefi')
 	const [diskBus, setDiskBus] = useState<'virtio' | 'sata'>('virtio')
 	const [diskDirectory, setDiskDirectory] = useState<string>()
+	const [networkMode, setNetworkMode] = useState<MachineNetworkMode>('nat')
 	const [advancedOpen, setAdvancedOpen] = useState(false)
 	const [diskBrowserOpen, setDiskBrowserOpen] = useState(false)
 	const [isCreating, setIsCreating] = useState(false)
@@ -136,13 +139,13 @@ export default function CreateMachine() {
 			: osImage.name
 		: stripDiskImageExtension(isoPath!.split('/').pop() ?? '')
 	const customSourceType = isoPath ? (/\.iso$/i.test(isoPath) ? 'installer' : 'disk-image') : undefined
-	const sourceVersion =
-		osImage?.version ??
-		(customSourceType === 'installer'
+	const sourceVersion = osImage
+		? osImageVersionLabel(osImage)
+		: customSourceType === 'installer'
 			? t('machines.custom-installer-iso')
 			: customSourceType === 'disk-image'
 				? t('machines.custom-disk-image')
-				: undefined)
+				: undefined
 	const sourceOsIconId = osImage && !osImage.custom ? osImage.familyId : 'custom'
 	const {color} = getOsVisuals(sourceOsIconId)
 	const isCustomSource = !!isoPath || !!osImage?.custom
@@ -220,6 +223,7 @@ export default function CreateMachine() {
 				cores: effectiveCores,
 				memoryGb,
 				arch: selectedArch,
+				networkMode,
 				...(isCustomSource && {
 					firmware: selectedArch === 'arm64' ? 'uefi' : firmware,
 					diskBus: selectedArch === 'arm64' ? 'virtio' : diskBus,
@@ -239,12 +243,12 @@ export default function CreateMachine() {
 		// No page-level fade: the hero monitor glides in from the catalog card
 		// via its shared layoutId, and a fading ancestor would hide it mid-flight.
 		// Each section settles on its own beat around the landing instead.
-		<div className='flex flex-col gap-8 px-4 py-6 md:p-12'>
-			<div className='flex flex-col gap-10 md:flex-row md:gap-10 lg:gap-14'>
+		<div className='flex flex-col gap-8 px-3 py-5 sm:px-4 sm:py-6 md:p-12 low:gap-4 low:p-3'>
+			<div className='flex flex-col gap-10 sm:flex-row sm:gap-8 md:gap-10 lg:gap-14 low:gap-6'>
 				{/* Identity: the machine is the hero, its name editable in place. The
 				    column stays lean at md so the spec rows get the width, and
 				    stretches back out from lg up. */}
-				<div className='flex flex-col items-center gap-4 pt-4 md:w-[200px] md:shrink-0 md:pt-6 lg:w-[280px]'>
+				<div className='flex flex-col items-center gap-4 pt-4 sm:w-[224px] sm:shrink-0 md:pt-6 lg:w-[280px] low:gap-2 low:pt-0'>
 					<div className='relative'>
 						{/* Glow blooms once the monitor has landed */}
 						<motion.div
@@ -264,7 +268,7 @@ export default function CreateMachine() {
 							transition={layoutMorphTransition}
 							className='relative'
 						>
-							<OsIcon osId={sourceOsIconId} className='size-32 lg:size-36' />
+							<OsIcon osId={sourceOsIconId} className='size-24 sm:size-32 lg:size-36 low:size-20' />
 						</motion.div>
 						{/* The catalog tiles' reflection materializes after landing */}
 						<motion.div
@@ -272,10 +276,10 @@ export default function CreateMachine() {
 							initial={{opacity: 0}}
 							animate={{opacity: 1}}
 							transition={{delay: 0.35, duration: 0.5, ease: 'easeOut'}}
-							className='pointer-events-none absolute top-32 left-1/2 h-16 w-32 -translate-x-1/2 lg:top-36 lg:w-36'
+							className='pointer-events-none absolute top-24 left-1/2 h-16 w-24 -translate-x-1/2 sm:top-32 sm:w-32 lg:top-36 lg:w-36 low:hidden'
 						>
 							<div className='[mask-image:linear-gradient(to_bottom,black,transparent_75%)] opacity-[0.08] blur-[2px]'>
-								<OsIcon osId={sourceOsIconId} className='size-32 -scale-y-100 lg:size-36' />
+								<OsIcon osId={sourceOsIconId} className='size-24 -scale-y-100 sm:size-32 lg:size-36' />
 							</div>
 						</motion.div>
 					</div>
@@ -338,7 +342,8 @@ export default function CreateMachine() {
 					transition={{delay: 0.1, duration: 0.35, ease: 'easeOut'}}
 					className='min-w-0 flex-1'
 				>
-					<div className='umbrel-divide-y'>
+					{/* A container, so a wide row lays out by the list's own width */}
+					<div className='umbrel-divide-y @container'>
 						<SpecRow
 							label={t('machines.configure-processor')}
 							note={t('machines.configure-processor-note', {count: maxCores})}
@@ -504,26 +509,40 @@ export default function CreateMachine() {
 							</SpecRow>
 						)}
 						{requiresLicenseKey && (
-							<SpecRow label={t('machines.license-key')}>
-								<div className='flex w-42 flex-col gap-2 sm:w-44'>
+							<SpecRow
+								label={t('machines.license-key')}
+								note={
+									osImage?.licenseChannel && t(`machines.license-key-note.${osImage.licenseChannel}`, {os: sourceName})
+								}
+								wide
+							>
+								<div className='flex flex-col gap-2'>
+									{/* Wide enough to show a whole 29-character key (and its placeholder),
+									    in monospace so the five groups line up for proofreading. 42px is
+									    the Input's horizontal padding and border */}
 									<Input
 										value={licenseKey}
 										onValueChange={(value) => setLicenseKey(value.toUpperCase())}
 										disabled={isCreating}
 										maxLength={29}
 										autoComplete='off'
+										spellCheck={false}
 										placeholder='XXXXX-XXXXX-XXXXX-XXXXX-XXXXX'
 										sizeVariant='short'
 										aria-label={t('machines.license-key')}
+										className='font-mono text-14 @[30rem]:w-[calc(29ch+42px)]'
 									/>
 									{licenseKey !== '' && !licenseKeyValid && (
-										<span className='px-1 text-12 -tracking-2 text-destructive2-lightest'>
+										// Wraps within the field's width instead of widening the column,
+										// which would pull the field sideways as the error appears
+										<span className='w-0 min-w-full px-1 text-12 -tracking-2 text-destructive2-lightest'>
 											{t('machines.license-key-invalid')}
 										</span>
 									)}
 								</div>
 							</SpecRow>
 						)}
+						<MachineNetworkModeRow value={networkMode} onChange={setNetworkMode} disabled={isCreating} />
 						{/* Custom images may target either supported guest architecture */}
 						{isCustomSource && (
 							<SpecRow label={t('machines.architecture')}>
@@ -535,11 +554,7 @@ export default function CreateMachine() {
 												type='button'
 												disabled={isCreating}
 												onClick={() => setArch(option)}
-												className={`h-9 rounded-full border px-4 text-13 font-medium transition-colors ${
-													selectedArch === option
-														? 'border-brand bg-brand/20 text-white'
-														: 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
-												}`}
+												className={machineSegmentButtonClass(selectedArch === option)}
 											>
 												{option === 'amd64' ? 'AMD64' : 'ARM64'}
 												{option === capabilities?.hostArchitecture ? ` · ${t('machines.native')}` : ''}
@@ -608,13 +623,11 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'bios')}
 													onClick={() => setFirmware(option)}
-													className={`h-10 rounded-full border text-13 font-medium uppercase transition-colors disabled:opacity-35 ${
-														(selectedArch === 'arm64' ? 'uefi' : firmware) === option
-															? 'border-brand bg-brand/20 text-white'
-															: 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
-													}`}
+													className={machineSegmentButtonClass(
+														(selectedArch === 'arm64' ? 'uefi' : firmware) === option,
+													)}
 												>
-													{option}
+													{option.toUpperCase()}
 												</button>
 											))}
 										</div>
@@ -629,13 +642,11 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'sata')}
 													onClick={() => setDiskBus(option)}
-													className={`h-10 rounded-full border text-13 font-medium uppercase transition-colors disabled:opacity-35 ${
-														(selectedArch === 'arm64' ? 'virtio' : diskBus) === option
-															? 'border-brand bg-brand/20 text-white'
-															: 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
-													}`}
+													className={machineSegmentButtonClass(
+														(selectedArch === 'arm64' ? 'virtio' : diskBus) === option,
+													)}
 												>
-													{option}
+													{option.toUpperCase()}
 												</button>
 											))}
 										</div>
@@ -674,29 +685,16 @@ export default function CreateMachine() {
 				</motion.div>
 			</div>
 
-			{/* Footer: reassurance (or the manual-setup caveat) on the left,
-			    commitment on the right */}
+			{/* Footer: reassurance on the left, commitment on the right */}
 			<motion.div
 				initial={{opacity: 0}}
 				animate={{opacity: 1}}
 				transition={{delay: 0.2, duration: 0.35, ease: 'easeOut'}}
 				className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 sm:flex-row sm:items-center'
 			>
-				{manualSetup ? (
-					<div className='flex max-w-[480px] gap-3 rounded-12 border border-amber-400/20 bg-amber-400/10 p-3 text-left text-amber-100/90'>
-						<TriangleAlert className='mt-0.5 size-4 shrink-0' />
-						<div className='flex flex-col gap-0.5'>
-							<span className='text-13 font-medium'>{t('machines.manual-setup-title')}</span>
-							<span className='text-12 leading-snug -tracking-2 text-amber-100/70'>
-								{t('machines.manual-setup-description')}
-							</span>
-						</div>
-					</div>
-				) : (
-					<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-sm:hidden'}`}>
-						{t('machines.configure-installs-itself', {os: sourceName})}
-					</span>
-				)}
+				<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-sm:hidden'}`}>
+					{t('machines.configure-installs-itself', {os: sourceName})}
+				</span>
 				{/* Stacked with the primary on top below sm (dialog-size buttons are
 				    full-width there), a Cancel→Create row from sm up */}
 				<div className='flex shrink-0 flex-col-reverse gap-2.5 sm:flex-row sm:items-center'>

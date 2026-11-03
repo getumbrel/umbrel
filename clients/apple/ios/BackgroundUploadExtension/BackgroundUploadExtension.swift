@@ -11,9 +11,6 @@ import UniformTypeIdentifiers
 // ledger, then fill the system's inflight queue. The host app never uploads.
 @main
 final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
-	private static let inventoryBatchSize = 256
-	private static let inventoryTargetPerInvocation = 4_096
-	private static let historyCheckpointSize = 1_024
 	private static let logger = Logger(
 		subsystem: "com.umbrel.app.photo-background-upload",
 		category: "PhotoBackup"
@@ -41,6 +38,12 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 		case .unavailable:
 			Self.logger.error("Invocation failed because backup configuration is unavailable")
 			return .failure
+		}
+		// The app sends backup itself on its own route. An activation left over from
+		// the Tailscale route has nothing to do.
+		guard configuration.route == .tailscale else {
+			Self.logger.notice("Invocation completed because the app sends this backup")
+			return .completed
 		}
 		// Refuse malformed or non-Tailscale configuration before reading a credential or
 		// touching the photo library. The host app applies the same validation on save.
@@ -294,6 +297,23 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 					issue: recovery.issue
 				)
 			}
+			// Once everything else has been backed up, give failed uploads another try in
+			// this pass instead of leaving them for the user to retry. Storage, sign-in and
+			// connectivity problems keep their own recovery.
+			if activeJobs.isEmpty,
+				changeResult != .moreWork,
+				authenticationIssue == nil,
+				!recovery.storagePaused,
+				!recovery.storageProbing,
+				!recovery.connectivityRecovering,
+				try ledger.requeueFailedAssetsAfterProgress(
+					deviceId: configuration.source.id,
+					includePhotos: configuration.includePhotos,
+					includeVideos: configuration.includeVideos
+				)
+			{
+				Self.logger.notice("Requeued failed resources after the rest of the backup caught up")
+			}
 
 			guard !isTerminated else {
 				Self.logger.notice("Invocation yielded after PhotoKit requested termination")
@@ -313,7 +333,9 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 					upTo: creationLimit,
 					ledger: ledger,
 					configuration: configuration,
-					grant: grant
+					grant: grant,
+					// A storage probe has to send a file
+					claiming: !recovery.storageProbing
 				)
 			let stats = try statistics(ledger: ledger, configuration: configuration)
 			let hasInflightJobs = !activeJobs.isEmpty || created > 0
@@ -354,6 +376,11 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 			Self.logger.notice(
 				"PhotoKit jobs: registered=\(activeCounts.registered, privacy: .public) pending=\(activeCounts.pending, privacy: .public) created=\(created, privacy: .public) freeSlotsBeforeCreate=\(availableSlots, privacy: .public); ledger: queuedAssets=\(stats.queuedCount, privacy: .public) preparedAssets=\(stats.preparedCount, privacy: .public) failedAssets=\(stats.failedCount, privacy: .public); phase=\(phase.rawValue, privacy: .public)"
 			)
+
+			// Backup ran: the app's "hasn't backed up" reminder moves a week out
+			if phase == .upToDate || terminalCounts.succeeded > 0 {
+				PhotoBackupReminder.push()
+			}
 
 			let hasRemainingWork = changeResult == .moreWork
 				|| hasInflightJobs
@@ -414,177 +441,16 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 
 	// MARK: - Photo library inventory
 
-	private enum ChangeIngestionResult {
-		case complete
-		case moreWork
-		case tokenReset
-	}
-
 	private func ingestLibraryChanges(
 		ledger: PhotoBackupLedger,
 		configuration: PhotoBackupConfiguration
-	) throws -> ChangeIngestionResult {
-		let library = PHPhotoLibrary.shared()
-		guard let tokenData = try ledger.changeToken(deviceId: configuration.source.id) else {
-			let scan = try ledger.startInventoryScan(
-				deviceId: configuration.source.id,
-				changeToken: try archive(library.currentChangeToken)
-			)
-			// Keep progress as durable identifiers instead of a PhotoKit keyset cursor.
-			// Do not sort PHAsset by localIdentifier: although PHFetchOptions documents it
-			// as supported, even using it as the only descriptor makes PHQuery throw an
-			// NSInvalidArgumentException on a physical iOS 26.6 device (FB24429469).
-			// Re-enumerating and checking each bounded batch against SQLite also makes
-			// mutations, equal dates, and missing dates irrelevant to correctness.
-			let options = inventoryOptions()
-			let result = PHAsset.fetchAssets(with: options)
-			var nextIndex = 0
-			var examinedCount = 0
-			var recordedCount = 0
-			// PhotoKit extensions have a constrained memory and runtime budget. Work in
-			// local autorelease pools so PHAsset/Foundation temporaries cannot accumulate,
-			// and checkpoint enough assets per invocation to avoid the old one-activation-
-			// per-256 scheduling stall. Only newly recorded assets count toward the target,
-			// so a resumed scan can cross its already committed prefix and keep progressing.
-			while nextIndex < result.count,
-				recordedCount < Self.inventoryTargetPerInvocation,
-				!isTerminated
-			{
-				let upperBound = min(nextIndex + Self.inventoryBatchSize, result.count)
-				let batchResult: (examined: Int, recorded: Int) = try autoreleasepool {
-					var candidates = [PhotoBackupLedger.AssetCandidate]()
-					candidates.reserveCapacity(upperBound - nextIndex)
-					for index in nextIndex..<upperBound {
-						guard !isTerminated else { break }
-						candidates.append(candidate(for: result.object(at: index)))
-					}
-					let recorded = try ledger.recordInventoryBatch(
-						candidates,
-						deviceId: configuration.source.id,
-						generation: scan.generation
-					)
-					return (candidates.count, recorded)
-				}
-				examinedCount += batchResult.examined
-				recordedCount += batchResult.recorded
-				nextIndex += batchResult.examined
-			}
-			let reachedEnd = nextIndex == result.count
-			Self.logger.notice(
-				"Inventoried PhotoKit library: examined=\(examinedCount, privacy: .public) recorded=\(recordedCount, privacy: .public) total=\(result.count, privacy: .public) complete=\(reachedEnd, privacy: .public) terminated=\(self.isTerminated, privacy: .public)"
-			)
-			guard reachedEnd, !isTerminated else { return .moreWork }
-			try ledger.finishInventoryScan(deviceId: configuration.source.id, generation: scan.generation)
-			return .complete
-		}
-
-		let token = try unarchiveToken(tokenData)
-		do {
-			let changes = try library.fetchPersistentChanges(since: token)
-			// Persistent history can be large because it includes Photos processing,
-			// iCloud sync, and upload-job lifecycle changes. Collapse the history to
-			// each asset's final action and periodically commit the token without
-			// yielding the activation. Checkpoints keep a very large history replay
-			// interruption-safe; PhotoKit termination, not an arbitrary record count,
-			// decides when this invocation stops.
-			var upsertedIdentifiers = Set<String>()
-			var deletedIdentifiers = Set<String>()
-			var lastChangeToken: PHPersistentChangeToken?
-			var changeCount = 0
-			var uncommittedChangeCount = 0
-			var checkpointCount = 0
-			func commitCheckpoint() throws {
-				guard let checkpointToken = lastChangeToken else { return }
-				// Insertions and updates both reconcile the ledger to the current PHAsset
-				// rendition, so one deduplicated candidate set preserves their semantics.
-				try ledger.applyChanges(
-					inserted: candidates(for: upsertedIdentifiers),
-					updated: [],
-					deleted: deletedIdentifiers,
-					deviceId: configuration.source.id,
-					changeToken: try archive(checkpointToken)
-				)
-				upsertedIdentifiers.removeAll(keepingCapacity: true)
-				deletedIdentifiers.removeAll(keepingCapacity: true)
-				lastChangeToken = nil
-				uncommittedChangeCount = 0
-				checkpointCount += 1
-			}
-			for change in changes {
-				guard !isTerminated else { break }
-				let details = try change.changeDetails(for: .asset)
-				let changedIdentifiers = details.insertedLocalIdentifiers
-					.union(details.updatedLocalIdentifiers)
-				upsertedIdentifiers.formUnion(changedIdentifiers)
-				deletedIdentifiers.subtract(changedIdentifiers)
-				deletedIdentifiers.formUnion(details.deletedLocalIdentifiers)
-				upsertedIdentifiers.subtract(details.deletedLocalIdentifiers)
-				lastChangeToken = change.changeToken
-				changeCount += 1
-				uncommittedChangeCount += 1
-				if uncommittedChangeCount == Self.historyCheckpointSize {
-					try commitCheckpoint()
-				}
-			}
-			try commitCheckpoint()
-			Self.logger.notice(
-				"Ingested PhotoKit history: changes=\(changeCount, privacy: .public) checkpoints=\(checkpointCount, privacy: .public) terminated=\(self.isTerminated, privacy: .public)"
-			)
-			return isTerminated ? .moreWork : .complete
-		} catch {
-			let nsError = error as NSError
-			let recoverableHistoryCodes = [
-				PHPhotosError.Code.persistentChangeTokenExpired.rawValue,
-				PHPhotosError.Code.persistentChangeDetailsUnavailable.rawValue,
-			]
-			guard nsError.domain == PHPhotosErrorDomain, recoverableHistoryCodes.contains(nsError.code) else {
-				throw error
-			}
-			try ledger.clearChangeToken(deviceId: configuration.source.id)
-			return .tokenReset
-		}
-	}
-
-	private func inventoryOptions() -> PHFetchOptions {
-		let options = PHFetchOptions()
-		options.predicate = NSPredicate(
-			format: "mediaType IN %@",
-			[PHAssetMediaType.image.rawValue, PHAssetMediaType.video.rawValue]
+	) throws -> PhotoBackupLibraryIngest.Result {
+		try PhotoBackupLibraryIngest.ingest(
+			ledger: ledger,
+			sourceId: configuration.source.id,
+			logger: Self.logger,
+			isCancelled: { isTerminated }
 		)
-		// Fill PhotoKit's finite job queue with the newest assets first. An
-		// unspecified fetch order can begin with old, iCloud-only resources and
-		// prevent recent on-device photos from starting until those download.
-		options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-		return options
-	}
-
-	private func candidates(for identifiers: Set<String>) -> [PhotoBackupLedger.AssetCandidate] {
-		guard !identifiers.isEmpty else { return [] }
-		let result = PHAsset.fetchAssets(withLocalIdentifiers: Array(identifiers), options: inventoryOptions())
-		var candidates = [PhotoBackupLedger.AssetCandidate]()
-		candidates.reserveCapacity(result.count)
-		result.enumerateObjects { asset, _, _ in candidates.append(self.candidate(for: asset)) }
-		return candidates
-	}
-
-	private func candidate(for asset: PHAsset) -> PhotoBackupLedger.AssetCandidate {
-		PhotoBackupLedger.AssetCandidate(
-			localIdentifier: asset.localIdentifier,
-			mediaType: Int64(asset.mediaType.rawValue),
-			creationDate: asset.creationDate ?? .distantPast,
-			modificationDate: asset.modificationDate ?? asset.creationDate ?? .distantPast
-		)
-	}
-
-	private func archive(_ token: PHPersistentChangeToken) throws -> Data {
-		try NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
-	}
-
-	private func unarchiveToken(_ data: Data) throws -> PHPersistentChangeToken {
-		guard let token = try NSKeyedUnarchiver.unarchivedObject(ofClass: PHPersistentChangeToken.self, from: data) else {
-			throw ExtensionError.invalidChangeToken
-		}
-		return token
 	}
 
 	// MARK: - Job reconciliation
@@ -798,66 +664,110 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 
 	private func resourceKey(for job: PHAssetResourceUploadJob) -> String? {
 		let value = job.destination.value(forHTTPHeaderField: "X-Umbrel-Photo-Backup-Key")
-		guard let value, value.utf8.count == 64, value.utf8.allSatisfy({ byte in
-			(byte >= 48 && byte <= 57) || (byte >= 97 && byte <= 102)
-		}) else { return nil }
+		guard let value, PhotoBackupResourceKey.isValid(value) else { return nil }
 		return value
 	}
 
 	// MARK: - Job creation
 
+	// Each batch first asks the Umbrel which files this backup already has, which are
+	// recorded as backed up instead of uploaded. Their slots go to the next batch.
 	private func createJobs(
 		upTo limit: Int,
 		ledger: PhotoBackupLedger,
 		configuration: PhotoBackupConfiguration,
-		grant: String
+		grant: String,
+		claiming: Bool
 	) throws -> Int {
-		guard limit > 0 else { return 0 }
-		let candidates = try ledger.nextAssets(
-			deviceId: configuration.source.id,
-			includePhotos: configuration.includePhotos,
-			includeVideos: configuration.includeVideos,
-			limit: limit
-		)
 		var remainingSlots = limit
 		var created = 0
+		// Until the Umbrel doesn't answer a claim, as umbrelOS before claims doesn't
+		var claiming = claiming
+		while remainingSlots > 0, !isTerminated {
+			let candidates = try ledger.nextAssets(
+				deviceId: configuration.source.id,
+				includePhotos: configuration.includePhotos,
+				includeVideos: configuration.includeVideos,
+				limit: remainingSlots
+			)
+			guard !candidates.isEmpty else { break }
+			var pending = [(work: PhotoBackupLedger.AssetWork, plan: PhotoBackupPlannedResource, cloudIdentifier: String?)]()
+			for work in candidates {
+				guard !isTerminated else { break }
+				guard
+					let asset = PHAsset.fetchAssets(withLocalIdentifiers: [work.localIdentifier], options: nil).firstObject
+				else {
+					try ledger.markDeleted(deviceId: configuration.source.id, localIdentifier: work.localIdentifier)
+					continue
+				}
 
-		for work in candidates where remainingSlots > 0 {
-			guard !isTerminated else { break }
-			guard
-				let asset = PHAsset.fetchAssets(withLocalIdentifiers: [work.localIdentifier], options: nil).firstObject
-			else {
-				try ledger.markDeleted(deviceId: configuration.source.id, localIdentifier: work.localIdentifier)
-				continue
-			}
+				let resources = PhotoBackupPlanner.selectedResources(for: asset)
+				guard !resources.isEmpty else {
+					try ledger.markAssetFailed(
+						deviceId: configuration.source.id,
+						localIdentifier: work.localIdentifier,
+						revision: work.revision,
+						message: "This asset has no uploadable resource"
+					)
+					continue
+				}
 
-			let resources = selectedResources(for: asset)
-			guard !resources.isEmpty else {
-				try ledger.markAssetFailed(
+				let plans = resources.map {
+					PhotoBackupPlanner.plan($0.resource, role: $0.role, work: work, sourceId: configuration.source.id)
+				}
+				let cloudIdentifier = PhotoBackupPlanner.cloudIdentifiers(forUnedited: [asset])[asset.localIdentifier]
+				try ledger.prepareAsset(
 					deviceId: configuration.source.id,
 					localIdentifier: work.localIdentifier,
 					revision: work.revision,
-					message: "This asset has no uploadable resource"
+					resources: plans.map(\.ledgerPlan)
 				)
-				continue
+				let stored = try ledger.resources(
+					deviceId: configuration.source.id,
+					localIdentifier: work.localIdentifier,
+					revision: work.revision
+				)
+				let pendingKeys = Set(stored.filter { $0.state == PhotoBackupLedger.resourcePending }.map(\.resourceKey))
+				pending += plans.filter { pendingKeys.contains($0.resourceKey) }.map { (work, $0, cloudIdentifier) }
+			}
+			// What was prepared stays pending for the next activation, so nothing is sent
+			// that wasn't asked about first
+			guard !isTerminated else { break }
+
+			var claimed = Set<String>()
+			if claiming, !pending.isEmpty {
+				let answer = claim(
+					pending.map { $0.plan.claim(cloudIdentifier: $0.cloudIdentifier) },
+					configuration: configuration,
+					grant: grant
+				)
+				try ledger.recordConfirmedResources(answer.receipts.map { .init(resourceKey: $0.resourceKey, bytes: $0.bytes) })
+				claimed = Set(answer.receipts.map(\.resourceKey))
+				claiming = answer.answered
 			}
 
-			let plans = resources.map { plan(for: $0, work: work, configuration: configuration) }
-			try ledger.prepareAsset(
-				deviceId: configuration.source.id,
-				localIdentifier: work.localIdentifier,
-				revision: work.revision,
-				resources: plans.map(\.ledgerPlan)
-			)
-			let stored = try ledger.resources(
-				deviceId: configuration.source.id,
-				localIdentifier: work.localIdentifier,
-				revision: work.revision
-			)
-			let pendingKeys = Set(stored.filter { $0.state == PhotoBackupLedger.resourcePending }.map(\.resourceKey))
-			let pending = plans.filter { pendingKeys.contains($0.resourceKey) }.prefix(remainingSlots)
-			for plan in pending {
-				let request = try destination(for: plan, configuration: configuration, grant: grant)
+			// The app may have sent a file while this batch was looked up and claimed
+			var stillPending = [String: Set<String>]()
+			for (work, plan, cloudIdentifier) in pending where remainingSlots > 0 && !claimed.contains(plan.resourceKey) {
+				guard !isTerminated else { break }
+				if stillPending[work.localIdentifier] == nil {
+					stillPending[work.localIdentifier] = Set(
+						try ledger.resources(
+							deviceId: configuration.source.id,
+							localIdentifier: work.localIdentifier,
+							revision: work.revision
+						)
+						.filter { $0.state == PhotoBackupLedger.resourcePending }
+						.map(\.resourceKey)
+					)
+				}
+				guard stillPending[work.localIdentifier]?.contains(plan.resourceKey) == true else { continue }
+				let request = try destination(
+					for: plan,
+					cloudIdentifier: cloudIdentifier,
+					configuration: configuration,
+					grant: grant
+				)
 				try PHPhotoLibrary.shared().performChangesAndWait {
 					PHAssetResourceUploadJobChangeRequest.creationRequestForJob(
 						destination: request,
@@ -868,83 +778,64 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 				created += 1
 				remainingSlots -= 1
 			}
+			// Without claims, the next batch would be the files that didn't fit
+			if claimed.isEmpty || isTerminated { break }
 		}
 		return created
 	}
 
-	private struct PlannedResource {
-		let resource: PHAssetResource
-		let resourceKey: String
-		let fileExtension: String
-		let filename: String
-		let sourceCreationDateMilliseconds: Int64?
-		let destinationPath: String
+	private final class ClaimResponse: @unchecked Sendable {
+		var statusCode: Int?
+		var data = Data()
+	}
 
-		var ledgerPlan: PhotoBackupLedger.ResourcePlan {
-			.init(resourceKey: resourceKey, filename: filename, destinationPath: destinationPath)
+	// The files this backup already has, which the Umbrel recorded under this iPhone's keys.
+	// Not answered when it couldn't be reached or doesn't take claims, and the files
+	// upload as before.
+	private func claim(
+		_ claims: [Umbreld.PhotoBackupResourceClaim],
+		configuration: PhotoBackupConfiguration,
+		grant: String
+	) -> (receipts: [Umbreld.PhotoBackupResourceReceipt], answered: Bool) {
+		guard configuration.isTailscaleDestination, let base = URL(string: configuration.uploadBaseURL) else {
+			return ([], false)
 		}
-	}
-
-	private struct SelectedResource {
-		let resource: PHAssetResource
-		let role: ResourceRole
-	}
-
-	private enum ResourceRole: String {
-		case photo
-		case livePhotoMotion = "live-photo-motion"
-		case video
-	}
-
-	private func plan(
-		for selected: SelectedResource,
-		work: PhotoBackupLedger.AssetWork,
-		configuration: PhotoBackupConfiguration
-	) -> PlannedResource {
-		let resource = selected.resource
-		// Avoid the resettable ledger revision: edits change the key, while each
-		// Live Photo component gets its own stable identity.
-		let key = stableKey(
-			namespace: "umbrel-photo-resource-v1",
-			parts: [
-				configuration.source.id,
-				work.localIdentifier,
-				String(work.contentVersionDate.timeIntervalSince1970.bitPattern, radix: 16),
-				selected.role.rawValue,
-			]
-		)
-		let originalExtension = URL(fileURLWithPath: resource.originalFilename).pathExtension.lowercased()
-		let preferredExtension = resource.contentType.preferredFilenameExtension?.lowercased() ?? ""
-		let fileExtension = validFileExtension(originalExtension)
-			?? validFileExtension(preferredExtension)
-			?? "bin"
-		// umbreld owns the physical destination. The stable resource key makes retries
-		// idempotent while the original filename remains display metadata.
-		let destinationPath = "\(configuration.source.id)/\(key).\(fileExtension)"
-		return PlannedResource(
-			resource: resource,
-			resourceKey: key,
-			fileExtension: fileExtension,
-			filename: resource.originalFilename,
-			sourceCreationDateMilliseconds: sourceCreationDateMilliseconds(work.creationDate),
-			destinationPath: destinationPath
-		)
-	}
-
-	private func sourceCreationDateMilliseconds(_ date: Date) -> Int64? {
-		// Some PhotoKit resources have no embedded capture date. umbreld uses this
-		// source date only as their fallback, never over file-derived metadata.
-		guard date != .distantPast else { return nil }
-		let milliseconds = date.timeIntervalSince1970 * 1_000
-		guard milliseconds.isFinite,
-			milliseconds >= -62_135_596_800_000,
-			milliseconds <= 253_402_300_799_999
-		else { return nil }
-		return Int64(milliseconds.rounded())
+		let url = base.appending(path: PhotoBackupUpload.claimPath)
+		var receipts = [Umbreld.PhotoBackupResourceReceipt]()
+		for start in stride(from: 0, to: claims.count, by: PhotoBackupUpload.claimsPerRequest) {
+			guard !isTerminated else { return (receipts, false) }
+			let batch = Array(claims[start..<min(start + PhotoBackupUpload.claimsPerRequest, claims.count)])
+			guard var request = try? PhotoBackupUpload.claimRequest(url: url, grant: grant, resources: batch) else {
+				return (receipts, false)
+			}
+			request.allowsCellularAccess = configuration.allowsCellularAccess
+			// process() waits for the answer, and PhotoKit gives it about a minute
+			request.timeoutInterval = 15
+			let response = ClaimResponse()
+			let done = DispatchSemaphore(value: 0)
+			URLSession.shared.dataTask(with: request) { data, answer, _ in
+				response.statusCode = (answer as? HTTPURLResponse)?.statusCode
+				response.data = data ?? Data()
+				done.signal()
+			}.resume()
+			done.wait()
+			guard let statusCode = response.statusCode,
+				let found = PhotoBackupUpload.claimedResources(statusCode: statusCode, data: response.data, requested: batch)
+			else {
+				Self.logger.notice(
+					"Photo backup claim wasn't answered: status=\(response.statusCode.map(String.init) ?? "none", privacy: .public)"
+				)
+				return (receipts, false)
+			}
+			receipts += found
+		}
+		Self.logger.notice("Photo backup claimed \(receipts.count, privacy: .public) of \(claims.count, privacy: .public) files")
+		return (receipts, true)
 	}
 
 	private func destination(
-		for plan: PlannedResource,
+		for plan: PhotoBackupPlannedResource,
+		cloudIdentifier: String?,
 		configuration: PhotoBackupConfiguration,
 		grant: String
 	) throws -> URLRequest {
@@ -957,7 +848,7 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 		// This per-job URL is the real upload destination. The extension's signed
 		// BackgroundUploadURLBase is necessarily static; project.yml records the
 		// physical testing that verifies PhotoKit accepts this per-configuration host.
-		let url = base.appending(path: "/api/photos/upload")
+		let url = base.appending(path: PhotoBackupUpload.path)
 
 		var request = URLRequest(url: url)
 		request.httpMethod = "POST"
@@ -965,69 +856,11 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 		// PhotoKit owns upload scheduling and already considers device power. Its
 		// upload-job API has no external-power constraint, so we intentionally don't
 		// offer a charging-only preference that the system can't reliably enforce.
-		request.setValue("Bearer \(grant)", forHTTPHeaderField: "Authorization")
-		request.setValue(plan.resourceKey, forHTTPHeaderField: "X-Umbrel-Photo-Backup-Key")
-		request.setValue(plan.fileExtension, forHTTPHeaderField: "X-Umbrel-Photo-Backup-Extension")
-		// Header values are ASCII; Base64 preserves PhotoKit's Unicode filename exactly.
-		request.setValue(
-			Data(plan.filename.utf8).base64EncodedString(),
-			forHTTPHeaderField: "X-Umbrel-Photo-Original-Filename-Base64"
-		)
-		if let creationDate = plan.sourceCreationDateMilliseconds {
-			request.setValue(
-				String(creationDate),
-				forHTTPHeaderField: "X-Umbrel-Photo-Creation-Date-Ms"
-			)
+		// The same headers the app's own uploader sends
+		for (field, value) in plan.uploadHeaders(grant: grant, cloudIdentifier: cloudIdentifier) {
+			request.setValue(value, forHTTPHeaderField: field)
 		}
-		request.setValue(
-			plan.resource.contentType.preferredMIMEType ?? "application/octet-stream",
-			forHTTPHeaderField: "Content-Type"
-		)
 		return request
-	}
-
-	private func selectedResources(for asset: PHAsset) -> [SelectedResource] {
-		let resources = PHAssetResource.assetResources(for: asset)
-		var selected = [SelectedResource]()
-		if asset.mediaType == .image {
-			// V1 backs up the version a person currently sees in Photos, not every
-			// resource needed to reconstruct Apple's edit history. fullSize* is the
-			// current edited rendition; unedited assets expose the original fallback.
-			// Deliberately ignore adjustment data, prior originals beneath an edit, and
-			// alternate RAW/JPEG resources unless product requirements later change to
-			// a lossless archival backup.
-			if let primary = resources.first(where: { $0.type == .fullSizePhoto })
-				?? resources.first(where: { $0.type == .photo })
-			{
-				selected.append(.init(resource: primary, role: .photo))
-			}
-			if asset.mediaSubtypes.contains(.photoLive),
-				let paired = resources.first(where: { $0.type == .fullSizePairedVideo })
-					?? resources.first(where: { $0.type == .pairedVideo })
-			{
-				selected.append(.init(resource: paired, role: .livePhotoMotion))
-			}
-		} else if asset.mediaType == .video,
-			let primary = resources.first(where: { $0.type == .fullSizeVideo })
-				?? resources.first(where: { $0.type == .video })
-		{
-			selected.append(.init(resource: primary, role: .video))
-		}
-		return selected
-	}
-
-	private func stableKey(namespace: String, parts: [String]) -> String {
-		let material = ([namespace] + parts).joined(separator: "\0")
-		return SHA256.hash(data: Data(material.utf8)).map { String(format: "%02x", $0) }.joined()
-	}
-
-	private func validFileExtension(_ value: String) -> String? {
-		guard !value.isEmpty, value.utf8.count <= 16,
-			value.utf8.allSatisfy({ byte in
-				(byte >= 48 && byte <= 57) || (byte >= 97 && byte <= 122)
-			})
-		else { return nil }
-		return value
 	}
 
 	// MARK: - Shared presentation
@@ -1063,14 +896,11 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 
 	private enum ExtensionError: LocalizedError {
 		case invalidUploadBase
-		case invalidChangeToken
 
 		var errorDescription: String? {
 			switch self {
 			case .invalidUploadBase:
 				"The extension does not declare a valid upload destination"
-			case .invalidChangeToken:
-				"The saved Photo Library change token is invalid"
 			}
 		}
 	}

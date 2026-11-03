@@ -11,11 +11,13 @@ import {
 	type IndexedEntry,
 	type SearchCandidate,
 	type WatcherChange,
-} from './file-index-engine.js'
-import type {PublishedFileRevision, ThumbnailReference} from './file-index-enrichment.js'
-import {PHOTOS_THUMBNAIL_VARIANTS, type ThumbnailVariant} from './thumbnail-support.js'
+} from './file-index-engine.ts'
+import type {PublishedFileRevision, ThumbnailReference} from './file-index-enrichment.ts'
+import {PHOTOS_THUMBNAIL_VARIANTS, type ThumbnailVariant} from './thumbnail-support.ts'
 import type {
 	PhotoAlbum,
+	PhotoBackupCloudIdentity,
+	PhotoBackupLocation,
 	PhotoFilter,
 	PhotoIndexingProgress,
 	PhotoIndexingState,
@@ -24,7 +26,7 @@ import type {
 	PhotoScopeMode,
 	PhotoSource,
 	PhotoSummary,
-} from '../photos/types.js'
+} from '../photos/types.ts'
 import {
 	deserializeError,
 	type FileIndexNotificationMethod,
@@ -32,7 +34,7 @@ import {
 	type FileIndexWorkerData,
 	type FileIndexWorkerInboundMessage,
 	type FileIndexWorkerOutboundMessage,
-} from './file-index-worker-protocol.js'
+} from './file-index-worker-protocol.ts'
 
 const DEFAULT_WORKER_RESTART_DELAY_MS = 1000
 const MAX_WORKER_RESTART_DELAY_MS = 60_000
@@ -53,6 +55,8 @@ export type FileIndexOptions = {
 	recoveryRetryMs?: number
 	watcherBulkThreshold?: number
 	batchSize?: number
+	// The running umbreld version. Enrichment that gave up is retried once per release.
+	release?: string
 	onPhotosChange?: (accountIds: string[]) => void
 	onPhotosIndexingProgress?: (progress: PhotoIndexingProgress[]) => void
 }
@@ -118,6 +122,7 @@ export default class FileIndex {
 			recoveryRetryMs,
 			watcherBulkThreshold = DEFAULT_WATCHER_BULK_THRESHOLD,
 			batchSize,
+			release,
 			onPhotosChange,
 			onPhotosIndexingProgress,
 		}: FileIndexOptions,
@@ -140,6 +145,7 @@ export default class FileIndex {
 			recoveryRetryMs,
 			watcherBulkThreshold,
 			batchSize,
+			release,
 		}
 		this.#createWorker = createWorker
 		this.#workerRestartDelayMs = workerRestartDelayMs
@@ -184,7 +190,7 @@ export default class FileIndex {
 	async #bootWorker() {
 		if (!this.#started || this.#stopping || this.#worker) return
 		const generation = ++this.#workerGeneration
-		const worker = this.#createWorker(new URL('./file-index-worker-bootstrap.js', import.meta.url), {
+		const worker = this.#createWorker(new URL('./file-index-worker.ts', import.meta.url), {
 			workerData: this.#workerData,
 			execArgv: [],
 			name: 'file-index',
@@ -391,8 +397,14 @@ export default class FileIndex {
 		])
 	}
 
-	async photosUpsertBackupSource(accountId: string, sourceId: string, name: string, createdAt: number) {
-		return this.#request<boolean>('photosUpsertBackupSource', [accountId, sourceId, name, createdAt])
+	async photosUpsertBackupSource(
+		accountId: string,
+		sourceId: string,
+		name: string,
+		createdAt: number,
+		platform?: string,
+	) {
+		return this.#request<boolean>('photosUpsertBackupSource', [accountId, sourceId, name, createdAt, platform])
 	}
 
 	async photosRegisterBackupResource(
@@ -404,6 +416,7 @@ export default class FileIndex {
 		expectedRevision: PublishedFileRevision,
 		originalFilename?: string,
 		sourceCreationDate?: number,
+		cloud?: PhotoBackupCloudIdentity,
 	) {
 		return this.#request<{resourceKey: string; path: string; bytes: number}>('photosRegisterBackupResource', [
 			accountId,
@@ -414,19 +427,61 @@ export default class FileIndex {
 			expectedRevision,
 			originalFilename,
 			sourceCreationDate,
+			cloud,
 		])
 	}
 
+	async photosRecordMatchedBackupResources(
+		accountId: string,
+		sourceId: string,
+		matches: Array<{
+			resourceKey: string
+			hash: Buffer
+			originalFilename?: string
+			sourceCreationDate?: number
+			cloud?: PhotoBackupCloudIdentity
+		}>,
+	) {
+		return this.#request<string[]>('photosRecordMatchedBackupResources', [accountId, sourceId, matches])
+	}
+
+	async photosBackupSourceContentLocations(accountId: string, sourceId: string, hash: Buffer) {
+		return this.#request<PhotoBackupLocation[]>('photosBackupSourceContentLocations', [accountId, sourceId, hash])
+	}
+
+	async photosBackupCloudIdentityMatches(accountId: string, sourceId: string, identities: PhotoBackupCloudIdentity[]) {
+		const matches = await this.#request<
+			Array<
+				PhotoBackupCloudIdentity & {
+					contentHash: Uint8Array
+					originalFilename?: string
+					locations: PhotoBackupLocation[]
+				}
+			>
+		>('photosBackupCloudIdentityMatches', [accountId, sourceId, identities])
+		return matches.map((match) => ({...match, contentHash: Buffer.from(match.contentHash)}))
+	}
+
+	async photosAttachBackupCloudIdentities(
+		accountId: string,
+		sourceId: string,
+		resources: Array<PhotoBackupCloudIdentity & {resourceKey: string}>,
+	) {
+		return this.#request<number>('photosAttachBackupCloudIdentities', [accountId, sourceId, resources])
+	}
+
 	async photosConfirmedBackupResources(accountId: string, sourceId: string, resourceKeys: string[]) {
-		return this.#request<
+		const resources = await this.#request<
 			Array<{
 				resourceKey: string
-				contentHash: Buffer
+				contentHash: Uint8Array
 				path?: string
 				bytes?: number
 				revision?: {device: string; inode: string; size: number; modifiedNs: string; ctimeNs: string}
 			}>
 		>('photosConfirmedBackupResources', [accountId, sourceId, resourceKeys])
+		// A Buffer crosses the worker boundary as a plain Uint8Array
+		return resources.map((resource) => ({...resource, contentHash: Buffer.from(resource.contentHash)}))
 	}
 
 	async photosPrepareUpload(accountId: string, hash: Buffer, albumId?: string) {
@@ -470,6 +525,10 @@ export default class FileIndex {
 		])
 	}
 
+	async photosMapPoints(accountId: string, filter: PhotoFilter) {
+		return this.#request<Uint8Array>('photosMapPoints', [accountId, filter])
+	}
+
 	async photosGetItem(accountId: string, id: string, deleted = false) {
 		return this.#request<PhotoItemDetail | undefined>('photosGetItem', [accountId, id, deleted])
 	}
@@ -483,7 +542,7 @@ export default class FileIndex {
 	}
 
 	async photosResolveItems(accountId: string, ids: string[]) {
-		return this.#request<Array<{id: string; path: string}>>('photosResolveItems', [accountId, ids])
+		return this.#request<Array<{id: string; path: string; modifiedMs: number}>>('photosResolveItems', [accountId, ids])
 	}
 
 	async photosResolveItemFiles(accountId: string, ids: string[] | undefined, rootKind: 'home' | 'trash') {
@@ -532,6 +591,10 @@ export default class FileIndex {
 
 	async photosUpdateSource(accountId: string, id: string, scope?: {mode: PhotoScopeMode; paths: string[]}) {
 		return this.#request<PhotoSource | undefined>('photosUpdateSource', [accountId, id, scope])
+	}
+
+	async photosSourceRemovalItemCount(accountId: string, id: string) {
+		return this.#request<number>('photosSourceRemovalItemCount', [accountId, id])
 	}
 
 	async photosSourceRemovalFiles(accountId: string, id: string) {
@@ -729,4 +792,4 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
 	}
 }
 
-export type {FileIndexRoot, IndexedEntry, SearchCandidate} from './file-index-engine.js'
+export type {FileIndexRoot, IndexedEntry, SearchCandidate} from './file-index-engine.ts'

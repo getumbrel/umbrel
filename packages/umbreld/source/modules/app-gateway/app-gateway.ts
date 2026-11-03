@@ -7,17 +7,17 @@ import dotenv from 'dotenv'
 import express from 'express'
 import fse from 'fs-extra'
 import type {Compose} from 'compose-spec-schema'
-import {createProxyMiddleware} from 'http-proxy-middleware'
+import {createProxyMiddleware, type RequestHandler} from 'http-proxy-middleware'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 import {
 	appGatewayTokenFromCookieHeader,
 	appGatewayTokenFromRequest,
 	setAppGatewayCookie,
 	stripAppGatewayCookies,
-} from '../auth/app-gateway-cookie.js'
-import {SESSION_DURATION} from '../auth/auth.js'
-import {appGatewayErrorPage} from './error-page.js'
+} from '../auth/app-gateway-cookie.ts'
+import {SESSION_DURATION} from '../auth/auth.ts'
+import {appGatewayErrorPage} from './error-page.ts'
 
 export type AppGatewayConfig = {
 	appId: string
@@ -127,6 +127,32 @@ export function pathMatches(pathname: string, rules: string[]) {
 	})
 }
 
+// http-proxy sent upstreams the request target as Node's legacy URL parser read
+// it, with repeated slashes merged, while httpxy sends it verbatim. Normalise it
+// the same way before authorizing and proxying, so apps get the path they did
+// before and the authorization check reads the same path the app receives: no
+// fragment, an absolute URL reduced to its path, and backslashes in the path
+// read as slashes, with repeated slashes merged except in the first http:// and
+// https://, which http-proxy restored.
+export function upstreamRequestTarget(target: string) {
+	target = target.split('#')[0]
+	if (/^[a-z][a-z\d+.-]*:/i.test(target)) {
+		try {
+			const url = new URL(target)
+			target = `${url.pathname}${url.search}`
+		} catch {}
+	}
+	const queryStart = target.includes('?') ? target.indexOf('?') : target.length
+	const path = mergeSlashes(`/${target.slice(0, queryStart).replaceAll('\\', '/')}`)
+		.replace('http:/', 'http://')
+		.replace('https:/', 'https://')
+	return path + target.slice(queryStart)
+}
+
+function mergeSlashes(path: string) {
+	return path.replace(/\/+/g, '/')
+}
+
 function safeRedirect(value: unknown) {
 	if (typeof value !== 'string') return '/'
 	try {
@@ -146,7 +172,10 @@ export default class AppGateway {
 	#umbreld: Umbreld
 	#config: AppGatewayConfig
 	#onUpstreamUnavailable?: () => void
-	#proxy: ReturnType<typeof createProxyMiddleware>
+	#proxy: RequestHandler
+	// Responses the upstream has started answering, whether or not any of it has
+	// been written to the client yet, mapped to the upstream's response.
+	#upstreamResponses = new WeakMap<http.ServerResponse, http.IncomingMessage>()
 	server: http.Server
 
 	constructor(umbreld: Umbreld, config: AppGatewayConfig, options: AppGatewayOptions = {}) {
@@ -177,7 +206,11 @@ export default class AppGateway {
 		// Keep the separate timeout for receiving request headers.
 		this.server.requestTimeout = 0
 		this.server.on('upgrade', (request, socket, head) => {
-			this.handleUpgrade(request, socket as net.Socket, head).catch(() => {
+			// Node.js 26 passes a stream wrapper instead of the socket when an upgrade
+			// request has a body, which the proxy can't handle. WebSocket handshakes
+			// never have a body.
+			if (!(socket instanceof net.Socket)) return socket.destroy()
+			this.handleUpgrade(request, socket, head).catch(() => {
 				socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n')
 				socket.destroy()
 			})
@@ -189,25 +222,36 @@ export default class AppGateway {
 		return createProxyMiddleware({
 			target: `${this.#config.targetProtocol}://${targetHost}`,
 			agent:
-				this.#config.targetProtocol === 'https' && this.#config.targetAddress
+				// Node.js 25+ rejects an IP address as a TLS server name
+				this.#config.targetProtocol === 'https' && this.#config.targetAddress && !net.isIP(this.#config.targetHost)
 					? new https.Agent({servername: this.#config.targetHost})
-					: undefined,
+					: // Open a new upstream connection for every request instead of pooling
+						// keep-alive connections, as http-proxy did.
+						false,
 			changeOrigin: false,
-			ws: true,
+			// WebSocket upgrades are proxied explicitly by handleUpgrade(), so don't let
+			// http-proxy-middleware subscribe its own upgrade listener as well.
+			ws: false,
 			xfwd: false,
 			proxyTimeout: this.#config.timeout,
 			followRedirects: false,
-			onProxyReq: (proxyRequest, request, response) => {
-				if (request.socket.remoteAddress === undefined) return response.end()
-				if (!this.#config.trustUpstream) {
-					proxyRequest.setHeader('x-forwarded-proto', request.protocol)
-					if (request.headers.host) proxyRequest.setHeader('x-forwarded-host', request.headers.host)
-					proxyRequest.setHeader('x-forwarded-for', request.socket.remoteAddress)
-				}
-				this.stripCookies(proxyRequest, request)
+			on: {
+				proxyRes: (proxyResponse, _request, response) => {
+					this.#upstreamResponses.set(response, proxyResponse)
+				},
+				error: (error, _request, response) => {
+					// Errors on a WebSocket client's own socket, such as a browser dropping
+					// the connection, are reported here too, as is the upstream request it
+					// then cancels. They aren't upstream failures.
+					if (response instanceof net.Socket && response.errored) return this.destroyProxyResponse(response)
+					// Neither is an upstream cutting its response short, which httpxy has
+					// already passed on by closing the client response.
+					if (this.#upstreamResponses.get(response as http.ServerResponse)?.errored === error) {
+						return this.destroyProxyResponse(response)
+					}
+					this.handleUpstreamError(response, error)
+				},
 			},
-			onProxyReqWs: (proxyRequest, request) => this.stripCookies(proxyRequest, request),
-			onError: (error, _request, response) => this.handleUpstreamError(response, error),
 		})
 	}
 
@@ -227,15 +271,19 @@ export default class AppGateway {
 	}
 
 	private sendUpstreamError(response: http.ServerResponse | net.Socket, error?: unknown) {
-		// http-proxy passes a raw socket here for WebSocket failures even though
-		// http-proxy-middleware types it as an HTTP response.
+		// WebSocket failures pass the raw socket instead of an HTTP response.
 		if (typeof (response as http.ServerResponse).writeHead !== 'function') {
 			this.destroyProxyResponse(response)
 			return
 		}
 
+		// Once the upstream has replied, httpxy is already piping its body into
+		// the response, even if the headers haven't been flushed yet. An error from
+		// then on, such as a parse error on bytes after the declared body, must close
+		// the response. Ending it with an error page makes the piped body write after
+		// end, which throws an unhandled error that terminates umbreld.
 		const httpResponse = response as http.ServerResponse
-		if (httpResponse.headersSent) {
+		if (httpResponse.headersSent || this.#upstreamResponses.has(httpResponse)) {
 			this.destroyProxyResponse(httpResponse)
 			return
 		}
@@ -259,17 +307,24 @@ export default class AppGateway {
 		} catch {}
 	}
 
-	private stripCookies(proxyRequest: http.ClientRequest, request: http.IncomingMessage) {
+	private stripCookies(request: http.IncomingMessage) {
 		const cookies = stripAppGatewayCookies(request.headers.cookie)
-		if (cookies) proxyRequest.setHeader('cookie', cookies)
-		else proxyRequest.removeHeader('cookie')
+		if (cookies) request.headers.cookie = cookies
+		else delete request.headers.cookie
 	}
 
 	private async isAuthorized(request: express.Request | http.IncomingMessage) {
 		if (!this.#config.auth) return
-		const pathname = new URL(request.url ?? '/', 'http://umbrel.local').pathname
-		const whitelisted = pathMatches(pathname, this.#config.authWhitelist)
-		const blacklisted = pathMatches(pathname, this.#config.authBlacklist)
+		// An app that merges repeated slashes reads a restored http:// in the path as
+		// http:/, which can resolve dot segments after it differently. Only skip
+		// authorization if the path is whitelisted read either way.
+		const url = request.url ?? '/'
+		const queryStart = url.includes('?') ? url.indexOf('?') : url.length
+		const pathnames = [url, mergeSlashes(url.slice(0, queryStart))].map(
+			(target) => new URL(target, 'http://umbrel.local').pathname,
+		)
+		const whitelisted = pathnames.every((pathname) => pathMatches(pathname, this.#config.authWhitelist))
+		const blacklisted = pathnames.some((pathname) => pathMatches(pathname, this.#config.authBlacklist))
 		if (whitelisted && !blacklisted) return
 
 		const token =
@@ -292,6 +347,7 @@ export default class AppGateway {
 	}
 
 	private async handleRequest(request: express.Request, response: express.Response) {
+		request.url = upstreamRequestTarget(request.url)
 		try {
 			await this.isAuthorized(request)
 		} catch {
@@ -313,12 +369,29 @@ export default class AppGateway {
 			response.redirect(`${request.protocol}://${host}/app-auth?${searchParams}`)
 			return
 		}
+		// The client may have gone away while it was being authorized. The proxy only
+		// notices a client leaving once it has started, so don't open an upstream
+		// request for it.
+		if (request.socket.destroyed || request.socket.remoteAddress === undefined) return response.end()
+		// Rewrite the incoming request's headers, which httpxy copies into the
+		// upstream request, rather than using the proxyReq event. httpxy skips that event
+		// for requests with an Expect header, since Node has already sent their
+		// headers by then.
+		if (!this.#config.trustUpstream) {
+			request.headers['x-forwarded-proto'] = request.protocol
+			if (request.headers.host) request.headers['x-forwarded-host'] = request.headers.host
+			request.headers['x-forwarded-for'] = request.socket.remoteAddress
+		}
+		this.stripCookies(request)
 		this.#proxy(request, response, (error) => {
 			if (error) this.sendUpstreamError(response, error)
+			// The proxy declines requests whose URL it can't read a path from
+			else response.sendStatus(400)
 		})
 	}
 
 	private async handleUpgrade(request: http.IncomingMessage, socket: net.Socket, head: Buffer) {
+		request.url = upstreamRequestTarget(request.url ?? '/')
 		const appAccessRevision = this.#umbreld.auth.appAccessRevision
 		const principal = await this.isAuthorized(request)
 		// Re-check and register synchronously after asynchronous authentication so
@@ -327,6 +400,7 @@ export default class AppGateway {
 		if (principal && !this.#umbreld.auth.registerAppSocket(principal, this.#config.appId, socket, appAccessRevision)) {
 			return
 		}
-		this.#proxy.upgrade?.(request as express.Request, socket, head)
+		this.stripCookies(request)
+		this.#proxy.upgrade(request as express.Request, socket, head)
 	}
 }

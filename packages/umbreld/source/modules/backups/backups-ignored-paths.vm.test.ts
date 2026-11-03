@@ -1,6 +1,6 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 import {
 	bootWithExternalStorage,
 	expectBackupFiles,
@@ -8,7 +8,7 @@ import {
 	installBackupIgnoreFixtureApp,
 	latestBackupFiles,
 	repositoryPassword,
-} from './backups.vm-test-helpers.js'
+} from './backups.vm-test-helpers.ts'
 
 describe.sequential('Backups ignored paths', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

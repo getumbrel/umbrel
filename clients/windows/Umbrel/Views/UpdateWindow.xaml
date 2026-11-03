@@ -1,0 +1,113 @@
+<Window x:Class="Umbrel.Views.UpdateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Umbrel.ViewModels"
+        xmlns:v="clr-namespace:Umbrel.Views"
+        Title="Software update" Width="360" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" ThemeMode="System"
+        FontFamily="{StaticResource UIFont}" FontSize="14" UseLayoutRounding="True">
+  <!-- A standard dialog that follows the system light or dark theme, like the macOS
+       update window, rather than the always-dark tray panel. -->
+  <Window.Resources>
+    <!-- Centered, wrapping text in the theme's foreground. -->
+    <Style TargetType="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+  </Window.Resources>
+  <Grid Margin="20,25,20,20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <Image Source="{Binding Source={x:Static vm:Presentation.AppIconPath}}" Width="64" Height="64" HorizontalAlignment="Center"
+           RenderOptions.BitmapScalingMode="HighQuality" />
+    <TextBlock Grid.Row="1" Text="{Binding Title}" FontWeight="SemiBold" Margin="4,12,4,0" />
+    <TextBlock Grid.Row="2" Text="{Binding Message}" Margin="4,5,4,0"
+               Visibility="{Binding Message, Converter={StaticResource NullToVisibility}}" />
+    <!-- What's New (macOS update window): collapsed, so the window keeps its compact size,
+         and growing downward when opened. An Expander, so screen readers hear it as
+         expandable. The template replaces Windows' full-width card with the small
+         chevron and label Windows dialogs use for optional details. -->
+    <!-- Not focusable itself: Tab lands once, on the chevron and label. -->
+    <Expander Grid.Row="3" Margin="0,14,0,0" Focusable="False" IsExpanded="{Binding NotesExpanded}" Expanded="OnNotesExpanded"
+              Visibility="{Binding Notes, Converter={StaticResource NullToVisibility}}"
+              AutomationProperties.Name="{Binding Notes.Title}">
+      <Expander.Template>
+        <ControlTemplate TargetType="Expander">
+          <StackPanel>
+            <ToggleButton IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"
+                          Cursor="Hand" AutomationProperties.Name="{Binding Notes.Title}">
+              <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                  <StackPanel Orientation="Horizontal" Background="Transparent">
+                    <!-- ChevronRight, ChevronDown once open. -->
+                    <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Notes.Title}" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="6,0,0,0"
+                               VerticalAlignment="Center" />
+                  </StackPanel>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsChecked" Value="True">
+                      <Setter TargetName="Chevron" Property="Text" Value="&#xE70D;" />
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </ToggleButton.Template>
+            </ToggleButton>
+            <ContentPresenter x:Name="Body" Margin="4,6,4,0" Visibility="Collapsed" />
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsExpanded" Value="True">
+              <Setter TargetName="Body" Property="Visibility" Value="Visible" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Expander.Template>
+      <!-- A lightly filled box that follows light and dark mode. Past about eight lines
+           the notes scroll inside it, so it's clear where the scrolling area ends. -->
+      <Border CornerRadius="8" Padding="10,8" Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+        <ScrollViewer x:Name="NotesScroller" MaxHeight="140" VerticalScrollBarVisibility="Auto" Focusable="False">
+          <ItemsControl ItemsSource="{Binding Notes.Lines}" Focusable="False">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,0,0,3">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <!-- In its own column, so wrapped lines indent to the text after the bullet. -->
+                  <TextBlock Text="&#x2022;&#x00A0;" FontSize="12"
+                             Visibility="{Binding IsBullet, Converter={StaticResource BoolToVisibility}}" />
+                  <TextBlock Grid.Column="1" FontSize="12" v:ReleaseNoteText.Runs="{Binding Runs}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+    </Expander>
+    <ProgressBar Grid.Row="4" Margin="20,20,20,0" Maximum="1"
+                 IsIndeterminate="{Binding IsIndeterminate}" Value="{Binding Progress, Mode=OneWay}"
+                 Visibility="{Binding ShowsProgress, Converter={StaticResource BoolToVisibility}}" />
+    <!-- Windows dialog order: the committing button comes first. -->
+    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+      <Button MinWidth="96" IsDefault="True" Style="{DynamicResource AccentButtonStyle}"
+              Command="{Binding PrimaryCommand}" IsEnabled="{Binding ButtonsEnabled}"
+              Visibility="{Binding PrimaryButton, Converter={StaticResource NullToVisibility}}">
+        <TextBlock Text="{Binding PrimaryButton}" />
+      </Button>
+      <Button MinWidth="96" Margin="12,0,0,0"
+              Command="{Binding SecondaryCommand}" IsEnabled="{Binding ButtonsEnabled}"
+              Visibility="{Binding SecondaryButton, Converter={StaticResource NullToVisibility}}">
+        <TextBlock Text="{Binding SecondaryButton}" />
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

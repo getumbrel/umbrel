@@ -120,7 +120,7 @@ build_os_image() {
   then
     cache_to=""
   fi
-  docker buildx build --cache-from type=gha,scope=umbrelos-amd64 ${cache_to} --load --file packages/os/umbrelos.Dockerfile --tag "${INSTANCE_ID}" .
+  docker buildx build --cache-from type=gha,scope=umbrelos-amd64 ${cache_to} --load --file packages/os/umbrelos.Dockerfile --target umbrelos --tag "${INSTANCE_ID}" .
 }
 
 create_instance() {
@@ -231,7 +231,7 @@ get_instance_ip() {
   then
     hostname -I | awk '{print $1}'
   else
-    docker inspect --format '{{ .NetworkSettings.IPAddress }}' "${INSTANCE_ID}"
+    docker inspect --format '{{ range .NetworkSettings.Networks }}{{ .IPAddress }}{{ end }}' "${INSTANCE_ID}"
   fi
 }
 

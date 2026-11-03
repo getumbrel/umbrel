@@ -1,5 +1,6 @@
 import type {SearchToken} from '@/features/photos/components/view-context'
 import type {PhotoSubKind} from '@/features/photos/constants'
+import {capitalizeDate} from '@/utils/date-time'
 
 // What the search field's text could mean, structurally. Everything here is
 // computed from data the app already holds — the library's calendar (which
@@ -88,7 +89,7 @@ function dates(needle: string, months: MonthCount[], locale: string): Suggestion
 			const span = {from: lo.from, to: hi.to}
 			const count = countIn(months, span)
 			if (count === 0) return []
-			const label = `${shortLabel(lo, locale)} – ${shortLabel(hi, locale)}`
+			const label = capitalizeDate(`${shortLabel(lo, locale)} – ${shortLabel(hi, locale)}`, locale)
 			return [{token: {type: 'date', label, ...span}, count}]
 		}
 		return []
@@ -188,7 +189,10 @@ function monthSuggestion({year, month, count}: MonthCount, locale: string): Sugg
 
 function longLabel(span: Span, locale: string) {
 	if (span.unit === 'year') return String(span.year)
-	return new Intl.DateTimeFormat(locale, {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(span.from)
+	return capitalizeDate(
+		new Intl.DateTimeFormat(locale, {month: 'long', year: 'numeric', timeZone: 'UTC'}).format(span.from),
+		locale,
+	)
 }
 function shortLabel(span: Span, locale: string) {
 	if (span.unit === 'year') return String(span.year)

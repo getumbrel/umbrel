@@ -5,7 +5,7 @@ import nodePath from 'node:path'
 
 import {afterEach, expect, test} from 'vitest'
 
-import RfbClient, {POINTER_BUTTON_LEFT} from './rfb-client.js'
+import RfbClient, {POINTER_BUTTON_LEFT} from './rfb-client.ts'
 
 // A scripted QEMU-like VNC server over a unix socket: it performs the 3.8
 // handshake, records every client message, and answers framebuffer requests

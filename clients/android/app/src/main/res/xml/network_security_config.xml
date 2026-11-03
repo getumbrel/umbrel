@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Every authenticated request, photo uploads included, goes over HTTPS pinned to the
+  Umbrel's own CA inside the app (a per-device X509TrustManager in UmbrelKit); nothing here
+  adds that CA to the system trust. Cleartext must stay permitted at the base level for
+  credential-free probes that the code itself restricts by address class: the first-use
+  bootstrap of system.localHttpsIdentity, the legacy system.version probe, and the browser
+  routing check of system.discoveryInfo.
+  The <domain> element matches exact strings only (IP literals work but are undocumented)
+  and has no range syntax, so LAN and CGNAT (100.64.0.0/10) addresses cannot be scoped
+  more tightly through this file.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

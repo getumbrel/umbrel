@@ -2,8 +2,8 @@ import nodePath from 'node:path'
 
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 import {
 	FILES_THUMBNAIL_VARIANT,
 	parseThumbnailFilename,
@@ -11,7 +11,7 @@ import {
 	thumbnailFilename,
 	thumbnailSystemPath,
 	type ThumbnailVariant,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 
 type ThumbnailReference = {
 	kind: 'content' | 'transient'

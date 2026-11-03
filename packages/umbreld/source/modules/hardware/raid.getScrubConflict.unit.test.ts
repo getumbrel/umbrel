@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {getScrubConflict} from './raid.js'
+import {getScrubConflict} from './raid.ts'
 
 const idle = {
 	isInitialSetupInProgress: false,

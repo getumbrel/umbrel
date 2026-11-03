@@ -1,4 +1,4 @@
-import {FolderX} from 'lucide-react'
+import {FolderLock, FolderX} from 'lucide-react'
 import {ComponentType, useRef} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
@@ -65,7 +65,7 @@ function ListingContent({
 	const {t, i18n} = useTranslation()
 	const selectedItems = useFilesStore((s) => s.selectedItems)
 	return (
-		<Card className='relative min-h-0 flex-1 rounded-24 bg-white/4 !p-0 !pt-4'>
+		<Card className='relative min-h-0 flex-1 rounded-24 bg-white/4 !p-0 !pt-4 phone-side:!pt-2'>
 			{(() => {
 				if (isLoading) return <LoadingView />
 				if (error) return <ErrorView error={error} />
@@ -85,7 +85,7 @@ function ListingContent({
 
 			{/* Display total item count (or truncated count) when no items are selected */}
 			{totalItems && !selectedItems.length ? (
-				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60 phone-side:hidden'>
 					{truncatedAt
 						? t('files-listing.item-count-truncated', {
 								formattedCount: formatNumberI18n({n: truncatedAt, showDecimals: false, locale: i18n.language}),
@@ -99,7 +99,7 @@ function ListingContent({
 
 			{/* Display selected count vs total (or truncated count) when items are selected */}
 			{selectedItems.length > 0 && (
-				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60 phone-side:hidden'>
 					{truncatedAt
 						? t('files-listing.selected-count-truncated', {
 								selectedCount: selectedItems.length,
@@ -152,17 +152,12 @@ export function Listing({
 
 	const content = (
 		// Wrap in a flex column to ensure the context menu works. The column carries the
-		// listing height budget so a top banner shrinks the card instead of pushing it
-		// below the dock. The embedded (Rewind) explorer keeps the original height so
-		// snapshots render unchanged.
+		// listing's height, which Files' layout gives it, so a top banner shrinks the card
+		// instead of pushing it below the dock. The embedded (Rewind) explorer keeps the
+		// original height so snapshots render unchanged.
 		<div
 			ref={listingRef}
-			className={cn(
-				'flex flex-col',
-				isEmbedded
-					? 'h-[calc(100svh-214px)] lg:h-[calc(100vh-300px)]'
-					: 'h-[calc(100svh-209px)] lg:h-[calc(100vh-262px)]',
-			)}
+			className={cn('flex flex-col', isEmbedded ? 'h-[calc(100svh-214px)] lg:h-[calc(100vh-300px)]' : 'h-full')}
 		>
 			{topBanner}
 			<ListingContent
@@ -227,12 +222,17 @@ function ErrorView({error}: {error: unknown}) {
 		message.includes('[invalid-path]') ||
 		message.startsWith('EIO')
 
+	// A member following an owner's link: same calm state as a missing folder, not raw backend text
+	const isForbidden = message.includes('[forbidden]')
+
 	return (
 		<div className='flex h-full items-center justify-center p-4 text-center'>
-			{isNotFound ? (
+			{isNotFound || isForbidden ? (
 				<div className='flex flex-col items-center gap-2'>
-					<FolderX className='h-6 w-6 opacity-50' />
-					<span className='text-12 text-white/40'>{t('files-listing.no-such-file')}</span>
+					{isForbidden ? <FolderLock className='h-6 w-6 opacity-50' /> : <FolderX className='h-6 w-6 opacity-50' />}
+					<span className='text-12 text-white/40'>
+						{isForbidden ? t('files-backend-error.forbidden') : t('files-listing.no-such-file')}
+					</span>
 				</div>
 			) : (
 				<span className='text-12 text-white/40'>{getFilesErrorMessage(message)}</span>

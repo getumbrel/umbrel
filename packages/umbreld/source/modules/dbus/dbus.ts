@@ -3,7 +3,7 @@
 
 import dbus from '@homebridge/dbus-native'
 import {throttle} from 'es-toolkit'
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 export default class Dbus {
 	#umbreld: Umbreld

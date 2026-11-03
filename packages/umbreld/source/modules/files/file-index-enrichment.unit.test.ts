@@ -16,7 +16,7 @@ import {
 	parseThumbnailFilename,
 	thumbnailFilename,
 	type ThumbnailVariant,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 import {
 	enrichmentQueueConcurrency,
 	extractMediaMetadata,
@@ -25,7 +25,7 @@ import {
 	generateThumbnailFiles,
 	hashFileRevision,
 	THUMBNAIL_GENERATION_TIMEOUT_MS,
-} from './file-index-enrichment.js'
+} from './file-index-enrichment.ts'
 
 vi.mock('execa')
 
@@ -143,10 +143,46 @@ test.each([
 	['video.webm', 'WEBM'],
 	['video.wmv', 'WMV'],
 ])('preserves the %s coder when a held descriptor hides the source extension', async (name, coder) => {
+	vi.mocked(execa).mockResolvedValue({
+		stdout: JSON.stringify({streams: [{codec_type: 'video', width: 1920, height: 1080}]}),
+	} as never)
 	await generateThumbnailFile(`/home/member/${name}`, '/data/thumbnail.webp', 'preview-192-webp-v1', 42)
 
-	const arguments_ = vi.mocked(execa).mock.calls[0][1] as string[]
+	const arguments_ = vi.mocked(execa).mock.calls.find(([command]) => command === 'convert')![1] as string[]
 	expect(arguments_).toContain(`${coder}:/dev/fd/3[0]`)
+})
+
+test.each([
+	['square pixels', {sample_aspect_ratio: '1:1'}, undefined],
+	['an unknown sample aspect ratio', {sample_aspect_ratio: '0:1'}, undefined],
+	['anamorphic pixels', {sample_aspect_ratio: '24:11'}, `${(24 / 11) * 100}%x100%`],
+	[
+		'rotated anamorphic pixels',
+		{sample_aspect_ratio: '24:11', side_data_list: [{rotation: -90}]},
+		`100%x${(24 / 11) * 100}%`,
+	],
+])('stretches a video frame with %s to its display shape', async (_name, stream, resize) => {
+	vi.mocked(execa).mockResolvedValue({
+		stdout: JSON.stringify({streams: [{codec_type: 'video', width: 352, height: 576, ...stream}]}),
+	} as never)
+	await generateThumbnailFile('/home/member/video.mp4', '/data/thumbnail.webp', 'preview-192-webp-v1', 42)
+
+	expect(execa).toHaveBeenNthCalledWith(1, 'ffprobe', expect.arrayContaining(['/dev/fd/3']), expect.anything())
+	const arguments_ = vi.mocked(execa).mock.calls.find(([command]) => command === 'convert')![1] as string[]
+	const resizeIndex = arguments_.indexOf('-resize')
+	if (resize === undefined) return expect(resizeIndex).toBe(-1)
+	expect(arguments_[resizeIndex + 1]).toBe(resize)
+	// The stretch applies once to the decoded frame, before any rendition is cut.
+	expect(resizeIndex).toBeLessThan(arguments_.indexOf('+clone'))
+})
+
+test('still renders a video frame when its stream cannot be probed', async () => {
+	vi.mocked(execa).mockImplementation(((command: string) =>
+		command === 'ffprobe' ? Promise.reject(new Error('probe failed')) : Promise.resolve({})) as never)
+	await generateThumbnailFile('/home/member/video.mp4', '/data/thumbnail.webp', 'preview-192-webp-v1', 42)
+
+	const arguments_ = vi.mocked(execa).mock.calls.find(([command]) => command === 'convert')![1] as string[]
+	expect(arguments_).not.toContain('-resize')
 })
 
 test.each(Object.entries(THUMBNAIL_VARIANTS))(
@@ -517,7 +553,7 @@ test('combines descriptor-backed FFprobe structure with ExifTool video semantics
 	expect(ffprobeArguments).not.toContain('MOV:/dev/fd/3')
 	const showEntries = ffprobeArguments[ffprobeArguments.indexOf('-show_entries') + 1]
 	expect(showEntries).toBe(
-		'stream=codec_type,width,height,duration:stream_tags=rotate:stream_side_data=rotation,crop_top,crop_bottom,crop_left,crop_right:format=duration',
+		'stream=codec_type,width,height,sample_aspect_ratio,duration:stream_tags=rotate:stream_side_data=rotation,crop_top,crop_bottom,crop_left,crop_right:format=duration',
 	)
 	expect(showEntries).not.toMatch(/creation|projection|identifier|color|audio|dolby/i)
 	expect(execa).toHaveBeenNthCalledWith(2, 'exiftool', expect.arrayContaining(['-G1:2', '/dev/fd/3']), {
@@ -540,6 +576,21 @@ test('combines descriptor-backed FFprobe structure with ExifTool video semantics
 	)
 	expect(exifToolArguments).not.toContain('IgnoreTags=all')
 	expect(exifToolArguments).not.toContain('-ee')
+})
+
+test.each([
+	['anamorphic', {sample_aspect_ratio: '24:11'}, {width: 768, height: 576}],
+	['rotated anamorphic', {sample_aspect_ratio: '24:11', side_data_list: [{rotation: 90}]}, {width: 576, height: 768}],
+	['unknown aspect', {sample_aspect_ratio: '0:1'}, {width: 352, height: 576}],
+	['missing aspect', {}, {width: 352, height: 576}],
+])('records %s video at its display dimensions', async (_name, stream, dimensions) => {
+	vi.mocked(execa)
+		.mockResolvedValueOnce({
+			stdout: JSON.stringify({streams: [{codec_type: 'video', width: 352, height: 576, ...stream}]}),
+		} as never)
+		.mockResolvedValueOnce(exifMetadata() as never)
+
+	await expect(extractMediaMetadata('/home/camcorder.mp4')).resolves.toMatchObject(dimensions)
 })
 
 test('extracts common iPhone MOV location, focal length, aperture, and lens VideoKeys', async () => {

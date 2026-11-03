@@ -1,10 +1,10 @@
 import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
-import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../apps/app.js'
-import {fillSelectedDependencies} from '../../utilities/dependencies.js'
-import type {McpPermissions} from '../mcp.js'
-import {MAX_LOG_BYTES, newestLogs, runTool, type McpToolContext} from './shared.js'
+import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../apps/app.ts'
+import {fillSelectedDependencies} from '../../utilities/dependencies.ts'
+import type {McpPermissions} from '../mcp.ts'
+import {MAX_LOG_BYTES, newestLogs, runTool, type McpToolContext} from './shared.ts'
 
 // Mirrors the canonical validation in App and AppStore.
 const appIdSchema = z.string().regex(/^[a-zA-Z0-9-_]+$/)

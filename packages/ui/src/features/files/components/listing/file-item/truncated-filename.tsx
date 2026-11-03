@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react'
+import {useLayoutEffect, useRef, type ReactNode} from 'react'
 
 import {formatItemName, splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {cn} from '@/lib/utils'
@@ -22,12 +22,7 @@ export function TruncatedFilename({
 }: TruncatedFilenameProps) {
 	// In icons view, we know the parent's height/width, so we don't need to use dynamic truncation
 	if (view === 'icons') {
-		return (
-			<span className={cn('block w-full text-center', className)} title={filename}>
-				{formatItemName({name: filename, maxLength})}
-				{suffix && <> {suffix}</>}
-			</span>
-		)
+		return <IconsViewFilename filename={filename} className={className} suffix={suffix} maxLength={maxLength} />
 	}
 
 	// Keep last 16 characters always visible in suffix
@@ -46,6 +41,47 @@ export function TruncatedFilename({
 		<span className={cn('flex', className)} title={filename}>
 			<span className='min-w-0 overflow-hidden text-ellipsis whitespace-pre'>{prefixText}</span>
 			<span className='flex-shrink-0 whitespace-pre'>{suffixText}</span>
+		</span>
+	)
+}
+
+function IconsViewFilename({
+	filename,
+	className,
+	suffix,
+	maxLength,
+}: {
+	filename: string
+	className?: string
+	suffix?: ReactNode
+	maxLength: number
+}) {
+	const ref = useRef<HTMLSpanElement>(null)
+	const name = formatItemName({name: filename, maxLength})
+	const hasSuffix = Boolean(suffix)
+
+	// Names wrap between words. One that would run past the line clamp that way
+	// packs its lines instead, so its end and extension stay in view
+	useLayoutEffect(() => {
+		const element = ref.current
+		if (!element) return
+		const fit = () => {
+			element.style.wordBreak = ''
+			if (element.scrollHeight > element.clientHeight) element.style.wordBreak = 'break-all'
+		}
+		fit()
+		// A webfont that lands later reflows the name without resizing it
+		if (document.fonts?.status === 'loading') void document.fonts.ready.then(fit)
+		// Tiles are narrower below lg
+		const observer = new ResizeObserver(fit)
+		observer.observe(element)
+		return () => observer.disconnect()
+	}, [name, hasSuffix])
+
+	return (
+		<span ref={ref} className={cn('block w-full text-center', className)} title={filename}>
+			{name}
+			{suffix && <> {suffix}</>}
 		</span>
 	)
 }

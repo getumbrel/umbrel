@@ -18,6 +18,7 @@ import {
 import {getItemKey} from '@/features/files/utils/get-item-key'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useHomeFit} from '@/modules/desktop/home-fit'
 
 // Hook to detect scroll in react-window components so we can apply custom fade styling
 const useScrollFade = () => {
@@ -151,12 +152,14 @@ interface GridItemData {
 // scrolled up past the bottom fade and read comfortably. Extends the scrollable
 // height without shrinking the viewport (which must stay flush with the card edge).
 const SCROLL_END_SPACER_PX = LISTING_FADE_BOTTOM_PX
+const SCROLL_END_SPACER_UNDER_DOCK_PX = 96
 const InnerElementWithEndSpacer = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
 	function InnerElementWithEndSpacer({style, ...rest}, ref) {
+		// On a phone on its side the card runs under the dock, so the end clears it
+		const {low} = useHomeFit()
+		const endSpacer = low ? SCROLL_END_SPACER_UNDER_DOCK_PX : SCROLL_END_SPACER_PX
 		const height =
-			typeof style?.height === 'number'
-				? style.height + SCROLL_END_SPACER_PX
-				: `calc(${style?.height} + ${SCROLL_END_SPACER_PX}px)`
+			typeof style?.height === 'number' ? style.height + endSpacer : `calc(${style?.height} + ${endSpacer}px)`
 		return <div ref={ref} style={{...style, height}} {...rest} />
 	},
 )

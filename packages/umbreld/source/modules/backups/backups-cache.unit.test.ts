@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {kopiaCacheSizeFlagsForInodes} from './backups.js'
+import {kopiaCacheSizeFlagsForInodes} from './backups.ts'
 
 describe('kopiaCacheSizeFlagsForInodes()', () => {
 	test.each([1, 1_261_568, 5_000_000])('limits caches on a filesystem with %i total inodes', (totalInodes) => {

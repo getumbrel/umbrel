@@ -23,6 +23,7 @@ export function ReadMoreMarkdownSection({
 	children: string
 	/** How many text lines stay visible while collapsed */
 	lines?: number
+	/** Styles the text itself: on a wrapper, Markdown's own prose styles would win */
 	className?: string
 }) {
 	const {t} = useTranslation()
@@ -51,7 +52,8 @@ export function ReadMoreMarkdownSection({
 		/** If the available space is close to enough, don't collapse */
 		const WIGGLE_ROOM = 20
 		const measure = () => {
-			const lineHeight = parseFloat(getComputedStyle(inner).lineHeight) || 24
+			const text = inner.firstElementChild ?? inner
+			const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || 24
 			setClampedHeight(Math.round(lineHeight * lines))
 			setIsOverflowing(inner.offsetHeight > lineHeight * lines + WIGGLE_ROOM)
 		}
@@ -77,14 +79,17 @@ export function ReadMoreMarkdownSection({
 				animate={{height: collapsed && clampedHeight !== null ? clampedHeight : 'auto'}}
 				transition={mounted.current ? expandTransition : {duration: 0}}
 				style={{
-					// The last couple of visible lines melt out instead of cutting off
-					WebkitMaskImage: collapsed ? 'linear-gradient(to bottom, black calc(100% - 3.5em), transparent)' : undefined,
+					// The last couple of visible lines melt out instead of cutting off.
+					// A short clamp fades only its lower half, so its first line stays crisp.
+					WebkitMaskImage: collapsed
+						? 'linear-gradient(to bottom, black calc(100% - min(3.5em, 50%)), transparent)'
+						: undefined,
 				}}
 				onClick={collapsed ? toggle : undefined}
-				className={cn(appPageTextClass, 'overflow-hidden', className)}
+				className={cn(appPageTextClass, 'overflow-hidden')}
 			>
 				<div ref={innerRef}>
-					<Markdown>{children}</Markdown>
+					<Markdown className={className}>{children}</Markdown>
 				</div>
 			</motion.div>
 			{isOverflowing && (

@@ -2,7 +2,7 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // Size validation rules for RAID operations:
 //

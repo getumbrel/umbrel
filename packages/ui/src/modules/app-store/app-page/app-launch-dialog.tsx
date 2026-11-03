@@ -30,6 +30,9 @@ export function AppLaunchDialog() {
 	const {app, isLoading} = useUserApp(appId)
 	const launchApp = useLaunchApp()
 	const httpsCheckboxId = useId()
+	const userQ = trpcReact.user.get.useQuery()
+	// HTTPS is set up in Advanced settings, which only the owner can open
+	const canSetUpHttps = userQ.data?.role === 'owner'
 	const [alwaysOpen, setAlwaysOpen] = useState(getAlwaysOpenHttpsRequiredApps)
 
 	const {open} = dialogProps
@@ -86,16 +89,20 @@ export function AppLaunchDialog() {
 					)}
 					{showHttps && (
 						<div className={cn('mt-5', showCredentials && 'border-t border-white/8 pt-4')}>
-							<p className='text-12 leading-relaxed text-white/60'>
-								{showCredentials && <>{httpsDescription} </>}
-								<button
-									type='button'
-									onClick={() => navigate('/settings/advanced/network?httpsAccess=guide')}
-									className='text-white/70 underline decoration-white/30 underline-offset-2 transition-colors hover:text-white'
-								>
-									{t('app-requires-https-dialog-learn')}
-								</button>
-							</p>
+							{(showCredentials || canSetUpHttps) && (
+								<p className='text-12 leading-relaxed text-white/60'>
+									{showCredentials && <>{httpsDescription} </>}
+									{canSetUpHttps && (
+										<button
+											type='button'
+											onClick={() => navigate('/settings/advanced/network?httpsAccess=guide')}
+											className='text-white/70 underline decoration-white/30 underline-offset-2 transition-colors hover:text-white'
+										>
+											{t('app-requires-https-dialog-learn')}
+										</button>
+									)}
+								</p>
+							)}
 							<label htmlFor={httpsCheckboxId} className={cn(preferenceRowClass, 'mt-1')}>
 								<Checkbox
 									id={httpsCheckboxId}

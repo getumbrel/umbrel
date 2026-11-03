@@ -13,13 +13,13 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {PinInput} from '@/components/ui/pin-input'
 import UmbrelLogo from '@/components/umbrel-logo'
 import {Layout} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'
 import {AccountDock} from '@/modules/auth/account-dock'
 import {OWNER_USER_ID} from '@/modules/auth/constants'
 import {LoginForm} from '@/modules/auth/login-form'
+import {TwoFactorForm} from '@/modules/auth/two-factor-form'
 import {useAccountLanguage} from '@/modules/auth/use-account-language'
 import {useAccountPicker, type Account} from '@/modules/auth/use-account-picker'
 import {useAuth} from '@/modules/auth/use-auth'
@@ -107,6 +107,8 @@ export default function Login() {
 	})
 	const loginIsPending = loginMut.isPending || activeLoginUserIdRef.current !== undefined
 	const loginError = loginMut.variables?.userId === userId ? loginMut.error?.message : undefined
+	// The server asks for the code with this error, so on the code step it is no failure
+	const twoFactorError = loginError === 'Missing 2FA code' ? undefined : loginError
 
 	// Avatar buttons own dock navigation. Enter with nothing focused commits
 	// the current account, while native button Enter commits a focused avatar.
@@ -151,6 +153,14 @@ export default function Login() {
 		loginMut.mutate({userId, password})
 	}
 
+	// Back from the code step to the password, where another account can be chosen too
+	const handleBackFrom2fa = () => {
+		if (activeLoginUserIdRef.current !== undefined || loginMut.isPending) return
+		setPassword('')
+		loginMut.reset()
+		setStep('password')
+	}
+
 	const handleSubmit2fa = async (totpToken: string) => {
 		if (activeLoginUserIdRef.current !== undefined || loginMut.isPending) return false
 		activeLoginUserIdRef.current = userId
@@ -177,7 +187,12 @@ export default function Login() {
 			<>
 				<Layout title={t('login-2fa.title')} subTitle={t('login-2fa.subtitle')}>
 					<form className='flex w-full flex-col items-center gap-5 px-4 md:px-0' onSubmit={handleSubmitPassword}>
-						<PinInput autoFocus length={6} onCodeCheck={handleSubmit2fa} />
+						<TwoFactorForm
+							onCodeCheck={handleSubmit2fa}
+							error={twoFactorError}
+							isPending={loginIsPending}
+							onBack={handleBackFrom2fa}
+						/>
 					</form>
 				</Layout>
 				{confirmDialog}
@@ -204,10 +219,11 @@ export default function Login() {
 			<>
 				<Wallpaper stayBlurred />
 				<div className='fixed inset-0 bg-black/20' />
-				<div className='relative z-10 flex w-full flex-1 animate-in flex-col items-center justify-center gap-5 duration-300 fade-in'>
+				<div className='relative z-10 flex w-full flex-1 animate-in flex-col items-center justify-center gap-5 duration-300 fade-in low:gap-3'>
 					{/* A lone account's avatar says nothing the greeting doesn't —
-					    show the Umbrel logo instead, like the multi-user picker */}
-					<UmbrelLogo className='mb-4 w-32 shrink-0' />
+					    show the Umbrel logo instead, like the multi-user picker.
+					    A phone on its side has room for the form only with a smaller one */}
+					<UmbrelLogo className='mb-4 w-32 shrink-0 low:mb-0 low:w-20' />
 					<LoginForm
 						account={account}
 						password={password}
@@ -261,18 +277,18 @@ export default function Login() {
 					// lens mid-screen. The dock clamps the lens inside the viewport
 					// itself, which is what keeps scrollbars away.
 					'relative z-10 flex w-full flex-1 flex-col items-center justify-center transition-transform duration-500',
-					!chosen && '-translate-y-10',
+					!chosen && '-translate-y-10 low:translate-y-0',
 				)}
 			>
 				<AnimatePresence initial={false}>
 					{!chosen && (
 						<motion.div
 							key='logo'
-							className='mb-24 overflow-visible'
+							className='mb-24 overflow-visible low:mb-6'
 							exit={{opacity: 0, y: -28, height: 0, marginBottom: 0}}
 							transition={{duration: 0.2}}
 						>
-							<UmbrelLogo className='w-32 shrink-0' />
+							<UmbrelLogo className='w-32 shrink-0 low:w-20' />
 						</motion.div>
 					)}
 				</AnimatePresence>

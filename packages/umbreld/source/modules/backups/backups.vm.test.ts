@@ -2,8 +2,8 @@ import {setTimeout} from 'node:timers/promises'
 
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {kopiaCacheSizeFlagsForInodes, UMBREL_DATABASE_BACKUP_DIRECTORY, type BackupsInProgress} from './backups.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {kopiaCacheSizeFlagsForInodes, UMBREL_DATABASE_BACKUP_DIRECTORY, type BackupsInProgress} from './backups.ts'
 import {
 	bootWithExternalStorage,
 	createNetworkBackupShare,
@@ -13,7 +13,7 @@ import {
 	repositoryPassword,
 	vmDataDirectory,
 	writeDataFile,
-} from './backups.vm-test-helpers.js'
+} from './backups.vm-test-helpers.ts'
 
 describe.sequential('Backups repositories', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
@@ -312,6 +312,11 @@ NODE
 	})
 
 	test('reports backup progress events', async () => {
+		// Kopia only reports a percentage once a backup runs long enough to estimate it,
+		// so give it 1 GiB of incompressible new data to hash
+		const progressFile = `${vmDataDirectory}/home/progress-test.bin`
+		await umbreld.vm.sshAsRoot(`head -c 1G /dev/urandom > ${progressFile}`)
+
 		const progressSubscription = umbreld.subscribeToEvents<BackupsInProgress>('backups:backup-progress')
 		await progressSubscription.started
 
@@ -322,8 +327,13 @@ NODE
 		expect(progressSubscription.collected).toEqual(
 			expect.arrayContaining([[expect.objectContaining({repositoryId: externalRepositoryId, percent: 0})]]),
 		)
+		// Progress must actually advance, not just report the initial 0%
+		const percentages = progressSubscription.collected.flat().map((progress) => progress.percent)
+		expect(percentages.some((percent) => percent > 0)).toBe(true)
 		expect(progressSubscription.collected.at(-1)).toEqual([])
 		progressSubscription.unsubscribe()
+
+		await umbreld.vm.sshAsRoot(`rm ${progressFile}`)
 	})
 
 	test('connects to a forgotten repository after a failed password attempt', async () => {

@@ -18,9 +18,9 @@ import {useTranslation} from 'react-i18next'
 import {IoLogoAndroid, IoLogoApple} from 'react-icons/io5'
 import {useLocation, useNavigate} from 'react-router-dom'
 
-import {FadeScroller} from '@/components/fade-scroller'
 import {Button} from '@/components/ui/button'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {contextMenuClasses} from '@/components/ui/shared/menu'
 import {AlbumCard} from '@/features/photos/components/albums/album-card'
 import {LivePhotoIcon} from '@/features/photos/components/live-photo-icon'
@@ -48,21 +48,24 @@ export function Sidebar({className}: {className?: string}) {
 	const {remove} = useRemoveSource()
 	const openDetails = (source: PhotoSource) => navigate(linkToDialog('photos-source', {id: source.id}))
 
+	// The Map row is hidden for now. /photos/map still works, and the info panel's
+	// location card still opens it — restore the row and its icon (MapIcon) to
+	// bring it back.
 	const libraryItems: Item[] = [
 		{section: 'all', label: t('photos-sidebar.all'), icon: GalleryHorizontalEnd},
 		{section: 'albums', label: t('photos-sidebar.albums'), icon: Album},
 		{section: 'favorites', label: t('photos-sidebar.favorites'), icon: Heart},
+		// {section: 'map', label: t('photos-sidebar.map'), icon: MapIcon},
 		{section: 'photos', label: t('photos-sidebar.photos'), icon: Image},
 		{section: 'videos', label: t('photos-sidebar.videos'), icon: Video},
 		{section: 'deleted', label: t('photos-sidebar.deleted'), icon: Trash2},
 	]
 
 	// Smart collections, grouped under their own label like Files' Favorites.
-	// People and Locations stay cut from v1 (no face/geo clustering yet) —
-	// restore those two rows and their icons (Users, MapPin) when they return.
+	// People stays cut from v1 (no face clustering yet) — restore its row and
+	// icon (Users) when it returns. Places live on the map.
 	const utilityItems: Item[] = [
 		// {section: 'people', label: t('photos-sidebar.people'), icon: Users},
-		// {section: 'locations', label: t('photos-sidebar.locations'), icon: MapPin},
 		{section: 'live-photos', label: t('photos-sidebar.live-photos'), icon: LivePhotoIcon},
 		{section: 'panoramas', label: t('photos-sidebar.panoramas'), icon: RectangleHorizontal},
 		{section: 'screenshots', label: t('photos-sidebar.screenshots'), icon: ScanLine},
@@ -87,10 +90,11 @@ export function Sidebar({className}: {className?: string}) {
 
 	return (
 		<nav className={cn('flex min-h-0 flex-col', className)} aria-label={t('photos-sidebar.navigation')}>
-			{/* Pulled left and padded back so an album card scaling up on hover isn't clipped by the scroll box's edge */}
-			<FadeScroller
-				direction='y'
-				className='umbrel-hide-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain lg:-ml-2 lg:pl-2'
+			{/* `auto` keeps the scroll bar up whenever the list overflows, as in Files' sidebar.
+			    Pulled left and padded back so an album card scaling up on hover isn't clipped by the scroll box's edge */}
+			<ScrollArea
+				type='auto'
+				className='h-full min-h-0 lg:-ml-2 [&>[data-radix-scroll-area-viewport]]:overscroll-contain lg:[&>[data-radix-scroll-area-viewport]]:pl-2'
 			>
 				<SidebarSection>{libraryItems.map(renderItem)}</SidebarSection>
 
@@ -122,7 +126,6 @@ export function Sidebar({className}: {className?: string}) {
 						</ContextMenu>
 					))}
 				</SidebarSection>
-				<PhoneBackupCard />
 
 				<SidebarDivider />
 				<SidebarSection label={t('photos-sidebar.utilities')}>{utilityItems.map(renderItem)}</SidebarSection>
@@ -130,9 +133,13 @@ export function Sidebar({className}: {className?: string}) {
 				<SidebarDivider />
 				<AlbumsSection isActive={pathname === sectionPath('albums')} onClick={() => navigate(sectionPath('albums'))} />
 
+				{/* Last, so the promo never pushes the library's own sections below the
+				    fold, and its arrival once sources load moves nothing above it */}
+				<PhoneBackupCard />
+
 				{/* Spacer */}
 				<div className='h-6' />
-			</FadeScroller>
+			</ScrollArea>
 		</nav>
 	)
 }
@@ -194,16 +201,17 @@ function PhoneBackupCard() {
 							<div className='text-12 leading-snug text-white/50'>{t('photos-phone-backup.description')}</div>
 						</div>
 						<div className='flex flex-wrap gap-2'>
-							<Button asChild variant='primary' size='sm'>
+							<Button asChild size='sm' className='gap-1.5'>
 								<a href='https://link.umbrel.com/ios-app' target='_blank' rel='noopener noreferrer'>
 									<IoLogoApple className='size-3.5' />
 									{t('photos-phone-backup.ios')}
 								</a>
 							</Button>
-							{/* Android app isn't out yet */}
-							<Button size='sm' disabled>
-								<IoLogoAndroid className='size-3.5' />
-								{t('photos-phone-backup.android-coming-soon')}
+							<Button asChild size='sm' className='gap-1.5'>
+								<a href='https://link.umbrel.com/android-app' target='_blank' rel='noopener noreferrer'>
+									<IoLogoAndroid className='size-3.5' />
+									{t('photos-phone-backup.android')}
+								</a>
 							</Button>
 						</div>
 					</div>

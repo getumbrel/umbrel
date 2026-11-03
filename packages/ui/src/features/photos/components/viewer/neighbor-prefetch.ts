@@ -1,5 +1,6 @@
 import {useEffect, useRef} from 'react'
 
+import {loadAtlas} from '@/features/photos/components/map/atlas'
 import {itemThumbnailUrl} from '@/features/photos/hooks/use-items'
 import {withHttpApiToken} from '@/modules/auth/authorized-url'
 import {trpcReact} from '@/trpc/trpc'
@@ -23,11 +24,17 @@ const DWELL_MS = 300
 // own original on screen — so it never competes for the wire with what the
 // eye is on, and only after a beat of rest. A step retargets it, and a leap
 // somewhere else abandons whatever is still in flight.
-// The info panel's location map lives in a lazy chunk with a sizeable atlas
-// behind it; both are session-wide singletons, so warming is idempotent and
-// a repeat call costs nothing
-const warmLocationMap = () =>
-	import('@/features/photos/components/viewer/offline-location-map').then((m) => m.loadAtlas()).catch(() => undefined)
+// The info panel's location card names places from the atlas, and on a
+// device with a basemap draws its map from a lazy chunk; both are
+// session-wide singletons, so warming is idempotent and a repeat call costs
+// nothing
+const warmLocationMap = (utils: ReturnType<typeof trpcReact.useUtils>) =>
+	Promise.all([
+		loadAtlas(),
+		utils.photos.map.basemap.ensureData().then((basemap) => {
+			if (basemap.available) return import('@/features/photos/components/map/location-map')
+		}),
+	]).catch(() => undefined)
 
 export function useNeighborPrefetch({
 	open,
@@ -77,8 +84,9 @@ export function useNeighborPrefetch({
 				if (stale) return
 				if (!detail) continue
 				// A located neighbour with the inspector open: the step will
-				// want the map, chunk and atlas both (videos included)
-				if (infoShowing && detail.location) void warmLocationMap()
+				// want the atlas, and the map's chunk if there is a basemap
+				// (videos included)
+				if (infoShowing && detail.location) void warmLocationMap(utils)
 				if (prefetches.current.has(id) || detail.kind === 'video') continue
 				const token = await utils.user.getHttpApiToken.ensureData().catch(() => undefined)
 				if (stale) return

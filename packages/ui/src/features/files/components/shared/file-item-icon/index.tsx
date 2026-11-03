@@ -176,11 +176,13 @@ const FileItemIconContent = ({
 
 	// Network root for synthetic MiniBrowser roots
 	if (item.type === 'directory' && item.path === NETWORK_STORAGE_PATH) {
-		return <img src={networkIcon} alt='Network' className={`${className ?? ''} object-contain`} draggable={false} />
+		return (
+			<img src={networkIcon} alt={t('network')} className={`${className ?? ''} object-contain`} draggable={false} />
+		)
 	}
 
 	if (item.type === 'directory' && item.name === 'Umbrel Backup.backup') {
-		return <img src={backupsIcon} alt='Umbrel Backup' className={className} draggable={false} />
+		return <img src={backupsIcon} alt={t('files-type.umbrel-backup')} className={className} draggable={false} />
 	}
 
 	// External storage for sidebar and pathbar
@@ -190,7 +192,9 @@ const FileItemIconContent = ({
 
 	// Network root for sidebar and pathbar
 	if (item.type === 'network-root') {
-		return <img src={networkIcon} alt='Network' className={`${className ?? ''} object-contain`} draggable={false} />
+		return (
+			<img src={networkIcon} alt={t('network')} className={`${className ?? ''} object-contain`} draggable={false} />
+		)
 	}
 
 	// Network share for sidebar and pathbar
@@ -238,18 +242,21 @@ const FileItemIconContent = ({
 	}
 
 	const {extension} = splitFileName(item.name)
+	// macOS AppleDouble `._<name>` sidecars keep the original's extension but
+	// never hold media, so the backend never thumbnails them
+	const isAppleDouble = item.name.startsWith('._')
 	const fallback = DefaultThumbnail ? (
 		<DefaultThumbnail className={className} />
 	) : (
 		<UnknownFileThumbnail type={item.type || ''} className={className} />
 	)
 	// Image file
-	if (extension && IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
+	if (!isAppleDouble && extension && IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
 		return <ImageThumbnail item={item} fallback={fallback} className={className} />
 	}
 
 	// Video file
-	if (extension && VIDEO_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
+	if (!isAppleDouble && extension && VIDEO_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
 		return <VideoThumbnail item={item} fallback={fallback} className={className} />
 	}
 
@@ -447,6 +454,7 @@ const CloudAccountIcon = ({path, className}: {path: string; className?: string})
 
 // Component to render network device icon with Umbrel detection
 const NetworkDeviceIcon = ({path, className}: {path: string; className?: string}) => {
+	const {t} = useTranslation()
 	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const {deviceType, isLoading} = useNetworkDeviceType(path)
 
@@ -458,7 +466,12 @@ const NetworkDeviceIcon = ({path, className}: {path: string; className?: string}
 	// While detecting, show generic NAS icon
 	if (isLoading) {
 		return (
-			<img src={isMounted ? activeNasIcon : nasIconInactive} alt='Network' className={className} draggable={false} />
+			<img
+				src={isMounted ? activeNasIcon : nasIconInactive}
+				alt={t('network')}
+				className={className}
+				draggable={false}
+			/>
 		)
 	}
 
@@ -475,7 +488,9 @@ const NetworkDeviceIcon = ({path, className}: {path: string; className?: string}
 	}
 
 	// Default to generic NAS icon
-	return <img src={isMounted ? activeNasIcon : nasIconInactive} alt='NAS' className={className} draggable={false} />
+	return (
+		<img src={isMounted ? activeNasIcon : nasIconInactive} alt={t('nas')} className={className} draggable={false} />
+	)
 }
 
 // Helper function to extract app ID from both normal and rewind paths

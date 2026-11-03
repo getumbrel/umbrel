@@ -71,7 +71,7 @@ function MinimizedContent() {
 				<span className='block truncate text-center text-xs text-white/90'>{addedText}</span>
 			</div>
 			{status === 'uploading' && etaSeconds !== undefined && (
-				<span className='shrink-0 text-xs text-white/60'>{secondsToEta(etaSeconds)}</span>
+				<span className='shrink-0 text-xs text-white/60'>{secondsToEta(etaSeconds, {compact: true})}</span>
 			)}
 		</div>
 	)
@@ -122,7 +122,7 @@ function ExpandedContent() {
 							{formatFilesystemSize(speed)}/s
 						</span>
 						<span className='absolute top-[calc(50%+10px)] right-0 text-11 whitespace-nowrap text-white/40'>
-							{secondsToEta(etaSeconds)}
+							{secondsToEta(etaSeconds, {compact: true})}
 						</span>
 					</>
 				)}

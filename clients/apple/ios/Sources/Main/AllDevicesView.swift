@@ -102,10 +102,8 @@ private struct DeviceCard: View {
 	}
 
 	var body: some View {
-		let isSquareRender = UmbrelDeviceKind(model: device.model) == .raspberryPi
 		HStack(spacing: 16) {
-			UmbrelDeviceRender(model: device.model)
-				.frame(width: 71, height: isSquareRender ? 60 : 52)
+			UmbrelDeviceRender(model: device.model, placement: .deviceRow)
 				.shadow(color: .black.opacity(0.16), radius: 8, y: 8)
 
 			VStack(alignment: .leading, spacing: 4) {
@@ -233,7 +231,17 @@ private struct DeviceCard: View {
 				StatusDot(color: Theme.gray)
 				Text("Offline")
 			}
+			// The host tells apart Umbrels that share an owner and model. It stays on the
+			// status line and gives way to the status by truncating in the middle.
+			Group {
+				Text("\u{00B7}")
+				Text(device.host)
+					.truncationMode(.middle)
+					.layoutPriority(-1)
+			}
+			.foregroundStyle(.white.opacity(0.7))
 		}
+		.lineLimit(1)
 		.frame(minHeight: 16, alignment: .leading)
 		.font(.footnote.weight(.medium))
 		.foregroundStyle(.white)

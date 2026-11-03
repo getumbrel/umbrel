@@ -1,13 +1,43 @@
+import type {Socket} from 'node:net'
 import {setTimeout as delay} from 'node:timers/promises'
 import {default as SMB2} from '@tryjsky/v9u-smb2'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const ownerDashboardPassword = 'moneyprintergobrrr'
 const memberDashboardPassword = 'member-password'
 const ownerSambaPassword = 'owner-samba-password'
 const sambaDenialCodes = new Set(['STATUS_ACCESS_DENIED', 'STATUS_LOGON_FAILURE', 'STATUS_BAD_NETWORK_NAME'])
+
+// Samba answers an async request that doesn't complete within 0.5ms (e.g. a
+// read on a loaded guest right after boot) with an interim STATUS_PENDING
+// response, then sends the final response under the same message id. v9u-smb2
+// resolves the request with the interim response and fails it, so drop interim
+// responses before they reach its parser and let it wait for the final one.
+const SMB2_STATUS_PENDING = 0x00000103
+const SMB2_FLAGS_ASYNC_COMMAND = 0x00000002
+function dropInterimSmbResponses(socket: Socket) {
+	const [handleFrames] = socket.listeners('data') as Array<(data: Buffer) => void>
+	socket.removeListener('data', handleFrames)
+	let buffered = Buffer.alloc(0)
+	socket.on('data', (data: Buffer) => {
+		buffered = Buffer.concat([buffered, data])
+		// Each NetBIOS frame is a 4 byte header with a 24 bit length, followed by
+		// the SMB2 header with Status at offset 8 and Flags at offset 16.
+		while (buffered.length >= 4) {
+			const frameLength = 4 + buffered.readUIntBE(1, 3)
+			if (buffered.length < frameLength) return
+			const frame = buffered.subarray(0, frameLength)
+			buffered = buffered.subarray(frameLength)
+			const isInterim =
+				frame.length >= 24 &&
+				frame.readUInt32LE(12) === SMB2_STATUS_PENDING &&
+				(frame.readUInt32LE(20) & SMB2_FLAGS_ASYNC_COMMAND) !== 0
+			if (!isInterim) handleFrames(frame)
+		}
+	})
+}
 
 describe.sequential('account-scoped Samba access', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
@@ -29,14 +59,17 @@ describe.sequential('account-scoped Samba access', () => {
 		umbreld.setAuthToken(token)
 	}
 
-	const createSmbClient = (username: string, password: string, share: string) =>
-		new (SMB2 as any)({
+	const createSmbClient = (username: string, password: string, share: string) => {
+		const client = new (SMB2 as any)({
 			share: `\\\\127.0.0.1\\${share}`,
 			port: umbreld.vm.getHostPort(445),
 			username,
 			password,
 			autoCloseTimeout: 0,
 		})
+		dropInterimSmbResponses(client.socket)
+		return client
+	}
 	const disconnectSmbClient = (client: ReturnType<typeof createSmbClient>) => {
 		// v9u-smb2's disconnect is a no-op when session setup succeeds but tree
 		// connect fails. Destroy the underlying socket as well so expected denials
@@ -103,37 +136,31 @@ describe.sequential('account-scoped Samba access', () => {
 		throw lastError
 	}
 	const writeSmbFile = async (username: string, password: string, share: string, file: string, contents: string) => {
-		let lastError: unknown
-		for (let attempt = 1; attempt <= 3; attempt++) {
-			const client = createSmbClient(username, password, share)
-			try {
-				await withSmbTimeout(
-					client.writeFile(file, contents, {encoding: 'utf8', flags: 'w'}),
-					`write ${share}/${file} as ${username} (attempt ${attempt})`,
-				)
-				return
-			} catch (error) {
-				lastError = error
-				if ((error as NodeJS.ErrnoException).code !== 'STATUS_PENDING') throw error
-				// STATUS_PENDING is a valid intermediate SMB response. v9u-smb2
-				// incorrectly rejects it instead of waiting for the final response,
-				// so give Samba time to finish before checking the result through a
-				// fresh connection. This is observed under loaded x64 CI runners.
-				await delay(500)
-			} finally {
-				disconnectSmbClient(client)
-			}
-
-			try {
-				await expectSmbReadable(username, password, share, file, contents)
-				return
-			} catch (error) {
-				lastError = error
-			}
+		const client = createSmbClient(username, password, share)
+		try {
+			await withSmbTimeout(
+				client.writeFile(file, contents, {encoding: 'utf8', flags: 'w'}),
+				`write ${share}/${file} as ${username}`,
+			)
+		} finally {
+			disconnectSmbClient(client)
 		}
-		throw lastError
 	}
 
+	// umbreld answers RPCs before Files startup has applied credentials and
+	// shares and started smbd, and until smbd listens the forwarded port resets
+	// connections. smbd only starts after its config is written, so once it
+	// listens the post-boot Samba state is ready to assert on.
+	const waitForSmbd = async () =>
+		expect(
+			umbreld.vm.sshAsRoot(`
+				for attempt in $(seq 1 1200); do
+					if ss -Hltn 'sport = :445' | grep -q .; then echo listening; exit 0; fi
+					sleep 0.1
+				done
+				echo timed-out
+			`),
+		).resolves.toContain('listening')
 	const mappedSystemUsername = async (clientUsername: string) =>
 		(await umbreld.vm.sshAsRoot(`awk -F ' = ' '$2 == "${clientUsername}" { print $1 }' /etc/samba/username.map`)).trim()
 	const activeSmbProcessId = async (systemUsername: string) =>
@@ -291,6 +318,7 @@ describe.sequential('account-scoped Samba access', () => {
 		await loginAs('0', ownerDashboardPassword)
 		await umbreld.vm.powerOff()
 		await umbreld.vm.powerOn()
+		await waitForSmbd()
 		await loginAs('0', ownerDashboardPassword)
 
 		await expectSmbReadable('umbrel', ownerSambaPassword, ownerSharename, 'private.txt', 'owner data')
@@ -385,6 +413,7 @@ describe.sequential('account-scoped Samba access', () => {
 	test('deleted member access does not return after another reboot', async () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.powerOn()
+		await waitForSmbd()
 		await loginAs('0', ownerDashboardPassword)
 
 		await expectSmbReadable('umbrel', ownerSambaPassword, ownerSharename, 'private.txt', 'owner data')

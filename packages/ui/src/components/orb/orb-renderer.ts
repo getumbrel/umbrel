@@ -41,11 +41,14 @@ export function createOrbRenderer(host: HTMLElement, {dpr = 1, seed = 0}: {dpr?:
 	const canvas = document.createElement('canvas')
 	canvas.className = 'block size-full rounded-full'
 	canvas.setAttribute('aria-hidden', 'true')
+	// Premultiplied output: Safari composites a premultipliedAlpha: false canvas
+	// as if it were premultiplied, which turns the anti-aliased rim into a
+	// bright, jagged halo. Premultiplying in the shader looks the same everywhere.
 	const context = canvas.getContext('webgl', {
 		alpha: true,
 		depth: false,
 		antialias: false,
-		premultipliedAlpha: false,
+		premultipliedAlpha: true,
 		powerPreference: 'low-power',
 	})
 	if (!context) return undefined
@@ -56,7 +59,7 @@ export function createOrbRenderer(host: HTMLElement, {dpr = 1, seed = 0}: {dpr?:
 		webgl: 1,
 		alpha: true,
 		depth: false,
-		premultipliedAlpha: false,
+		premultipliedAlpha: true,
 		powerPreference: 'low-power',
 		dpr,
 	})
@@ -321,6 +324,6 @@ void main() {
   col += uMilk * uPulse * 0.38;
   col += (grain(gl_FragCoord.xy, floor(t * 14.0)) - 0.5) * 0.05;
 
-  gl_FragColor = vec4(col, edge);
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0) * edge, edge);
 }
 `

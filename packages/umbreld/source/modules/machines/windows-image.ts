@@ -8,7 +8,7 @@ import {
 	installCommandOptions,
 	MACHINE_INSTALL_CLEANUP_TIMEOUT_MS,
 	MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS,
-} from './install-command.js'
+} from './install-command.ts'
 
 export type WindowsInstaller = 'windows-11' | 'windows-server-2025' | 'windows-7' | 'windows-xp' | 'windows-98'
 export type WindowsArchitecture = 'amd64' | 'arm64'
@@ -66,6 +66,15 @@ export function windowsVirtioExtractionPaths(
 				: [`viogpudo/2k25/${driverArch}`]
 			: []
 	return [...new Set([...canonicalTargets, ...driverPaths])]
+}
+
+// virtio-win's bundle of its drivers and the SPICE guest agent that shares the
+// clipboard with the console. There's no Arm build of the agent, and Windows 7
+// has no virtio devices for it to use.
+const WINDOWS_GUEST_TOOLS = 'virtio-win-guest-tools.exe'
+
+function windowsGuestToolsSupported({installer, arch}: Pick<WindowsInstallOptions, 'installer' | 'arch'>) {
+	return arch === 'amd64' && (installer === 'windows-11' || installer === 'windows-server-2025')
 }
 
 type LegacyElToritoBoot = {
@@ -134,10 +143,15 @@ export function renderWindowsUnattend(options: WindowsInstallOptions) {
 	// Windows 7 runs its completion callback from SetupComplete.cmd instead.
 	// FirstLogonCommands proved unreliable on a clean Enterprise SP1 install,
 	// while SetupComplete is supported for Enterprise and runs as Local System.
+	// Guest tools go first so a machine reported as ready already shares its
+	// clipboard. Windows moves on to the next command if the install fails.
+	const guestToolsCommand = windowsGuestToolsSupported(options)
+		? `<SynchronousCommand wcm:action="add"><Order>1</Order><Description>Install guest tools</Description><CommandLine>C:\\Windows\\Setup\\Umbrel\\${WINDOWS_GUEST_TOOLS} /install /quiet /norestart</CommandLine></SynchronousCommand>`
+		: ''
 	const firstLogonCommands =
 		installer === 'windows-7'
 			? ''
-			: `<FirstLogonCommands><SynchronousCommand wcm:action="add"><Order>1</Order><Description>Complete Umbrel machine setup</Description><CommandLine>${completionCommand}</CommandLine></SynchronousCommand></FirstLogonCommands>`
+			: `<FirstLogonCommands>${guestToolsCommand}<SynchronousCommand wcm:action="add"><Order>${guestToolsCommand ? 2 : 1}</Order><Description>Complete Umbrel machine setup</Description><CommandLine>${completionCommand}</CommandLine></SynchronousCommand></FirstLogonCommands>`
 
 	return `<?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
@@ -695,6 +709,19 @@ export async function prepareWindowsInstallMedia(
 					await fse.copy(nodePath.join(extracted, path), nodePath.join(drivers, name))
 				}
 				mappings.push([drivers, '/$WinPEDriver$'])
+				if (windowsGuestToolsSupported(options)) {
+					await execa(
+						'bsdtar',
+						['-xf', options.virtioIso, '-C', extracted, WINDOWS_GUEST_TOOLS],
+						installCommandOptions(signal),
+					)
+					// Setup copies $OEM$/$$ into C:\Windows, so first logon finds the
+					// installer whatever drive letter the install media ends up on
+					mappings.push([
+						nodePath.join(extracted, WINDOWS_GUEST_TOOLS),
+						`/sources/$OEM$/$$/Setup/Umbrel/${WINDOWS_GUEST_TOOLS}`,
+					])
+				}
 			}
 		}
 

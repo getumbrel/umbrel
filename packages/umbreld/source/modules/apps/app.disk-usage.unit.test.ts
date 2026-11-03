@@ -1,10 +1,10 @@
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import getDirectorySize from '../utilities/get-directory-size.js'
-import App from './app.js'
+import type Umbreld from '../../index.ts'
+import getDirectorySize from '../utilities/get-directory-size.ts'
+import App from './app.ts'
 
-vi.mock('../utilities/get-directory-size.js', () => ({default: vi.fn()}))
+vi.mock('../utilities/get-directory-size.ts', () => ({default: vi.fn()}))
 
 beforeEach(() => {
 	vi.mocked(getDirectorySize).mockReset()

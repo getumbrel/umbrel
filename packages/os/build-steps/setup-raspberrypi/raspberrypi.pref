@@ -1,0 +1,7 @@
+Package: src:linux src:raspi-firmware src:firmware-nonfree src:initramfs-tools src:wpa
+Pin: origin archive.raspberrypi.com
+Pin-Priority: 990
+
+Package: *
+Pin: origin archive.raspberrypi.com
+Pin-Priority: -1

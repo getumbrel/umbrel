@@ -3,6 +3,7 @@
 // the performance impact is negligible with so few items and simple DOM updates.
 // So we've opted for simpler code over premature optimization.
 import {AnimatePresence, motion} from 'motion/react'
+import {useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {ScrollArea} from '@/components/ui/scroll-area'
@@ -66,9 +67,14 @@ export function Sidebar({className}: {className?: string}) {
 	const showCloud = !hidden.cloud
 	const showMachines = !hidden.machines && !isMember
 
+	const viewportRef = useRef<HTMLDivElement>(null)
+	const hasMoreBelow = useHasMoreBelow(viewportRef)
+
 	return (
 		<nav className={cn('flex flex-col', className)} aria-label={t('files-sidebar.navigation')}>
-			<ScrollArea className='h-full'>
+			{/* `auto` keeps the scroll bar up whenever the list overflows, so a
+			    short window shows there's more without anyone hunting for it */}
+			<ScrollArea className='h-full' type='auto' viewportRef={viewportRef}>
 				{/* Hardcoded home link */}
 				<SidebarSection>
 					<SidebarHome />
@@ -172,11 +178,50 @@ export function Sidebar({className}: {className?: string}) {
 				{/* Spacer */}
 				<div className='h-6' />
 			</ScrollArea>
-			{/* Trash */}
-			{showTrash ? <SidebarTrash /> : null}
-			{showRewind ? <SidebarRewind /> : null}
+			{/* Trash and Rewind stay put below the list. While rows continue under
+			    them, a hairline marks where the list is cut, so they never read as
+			    its next rows */}
+			{showTrash || showRewind ? (
+				<div className='relative pt-2'>
+					<div
+						aria-hidden
+						className={cn(
+							'absolute inset-x-0 top-0 h-px bg-[radial-gradient(35%_35%_at_35%_35%,rgba(255,255,255,0.35)_0%,transparent_70%)] transition-opacity duration-200',
+							hasMoreBelow ? 'opacity-100' : 'opacity-0',
+						)}
+					/>
+					{showTrash ? <SidebarTrash /> : null}
+					{showRewind ? <SidebarRewind /> : null}
+				</div>
+			) : null}
 		</nav>
 	)
+}
+
+// Whether rows continue below the visible part of the list
+function useHasMoreBelow(viewportRef: React.RefObject<HTMLDivElement | null>) {
+	const [hasMoreBelow, setHasMoreBelow] = useState(false)
+
+	useLayoutEffect(() => {
+		const viewport = viewportRef.current
+		if (!viewport) return
+
+		// A pixel of slack absorbs sub-pixel scroll positions
+		const update = () => setHasMoreBelow(viewport.scrollTop + viewport.clientHeight < viewport.scrollHeight - 1)
+
+		update()
+		// The box resizes with the window and Trash's card, its content as sections load in
+		const resizeObserver = new ResizeObserver(update)
+		resizeObserver.observe(viewport)
+		if (viewport.firstElementChild) resizeObserver.observe(viewport.firstElementChild)
+		viewport.addEventListener('scroll', update, {passive: true})
+		return () => {
+			resizeObserver.disconnect()
+			viewport.removeEventListener('scroll', update)
+		}
+	}, [viewportRef])
+
+	return hasMoreBelow
 }
 
 const SidebarSection = ({children, label = ''}: {children: React.ReactNode; label?: string}) => {

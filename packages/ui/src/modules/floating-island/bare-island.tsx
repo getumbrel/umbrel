@@ -4,6 +4,8 @@ import {RiCloseLine} from 'react-icons/ri'
 
 import {cn} from '@/lib/utils'
 
+import {useLaneStore} from './lane'
+
 // Animation configurations
 const spring = {
 	type: 'spring' as const,
@@ -12,7 +14,7 @@ const spring = {
 }
 
 // Size presets
-const islandSizes = {
+export const islandSizes = {
 	minimized: {
 		width: 150,
 		height: 40,
@@ -134,6 +136,15 @@ export const Island = ({
 
 	// Use forceExpanded to prevent minimizing, or use internal state
 	const effectiveExpanded = forceExpanded || isExpanded
+
+	// An open card on a phone takes the whole row: the lane hides Search
+	const changeExpandedCount = useLaneStore((state) => state.changeExpandedCount)
+	useEffect(() => {
+		if (!effectiveExpanded) return
+		changeExpandedCount(1)
+		return () => changeExpandedCount(-1)
+	}, [effectiveExpanded, changeExpandedCount])
+
 	const size = (sizes ?? islandSizes)[effectiveExpanded ? 'expanded' : 'minimized']
 
 	// Find and render the appropriate child component
@@ -163,6 +174,8 @@ export const Island = ({
 					borderRadius: size.borderRadius,
 				}}
 				transition={spring}
+				// The phone row keeps an open card in view (container.tsx)
+				data-island-open={effectiveExpanded || undefined}
 				onClick={handleIslandClick}
 				onPointerDown={handlePointerDown}
 			>

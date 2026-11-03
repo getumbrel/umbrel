@@ -8,11 +8,11 @@ import {$, type ExecaError} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import {escapeSpecialRegExpLiterals} from '../utilities/regexp.js'
+import {escapeSpecialRegExpLiterals} from '../utilities/regexp.ts'
 import pWaitFor from 'p-wait-for'
-import {getGpuDeviceUsage, type GpuDeviceUsage} from '../hardware/gpu-usage.js'
+import {getGpuDeviceUsage, type GpuDeviceUsage} from '../hardware/gpu-usage.ts'
 
 export async function getCpuTemperature(): Promise<{
 	warning: 'normal' | 'warm' | 'hot'
@@ -148,7 +148,7 @@ async function getDockerContainerIds(): Promise<Map<string, string>> {
 // container. Docker's systemd cgroup contains every process in a container,
 // including children, and the single `docker ps` snapshot gives us the stable
 // full container ID used by that cgroup path.
-async function getAppPids(umbreld: Umbreld): Promise<Map<number, string>> {
+export async function getAppPids(umbreld: Umbreld): Promise<Map<number, string>> {
 	const [containerIds, appContainers] = await Promise.all([
 		getDockerContainerIds(),
 		Promise.all(
@@ -608,6 +608,21 @@ export async function setupPiCpuGovernor(umbreld: Umbreld): Promise<void> {
 	}
 }
 
+// When the data partition fails to mount at boot (recovery mode), Rugix keeps its
+// state, including /data, /var/log and the root overlay, in the RAM-backed /run
+// tmpfs, which is only sized at 10% of RAM. Give it more room so recovery mode
+// doesn't run out of space. A tmpfs only uses memory for what is actually written,
+// so the larger limit doesn't reserve any RAM.
+export async function enlargeRunInRecoveryMode(umbreld: Umbreld): Promise<void> {
+	try {
+		if (!(await umbreld.hardware.raid.checkRaidMountFailure())) return
+		await $`mount -o remount,size=25% /run`
+		umbreld.logger.log(`Data mount failed at boot, enlarged /run to 25% of RAM`)
+	} catch (error) {
+		umbreld.logger.error(`Failed to enlarge /run in recovery mode`, error)
+	}
+}
+
 export async function hasWifi() {
 	const {stdout} = await $`nmcli --terse --fields TYPE device status`
 	const networkDevices = stdout.split('\n')
@@ -659,15 +674,22 @@ export async function deleteWifiConnections({inactiveOnly = false}: {inactiveOnl
 }
 
 export async function connectToWiFiNetwork({ssid, password}: {ssid: string; password?: string}) {
-	let connection
-	if (password !== undefined) {
-		connection = $`nmcli device wifi connect ${ssid} password ${password}`
-	} else {
-		connection = $`nmcli device wifi connect ${ssid}`
-	}
+	const connect = () =>
+		password !== undefined
+			? $`nmcli device wifi connect ${ssid} password ${password}`
+			: $`nmcli device wifi connect ${ssid}`
 
 	try {
-		await connection
+		try {
+			await connect()
+		} catch (error) {
+			// nmcli only looks for the network in NetworkManager's last scan results, which
+			// won't include it yet if NetworkManager has only just started or the network has
+			// only just come back. So if it's not found, rescan and try once more.
+			if ((error as ExecaError).exitCode !== 10) throw error
+			await $`nmcli device wifi list --rescan yes`.catch(() => {})
+			await connect()
+		}
 
 		// Destroy any inactive WiFi connections incase we just transitioned
 		// from a previous wireless connection. We don't wanna leave that
@@ -690,8 +712,9 @@ export async function connectToWiFiNetwork({ssid, password}: {ssid: string; pass
 			console.log(`Failed to cleanup WiFi connections: ${(error as Error).message}`)
 		}
 
-		if (connection.exitCode === 10) throw new Error('Network not found')
-		if (connection.exitCode === 1 || connection.exitCode === 4) throw new Error('Incorrect password')
+		const {exitCode} = error as ExecaError
+		if (exitCode === 10) throw new Error('Network not found')
+		if (exitCode === 1 || exitCode === 4) throw new Error('Incorrect password')
 		throw new Error('Connection failed')
 	}
 }
@@ -709,6 +732,22 @@ export async function restoreWiFi(umbreld: Umbreld): Promise<void> {
 		} catch (error) {
 			umbreld.logger.error(`Failed to restore WiFi connection, retrying in 1 minute`, error)
 			await setTimeout(1000 * 60)
+		}
+
+		// Stop retrying if the user has disconnected or switched to another network
+		// since we started, otherwise we'd connect to a network they no longer want.
+		// If the settings can't be read, keep retrying rather than throwing, since
+		// nothing awaits this and an unhandled rejection would crash umbreld.
+		const currentWifiCredentials = await umbreld.store.get('settings.wifi').catch((error) => {
+			umbreld.logger.error(`Failed to read WiFi settings, retrying anyway`, error)
+			return wifiCredentials
+		})
+		if (
+			currentWifiCredentials?.ssid !== wifiCredentials.ssid ||
+			currentWifiCredentials?.password !== wifiCredentials.password
+		) {
+			umbreld.logger.log(`WiFi settings changed, no longer restoring WiFi connection to ${wifiCredentials.ssid}`)
+			break
 		}
 	}
 }
@@ -776,28 +815,54 @@ type NetworkInterface = {
 	dns?: string[]
 }
 
+// The bridge an interface is a port of, if any. The interface's IP settings
+// live on the bridge's connection then, like when Machines puts Umbrel's
+// wired interface behind a bridge so machines can join the LAN.
+async function getBridgeOfDevice(device: string) {
+	let controller: string
+	try {
+		controller = await fse.realpath(`/sys/class/net/${device}/master`)
+	} catch {
+		return undefined
+	}
+	if (!controller || !(await fse.pathExists(`${controller}/bridge`))) return undefined
+	return controller.split('/').pop()
+}
+
+// Apply changes made to a connection. A bridge's connection is reapplied in
+// place because taking it down and up would detach running machines from it.
+async function reloadConnection(connection: string, device: string) {
+	if (await fse.pathExists(`/sys/class/net/${device}/bridge`)) {
+		await $`nmcli device reapply ${device}`
+		return
+	}
+	await $`nmcli connection down ${connection}`
+	await $`nmcli connection up ${connection}`
+}
+
 // Get all physical network interfaces with connection details
 export async function getNetworkInterfaces(umbreld?: Umbreld): Promise<NetworkInterface[]> {
 	const {stdout: deviceOutput} = await $`nmcli --terse --fields DEVICE,TYPE,STATE,CONNECTION device status`
 	const configuredStaticSettings = (await umbreld?.store.get('settings.staticIp')) ?? {}
 
+	const devices = deviceOutput
+		.split('\n')
+		.filter((line) => line.trim())
+		.map((line) => {
+			const parts = line.split(':')
+			return {
+				device: parts[0],
+				type: parts[1],
+				state: parts[2],
+				// Connection name could contain colons, so join remaining parts
+				connection: parts.slice(3).join(':'),
+			}
+		})
 	const interfaces = await Promise.all(
-		deviceOutput
-			.split('\n')
-			.filter((line) => line.trim())
-			.map((line) => {
-				const parts = line.split(':')
-				return {
-					device: parts[0],
-					type: parts[1],
-					state: parts[2],
-					// Connection name could contain colons, so join remaining parts
-					connection: parts.slice(3).join(':'),
-				}
-			})
+		devices
 			// Only include ethernet and wifi types
 			.filter(({type}) => type === 'ethernet' || type === 'wifi')
-			.map(async ({device, type, state, connection}) => {
+			.map(async ({device, type, state, connection: deviceConnection}) => {
 				// For ethernet interfaces, verify they're backed by physical hardware
 				// by checking for the presence of a device symlink in sysfs. Virtual
 				// interfaces (veth, bridges, docker) won't have this.
@@ -816,6 +881,9 @@ export async function getNetworkInterfaces(umbreld?: Umbreld): Promise<NetworkIn
 				}
 				const configuredStaticSetting = configuredStaticSettings[mac]
 				if (configuredStaticSetting) iface.configuredStaticSettings = configuredStaticSetting
+
+				const bridge = await getBridgeOfDevice(device)
+				const connection = bridge ? devices.find((entry) => entry.device === bridge)?.connection : deviceConnection
 
 				// If connected, get IP configuration from the active connection
 				if (iface.connected && connection && connection !== '--') {
@@ -864,6 +932,9 @@ async function getInterfaceByMac(mac: string): Promise<NetworkInterface> {
 
 // Find the saved connection name for a device, even if it's not currently connected
 async function getConnectionByDevice(device: string): Promise<string | false> {
+	const bridge = await getBridgeOfDevice(device)
+	if (bridge) return getConnectionByDevice(bridge)
+
 	// `nmcli device status` only shows the active connection, which is not enough
 	// when we need to clear static IP settings from a disconnected interface.
 	const {stdout: uuidsOutput} = await $`nmcli --terse --fields UUID connection show`
@@ -913,14 +984,33 @@ async function applyStaticIp({
 		await $`nmcli connection add type ethernet con-name ${connection} ifname ${device}`
 	}
 
+	// If the existing connection already has these settings there's nothing to apply. This is
+	// the case on boot since umbrel-static-ip-restore writes them before NetworkManager starts,
+	// and hard reloading the connection would needlessly drop the IP while apps are starting.
+	if (existingConnection) {
+		const {stdout} =
+			await $`nmcli --terse --fields ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns connection show ${connection}`
+		const current = Object.fromEntries(
+			stdout.split('\n').map((line) => {
+				const [key, ...valueParts] = line.split(':')
+				return [key, valueParts.join(':')]
+			}),
+		)
+		if (
+			current['ipv4.method'] === 'manual' &&
+			current['ipv4.addresses'] === `${ip}/${subnetPrefix}` &&
+			current['ipv4.gateway'] === gateway &&
+			current['ipv4.dns'] === dns.join(',')
+		) {
+			return device
+		}
+	}
+
 	// Modify the connection with static ip settings
 	await $`nmcli connection modify ${connection} ipv4.method manual ipv4.addresses ${`${ip}/${subnetPrefix}`} ipv4.gateway ${gateway} ipv4.dns ${dns.join(',')}`
 
 	// If we modified an existing connction, hard reload it
-	if (existingConnection) {
-		await $`nmcli connection down ${connection}`
-		await $`nmcli connection up ${connection}`
-	}
+	if (existingConnection) await reloadConnection(connection, (await getBridgeOfDevice(device)) ?? device)
 	return device
 }
 
@@ -978,10 +1068,7 @@ export async function clearStaticIp(umbreld: Umbreld, {mac}: {mac: string}) {
 		await $`nmcli connection modify ${connection} ipv4.method auto ipv4.addresses ${''} ipv4.gateway ${''} ipv4.dns ${''}`
 		// If the interface is disconnected we still want to clear the saved
 		// profile, but there is no live connection to bounce.
-		if (networkInterface.connected) {
-			await $`nmcli connection down ${connection}`
-			await $`nmcli connection up ${connection}`
-		}
+		if (networkInterface.connected) await reloadConnection(connection, (await getBridgeOfDevice(device)) ?? device)
 	}
 
 	// Remove from store

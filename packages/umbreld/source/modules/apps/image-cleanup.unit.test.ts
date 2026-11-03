@@ -1,7 +1,7 @@
 import Dockerode from 'dockerode'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import ImageCleanup, {removeUnusedImages} from './image-cleanup.js'
+import ImageCleanup, {removeUnusedImages} from './image-cleanup.ts'
 
 function deferred() {
 	let resolve!: () => void

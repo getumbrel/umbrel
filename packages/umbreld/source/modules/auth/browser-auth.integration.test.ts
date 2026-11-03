@@ -2,8 +2,8 @@ import {readFile} from 'node:fs/promises'
 
 import {afterEach, beforeEach, expect, test} from 'vitest'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
-import * as totp from '../utilities/totp.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
+import * as totp from '../utilities/totp.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 let dashboardToken = ''

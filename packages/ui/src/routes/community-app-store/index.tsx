@@ -8,7 +8,7 @@ import {objectKeys} from 'ts-extras'
 import {Loading} from '@/components/ui/loading'
 import {SheetHeader, SheetTitle} from '@/components/ui/sheet'
 import {communityAppPath} from '@/constants/app-store'
-import {AppGridSection, AppStoreEmptyState} from '@/features/app-store/components/app-grid'
+import {AppGridSection, AppStoreEmptyState, AppStoreNotFound} from '@/features/app-store/components/app-grid'
 import {StorePills} from '@/features/app-store/components/category-rail'
 import {StoreSearchInput} from '@/features/app-store/components/store-header'
 import {storeRevealClass, storeRevealDelay, storeRevealSoftClass} from '@/features/app-store/constants'
@@ -39,8 +39,17 @@ export default function CommunityAppStoreHome() {
 		return <Loading />
 	}
 
-	if (registryQ.isError || !registryQ.data || !appStore) {
+	if (registryQ.isError || !registryQ.data) {
 		throw new Error('No data')
+	}
+
+	if (!appStore) {
+		return (
+			<AppStoreNotFound
+				title={t('community-app-store.not-found.title')}
+				description={t('community-app-store.not-found.description')}
+			/>
+		)
 	}
 
 	const apps = appStore.apps
@@ -70,7 +79,9 @@ export default function CommunityAppStoreHome() {
 						<CommunityBadge className='self-start' />
 						{/* Search sits on its own full-width row on mobile, beside the title on desktop */}
 						<div className='flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between'>
-							<SheetTitle className='leading-none'>{`${appStoreName} app store`}</SheetTitle>
+							<SheetTitle className='leading-none'>
+								{t('community-app-store.page-title', {name: appStoreName})}
+							</SheetTitle>
 							<StoreSearchInput
 								className='max-w-none md:max-w-[200px]'
 								inputRef={search.setActiveInput}
@@ -104,7 +115,7 @@ export default function CommunityAppStoreHome() {
 						) : (
 							<AppStoreEmptyState
 								title={t('app-store.search.no-results')}
-								description={t('community-app-store.search.no-results-description')}
+								description={t('app-store.search.no-results-description')}
 							/>
 						)}
 					</div>

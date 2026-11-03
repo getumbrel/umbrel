@@ -5,6 +5,7 @@ import {CLOUD_PROVIDER_LOGOS} from '@/features/files/constants'
 import {useAnimatedNumber} from '@/features/files/hooks/use-animated-number'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {ProgressRing, ProgressRingBadge} from '@/modules/floating-island/progress-ring'
+import {formatNumberI18n} from '@/utils/number'
 
 import {CloudProgressBar} from '../../shared/cloud-progress-bar'
 import type {CloudIslandRow} from './index'
@@ -13,6 +14,9 @@ const cloudLogo = (provider: string | undefined) => CLOUD_PROVIDER_LOGOS[provide
 
 const formatSpeed = (bytesPerSecond: number) =>
 	bytesPerSecond === 0 ? '0 B/s' : `${formatFilesystemSize(bytesPerSecond)}/s`
+
+// "1,234 of 98,765", grouped for the language, as Files' other counts are
+const formatCount = (n: number, locale: string) => formatNumberI18n({n, showDecimals: false, locale})
 
 // "Downloading from Google Drive" when every transfer shares a provider, the
 // generic title when providers are mixed or still unknown
@@ -24,7 +28,7 @@ const islandTitle = (t: ReturnType<typeof useTranslation>['t'], rows: CloudIslan
 }
 
 export function ExpandedContent({rows, totalSpeed}: {rows: CloudIslandRow[]; totalSpeed: number}) {
-	const {t} = useTranslation()
+	const {t, i18n} = useTranslation()
 
 	// A single transfer gets the full ring treatment; multiple show the list
 	if (rows.length === 1) {
@@ -48,8 +52,8 @@ export function ExpandedContent({rows, totalSpeed}: {rows: CloudIslandRow[]; tot
 									<span className='shrink-0 text-white/60'>
 										{row.totalFiles
 											? t('files-cloud.island-files', {
-													transferred: row.transferredFiles,
-													total: row.totalFiles,
+													transferred: formatCount(row.transferredFiles, i18n.language),
+													total: formatCount(row.totalFiles, i18n.language),
 												})
 											: row.totalBytes
 												? t('files-cloud.island-files', {
@@ -70,7 +74,7 @@ export function ExpandedContent({rows, totalSpeed}: {rows: CloudIslandRow[]; tot
 }
 
 function SingleTransfer({row, totalSpeed}: {row: CloudIslandRow; totalSpeed: number}) {
-	const {t} = useTranslation()
+	const {t, i18n} = useTranslation()
 	const animatedPercent = useAnimatedNumber(row.percent)
 
 	return (
@@ -94,7 +98,7 @@ function SingleTransfer({row, totalSpeed}: {row: CloudIslandRow; totalSpeed: num
 				</div>
 				<div className='text-xs text-white/40'>
 					{row.totalFiles
-						? `${t('files-cloud.island-files', {transferred: row.transferredFiles, total: row.totalFiles})} · ${formatSpeed(totalSpeed)}`
+						? `${t('files-cloud.island-files', {transferred: formatCount(row.transferredFiles, i18n.language), total: formatCount(row.totalFiles, i18n.language)})} · ${formatSpeed(totalSpeed)}`
 						: row.totalBytes
 							? `${t('files-cloud.island-files', {transferred: formatFilesystemSize(row.transferredBytes), total: formatFilesystemSize(row.totalBytes)})} · ${formatSpeed(totalSpeed)}`
 							: formatSpeed(totalSpeed)}

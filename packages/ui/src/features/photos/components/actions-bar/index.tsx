@@ -2,11 +2,15 @@ import {Plus} from 'lucide-react'
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
+import {HiMenuAlt2} from 'react-icons/hi'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {FilterPills, PillButton} from '@/components/ui/edge-controls'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {CountText} from '@/features/photos/components/actions-bar/count-text'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
+import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
+import {MobileActions} from '@/features/photos/components/actions-bar/mobile-actions'
 import {PickingActions} from '@/features/photos/components/actions-bar/picking-actions'
 import {SelectionActions} from '@/features/photos/components/actions-bar/selection-actions'
 import {UploadButton} from '@/features/photos/components/actions-bar/upload-button'
@@ -23,6 +27,7 @@ import {usePhotoSources} from '@/features/photos/hooks/use-photo-sources'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
+import {touchTargetClass} from '@/utils/element-classes'
 import {formatNumberI18n} from '@/utils/number'
 import {tw} from '@/utils/tw'
 
@@ -63,13 +68,18 @@ const roll = (distance: string) => ({
 const titleRoll = roll('100%')
 const pillsRoll = roll('115%')
 
-export function ActionsBar() {
+export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
-	const {section} = usePhotosView()
+	const {section, mapArea, mapControls} = usePhotosView()
 	const searchEngaged = useSearchEngaged()
 	const isMobile = useIsMobile()
+	// A phone's grid zooms under the fingers — two columns to six in one
+	// pinch — so the − / + steps would only be a smaller, slower copy of the
+	// gesture taking the date's row. A window merely narrowed to a phone's
+	// width has a mouse, and keeps them.
+	const pinchZooms = useIsTouchDevice() && isMobile
 	const selection = usePhotosSelection()
 	const {albumId, sourceId} = useParams()
 	const reduceMotion = useReducedMotion() ?? false
@@ -82,17 +92,28 @@ export function ActionsBar() {
 		animate: 'animate',
 		exit: 'exit',
 	})
-	const {collection, isSources, inDeleted, isTimeline} = useBarRoute()
+	const {collection, isSources, isMap, inDeleted, isTimeline} = useBarRoute()
 	const createAlbum = () => navigate(linkToDialog('photos-create-album'))
 	const addSource = () => navigate(linkToDialog('photos-add-source'))
 
 	return (
 		<nav
 			// The lg pull-up puts the bar in the sheet close button's row; xl's
-			// wider sheet padding clears the × on its own, lg needs the padding
-			className='umbrel-photos-actions relative z-10 flex h-11 w-full min-w-0 items-center gap-3 lg:-mt-[86px] lg:pr-5 xl:pr-0'
+			// wider sheet padding clears the × on its own, lg needs the padding.
+			// A phone on its side has no title row, so this is the top row there
+			className='umbrel-photos-actions relative z-10 flex h-11 w-full min-w-0 items-center gap-3 lg:-mt-[86px] lg:pr-5 xl:pr-0 phone-side:pr-9'
 			aria-label={t('photos-actions.navigation')}
 		>
+			{onOpenSidebar && (
+				<button
+					type='button'
+					onClick={onOpenSidebar}
+					aria-label={t('photos-sidebar.navigation')}
+					className={cn(touchTargetClass, 'hidden shrink-0 self-center pl-1 phone-side:block')}
+				>
+					<HiMenuAlt2 className='h-5 w-5 text-white/90' />
+				</button>
+			)}
 			{/* Left side: on a collection page how many it holds; on a timeline the
 			    section it is scrolled to — this row is where the grid's headers
 			    would pin, so the title lives here instead and slides in as sections
@@ -105,7 +126,16 @@ export function ActionsBar() {
 			) : isSources ? (
 				<SourcesCount />
 			) : (
-				<div className={cn('flex min-w-0 flex-col self-end', titleShadowClass)}>
+				<div
+					className={cn(
+						'flex min-w-0 flex-col self-end',
+						titleShadowClass,
+						// On desktop the map runs beneath the sidebar's glass card, which
+						// reaches 8px past its column (the map's SIDEBAR_OVERHANG): the
+						// title stands 20px clear of it
+						isMap && 'lg:ml-7',
+					)}
+				>
 					<div className='relative h-[1lh] overflow-y-clip text-17 leading-tight'>
 						<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 							{selection.coveringFor ? (
@@ -118,7 +148,8 @@ export function ActionsBar() {
 								</motion.h2>
 							) : (
 								<motion.div key='page' className='min-w-0' {...faceProps(titleRoll)}>
-									<SectionTitle section={section} />
+									{/* On the map, the place in view stands where the date would */}
+									<SectionTitle section={isMap ? (mapArea?.place ?? t('photos-sidebar.map')) : section} />
 								</motion.div>
 							)}
 						</AnimatePresence>
@@ -129,23 +160,30 @@ export function ActionsBar() {
 
 			{/* Right side: the page's actions, or the selection's. Clipped above and
 			    below (with room for focus rings), not at the sides: menus and
-			    tooltips are portaled, and the wider face must not be cut while it rolls */}
-			<div className='relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5'>
+			    tooltips are portaled, and the wider face must not be cut while it rolls.
+			    While picking, the album's name in Add can give way, so this side
+			    narrows with the title instead of squeezing it to a sliver */}
+			<div
+				className={cn(
+					'relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5',
+					selection.pickingFor && 'min-w-0',
+				)}
+			>
 				<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 					{selection.coveringFor ? (
 						<motion.div key='covering' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
 							{isTimeline && (
 								<div className='hidden items-center gap-2 md:flex'>
-									<TimelineZoom />
+									<TimelineZoom slider={!pinchZooms} />
 								</div>
 							)}
 							<PillButton onClick={() => selection.done()}>{t('cancel')}</PillButton>
 						</motion.div>
 					) : selection.pickingFor ? (
-						<motion.div key='picking' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
+						<motion.div key='picking' className='flex min-w-0 items-center gap-2' {...faceProps(pillsRoll)}>
 							{isTimeline && (
 								<div className='hidden items-center gap-2 md:flex'>
-									<TimelineZoom />
+									<TimelineZoom slider={!pinchZooms} />
 								</div>
 							)}
 							<PickingActions albumId={selection.pickingFor} />
@@ -156,15 +194,23 @@ export function ActionsBar() {
 						</motion.div>
 					) : (
 						<motion.div key='page' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
-							{/* Phones: the page's controls live in the title row, so the
-							    date's row carries only the zoom steps, right over the grid
-							    they size (the slider folds to − / + below xl) */}
-							{isTimeline && (
-								<div className='flex items-center md:hidden'>
-									<ZoomSlider />
-								</div>
-							)}
-							<div className='hidden items-center gap-2 md:flex'>
+							{/* Phones and tablets: the page's controls live in the title row,
+							    so the date's row carries only what sizes the grid beneath it —
+							    the grouping where there's room, and the zoom steps for a mouse
+							    (the slider folds to − / + below xl): on a touch screen the
+							    date has the row. A phone on its side has no title row, so the
+							    controls come here */}
+							<div className='flex items-center gap-2 lg:hidden'>
+								{isTimeline && (
+									<div className='hidden md:flex'>
+										<GroupingPills />
+									</div>
+								)}
+								{isTimeline && !pinchZooms && <ZoomSlider />}
+								{/* While a search is on, the title row is back with its field */}
+								{!searchEngaged && <MobileActions className='hidden phone-side:flex' />}
+							</div>
+							<div className='hidden items-center gap-2 lg:flex'>
 								{/* Most of the page's controls step aside while the search has
 								    the stage; the zoom stays — narrowing the grid and resizing
 								    its tiles go together — and everything returns when the
@@ -185,7 +231,7 @@ export function ActionsBar() {
 								</CollapseAside>
 								{isTimeline && (
 									<>
-										<ZoomSlider />
+										{!pinchZooms && <ZoomSlider />}
 										<CollapseAside hidden={searchEngaged}>
 											{albumId && (
 												<PillButton icon={Plus} onClick={() => selection.pickFor(albumId)}>
@@ -196,6 +242,8 @@ export function ActionsBar() {
 										</CollapseAside>
 									</>
 								)}
+								{/* The map's zoom, and its way back to everything and to the list */}
+								{isMap && mapControls && <MapControls controls={mapControls} />}
 								{/* Phones search from the title row (MobileSearch); mounting this
 								    too would portal a second suggestion panel over it */}
 								{!isMobile && <SearchPill />}
@@ -252,12 +300,12 @@ function GroupingPills() {
 
 // The grouping and the thumbnail size together (the picking face keeps them
 // side by side; the page face lays them out itself so the slider can stay up
-// while the search is open)
-function TimelineZoom() {
+// while the search is open) — the size only where it isn't a pinch
+function TimelineZoom({slider}: {slider: boolean}) {
 	return (
 		<>
 			<GroupingPills />
-			<ZoomSlider />
+			{slider && <ZoomSlider />}
 		</>
 	)
 }
@@ -291,13 +339,13 @@ function SelectionCount({count}: {count: number}) {
 	const {t, i18n} = useTranslation()
 	if (count === 0)
 		return (
-			<span key='none' className={cn('block', riseClass)}>
+			<span key='none' className={cn('block truncate', riseClass)}>
 				{t('photos-selection.none')}
 			</span>
 		)
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
 	return (
-		<span key='count' className={cn('block', riseClass)}>
+		<span key='count' className={cn('block truncate', riseClass)}>
 			<CountText text={t('photos-selection.count', {count, formattedCount})} number={formattedCount} />
 		</span>
 	)
@@ -311,9 +359,8 @@ function CollectionCount({kind}: {kind: CollectionSection}) {
 	const count = albums.data?.length
 	if (count === undefined) return null
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
-	const label =
-		count === 0 ? t('photos-actions.album-count-none') : t('photos-actions.album-count', {count, formattedCount})
-	return <h2 className={countClass}>{label}</h2>
+	// "0 albums" like "0 sources": the empty screen below says there are none yet
+	return <h2 className={countClass}>{t('photos-actions.album-count', {count, formattedCount})}</h2>
 }
 
 // "5 sources"

@@ -19,16 +19,10 @@ function getErrorMessage(error: unknown): string {
 // with stale/failed data and throws. We detect these to show a "Connection lost"
 // message instead of a scary "Something went wrong" nessage.
 // Covers Chrome ("Failed to fetch"), Firefox ("NetworkError"), Safari ("Load failed"),
-// and Node-style errors ("ECONNREFUSED").
-const NETWORK_ERROR_PATTERNS = [
-	'Failed to fetch',
-	'NetworkError',
-	'Load failed',
-	'net::ERR_',
-	'fetch',
-	'network',
-	'ECONNREFUSED',
-]
+// and Node-style errors ("ECONNREFUSED"). Only messages containing these count: a bare "fetch" or
+// "network" would also match real bugs (reading 'refetch', a network share error) and hide
+// them behind a connection screen without the logs.
+const NETWORK_ERROR_PATTERNS = ['Failed to fetch', 'NetworkError', 'Load failed', 'net::ERR_', 'ECONNREFUSED']
 
 function isNetworkError(error: unknown): boolean {
 	const message = getErrorMessage(error).toLowerCase()

@@ -5,8 +5,8 @@ import {tmpdir} from 'node:os'
 import {execa} from 'execa'
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import Watcher from './watcher.js'
+import type Umbreld from '../../index.ts'
+import Watcher from './watcher.ts'
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`
 
@@ -18,7 +18,7 @@ test.runIf(process.platform === 'linux')('recovers events from a poisoned Watchm
 	const pidFile = nodePath.join(directory, 'pid')
 	await mkdir(binDirectory)
 	const wrapper = nodePath.join(binDirectory, 'watchman')
-	// Keep every Watchman command, including Parcel discovery and recovery,
+	// Keep every Watchman command, including socket discovery and recovery,
 	// on a private daemon. Never poison or stop the host's Watchman instance.
 	await writeFile(
 		wrapper,
@@ -50,7 +50,7 @@ test.runIf(process.platform === 'linux')('recovers events from a poisoned Watchm
 	)
 
 	// Advance only the five-minute scheduling interval. Sentinel timeouts,
-	// filesystem I/O, Parcel callbacks and daemon shutdown all remain real.
+	// filesystem I/O, Watchman callbacks and daemon shutdown all remain real.
 	vi.useFakeTimers({toFake: ['setInterval', 'clearInterval']})
 	try {
 		await Promise.all(['/Home', '/Trash', '/unwatched'].map((path) => mkdir(systemPath(path))))

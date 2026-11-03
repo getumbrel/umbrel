@@ -3,7 +3,7 @@ import got from 'got'
 import pWaitFor from 'p-wait-for'
 import {setTimeout as delay} from 'node:timers/promises'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 function incrementIpv4(ip: string) {
 	const parts = ip.split('.').map(Number)

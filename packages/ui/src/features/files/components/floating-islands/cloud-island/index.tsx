@@ -54,12 +54,10 @@ export function CloudIsland() {
 	const weighted = known.length > 0 && known.every((row) => row.totalBytes)
 	const totalPercent =
 		known.length > 0
-			? Math.round(
-					weighted
-						? known.reduce((sum, row) => sum + (row.percent ?? 0) * (row.totalBytes ?? 0), 0) /
-								known.reduce((sum, row) => sum + (row.totalBytes ?? 0), 0)
-						: known.reduce((sum, row) => sum + (row.percent ?? 0), 0) / known.length,
-				)
+			? weighted
+				? known.reduce((sum, row) => sum + (row.percent ?? 0) * (row.totalBytes ?? 0), 0) /
+					known.reduce((sum, row) => sum + (row.totalBytes ?? 0), 0)
+				: known.reduce((sum, row) => sum + (row.percent ?? 0), 0) / known.length
 			: undefined
 	const totalSpeed = rows.reduce((sum, row) => sum + row.bytesPerSecond, 0)
 

@@ -3,7 +3,7 @@ import {filter} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
 import {pollStates} from '@/hooks/use-app-install'
-import {trpcReact, UserApp} from '@/trpc/trpc'
+import {RouterOutput, trpcReact, UserApp} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
 export type AppT = {
@@ -152,6 +152,25 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 			},
 			onError(err) {
 				console.error('eventBus.listen(apps:state:change) subscription error', err)
+			},
+		},
+	)
+
+	// Push install/update progress straight into the per-app state cache so
+	// progress bars move as soon as umbreld reports it. The transition poll
+	// still runs alongside as a fallback in case an event is missed, but an
+	// in-flight poll is older than the event so it mustn't land on top of it.
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'apps:progress'},
+		{
+			enabled: userQ.data?.role === 'owner',
+			onData(data) {
+				const {appId, ...status} = data as {appId: string} & RouterOutput['apps']['state']
+				utils.apps.state.cancel({appId})
+				utils.apps.state.setData({appId}, status)
+			},
+			onError(err) {
+				console.error('eventBus.listen(apps:progress) subscription error', err)
 			},
 		},
 	)

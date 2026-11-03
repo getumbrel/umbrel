@@ -14,12 +14,6 @@ public struct SavedAccountProfile: Codable, Equatable, Sendable {
 	}
 }
 
-public enum BrowserConnectionPreference: String, Codable, Equatable, Sendable {
-	case automatic
-	case localNetwork
-	case tailscale
-}
-
 // Persisted shape of a saved device. Native grants live in the Keychain, never here.
 public struct SavedDevice: Codable, Equatable, Sendable {
 	public var id: String
@@ -36,9 +30,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 	// Non-secret picker preference. It changes only after a successful login, so
 	// browsing the account dock never changes who is selected next time.
 	public var lastAccountId: String?
-	// Browser preferences are presentation-only. The connection controls which
-	// kind of address the app chooses when opening the Umbrel in a browser.
-	public var browserConnection: BrowserConnectionPreference?
+	// Browser preferences are presentation-only.
 	public var dashboardUsesHTTPS: Bool?
 	public var suppressHTTPSRequiredAppWarning: Bool?
 
@@ -52,7 +44,6 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		wallpaperId: String? = nil,
 		accountProfiles: [String: SavedAccountProfile]? = nil,
 		lastAccountId: String? = nil,
-		browserConnection: BrowserConnectionPreference? = nil,
 		dashboardUsesHTTPS: Bool? = nil,
 		suppressHTTPSRequiredAppWarning: Bool? = nil
 	) {
@@ -65,7 +56,6 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		self.wallpaperId = wallpaperId
 		self.accountProfiles = accountProfiles
 		self.lastAccountId = lastAccountId
-		self.browserConnection = browserConnection
 		self.dashboardUsesHTTPS = dashboardUsesHTTPS
 		self.suppressHTTPSRequiredAppWarning = suppressHTTPSRequiredAppWarning
 	}

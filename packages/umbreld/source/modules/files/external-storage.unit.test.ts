@@ -1,10 +1,11 @@
 import {describe, expect, test} from 'vitest'
 
 import {
+	isAutoMountableFilesystem,
 	isEligibleExternalStorageDevice,
 	supportsAppDataRootFilesystem,
 	syntheticOwnershipMountOptions,
-} from './external-storage.js'
+} from './external-storage.ts'
 
 describe('isEligibleExternalStorageDevice', () => {
 	test('excludes USB devices that report zero capacity', () => {
@@ -15,6 +16,32 @@ describe('isEligibleExternalStorageDevice', () => {
 		expect(isEligibleExternalStorageDevice({id: 'sdb', transport: 'usb', size: 1_000_204_886_016}, new Set())).toBe(
 			true,
 		)
+	})
+})
+
+describe('isAutoMountableFilesystem', () => {
+	test.each(['ext2', 'ext3', 'ext4', 'btrfs', 'xfs', 'vfat', 'exfat', 'ntfs', 'EXFAT'])(
+		'auto-mounts %s',
+		(filesystem) => {
+			expect(isAutoMountableFilesystem(filesystem)).toBe(true)
+		},
+	)
+
+	test.each([
+		'hfsplus',
+		'hfs',
+		'minix',
+		'nilfs2',
+		'ufs',
+		'jfs',
+		'f2fs',
+		'iso9660',
+		'udf',
+		'crypto_LUKS',
+		'unknown',
+		'',
+	])('does not auto-mount %s', (filesystem) => {
+		expect(isAutoMountableFilesystem(filesystem)).toBe(false)
 	})
 })
 

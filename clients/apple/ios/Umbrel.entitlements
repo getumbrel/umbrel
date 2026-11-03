@@ -8,5 +8,10 @@
 	<array>
 		<string>$(APP_GROUP_IDENTIFIER)</string>
 	</array>
+	<!-- Lets UIDevice.name return the user's own iPhone name for the photo backup
+	     source. Apple granted it for com.umbrel.app only, so Debug builds sign with
+	     UmbrelDebug.entitlements, which leaves it out -->
+	<key>com.apple.developer.device-information.user-assigned-device-name</key>
+	<true/>
 </dict>
 </plist>

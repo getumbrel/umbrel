@@ -68,9 +68,6 @@ export function RenameAlbumDialog() {
 						maxLength={100}
 					/>
 					<DialogFooter>
-						<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
-							{t('cancel')}
-						</Button>
 						<Button
 							type='submit'
 							variant='primary'
@@ -79,6 +76,9 @@ export function RenameAlbumDialog() {
 						>
 							{busy && <TbLoader className='size-4 animate-spin' />}
 							{t('photos-album.rename-save')}
+						</Button>
+						<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
+							{t('cancel')}
 						</Button>
 					</DialogFooter>
 				</form>

@@ -5,13 +5,13 @@ import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {PinInput} from '@/components/ui/pin-input'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {SubTitle, Title} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'
 import {AccountDock} from '@/modules/auth/account-dock'
 import {OWNER_USER_ID} from '@/modules/auth/constants'
 import {LoginForm} from '@/modules/auth/login-form'
+import {TwoFactorForm} from '@/modules/auth/two-factor-form'
 import {useAccountLanguage} from '@/modules/auth/use-account-language'
 import {useAccountPicker, type Account} from '@/modules/auth/use-account-picker'
 import {
@@ -180,6 +180,7 @@ export default function LoginWithUmbrel() {
 	const handleSubmit2fa = async (totpToken: string): Promise<boolean> => {
 		const attempt = beginLoginAttempt()
 		if (!attempt) return false
+		setError(undefined)
 		try {
 			const data = await login({userId: attempt.userId, password, totpToken}, () => isCurrentLoginAttempt(attempt))
 			if (!isCurrentLoginAttempt(attempt)) {
@@ -191,14 +192,23 @@ export default function LoginWithUmbrel() {
 			if ('url' in data) {
 				return true
 			}
+			if ('error' in data && data.error) setError(data.error.message)
 			finishLoginAttempt(attempt)
 			return false
 		} catch (error) {
 			const isCurrent = isCurrentLoginAttempt(attempt)
 			finishLoginAttempt(attempt)
 			if (!isCurrent) return false
+			setError(error instanceof Error ? error.message : String(error))
 			throw error
 		}
+	}
+
+	// Back from the code step to the password, where another account can be chosen too
+	const handleBackFrom2fa = () => {
+		if (activeLoginAttemptRef.current || isPending) return
+		resetEntry()
+		setStep('password')
 	}
 
 	const captionAccount = activeAccount
@@ -225,13 +235,19 @@ export default function LoginWithUmbrel() {
 								<Title>{t('login-2fa.title')}</Title>
 								<SubTitle>{t('login-2fa.subtitle')}</SubTitle>
 							</div>
-							<PinInput autoFocus length={6} onCodeCheck={handleSubmit2fa} />
+							<TwoFactorForm
+								onCodeCheck={handleSubmit2fa}
+								error={error}
+								isPending={loginIsPending}
+								onBack={handleBackFrom2fa}
+							/>
 						</div>
 					) : (
 						<div
 							className={cn(
 								'flex w-full flex-col items-center justify-center transition-transform duration-500',
-								!chosen && '-translate-y-10',
+								// Short screens scroll instead: lifted, the top would be out of reach
+								!chosen && '-translate-y-10 low:translate-y-0',
 							)}
 						>
 							{/* umbrelOS + app icons fanned like a card stack (each rotated
@@ -243,7 +259,13 @@ export default function LoginWithUmbrel() {
 								{(!chosen || !hasMultipleAccounts) && (
 									<motion.div
 										key='app-header'
-										className='mb-10 flex flex-col items-center gap-5 overflow-visible'
+										// The account dock's lens rises 48px above the dock's own box, so
+										// the title gets the lock screen's clearance below its logo (just
+										// clear of the lens on short screens)
+										className={cn(
+											'flex flex-col items-center gap-5 overflow-visible',
+											hasMultipleAccounts ? 'mb-24 low:mb-14' : 'mb-10',
+										)}
 										exit={{opacity: 0, y: -28, height: 0, marginBottom: 0}}
 										transition={{duration: 0.2}}
 									>
@@ -388,7 +410,10 @@ type HandoffResponse = {
 function submitHandoff(data: HandoffResponse) {
 	const form = document.createElement('form')
 	form.method = 'POST'
-	form.action = data.url
+	// The app's own fragment (e.g. a key it was opened with) came through the
+	// proxy's redirect to this page. Carrying it on the action lets the browser
+	// keep it through the handoff's redirect too, still never sent to a server.
+	form.action = data.url + document.location.hash
 	form.style.display = 'none'
 	for (const [key, value] of Object.entries(data.params)) {
 		const input = document.createElement('input')

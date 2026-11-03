@@ -1,6 +1,6 @@
 import {expect, beforeAll, afterAll, test, describe} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // The protected-app test is covered in files.move.integration.test.ts (it
 // installs a fixture app from the local test app store). Everything else runs

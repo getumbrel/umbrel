@@ -6,11 +6,11 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {normalizePath} from '../files/files.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import FileStore from '../utilities/file-store.js'
-import Mcp, {type McpStoreSettings} from './mcp.js'
+import type Umbreld from '../../index.ts'
+import {normalizePath} from '../files/files.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import FileStore from '../utilities/file-store.ts'
+import Mcp, {type McpStoreSettings} from './mcp.ts'
 
 type TestStore = {
 	mcp?: McpStoreSettings
@@ -42,7 +42,7 @@ async function createMcp() {
 	const store = new FileStore<TestStore>({filePath: nodePath.join(root, 'umbrel.yaml')})
 	const appIds = ['plex', 'plex-2']
 	const machineIds = ['debian', 'windows']
-	const fileListeners: Array<(event: {type: 'delete'; path: string}) => Promise<void>> = []
+	const fileListeners: Array<(events: {type: 'delete'; path: string}[]) => Promise<void>> = []
 	const virtualToSystemPath = vi.fn(async (virtualPath: string) => {
 		const path = normalizePath(virtualPath)
 		const [base, ...tail] = path.split('/').filter(Boolean)
@@ -67,7 +67,7 @@ async function createMcp() {
 			getApp: vi.fn((appId: string) => ({id: appId})),
 		},
 		eventBus: {
-			on: vi.fn((_eventName: string, listener: (event: {type: 'delete'; path: string}) => Promise<void>) => {
+			onFileChanges: vi.fn((listener: (events: {type: 'delete'; path: string}[]) => Promise<void>) => {
 				fileListeners.push(listener)
 				return () => {
 					const index = fileListeners.indexOf(listener)
@@ -576,20 +576,21 @@ test('only Home deletion events remove file grants', async () => {
 	})
 	const getWriteLock = vi.spyOn(store, 'getWriteLock')
 
-	await fileListeners[0]({type: 'delete', path: nodePath.join(roots.Apps, 'plex', 'cache')})
+	await fileListeners[0]([{type: 'delete', path: nodePath.join(roots.Apps, 'plex', 'cache')}])
 	expect(getWriteLock).not.toHaveBeenCalled()
 
 	const get = vi.spyOn(store, 'get')
 	get.mockClear()
-	await Promise.all(
-		Array.from({length: 100}, (_, index) =>
-			fileListeners[0]({type: 'delete', path: nodePath.join(roots.Home, 'Unrelated', String(index))}),
-		),
+	await fileListeners[0](
+		Array.from({length: 100}, (_, index) => ({
+			type: 'delete' as const,
+			path: nodePath.join(roots.Home, 'Unrelated', String(index)),
+		})),
 	)
 	expect(get).toHaveBeenCalledOnce()
 	expect(getWriteLock).not.toHaveBeenCalled()
 
-	await fileListeners[0]({type: 'delete', path: nodePath.join(roots.Home, 'Granted')})
+	await fileListeners[0]([{type: 'delete', path: nodePath.join(roots.Home, 'Granted')}])
 	expect(getWriteLock).toHaveBeenCalledTimes(1)
 
 	await expect(store.get('mcp')).resolves.toMatchObject({

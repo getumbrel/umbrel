@@ -13,19 +13,31 @@ import {RootErrorFallback} from '@/components/ui/root-error-fallback'
 import {Toaster} from '@/components/ui/toast'
 import {TooltipProvider} from '@/components/ui/tooltip'
 import {monkeyPatchConsoleLog} from '@/utils/logs'
+import {allowsNativeContextMenu} from '@/utils/native-context-menu'
 
 monkeyPatchConsoleLog()
 
-// Keep the browser context menu available in explicitly opted-in text surfaces.
+// Disable the browser context menu for a native OS feel, except on text fields and opted-in surfaces
 document.addEventListener(
 	'contextmenu',
 	(event) => {
-		if (event.target instanceof Element && event.target.closest('[data-native-context-menu]')) return
+		if (allowsNativeContextMenu(event.target)) return
 		event.preventDefault()
 		return false
 	},
 	{passive: false},
 )
+
+// Refuse a file dragged in from the desktop wherever nothing takes it, or the browser opens the
+// file in place of umbrelOS. Upload areas handle their drag and drop before it gets here.
+window.addEventListener('dragover', (event) => {
+	if (event.defaultPrevented || !event.dataTransfer?.types.includes('Files')) return
+	event.preventDefault()
+	event.dataTransfer.dropEffect = 'none'
+})
+window.addEventListener('drop', (event) => {
+	if (event.dataTransfer?.types.includes('Files')) event.preventDefault()
+})
 
 export function init(element: React.ReactNode) {
 	i18next.on('initialized', () => {

@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# The root filesystem overlay is discarded on every boot, so NetworkManager forgets
+# static IP settings and brings interfaces up on DHCP until umbreld restores them.
+# Anything that starts in that window, like apps Docker restarts after a power cut,
+# sees the interface without its static IP (or with no IP at all if the device is
+# the network's DHCP server). Write the saved static IP settings as NetworkManager
+# connections before it starts so interfaces come up with them straight away.
+#
+# The same goes for the bridge Machines puts the wired interface behind so
+# machines can join the LAN. Without it here umbreld would only rebuild it after
+# apps had started, moving Umbrel's address out from under them. umbreld creates
+# the same two connections in source/modules/machines/lan-bridge.ts.
+
+UMBREL_YAML=/home/umbrel/umbrel/umbrel.yaml
+CONNECTIONS_DIR=/etc/NetworkManager/system-connections
+LAN_BRIDGE=umbrel-lan
+
+# NetworkManager ignores connection files that other users can read
+umask 077
+
+# Find the physical ethernet interface with a MAC address
+ethernet_device() {
+    local mac="$1"
+    for interface in /sys/class/net/*; do
+        [[ -e "$interface/device" && ! -e "$interface/wireless" ]] || continue
+        if [[ "$(cat "$interface/address")" == "$mac" ]]; then
+            basename "$interface"
+            return
+        fi
+    done
+}
+
+lan_bridge_mac=$(yq eval '.settings.lanBridge.mac // ""' "$UMBREL_YAML" 2>/dev/null)
+lan_bridge_device=""
+if [[ -n "$lan_bridge_mac" ]]; then
+    lan_bridge_device=$(ethernet_device "$lan_bridge_mac")
+    [[ -n "$lan_bridge_device" ]] || echo "No ethernet interface found with MAC address $lan_bridge_mac for the machine LAN bridge, skipping"
+fi
+
+# Saved static settings for the bridged interface go on the bridge instead
+bridge_ipv4="method=auto"
+
+while read -r mac ip subnet_prefix gateway dns; do
+    # yq prints an empty line when there are no saved static IPs
+    [[ -n "$mac" ]] || continue
+
+    device=$(ethernet_device "$mac")
+    if [[ -z "$device" ]]; then
+        echo "No ethernet interface found with MAC address $mac, skipping"
+        continue
+    fi
+
+    echo "Restoring static IP $ip/$subnet_prefix for $mac ($device)"
+    ipv4="method=manual
+address1=$ip/$subnet_prefix
+gateway=$gateway
+dns=$dns"
+    if [[ "$device" == "$lan_bridge_device" ]]; then
+        bridge_ipv4="$ipv4"
+        continue
+    fi
+
+    # NetworkManager reads a connection file without addr-gen-mode as a legacy profile
+    # and derives IPv6 addresses from the MAC address, so set the default it uses for
+    # the connections it creates itself.
+    cat > "$CONNECTIONS_DIR/static-ip-$device.nmconnection" << EOF
+[connection]
+id=static-ip-$device
+uuid=$(cat /proc/sys/kernel/random/uuid)
+type=ethernet
+interface-name=$device
+
+[ipv4]
+$ipv4
+
+[ipv6]
+addr-gen-mode=default
+method=auto
+EOF
+done < <(yq eval '.settings.staticIp // {} | to_entries | .[] | [.key, .value.ip, .value.subnetPrefix, .value.gateway, (.value.dns | join(";"))] | join(" ")' "$UMBREL_YAML" 2>/dev/null)
+
+if [[ -n "$lan_bridge_device" ]]; then
+    echo "Restoring the machine LAN bridge on $lan_bridge_device"
+    # Spanning tree off and no forward delay so ports pass traffic immediately,
+    # and the interface's MAC so the router hands Umbrel the same lease
+    cat > "$CONNECTIONS_DIR/$LAN_BRIDGE.nmconnection" << EOF
+[connection]
+id=$LAN_BRIDGE
+uuid=$(cat /proc/sys/kernel/random/uuid)
+type=bridge
+interface-name=$LAN_BRIDGE
+autoconnect-ports=1
+
+[ethernet]
+cloned-mac-address=$lan_bridge_mac
+
+[bridge]
+stp=false
+forward-delay=0
+
+[ipv4]
+$bridge_ipv4
+
+[ipv6]
+addr-gen-mode=default
+method=auto
+EOF
+    cat > "$CONNECTIONS_DIR/$LAN_BRIDGE-port.nmconnection" << EOF
+[connection]
+id=$LAN_BRIDGE-port
+uuid=$(cat /proc/sys/kernel/random/uuid)
+type=ethernet
+interface-name=$lan_bridge_device
+controller=$LAN_BRIDGE
+port-type=bridge
+EOF
+fi

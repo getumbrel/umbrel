@@ -20,7 +20,7 @@ import {
 	type CloudSync,
 } from '@/features/files/hooks/use-cloud'
 import {cloudAccountBrand, cloudBrandName} from '@/features/files/utils/cloud'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsMobile, useIsPhone} from '@/hooks/use-is-mobile'
 import {useConfirmation} from '@/providers/confirmation'
 import {languageCodeToDateLocale} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -78,6 +78,7 @@ export function CloudDetailsDialog({
 }) {
 	const {t, i18n} = useTranslation()
 	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const {data: accounts} = useCloudAccounts({enabled: open})
 	const {pauseSync, resumeSync, removeSync, runNow, isPausing, isResuming, isRunningNow} = useCloudActions()
 	const confirm = useConfirmation()
@@ -199,7 +200,7 @@ export function CloudDetailsDialog({
 					>
 						{isPaused ? t('files-cloud.resume') : t('files-cloud.pause')}
 					</IconButton>
-					{/* Phones have no refresh in the banner, so the drawer carries it */}
+					{/* Phones have no refresh in the banner, so this carries it */}
 					{isMobile && (
 						<IconButton
 							icon={RefreshCw}
@@ -216,13 +217,13 @@ export function CloudDetailsDialog({
 					)}
 				</div>
 				<IconButton icon={Trash2} className='text-destructive2-lightest' onClick={handleRemove}>
-					{isMobile ? t('files-cloud.remove') : t('files-cloud.remove-download')}
+					{t('files-cloud.remove-download')}
 				</IconButton>
 			</div>
 		</div>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer open={open} onOpenChange={onOpenChange}>
 				<DrawerContent>
@@ -239,7 +240,7 @@ export function CloudDetailsDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className='flex flex-col'>
 				<DialogHeader>
-					<DialogTitle className='text-center'>{name}</DialogTitle>
+					<DialogTitle className='px-6 text-center'>{name}</DialogTitle>
 				</DialogHeader>
 				{body}
 				<DialogFooter />

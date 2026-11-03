@@ -3,7 +3,8 @@ import {Link} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
-import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {DrawerFooter} from '@/components/ui/drawer'
+import {useDrawerOrDialog} from '@/components/ui/drawer-or-dialog'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
@@ -11,21 +12,22 @@ import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {useLinkToDialog} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
-export function SoftwareUpdateDrawer() {
+export function SoftwareUpdateDrawerOrDialog() {
 	const {t} = useTranslation()
 	const title = t('software-update.title')
 	const dialogProps = useSettingsDialogProps()
+	const {Root, Content, Header, Title, Description} = useDrawerOrDialog()
 
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
 	const linkToDialog = useLinkToDialog()
 
 	return (
-		<Drawer {...dialogProps}>
-			<DrawerContent>
-				<DrawerHeader>
-					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{t('check-for-latest-version')}</DrawerDescription>
-				</DrawerHeader>
+		<Root {...dialogProps}>
+			<Content withScroll>
+				<Header>
+					<Title>{title}</Title>
+					<Description>{t('check-for-latest-version')}</Description>
+				</Header>
 				<div className='flex flex-col items-center py-8'>
 					<FadeInImg src='/assets/umbrel-ios.png' className='h-[96px] w-[96px]' />
 					<div className='mb-4' />
@@ -71,8 +73,8 @@ export function SoftwareUpdateDrawer() {
 						</>
 					)}
 				</DrawerFooter>
-			</DrawerContent>
-		</Drawer>
+			</Content>
+		</Root>
 	)
 }
 

@@ -3,11 +3,11 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {expect, test} from 'vitest'
 
-import {migrateFileIndex} from '../files/file-index/migrations.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {photoLibraryCte} from './library-sql.js'
-import {migratePhotos} from './migrations.js'
-import PhotosRepository from './repository.js'
+import {migrateFileIndex} from '../files/file-index/migrations.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {photoLibraryCte} from './library-sql.ts'
+import {migratePhotos} from './migrations.ts'
+import PhotosRepository from './repository.ts'
 
 const hash = (value: number) => Buffer.from(value.toString(16).padStart(64, '0'), 'hex')
 const id = (value: number) => hash(value).toString('hex')
@@ -292,6 +292,98 @@ test('startup refreshes 129 pending hashes without replacing unrelated library r
 		f.repository.syncAll(f.database)
 		expect(f.repository.getItem(f.database, 'owner', id(1))?.takenAt).toBe(2000)
 		expect(f.repository.getItem(f.database, 'owner', id(260))?.takenAt).toBe(1000)
+		f.assertProjection()
+	} finally {
+		await f.close()
+	}
+})
+
+test('media without an embedded date uses its source date, else the earliest filesystem date', async () => {
+	const f = await fixture()
+	try {
+		f.add(1, 'dateless.jpg')
+		f.add(2, 'dated.jpg')
+		f.database.exec('UPDATE media_metadata SET taken_at=NULL WHERE content_id=1')
+		const dates = () => {
+			f.assertProjection()
+			const {takenAt, createdAt} = f.repository.getItem(f.database, 'owner', id(1))!
+			return {takenAt, createdAt}
+		}
+		const setEntry = (modifiedMs: number, birthtimeMs: number | null) =>
+			f.database
+				.prepare('UPDATE entries SET modified_ms=?,birthtime_ms=? WHERE content_id=1')
+				.run(modifiedMs, birthtimeMs)
+		// Linux records the arrival on this disk as the birth time, so a
+		// preserved modification time is the older and better date.
+		setEntry(5000, 9000)
+		expect(dates()).toEqual({takenAt: 5000, createdAt: 5000})
+		setEntry(5000, 3000)
+		expect(dates()).toEqual({takenAt: 3000, createdAt: 3000})
+		// An unknown birth time is not a date and must not make the result NULL.
+		setEntry(5000, 0)
+		expect(dates()).toEqual({takenAt: 5000, createdAt: 5000})
+		setEntry(5000, null)
+		expect(dates()).toEqual({takenAt: 5000, createdAt: 5000})
+		// Neither is an unset modification time, unless nothing else is known.
+		setEntry(0, 9000)
+		expect(dates()).toEqual({takenAt: 9000, createdAt: 9000})
+		setEntry(0, null)
+		expect(dates()).toEqual({takenAt: 0, createdAt: 0})
+		// A change to the modification time alone refreshes the stored date.
+		setEntry(4000, 9000)
+		expect(dates()).toEqual({takenAt: 4000, createdAt: 4000})
+		const setSourceDate = (sourceCreatedAt: number) =>
+			f.database
+				.prepare(
+					"UPDATE umbrel.photos_content_state SET source_created_at=? WHERE account_id='owner' AND content_hash=?",
+				)
+				.run(sourceCreatedAt, hash(1))
+		setSourceDate(2000)
+		expect(dates()).toEqual({takenAt: 2000, createdAt: 2000})
+		// The backup source's date is the photo library's own record, so even a
+		// later one beats filesystem dates.
+		setSourceDate(6000)
+		expect(dates()).toEqual({takenAt: 6000, createdAt: 6000})
+		// Embedded dates win outright, each for its own field.
+		f.database.exec('UPDATE media_metadata SET taken_at=8000 WHERE content_id=1')
+		expect(dates()).toEqual({takenAt: 8000, createdAt: 6000})
+		f.database.exec('UPDATE media_metadata SET created_at=7000 WHERE content_id=1')
+		expect(dates()).toEqual({takenAt: 8000, createdAt: 7000})
+	} finally {
+		await f.close()
+	}
+})
+
+test('upgrading recomputes the stored dates of media without an embedded date', async () => {
+	const f = await fixture()
+	try {
+		f.add(1, 'dateless.jpg')
+		f.add(2, 'dated.jpg')
+		f.add(3, 'member-dateless.jpg', 'photo', null, 3)
+		f.database.exec(`UPDATE media_metadata SET taken_at=NULL WHERE content_id IN (1,3);
+			UPDATE media_metadata SET created_at=1000 WHERE content_id=2;
+			UPDATE entries SET modified_ms=5000,birthtime_ms=9000`)
+		f.assertProjection()
+		// Recreate what the previous fallback order stored, then upgrade.
+		f.database
+			.exec(`UPDATE photos_library_items SET logical_taken_at=9000,logical_created_at=9000 WHERE content_id IN (1,3);
+			UPDATE umbrel.photos_content_state SET effective_taken_at=9000 WHERE content_hash IN (x'${id(1)}',x'${id(3)}');
+			DELETE FROM schema_migrations WHERE version=22`)
+		await migrateFileIndex(f.database)
+		expect(
+			f.database.prepare('SELECT account_id,content_hash FROM photos_read_model_dirty_contents ORDER BY 1').all(),
+		).toEqual([
+			{account_id: 'member', content_hash: hash(3)},
+			{account_id: 'owner', content_hash: hash(1)},
+		])
+		f.reopen()
+		// Only the journaled items are replaced, not the whole library.
+		f.database.exec(`CREATE TEMP TRIGGER forbid_unrelated_refresh BEFORE DELETE ON main.photos_library_items
+			WHEN old.content_id = 2 BEGIN SELECT RAISE(ABORT, 'unrelated item refreshed'); END;`)
+		f.repository.syncAll(f.database)
+		expect(f.repository.getItem(f.database, 'owner', id(1))?.takenAt).toBe(5000)
+		expect(f.repository.getItem(f.database, 'member', id(3))?.takenAt).toBe(5000)
+		expect(f.repository.getItem(f.database, 'owner', id(2))?.takenAt).toBe(1000)
 		f.assertProjection()
 	} finally {
 		await f.close()

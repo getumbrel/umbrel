@@ -603,7 +603,7 @@ function AppSettingsDialogForApp({
 								{t('app-settings.discard')}
 							</Button>
 							<Button variant='primary' size='dialog' className='w-auto' disabled={saveDisabled} onClick={onSubmit}>
-								{inProgress ? appStateToString(app.state, t) + '...' : saveLabel}
+								{inProgress ? appStateToString(app.state, t) + '…' : saveLabel}
 							</Button>
 						</div>
 					</div>

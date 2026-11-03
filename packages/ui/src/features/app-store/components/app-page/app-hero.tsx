@@ -38,7 +38,7 @@ function SheetBackButton() {
 		<SheetFixedContent>
 			<button
 				type='button'
-				className={cn(dialogHeaderCircleButtonClass, 'absolute top-3 left-3 z-60 sm:top-5 sm:left-5')}
+				className={cn(dialogHeaderCircleButtonClass, 'absolute top-3 left-3 z-60 lg:top-5 lg:left-5')}
 				onClick={handleBack}
 				aria-label={t('back')}
 			>
@@ -155,7 +155,7 @@ function DesktopAppHero({app, renderActions}: HeroProps) {
 			)}
 
 			<SheetStickyHeader visible={pinned} surfaceVisible={settled} animateContent={false} fadeSurface>
-				<DialogCloseButton className='pointer-events-auto absolute top-5 right-5' />
+				<DialogCloseButton surface='sheet' />
 			</SheetStickyHeader>
 		</>
 	)

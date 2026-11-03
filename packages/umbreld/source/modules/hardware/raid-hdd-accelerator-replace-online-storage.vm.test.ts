@@ -1,8 +1,8 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {ReplaceStatus} from './raid.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
+import type {ReplaceStatus} from './raid.ts'
 
 const expectedSingleAcceleratorL2arcSizeGb = 10
 const expectedSingleAcceleratorSpecialSizeGb = 490
@@ -14,7 +14,7 @@ function expectSizeToBeWithinTenPercentOfGb(actualBytes: number | undefined, exp
 	expect(actualGb).toBeLessThanOrEqual(expectedGb * 1.1)
 }
 
-describe('RAID HDD storage mode accelerator replacement with an online device', () => {
+describe.each(driveBuses)('RAID HDD storage mode accelerator replacement with an online device (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let hddDeviceId: string
 	let acceleratorDeviceId: string
@@ -40,7 +40,7 @@ describe('RAID HDD storage mode accelerator replacement with an online device', 
 	})
 
 	test('adds one HDD and two NVMe SSDs and boots VM', async () => {
-		await umbreld.vm.addHdd({slot: 1})
+		await umbreld.vm.addHdd({slot: 1, bus})
 		await umbreld.vm.addNvme({slot: 1, size: '512G'})
 		await umbreld.vm.addNvme({slot: 2, size: '500G'})
 		await umbreld.vm.powerOn()

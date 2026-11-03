@@ -1,0 +1,112 @@
+/* pdf.js's own styles, in a layer of their own: everything here, unlayered,
+   wins over them without a fight */
+@import 'pdfjs-dist/legacy/web/pdf_viewer.css' layer(pdfjs);
+
+@layer pdfjs {
+	/* pdf.js sets this for a document of its own; Umbrel's keeps the one it has */
+	:root {
+		color-scheme: revert-layer;
+	}
+}
+
+/* White sheets floating on the dark stage, a gap apart */
+.umbrel-pdf .pdfViewer {
+	--page-margin: 0 auto 16px;
+	--page-border: none;
+	padding: 16px 0 56px;
+}
+
+.umbrel-pdf .pdfViewer .page {
+	box-shadow:
+		0 8px 30px rgb(0 0 0 / 0.35),
+		0 0 0 1px rgb(255 255 255 / 0.05);
+	border-radius: 2px;
+}
+
+.umbrel-pdf .pdfViewer .canvasWrapper {
+	border-radius: inherit;
+}
+
+/* A page still drawing is a blank sheet, not pdf.js's spinner */
+.umbrel-pdf .pdfViewer .page.loading::after {
+	display: none;
+}
+
+/* Find: every match a soft yellow, the current one a deeper one */
+.umbrel-pdf .textLayer .highlight {
+	--highlight-bg-color: rgb(255 214 10 / 0.35);
+	--highlight-selected-bg-color: rgb(255 149 0 / 0.55);
+}
+
+/* pdf.js brings the current match in 50px below the top of the pages,
+   where the find pill floats: it comes in 16px below the pill instead. The
+   pill is 12px from the top and 40px tall (shell/find-pill.tsx), and 64px
+   from the top while the markup toolbar is up (index.tsx). */
+.umbrel-pdf .textLayer .highlight.selected {
+	scroll-margin-top: 68px;
+}
+
+.umbrel-pdf-markup .textLayer .highlight.selected {
+	scroll-margin-top: 120px;
+}
+
+/* The annotation in hand, outlined in Umbrel's colour with round handles.
+   pdf.js derives its outlines from these on :root, so they're derived again
+   here, where the colour changes. */
+.umbrel-pdf .annotationEditorLayer {
+	--outline-color: hsl(var(--color-brand));
+	--outline-around-color: rgb(255 255 255 / 0.9);
+	--editor-selection-outline: solid var(--outline-width) var(--outline-color);
+	--focus-outline-around: solid var(--outline-around-width) var(--outline-around-color);
+	--hover-outline: solid var(--outline-width) hsl(var(--color-brand) / 0.45);
+	--resizer-bg-color: var(--outline-color);
+	--resizer-size: 8px;
+	--resizer-shift: calc(0px - (var(--outline-width) + var(--resizer-size)) / 2 - var(--outline-around-width));
+}
+
+.umbrel-pdf .annotationEditorLayer .resizer {
+	border-radius: 9999px;
+}
+
+/* pdf.js's little toolbar under the annotation in hand, reduced to Delete in
+   the viewer's dark glass: colours and sizes are set from the markup toolbar,
+   and there's no alt-text editor to open. Its type is its own: it would
+   inherit a size made for the page's text, and its icons would sink. */
+.umbrel-pdf .editToolbar {
+	backdrop-filter: blur(24px);
+	box-shadow: 0 6px 20px rgb(0 0 0 / 0.3);
+	border: 0.5px solid rgb(255 255 255 / 0.12);
+	border-radius: 9999px;
+	background-color: rgb(0 0 0 / 0.65);
+	padding: 2px;
+	color-scheme: dark;
+	font-size: 12px;
+	line-height: 1;
+}
+
+.umbrel-pdf .editToolbar .buttons > :not(.deleteButton) {
+	display: none;
+}
+
+.umbrel-pdf .editToolbar .buttons .deleteButton {
+	border-radius: 9999px;
+
+	&:hover {
+		border-radius: 9999px;
+		background-color: rgb(255 255 255 / 0.12);
+	}
+}
+
+/* Form fields: a faint tint says where to type, a soft edge answers the
+   pointer, and focus is Umbrel's ring. Required fields aren't flagged red
+   before anything has been typed. */
+.umbrel-pdf .annotationLayer {
+	--annotation-unfocused-field-background: linear-gradient(rgb(0 122 255 / 0.07), rgb(0 122 255 / 0.07));
+	--input-hover-border-color: rgb(0 0 0 / 0.2);
+	--input-focus-border-color: hsl(var(--color-brand));
+	--input-focus-outline: none;
+
+	:is(input, textarea, select):required {
+		outline: none;
+	}
+}

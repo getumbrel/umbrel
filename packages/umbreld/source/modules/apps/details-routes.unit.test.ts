@@ -1,8 +1,8 @@
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {Context} from '../server/trpc/context.js'
-import {apps as routes} from './routes.js'
+import type Umbreld from '../../index.ts'
+import type {Context} from '../server/trpc/context.ts'
+import {apps as routes} from './routes.ts'
 
 function callerFor(app: Record<string, unknown>, getDependents = vi.fn(async () => ['electrs'])) {
 	const context = {

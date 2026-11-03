@@ -395,7 +395,7 @@ export function ShortcutPopover({
 												className='group flex w-full min-w-0 items-center gap-1'
 											>
 												<span className='min-w-0 truncate text-13 font-medium -tracking-2 text-white/80'>
-													{fetchFailed ? t('shortcut.add.fetch-failed') : title || '...'}
+													{fetchFailed ? t('shortcut.add.fetch-failed') : title || '…'}
 												</span>
 												<TbEdit className='shrink-0 text-white/50 transition-colors group-hover:text-white/80' />
 											</button>

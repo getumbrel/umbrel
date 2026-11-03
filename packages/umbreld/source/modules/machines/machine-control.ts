@@ -10,8 +10,8 @@ import {
 	type MachineInputActionType,
 	type PointerMotion,
 	type PointerTarget,
-} from './input-motion.js'
-export {MACHINE_INPUT_ACTIONS, easeTravel, type MachineInputActionType, type PointerTarget} from './input-motion.js'
+} from './input-motion.ts'
+export {MACHINE_INPUT_ACTIONS, easeTravel, type MachineInputActionType, type PointerTarget} from './input-motion.ts'
 
 import RfbClient, {
 	POINTER_BUTTON_LEFT,
@@ -23,7 +23,7 @@ import RfbClient, {
 	POINTER_WHEEL_RIGHT,
 	POINTER_WHEEL_UP,
 	type Framebuffer,
-} from './rfb-client.js'
+} from './rfb-client.ts'
 
 // ─── Screenshots ─────────────────────────────────────────────────────────────
 

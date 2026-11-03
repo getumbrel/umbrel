@@ -1,6 +1,6 @@
 import type {ErrorRequestHandler} from 'express'
 
-import type createLogger from '../utilities/logger.js'
+import type createLogger from '../utilities/logger.ts'
 
 export default function createErrorHandler(
 	logger: Pick<ReturnType<typeof createLogger>, 'error'>,

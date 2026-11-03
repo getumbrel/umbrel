@@ -263,7 +263,7 @@ export function MachineAgentDialog({
 			}}
 		>
 			<DialogScrollableContent
-				showClose
+				closeButton={!c.busy}
 				className='sm:max-w-[500px]'
 				onCloseAutoFocus={(event) => {
 					if (!closingForTakeOver.current) return

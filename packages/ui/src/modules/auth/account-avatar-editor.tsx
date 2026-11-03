@@ -11,6 +11,7 @@ import {cn} from '@/lib/utils'
 import {AccountAvatar} from '@/modules/auth/account-avatar'
 import {authorizedHttpUrl} from '@/modules/auth/http-auth'
 import {useAccountAvatar} from '@/modules/auth/use-account-avatar'
+import {touchTargetClass} from '@/utils/element-classes'
 
 type EditableAccount = {userId: string; name: string; avatarUrl?: string}
 export type AccountAvatarControlsVisibility = 'always' | 'hover'
@@ -154,6 +155,7 @@ export function AccountAvatarEditor({
 						onClick={() => void remove()}
 						className={cn(
 							'border-white/15 bg-black/80 text-white shadow-lg backdrop-blur-md hover:bg-black/90 hover:text-destructive2-lightest',
+							touchTargetClass,
 							controlInteractionClass,
 						)}
 					/>
@@ -171,6 +173,7 @@ export function AccountAvatarEditor({
 							disabled={isPending}
 							className={cn(
 								'border-white/15 bg-black/80 text-white shadow-lg backdrop-blur-md hover:bg-black/90',
+								touchTargetClass,
 								controlInteractionClass,
 								(avatarMutation.isPending || isLoadingFromFiles) && '[&_svg]:animate-spin',
 							)}

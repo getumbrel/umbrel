@@ -1,9 +1,11 @@
 import SwiftUI
+import UmbrelKit
 
 // Onboarding step 4. A live loading state: header + an animated
 // radar sweep. Discovery is already running (started on the Local Network screen); as
 // soon as an Umbrel appears we move to the results, and if nothing shows up within a
-// grace period we fall through to the no-device screen.
+// grace period, and no Umbrel that answered is still being verified, we fall through
+// to the no-device screen.
 struct FindingView: View {
 	@Environment(OnboardingModel.self) private var model
 
@@ -11,8 +13,12 @@ struct FindingView: View {
 	// revolution before resolving, so an instant discovery doesn't flash past (or cut
 	// off the entry push mid-flight). The scan is real; this only paces the exit.
 	private static let minDwell: Duration = .seconds(2.4)
+	// The fallback scan finishes within its time limit; past that, this only guards
+	// against a browse that keeps restarting verification
+	private static let maxVerificationWait: Duration = max(.seconds(12), Umbreld.fallbackDiscoveryTimeLimit) + .seconds(2)
 	@State private var enteredAt = ContinuousClock.now
 	@State private var advanceTask: Task<Void, Never>?
+	@State private var gracePeriodElapsed = false
 
 	var body: some View {
 		VStack(spacing: 0) {
@@ -37,6 +43,9 @@ struct FindingView: View {
 		.onChange(of: model.discoveryResults.isEmpty) { _, empty in
 			if !empty { advanceAfterDwell() }
 		}
+		.onChange(of: model.isVerifyingCandidates) {
+			showNoDeviceIfNothingFound()
+		}
 		.task {
 			model.startDiscoveryIfNeeded()
 			model.startFallbackDiscoveryIfNeeded()
@@ -47,13 +56,22 @@ struct FindingView: View {
 			}
 			// Otherwise give discovery a grace period before showing "no device"
 			try? await Task.sleep(for: .seconds(12))
-			if !Task.isCancelled, model.step == .finding, model.discoveryResults.isEmpty {
-				model.advance(to: .noDevice)
-			}
+			guard !Task.isCancelled else { return }
+			gracePeriodElapsed = true
+			showNoDeviceIfNothingFound()
+			try? await Task.sleep(for: Self.maxVerificationWait - .seconds(12))
+			guard !Task.isCancelled else { return }
+			showNoDeviceIfNothingFound(waitingForVerification: false)
 		}
 		.onDisappear {
 			advanceTask?.cancel()
 		}
+	}
+
+	private func showNoDeviceIfNothingFound(waitingForVerification: Bool = true) {
+		guard gracePeriodElapsed, model.step == .finding, model.discoveryResults.isEmpty else { return }
+		guard !waitingForVerification || !model.isVerifyingCandidates else { return }
+		model.advance(to: .noDevice)
 	}
 
 	// Move to the results once the minimum dwell has played out (immediately if the

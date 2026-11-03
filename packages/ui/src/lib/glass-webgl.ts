@@ -123,6 +123,38 @@ function sourceUrl(source: LensSource): string {
 	return source.currentSrc || source.src
 }
 
+type Rect = {left: number; top: number; width: number; height: number}
+
+/**
+ * The canvas's viewport rect without its host's own transform: the host's
+ * layout offset inside its parent, placed at the parent's live rect so page
+ * scrolling and ancestor transforms still count. Falls back to the transformed
+ * rect where the offsets can't be related (e.g. a fixed host).
+ */
+function untransformedRect(canvas: HTMLCanvasElement): Rect {
+	const host = canvas.offsetParent
+	const parent = host?.parentElement
+	if (!(host instanceof HTMLElement) || !parent) return canvas.getBoundingClientRect()
+	const parentRect = parent.getBoundingClientRect()
+	let left: number
+	let top: number
+	if (host.offsetParent === parent) {
+		left = parentRect.left + parent.clientLeft + host.offsetLeft
+		top = parentRect.top + parent.clientTop + host.offsetTop
+	} else if (host.offsetParent === parent.offsetParent) {
+		left = parentRect.left + host.offsetLeft - parent.offsetLeft
+		top = parentRect.top + host.offsetTop - parent.offsetTop
+	} else {
+		return canvas.getBoundingClientRect()
+	}
+	return {
+		left: left - parent.scrollLeft + host.clientLeft + canvas.offsetLeft,
+		top: top - parent.scrollTop + host.clientTop + canvas.offsetTop,
+		width: canvas.offsetWidth,
+		height: canvas.offsetHeight,
+	}
+}
+
 /**
  * Drives `canvas` as a refraction lens over `getSource()` (the object-fit:
  * cover wallpaper <img>, or a <video>). Alignment is read from live bounding
@@ -136,6 +168,10 @@ function sourceUrl(source: LensSource): string {
  * params can change live without tearing down and re-uploading the texture;
  * the param values feed the dirty-check state below, so a param change
  * repaints a static backdrop.
+ *
+ * With `followHostTransform: false` the lens is aimed from the host's laid-out
+ * box instead, ignoring the host's own transform (a hover scale or tilt): the
+ * resting view rides along with the card rather than being redrawn every frame.
  */
 export function attachBackdropLens(
 	canvas: HTMLCanvasElement,
@@ -143,6 +179,7 @@ export function attachBackdropLens(
 	getParams: () => GlassLensParams,
 	onFirstFrame?: () => void,
 	onContextLost?: () => void,
+	{followHostTransform = true}: {followHostTransform?: boolean} = {},
 ): (() => void) | null {
 	const gl = canvas.getContext('webgl', {antialias: false, alpha: false})
 	if (!gl) return null
@@ -169,6 +206,25 @@ export function attachBackdropLens(
 	let uploadedSrc: string | null = null
 	let lastState = ''
 	let drawn = false
+
+	// A video is re-uploaded only when it presents a new frame, not on every
+	// display refresh: a 30fps wallpaper on a 144Hz screen would otherwise be
+	// copied to the GPU almost five times per frame it shows, and a paused one
+	// every refresh. Without requestVideoFrameCallback every refresh redraws.
+	let watchedVideo: HTMLVideoElement | null = null
+	let videoFrameCallback = 0
+	let videoFrameDirty = true
+	function onVideoFrame() {
+		videoFrameDirty = true
+		if (watchedVideo) videoFrameCallback = watchedVideo.requestVideoFrameCallback(onVideoFrame)
+	}
+	function watchVideo(video: HTMLVideoElement | null) {
+		if (video === watchedVideo) return
+		if (watchedVideo) watchedVideo.cancelVideoFrameCallback(videoFrameCallback)
+		watchedVideo = video && 'requestVideoFrameCallback' in video ? video : null
+		videoFrameDirty = true
+		if (watchedVideo) videoFrameCallback = watchedVideo.requestVideoFrameCallback(onVideoFrame)
+	}
 
 	function init(): boolean {
 		vs = compile(gl!, gl!.VERTEX_SHADER, VERT)
@@ -229,7 +285,7 @@ export function attachBackdropLens(
 
 		const isVideo = source instanceof HTMLVideoElement
 		const params = getParams()
-		const crect = canvas.getBoundingClientRect()
+		const crect = followHostTransform ? canvas.getBoundingClientRect() : untransformedRect(canvas)
 		const vrect = source.getBoundingClientRect()
 		const state = [
 			sourceUrl(source),
@@ -251,8 +307,10 @@ export function attachBackdropLens(
 			params.brightness,
 			params.blur,
 		].join()
+		watchVideo(isVideo ? source : null)
+		const newVideoFrame = isVideo && (!watchedVideo || videoFrameDirty)
 		// Static backdrop and static geometry — nothing to redraw
-		if (!isVideo && drawn && state === lastState) return
+		if (!newVideoFrame && drawn && state === lastState) return
 		lastState = state
 
 		const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -263,11 +321,12 @@ export function attachBackdropLens(
 			canvas.height = bh
 		}
 		gl!.viewport(0, 0, bw, bh)
-		// Videos change every frame; images only when the src swaps
+		// Videos upload per new frame; images only when the src swaps
 		const currentSourceUrl = sourceUrl(source)
-		if (isVideo || uploadedSrc !== currentSourceUrl) {
+		if (newVideoFrame || uploadedSrc !== currentSourceUrl) {
 			gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGBA, gl!.RGBA, gl!.UNSIGNED_BYTE, source)
 			uploadedSrc = currentSourceUrl
+			videoFrameDirty = false
 		}
 
 		// Map lens css px → texture UV, honoring object-fit: cover cropping.
@@ -332,6 +391,7 @@ export function attachBackdropLens(
 
 	return () => {
 		stop()
+		watchVideo(null)
 		io.disconnect()
 		canvas.removeEventListener('webglcontextlost', handleContextLost)
 		canvas.removeEventListener('webglcontextrestored', handleContextRestored)

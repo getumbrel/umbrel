@@ -5,22 +5,22 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import pRetry from 'p-retry'
 
-import randomToken from '../../modules/utilities/random-token.js'
-import type Umbreld from '../../index.js'
-import {CLOUD_DESTINATION_MISSING_ERROR} from '../files/cloud-types.js'
-import appEnvironment from './legacy-compat/app-environment.js'
-import type {AppDataRootLocation, AppFolderAccessSelection, AppSettings} from './schema.js'
+import randomToken from '../../modules/utilities/random-token.ts'
+import type Umbreld from '../../index.ts'
+import {CLOUD_DESTINATION_MISSING_ERROR} from '../files/cloud-types.ts'
+import appEnvironment from './legacy-compat/app-environment.ts'
+import type {AppDataRootLocation, AppFolderAccessSelection, AppSettings} from './schema.ts'
 import App, {
 	getFolderAccessSlots,
 	readComposeInDirectory,
 	readManifestInDirectory,
 	type AppSettingsUpdate,
-} from './app.js'
-import type {AppManifest} from './schema.js'
-import {fillSelectedDependencies} from '../utilities/dependencies.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import {assertManifestVersionCompatible} from './manifest-compatibility.js'
-import ImageCleanup, {removeUnusedImages} from './image-cleanup.js'
+} from './app.ts'
+import type {AppManifest} from './schema.ts'
+import {fillSelectedDependencies, resolveSelectedDependencies} from '../utilities/dependencies.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import {assertManifestVersionCompatible} from './manifest-compatibility.ts'
+import ImageCleanup, {removeUnusedImages} from './image-cleanup.ts'
 
 export type AppDataRootStatus = 'available' | 'storage-unavailable' | 'data-missing'
 
@@ -45,6 +45,10 @@ export default class Apps {
 	#storageBlocks = new Map<symbol, string[]>()
 	#storageOperations = new Map<symbol, {appId: string; paths: string[]; protectAsDataRoot: boolean}>()
 	#installsInProgress = new Set<string>()
+	// Settles once start() has brought the app environment up. Lifecycle
+	// operations wait for it so they don't run their own `docker compose up`
+	// concurrently with boot's (which can also clean Docker state and retry).
+	#environmentStarted: Promise<void> = Promise.resolve()
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -97,16 +101,28 @@ export default class Apps {
 
 	async start() {
 		return this.imageCleanup.runOperation(async () => {
+			let environmentStarted!: () => void
+			this.#environmentStarted = new Promise((resolve) => (environmentStarted = resolve))
 			try {
-				await this.#start()
+				await this.#start(environmentStarted)
 			} finally {
+				environmentStarted()
 				// Let startup and initial user activity finish before low-priority cleanup.
 				this.imageCleanup.schedule(10 * 60 * 1000)
 			}
 		})
 	}
 
-	async #start() {
+	async #start(environmentStarted: () => void) {
+		// In recovery mode the data partition failed to mount, so installed apps and
+		// their data are unreachable and Docker's data directory lives in the RAM-backed
+		// /run. Loading images and starting the app environment there only fills RAM,
+		// so leave apps stopped until the data mount is fixed.
+		if (await this.#umbreld.hardware.raid.checkRaidMountFailure().catch(() => false)) {
+			this.logger.log('Data mount failed at boot, skipping app startup')
+			return
+		}
+
 		this.imageCleanup.enabled = true
 		// Set apps to empty array on first start
 		if ((await this.#umbreld.store.get('apps')) === undefined) {
@@ -255,6 +271,7 @@ export default class Apps {
 		} catch (error) {
 			this.logger.error(`Failed to set permissions for Tor data directory`, error)
 		}
+		environmentStarted()
 
 		this.logger.log('Starting apps')
 		// Snapshot of currently installed apps (minus apps missing their data directories that will be reinstalled)
@@ -940,6 +957,7 @@ export default class Apps {
 	}
 
 	async #install(appId: string, {alternatives, folderAccess}: InstallOptions) {
+		await this.#environmentStarted
 		if (await this.isInstalled(appId)) throw new Error(`App ${appId} is already installed`)
 
 		this.logger.log(`Installing app ${appId}`)
@@ -948,6 +966,17 @@ export default class Apps {
 		// the canonical machine definitions before installing so a later app
 		// cannot silently steal a stable port promised to a VM.
 		await this.#umbreld.machines.assertAppPortAvailable(manifest.port)
+		// Alternatives name the installed apps that satisfy this app's dependencies.
+		// Their ids become app-data directories whose exports the app script sources
+		// on the host, so only a validated provider may be stored. Default selections
+		// are not required to be installed yet so restores can reinstall in any order.
+		const dependencies = await resolveSelectedDependencies({
+			appId,
+			dependencies: manifest.dependencies,
+			selectedDependencies: alternatives,
+			previousSelections: fillSelectedDependencies(manifest.dependencies),
+			providers: this.instances,
+		})
 
 		this.logger.log(`Setting up data directory for ${appId}`)
 		const appDataDirectory = `${this.#umbreld.dataDirectory}/app-data/${appId}`
@@ -958,7 +987,6 @@ export default class Apps {
 
 		// Save reference to app instance
 		const app = new App(this.#umbreld, appId)
-		const dependencies = fillSelectedDependencies(manifest.dependencies, alternatives)
 		// The instance becomes reachable as soon as it is added below, so claim the
 		// lifecycle state before the first await. Settings and data-root changes must
 		// never observe a half-installed app as idle.
@@ -975,6 +1003,7 @@ export default class Apps {
 			await app.install({dependencies, folderAccess})
 		} catch (error) {
 			this.logger.error(`Failed to install app ${appId}`, error)
+			app.cancelPendingProgressEvent()
 			this.instances = this.instances.filter((app) => app.id !== appId)
 			this.#folderAccessSourcePaths.delete(appId)
 			this.#umbreld.eventBus.emit('apps:state:change', {appId, state: 'not-installed'})
@@ -1036,6 +1065,7 @@ export default class Apps {
 		const uninstalled = await app.uninstall()
 		if (uninstalled) {
 			// Remove app instance
+			app.cancelPendingProgressEvent()
 			this.instances = this.instances.filter((app) => app.id !== appId)
 			this.#dataRootLocations.delete(appId)
 			this.#folderAccessSourcePaths.delete(appId)
@@ -1056,6 +1086,7 @@ export default class Apps {
 	}
 
 	async #startApp(appId: string) {
+		await this.#environmentStarted
 		const app = this.getApp(appId)
 
 		// We quickly try to start the app env before starting the app. In most normal cases
@@ -1070,6 +1101,7 @@ export default class Apps {
 	}
 
 	async #restart(appId: string) {
+		await this.#environmentStarted
 		const app = this.getApp(appId)
 
 		// We quickly try to start the app env before restarting the app. In most normal cases

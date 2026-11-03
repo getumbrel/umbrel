@@ -1,8 +1,8 @@
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import Search from './search.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import Search from './search.ts'
 
 function testSearch({available = true, indexFails = false}: {available?: boolean; indexFails?: boolean} = {}) {
 	const searchCandidates = vi.fn(async (virtualRoot: string) => {

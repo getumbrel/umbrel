@@ -4,7 +4,7 @@ import {expect, beforeAll, afterAll, test} from 'vitest'
 import yaml from 'js-yaml'
 import pRetry from 'p-retry'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // The entire files.list() API runs end-to-end here, including recovery from a
 // real filesystem status failure caused by a disconnected FUSE mount.

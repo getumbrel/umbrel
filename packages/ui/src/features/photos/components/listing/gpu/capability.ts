@@ -47,9 +47,11 @@ export function slotsPerLayer(side: number, cell: number) {
 
 // Items a band of this size holds at this tile — an over-estimate, because it
 // ignores the headers that push tiles out of it, which is the right direction
-// to be wrong in
+// to be wrong in. The canvas only ever draws below the seam, where a phone's
+// gap and the desktop's are the same ramp (neither reaches its cap under a
+// 72px tile; see tileGap), so the band is one sum on either.
 export function bandItems(band: {width: number; height: number}, tile: number) {
-	const pitch = tile + tileGap(tile)
+	const pitch = tile + tileGap(tile, false)
 	return Math.ceil(band.width / pitch) * (Math.ceil(band.height / pitch) + 1)
 }
 

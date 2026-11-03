@@ -3,7 +3,7 @@ import tls from 'node:tls'
 
 import {describe, expect, test} from 'vitest'
 
-import {ClientHelloReader, MAX_CLIENT_HELLO_WIRE_BYTES} from './tls-client-hello.js'
+import {ClientHelloReader, MAX_CLIENT_HELLO_WIRE_BYTES} from './tls-client-hello.ts'
 
 const hostname = '192-168-1-100.server-id.plex.direct'
 

@@ -7,8 +7,9 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
-import {getSystemDiskNames} from '../system/system-disk.js'
+import type Umbreld from '../../index.ts'
+import {isBlockDeviceOnUsbDevice} from '../machines/usb-devices.ts'
+import {getSystemDiskNames} from '../system/system-disk.ts'
 
 type BlockDevice = {
 	id: string
@@ -27,6 +28,15 @@ type BlockDevice = {
 		label: string
 		filesystemUuid: string
 	}[]
+}
+
+// Filesystems we auto-mount, named as lsblk reports them. Mounting makes the
+// kernel parse whatever is on the drive, so without this a crafted USB drive
+// could reach any of the kernel's filesystem drivers, including rarely used
+// ones that fuzzers regularly find memory corruption bugs in. Mounts pass the
+// type explicitly so mount never falls back to trying other drivers.
+export function isAutoMountableFilesystem(filesystemType: string) {
+	return ['ext2', 'ext3', 'ext4', 'btrfs', 'xfs', 'vfat', 'exfat', 'ntfs'].includes(filesystemType.toLowerCase())
 }
 
 // These filesystems cannot store Linux ownership or permissions, so mounts
@@ -146,14 +156,14 @@ export default class ExternalStorage {
 		await this.#cleanLeftOverMountPoints()
 
 		// Auto mount any external devices
-		await this.#mountExternalDevices().catch((error) => {
+		await this.mountExternalDevices().catch((error) => {
 			this.logger.error(`Failed to mount external devices on startup`, error)
 		})
 
 		// Attach disk change listener and auto mount any new external devices
 		this.#removeDeviceChangeListener = this.#umbreld.eventBus.on('system:disk:change', async () => {
 			this.logger.log('Device change detected')
-			await this.#mountExternalDevices()
+			await this.mountExternalDevices()
 		})
 	}
 
@@ -180,7 +190,7 @@ export default class ExternalStorage {
 	}
 
 	// Mount external disks
-	async #mountExternalDevices() {
+	async mountExternalDevices() {
 		// Run through single threaded queue so we don't try to mount concurrently
 		return this.#mountQueue.add(async () => {
 			// A physically removed device can leave its filesystem mounted even after
@@ -222,6 +232,14 @@ export default class ExternalStorage {
 					// Skip EFI partitions since they're just confusing for users
 					if (partition.type === 'EFI System') continue
 
+					// Skip partitions without a filesystem we support
+					if (!isAutoMountableFilesystem(partition.filesystemType)) {
+						this.logger.log(
+							`Skipping partition ${device.name} ${partition.label} with unsupported filesystem ${partition.filesystemType}`,
+						)
+						continue
+					}
+
 					// We have a new partition to mount
 					this.logger.log(`Mounting new partition ${device.name} ${partition.label}`)
 					try {
@@ -262,9 +280,9 @@ export default class ExternalStorage {
 										// Files and QEMU share this group. Permission-emulating
 										// filesystems cannot chown an individual VM disk later, so
 										// grant group write access at mount time instead.
-										await $`mount -o ${mountOptions} /dev/${partition.id} ${systemMountpoint}`
+										await $`mount -t ${partition.filesystemType} -o ${mountOptions} /dev/${partition.id} ${systemMountpoint}`
 									} else {
-										await $`mount /dev/${partition.id} ${systemMountpoint}`
+										await $`mount -t ${partition.filesystemType} /dev/${partition.id} ${systemMountpoint}`
 									}
 								},
 								{
@@ -525,9 +543,28 @@ export default class ExternalStorage {
 			if (hasSystemMount) systemDiskNames.add(blockDevice.id)
 		}
 
+		// A drive passed through to a machine belongs to that machine, even while
+		// it's off. Fall back to treating every drive as external storage if the
+		// assignments can't be read.
+		const reservedUsbDevicePaths = await this.#umbreld.machines.reservedUsbDevicePaths().catch((error) => {
+			this.logger.error('Failed reading USB devices assigned to machines', error)
+			return []
+		})
+		const reserved = await Promise.all(
+			blockDevices.map((device) => isBlockDeviceOnUsbDevice(device.id, reservedUsbDevicePaths)),
+		)
+
 		// Filter out non-USB devices, disks that back the running system, and
 		// empty readers or unresponsive enclosures that report no usable capacity.
-		return blockDevices.filter((device) => isEligibleExternalStorageDevice(device, systemDiskNames))
+		// A drive given to a machine just as Files mounted it stays listed by what's
+		// mounted, so it can still be ejected for the machine, and nothing more of
+		// it is mounted.
+		return blockDevices.flatMap((device, index) => {
+			if (!isEligibleExternalStorageDevice(device, systemDiskNames)) return []
+			if (!reserved[index]) return [device]
+			const partitions = device.partitions.filter((partition) => partition.mountpoints.length > 0)
+			return partitions.length > 0 ? [{...device, partitions}] : []
+		})
 	}
 
 	#isPathOnMountpoint(systemPath: string, mountpoint: string) {

@@ -1,6 +1,8 @@
 import {Minus, Plus} from 'lucide-react'
 import {useId} from 'react'
 
+import {cn} from '@/lib/utils'
+
 // Shared building blocks of the machine spec-sheet forms (create + settings)
 
 // Round −/+ controls with the current value between them; pass `middle` to
@@ -53,11 +55,30 @@ export function Stepper({
 	)
 }
 
-export function SpecRow({label, note, children}: {label: string; note?: string; children: React.ReactNode}) {
+export function SpecRow({
+	label,
+	note,
+	wide,
+	children,
+}: {
+	label: string
+	note?: string
+	/** A long value (a product key): the control drops under the label until the
+	 * spec list (an @container) has room for both side by side */
+	wide?: boolean
+	children: React.ReactNode
+}) {
 	const labelId = useId()
 
 	return (
-		<div role='group' aria-labelledby={labelId} className='flex items-center justify-between gap-4 py-5 sm:gap-6'>
+		<div
+			role='group'
+			aria-labelledby={labelId}
+			className={cn(
+				'flex justify-between gap-4 py-5 sm:gap-6',
+				wide ? 'flex-col @[30rem]:flex-row @[30rem]:items-center' : 'items-center',
+			)}
+		>
 			<div className='flex min-w-0 flex-1 flex-col gap-1'>
 				<span id={labelId} className='text-15 font-medium -tracking-2 text-white'>
 					{label}

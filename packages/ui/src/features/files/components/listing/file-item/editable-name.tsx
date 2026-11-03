@@ -5,8 +5,11 @@ import {AiOutlineFileExclamation} from 'react-icons/ai'
 import {Button} from '@/components/ui/button'
 import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {Input, Labeled} from '@/components/ui/input'
+import {toast} from '@/components/ui/toast'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
+import {useListDirectory} from '@/features/files/hooks/use-list-directory'
+import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useNewFolder} from '@/features/files/hooks/use-new-folder'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
@@ -33,6 +36,10 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	const {renameItem} = useFilesOperations()
 	const {cancelNewFolder, commitNewFolder} = useNewFolder()
 	const confirm = useConfirmation()
+	const {currentPath} = useNavigate()
+	const {listing} = useListDirectory(currentPath)
+	// Opening the extension dialog blurs the input, which would submit the name a second time
+	const isSubmittingRef = useRef(false)
 
 	const isCreatingNewFolder = 'isNew' in item && item.isNew
 	const isFolder = item.type === 'directory'
@@ -77,52 +84,85 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 		return () => clearTimeout(timer)
 	}, [])
 
-	const handleSubmit = async (submittedName: string) => {
-		const trimmedName = submittedName.trim()
-		let performRename = true
-		if (isCreatingNewFolder) {
-			// Calculate parent path and the full path for the new folder
-			const parentPath = path.split('/').slice(0, -1).join('/')
-			const fullPath = `${parentPath}/${trimmedName}`
-			commitNewFolder(fullPath)
-		} else {
-			// check if the user is changing the extension of a file
-			if (item.type !== 'directory') {
-				const {extension: currentNameExtension} = splitFileName(initialName)
-				const {extension: toNameExtension} = splitFileName(trimmedName)
+	const parentPath = path.slice(0, path.lastIndexOf('/'))
 
-				// if the extension is changing, show the extension change confirmation dialog
-				// and let it handle the renaming
-				if (currentNameExtension !== toNameExtension) {
-					try {
-						await confirm({
-							title: toNameExtension
-								? t('files-extension-change.title-add', {extension: toNameExtension})
-								: t('files-extension-change.title-remove'),
-							message: toNameExtension
-								? t('files-extension-change.description-add', {
-										fileName: initialName,
-										extension: toNameExtension,
-									})
-								: t('files-extension-change.description-remove', {fileName: initialName}),
-							actions: [
-								{label: t('files-extension-change.confirm'), value: 'confirm', variant: 'destructive'},
-								{label: t('cancel'), value: 'cancel', variant: 'default'},
-							],
-							icon: AiOutlineFileExclamation,
-						})
-						// Confirmation passed, proceed with rename (handled below)
-					} catch {
-						// User cancelled confirmation
-						performRename = false
-					}
+	// Gives up on the name: drops the new folder, or leaves the item as it was
+	const cancel = () => (isCreatingNewFolder ? cancelNewFolder() : onFinish())
+
+	// Why a name can't be used, found before anything changes on screen. Only the loaded part
+	// of the folder being browsed is known here. The server rejects any other clash on rename,
+	// but creating a folder that already exists quietly does nothing.
+	const getNameProblem = (newName: string) => {
+		const failed = (message: string) =>
+			isCreatingNewFolder ? t('files-error.create-folder', {message}) : t('files-error.rename', {message})
+
+		if (newName.includes('/') || newName === '.' || newName === '..') {
+			return failed(t('files-backend-error.invalid-filename'))
+		}
+		const isTaken =
+			parentPath === currentPath && listing?.items.some((other) => other.name === newName && other.path !== path)
+		if (isTaken) {
+			return isCreatingNewFolder
+				? t('files-error.folder-already-exists')
+				: failed(t('files-backend-error.destination-already-exists'))
+		}
+	}
+
+	const submit = async (submittedName: string, {isBlur}: {isBlur: boolean}) => {
+		if (!isCreatingNewFolder && submittedName === initialName) return onFinish()
+		const newName = submittedName.trim()
+		if (!newName) return cancel()
+
+		const problem = getNameProblem(newName)
+		if (problem) {
+			// One toast per name, even when Enter and then a click away both find the problem
+			toast.error(problem, {area: 'files', id: `files-name-problem-${path}`})
+			// After Enter the name stays in the field to be fixed. Clicking away gives up on it.
+			return isBlur ? cancel() : undefined
+		}
+
+		if (isCreatingNewFolder) return commitNewFolder(`${parentPath}/${newName}`)
+
+		// Changing a file's extension can change how it opens, so it is confirmed first
+		if (item.type !== 'directory') {
+			const {extension: currentNameExtension} = splitFileName(initialName)
+			const {extension: toNameExtension} = splitFileName(newName)
+
+			if (currentNameExtension !== toNameExtension) {
+				try {
+					await confirm({
+						title: toNameExtension
+							? t('files-extension-change.title-add', {extension: toNameExtension})
+							: t('files-extension-change.title-remove'),
+						message: toNameExtension
+							? t('files-extension-change.description-add', {
+									fileName: initialName,
+									extension: toNameExtension,
+								})
+							: t('files-extension-change.description-remove', {fileName: initialName}),
+						actions: [
+							{label: t('files-extension-change.confirm'), value: 'confirm', variant: 'primary'},
+							{label: t('cancel'), value: 'cancel', variant: 'default'},
+						],
+						icon: AiOutlineFileExclamation,
+					})
+				} catch {
+					return onFinish()
 				}
 			}
-			if (performRename) {
-				renameItem({item, newName: trimmedName})
-			}
 		}
+		renameItem({item, newName})
 		onFinish()
+	}
+
+	const handleSubmit = async (submittedName: string, {isBlur = false} = {}) => {
+		if (isSubmittingRef.current) return
+		isSubmittingRef.current = true
+		try {
+			await submit(submittedName, {isBlur})
+		} finally {
+			isSubmittingRef.current = false
+		}
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -137,14 +177,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 		if (e.key === 'Escape') {
 			e.preventDefault()
 			e.stopPropagation()
-
-			// cancel new folder
-			if ('isNew' in item && item.isNew) {
-				return cancelNewFolder()
-			}
-
-			// cancel rename
-			return handleSubmit(initialName)
+			return cancel()
 		}
 	}
 
@@ -211,11 +244,11 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 							</Labeled>
 							<div className='flex-1' />
 							<DrawerFooter>
-								<Button type='button' size='dialog' onClick={handleClose}>
-									{t('cancel')}
-								</Button>
 								<Button type='submit' size='dialog' variant='primary'>
 									{t('ok')}
+								</Button>
+								<Button type='button' size='dialog' onClick={handleClose}>
+									{t('cancel')}
 								</Button>
 							</DrawerFooter>
 						</fieldset>
@@ -234,7 +267,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 			onKeyDown={handleKeyDown}
 			onClick={preventClickPropagation}
 			onDoubleClick={preventClickPropagation}
-			onBlur={() => handleSubmit(name)}
+			onBlur={() => handleSubmit(name, {isBlur: true})}
 			className={inputStyles}
 		/>
 	)

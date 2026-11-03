@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto'
 import {constants as fsConstants} from 'node:fs'
 import {open, statfs} from 'node:fs/promises'
 import http from 'node:http'
+import net from 'node:net'
 import os from 'node:os'
 import nodePath from 'node:path'
 import readline from 'node:readline'
@@ -11,7 +12,7 @@ import {execa, type ExecaChildProcess, type ExecaError, type ExecaReturnValue} f
 import fse from 'fs-extra'
 import pWaitFor from 'p-wait-for'
 
-import randomToken from '../utilities/random-token.js'
+import randomToken from '../utilities/random-token.ts'
 
 import {
 	CLOUD_INVALID_ACCOUNT_CONFIG_ERROR,
@@ -20,7 +21,7 @@ import {
 	type CloudSyncActivity,
 	type Provider,
 	type RemoteRef,
-} from './cloud-types.js'
+} from './cloud-types.ts'
 
 export const CLOUD_RCLONE_REMOTE = 'cloud'
 
@@ -50,12 +51,16 @@ const RCLONE_PROVIDER_TYPES: Record<Provider, string> = {
 // expose the hashes used by the default track-renames strategy.
 // iCloud reports the uncompressed size of package documents such as Pages
 // files, but serves them as smaller ZIP archives.
+// Verified against rclone v1.75.2: those ZIPs ignore Range requests, so a package
+// reported above the 256 MiB multi-thread cutoff gets the whole ZIP written into
+// each 64 MiB chunk and fails. rclone can't tell packages apart, so iCloud files
+// download as single streams.
 const RCLONE_SYNC_PROVIDER_FLAGS: Record<Provider, string[]> = {
 	'google-drive': ['--track-renames', '--drive-skip-dangling-shortcuts', '--tpslimit', '5', '--tpslimit-burst', '10'],
 	dropbox: ['--track-renames'],
 	onedrive: ['--track-renames'],
 	webdav: [],
-	icloud: ['--ignore-size'],
+	icloud: ['--ignore-size', '--multi-thread-streams', '0'],
 }
 
 type FileOwner = {userId: number; groupId: number}
@@ -846,13 +851,19 @@ export default class CloudRclone {
 						await logs.finished
 						throw new RcloneProcessError('rcd', exit, logs.records)
 					}
-					try {
-						const stats = await fse.lstat(socketPath)
-						return stats.isSocket()
-					} catch (error) {
-						if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-						return false
-					}
+					// rcd creates the socket file when it binds, just before it listens.
+					// Only an accepted connection proves the RC API is ready for calls.
+					return await new Promise<boolean>((resolve, reject) => {
+						const probe = net.createConnection(socketPath)
+						probe.once('connect', () => {
+							probe.destroy()
+							resolve(true)
+						})
+						probe.once('error', (error: NodeJS.ErrnoException) => {
+							if (error.code === 'ENOENT' || error.code === 'ECONNREFUSED') resolve(false)
+							else reject(error)
+						})
+					})
 				},
 				{
 					interval: 20,

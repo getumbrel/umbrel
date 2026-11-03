@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MSIX identity for the Windows app. The Publisher must match the subject of the
+  code-signing certificate exactly, with a value that contains a comma in quotes, and
+  Version must equal AssemblyVersion in Umbrel.csproj. The subject is the Artifact
+  Signing certificate profile's. The Publisher is part of the package's identity, so if
+  the subject changes (the company's legal name, city or state), installed copies stop
+  getting updates.
+  Packaged builds get launch-at-login through windows.startupTask and updates through
+  App Installer (see Umbrel.appinstaller).
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap5 uap10 rescap">
+  <Identity Name="Umbrel.Umbrel" Publisher="CN=&quot;Umbrel, Inc.&quot;, O=&quot;Umbrel, Inc.&quot;, L=Claymont, S=Delaware, C=US" Version="0.1.3.4" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>Umbrel</DisplayName>
+    <PublisherDisplayName>Umbrel, Inc.</PublisherDisplayName>
+    <Description>Find your Umbrel on the network, open umbrelOS, and connect its shared folders.</Description>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <!-- No counterpart to the macOS local network and network volume usage descriptions:
+       full-trust desktop apps get no Windows privacy prompts for these. -->
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <!-- No packageManagement: Umbrel installs only its own updates (Services/UpdateChecker.cs),
+         which Microsoft documents as working without it, and App Installer would list it as
+         "Manage other apps directly". -->
+  </Capabilities>
+  <Applications>
+    <Application Id="Umbrel" Executable="Umbrel.exe" uap10:RuntimeBehavior="packagedClassicApp" uap10:TrustLevel="mediumIL">
+      <uap:VisualElements
+        DisplayName="Umbrel"
+        Description="Umbrel"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        BackgroundColor="transparent" />
+      <Extensions>
+        <!-- Enabled="false": the app enables it once on first run (StartupTask.RequestEnableAsync),
+             and a user's later choice in Settings or Task Manager is never overridden. -->
+        <uap5:Extension Category="windows.startupTask" Executable="Umbrel.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:StartupTask TaskId="UmbrelStartup" Enabled="false" DisplayName="Umbrel" />
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+</Package>

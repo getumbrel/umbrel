@@ -6,7 +6,7 @@ import {default as SMB2} from '@tryjsky/v9u-smb2'
 import tcpPortUsed from 'tcp-port-used'
 import {$} from 'execa'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 
@@ -99,7 +99,7 @@ describe('#handleFileChange()', () => {
 		// Delete one directory
 		await fse.remove(testDirectoryToDelete)
 
-		// Watchman/Parcel batch events and store writes are asynchronous. Wait for
+		// Watchman batch events and store writes are asynchronous. Wait for
 		// persisted cleanup instead of assuming both finish within 100 ms.
 		await vi.waitFor(
 			async () => {

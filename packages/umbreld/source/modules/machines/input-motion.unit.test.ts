@@ -1,5 +1,5 @@
 import {afterEach, expect, test, vi} from 'vitest'
-import {createPointerMotion, pointOnMotion} from './input-motion.js'
+import {createPointerMotion, pointOnMotion} from './input-motion.ts'
 
 afterEach(() => vi.restoreAllMocks())
 const from = {x: 100, y: 300},

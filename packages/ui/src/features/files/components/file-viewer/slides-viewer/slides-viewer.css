@@ -1,0 +1,18 @@
+/* While the slide on stage can be edited, each text box it owns is outlined in Umbrel's colour as the pointer
+   finds it, and more firmly once it holds the caret. The slide is drawn at its own size and scaled, so lengths are
+   divided by that scale to stay hairlines on screen. */
+.umbrel-slide-editing :is([contenteditable='true'], [contenteditable='plaintext-only']) {
+	transition: outline-color 150ms ease-out;
+	cursor: text;
+	outline: calc(1px / var(--slide-scale)) solid transparent;
+	outline-offset: calc(3px / var(--slide-scale));
+	border-radius: calc(3px / var(--slide-scale));
+
+	&:hover {
+		outline-color: hsl(var(--color-brand) / 0.5);
+	}
+
+	&:focus {
+		outline: calc(1.5px / var(--slide-scale)) solid hsl(var(--color-brand) / 0.9);
+	}
+}

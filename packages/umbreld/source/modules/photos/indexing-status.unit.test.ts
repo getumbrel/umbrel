@@ -3,10 +3,10 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 
-import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {migratePhotos} from './migrations.js'
-import PhotosRepository from './repository.js'
+import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {migratePhotos} from './migrations.ts'
+import PhotosRepository from './repository.ts'
 
 let database: BetterSqlite3.Database
 let directory: string
@@ -109,6 +109,46 @@ test('tracks pending hashes, metadata, all required thumbnails, failures and rec
 	expect(status()).toEqual(ready(1))
 	database.prepare('DELETE FROM thumbnail_variants WHERE variant = ?').run(variants[0])
 	expect(status()).toMatchObject({phase: 'enriching', completed: 0})
+})
+
+test('keeps enriching while other work is pending, even after some items fail', () => {
+	media(1)
+	media(2)
+	media(3)
+	media(4)
+	database.exec("UPDATE media_metadata SET state = 'failed', retry_at = 1 WHERE content_id = 2")
+	thumbnail(3, variants[0], 'failed')
+	database.exec("UPDATE media_metadata SET state = 'pending' WHERE content_id = 4")
+	expect(status()).toEqual({phase: 'enriching', total: 4, completed: 1, percentage: 25})
+	database.exec("UPDATE media_metadata SET state = 'ready' WHERE content_id = 4")
+	expect(status()).toEqual({
+		phase: 'degraded',
+		total: 4,
+		completed: 2,
+		percentage: 50,
+		error: 'Some media could not be prepared',
+	})
+})
+
+test('counts failed items toward settling the library but not as completed', () => {
+	media(1)
+	const unhashed = entry('unhashed.jpg', null)
+	expect(status()).toEqual({phase: 'enriching', total: 2, completed: 1, percentage: 50})
+	// Failures retry with backoff indefinitely, so no failure ever becomes
+	// completed; a library whose remaining work has all failed must still settle.
+	database.prepare("UPDATE entries SET hash_error = 'read failed', hash_failure_count = 9 WHERE id = ?").run(unhashed)
+	expect(status()).toEqual({
+		phase: 'degraded',
+		total: 2,
+		completed: 1,
+		percentage: 50,
+		error: 'Some media could not be prepared',
+	})
+	expect(database.prepare('SELECT total, completed, failures FROM photos_indexing_counts').get()).toEqual({
+		total: 2,
+		completed: 1,
+		failures: 1,
+	})
 })
 
 test('deduplicates copies per account, includes both Live Photo resources, and excludes Trash and Apps', () => {

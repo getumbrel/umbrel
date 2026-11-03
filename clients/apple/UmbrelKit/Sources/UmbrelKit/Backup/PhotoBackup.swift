@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 // A photo library's stable identity on one Umbrel. The id is deliberately random
@@ -13,13 +14,30 @@ public struct PhotoBackupSource: Codable, Equatable, Sendable {
 		self.accountId = accountId
 		self.name = name
 	}
+
+	// The id Photos on the Umbrel lists this source under
+	public var libraryId: String {
+		let digest = SHA256.hash(data: Data("\(accountId)\u{0}\(id)".utf8))
+		return "iphone:" + digest.map { String(format: "%02x", $0) }.joined()
+	}
 }
 
 // Configuration and presentation state shared by the host app and PhotoKit's
 // system-owned background upload extension. Durable queue state lives in the
 // App Group SQLite ledger; small operational values use coordinated JSON files.
 public struct PhotoBackupConfiguration: Codable, Equatable, Sendable {
+	// Whether PhotoKit's extension also uploads while the app is closed. It can't check
+	// the Umbrel's certificate, so it may only send plain HTTP to a Tailscale address.
+	// The app itself backs up over the pinned connection whenever it's open, on either.
+	public enum Route: String, Codable, Sendable {
+		case tailscale
+		case app
+	}
+
 	public let deviceId: String
+	public let route: Route
+	// The Tailscale address PhotoKit's jobs go to. Empty on the app route, which
+	// finds the Umbrel on any route for each upload.
 	public let uploadBaseURL: String
 	public let source: PhotoBackupSource
 	public let includePhotos: Bool
@@ -28,6 +46,7 @@ public struct PhotoBackupConfiguration: Codable, Equatable, Sendable {
 
 	public init(
 		deviceId: String,
+		route: Route = .tailscale,
 		uploadBaseURL: String,
 		source: PhotoBackupSource,
 		includePhotos: Bool,
@@ -35,6 +54,7 @@ public struct PhotoBackupConfiguration: Codable, Equatable, Sendable {
 		allowsCellularAccess: Bool = false
 	) {
 		self.deviceId = deviceId
+		self.route = route
 		self.uploadBaseURL = uploadBaseURL
 		self.source = source
 		self.includePhotos = includePhotos
@@ -42,12 +62,32 @@ public struct PhotoBackupConfiguration: Codable, Equatable, Sendable {
 		self.allowsCellularAccess = allowsCellularAccess
 	}
 
+	public init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		deviceId = try container.decode(String.self, forKey: .deviceId)
+		// Saved before the app route existed
+		route = try container.decodeIfPresent(Route.self, forKey: .route) ?? .tailscale
+		uploadBaseURL = try container.decode(String.self, forKey: .uploadBaseURL)
+		source = try container.decode(PhotoBackupSource.self, forKey: .source)
+		includePhotos = try container.decode(Bool.self, forKey: .includePhotos)
+		includeVideos = try container.decode(Bool.self, forKey: .includeVideos)
+		allowsCellularAccess = try container.decode(Bool.self, forKey: .allowsCellularAccess)
+	}
+
+	public var hasValidRoute: Bool {
+		switch route {
+		case .tailscale: isTailscaleDestination
+		case .app: uploadBaseURL.isEmpty
+		}
+	}
+
 	// HTTP is permitted only when its destination is in Tailscale's CGNAT range.
 	// Both the host app and extension enforce this before enabling or creating jobs.
 	// This is a destination policy, not route attestation: the client cannot
 	// cryptographically prove which route iOS used to reach that address.
 	public var isTailscaleDestination: Bool {
-		guard let url = URL(string: uploadBaseURL),
+		guard route == .tailscale,
+			let url = URL(string: uploadBaseURL),
 			url.scheme?.lowercased() == "http",
 			let host = url.host
 		else { return false }
@@ -321,6 +361,9 @@ public struct PhotoBackupStatistics: Codable, Equatable, Sendable {
 	public let uploadedVideoCount: Int
 	public let failedCount: Int
 	public let uploadedBytes: Int64
+	// When the most recent asset finished uploading. Optional so snapshots written
+	// before it existed still decode.
+	public let lastUploadedAt: Date?
 
 	public var uploadedCount: Int { uploadedPhotoCount + uploadedVideoCount }
 
@@ -339,13 +382,20 @@ public struct PhotoBackupStatistics: Codable, Equatable, Sendable {
 		return max(0, included - uploaded)
 	}
 
+	// Failed uploads count as remaining work while anything else is still waiting,
+	// because the extension retries them once the rest have caught up.
+	public func onlyFailuresRemain(remainingCount: Int) -> Bool {
+		failedCount > 0 && remainingCount <= failedCount
+	}
+
 	public init(
 		queuedCount: Int,
 		preparedCount: Int,
 		uploadedPhotoCount: Int,
 		uploadedVideoCount: Int,
 		failedCount: Int,
-		uploadedBytes: Int64
+		uploadedBytes: Int64,
+		lastUploadedAt: Date? = nil
 	) {
 		self.queuedCount = queuedCount
 		self.preparedCount = preparedCount
@@ -353,6 +403,7 @@ public struct PhotoBackupStatistics: Codable, Equatable, Sendable {
 		self.uploadedVideoCount = uploadedVideoCount
 		self.failedCount = failedCount
 		self.uploadedBytes = uploadedBytes
+		self.lastUploadedAt = lastUploadedAt
 	}
 }
 
@@ -505,7 +556,7 @@ public enum PhotoBackupStore {
 	}()
 
 	public static func save(configuration: PhotoBackupConfiguration) -> Bool {
-		guard configuration.isTailscaleDestination,
+		guard configuration.hasValidRoute,
 			let sharedFiles
 		else { return false }
 		return sharedFiles.write(configuration, to: configurationFile)

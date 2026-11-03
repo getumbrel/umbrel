@@ -32,7 +32,7 @@ export function UsbDrives() {
 							draggable={false}
 							className='size-4 shrink-0 rounded-[4px]'
 						/>
-						<span>{t('storage-manager.usb-drives.open-files')} Files</span>
+						<span>{t('storage-manager.usb-drives.open-files', {app: t('files')})}</span>
 					</Link>
 				</div>
 				<p className='text-13 leading-relaxed text-white/50'>{t('storage-manager.usb-drives.description')}</p>

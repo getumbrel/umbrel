@@ -4,7 +4,7 @@ import {useTranslation} from 'react-i18next'
 import {Button} from '@/components/ui/button'
 import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import MigrationAssistantDialog from '@/routes/settings/migration-assistant'
@@ -15,8 +15,8 @@ export function StartMigrationDrawerOrDialog() {
 	const dialogProps = useSettingsDialogProps()
 	const {deviceName} = useIsHomeOrPro()
 
-	const isMobile = useIsMobile()
-	const [startMigration, setStartMigration] = useState(isMobile ? false : true)
+	const isPhone = useIsPhone()
+	const [startMigration, setStartMigration] = useState(isPhone ? false : true)
 
 	if (startMigration) {
 		return <MigrationAssistantDialog />
@@ -24,7 +24,7 @@ export function StartMigrationDrawerOrDialog() {
 
 	return (
 		<Drawer {...dialogProps}>
-			<DrawerContent>
+			<DrawerContent withScroll>
 				<DrawerHeader className='flex flex-col items-center text-center'>
 					<div className='py-5'>
 						<MigrateImage />

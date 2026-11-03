@@ -101,6 +101,10 @@ export function platform() {
 // NOTE: in Chrome, this can be `true` when emulating a touch device
 export const IS_ANDROID = /Android/i.test(navigator.userAgent)
 
+// A browser on an iPhone, not a web app added to the Home Screen
+export const IS_IPHONE_BROWSER =
+	/iPhone|iPod/.test(navigator.userAgent) && !(navigator as {standalone?: boolean}).standalone
+
 export const IS_DEV = localStorage.getItem('debug') === 'true'
 
 export function cmdOrCtrl() {

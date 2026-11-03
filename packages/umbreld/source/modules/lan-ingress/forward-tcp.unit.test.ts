@@ -4,7 +4,7 @@ import net from 'node:net'
 
 import {afterEach, expect, test, vi} from 'vitest'
 
-import {forwardTcp} from './forward-tcp.js'
+import {forwardTcp} from './forward-tcp.ts'
 
 const servers: net.Server[] = []
 const sockets = new Set<net.Socket>()

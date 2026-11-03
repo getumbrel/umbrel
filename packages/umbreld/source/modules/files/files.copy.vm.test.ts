@@ -1,6 +1,6 @@
 import {expect, beforeAll, afterAll, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // The entire copy() API runs end-to-end here, including the not-enough-space
 // case which is triggered with a genuinely small filesystem (a tmpfs mount)

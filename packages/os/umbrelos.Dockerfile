@@ -1,47 +1,76 @@
 ARG DEBIAN_VERSION=trixie
 # Debian Docker image tags lag behind snapshot.debian.org, so pin the base image
-# and apt repositories independently.
-ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20260713
-ARG APT_SNAPSHOT_DATE=20260727
+# and apt repositories independently. Base images are also pinned by digest
+# because tags can be re-pushed, which would silently change the build. Pin
+# every stage's base image this way.
+ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20261027
+ARG DEBIAN_IMAGE_DIGEST=sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1
+ARG APT_SNAPSHOT_DATE=20261031
+# amd64 and generic arm64 take their kernel, ZFS, and firmware from trixie-backports (see umbrelos-base below), pinned to their own snapshot
+ARG KERNEL_BACKPORTS_SNAPSHOT_DATE=20261028T000000Z
 ARG BASE_VARIANT=""
 
-ARG DOCKER_VERSION=28.5.0
-ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
+# Build tools that record the current time (user creation in package scripts,
+# initramfs, DKMS) read it from SOURCE_DATE_EPOCH instead, so the build doesn't
+# depend on when it runs. Any fixed value works. Keep it fixed rather than
+# passing the commit time, which would invalidate the layer cache on every
+# commit. build.sh sets the timestamps of the exported root filesystem to the
+# commit time separately. Declare `ARG SOURCE_DATE_EPOCH` in every stage that
+# runs such tools, since stages don't see it otherwise.
+ARG SOURCE_DATE_EPOCH=1792627200
 
 ARG NVIDIA_CUDA_SUPPORT=true
-ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.19.1-1
-ARG LIBNVIDIA_CONTAINER1_SHA256_amd64=d73bb582af893135198ef81cb22135c790a75d2ad72910446477c6c4430f3e6b
-ARG LIBNVIDIA_CONTAINER_TOOLS_SHA256_amd64=5642763d51961a2295dff09990048a5dcee81edbea2a8c5084e47b09ccf17268
-ARG NVIDIA_CONTAINER_TOOLKIT_BASE_SHA256_amd64=b6c5b4e77a28cde0197cc0e64edf75538604775d9f8aea502cef667e7e5b2132
-ARG NVIDIA_CONTAINER_TOOLKIT_SHA256_amd64=e66acb5b33420a8417429cd217abc8400b4a409a2ae17a3852cf6feb34b5c8e6
+ARG NVIDIA_DRIVER_VERSION=595.91.07
+ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.20.1-1
+ARG LIBNVIDIA_CONTAINER1_SHA256_amd64=9d803cd9c898cb2fa927529d5ac4fc09f3d65c8cfbde8985de1b9398e53a4656
+ARG LIBNVIDIA_CONTAINER_TOOLS_SHA256_amd64=8bd131b8977a3db667982024850ae7b50cfa02d6b2be06a718064ec814778f05
+ARG NVIDIA_CONTAINER_TOOLKIT_BASE_SHA256_amd64=e01964a064fbdb62425ab22ec5832349f92c5b0b50c8f23fdf14dad004db4fb2
+ARG NVIDIA_CONTAINER_TOOLKIT_SHA256_amd64=a95c9d206a7ecd6a90adff9290635271fa167a86b5767b17eaa0478a552eb02c
 
-ARG YQ_VERSION=4.24.5
-ARG YQ_SHA256_amd64=c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961c760
-ARG YQ_SHA256_arm64=8879e61c0b3b70908160535ea358ec67989ac4435435510e1fcb2eda5d74a0e9
+ARG YQ_VERSION=4.54.1
+ARG YQ_SHA256_amd64=8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f
+ARG YQ_SHA256_arm64=189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b
 
-ARG NODE_VERSION=22.13.0
-ARG NODE_SHA256_amd64=9a33e89093a0d946c54781dcb3ccab4ccf7538a7135286528ca41ca055e9b38f  
-ARG NODE_SHA256_arm64=e0cc088cb4fb2e945d3d5c416c601e1101a15f73e0f024c9529b964d9f6dce5b
+ARG NODE_VERSION=26.12.1
+ARG NODE_IMAGE_DIGEST=sha256:88e480776c6149ff1d098cd304f44bf18057fb5d284a3329b78162d29821e28c
+ARG NODE_SHA256_amd64=0fd1eb7770598f52a21995edf6ed35fc690400fa437c2386af329519e9143132
+ARG NODE_SHA256_arm64=a6c01af459dd8972ab3fb08ee5da81244d26ba8c4944a62d5bbba8c597ae154f
 
-ARG KOPIA_VERSION=0.19.0
-ARG KOPIA_SHA256_amd64=c07843822c82ec752e5ee749774a18820b858215aabd7da448ce665b9b9107aa
-ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e75669210ed9
+ARG KOPIA_VERSION=0.23.1
+ARG KOPIA_SHA256_amd64=416d0f84a3dbb321a8b2d8f0997b1a0a6e915babe79ee76fa6e4d2bd1e1c5178
+ARG KOPIA_SHA256_arm64=a4ffbc019e0b0f932e2632054e73ec521dc1e80172a00095369c53ecf4e5a6cb
 
-ARG RTL8127_VERSION=11.015.00
-ARG RTL8127_COMMIT=d4efe6050041f7d794d6f31b288abbacef11ff63
-ARG RTL8127_SHA256=7ef27a4b5845ed011271217a8d5824f97ef6f1720ae304661b57bf0714010080
+ARG RCLONE_RELEASE=1.75.2
+ARG RCLONE_SHA256_amd64=349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+ARG RCLONE_SHA256_arm64=7e1e8d69654941b7b7df84ee74c5f7fb09cce7d5496947fb7bf16b55ff427d10
 
-ARG RCLONE_RELEASE=1.75.1
-ARG RCLONE_SHA256_amd64=982b5aa772841168f8e380f139e9e787b2a105403e32b94da8676a0e1c0a13ab
-ARG RCLONE_SHA256_arm64=03f2504174034b6d004152ed7369251c9a9ec1f7e0836eda420f5c7a5ec0dff9
+ARG LIBDE265_VERSION=1.1.3-1
+ARG LIBDE265_SNAPSHOT_DATE=20260919T000000Z
+ARG LIBDE265_SHA256_amd64=36115188a321806ac797218cb878be15e8df7584fc65b10ea50d52cad065c5f5
+ARG LIBDE265_SHA256_arm64=36c69add16a79fdffd85f284501b8f9ddd7128ccb8e078598818beb3e50109ec
 
-ARG LIBDE265_VERSION=1.1.1-1
-ARG LIBDE265_SNAPSHOT_DATE=20260831T000000Z
-ARG LIBDE265_SHA256_amd64=9af67dd3a1dce99c936f33865f92407746ca4031b7a8b86ae8c28b9a3445f01c
-ARG LIBDE265_SHA256_arm64=1982300d3b6845a1c96f80a364b7921a69b69abd0c0417dc8554e2d487f488f5
+#########################################################################
+# source stage
+#########################################################################
 
-ARG LIBHEIF_VERSION=1.23.4-1
-ARG LIBHEIF_SNAPSHOT_DATE=20260921T000000Z
+# Files copied from the build context keep the modes and mtimes they have in the
+# checkout, which depend on the umask and on when each file was checked out.
+# Normalize the ones that end up in the OS so the result doesn't depend on the
+# checkout: Git only tracks the executable bit, and every mtime is set to
+# SOURCE_DATE_EPOCH.
+FROM --platform=$BUILDPLATFORM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS source
+
+ARG SOURCE_DATE_EPOCH
+
+COPY packages/ui /source/ui
+COPY packages/umbreld /source/umbreld
+COPY packages/os/overlay /source/overlay
+COPY packages/os/overlay-pi /source/overlay-pi
+RUN find /source -type d -exec chmod 0755 {} + && \
+    find /source -type f -perm /0111 -exec chmod 0755 {} + && \
+    find /source -type f ! -perm /0111 -exec chmod 0644 {} + && \
+    find /source -exec touch --no-dereference --date="@${SOURCE_DATE_EPOCH}" {} +
+
 
 #########################################################################
 # ui build stage
@@ -49,13 +78,13 @@ ARG LIBHEIF_SNAPSHOT_DATE=20260921T000000Z
 
 # The UI output is architecture-independent, so build it on the builder's native
 # architecture. This also avoids running esbuild's Go binary under emulation.
-FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-bookworm-slim AS ui-build
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-bookworm-slim@${NODE_IMAGE_DIGEST} AS ui-build
 
 # Set the working directory
 WORKDIR /app
 
 # Copy the package.json and package-lock.json
-COPY packages/ui/ .
+COPY --from=source /source/ui/ .
 
 # The ui-build stage only has 'packages/ui' in '/app', but the ui imports runtime values
 # via a relative path ('../../../umbreld/source/modules/server/trpc/common') that resolves outside '/app'.
@@ -69,6 +98,9 @@ RUN rm -rf node_modules || true
 RUN npm ci
 
 # Build the shared dashboard and app-auth frontend
+# The build needs more than Node's default heap on the arm64 builders, which
+# otherwise run out of memory part way through
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
 
 
@@ -79,8 +111,9 @@ RUN npm run build
 # Pull the target-architecture images with a native skopeo binary. Go binaries
 # can fail under cross-architecture user-mode emulation, and skopeo is only
 # needed while building these archives—not in the shipped OS.
-FROM --platform=$BUILDPLATFORM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS bundled-images
+FROM --platform=$BUILDPLATFORM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS bundled-images
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
 ARG TARGETARCH
 
@@ -88,41 +121,93 @@ COPY packages/os/build-steps /build-steps
 RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}" && \
     apt-get install --yes ca-certificates skopeo && \
     mkdir -p /images
-RUN skopeo copy --override-arch "${TARGETARCH}" docker://ghcr.io/getumbrel/tor@sha256:e382b8629c0dfef6ceb396b062622d4e4e955b19d6f16b883fd2c0723ad5671a docker-archive:/images/tor
+RUN skopeo copy --override-arch "${TARGETARCH}" docker://ghcr.io/getumbrel/tor@sha256:7663d18fe37b3edd97c859aa36bb5eeaa328d86c57729db0433dff430e8abd8d docker-archive:/images/tor
 
 
 #########################################################################
 # umbrelos-base build stage (amd64 and generic arm64)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS umbrelos-base
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
+ARG KERNEL_BACKPORTS_SNAPSHOT_DATE
 ARG TARGETARCH
 ARG NVIDIA_CUDA_SUPPORT
+ARG NVIDIA_DRIVER_VERSION
 
 COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
 
-# Install Linux kernel, firmware, and ZFS
-RUN apt-get install --yes \
-    zfs-dkms \
-    zfsutils-linux \
-    linux-headers-${TARGETARCH} \
-    linux-image-${TARGETARCH} \
-    firmware-linux
+# DKMS signs the modules it builds with a key it generates on the fly, which
+# would make every build differ and ship the private key in the image. umbrelOS
+# doesn't use Secure Boot, so nothing checks module signatures. Point DKMS at a
+# signing tool that doesn't exist so it leaves the modules unsigned.
+RUN mkdir -p /etc/dkms/framework.conf.d && \
+    echo 'sign_file=/nonexistent' > /etc/dkms/framework.conf.d/umbrel-no-module-signing.conf
 
-# Install amd64-specific microcode, firmware, and network drivers
+# Install Linux kernel, firmware, and ZFS.
+#
+# Take the kernel and firmware from trixie-backports, which tracks newer
+# upstream kernels, so new hardware is supported without out-of-tree drivers.
+# trixie's 6.12 kernel only gets fixes. The backports firmware matches the
+# backports kernel. Generic arm64 (dev VMs) takes the same kernel so it matches
+# what amd64 devices run.
+#
+# ZFS stays on trixie for now. trixie's ZFS builds against kernels up to its
+# upstream Linux-Maximum (7.2 for 2.3.9) and refuses anything newer. To build
+# against newer kernels, add src:zfs-linux to the pin to take ZFS from
+# backports too.
+#
+# Pin the source packages that have to come from backports, rather than using
+# --target-release, which would also pull in whatever other backports packages
+# the install's dependencies happen to reach and then conflict with later
+# installs from trixie. Everything else stays on trixie. If a future backports
+# kernel, ZFS, or firmware needs another backports package, the install fails
+# and its source package needs adding here.
+#
+# Newer kernels depend on dracut | initramfs-tools, and apt picks dracut on
+# arm64. umbrelOS builds its initramfs with initramfs-tools, so install it
+# explicitly.
+RUN set -e; \
+    echo "deb http://snapshot.debian.org/archive/debian/${KERNEL_BACKPORTS_SNAPSHOT_DATE} trixie-backports main contrib non-free non-free-firmware" \
+        >/etc/apt/sources.list.d/trixie-backports.list; \
+    printf '%s\n' \
+        'Package: src:linux src:linux-signed-amd64 src:linux-signed-arm64 src:linux-base src:firmware-nonfree' \
+        'Pin: release n=trixie-backports' \
+        'Pin-Priority: 990' \
+        >/etc/apt/preferences.d/trixie-backports-kernel; \
+    apt-get update --yes; \
+    apt-get install --yes \
+        zfs-dkms \
+        zfsutils-linux \
+        linux-headers-${TARGETARCH} \
+        linux-image-${TARGETARCH} \
+        initramfs-tools \
+        firmware-linux \
+        firmware-intel-graphics \
+        firmware-intel-misc \
+        firmware-mediatek \
+        firmware-nvidia-graphics
+
+# Install amd64-specific microcode and firmware
+#
+# Both microcode packages add their updates to the initramfs, which loads them
+# early in boot. amd64-microcode only does so when the machine building the
+# image has an AMD CPU, so AMD devices would only get microcode updates if the
+# image happened to be built on one. Always include them, like intel-microcode
+# already does for generic initramfs images.
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ]; then \
     apt-get install --yes \
         intel-microcode \
         amd64-microcode \
         firmware-realtek \
-        r8125-dkms \
         firmware-iwlwifi \
         firmware-atheros; \
+    echo 'AMD64UCODE_INITRAMFS=early' >> /etc/default/amd64-microcode; \
     fi
 
 # The Debian kernel and firmware already provide the in-tree amdgpu/KFD and
@@ -132,19 +217,48 @@ RUN set -e; \
 # CUDA, NVIDIA's Vulkan implementation, and NVDEC/NVENC share the NVIDIA kernel
 # driver. Keep their userspace libraries on the host so the NVIDIA Container
 # Toolkit can inject the versions matching that driver into application
-# containers. Use Debian's driver-library and Vulkan ICD package contracts so
-# all private compute, video, GLX, EGL, and Vulkan dependencies stay
-# version-matched.
-RUN set -e; \
+# containers.
+#
+# Debian's own NVIDIA packages are stuck on the 550 branch, which predates
+# Blackwell (RTX 50-series) support. Install a production-branch driver from
+# NVIDIA's Debian 13 repository instead. Those packages follow Debian's
+# driver-library and Vulkan ICD package contracts so all private compute, video,
+# GLX, EGL, and Vulkan dependencies stay version-matched. The repository is not
+# archived by snapshot.debian.org, so pin every package by checksum and keep the
+# repository itself out of the image's apt sources.
+#
+# NVIDIA ships nvidia-smi in nvidia-driver-cuda, which also enables
+# nvidia-persistenced. Every amd64 image carries the driver whether or not an
+# NVIDIA GPU is present, so leave the daemon disabled.
+#
+# NVIDIA's nvidia_drm module claims the same PCI IDs as nvidia, so udev would
+# autoload it with modesetting on and give NVIDIA GPUs a /dev/dri card and render
+# node. On systems with an iGPU, the NVIDIA node can then take renderD128, which
+# VA-API/QSV apps assume is the iGPU. CUDA, NVENC/NVDEC, and NVIDIA Vulkan only
+# need /dev/nvidia*, so blacklist the autoload and keep NVIDIA GPUs off /dev/dri.
+#
+# NVIDIA's module build embeds the output of $(DATE), which defaults to `date`,
+# so point it at SOURCE_DATE_EPOCH.
+COPY packages/os/nvidia-driver-packages.sha256 /tmp/nvidia-driver-packages.sha256
+RUN set -eu; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
-        apt-get install --yes --no-install-recommends \
-            nvidia-open-kernel-dkms \
-            nvidia-driver-libs \
-            libcuda1 \
-            libnvcuvid1 \
-            libnvidia-encode1 \
-            nvidia-smi \
-            nvidia-vulkan-icd; \
+        apt-get install --yes curl ca-certificates; \
+        mkdir -p /tmp/nvidia-driver; \
+        while read -r checksum package_file; do \
+            curl -fsSL "https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/${package_file}" -o "/tmp/nvidia-driver/${package_file}"; \
+            echo "${checksum}  /tmp/nvidia-driver/${package_file}" | sha256sum -c -; \
+        done < /tmp/nvidia-driver-packages.sha256; \
+        DATE="date --utc --date=@${SOURCE_DATE_EPOCH}" \
+            apt-get install --yes --no-install-recommends --no-remove /tmp/nvidia-driver/*.deb; \
+        systemctl disable nvidia-persistenced.service; \
+        echo 'blacklist nvidia_drm' > /etc/modprobe.d/nvidia-drm.conf; \
+        module_built=false; \
+        for modules_dir in /lib/modules/*; do \
+            test "$(modinfo -k "$(basename "${modules_dir}")" -F version nvidia)" = "${NVIDIA_DRIVER_VERSION}"; \
+            module_built=true; \
+        done; \
+        test "${module_built}" = "true"; \
+        rm -rf /tmp/nvidia-driver; \
         install --directory /etc/vulkan/icd.d; \
         cp /usr/share/vulkan/icd.d/nvidia_icd.json \
             /etc/vulkan/icd.d/nvidia_icd.json; \
@@ -152,7 +266,8 @@ RUN set -e; \
         rm -f \
             /usr/share/vulkan/icd.d/nvidia_icd.json \
             /usr/share/vulkan/implicit_layer.d/nvidia_layers.json; \
-    fi
+    fi; \
+    rm /tmp/nvidia-driver-packages.sha256
 
 # Keep the cross-hardware acceleration contract explicit. These options are
 # provided by Debian's generic amd64 kernel and expose /dev/dri for Vulkan plus
@@ -172,8 +287,9 @@ RUN rm -rf /build-steps
 # umbrelos-base-pi build stage (Raspberry Pi)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base-pi
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS umbrelos-base-pi
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
@@ -186,24 +302,22 @@ RUN /build-steps/setup-raspberrypi.sh
 RUN rm -rf /build-steps
 
 # Copy Pi-specific filesystem overlay
-COPY packages/os/overlay-pi /
+COPY --from=source /source/overlay-pi /
 
 
 #########################################################################
 # watchman build stage (amd64 and arm64)
 #########################################################################
 
-# Nasty hack to work around a Parcel watcher bug:
-# https://github.com/getumbrel/umbrel/issues/2158
+# umbreld watches files through Watchman, which avoids bugs in inotify-based
+# watching: https://github.com/getumbrel/umbrel/issues/2158
 #
 # We install Watchman through Homebrew because it gives us prebuilt bottles
 # for both arm64 and amd64. Building Watchman from source takes ages, and
 # upstream only provides prebuilt binaries for amd64.
-#
-# This can be removed if Parcel fixes the watcher bug or if we move away from
-# Parcel's watcher.
-FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS watchman-build
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS watchman-build
 
+ARG SOURCE_DATE_EPOCH
 ARG APT_SNAPSHOT_DATE
 ARG WATCHMAN_VERSION=2026.05.11.00
 ARG HOMEBREW_BREW_COMMIT=76ca8d74e4a180badad438bf245ddfc740d68a8e
@@ -291,6 +405,62 @@ RUN cp -a /home/linuxbrew/.linuxbrew /opt/linuxbrew && \
     mv /home/linuxbrew /home/linuxbrew.build-only && \
     /opt/linuxbrew/bin/watchman -v
 
+# Only Watchman runs in the OS, so drop Homebrew itself, along with the install
+# receipts and SBOMs it writes with the time each package was poured.
+RUN rm -rf /opt/linuxbrew/Homebrew /opt/linuxbrew/bin/brew && \
+    find /opt/linuxbrew/Cellar -mindepth 3 -maxdepth 3 \( -name INSTALL_RECEIPT.json -o -name sbom.spdx.json \) -delete
+
+
+#########################################################################
+# avahi build stage
+#########################################################################
+
+# Debian's avahi 0.8 publishes IPv6 addresses while they are still tentative,
+# before Duplicate Address Detection has finished. If another host on the LAN
+# already uses the address (e.g. a DHCPv6 server hands out an address that is
+# still in use), DAD fails, but avahi has already started probing a reverse
+# PTR record for it. The real owner defends that record and avahi treats it as
+# a host name conflict, so umbrel.local becomes umbrel-2.local. Clients keep
+# retrying the address, so the suffix keeps climbing (we've seen
+# umbrel-5582.local) until avahi is restarted.
+#
+# Upstream fixed this by ignoring tentative addresses, so we rebuild Debian's
+# avahi with that commit backported. This can be removed once Debian ships
+# avahi 0.9: https://github.com/avahi/avahi/pull/616
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS avahi-build
+
+ARG APT_SNAPSHOT_DATE
+
+COPY packages/os/build-steps /build-steps
+
+RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
+
+RUN apt-get install --yes dpkg-dev
+
+COPY packages/os/avahi-patches /avahi-patches
+
+# The build profiles skip the GTK and GObject introspection packages, which
+# umbrelOS doesn't install, and the test suite.
+WORKDIR /build
+RUN export DEB_BUILD_PROFILES="nogir pkg.avahi.nogui nocheck" DEB_BUILD_OPTIONS="nocheck" && \
+    apt-get source avahi && \
+    cd avahi-*/ && \
+    apt-get build-dep --yes ./ && \
+    for patch in /avahi-patches/*.patch; do \
+        cp "${patch}" debian/patches/ && \
+        basename "${patch}" >> debian/patches/series; \
+    done && \
+    { \
+        printf 'avahi (%s+umbrel1) %s; urgency=medium\n\n' "$(dpkg-parsechangelog --show-field Version)" "$(dpkg-parsechangelog --show-field Distribution)" && \
+        printf '  * Backport upstream fix to ignore tentative IPv6 addresses.\n\n' && \
+        printf ' -- umbrelOS <noreply@umbrel.com>  %s\n\n' "$(dpkg-parsechangelog --show-field Date)" && \
+        cat debian/changelog; \
+    } > debian/changelog.new && \
+    mv debian/changelog.new debian/changelog && \
+    dpkg-buildpackage --build=binary --no-sign && \
+    mkdir /debs && \
+    mv ../*.deb /debs/
+
 
 #########################################################################
 # umbrelos build stage
@@ -302,9 +472,8 @@ RUN cp -a /home/linuxbrew/.linuxbrew /opt/linuxbrew && \
 FROM umbrelos-base${BASE_VARIANT} AS umbrelos
 
 # We need to duplicate this such that we can also use the argument below.
+ARG SOURCE_DATE_EPOCH
 ARG TARGETARCH
-ARG DOCKER_VERSION
-ARG DOCKER_INSTALL_SCRIPT_COMMIT
 ARG NVIDIA_CUDA_SUPPORT
 ARG NVIDIA_CONTAINER_TOOLKIT_VERSION
 ARG LIBNVIDIA_CONTAINER1_SHA256_amd64
@@ -320,9 +489,6 @@ ARG NODE_SHA256_arm64
 ARG KOPIA_VERSION
 ARG KOPIA_SHA256_amd64
 ARG KOPIA_SHA256_arm64
-ARG RTL8127_VERSION
-ARG RTL8127_COMMIT
-ARG RTL8127_SHA256
 ARG RCLONE_RELEASE
 ARG RCLONE_SHA256_amd64
 ARG RCLONE_SHA256_arm64
@@ -330,8 +496,6 @@ ARG LIBDE265_VERSION
 ARG LIBDE265_SNAPSHOT_DATE
 ARG LIBDE265_SHA256_amd64
 ARG LIBDE265_SHA256_arm64
-ARG LIBHEIF_VERSION
-ARG LIBHEIF_SNAPSHOT_DATE
 
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
@@ -343,6 +507,19 @@ RUN apt-get install --yes systemd-zram-generator
 
 # Install essential networking services
 RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi-daemon avahi-discover avahi-utils libnss-mdns nftables
+
+# Replace Debian's avahi packages with our patched rebuild (see the avahi build stage)
+COPY --from=avahi-build /debs /tmp/avahi-debs
+RUN cd /tmp/avahi-debs && \
+    dpkg --install \
+        avahi-daemon_*.deb \
+        avahi-utils_*.deb \
+        libavahi-client3_*.deb \
+        libavahi-common-data_*.deb \
+        libavahi-common3_*.deb \
+        libavahi-core7_*.deb \
+        python3-avahi_*.deb && \
+    rm -rf /tmp/avahi-debs
 
 # Install bluetooth stack
 # The default configuration enables all bluetooth controllers/adapters present on boot and plugged in after boot
@@ -360,6 +537,7 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 # backends and consume well over a gigabyte on the A/B system partitions.
 # QEMU's OpenGL module loads libEGL at runtime without declaring it as a hard
 # package dependency, so keep libegl1 explicit for the headless virgl display.
+# eject loads the medium of a USB drive a guest ejected before it changes hands.
 RUN apt-get install --yes --no-install-recommends \
     libvirt-daemon-system \
     libvirt-daemon-driver-qemu \
@@ -385,7 +563,8 @@ RUN apt-get install --yes --no-install-recommends \
     genisoimage \
     dosfstools \
     mtools \
-    wimtools
+    wimtools \
+    eject
 
 # Docker's nftables compatibility rules can contain expressions that the
 # iptables frontend cannot round-trip (notably Tailscale interface globs).
@@ -432,62 +611,11 @@ RUN LIBDE265_SHA256=$(eval echo \$LIBDE265_SHA256_${TARGETARCH}) && \
     test "$(dpkg-query -W -f='${Version}' libde265-0)" = "${LIBDE265_VERSION}" && \
     rm /tmp/libde265-0.deb
 
-# Files and Photos decode untrusted HEIF/AVIF images through ImageMagick.
-# The pinned trixie package lacks libheif's security fixes. Install Debian's
-# 1.23.4 packages with matching plugins and their newer sharpyuv/x265 runtimes.
-# Keep this package set separate from the OS-wide apt snapshot.
-COPY packages/os/libheif-packages.sha256 /tmp/libheif-packages.sha256
-RUN set -eu; \
-    mkdir -p /tmp/libheif; \
-    grep "_${TARGETARCH}\\.deb$" /tmp/libheif-packages.sha256 > /tmp/libheif/packages.sha256; \
-    while read -r checksum package_path; do \
-        package_file="/tmp/libheif/${package_path##*/}"; \
-        curl -fsSL "https://snapshot.debian.org/archive/debian/${LIBHEIF_SNAPSHOT_DATE}/${package_path}" -o "${package_file}"; \
-        echo "${checksum}  ${package_file}" | sha256sum -c -; \
-    done < /tmp/libheif/packages.sha256; \
-    apt-get install --yes --no-install-recommends --no-remove /tmp/libheif/*.deb; \
-    for package in libheif1 libheif-plugin-libde265 libheif-plugin-dav1d libheif-plugin-aomenc libheif-plugin-x265; do \
-        test "$(dpkg-query -W -f='${Version}' "${package}")" = "${LIBHEIF_VERSION}"; \
-    done; \
-    convert -list format > /tmp/libheif/formats; \
-    for format in HEIC HEIF AVIF; do \
-        grep -Eq "^[[:space:]]*${format}[[:space:]]+HEIC[[:space:]]+rw[+]?[[:space:]]" /tmp/libheif/formats; \
-    done; \
-    rm -rf /tmp/libheif /tmp/libheif-packages.sha256
-
-# Install the Realtek RTL8127 10GbE driver on amd64 systems. Build against the
-# kernels in the image rather than the kernel running the Docker builder.
-RUN set -e; \
-    if [ "${TARGETARCH}" = "amd64" ]; then \
-        curl -fsSL "https://github.com/openwrt/rtl8127/archive/${RTL8127_COMMIT}.tar.gz" -o /tmp/rtl8127.tar.gz && \
-        echo "${RTL8127_SHA256}  /tmp/rtl8127.tar.gz" | sha256sum -c - && \
-        mkdir -p /tmp/rtl8127 && \
-        tar -xzf /tmp/rtl8127.tar.gz -C /tmp/rtl8127 --strip-components=1 && \
-        module_built=false && \
-        for modules_dir in /lib/modules/*; do \
-            if [ ! -d "${modules_dir}/build" ]; then \
-                continue; \
-            fi; \
-            kernel_version="$(basename "${modules_dir}")"; \
-            make -C "${modules_dir}/build" M=/tmp/rtl8127 clean; \
-            make -C "${modules_dir}/build" M=/tmp/rtl8127 modules; \
-            make -C "${modules_dir}/build" M=/tmp/rtl8127 INSTALL_MOD_DIR=kernel/drivers/net/ethernet/realtek modules_install; \
-            depmod -a "${kernel_version}"; \
-            test "$(modinfo -k "${kernel_version}" -F version r8127)" = "${RTL8127_VERSION}-NAPI"; \
-            module_built=true; \
-        done && \
-        test "${module_built}" = "true" && \
-        rm -rf /tmp/rtl8127 /tmp/rtl8127.tar.gz; \
-    fi
-
 # Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
 RUN systemctl disable smbd wsdd2
 
 # Filessystem support
-RUN apt-get install --yes gdisk parted e2fsprogs exfatprogs
-# For some reason this always fails on arm64 but it's ok since we
-# don't support external storage on Pi anyway.
-RUN [ "${TARGETARCH}" = "amd64" ] && apt-get install --yes ntfs-3g || true
+RUN apt-get install --yes gdisk parted e2fsprogs exfatprogs ntfs-3g
 
 # Install Node.js
 RUN NODE_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") && \
@@ -504,9 +632,10 @@ RUN YQ_SHA256=$(eval echo \$YQ_SHA256_${TARGETARCH}) && \
     echo "${YQ_SHA256} /usr/bin/yq" | sha256sum -c && \
     chmod +x /usr/bin/yq
 
-# Create the runtime user.
+# Create the runtime user with the password "umbrel". Set it from a fixed hash,
+# since chpasswd salts it randomly on every build.
 RUN adduser --gecos "" --disabled-password umbrel
-RUN echo "umbrel:umbrel" | chpasswd
+RUN usermod --password '$y$j9T$DVr8q3Zyf9OtCMowT3Q/K1$UNSCQ/Ev7h65gu36ePxQHpvbyUrvBJBQ5PxtinaXtuB' umbrel
 RUN usermod -aG sudo umbrel
 
 # Install the rclone release used by Cloud.
@@ -519,9 +648,32 @@ RUN RCLONE_SHA256=$(eval echo \$RCLONE_SHA256_${TARGETARCH}) && \
     test "$(rclone version | head -n 1)" = "rclone v${RCLONE_RELEASE}" && \
     rm -rf /tmp/rclone /tmp/rclone.zip
 
-RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_INSTALL_SCRIPT_COMMIT}/install.sh -o /tmp/install-docker.sh
-RUN sh /tmp/install-docker.sh --version v${DOCKER_VERSION}
-RUN rm /tmp/install-docker.sh
+# Docker 29 changed two defaults that /etc/docker/daemon.json reverts:
+# - Fresh installs default to the containerd image store, which keeps images
+#   in /var/lib/containerd on the root filesystem. Only /var/lib/docker is
+#   persisted on the data partition, so new devices and factory-reset devices
+#   would lose every app image on reboot. Keep the graphdriver store that
+#   existing devices already use.
+# - The minimum API version rose from 1.24 to 1.40, which would break apps
+#   that talk to the host Docker socket with older clients. Keep 1.24.
+#
+# Docker's repository isn't archived by snapshot.debian.org and moves on as new
+# versions are released, so install the same packages Docker's install script
+# would, pinned by checksum, and keep the repository out of the image's apt
+# sources. To update Docker, take the Filename (minus `dists/trixie/pool/stable/`)
+# and SHA256 of each of these packages from
+# https://download.docker.com/linux/debian/dists/trixie/stable/binary-<arch>/Packages
+# for amd64 and arm64.
+COPY packages/os/docker-packages.sha256 /tmp/docker-packages.sha256
+RUN set -eu; \
+    mkdir -p /tmp/docker; \
+    grep "_${TARGETARCH}.deb\$" /tmp/docker-packages.sha256 | while read -r checksum package_path; do \
+        package_file="$(basename "${package_path}")"; \
+        curl -fsSL "https://download.docker.com/linux/debian/dists/trixie/pool/stable/${package_path}" -o "/tmp/docker/${package_file}"; \
+        echo "${checksum}  /tmp/docker/${package_file}" | sha256sum -c -; \
+    done; \
+    apt-get install --yes /tmp/docker/*.deb; \
+    rm -rf /tmp/docker /tmp/docker-packages.sha256
 
 # Install the NVIDIA Container Toolkit directly from pinned, checksummed
 # packages. The toolkit exposes the matching CUDA and Vulkan driver userspace
@@ -579,7 +731,7 @@ RUN usermod -aG umbrel libvirt-qemu
 COPY --from=bundled-images /images /images
 
 # Install umbreld
-COPY packages/umbreld /opt/umbreld
+COPY --from=source /source/umbreld /opt/umbreld
 COPY --from=ui-build /app/dist /opt/umbreld/ui
 WORKDIR /opt/umbreld
 RUN rm -rf node_modules || true
@@ -587,18 +739,23 @@ RUN npm clean-install --omit dev && npm link
 WORKDIR /
 
 # Copy in filesystem overlay
-COPY packages/os/overlay /
+COPY --from=source /source/overlay /
 
 # The common overlay is shared with arm64 builds, so add the NVIDIA runtime
-# after copying it and only when the runtime binary exists on amd64. Toolkit
-# 1.19.1 auto-selects JIT CDI, which does not inject private dependencies from
+# after copying it and only when the runtime binary exists on amd64. The
+# toolkit auto-selects JIT CDI, which does not inject private dependencies from
 # Debian's split NVIDIA packages. Legacy mode uses libnvidia-container's
 # complete dependency discovery.
+#
+# Toolkit 1.20 enables nvidia-cdi-refresh, which writes a CDI spec at boot.
+# Docker tries CDI before the legacy hook for GPU device requests, so that spec
+# would silently bypass legacy mode. Mask it so GPU apps keep using the hook.
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ] && [ "${NVIDIA_CUDA_SUPPORT}" = "true" ]; then \
         nvidia-ctk runtime configure --runtime=docker; \
         nvidia-ctk config --in-place \
             --set nvidia-container-runtime.mode=legacy; \
+        systemctl mask nvidia-cdi-refresh.service nvidia-cdi-refresh.path; \
     fi
 
 # Rebuild initramfs after overlay changes so custom udev rules are available
@@ -607,6 +764,28 @@ RUN set -e; \
 # update-initramfs only regenerates the highest version by default, so
 # regenerate every installed kernel's initramfs.
 RUN update-initramfs -u -k all
+
+# Remove build-time state that would differ between otherwise identical builds:
+# logs, caches, and IDs generated at random while installing packages.
+# - Each device generates its own SSH host keys on first boot
+#   (umbrel-ssh-host-key-hydration).
+# - Rugix Ctrl gives each device its own machine ID at boot, which D-Bus reads
+#   from /etc/machine-id.
+# - Every device running a given build already shared the generated ZFS host
+#   ID and NVMe host NQN, so give them fixed values instead. umbrelOS imports
+#   pools with --force, so the host ID only needs to be stable.
+# - Homebrew's Python writes sitecustomize.py when it's poured, and build steps
+#   that run Python afterwards compile it with that time embedded.
+RUN rm -f /etc/ssh/ssh_host_*_key* /var/lib/dbus/machine-id /var/cache/ldconfig/aux-cache && \
+    truncate -s 0 /etc/machine-id && \
+    if command -v zgenhostid > /dev/null; then zgenhostid -f 756d6272; fi && \
+    if [ -d /etc/nvme ]; then \
+        echo "a4b0c2a6-4e3c-4f6b-9d38-4b5f0e1c7a21" > /etc/nvme/hostid && \
+        echo "nqn.2014-08.org.nvmexpress:uuid:a4b0c2a6-4e3c-4f6b-9d38-4b5f0e1c7a21" > /etc/nvme/hostnqn; \
+    fi && \
+    rm -rf /var/lib/dkms/*/*/*/*/log /root/.npm /tmp/node-compile-cache && \
+    find /opt/linuxbrew/Cellar -path '*/__pycache__/sitecustomize.*.pyc' -delete && \
+    find /var/log -type f -delete
 
 # Move persistant locations to /data to be bind mounted over the OS.
 # /data will exist on a seperate partition that survives OS updates.
@@ -618,3 +797,24 @@ RUN update-initramfs -u -k all
 RUN mkdir -p /data/umbrel-os/var
 RUN mv /var/log     /data/umbrel-os/var/log
 RUN mv /home        /data/umbrel-os/home
+
+
+#########################################################################
+# Docker image stage
+#########################################################################
+
+# Publish the multi-arch Docker image as a single layer holding the finished
+# filesystem. Every build step's layer also captures the logs and caches it
+# wrote, which would make the image differ on every build even though the
+# filesystem it adds up to doesn't. Keep the config the umbrelos stage ends up
+# with.
+#
+# This stage has to come after umbrelos to copy from it, which makes it the
+# default target, so everything that builds the OS itself passes
+# `--target umbrelos`.
+FROM scratch AS umbrelos-docker
+
+COPY --from=umbrelos / /
+ENV PATH=/opt/linuxbrew/bin:/opt/linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WORKDIR /
+CMD ["bash"]

@@ -8,7 +8,7 @@ import CloudRclone, {
 	RcloneProcessError,
 	readCloudConfig,
 	type RcloneConfigTransaction,
-} from './cloud-rclone.js'
+} from './cloud-rclone.ts'
 import {
 	CLOUD_INVALID_ACCOUNT_CONFIG_ERROR,
 	CLOUD_INVALID_ACCOUNT_IDENTITY_ERROR,
@@ -16,7 +16,7 @@ import {
 	type Provider,
 	type RemoteRef,
 	type WebDavFlavor,
-} from './cloud-types.js'
+} from './cloud-types.ts'
 
 export const OAUTH_SESSION_LIFETIME = 10 * 60 * 1000
 // The production bouncer is a stateless copy-code page. Account binding, PKCE

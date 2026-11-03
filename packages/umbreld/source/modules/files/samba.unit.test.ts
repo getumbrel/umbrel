@@ -1,8 +1,8 @@
 import fse from 'fs-extra'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
 describe('multi-account Samba policy', () => {
 	let directory: ReturnType<typeof temporaryDirectory>

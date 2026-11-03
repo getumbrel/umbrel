@@ -1,7 +1,6 @@
 import {formatDistanceToNowStrict} from 'date-fns'
-import type {ReactNode} from 'react'
 import {useTranslation} from 'react-i18next'
-import {TbChevronLeft, TbDeviceDesktop, TbDeviceMobile, TbHelp} from 'react-icons/tb'
+import {TbDeviceDesktop, TbDeviceMobile, TbHelp} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
@@ -9,15 +8,13 @@ import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/comp
 import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '@/components/ui/drawer'
 import {Loading} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
-import {useIsMobile} from '@/hooks/use-is-mobile'
-import {cn} from '@/lib/utils'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {finishBrowserLogout} from '@/modules/auth/logout'
 import {parseNativeSessionClient, parseSessionUserAgent, SessionClient} from '@/modules/auth/session-user-agent'
 import {useConfirmation} from '@/providers/confirmation'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {BackButton, useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
 import {languageCodeToDateLocale} from '@/utils/date-time'
-import {focusRingClass} from '@/utils/element-classes'
 
 type Session = RouterOutput['user']['listSessions'][number]
 
@@ -260,12 +257,12 @@ function SessionsView({
 export default function SessionsDrawerOrDialog() {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const dialogProps = useSettingsDialogProps()
 	const onBack = () => navigate('/settings')
 	const panel = <SessionsPanel onBack={onBack} backLabel={t('settings')} />
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
@@ -282,7 +279,7 @@ export default function SessionsDrawerOrDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogScrollableContent showClose>
+			<DialogScrollableContent>
 				<DialogHeader className='sr-only'>
 					<DialogTitle>{t('active-logins.title')}</DialogTitle>
 				</DialogHeader>
@@ -317,21 +314,6 @@ function SessionClientIcon({client}: {client: SessionClient}) {
 				/>
 			)}
 		</div>
-	)
-}
-
-function BackButton({onClick, children}: {onClick: () => void; children: ReactNode}) {
-	return (
-		<button
-			onClick={onClick}
-			className={cn(
-				'-mx-1 flex items-center gap-0.5 self-start rounded-4 px-1 text-13 font-medium -tracking-2 text-white/50 transition-colors hover:text-white/70',
-				focusRingClass,
-			)}
-		>
-			<TbChevronLeft className='size-4' />
-			{children}
-		</button>
 	)
 }
 

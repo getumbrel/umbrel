@@ -49,20 +49,14 @@ export function useNewFolder() {
 	})
 
 	// Commits the folder name synchronously: removes the top-pinned placeholder
-	// and inserts a sorted incoming item, then fires the mutation.
+	// and inserts a sorted incoming item, then fires the mutation. The name has
+	// already been checked where it was typed.
 	const commitNewFolder = (fullPath: string) => {
 		if (isReadOnly || !listingRef.current?.operations.includes('writable')) {
 			setNewFolder(null)
 			return
 		}
 		const name = fullPath.split('/').pop() || ''
-
-		if (listingRef.current?.items) {
-			if (!isNameAvailable(name, listingRef.current.items)) {
-				toast.error(t('files-error.folder-already-exists'), {area: 'files'})
-				return
-			}
-		}
 
 		const folder: FileSystemItem = {
 			name,
@@ -130,9 +124,6 @@ export function useNewFolder() {
 }
 
 // This is a best-effort check as it only compares against the currently loaded items.
-// umbreld still returns true if EEXIST, but doesn't create the folder.
-// So even if we don't throw an error here, umbreld will still handle the duplicate name.
-// But when we do throw an error, the user will see a toast
 function isNameAvailable(name: string, existingItems: FileSystemItem[]) {
 	const existingNames = new Set(existingItems.map((item) => item.name))
 	return !existingNames.has(name)

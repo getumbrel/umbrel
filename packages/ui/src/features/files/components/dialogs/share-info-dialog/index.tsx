@@ -5,7 +5,6 @@ import {TbAlertTriangle} from 'react-icons/tb'
 import {useSearchParams} from 'react-router-dom'
 
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
-import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {
 	Drawer,
 	DrawerContent,
@@ -27,13 +26,13 @@ import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-na
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function ShareInfoDialog() {
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const homeDirectoryName = useHomeDirectoryName()
 	const homePath = useHomePath()
 	const [searchParams] = useSearchParams()
@@ -81,7 +80,7 @@ export default function ShareInfoDialog() {
 	const smbUrl =
 		selectedPlatform?.id === 'windows' ? `\\\\${window.location.hostname}` : `smb://${window.location.hostname}/`
 	const username = user?.sambaUsername ?? ''
-	const password = isLoadingSharesPassword ? '...' : sharePassword || ''
+	const password = isLoadingSharesPassword ? '…' : sharePassword || ''
 
 	const content = (
 		<div className='space-y-6'>
@@ -142,7 +141,7 @@ export default function ShareInfoDialog() {
 		</div>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
@@ -164,7 +163,6 @@ export default function ShareInfoDialog() {
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
 				<div className='umbrel-stable-gutter min-h-0 flex-1 overflow-y-auto'>{content}</div>
-				<DialogCloseButton className='absolute top-2 right-2 z-50' />
 			</DialogContent>
 		</Dialog>
 	)

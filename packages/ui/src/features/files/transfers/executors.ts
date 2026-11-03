@@ -1,5 +1,6 @@
 import {authorizedHttpUrl, dashboardAuthHeaders} from '@/modules/auth/http-auth'
 import {trpcClient} from '@/trpc/trpc'
+import {uploadLastModified} from '@/utils/upload-last-modified'
 
 import type {TransferAttempt, TransferExecutor, TransferOutcome} from './transfer-queue'
 import type {TransferBatch, TransferItem, TransferLane} from './types'
@@ -76,7 +77,10 @@ const sendUpload = (item: TransferItem, {collision, file, signal, onProgress}: T
 	new Promise<TransferOutcome>((resolve) => {
 		if (!file) return resolve({type: 'failed', error: UPLOAD_FAILED_ERROR})
 		const xhr = new XMLHttpRequest()
-		xhr.open('POST', `/api/files/upload?path=${encodeURIComponent(item.path)}&collision=${collision}`)
+		// The stored copy keeps the file's own modification time
+		const lastModified = uploadLastModified(file)
+		const query = lastModified === undefined ? '' : `&lastModified=${lastModified}`
+		xhr.open('POST', `/api/files/upload?path=${encodeURIComponent(item.path)}&collision=${collision}${query}`)
 		const authorization = dashboardAuthHeaders().Authorization
 		if (authorization) xhr.setRequestHeader('Authorization', authorization)
 

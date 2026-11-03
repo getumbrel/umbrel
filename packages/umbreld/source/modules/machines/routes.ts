@@ -1,8 +1,9 @@
 import z from 'zod'
 
-import {router, privateProcedure} from '../server/trpc/trpc.js'
-import {MACHINE_INPUT_ACTIONS, MAX_SCROLL_AMOUNT, MAX_TYPE_TEXT_LENGTH, MAX_WAIT_SECONDS} from './machine-control.js'
-import {machineIdSchema} from './machine-id.js'
+import {router, privateProcedure} from '../server/trpc/trpc.ts'
+import {MACHINE_INPUT_ACTIONS, MAX_SCROLL_AMOUNT, MAX_TYPE_TEXT_LENGTH, MAX_WAIT_SECONDS} from './machine-control.ts'
+import {machineIdSchema} from './machine-id.ts'
+import {MAX_MACHINE_USB_DEVICES, usbDeviceIdentitySchema} from './machine-store.ts'
 
 const windowsLicenseKey = z.string().regex(/^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$/i)
 const screenshotCoordinate = z.tuple([z.number().int().min(0), z.number().int().min(0)])
@@ -33,6 +34,8 @@ export default router({
 					firmware: z.enum(['uefi', 'bios']).optional(),
 					diskBus: z.enum(['virtio', 'sata']).optional(),
 					diskDirectory: z.string().min(1).optional(),
+					// nat keeps the machine behind Umbrel, bridged puts it directly on the LAN
+					networkMode: z.enum(['nat', 'bridged']).optional(),
 					username: z.string().min(1).max(32).optional(),
 					// Only used during OS setup — never part of the machine definition
 					password: z.string().min(1).max(128).optional(),
@@ -97,12 +100,20 @@ export default router({
 						}),
 					)
 					.optional(),
+				// The complete set of host USB devices passed through to the machine
+				usbDevices: z.array(usbDeviceIdentitySchema).max(MAX_MACHINE_USB_DEVICES).optional(),
+				// Takes effect the next time the machine starts
+				networkMode: z.enum(['nat', 'bridged']).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
 			const {id, ...settings} = input
 			return ctx.umbreld.machines.updateSettings(id, settings)
 		}),
+
+	// USB devices plugged into Umbrel that can be passed through to machines,
+	// along with assigned devices that are currently unplugged
+	usbDevices: privateProcedure.query(async ({ctx}) => ctx.umbreld.machines.usbDevices()),
 
 	setPinned: privateProcedure
 		.input(z.object({id: machineIdSchema, pinned: z.boolean()}))
@@ -119,6 +130,12 @@ export default router({
 	// Which machines an MCP agent is currently driving, so the console can show
 	// who is at the controls
 	agentControls: privateProcedure.query(async ({ctx}) => ctx.umbreld.machines.agentControls()),
+
+	// Whether copy and paste reach the guest, so the console can type pasted text
+	// in when they don't
+	clipboardSharing: privateProcedure
+		.input(z.object({id: machineIdSchema}))
+		.query(async ({ctx, input}) => ctx.umbreld.machines.clipboardSharing(input.id)),
 
 	// The console as a still image, scaled for machine vision. Coordinates
 	// given to control refer to this image's pixels.

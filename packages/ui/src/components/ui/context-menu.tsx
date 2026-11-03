@@ -3,12 +3,28 @@ import {Check, ChevronRight, Circle} from 'lucide-react'
 import * as React from 'react'
 
 import {cn} from '@/lib/utils'
+import {allowsNativeContextMenu} from '@/utils/native-context-menu'
 
 import {contextMenuClasses} from './shared/menu'
 
 const ContextMenu = ContextMenuPrimitive.Root
 
-const ContextMenuTrigger = ContextMenuPrimitive.Trigger
+function ContextMenuTrigger({
+	onContextMenuCapture,
+	...props
+}: React.ComponentProps<typeof ContextMenuPrimitive.Trigger>) {
+	return (
+		<ContextMenuPrimitive.Trigger
+			{...props}
+			onContextMenuCapture={(e) => {
+				onContextMenuCapture?.(e)
+				// A text field inside the trigger (a rename, the Files path) gets the browser's text menu: stopping
+				// the event on its way down keeps it from the trigger and from the document's blocker
+				if (allowsNativeContextMenu(e.target)) e.stopPropagation()
+			}}
+		/>
+	)
+}
 
 const ContextMenuGroup = ContextMenuPrimitive.Group
 
@@ -56,9 +72,9 @@ function ContextMenuSubContent({
 				ref={ref}
 				className={cn(contextMenuClasses.content, className)}
 				{...props}
-				// Prevent right-clicks within subcontent from triggering parent context menus
+				// Keep right-clicks inside from opening an ancestor's context menu, while text fields keep the browser's own
 				onContextMenu={(e) => {
-					e.preventDefault() // Prevent default browser context menu
+					if (!allowsNativeContextMenu(e.target)) e.preventDefault()
 					e.stopPropagation()
 				}}
 			/>
@@ -68,6 +84,7 @@ function ContextMenuSubContent({
 
 function ContextMenuContent({
 	className,
+	collisionPadding = 8,
 	ref,
 	...props
 }: React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content> & {
@@ -77,11 +94,12 @@ function ContextMenuContent({
 		<ContextMenuPrimitive.Portal>
 			<ContextMenuPrimitive.Content
 				ref={ref}
+				collisionPadding={collisionPadding}
 				className={cn(contextMenuClasses.content, className)}
 				{...props}
-				// Prevent right-clicks within content from triggering parent context menus
+				// Keep right-clicks inside from opening an ancestor's context menu, while text fields keep the browser's own
 				onContextMenu={(e) => {
-					e.preventDefault() // Prevent default browser context menu
+					if (!allowsNativeContextMenu(e.target)) e.preventDefault()
 					e.stopPropagation()
 				}}
 			/>

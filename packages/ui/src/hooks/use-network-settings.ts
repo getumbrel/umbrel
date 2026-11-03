@@ -82,8 +82,9 @@ export function useStaticIp(mac: string, {onSettled}: {onSettled?: () => void} =
 	})
 
 	return {
+		/** Resolves or rejects when the request settles; errors are already toasted */
 		setStaticIp: (config: {ip: string; subnetPrefix: number; gateway: string; dns: string[]}) =>
-			setStaticIpMut.mutate({mac, ...config}),
+			setStaticIpMut.mutateAsync({mac, ...config}),
 		clearStaticIp: () => clearMut.mutate({mac}),
 		isSettingStaticIp: setStaticIpMut.isPending,
 		isClearing: clearMut.isPending,

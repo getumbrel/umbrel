@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -66,5 +67,12 @@ export default defineConfig({
 				},
 			},
 		},
+	},
+	test: {
+		// Node.js 25+ defines its own localStorage global, which is undefined without
+		// --localstorage-file and hides jsdom's localStorage in Vitest 4.
+		execArgv: ['--no-experimental-webstorage'],
+		// noVNC only declares a `browser` entry, which Vitest's resolver ignores
+		alias: [{find: /^@novnc\/novnc$/, replacement: '@novnc/novnc/lib/rfb.js'}],
 	},
 })

@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto'
 
 import {describe, expect, test} from 'vitest'
 
-import {buildDomainXml, type MachineDefinition} from './domain.js'
+import {buildDomainXml, buildInterfaceXml, machineJoinsLan, type MachineDefinition} from './domain.ts'
 
 function definition(overrides: Partial<MachineDefinition> = {}): MachineDefinition {
 	const id = randomUUID()
@@ -152,6 +152,40 @@ describe('libvirt domain XML', () => {
 		expect(xml).not.toContain('id=umbrel-audio')
 	})
 
+	test('gives guests that can run a clipboard agent a vdagent channel on a pinned controller', () => {
+		const xmlFor = (overrides: Partial<MachineDefinition>) =>
+			buildDomainXml({
+				definition: definition(overrides),
+				machineDirectory: '/data/machines/clipboard',
+				runtimeDirectory: '/run/umbrel-machines/clipboard',
+				acceleration: 'kvm',
+				firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+			})
+		const channel = "<channel type='qemu-vdagent'><source><clipboard copypaste='yes'/><mouse mode='server'/></source>"
+
+		for (const xml of [
+			xmlFor({}),
+			xmlFor({osId: 'windows-11'}),
+			xmlFor({arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'}),
+		]) {
+			expect(xml).toContain(channel)
+			expect(xml).toContain("<target type='virtio' name='com.redhat.spice.0'/>")
+			// Placed by libvirt, the controller would shift existing machines' PCI devices
+			expect(xml).toContain(
+				"<controller type='virtio-serial' index='0'><address type='pci' domain='0x0000' bus='0x00' slot='0x0a' function='0x0'/></controller>",
+			)
+		}
+		for (const xml of [
+			xmlFor({osId: 'windows-11', arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'}),
+			xmlFor({platformProfile: 'windows-7-x86', firmware: 'bios'}),
+			xmlFor({platformProfile: 'legacy-x86', firmware: 'bios'}),
+			xmlFor({platformProfile: 'windows-98-x86', firmware: 'bios'}),
+		]) {
+			expect(xml).not.toContain('virtio-serial')
+			expect(xml).not.toContain('qemu-vdagent')
+		}
+	})
+
 	test('uses TCG maximum CPU for a cross-architecture ARM guest', () => {
 		const xml = buildDomainXml({
 			definition: definition({
@@ -192,6 +226,100 @@ describe('libvirt domain XML', () => {
 		expect(xml).toContain("<input type='keyboard' bus='usb'/>")
 	})
 
+	// Without a topology libvirt gives each vCPU its own socket, and Windows
+	// client editions use at most two sockets
+	test.each([
+		{acceleration: 'kvm', cores: 6, overrides: {}},
+		{acceleration: 'kvm', cores: 1, overrides: {}},
+		{
+			acceleration: 'tcg',
+			cores: 3,
+			overrides: {arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'},
+		},
+		{
+			acceleration: 'kvm',
+			cores: 64,
+			overrides: {platformProfile: 'windows-98-x86', machineType: 'pc-i440fx-9.2', firmware: 'bios'},
+		},
+	] as const)('presents $cores $acceleration vCPUs as cores on a single socket', ({acceleration, cores, overrides}) => {
+		const xml = buildDomainXml({
+			definition: definition({...overrides, cores}),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration,
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+		})
+
+		expect(xml).toContain(`<vcpu placement='static'>${cores}</vcpu>`)
+		expect(xml).toMatch(
+			new RegExp(`<cpu mode='[a-z-]+' check='none'>\\s*<topology sockets='1' cores='${cores}' threads='1'/>\\s*</cpu>`),
+		)
+	})
+
+	const hyperv =
+		"<hyperv mode='custom'><relaxed state='on'/><vapic state='on'/><spinlocks state='on' retries='8191'/><vpindex state='on'/><runtime state='on'/><synic state='on'/><stimer state='on'><direct state='on'/></stimer><frequencies state='on'/><tlbflush state='on'/><ipi state='on'/></hyperv>"
+	const hypervClock =
+		"<clock offset='utc'><timer name='rtc' tickpolicy='catchup'/><timer name='pit' tickpolicy='delay'/><timer name='hpet' present='no'/><timer name='hypervclock' present='yes'/></clock>"
+
+	test.each([
+		{osId: 'windows-11', overrides: {secureBoot: true, tpm: true}},
+		{osId: 'windows-server', overrides: {secureBoot: true, tpm: true}},
+		{osId: 'windows-7', overrides: {platformProfile: 'windows-7-x86', firmware: 'bios'}},
+	] as const)('gives KVM $osId guests Hyper-V enlightenments and the Hyper-V clock', ({osId, overrides}) => {
+		const xml = buildDomainXml({
+			definition: definition({...overrides, osId}),
+			machineDirectory: '/data/machines/windows',
+			runtimeDirectory: '/run/umbrel-machines/windows',
+			acceleration: 'kvm',
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.ms.fd',
+		})
+
+		expect(xml).toContain(`<features><acpi/><apic/>${hyperv}`)
+		expect(xml).toContain(hypervClock)
+		expect(xml).not.toContain('evmcs')
+	})
+
+	// Linux switches clocksource away from kvm-clock when it sees Hyper-V, and
+	// the legacy Windows profiles and non-KVM guests stay as they were
+	test.each([
+		{name: 'a custom image', acceleration: 'kvm', overrides: {}},
+		{name: 'Ubuntu', acceleration: 'kvm', overrides: {osId: 'ubuntu'}},
+		{name: 'Android', acceleration: 'kvm', overrides: {osId: 'android'}},
+		{
+			name: 'Windows XP',
+			acceleration: 'kvm',
+			overrides: {osId: 'windows-xp', platformProfile: 'legacy-x86', machineType: 'pc-i440fx-9.2', firmware: 'bios'},
+		},
+		{
+			name: 'Windows 98',
+			acceleration: 'kvm',
+			overrides: {
+				osId: 'windows-98',
+				platformProfile: 'windows-98-x86',
+				machineType: 'pc-i440fx-9.2',
+				firmware: 'bios',
+			},
+		},
+		{
+			name: 'Windows 11 on Arm',
+			acceleration: 'kvm',
+			overrides: {osId: 'windows-11', arch: 'arm64', platformProfile: 'modern-arm64', machineType: 'virt-9.2'},
+		},
+		{name: 'emulated Windows 11', acceleration: 'tcg', overrides: {osId: 'windows-11'}},
+	] as const)('keeps $name on the plain UTC clock without Hyper-V', ({acceleration, overrides}) => {
+		const xml = buildDomainXml({
+			definition: definition(overrides),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration,
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+		})
+
+		expect(xml).not.toContain('<hyperv')
+		expect(xml).not.toContain('<timer')
+		expect(xml).toContain("<clock offset='utc'/>")
+	})
+
 	test('keeps port forwarding out of domain XML so umbreld can enforce DNAT centrally', () => {
 		const xml = buildDomainXml({
 			definition: definition({
@@ -209,6 +337,39 @@ describe('libvirt domain XML', () => {
 		expect(xml).not.toContain('portForward')
 		expect(xml).toContain("<source network='umbrel-machines'/>")
 		expect(xml).toContain("<port isolated='yes'/>")
+	})
+
+	test('passes assigned USB devices through on the xHCI controller by their current address', () => {
+		const xml = buildDomainXml({
+			definition: definition(),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration: 'kvm',
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+			usbDevices: [
+				{bus: 3, device: 7},
+				{bus: 1, device: 12},
+			],
+		})
+
+		expect(xml).toContain("<controller type='usb' model='qemu-xhci'/>")
+		expect(xml.match(/<hostdev\b[\s\S]*?<\/hostdev>/g)).toEqual([
+			"<hostdev mode='subsystem' type='usb'><source><address bus='3' device='7'/></source></hostdev>",
+			"<hostdev mode='subsystem' type='usb'><source><address bus='1' device='12'/></source></hostdev>",
+		])
+	})
+
+	test('never passes USB devices to legacy profiles without an xHCI controller', () => {
+		for (const platformProfile of ['legacy-x86', 'windows-98-x86'] as const) {
+			const xml = buildDomainXml({
+				definition: definition({platformProfile, machineType: 'pc-i440fx-9.2', firmware: 'bios'}),
+				machineDirectory: '/data/machines/legacy',
+				runtimeDirectory: '/run/umbrel-machines/legacy',
+				acceleration: 'kvm',
+				usbDevices: [{bus: 3, device: 7}],
+			})
+			expect(xml).not.toContain('<hostdev')
+		}
 	})
 
 	test('uses the legacy BIOS device profile without NVRAM', () => {
@@ -338,5 +499,60 @@ describe('libvirt domain XML', () => {
 		expect(xml).toContain("target dev='hdb' bus='ide'/><readonly/><boot order='3'")
 		expect(xml).toContain("source file='/data/machines/windows-98/media/install.iso' startupPolicy='optional'")
 		expect(xml).not.toContain('<acpi/>')
+	})
+
+	test('puts a bridged machine directly on the LAN bridge without NAT isolation or address filtering', () => {
+		const xml = buildDomainXml({
+			definition: definition({networkMode: 'bridged'}),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration: 'kvm',
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+		})
+		const networkInterface = xml.match(/<interface\b[\s\S]*?<\/interface>/g)!
+		expect(networkInterface).toHaveLength(1)
+		expect(networkInterface[0]).toContain("<interface type='bridge'>")
+		expect(networkInterface[0]).toContain("<mac address='02:00:00:00:00:01'/>")
+		expect(networkInterface[0]).toContain("<source bridge='umbrel-lan'/>")
+		expect(networkInterface[0]).toContain("<model type='virtio'/>")
+		expect(networkInterface[0]).toContain("<driver name='vhost'/>")
+		expect(networkInterface[0]).not.toContain('umbrel-machines')
+		expect(networkInterface[0]).not.toContain('isolated')
+		expect(networkInterface[0]).not.toContain('filterref')
+	})
+
+	test('keeps a bridged machine on NAT until its first-boot setup has called home', () => {
+		const settingUp = definition({
+			networkMode: 'bridged',
+			firstBootSetup: {startedAt: 1, tokenHash: 'a'.repeat(64)},
+		})
+		expect(machineJoinsLan(settingUp)).toBe(false)
+		expect(buildInterfaceXml(settingUp)).toContain("<source network='umbrel-machines'/>")
+		expect(buildInterfaceXml(settingUp)).toContain("<port isolated='yes'/>")
+
+		const setUp = {...settingUp, firstBootSetup: undefined}
+		expect(machineJoinsLan(setUp)).toBe(true)
+		expect(buildInterfaceXml(setUp)).toContain("<source bridge='umbrel-lan'/>")
+	})
+
+	test('treats machines saved before network modes existed as NAT', () => {
+		const legacy = definition()
+		expect(legacy.networkMode).toBeUndefined()
+		expect(machineJoinsLan(legacy)).toBe(false)
+		expect(machineJoinsLan(definition({networkMode: 'nat'}))).toBe(false)
+		expect(buildInterfaceXml(legacy)).toContain("<interface type='network'>")
+	})
+
+	test.each([
+		['windows-98-x86', 'ne2k_isa', "<address type='isa' iobase='0x200' irq='3'/>"],
+		['windows-7-x86', 'e1000', undefined],
+		['legacy-x86', 'rtl8139', undefined],
+	] as const)('keeps the %s network card when bridged', (platformProfile, model, address) => {
+		const xml = buildInterfaceXml(definition({networkMode: 'bridged', platformProfile}))
+		expect(xml).toContain("<source bridge='umbrel-lan'/>")
+		expect(xml).toContain(`<model type='${model}'/>`)
+		expect(xml).not.toContain('vhost')
+		if (address) expect(xml).toContain(address)
+		else expect(xml).not.toContain('<address')
 	})
 })

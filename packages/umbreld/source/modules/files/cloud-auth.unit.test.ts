@@ -3,7 +3,7 @@ import {inspect} from 'node:util'
 import type {Input, Options} from 'ky'
 import {describe, expect, test} from 'vitest'
 
-import CloudAuth, {CLOUD_OAUTH_SCOPES, OAUTH_SESSION_LIFETIME, type OAuthSession} from './cloud-auth.js'
+import CloudAuth, {CLOUD_OAUTH_SCOPES, OAUTH_SESSION_LIFETIME, type OAuthSession} from './cloud-auth.ts'
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111'
 const NOW = 1_720_000_000_000

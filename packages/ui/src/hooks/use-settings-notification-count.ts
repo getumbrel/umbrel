@@ -34,7 +34,7 @@ export function useSettingsNotificationCount() {
 
 		const res = Promise.allSettled([
 			// Deferred so it doesn't compete with the page-load requests
-			sleep(500).then(() => utils.system.checkUpdate.fetch()),
+			sleep(500).then(() => utils.update.check.fetch()),
 			utils.system.cpuTemperature.fetch(),
 			utils.system.systemMemoryUsage.fetch(),
 			utils.system.systemDiskUsage.fetch(),

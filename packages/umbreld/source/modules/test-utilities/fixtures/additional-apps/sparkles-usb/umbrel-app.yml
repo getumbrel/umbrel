@@ -1,0 +1,19 @@
+manifestVersion: 1
+id: sparkles-usb
+name: USB Test
+tagline: Holds serial adapters open like a smart home app
+icon: https://svgur.com/i/mvA.svg
+category: Development
+version: '1.0.0'
+port: 4002
+description: >-
+  A test app that sees the host's devices and opens every USB serial adapter
+  it finds when it starts, as a Zigbee or Z-Wave app would.
+developer: Umbrel
+website: https://umbrel.com
+support: https://github.com/getumbrel/umbrel/issues
+gallery: []
+dependencies: []
+path: ''
+defaultUsername: ''
+defaultPassword: ''

@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {assertManifestVersionCompatible, isManifestVersionCompatible} from './manifest-compatibility.js'
+import {assertManifestVersionCompatible, isManifestVersionCompatible} from './manifest-compatibility.ts'
 
 describe('isManifestVersionCompatible()', () => {
 	test.each([

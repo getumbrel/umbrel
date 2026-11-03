@@ -8,10 +8,10 @@ import yaml from 'js-yaml'
 import getPort from 'get-port'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type {AppGatewayConfig} from '../app-gateway/app-gateway.js'
-import type {NativeTlsPolicy} from '../apps/native-tls.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import LanIngress from './lan-ingress.js'
+import type {AppGatewayConfig} from '../app-gateway/app-gateway.ts'
+import type {NativeTlsPolicy} from '../apps/native-tls.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import LanIngress from './lan-ingress.ts'
 
 type Route = {
 	id: string

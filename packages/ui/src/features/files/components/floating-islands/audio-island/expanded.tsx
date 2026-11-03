@@ -41,9 +41,7 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 	if (authorizationFailed) {
 		return (
 			<div className='flex h-full flex-col items-center justify-center gap-3 px-6 text-center'>
-				<p className='text-13 text-white/60'>
-					{t('files-audio-island.auth-error', 'Umbrel could not authorize this audio file.')}
-				</p>
+				<p className='text-13 text-white/60'>{t('files-audio-island.auth-error')}</p>
 				<Button onClick={onRetryAuthorization} disabled={isRetryingAuthorization}>
 					{isRetryingAuthorization ? t('loading') : t('try-again')}
 				</Button>

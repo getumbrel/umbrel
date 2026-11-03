@@ -13,8 +13,9 @@ import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
+import {toast} from '@/components/ui/toast'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {cn} from '@/lib/utils'
@@ -44,7 +45,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 
 	const isBetaChannel = useIsBetaChannel()
 
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 
 	// Umbrel Home and Umbrel Pro have no Thunderbolt ports, so the panel is inert there.
 	const {isHomeOrPro} = useIsHomeOrPro()
@@ -176,7 +177,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 		)
 	const showOverview = activePanel === 'overview'
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
@@ -191,7 +192,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogScrollableContent showClose>
+			<DialogScrollableContent>
 				<AnimatedHeight>
 					<div className='space-y-6 px-5 py-6'>
 						<DialogHeader className={cn(!showOverview && 'sr-only')}>
@@ -206,15 +207,18 @@ export default function AdvancedSettingsDrawerOrDialog() {
 }
 
 function useIsBetaChannel() {
-	const releaseChannelQ = trpcReact.system.getReleaseChannel.useQuery()
+	const {t} = useTranslation()
+	const releaseChannelQ = trpcReact.update.getReleaseChannel.useQuery()
 	const isChecked = releaseChannelQ.data === 'beta'
 	const {checkLatest} = useSoftwareUpdate()
 
-	const releaseChannelMut = trpcReact.system.setReleaseChannel.useMutation({
+	const releaseChannelMut = trpcReact.update.setReleaseChannel.useMutation({
 		onSuccess: () => {
 			releaseChannelQ.refetch()
 			checkLatest()
 		},
+		// Otherwise the switch just flips back, with nothing to say it didn't take
+		onError: (error) => toast.error(t('beta-program-error', {message: error.message}), {area: 'settings'}),
 	})
 
 	const change = (checked: boolean) => {

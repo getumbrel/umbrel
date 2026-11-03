@@ -5,7 +5,7 @@ import type {SourceType} from '@/features/photos/hooks/use-photo-sources'
 import {languageCodeToDateLocale} from '@/utils/date-time'
 
 // Source states, import progress and per-state status lines return with the
-// post-v1 source types (android, drives, shares)
+// post-v1 source types (drives, shares)
 
 export function sourceTypeLabel(type: SourceType, t: TFunction): string {
 	switch (type) {
@@ -13,6 +13,8 @@ export function sourceTypeLabel(type: SourceType, t: TFunction): string {
 			return t('photos-source.type-umbrel')
 		case 'iphone':
 			return t('photos-source.type-iphone')
+		case 'android':
+			return t('photos-source.type-android')
 	}
 }
 

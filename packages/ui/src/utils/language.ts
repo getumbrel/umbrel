@@ -40,3 +40,30 @@ export const languages = [
 export const supportedLanguageCodes = map(languages, (entry) => entry.code)
 
 export type SupportedLanguageCode = (typeof supportedLanguageCodes)[number]
+
+// Chinese is the one language we ship in two scripts, so its script or region subtag
+// picks between them (eg. 'zh-TW', 'zh-Hant-HK')
+const traditionalChineseRegions = ['tw', 'hk', 'mo']
+
+// Picks the first language we support from the browser's ordered preferences
+// (eg. ['zh-TW', 'en-US'])
+export function matchBrowserLanguage(browserLanguageCodes: readonly string[]): SupportedLanguageCode | undefined {
+	for (const languageCode of browserLanguageCodes) {
+		// A regional variant we ship wins over its base language (eg. 'pt-BR')
+		const exactMatch = supportedLanguageCodes.find((code) => code.toLowerCase() === languageCode.toLowerCase())
+		if (exactMatch) return exactMatch
+
+		const [baseCode, ...subtags] = languageCode.toLowerCase().split('-')
+
+		if (baseCode === 'zh') {
+			const isTraditional =
+				subtags.includes('hant') ||
+				(!subtags.includes('hans') && subtags.some((subtag) => traditionalChineseRegions.includes(subtag)))
+			return isTraditional ? 'zh-TW' : 'zh'
+		}
+
+		const match = supportedLanguageCodes.find((code) => code === baseCode)
+		if (match) return match
+	}
+	return undefined
+}

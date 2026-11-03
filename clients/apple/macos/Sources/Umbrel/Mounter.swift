@@ -92,7 +92,7 @@ enum Mounter {
 					guard let path = recoveredMountPath(
 						host: host,
 						sharename: sharename,
-						from: mountedSharesSnapshot(hosts: [host])
+						from: mountedSharesSnapshot()
 					) else {
 						continuation.resume(throwing: MountError(
 							message: "Mounted \(sharename), but couldn't determine its location"
@@ -106,20 +106,17 @@ enum Mounter {
 	}
 
 	// Finder mounts outlive this process, so in-memory paths aren't enough after a
-	// crash or relaunch. Foundation exposes each network volume's remount URL; use
-	// its SMB host to recover every volume belonging to this Umbrel.
-	static func mountedShares(hosts: Set<String>) async -> [MountedShare] {
+	// crash or relaunch. Foundation exposes each network volume's remount URL; its SMB
+	// host and share say which server and share every volume belongs to.
+	static func mountedShares() async -> [MountedShare] {
 		return await withCheckedContinuation { (continuation: CheckedContinuation<[MountedShare], Never>) in
 			blockingQueue.async(qos: .utility) {
-				continuation.resume(returning: mountedSharesSnapshot(hosts: hosts))
+				continuation.resume(returning: mountedSharesSnapshot())
 			}
 		}
 	}
 
-	private static func mountedSharesSnapshot(hosts: Set<String>) -> [MountedShare] {
-		let normalizedHosts = Set(hosts.map(normalize(host:)))
-		guard !normalizedHosts.isEmpty else { return [] }
-
+	private static func mountedSharesSnapshot() -> [MountedShare] {
 		let key: URLResourceKey = .volumeURLForRemountingKey
 		let volumes = FileManager.default.mountedVolumeURLs(
 			includingResourceValuesForKeys: [key]
@@ -129,7 +126,6 @@ enum Mounter {
 				let remote = values.volumeURLForRemounting,
 				remote.scheme?.lowercased() == "smb",
 				let host = remote.host,
-				normalizedHosts.contains(normalize(host: host)),
 				!remote.lastPathComponent.isEmpty
 			else { return nil }
 			return MountedShare(host: host, sharename: remote.lastPathComponent, path: volume.path)
@@ -152,14 +148,20 @@ enum Mounter {
 		return matches[0].path
 	}
 
+	// The same volume: path, share and host all match. A path alone isn't enough because
+	// macOS reuses /Volumes names, so it may now hold another server's share.
+	static func isSameMount(_ lhs: MountedShare, _ rhs: MountedShare) -> Bool {
+		lhs.path == rhs.path && lhs.sharename == rhs.sharename && hostsMatch(lhs.host, rhs.host)
+	}
+
 	static func shares(
 		_ shares: [MountedShare],
 		ownedByHosts hosts: Set<String>,
-		orCreatedPaths createdPaths: Set<String> = []
+		orKnown known: [MountedShare] = []
 	) -> [MountedShare] {
 		let hostKeys = Set(hosts.map(normalize(host:)))
-		return shares.filter {
-			hostKeys.contains(normalize(host: $0.host)) || createdPaths.contains($0.path)
+		return shares.filter { share in
+			hostKeys.contains(normalize(host: share.host)) || known.contains { isSameMount($0, share) }
 		}
 	}
 

@@ -94,8 +94,18 @@ export function SwapDialog({
 	// dv('storage-manager.swap.foo') resolves to 'storage-manager.swap.foo-drive' when generic.
 	const isGenericDrive = !slot && (oldDevice ? oldDevice.type !== 'ssd' : missingDeviceType !== 'ssd')
 	const dv = (key: string) => t(isGenericDrive ? `${key}-drive` : key)
+	// Whole titles rather than a verb and a label, since languages order them differently ("SSD 2 tauschen")
+	const swapTitle = slot
+		? t('storage-manager.swap.title-slot', {slot})
+		: isGenericDrive
+			? t('storage-manager.swap.title-drive')
+			: t('storage-manager.swap.title')
+	const replaceTitle = slot
+		? t('storage-manager.replace-failed.title-slot', {slot})
+		: isGenericDrive
+			? t('storage-manager.replace-failed.title-drive')
+			: t('storage-manager.replace-failed.title')
 	// "SSD" slot labels are not translated - they match the physical device markings
-	const swappedLabel = slot ? `SSD ${slot}` : isGenericDrive ? t('storage-manager.swap.drive-label') : 'SSD'
 	const swappedLabelDefinite = slot
 		? `SSD ${slot}`
 		: isGenericDrive
@@ -163,7 +173,9 @@ export function SwapDialog({
 						{!isMissingMember && <StorageNotice>{t('storage-manager.swap.removal-risk')}</StorageNotice>}
 						{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 						<DialogFooter>
-							<Button onClick={() => onOpenChange(false)}>{t('done')}</Button>
+							<Button size='dialog' onClick={() => onOpenChange(false)}>
+								{t('done')}
+							</Button>
 						</DialogFooter>
 					</div>
 				</DialogScrollableContent>
@@ -176,6 +188,8 @@ export function SwapDialog({
 	// confirm could never enable, so missing members fall through to the instructions.
 	if (isStorageMode && hasAvailableDevices && oldDevice) {
 		const selectedDevice = validReplacementDevices.find((d) => d.id === selectedReplacementId)
+		// Same verb as the button that opened this: Swap for a healthy drive, Replace for a failed one
+		const actionLabel = oldDeviceFailed ? t('storage-manager.replace') : t('storage-manager.swap')
 
 		const handleReplace = () => {
 			if (!selectedDevice?.id || !oldDevice?.id) return
@@ -194,10 +208,7 @@ export function SwapDialog({
 			}).catch((error) => {
 				clearPendingOperation()
 				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-				toast.error(t('storage-manager.swap.failed-to-start'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				toast.error(t('storage-manager.swap.failed-to-start'), {area: 'settings'})
 			})
 		}
 
@@ -206,9 +217,7 @@ export function SwapDialog({
 				<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
 					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
-							<DialogTitle>
-								{t('storage-manager.replace')} {swappedLabel}
-							</DialogTitle>
+							<DialogTitle>{oldDeviceFailed ? replaceTitle : swapTitle}</DialogTitle>
 							<DialogDescription>{dv('storage-manager.swap.description-replace')}</DialogDescription>
 						</DialogHeader>
 
@@ -300,6 +309,14 @@ export function SwapDialog({
 							</div>
 						</div>
 
+						{/* Erase warning for devices without physical slots (the drive may have been used elsewhere before) */}
+						{selectedDevice && !selectedDevice.slot && (
+							<p className='text-[13px] text-yellow-500'>
+								<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
+								{t('storage-manager.add-drive-erase-warning')}
+							</p>
+						)}
+
 						{/* What happens next */}
 						<div className='flex flex-col gap-2'>
 							<span className='text-13 font-medium text-white/60'>{t('storage-manager.swap.what-happens-next')}</span>
@@ -324,12 +341,13 @@ export function SwapDialog({
 						<DialogFooter>
 							<Button
 								variant='primary'
+								size='dialog'
 								onClick={handleReplace}
 								disabled={!selectedDevice || !oldDevice || isOperationInProgress}
 							>
-								{t('storage-manager.replace')}
+								{actionLabel}
 							</Button>
-							<Button variant='default' onClick={() => onOpenChange(false)}>
+							<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 								{t('cancel')}
 							</Button>
 						</DialogFooter>
@@ -361,9 +379,7 @@ export function SwapDialog({
 					<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
 						<div className='flex flex-col gap-5 p-5'>
 							<DialogHeader>
-								<DialogTitle>
-									{oldDeviceFailed ? t('storage-manager.replace') : t('storage-manager.swap')} {swappedLabel}
-								</DialogTitle>
+								<DialogTitle>{oldDeviceFailed ? replaceTitle : swapTitle}</DialogTitle>
 								<DialogDescription>{t('storage-manager.swap.description-full-storage')}</DialogDescription>
 							</DialogHeader>
 
@@ -422,10 +438,10 @@ export function SwapDialog({
 							{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 							<DialogFooter>
-								<Button variant='primary' onClick={() => setShowShutdownConfirmation(true)}>
+								<Button variant='primary' size='dialog' onClick={() => setShowShutdownConfirmation(true)}>
 									{t('shut-down')}
 								</Button>
-								<Button variant='default' onClick={() => onOpenChange(false)}>
+								<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 									{t('cancel')}
 								</Button>
 							</DialogFooter>
@@ -471,9 +487,9 @@ export function SwapDialog({
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
 					<DialogHeader>
-						{/* "SSD" slot labels are not translated - they match the physical device markings */}
+						{/* SSD wording even without a slot, like the steps below */}
 						<DialogTitle>
-							{t('storage-manager.swap')} {slot ? `SSD ${slot}` : 'SSD'}
+							{slot ? t('storage-manager.swap.title-slot', {slot}) : t('storage-manager.swap.title')}
 						</DialogTitle>
 						<DialogDescription>{t('storage-manager.swap.description-no-free-slot')}</DialogDescription>
 					</DialogHeader>
@@ -507,7 +523,7 @@ export function SwapDialog({
 					</div>
 
 					<DialogFooter>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('done')}
 						</Button>
 					</DialogFooter>
@@ -525,6 +541,18 @@ export function SwapDialog({
 		t('storage-manager.swap.step-power-on', {deviceName}),
 		dv('storage-manager.swap.step-return-to-storage-manager'),
 	]
+	// A larger replacement only adds space once the drives sharing its data are larger too:
+	// the other drive of an HDD pair, or every SSD in the pool, since FailSafe uses the
+	// smallest SSD's size on all of them. Accelerator SSDs add no storage space.
+	const isDataMember = raidStatus?.devices?.some((member) => member.id === targetId)
+	const largerDriveNote =
+		isMissingMember || !isDataMember
+			? null
+			: raidStatus?.topology === 'mirror'
+				? t('storage-manager.swap.larger-drives-pair')
+				: raidStatus?.topology === 'raidz'
+					? t('storage-manager.swap.larger-ssds')
+					: null
 
 	return (
 		<>
@@ -532,10 +560,7 @@ export function SwapDialog({
 				<DialogScrollableContent>
 					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
-							<DialogTitle>
-								{oldDeviceFailed || isMissingMember ? t('storage-manager.replace') : t('storage-manager.swap')}{' '}
-								{swappedLabel}
-							</DialogTitle>
+							<DialogTitle>{oldDeviceFailed || isMissingMember ? replaceTitle : swapTitle}</DialogTitle>
 							<DialogDescription>{t('storage-manager.swap.description-failsafe')}</DialogDescription>
 						</DialogHeader>
 
@@ -587,13 +612,15 @@ export function SwapDialog({
 							</div>
 						)}
 
+						{largerDriveNote && <p className='text-13 leading-relaxed text-white/50'>{largerDriveNote}</p>}
+
 						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 						<DialogFooter>
-							<Button variant='primary' onClick={() => setShowShutdownConfirmation(true)}>
+							<Button variant='primary' size='dialog' onClick={() => setShowShutdownConfirmation(true)}>
 								{t('shut-down')}
 							</Button>
-							<Button variant='default' onClick={() => onOpenChange(false)}>
+							<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 								{t('cancel')}
 							</Button>
 						</DialogFooter>

@@ -67,11 +67,14 @@ export function DockItem({
 		damping: 10,
 	}
 
+	// The icon is laid out at its magnified size rather than scaled up with a
+	// transform: Safari rasterizes a scaled icon at its resting size and stretches
+	// that bitmap, so magnified icons came out soft. Only the badge still scales.
 	const widthSync = useTransform(distance, [-150, 0, 150], [iconSize, iconSizeZoomed, iconSize])
 	const width = useSpring(widthSync, springOptions)
 
 	const scaleSync = useTransform(distance, [-150, 0, 150], [1, iconSizeZoomed / iconSize, 1])
-	const transform = useSpring(scaleSync, springOptions)
+	const badgeScale = useSpring(scaleSync, springOptions)
 
 	return (
 		<motion.div
@@ -111,20 +114,19 @@ export function DockItem({
 			{/* icon */}
 			<motion.div
 				className={cn(
-					'relative origin-top-left bg-cover transition-[filter] has-[:focus-visible]:brightness-125',
+					'relative bg-cover transition-[filter] has-[:focus-visible]:brightness-125',
 					// CSS bounce (see index.css) instead of a motion variant: a JS-driven
 					// bounce stutters while the sheet's route mounts on the main thread
 					open && clickedOpen && 'umbrel-dock-bounce',
 					className,
 				)}
 				style={{
-					width: iconSize,
-					height: iconSize,
+					width,
+					height: width,
 					backgroundImage: bg
 						? `url(${bg})`
 						: // TODO: use a better default
 							`linear-gradient(to bottom right, white, black)`,
-					scale: transform,
 					...style,
 				}}
 				{...props}
@@ -139,7 +141,13 @@ export function DockItem({
 						}
 					}}
 				/>
-				{!!notificationCount && <NotificationBadge count={notificationCount} />}
+				{!!notificationCount && (
+					// Grows with the icon from its top-right corner, as it did when the
+					// whole icon was scaled
+					<motion.div className='absolute top-0 right-0 origin-top-right' style={{scale: badgeScale}}>
+						<NotificationBadge count={notificationCount} />
+					</motion.div>
+				)}
 			</motion.div>
 			{open && <OpenPill />}
 		</motion.div>

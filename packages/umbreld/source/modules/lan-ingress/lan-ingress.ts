@@ -6,21 +6,29 @@ import {lookup} from 'node:dns/promises'
 import {rename} from 'node:fs/promises'
 import {setTimeout as delay} from 'node:timers/promises'
 
+import Dockerode from 'dockerode'
 import {$} from 'execa'
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {createProxyMiddleware, type RequestHandler} from 'http-proxy-middleware'
 
-import type Umbreld from '../../index.js'
-import randomToken from '../utilities/random-token.js'
-import {getHostname, getIpAddresses} from '../system/system.js'
-import runEvery from '../utilities/run-every.js'
-import {forwardTcp} from './forward-tcp.js'
-import {readNativeTlsPrelude} from './native-tls-preread.js'
-import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.js'
-import AppGateway, {readAppGatewayConfig, type AppGatewayConfig} from '../app-gateway/app-gateway.js'
+import type Umbreld from '../../index.ts'
+import randomToken from '../utilities/random-token.ts'
+import {getHostname, getIpAddresses} from '../system/system.ts'
+import runEvery from '../utilities/run-every.ts'
+import {forwardTcp} from './forward-tcp.ts'
+import {readNativeTlsPrelude} from './native-tls-preread.ts'
+import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.ts'
+import AppGateway, {readAppGatewayConfig, type AppGatewayConfig} from '../app-gateway/app-gateway.ts'
 
 const NFT_BIN = '/usr/sbin/nft'
+
+// Container lookups go to the Docker Engine API rather than the docker CLI. They
+// run for every gateway app on each ingress refresh and once a second for each
+// app waiting on its gateway, and every CLI call forks umbreld, which blocks the
+// event loop until the child has exec'd. With many apps starting or updating at
+// once that kept the event loop blocked for around half of the time.
+const docker = new Dockerode()
 
 // This table contains only Umbrel-owned LAN ingress rules. App ports stay
 // owned by apps; nftables redirects inbound LAN traffic to hidden Node listeners.
@@ -609,11 +617,15 @@ export default class LanIngress {
 			return host === `${appId}_${serviceName}_1`
 		})?.[0]
 		if (matchingService) {
-			const container = await $({
-				reject: false,
-			})`docker ps --filter label=com.docker.compose.project=${appId} --filter label=com.docker.compose.service=${matchingService} --format {{.ID}}`
-			const containerId = container.stdout.trim().split('\n')[0]
-			if (container.exitCode === 0 && containerId) {
+			const containers = await docker
+				.listContainers({
+					filters: JSON.stringify({
+						label: [`com.docker.compose.project=${appId}`, `com.docker.compose.service=${matchingService}`],
+					}),
+				})
+				.catch(() => [])
+			const containerId = containers[0]?.Id
+			if (containerId) {
 				const serviceAddress = await this.inspectContainerAddress(containerId)
 				if (serviceAddress) return serviceAddress
 			}
@@ -663,16 +675,12 @@ export default class LanIngress {
 	}
 
 	private async inspectContainerAddress(container: string) {
-		// Interpolate the Go template so Execa passes it as one argument. Quotes in an
-		// Execa command template are literal (there is no shell to remove them), which
-		// would wrap Docker's JSON output in single quotes and make it unparsable.
-		const networksFormat = '{{json .NetworkSettings.Networks}}'
-		const inspection = await $({
-			reject: false,
-		})`docker inspect --format ${networksFormat} -- ${container}`
-		if (inspection.exitCode !== 0) return null
 		try {
-			const networks = JSON.parse(inspection.stdout) as Record<string, {IPAddress?: unknown}>
+			// Dockerode puts the name into the request path unescaped, and an app's
+			// APP_HOST can be any string. Unescapable characters would throw where
+			// this catch can't see it and crash umbreld.
+			const inspection = await docker.getContainer(encodeURIComponent(container)).inspect()
+			const networks: Record<string, {IPAddress?: unknown} | undefined> = inspection.NetworkSettings?.Networks ?? {}
 			const addresses = [networks.umbrel_main_network, ...Object.values(networks)]
 				.map((network) => network?.IPAddress)
 				.filter((address): address is string => typeof address === 'string')
@@ -931,7 +939,10 @@ export default class LanIngress {
 			const forward = (chunks: Buffer[], tls: boolean, hostname?: string, release = () => {}) => {
 				if (socket.destroyed) return release()
 				let port = httpPort
-				if (tls && !(nativeTls && matchesNativeTlsHostname(hostname, nativeTls))) {
+				// The app owns TLS on this port, so it also gets ClientHellos without
+				// SNI, such as Apple's native clients send when connecting by IP.
+				const native = nativeTls && (hostname === undefined || matchesNativeTlsHostname(hostname, nativeTls))
+				if (tls && !native) {
 					const address = getHttpsProxyServer()?.address()
 					if (!address || typeof address === 'string') {
 						release()
@@ -997,8 +1008,11 @@ export default class LanIngress {
 					return
 				}
 			}
+			this.setForwardedHeaders(request, options.includeForwardedFor ?? true)
 			middleware(request as any, response as any, (error?: unknown) => {
-				// Reset instead of an error response for the same reason as onError above.
+				// http-proxy-middleware declines URLs it can't parse, such as GET //[
+				if (!error) return void response.writeHead(400).end()
+				// Reset instead of an error response for the same reason as the error handler above.
 				this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
 				response.destroy()
 			})
@@ -1006,7 +1020,7 @@ export default class LanIngress {
 		// Let umbreld and upstream apps enforce their own upload deadlines.
 		// Keep the separate timeout for receiving request headers.
 		server.requestTimeout = 0
-		this.attachProxyUpgradeHandler(server, middleware)
+		this.attachProxyUpgradeHandler(server, middleware, options.includeForwardedFor ?? true)
 		return server
 	}
 
@@ -1033,8 +1047,11 @@ export default class LanIngress {
 						return
 					}
 				}
+				this.setForwardedHeaders(request, includeForwardedFor)
 				middleware(request as any, response as any, (error?: unknown) => {
-					// Reset instead of an error response for the same reason as onError above.
+					// http-proxy-middleware declines URLs it can't parse, such as GET //[
+					if (!error) return void response.writeHead(400).end()
+					// Reset instead of an error response for the same reason as the error handler above.
 					this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
 					response.destroy()
 				})
@@ -1043,7 +1060,7 @@ export default class LanIngress {
 		// Let umbreld and upstream apps enforce their own upload deadlines.
 		// Keep the separate timeout for receiving request headers.
 		server.requestTimeout = 0
-		this.attachProxyUpgradeHandler(server, middleware)
+		this.attachProxyUpgradeHandler(server, middleware, includeForwardedFor)
 		return server
 	}
 
@@ -1061,54 +1078,79 @@ export default class LanIngress {
 		return createProxyMiddleware({
 			target: `http://127.0.0.1:${upstreamPort}`,
 			changeOrigin: false,
-			ws: true,
+			// WebSocket upgrades are proxied explicitly by attachProxyUpgradeHandler(), so
+			// don't let http-proxy-middleware subscribe its own upgrade listener as well.
+			ws: false,
+			// Open a new upstream connection for every request instead of pooling
+			// keep-alive connections, so apps see the same connection behavior as they
+			// did behind http-proxy.
+			agent: false,
 			pathRewrite: rewritePath,
 			// Umbrel-owned upstreams (dashboard, app-auth) get X-Forwarded-For since they
 			// only trust it from loopback. App upstreams must not: some apps reject any
 			// X-Forwarded-For from an unconfigured proxy (Home Assistant returns 400),
 			// and the plain-HTTP raw forward path never carried it either.
 			xfwd: includeForwardedFor,
-			logProvider: () => ({
-				log: this.logger.verbose,
-				debug: this.logger.verbose,
-				info: this.logger.verbose,
-				warn: this.logger.log,
-				error: this.logger.error,
-			}),
-			onProxyReq: (proxyRequest, request) => {
-				// The upstream target is always HTTP. Tell umbreld/app-auth/app-proxy
-				// whether the original browser request used HTTP or HTTPS.
-				proxyRequest.setHeader('x-forwarded-proto', originalProtocol)
-				if (request.headers.host) proxyRequest.setHeader('x-forwarded-host', request.headers.host)
-			},
-			onProxyReqWs: (proxyRequest, request) => {
-				// WebSocket upgrade requests bypass onProxyReq, so mirror the same
-				// forwarded headers for ws:// and wss:// traffic.
-				proxyRequest.setHeader('x-forwarded-proto', originalProtocol)
-				if (request.headers.host) proxyRequest.setHeader('x-forwarded-host', request.headers.host)
-			},
-			onProxyRes: (proxyResponse) => {
-				// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
-				// and HTTP fallback paths that are important for private local certs.
-				delete proxyResponse.headers['strict-transport-security']
-			},
-			onError: (error, _request, response) => {
-				// Destroy the connection instead of answering with an error body. An
-				// unreachable upstream means umbreld or an app is still starting (or has
-				// crashed), and before LAN ingress existed clients saw connection refused
-				// in those windows. Existing retry loops (UI polling, tRPC websocket
-				// reconnects, companion apps) treat a reset the same way, while an error
-				// body breaks JSON clients mid-poll. The plain-HTTP raw forward path
-				// already resets on upstream failure, so this also keeps HTTP and HTTPS
-				// behavior consistent on the same port.
-				this.logger.verbose(`LAN ingress proxy error to ${upstreamPort}: ${error}`)
-				response.destroy()
+			// The upstream target is always HTTP. Tell umbreld/app-auth/app-gateway
+			// whether the original browser request used HTTP or HTTPS. httpxy
+			// applies these when it builds the upstream request, after xfwd, so unlike
+			// the proxyReq event they also cover requests with an Expect header.
+			headers: {'x-forwarded-proto': originalProtocol},
+			// Leave http-proxy-middleware's own logging off, as the app gateway does. Its
+			// lines include each request's URL, and so any token in the query string.
+			// The error handler below logs failures without it.
+			on: {
+				proxyRes: (proxyResponse) => {
+					// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
+					// and HTTP fallback paths that are important for private local certs.
+					delete proxyResponse.headers['strict-transport-security']
+				},
+				error: (error, _request, response) => {
+					// Destroy the connection instead of answering with an error body. An
+					// unreachable upstream means umbreld or an app is still starting (or has
+					// crashed), and before LAN ingress existed clients saw connection refused
+					// in those windows. Existing retry loops (UI polling, tRPC websocket
+					// reconnects, companion apps) treat a reset the same way, while an error
+					// body breaks JSON clients mid-poll. The plain-HTTP raw forward path
+					// already resets on upstream failure, so this also keeps HTTP and HTTPS
+					// behavior consistent on the same port.
+					// A WebSocket client dropping its connection, and the upstream request
+					// that then cancels, isn't a proxy failure.
+					const clientFailed = response instanceof net.Socket && response.errored
+					this.logger[clientFailed ? 'verbose' : 'error'](`LAN ingress proxy error to ${upstreamPort}: ${error}`)
+					response.destroy()
+				},
 			},
 		})
 	}
 
-	private attachProxyUpgradeHandler(server: http.Server, middleware: RequestHandler) {
-		server.on('upgrade', (request, socket, head) => middleware.upgrade?.(request as any, socket as net.Socket, head))
+	private attachProxyUpgradeHandler(server: http.Server, middleware: RequestHandler, includeForwardedFor: boolean) {
+		server.on('upgrade', (request, socket, head) => {
+			// Node.js 26 passes a stream wrapper instead of the socket when an upgrade
+			// request has a body, which the proxy can't handle. WebSocket handshakes
+			// never have a body.
+			if (!(socket instanceof net.Socket)) return socket.destroy()
+			// http-proxy-middleware ignores upgrades whose URL it can't read a path from,
+			// such as GET //[ or GET foo://host, which would leave the socket open.
+			if (!URL.parse(request.url ?? '', 'http://localhost')?.pathname.startsWith('/')) return socket.destroy()
+			this.setForwardedHeaders(request, includeForwardedFor)
+			middleware.upgrade(request as any, socket, head)
+		})
+	}
+
+	// Set on the incoming request, which httpxy copies into the upstream one,
+	// rather than in the proxyReq event. httpxy skips that event for requests with
+	// an Expect header, since Node has already sent their headers by then.
+	private setForwardedHeaders(request: http.IncomingMessage, includeForwardedFor: boolean) {
+		if (request.headers.host) request.headers['x-forwarded-host'] = request.headers.host
+		// xfwd only fills in X-Forwarded-For when the client didn't send one, which
+		// would pass a client-chosen address to upstreams that trust it from
+		// loopback. Append the peer address instead, so the last entry is always ours.
+		if (includeForwardedFor) {
+			const forwardedFor = request.headers['x-forwarded-for']
+			const remoteAddress = request.socket.remoteAddress ?? ''
+			request.headers['x-forwarded-for'] = forwardedFor ? `${forwardedFor},${remoteAddress}` : remoteAddress
+		}
 	}
 
 	private serverPort(server: net.Server | http.Server) {

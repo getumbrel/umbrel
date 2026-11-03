@@ -1,26 +1,26 @@
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 
-import {appGatewayTokenFromRequest, clearAppGatewayCookies, setAppGatewayCookie} from '../auth/app-gateway-cookie.js'
+import {appGatewayTokenFromRequest, clearAppGatewayCookies, setAppGatewayCookie} from '../auth/app-gateway-cookie.ts'
 import {
 	BrowserSessionRequiredError,
 	InvalidNativeDeviceCredentialError,
 	OWNER_ACCOUNT_ID,
 	SessionIssuanceInvalidatedError,
-} from '../auth/auth.js'
+} from '../auth/auth.ts'
 import {
 	browserSessionTokenFromRequest,
 	clearBrowserSessionCookies,
 	setBrowserSessionCookie,
-} from '../auth/browser-session-cookie.js'
-import {nativeClientSchema} from '../auth/native-client.js'
-import * as totp from '../utilities/totp.js'
-import type {Context} from '../server/trpc/context.js'
-import {privateProcedure, privateProcedureWithMembers, publicProcedure, router} from '../server/trpc/trpc.js'
-import {accountAvatarUrl, serializeAccountAvatar} from './avatar-api.js'
-import {OWNER_USER_ID} from './constants.js'
-import type {AccountLoginValidation} from './user.js'
-import {isWallpaperId, resolveWallpaperAppearance} from './wallpapers.js'
+} from '../auth/browser-session-cookie.ts'
+import {nativeClientSchema} from '../auth/native-client.ts'
+import * as totp from '../utilities/totp.ts'
+import type {Context} from '../server/trpc/context.ts'
+import {privateProcedure, privateProcedureWithMembers, publicProcedure, router} from '../server/trpc/trpc.ts'
+import {accountAvatarUrl, serializeAccountAvatar} from './avatar-api.ts'
+import {OWNER_USER_ID} from './constants.ts'
+import type {AccountLoginValidation} from './user.ts'
+import {isWallpaperId, resolveWallpaperAppearance} from './wallpapers.ts'
 
 const loginErrorMessage = (reason: Extract<AccountLoginValidation, {valid: false}>['reason']) => {
 	if (reason === 'missing-totp') return 'Missing 2FA code'

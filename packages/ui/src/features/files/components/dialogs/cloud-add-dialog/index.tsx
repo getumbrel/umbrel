@@ -31,7 +31,7 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import type {FileSystemItem} from '@/features/files/types'
 import {CLOUD_WEBDAV_FLAVORS, isValidCloudDestination, type CloudWebDavFlavorId} from '@/features/files/utils/cloud'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {trpcReact, type RouterError} from '@/trpc/trpc'
@@ -55,7 +55,7 @@ const CLOUD_BROWSE_ROOT = '/cloud'
 
 export default function CloudAddDialog() {
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const dialogProps = useDialogOpenProps('files-cloud-add')
 	const {params} = useQueryParams()
 	const {navigateToDirectory} = useNavigate()
@@ -94,6 +94,8 @@ export default function CloudAddDialog() {
 	const [cameFromConnect, setCameFromConnect] = useState(false)
 	const [locations, setLocations] = useState<CloudLocations | null>(null)
 	const [folderState, setFolderState] = useState<CloudFolderState>('loading')
+	// Why the folders didn't load, shown in the step rather than a toast that disappears
+	const [folderError, setFolderError] = useState('')
 	const [remote, setRemote] = useState<{ref: CloudSyncRemote; name: string} | null>(null)
 	const [truncated, setTruncated] = useState(false)
 	const [cloudPickerOpen, setCloudPickerOpen] = useState(false)
@@ -175,12 +177,12 @@ export default function CloudAddDialog() {
 				if (message.includes('[cloud-account-busy]')) setFolderState('busy')
 				else if (message.includes('[cloud-account-auth-required]')) setFolderState('auth')
 				else {
+					setFolderError(getFilesErrorMessage(message))
 					setFolderState('error')
-					toast.error(t('files-cloud-error.browse', {message: getFilesErrorMessage(message)}), {area: 'files'})
 				}
 			}
 		},
-		[fetchLocations, t],
+		[fetchLocations],
 	)
 
 	const handleSelectAccount = (account: CloudAccount) => {
@@ -467,14 +469,14 @@ export default function CloudAddDialog() {
 	const headerHidden = step === Step.Source && sourceView !== 'picker'
 	const headerCentered = step === Step.Connect || step === Step.CloudFolder
 
-	const header = isMobile ? (
+	const header = isPhone ? (
 		<DrawerHeader className={cn(headerHidden && 'sr-only', headerCentered && 'text-center')}>
 			<DrawerTitle>{title}</DrawerTitle>
 			{description ? <DrawerDescription>{description}</DrawerDescription> : null}
 		</DrawerHeader>
 	) : (
 		<DialogHeader className={cn(headerHidden && 'sr-only', headerCentered && 'items-center text-center')}>
-			<DialogTitle>{title}</DialogTitle>
+			<DialogTitle className={cn(headerCentered && 'px-6 text-center')}>{title}</DialogTitle>
 			{description ? <DialogDescription>{description}</DialogDescription> : null}
 		</DialogHeader>
 	)
@@ -547,6 +549,7 @@ export default function CloudAddDialog() {
 								layoutKey={webdavFlavor ?? provider.id}
 								morph={cameFromConnect}
 								state={folderState}
+								errorMessage={folderError}
 								isPersonalOneDrive={isPersonalOneDrive}
 								onRetry={() => accountId && loadLocations(accountId)}
 								onOpenPicker={() => setCloudPickerOpen(true)}
@@ -606,7 +609,7 @@ export default function CloudAddDialog() {
 
 	return (
 		<>
-			{isMobile ? (
+			{isPhone ? (
 				<Drawer open={wizardOpen} onOpenChange={handleDialogOpenChange}>
 					<DrawerContent fullHeight>
 						{header}

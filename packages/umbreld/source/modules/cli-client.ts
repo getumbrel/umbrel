@@ -3,7 +3,7 @@ import process from 'node:process'
 import {createTRPCClient, httpLink, createWSClient, wsLink, splitLink} from '@trpc/client'
 import fse from 'fs-extra'
 
-import {type AppRouter, httpOnlyPaths} from './server/trpc/common.js'
+import {type AppRouter, httpOnlyPaths} from './server/trpc/common.ts'
 
 // TODO: Maybe just read the endpoint from the data dir
 const dataDir = process.env.UMBREL_DATA_DIR ?? '/home/umbrel/umbrel'
@@ -23,9 +23,18 @@ const ticketClient = createTRPCClient<AppRouter>({
 	],
 })
 
+// tRPC's WS client retries a connection it can't set up forever without failing pending operations,
+// so an unreadable system token (e.g. not running as root) or an unreachable umbreld would hang the
+// CLI. We surface failures to set up the initial connection so the command errors instead.
+let initialConnectionOpened = false
+let rejectInitialConnection: (error: unknown) => void
+const initialConnectionFailed = new Promise<never>((_, reject) => (rejectInitialConnection = reject))
+// The WS client connects eagerly, so this can reject before a command is waiting on it
+initialConnectionFailed.catch(() => {})
+
 // The CLI client always authenticates with the local system credential; no unauthenticated mode.
 // We use HTTP only for `httpOnlyPaths` (needs request/response semantics like cookies/headers), and WS otherwise.
-const trpc = createTRPCClient<AppRouter>({
+export const trpc = createTRPCClient<AppRouter>({
 	links: [
 		splitLink({
 			condition: (operation) => httpOnlyPaths.includes(operation.path as (typeof httpOnlyPaths)[number]),
@@ -37,8 +46,17 @@ const trpc = createTRPCClient<AppRouter>({
 			}),
 			false: wsLink({
 				client: createWSClient({
-					url: async () =>
-						`${trpcEndpoint}?ticket=${await ticketClient.user.createWebSocketTicket.mutate({target: 'trpc'})}`,
+					url: async () => {
+						try {
+							return `${trpcEndpoint}?ticket=${await ticketClient.user.createWebSocketTicket.mutate({target: 'trpc'})}`
+						} catch (error) {
+							if (!initialConnectionOpened) rejectInitialConnection(error)
+							throw error
+						}
+					},
+					onOpen: () => {
+						initialConnectionOpened = true
+					},
 				}),
 			}),
 		}),
@@ -94,9 +112,15 @@ export const cliClient = async ({query, args}: CliClientOptions) => {
 	let procedure: any = trpc
 	for (const part of parts) procedure = procedure[part]
 
+	// Only operations routed over WS are left pending by a failed connection
+	const path = parts.slice(0, -1).join('.')
+	const usesWebSocket = !httpOnlyPaths.includes(path as (typeof httpOnlyPaths)[number])
+	const connectionFailed = usesWebSocket ? initialConnectionFailed : new Promise<never>(() => {})
+
 	// Subscription
 	if (parts.at(-1) === 'subscribe') {
 		return await new Promise((resolve, reject) => {
+			connectionFailed.catch(reject)
 			procedure(parsedArgs, {
 				onData: (data: any) => console.log(JSON.stringify(data, null, 2)),
 				onError: (error: any) => reject(error),
@@ -106,5 +130,5 @@ export const cliClient = async ({query, args}: CliClientOptions) => {
 	}
 
 	// Query or Mutation
-	console.log(JSON.stringify(await procedure(parsedArgs), null, 2))
+	console.log(JSON.stringify(await Promise.race([connectionFailed, procedure(parsedArgs)]), null, 2))
 }

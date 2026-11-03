@@ -9,7 +9,7 @@ import {execa} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 export const MAX_AVATAR_UPLOAD_BYTES = 20 * 1024 * 1024
 const MAX_AVATAR_DECODED_PIXELS = 50_000_000

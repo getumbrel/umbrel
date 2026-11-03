@@ -2,8 +2,8 @@ import http from 'node:http'
 
 import express, {type ErrorRequestHandler, type RequestHandler} from 'express'
 
-import type Umbreld from '../../index.js'
-import {machineIdPattern} from './machine-id.js'
+import type Umbreld from '../../index.ts'
+import {machineIdPattern} from './machine-id.ts'
 
 const tokenPattern = /^[0-9a-f]{64}$/
 const firstBootBodyLimitBytes = 4 * 1024

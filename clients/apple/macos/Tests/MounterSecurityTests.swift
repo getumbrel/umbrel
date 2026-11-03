@@ -49,7 +49,7 @@ final class MounterSecurityTests: XCTestCase {
 		XCTAssertEqual(owned.first?.path, umbrel.path)
 	}
 
-	func testOwnershipFilterKeepsAProcessCreatedMountWhenItsHostIsOffline() {
+	func testOwnershipFilterKeepsAKnownMountWhenItsHostIsOffline() {
 		let staleRoute = Mounter.MountedShare(
 			host: "192.168.1.20",
 			sharename: "Documents",
@@ -64,10 +64,53 @@ final class MounterSecurityTests: XCTestCase {
 		let owned = Mounter.shares(
 			[staleRoute, unowned],
 			ownedByHosts: [],
-			orCreatedPaths: [staleRoute.path]
+			orKnown: [staleRoute]
 		)
 
 		XCTAssertEqual(owned.count, 1)
 		XCTAssertEqual(owned.first?.path, staleRoute.path)
+	}
+
+	func testSameMountIgnoresHostCaseAndTrailingDotOnly() {
+		let known = Mounter.MountedShare(host: "umbrel.local.", sharename: "Documents", path: "/Volumes/Documents")
+
+		XCTAssertTrue(Mounter.isSameMount(
+			known,
+			Mounter.MountedShare(host: "UMBREL.LOCAL", sharename: "Documents", path: "/Volumes/Documents")
+		))
+		XCTAssertFalse(Mounter.isSameMount(
+			known,
+			Mounter.MountedShare(host: "umbrel.local", sharename: "Documents", path: "/Volumes/Documents-1")
+		))
+		XCTAssertFalse(Mounter.isSameMount(
+			known,
+			Mounter.MountedShare(host: "umbrel-2.local", sharename: "Documents", path: "/Volumes/Documents")
+		))
+	}
+
+	func testOwnershipFilterRejectsAKnownPathThatNowHoldsAnotherShare() {
+		let known = Mounter.MountedShare(
+			host: "umbrel.local",
+			sharename: "Documents",
+			path: "/Volumes/Documents"
+		)
+		let sameNameOtherServer = Mounter.MountedShare(
+			host: "nas.local",
+			sharename: "Documents",
+			path: "/Volumes/Documents"
+		)
+		let otherShareSameServer = Mounter.MountedShare(
+			host: "umbrel.local",
+			sharename: "Backup",
+			path: "/Volumes/Documents"
+		)
+
+		let owned = Mounter.shares(
+			[sameNameOtherServer, otherShareSameServer],
+			ownedByHosts: [],
+			orKnown: [known]
+		)
+
+		XCTAssertTrue(owned.isEmpty)
 	}
 }

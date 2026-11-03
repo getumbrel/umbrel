@@ -13,6 +13,16 @@ final class PhotoBackupCoverageTests: XCTestCase {
 		XCTAssertNil(snapshot.statistics)
 	}
 
+	func testStatisticsDecodeDataWrittenBeforeLastUploadTimeWasAdded() throws {
+		let data = Data(#"""
+		{"queuedCount":1,"preparedCount":0,"uploadedPhotoCount":2,"uploadedVideoCount":0,"failedCount":0,"uploadedBytes":10}
+		"""#.utf8)
+		let statistics = try JSONDecoder().decode(PhotoBackupStatistics.self, from: data)
+
+		XCTAssertEqual(statistics.uploadedPhotoCount, 2)
+		XCTAssertNil(statistics.lastUploadedAt)
+	}
+
 	func testInsufficientStorageIssueUsesPhotoKitNormalizedResponseHeader() {
 		XCTAssertEqual(
 			PhotoBackupIssue(responseHeaderFields: [
@@ -133,6 +143,28 @@ final class PhotoBackupCoverageTests: XCTestCase {
 			includePhotos: false,
 			includeVideos: true
 		), 12)
+	}
+
+	func testOnlyFailuresRemainWhenNothingElseIsLeft() {
+		let statistics = PhotoBackupStatistics(
+			queuedCount: 0,
+			preparedCount: 0,
+			uploadedPhotoCount: 90,
+			uploadedVideoCount: 0,
+			failedCount: 2,
+			uploadedBytes: 42
+		)
+
+		XCTAssertFalse(statistics.onlyFailuresRemain(remainingCount: 10))
+		XCTAssertTrue(statistics.onlyFailuresRemain(remainingCount: 2))
+		XCTAssertFalse(PhotoBackupStatistics(
+			queuedCount: 0,
+			preparedCount: 0,
+			uploadedPhotoCount: 90,
+			uploadedVideoCount: 0,
+			failedCount: 0,
+			uploadedBytes: 42
+		).onlyFailuresRemain(remainingCount: 0))
 	}
 
 	func testDurableLedgerStateDeterminesCoverageWithoutReinterpretingPhotoKitTimestamps() {

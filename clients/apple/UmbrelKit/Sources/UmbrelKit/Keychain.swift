@@ -7,6 +7,7 @@ import Security
 public enum Keychain {
 	private static let service = "com.umbrel.app"
 	private static let localHTTPSCAService = "com.umbrel.app.local-https-ca"
+	private static let browserSessionService = "com.umbrel.app.browser-session"
 	private static let photoBackupGrantService = "com.umbrel.app.photo-background-upload"
 	private static let photoBackupSourceService = "com.umbrel.app.photo-backup-source"
 	private static let photoBackupAccessGroupInfoKey = "UmbrelPhotoBackupKeychainAccessGroup"
@@ -287,6 +288,35 @@ public enum Keychain {
 			stored.belongsToSameLogin(as: expected)
 		else { return }
 		deleteSessionUnlocked(deviceId: expected.deviceId)
+	}
+
+	// The in-app browser's umbrelOS session, kept beside the native session so any
+	// of the Umbrel's addresses can be opened without signing in again.
+	@discardableResult
+	public static func setBrowserSession(_ session: Umbreld.BrowserSession) -> Bool {
+		guard let data = try? JSONEncoder().encode(session) else { return false }
+		let query = genericPasswordQuery(service: browserSessionService, account: session.deviceId)
+		let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+		guard status == errSecItemNotFound else { return status == errSecSuccess }
+		var add = query
+		add[kSecValueData as String] = data
+		add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+		return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
+	}
+
+	public static func readBrowserSession(deviceId: String) -> Umbreld.BrowserSession? {
+		var query = genericPasswordQuery(service: browserSessionService, account: deviceId)
+		query[kSecReturnData as String] = true
+		query[kSecMatchLimit as String] = kSecMatchLimitOne
+		var result: CFTypeRef?
+		guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+			let data = result as? Data
+		else { return nil }
+		return try? JSONDecoder().decode(Umbreld.BrowserSession.self, from: data)
+	}
+
+	public static func deleteBrowserSession(deviceId: String) {
+		SecItemDelete(genericPasswordQuery(service: browserSessionService, account: deviceId) as CFDictionary)
 	}
 
 	public enum PhotoBackupGrantReadResult {

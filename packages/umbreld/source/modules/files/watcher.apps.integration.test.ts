@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os'
 import {execa} from 'execa'
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`
 
@@ -18,7 +18,7 @@ test.runIf(process.platform === 'linux')(
 		const binDirectory = nodePath.join(directory, 'bin')
 		await mkdir(binDirectory)
 		const wrapper = nodePath.join(binDirectory, 'watchman')
-		// Parcel discovers Watchman through PATH. Give this test its own daemon,
+		// The client discovers Watchman through PATH. Give this test its own daemon,
 		// socket, log and state file so it cannot touch an existing system daemon.
 		await writeFile(
 			wrapper,
@@ -26,7 +26,7 @@ test.runIf(process.platform === 'linux')(
 			{mode: 0o755},
 		)
 		process.env.PATH = `${binDirectory}:${previousPath}`
-		const {default: Files} = await import('./files.js')
+		const {default: Files} = await import('./files.ts')
 		const watchman = async (...args: string[]) => {
 			const result = JSON.parse((await execa(wrapper, ['--no-pretty', ...args])).stdout)
 			if (result.error) throw new Error(result.error)
@@ -62,7 +62,7 @@ test.runIf(process.platform === 'linux')(
 			expect(roots).not.toContain(apps)
 			expect(watcher.subscriptions.has('/Apps')).toBe(false)
 
-			// A Home event must still flow through the real Parcel/Watchman pipeline.
+			// A Home event must still flow through the real Watchman pipeline.
 			const before = nodePath.join(home, 'before.txt')
 			await writeFile(before, 'visible')
 			await vi.waitFor(() => expect(changes).toContain(before), {timeout: 40_000, interval: 100})

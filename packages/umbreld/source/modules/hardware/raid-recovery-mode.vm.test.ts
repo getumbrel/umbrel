@@ -1,8 +1,8 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {triggerFactoryReset, triggerRebootingAction} from '../test-utilities/rebooting-action.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {triggerFactoryReset, triggerRebootingAction} from '../test-utilities/rebooting-action.ts'
 
 describe('RAID mount failure detection', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
@@ -43,6 +43,14 @@ describe('RAID mount failure detection', () => {
 	beforeEach(({skip}) => {
 		if (failed) skip()
 	})
+
+	// /run's tmpfs size as a whole percentage of the VM's RAM
+	const runSizePercent = async () =>
+		Number(
+			await umbreld.vm.sshAsRoot(
+				`echo $(( $(df --output=size -k /run | tail -1) * 100 / $(awk '/MemTotal/ {print $2}' /proc/meminfo) ))`,
+			),
+		)
 
 	test('adds two NVMe devices and boots VM', async () => {
 		await umbreld.vm.addNvme({slot: 1})
@@ -129,6 +137,13 @@ describe('RAID mount failure detection', () => {
 		expect(devices.every((d) => d.isOk === false)).toBe(true)
 	})
 
+	test('keeps the config partition read-only after the mount failure', async () => {
+		// Rugix records the mount failure on the config partition, which also holds
+		// the RAID config, and must leave it read-only again
+		const options = await umbreld.vm.sshAsRoot('findmnt --noheadings --output OPTIONS /run/rugix/mounts/config')
+		expect(options.split(',')).toContain('ro')
+	})
+
 	// Reconnect both SSDs and verify recovery
 	test('powers off and reconnects both SSDs', async () => {
 		await umbreld.vm.powerOff()
@@ -151,6 +166,10 @@ describe('RAID mount failure detection', () => {
 		expect(status.devices).toHaveLength(2)
 	})
 
+	test('leaves /run at its default size when the data mount succeeds', async () => {
+		expect(await runSizePercent()).toBeLessThan(15)
+	})
+
 	// Test recovery mode operations
 	test('powers off and disconnects one SSD to enter recovery mode', async () => {
 		await umbreld.vm.powerOff()
@@ -164,6 +183,21 @@ describe('RAID mount failure detection', () => {
 		expect(failure).toBe(true)
 	})
 
+	test('does not start apps or load Docker images in recovery mode', async () => {
+		// Docker's data directory is RAM-backed in recovery mode, so Apps must not load
+		// images or start the app environment there
+		await pWaitFor(
+			() =>
+				umbreld.vm.sshAsRoot("journalctl -b -u umbrel --no-pager | grep -q 'skipping app startup'").then(
+					() => true,
+					() => false,
+				),
+			{interval: 1000, timeout: 60_000},
+		)
+		expect((await umbreld.vm.sshAsRoot('docker image ls --quiet')).trim()).toBe('')
+		expect((await umbreld.vm.sshAsRoot('docker ps --all --quiet')).trim()).toBe('')
+	})
+
 	test('can shutdown from recovery mode', async () => {
 		await triggerRebootingAction(umbreld.unauthenticatedClient.system.shutdown.mutate(), ['poweroff'])
 		await umbreld.vm.waitForShutdown()
@@ -174,6 +208,11 @@ describe('RAID mount failure detection', () => {
 		await umbreld.waitForStartup({waitForUser: false})
 		const failure = await umbreld.unauthenticatedClient.hardware.raid.checkRaidMountFailure.query()
 		expect(failure).toBe(true)
+	})
+
+	test('enlarges /run in recovery mode', async () => {
+		// Rugix keeps its state in the RAM-backed /run when the data mount fails
+		expect(await runSizePercent()).toBeGreaterThanOrEqual(20)
 	})
 
 	test('can restart from recovery mode', async () => {

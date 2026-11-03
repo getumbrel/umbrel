@@ -315,7 +315,9 @@ function HttpsCertificateInstructions({platform, secureUrl}: {platform: HttpsCer
 	if (platform.id === 'macos') {
 		return (
 			<HttpsCertificateInstructionSet secureUrl={secureUrl} showFirefoxNote>
-				<InstructionStep>{t('https-access-instructions.macos.download')}</InstructionStep>
+				<InstructionStep>
+					{t('https-access-instructions.macos.download', {button: t('https-access-download-certificate')})}
+				</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.macos.add-system')}</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.macos.open-keychain')}</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.macos.drag-certificate')}</InstructionStep>
@@ -330,7 +332,9 @@ function HttpsCertificateInstructions({platform, secureUrl}: {platform: HttpsCer
 	if (platform.id === 'ios') {
 		return (
 			<HttpsCertificateInstructionSet secureUrl={secureUrl}>
-				<InstructionStep>{t('https-access-instructions.ios.download')}</InstructionStep>
+				<InstructionStep>
+					{t('https-access-instructions.ios.download', {button: t('https-access-download-certificate')})}
+				</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.ios.allow-profile')}</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.ios.profile-downloaded')}</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.ios.install-profile')}</InstructionStep>
@@ -344,7 +348,9 @@ function HttpsCertificateInstructions({platform, secureUrl}: {platform: HttpsCer
 	if (platform.id === 'windows') {
 		return (
 			<HttpsCertificateInstructionSet secureUrl={secureUrl} showFirefoxNote>
-				<InstructionStep>{t('https-access-instructions.windows.download')}</InstructionStep>
+				<InstructionStep>
+					{t('https-access-instructions.windows.download', {button: t('https-access-download-certificate')})}
+				</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.windows.install-certificate')}</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.windows.local-machine')}</InstructionStep>
 				<InstructionStep>{t('https-access-instructions.windows.place-store')}</InstructionStep>
@@ -360,7 +366,9 @@ function HttpsCertificateInstructions({platform, secureUrl}: {platform: HttpsCer
 		// No Firefox note here: Firefox on Android has a different setting for user CAs
 		// than the desktop note describes.
 		<HttpsCertificateInstructionSet secureUrl={secureUrl}>
-			<InstructionStep>{t('https-access-instructions.android.download')}</InstructionStep>
+			<InstructionStep>
+				{t('https-access-instructions.android.download', {button: t('https-access-download-certificate')})}
+			</InstructionStep>
 			<InstructionStep>{t('https-access-instructions.android.open-settings')}</InstructionStep>
 			<InstructionStep>{t('https-access-instructions.android.install-certificate')}</InstructionStep>
 			<InstructionStep>{t('https-access-instructions.android.install-anyway')}</InstructionStep>

@@ -1,0 +1,54 @@
+From aa0214dacb5d4f79eba445ac889ee1eacc264aa3 Mon Sep 17 00:00:00 2001
+From: Christian Eggers <ceggers@arri.de>
+Date: Fri, 26 Jul 2024 15:36:00 +0200
+Subject: [PATCH] iface: Check for IFA_F_TENTATIVE
+
+Skip (IPV6) addresses during Duplicate Address Detection (DAD) phase.
+Using them as source address when sending datagrams would be rejected by
+the kernel (#615).
+
+Signed-off-by: Christian Eggers <ceggers@arri.de>
+---
+ avahi-core/iface-linux.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/avahi-core/iface-linux.c b/avahi-core/iface-linux.c
+index f49c573..e4d7c1b 100644
+--- a/avahi-core/iface-linux.c
++++ b/avahi-core/iface-linux.c
+@@ -183,6 +183,7 @@ static void netlink_callback(AvahiNetlink *nl, struct nlmsghdr *n, void* userdat
+         size_t l;
+         AvahiAddress raddr, rlocal, *r;
+         int raddr_valid = 0, rlocal_valid = 0;
++        uint32_t flags = ifaddrmsg->ifa_flags;  /* may be overridden by IFA_FLAGS */
+ 
+         /* We are only interested in IPv4 and IPv6 */
+         if (ifaddrmsg->ifa_family != AF_INET && ifaddrmsg->ifa_family != AF_INET6)
+@@ -232,6 +233,14 @@ static void netlink_callback(AvahiNetlink *nl, struct nlmsghdr *n, void* userdat
+ 
+                     break;
+ 
++                case IFA_FLAGS:
++                    if (RTA_PAYLOAD(a) != sizeof(flags))
++                        return;
++
++                    memcpy(&flags, RTA_DATA(a), RTA_PAYLOAD(a));
++
++                    break;
++
+                 default:
+                     ;
+             }
+@@ -250,6 +259,9 @@ static void netlink_callback(AvahiNetlink *nl, struct nlmsghdr *n, void* userdat
+         if (n->nlmsg_type == RTM_NEWADDR) {
+             AvahiInterfaceAddress *addr;
+ 
++            if (flags & IFA_F_TENTATIVE)
++                return;
++
+             /* This address is new or has been modified, so let's get an object for it */
+             if (!(addr = avahi_interface_monitor_get_address(m, i, r)))
+ 
+-- 
+2.48.1
+

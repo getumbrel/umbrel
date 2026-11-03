@@ -15,7 +15,7 @@ import {
 // In 'pitch' view the agents orbit the umbrelOS icon on a tilted plane — many
 // agents, one home in the middle. Switching to 'picker' view sends the same
 // plates flying into a tidy grid of agent tiles, so the decoration turns out
-// to have been the interface all along. The sixth satellite is the waving
+// to have been the interface all along. The last satellite is the waving
 // robot standing in for every other MCP-capable agent.
 
 type SatelliteSlot = {ring: 'inner' | 'outer'; angle: number; size: number}
@@ -28,17 +28,20 @@ const ORBIT_RINGS = {
 	outer: {rx: 148, ry: 92, duration: 58},
 }
 
-// Starting angles (deg) in display order (MCP_AGENTS + the robot). Sizes step
-// down through the ranks — OpenClaw and Hermes largest, then Codex and Claude
-// Code, then Cursor and the robot — and same-ring satellites keep their
-// relative spacing forever, so gaps stay near-even with a slight wobble.
+// Starting angles (deg) in display order (MCP_AGENTS + the robot), one slot
+// for each: an agent without a slot isn't shown at all, in the pitch or the
+// picker. Sizes step down through the ranks — Murmur, Hermes and OpenClaw on
+// the inner ring, then Claude Code, Codex, Cursor and the robot on the outer —
+// and same-ring satellites keep their relative spacing forever, so gaps stay
+// even with a slight wobble.
 const SATELLITE_SLOTS: SatelliteSlot[] = [
 	{ring: 'inner', angle: 205, size: 70},
-	{ring: 'inner', angle: 330, size: 66},
-	{ring: 'outer', angle: 265, size: 52},
-	{ring: 'inner', angle: 85, size: 58},
-	{ring: 'outer', angle: 25, size: 46},
-	{ring: 'outer', angle: 145, size: 42},
+	{ring: 'inner', angle: 325, size: 66},
+	{ring: 'inner', angle: 85, size: 62},
+	{ring: 'outer', angle: 250, size: 52},
+	{ring: 'outer', angle: 340, size: 48},
+	{ring: 'outer', angle: 70, size: 44},
+	{ring: 'outer', angle: 160, size: 42},
 ]
 
 const PLATE_SPRING = {type: 'spring' as const, stiffness: 190, damping: 24, mass: 0.9}
@@ -145,12 +148,17 @@ export function AgentConstellation({
 	const layoutTransition = reducedMotion ? {duration: 0} : PLATE_SPRING
 
 	// The registry agents plus the robot for everything else, in display order
-	const entries: Array<{visual: McpAgentVisual; label: string}> = [
-		...MCP_AGENTS.map((agent) => ({visual: agent as McpAgentVisual, label: agent.name})),
-		{visual: OTHER_AGENT, label: t('mcp-connect-agent-other')},
+	type Entry = {visual: McpAgentVisual; label: string; picker: boolean}
+	const entries: Entry[] = [
+		...MCP_AGENTS.map((agent) => ({
+			visual: agent as McpAgentVisual,
+			label: agent.name,
+			picker: agent.picker !== false,
+		})),
+		{visual: OTHER_AGENT, label: t('mcp-connect-agent-other'), picker: true},
 	]
 
-	const satellite = ({visual, label}: {visual: McpAgentVisual; label: string}, slot: SatelliteSlot, index: number) => {
+	const satellite = ({visual, label}: Entry, slot: SatelliteSlot, index: number) => {
 		// The stagger applies to the mount entrance only, never to the morph. On
 		// the pitch the agents hold back until the umbrel has landed, then arrive
 		// in quick succession.
@@ -167,6 +175,7 @@ export function AgentConstellation({
 				key={`${visual.id}-${view}`}
 				layoutId={`mcp-agent-${visual.id}`}
 				animate={orbiting ? {transform: orbit.transform} : undefined}
+				exit={{opacity: 0, transition: {duration: 0.2}}}
 				transition={
 					orbiting ? {transform: {duration: orbit.duration, repeat: Infinity, ease: 'linear'}} : layoutTransition
 				}
@@ -264,7 +273,11 @@ export function AgentConstellation({
 
 			{entries.map((entry, index) => {
 				const slot = SATELLITE_SLOTS[index]
-				return slot ? satellite(entry, slot, index) : null
+				if (!slot) return null
+				if (entry.picker) return satellite(entry, slot, index)
+				// An agent that orbits but has no tile fades away in place while the
+				// others fly into the grid
+				return <AnimatePresence key={entry.visual.id}>{isPitch && satellite(entry, slot, index)}</AnimatePresence>
 			})}
 		</motion.div>
 	)

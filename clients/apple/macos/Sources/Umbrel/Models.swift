@@ -24,8 +24,6 @@ struct Device: Identifiable, Equatable {
 
 	// Includes the user's name when available (e.g. "Patrick's Umbrel Home (2025)").
 	var displayName: String { userName.map { "\($0)\u{2019}s \(displayModel)" } ?? displayModel }
-
-	var isPro: Bool { model?.lowercased().contains("umbrel pro") ?? false }
 }
 
 enum DeviceReachability: Equatable {

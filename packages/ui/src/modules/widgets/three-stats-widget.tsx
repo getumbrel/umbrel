@@ -1,10 +1,11 @@
 import {LOADING_DASH} from '@/constants'
 import {cn} from '@/lib/utils'
-import type {ThreeStatsItem, ThreeStatsWidget, ThreeStatsWidgetProps} from '@/modules/widgets/shared/constants'
+import type {ThreeStatsWidgetProps} from '@/modules/widgets/shared/constants'
 
 import {glassCellClass} from './shared/glass-cell'
-import {WidgetContainer, widgetTextCva} from './shared/shared'
+import {RollingPairs} from './shared/rolling-pairs'
 import {TablerIcon} from './shared/tabler-icon'
+import {compactContainerClass, compactStatClass, widgetCaptionClass, WidgetShell} from './shared/widget-shell'
 
 export function ThreeStatsWidget({
 	items,
@@ -13,40 +14,55 @@ export function ThreeStatsWidget({
 }: ThreeStatsWidgetProps & {
 	onClick?: (link?: string) => void
 }) {
+	const rows = items ?? [undefined, undefined, undefined]
 	return (
-		<WidgetContainer
+		<WidgetShell
 			onClick={() => onClick?.(link)}
-			className='flex flex-col items-stretch justify-stretch gap-1.5 p-1.5 sm:flex-row sm:gap-2 sm:px-4 sm:py-3'
+			compact={<Compact items={items} />}
+			className='gap-1 p-1.5 w-tall:gap-1.5 w-tall:p-2 w-expanded:flex-row w-expanded:gap-2 w-expanded:px-4 w-expanded:py-3'
 		>
-			{items?.[0] && <Item icon={items[0].icon} subtext={items[0].subtext} text={items[0].text} />}
-			{items?.[1] && <Item icon={items[1].icon} subtext={items[1].subtext} text={items[1].text} />}
-			{items?.[2] && <Item icon={items[2].icon} subtext={items[2].subtext} text={items[2].text} />}
-			{!items && (
-				<>
-					<Item icon='' subtext={LOADING_DASH} text={LOADING_DASH} />
-					<Item icon='' subtext={LOADING_DASH} text={LOADING_DASH} />
-					<Item icon='' subtext={LOADING_DASH} text={LOADING_DASH} />
-				</>
-			)}
-		</WidgetContainer>
+			{rows.map((item, i) => (
+				// Rows on the phone, pills side by side on the desktop
+				<div
+					key={i}
+					className={cn(
+						'flex min-h-0 min-w-0 flex-1 animate-in items-center gap-1.5 rounded-10 px-2 duration-300 fade-in w-tall:rounded-12 w-expanded:flex-col w-expanded:justify-center w-expanded:gap-0 w-expanded:rounded-full w-expanded:px-1',
+						glassCellClass,
+					)}
+				>
+					{/* `[&>svg]` to select child svg. While loading, a placeholder of the same size */}
+					{item?.icon ? (
+						<TablerIcon iconName={item.icon} className='size-5 shrink-0 w-expanded:mb-4 [&>svg]:size-full' />
+					) : (
+						<span className='size-5 shrink-0 rounded-5 bg-white/5 w-expanded:mb-4' />
+					)}
+					<p className={cn(widgetCaptionClass, 'min-w-0 flex-1 w-expanded:flex-none')}>
+						{item?.subtext ?? LOADING_DASH}
+					</p>
+					<p className='ml-auto truncate text-12 leading-tight font-semibold -tracking-2 tabular-nums opacity-80 w-tall:text-13 w-expanded:ml-0 w-expanded:max-w-full'>
+						{item?.text ?? LOADING_DASH}
+					</p>
+				</div>
+			))}
+		</WidgetShell>
 	)
 }
 
-function Item(item?: ThreeStatsItem) {
+// Icon over value, two at a time, rolling through all three
+function Compact({items}: ThreeStatsWidgetProps) {
 	return (
-		// NOTE: consider reducing rounding if we don't have 3 items
-		<div
-			className={cn(
-				'flex min-w-0 flex-1 animate-in items-center overflow-hidden rounded-5 px-1 duration-300 fade-in max-sm:gap-1 max-sm:px-1 sm:flex-col sm:justify-center sm:rounded-full',
-				glassCellClass,
-			)}
-		>
-			{/* `[&>svg]` to select child svg */}
-			{item?.icon && <TablerIcon iconName={item?.icon} className='h-5 w-5 sm:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
-			<div className='flex w-full flex-row justify-between sm:flex-col sm:text-center'>
-				<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate')}>{item?.subtext}</p>
-				<p className={cn(widgetTextCva(), 'max-w-full truncate')}>{item?.text}</p>
-			</div>
+		<div className={cn(compactContainerClass, 'p-2')}>
+			<RollingPairs
+				items={items}
+				// Flat tint, matching the rows of the regular widget
+				rowClassName='flex flex-col items-center justify-center gap-0.5 rounded-10 bg-white/5 px-1'
+				renderRow={(item) => (
+					<>
+						{item?.icon && <TablerIcon iconName={item.icon} className='size-[13px] opacity-80 [&>svg]:size-full' />}
+						<p className={cn(compactStatClass, 'max-w-full')}>{item?.text ?? LOADING_DASH}</p>
+					</>
+				)}
+			/>
 		</div>
 	)
 }

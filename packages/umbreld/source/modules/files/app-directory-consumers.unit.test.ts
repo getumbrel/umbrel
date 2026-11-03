@@ -3,16 +3,16 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import * as system from '../system/system.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import Umbreld from '../../index.ts'
+import * as system from '../system/system.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
 vi.mock('execa', async (importOriginal) => ({
 	...(await importOriginal<typeof import('execa')>()),
 	$: vi.fn(async () => ({stdout: ''})),
 }))
 
-vi.mock('../utilities/copy-with-progress.js', () => ({
+vi.mock('../utilities/copy-with-progress.ts', () => ({
 	copyWithProgress: (source: string, destination: string) => fse.copy(source, destination),
 }))
 
@@ -167,12 +167,13 @@ test('cleans up app favorites, Samba shares and member grants once every 24 hour
 		expect(await umbreld.files.memberShares.list()).toHaveLength(1)
 		expect(applyShares).toHaveBeenCalledOnce()
 		await vi.advanceTimersByTimeAsync(1)
+		// Samba reapplies shares only after its store write completes.
 		await vi.waitFor(async () => {
 			expect(await umbreld.user.getAccountFavorites('0')).toEqual([])
 			expect(await umbreld.store.get('files.shares')).toEqual([])
 			expect(await umbreld.files.memberShares.list()).toEqual([])
+			expect(applyShares).toHaveBeenCalledTimes(2)
 		})
-		expect(applyShares).toHaveBeenCalledTimes(2)
 		await expect(fse.pathExists(systemPath)).resolves.toBe(true)
 	} finally {
 		await umbreld.files.favorites.stop()

@@ -1,7 +1,7 @@
 import {expect, test} from 'vitest'
 
-import type {GpuDeviceUsage} from '../hardware/gpu-usage.js'
-import {aggregateGpuUsage} from './system.js'
+import type {GpuDeviceUsage} from '../hardware/gpu-usage.ts'
+import {aggregateGpuUsage} from './system.ts'
 
 test('aggregates mixed GPUs without counting shared GPU allocations as extra system RAM', () => {
 	const gib = 1024 ** 3

@@ -8,6 +8,8 @@ export function getFilesErrorMessage(message: string): string {
 	if (message.includes('[destination-not-exist]')) return t('files-backend-error.destination-not-exist')
 	if (message.includes('[destination-already-exists]')) return t('files-backend-error.destination-already-exists')
 	if (message.includes('[operation-not-allowed]')) return t('files-backend-error.operation-not-allowed')
+	// A member reaching a path outside what's shared with them
+	if (message.includes('[forbidden]')) return t('files-backend-error.forbidden')
 	if (message.includes('[not-enough-space]')) return t('files-backend-error.not-enough-space')
 	if (message.includes('[invalid-filename]')) return t('files-backend-error.invalid-filename')
 	if (message.includes('[subdir-of-self]')) return t('files-backend-error.subdir-of-self')

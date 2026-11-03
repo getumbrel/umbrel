@@ -1,9 +1,9 @@
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import InternalStorage from './internal-storage.js'
-import Raid from './raid.js'
-import UmbrelPro from './umbrel-pro.js'
-import Thunderbolt from './thunderbolt.js'
+import InternalStorage from './internal-storage.ts'
+import Raid from './raid.ts'
+import UmbrelPro from './umbrel-pro.ts'
+import Thunderbolt from './thunderbolt.ts'
 
 export default class Hardware {
 	#umbreld: Umbreld

@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {machineIdCandidate, machineIdSchema, slugifyMachineId} from './machine-id.js'
+import {machineIdCandidate, machineIdSchema, slugifyMachineId} from './machine-id.ts'
 
 describe('machine ids', () => {
 	test('creates safe, bounded slugs with a stable empty-name fallback', () => {

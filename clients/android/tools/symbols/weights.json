@@ -1,0 +1,184 @@
+{
+ "Close": [
+  400,
+  500,
+  600
+ ],
+ "WifiAlert": [
+  400,
+  500,
+  600
+ ],
+ "Language": [
+  400,
+  500,
+  600
+ ],
+ "MoreHoriz": [
+  400,
+  600
+ ],
+ "Add": [
+  500
+ ],
+ "PauseCircle": [
+  500
+ ],
+ "WarningAmber": [
+  500
+ ],
+ "Check": [
+  400,
+  500,
+  600,
+  700
+ ],
+ "ContentCopy": [
+  400,
+  500
+ ],
+ "CircleGrid": [
+  600
+ ],
+ "Wifi": [
+  500,
+  600
+ ],
+ "LockWarning": [
+  500,
+  600
+ ],
+ "Lock": [
+  500
+ ],
+ "VerifiedUser": [
+  500
+ ],
+ "WebAsset": [
+  500
+ ],
+ "AppsDiamond": [
+  400
+ ],
+ "HardDrive": [
+  400
+ ],
+ "RefreshCircle": [
+  500
+ ],
+ "DriveQuestion": [
+  500
+ ],
+ "LocationOn": [
+  500
+ ],
+ "KeyHorizontal": [
+  500
+ ],
+ "PhotoLibrary": [
+  400,
+  500,
+  600
+ ],
+ "ArrowForwardIos": [
+  400,
+  500,
+  600
+ ],
+ "Videocam": [
+  400
+ ],
+ "CloudDone": [
+  400
+ ],
+ "MoonZzz": [
+  500
+ ],
+ "PhotoCheck": [
+  500
+ ],
+ "AutoFixHigh": [
+  500
+ ],
+ "Home": [
+  400
+ ],
+ "PhotoLibraryFilled": [
+  400
+ ],
+ "ArrowBackIosNew": [
+  400,
+  500,
+  600
+ ],
+ "Person": [
+  400
+ ],
+ "CheckCircle": [
+  400,
+  600
+ ],
+ "South": [
+  600
+ ],
+ "InfoI": [
+  500
+ ],
+ "Schedule": [
+  400,
+  600
+ ],
+ "RemoveCircleOutline": [
+  400,
+  600
+ ],
+ "PlayArrow": [
+  600
+ ],
+ "Antenna": [
+  400
+ ],
+ "History": [
+  400
+ ],
+ "Photo": [
+  400
+ ],
+ "ShieldLock": [
+  400
+ ],
+ "PowerSettingsNew": [
+  400
+ ],
+ "DriveWarning": [
+  400
+ ],
+ "ArrowCircleUp": [
+  400
+ ],
+ "AppBadge": [
+  400
+ ],
+ "Notifications": [
+  400
+ ],
+ "Refresh": [
+  400
+ ],
+ "Share": [
+  400
+ ],
+ "OpenInNew": [
+  400
+ ],
+ "DriveExclamation": [
+  500
+ ],
+ "Folder": [
+  400,
+  600
+ ],
+ "Smartphone": [
+  500
+ ]
+}

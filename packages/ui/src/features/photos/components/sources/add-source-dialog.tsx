@@ -28,21 +28,21 @@ import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {UmbrelScopeSettings} from '@/features/photos/components/sources/source-settings'
 import {sourcePath} from '@/features/photos/constants'
 import {usePhotoSourceActions, usePhotoSources, type SourceSettings} from '@/features/photos/hooks/use-photo-sources'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useDialogOpenProps} from '@/utils/dialog'
 
 type Step = 'kind' | 'umbrel'
 
-// Where photos come from. iPhones register themselves from the Umbrel app, so
-// that card only hands over to it; This Umbrel is a permanent source, so its
+// Where photos come from. Phones register themselves from the Umbrel app, so
+// those cards only hand over to it; This Umbrel is a permanent source, so its
 // card shows the live import scope (all folders / except / only) and saves
-// changes to it. Android, drives and NAS are post-v1 — their cards stay
-// visible but locked, so the roadmap reads at a glance.
+// changes to it. Drives and NAS are post-v1: their cards stay visible but
+// locked, so the roadmap reads at a glance.
 export function AddSourceDialog() {
 	const homePath = useHomePath()
 	const dialogProps = useDialogOpenProps('photos-add-source')
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const navigate = useNavigate()
 	const {updateSettings} = usePhotoSourceActions()
 	// This Umbrel is a permanent source; its card opens that source's scope
@@ -98,8 +98,15 @@ export function AddSourceDialog() {
 			art: <SourceIcon type='iphone' size={40} />,
 			title: t('photos-add-source.kind-iphone'),
 			description: t('photos-add-source.kind-iphone-description'),
-			// The Umbrel app carries the whole flow; the card just hands over to it
+			// The Umbrel app carries the whole flow; the phone cards just hand over to it
 			open: () => window.open('https://link.umbrel.com/ios-app', '_blank', 'noopener,noreferrer'),
+		},
+		{
+			id: 'android',
+			art: <SourceIcon type='android' size={40} />,
+			title: t('photos-add-source.kind-android'),
+			description: t('photos-add-source.kind-android-description'),
+			open: () => window.open('https://link.umbrel.com/android-app', '_blank', 'noopener,noreferrer'),
 		},
 		{
 			id: 'folder',
@@ -112,13 +119,6 @@ export function AddSourceDialog() {
 				setUmbrelScope(umbrelSource?.scope ?? {mode: 'everything', paths: []})
 				setStep('umbrel')
 			},
-		},
-		{
-			id: 'android',
-			art: <SourceIcon type='android' size={40} />,
-			title: t('photos-add-source.kind-android'),
-			description: t('photos-add-source.kind-android-description'),
-			locked: true,
 		},
 		{
 			id: 'external-drive',
@@ -164,10 +164,7 @@ export function AddSourceDialog() {
 					{step === 'umbrel' && (
 						<motion.div key='umbrel' {...stepFade} className='flex flex-col gap-4 py-2'>
 							<UmbrelScopeSettings rootPath={homePath} scope={umbrelScope} onChange={setUmbrelScope} />
-							<DialogFooter className='flex-col-reverse gap-2 pt-2'>
-								<Button size='dialog' onClick={() => setStep('kind')}>
-									{t('back')}
-								</Button>
+							<DialogFooter className='gap-2 pt-2'>
 								<Button
 									variant='primary'
 									size='dialog'
@@ -175,6 +172,9 @@ export function AddSourceDialog() {
 									disabled={!umbrelSource || scopeNeedsFolders}
 								>
 									{t('photos-add-source.save')}
+								</Button>
+								<Button size='dialog' onClick={() => setStep('kind')}>
+									{t('back')}
 								</Button>
 							</DialogFooter>
 						</motion.div>
@@ -184,7 +184,7 @@ export function AddSourceDialog() {
 		</div>
 	)
 
-	const header = isMobile ? (
+	const header = isPhone ? (
 		<DrawerHeader>
 			<DrawerTitle>{title}</DrawerTitle>
 			{description ? <DrawerDescription>{description}</DrawerDescription> : null}
@@ -196,7 +196,7 @@ export function AddSourceDialog() {
 		</DialogHeader>
 	)
 
-	return isMobile ? (
+	return isPhone ? (
 		<Drawer open={dialogProps.open} onOpenChange={dialogProps.onOpenChange}>
 			<DrawerContent fullHeight>
 				{header}
@@ -205,7 +205,7 @@ export function AddSourceDialog() {
 		</Drawer>
 	) : (
 		<Dialog open={dialogProps.open} onOpenChange={dialogProps.onOpenChange}>
-			<DialogScrollableContent showClose>
+			<DialogScrollableContent>
 				<div className='flex flex-col gap-5 px-5 py-6'>
 					{header}
 					{body}

@@ -1,0 +1,198 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:conv="clr-namespace:Umbrel.Views">
+  <!-- The panel is always dark, like the macOS popover. -->
+  <!-- Opaque: without the macOS backdrop blur, any transparency shows windows behind the panel. -->
+  <SolidColorBrush x:Key="PanelBrush" Color="#FF1C1C1E" />
+  <SolidColorBrush x:Key="CardBrush" Color="#0FFFFFFF" />
+  <SolidColorBrush x:Key="CardHoverBrush" Color="#1FFFFFFF" />
+  <SolidColorBrush x:Key="HairlineBrush" Color="#1AFFFFFF" />
+  <SolidColorBrush x:Key="TextBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="MutedBrush" Color="#FF8E8E93" />
+  <!-- Titles are white at 85% opacity, like the macOS panel. -->
+  <SolidColorBrush x:Key="TitleBrush" Color="#D9FFFFFF" />
+  <!-- Palette colors match the macOS Palette (and Palette in Presentation.cs). -->
+  <SolidColorBrush x:Key="BlueBrush" Color="#FF0088FF" />
+  <SolidColorBrush x:Key="ButtonBlueBrush" Color="#FF0078F0" />
+  <SolidColorBrush x:Key="IndigoBrush" Color="#FF6155F5" />
+  <SolidColorBrush x:Key="RedBrush" Color="#FFFF2D55" />
+  <SolidColorBrush x:Key="FieldBrush" Color="#FF2C2C2E" />
+
+  <!-- Inter, the umbrelOS font, from the TTFs built into the app (Fonts folder). -->
+  <FontFamily x:Key="UIFont">pack://application:,,,/Fonts/#Inter</FontFamily>
+
+  <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+  <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+  <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+  <conv:ModeToVisibilityConverter x:Key="ModeToVisibility" />
+
+  <!-- No Foreground here: an app-level implicit TextBlock style also reaches text that
+       templates create, so it would paint tooltip text white on the light system tooltip.
+       Panel text inherits white from PopupWindow's Foreground instead. -->
+  <Style TargetType="TextBlock">
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style x:Key="MutedText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+  </Style>
+
+  <!-- macOS PillButtonStyle: 13pt, 16x8 padding, darker when pressed. No disabled look:
+       the Mac style draws the same whether or not the button is enabled. -->
+  <Style x:Key="PillButton" TargetType="Button">
+    <Setter Property="Background" Value="{StaticResource ButtonBlueBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="16" Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+    <Style.Triggers>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter Property="Background" Value="#FF0055B0" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- The Scan network button (macOS ScanButton). -->
+  <Style x:Key="IndigoPillButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+    <Setter Property="Background" Value="{StaticResource IndigoBrush}" />
+    <Style.Triggers>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter Property="Background" Value="#FF4840B8" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- The macOS non-prominent pill: near-black fill and 85% white text. -->
+  <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource PillButton}">
+    <Setter Property="Background" Value="#FF141414" />
+    <Setter Property="Foreground" Value="#D9FFFFFF" />
+    <Style.Triggers>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter Property="Background" Value="#FF2A2A2A" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="LinkButton" TargetType="Button">
+    <Setter Property="Foreground" Value="{StaticResource BlueBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <ContentPresenter />
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- macOS device card: 16 padding and radius, 6% white fill, 12% on hover. -->
+  <Style x:Key="CardButton" TargetType="Button">
+    <Setter Property="Background" Value="{StaticResource CardBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="16" Padding="{TemplateBinding Padding}">
+            <ContentPresenter />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardHoverBrush}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- macOS SectionBox: black 22% fill, 12 radius, 1px white 10% stroke. -->
+  <Style TargetType="conv:SectionBox">
+    <Setter Property="Background" Value="#38000000" />
+    <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+  </Style>
+
+  <!-- A clickable SectionBox row (macOS ShareRow): 10 padding, white 6% on hover. -->
+  <Style x:Key="RowButton" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+            <ContentPresenter />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="#0FFFFFFF" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- macOS 26 small switch: 44x20 track, 27x16 knob inset 2, white 13% off,
+       accent blue on. WPF has no toggle switch control, so this restyles a CheckBox. -->
+  <Style x:Key="Switch" TargetType="CheckBox">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <Border x:Name="Track" Width="44" Height="20" CornerRadius="10" Background="#21FFFFFF">
+            <Border x:Name="Knob" Width="27" Height="16" CornerRadius="8" Margin="2" Background="#FFE3E3E3" HorizontalAlignment="Left" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Track" Property="Background" Value="{StaticResource BlueBrush}" />
+              <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="Field" TargetType="Control">
+    <Setter Property="Background" Value="{StaticResource FieldBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style TargetType="TextBox" BasedOn="{StaticResource Field}">
+    <Setter Property="CaretBrush" Value="White" />
+  </Style>
+  <Style TargetType="PasswordBox" BasedOn="{StaticResource Field}">
+    <Setter Property="CaretBrush" Value="White" />
+  </Style>
+  <Style TargetType="CheckBox">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+</ResourceDictionary>

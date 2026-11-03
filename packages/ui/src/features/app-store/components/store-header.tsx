@@ -4,6 +4,7 @@ import {useTranslation} from 'react-i18next'
 import {RiCloseCircleFill} from 'react-icons/ri'
 import {TbCircleArrowUp, TbDots, TbSearch} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
+import {useWindowSize} from 'react-use'
 
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {
@@ -44,6 +45,7 @@ const RAIL_HEIGHT = 44
 const HEADER_HEIGHT = TITLE_ROW_HEIGHT + ROW_GAP + RAIL_HEIGHT
 const BAR_HEIGHT = 64
 const COLLAPSE_DISTANCE = 90
+const NARROW_SEARCH_BELOW_W = 420
 
 export function StoreHeader({search, isOwner}: {search: StoreSearch; isOwner: boolean}) {
 	return isOwner ? <OwnerStoreHeader search={search} /> : <StoreHeaderChrome search={search} />
@@ -155,7 +157,7 @@ function DesktopStoreHeader({
 			)}
 
 			<SheetStickyHeader visible={pinned} surfaceVisible={settled} animateContent={false} fadeSurface>
-				<DialogCloseButton className='pointer-events-auto absolute top-5 right-5' />
+				<DialogCloseButton surface='sheet' />
 			</SheetStickyHeader>
 		</>
 	)
@@ -172,10 +174,11 @@ function MobileStoreHeader({
 }) {
 	const {t} = useTranslation()
 	return (
-		<SheetHeader className={cn('gap-4', storeRevealSoftClass)}>
+		<SheetHeader className={cn('gap-4 low:gap-2', storeRevealSoftClass)}>
 			{/* The sheet's close button sits in this row's top-right corner on phones;
-			    the right padding keeps the controls clear of it */}
-			<div className='flex flex-wrap items-center gap-x-3 gap-y-3 pr-8 pl-2.5'>
+			    the right padding keeps the controls clear of it. From md the sheet's
+			    own padding does that, and the row lines up with the content below */}
+			<div className='flex flex-wrap items-center gap-x-3 gap-y-3 pr-8 pl-2.5 md:pr-0 md:pl-0'>
 				<SheetTitle className='leading-none whitespace-nowrap'>{t('app-store.title')}</SheetTitle>
 				<div className='flex min-w-0 flex-1 items-center justify-end gap-2'>
 					<StoreSearchInput inputRef={search.setActiveInput} value={search.query} onValueChange={search.setQuery} />
@@ -199,6 +202,8 @@ export function StoreSearchInput({
 	className?: string
 }) {
 	const {t} = useTranslation()
+	// On the narrowest phones the field can't hold "Search apps", and a clipped word looks broken
+	const narrow = useWindowSize().width < NARROW_SEARCH_BELOW_W
 	return (
 		<div
 			className={cn(
@@ -211,7 +216,7 @@ export function StoreSearchInput({
 			<input
 				ref={inputRef}
 				className='min-w-0 flex-1 bg-transparent text-13 text-white outline-hidden placeholder:text-white/35'
-				placeholder={t('app-store.search-apps')}
+				placeholder={narrow ? t('search') : t('app-store.search-apps')}
 				value={value}
 				onChange={(event) => onValueChange(event.target.value)}
 				onKeyDown={(event) => {

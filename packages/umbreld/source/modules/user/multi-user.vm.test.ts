@@ -9,12 +9,12 @@ import got from 'got'
 import {CookieJar} from 'tough-cookie'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
-import type {AppRouter} from '../server/trpc/common.js'
-import type {events} from '../event-bus/event-bus.js'
-import * as totp from '../utilities/totp.js'
-import {resolveWallpaperAppearance} from './wallpapers.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
+import type {AppRouter} from '../server/trpc/common.ts'
+import type {events} from '../event-bus/event-bus.ts'
+import * as totp from '../utilities/totp.ts'
+import {resolveWallpaperAppearance} from './wallpapers.ts'
 
 type BrowserSession = {
 	dashboardToken: string

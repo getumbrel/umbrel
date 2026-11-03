@@ -12,7 +12,7 @@ const {$, spawn} = vi.hoisted(() => ({
 vi.mock('execa', () => ({$}))
 vi.mock('node-pty', () => ({default: {spawn}}))
 
-import createTerminalWebSocketHandler from './terminal-socket.js'
+import createTerminalWebSocketHandler from './terminal-socket.ts'
 
 class TestWebSocket extends EventEmitter {
 	readyState: number = WebSocket.OPEN

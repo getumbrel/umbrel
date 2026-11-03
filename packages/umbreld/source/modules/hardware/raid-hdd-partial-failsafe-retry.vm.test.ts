@@ -1,9 +1,9 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
 
-describe('Partially mirrored HDD FailSafe transition retry', () => {
+describe.each(driveBuses)('Partially mirrored HDD FailSafe transition retry (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
@@ -32,7 +32,7 @@ describe('Partially mirrored HDD FailSafe transition retry', () => {
 	// Six HDDs let us exercise destructive retries, while the SSD covers the
 	// accelerator path that must also reject this partial topology.
 	test('adds six HDDs and an accelerator SSD, then boots the VM', async () => {
-		for (let slot = 1; slot <= 6; slot++) await umbreld.vm.addHdd({slot})
+		for (let slot = 1; slot <= 6; slot++) await umbreld.vm.addHdd({slot, bus})
 		await umbreld.vm.addNvme({slot: 1, size: '500G'})
 		await umbreld.vm.powerOn()
 	})

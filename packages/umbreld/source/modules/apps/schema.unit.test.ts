@@ -6,7 +6,7 @@ import {
 	AppManifestEnvironmentVariableSchema,
 	AppManifestFolderAccessSchema,
 	validateManifest,
-} from './schema.js'
+} from './schema.ts'
 
 describe('app storage manifest compatibility', () => {
 	test('allows a version 1 manifest to opt into the data-root capability', () => {

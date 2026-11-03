@@ -1,5 +1,5 @@
 import {randomBytes} from 'node:crypto'
-import {constants} from 'node:fs'
+import {constants, type BigIntStats} from 'node:fs'
 import {copyFile, link, lstat, open, unlink} from 'node:fs/promises'
 import nodePath from 'node:path'
 import {Transform} from 'node:stream'
@@ -9,14 +9,14 @@ import express from 'express'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
-import type {Principal} from '../auth/auth.js'
-import {authorizeDashboardRequest, authorizeHttpRequest} from '../auth/http-request.js'
-import type UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.js'
-import {Blake3Hasher} from './blake3.js'
-import type {PublishedFileRevision} from './file-index-enrichment.js'
-import {lookupMimeType} from './mime.js'
+import type Umbreld from '../../index.ts'
+import type {Principal} from '../auth/auth.ts'
+import {authorizeDashboardRequest, authorizeHttpRequest} from '../auth/http-request.ts'
+import type UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import {PRIVATE_IMMUTABLE_CACHE_CONTROL} from '../server/cache-control.ts'
+import {Blake3Hasher} from './blake3.ts'
+import type {PublishedFileRevision} from './file-index-enrichment.ts'
+import {lookupMimeType} from './mime.ts'
 
 // Final publication must choose and claim a keep-both name atomically. Umbreld
 // has one upload API process, so this also avoids two concurrent requests
@@ -75,15 +75,35 @@ function acceptsEmbeddedSvg(request: express.Request) {
 	return explicitlyAcceptsSvg && !acceptsDocument
 }
 
+// Identifies the bytes at a path: atomic saves publish a new inode, and
+// in-place writes move the size, the modification time or the change time.
+// Uploads may set the modification time (lastModified), so a same-size
+// rewrite stamped with the old time keeps its inode and mtime; the change
+// time is the one no client can set.
+export function fileRevision(stats: BigIntStats) {
+	return `${stats.ino}-${stats.size}-${stats.mtimeNs}-${stats.ctimeNs}`
+}
+
+// If-Match compares strongly, so a weak tag never matches, and "*" only asks
+// for an existing file. Only a regular file has a revision to match: replacing
+// a symlink would publish over the link, not the file read through it.
+export function satisfiesIfMatch(ifMatch: string, destination: BigIntStats | undefined) {
+	if (!destination?.isFile()) return false
+	const entityTag = `"${fileRevision(destination)}"`
+	return ifMatch.trim() === '*' || ifMatch.split(',').some((tag) => tag.trim() === entityTag)
+}
+
 export async function publishUploadWithoutReplacing(
 	temporarySystemPath: string,
 	destinationSystemPath: string,
 	{
 		createLink = link,
 		copyExclusive = (source: string, destination: string) => copyFile(source, destination, constants.COPYFILE_EXCL),
+		modifiedMs,
 	}: {
 		createLink?: typeof link
 		copyExclusive?: (source: string, destination: string) => Promise<void>
+		modifiedMs?: number
 	} = {},
 ) {
 	try {
@@ -99,6 +119,8 @@ export async function publishUploadWithoutReplacing(
 			copied = true
 			const destination = await open(destinationSystemPath, constants.O_RDONLY | constants.O_NOFOLLOW)
 			try {
+				// Unlike a hard link, the copy is a new file with its own times.
+				if (modifiedMs !== undefined) await destination.utimes(new Date(), new Date(modifiedMs))
 				await destination.sync()
 			} finally {
 				await destination.close()
@@ -161,6 +183,17 @@ function requireFileApiAuth(umbreld: Umbreld) {
 	}
 }
 
+// Express derives its ETag from size and modification time alone, which
+// uploads may now set to the file's original time. A replacement with the same
+// size and time would then revalidate as the old file, so the validator also
+// covers the inode and change time, which a client cannot set.
+async function sendFileRevision(response: express.Response, systemPath: string) {
+	const stats = await fse.stat(systemPath, {bigint: true})
+	const revision = [stats.size, stats.mtimeNs, stats.ctimeNs, stats.ino].map((value) => value.toString(16))
+	response.setHeader('ETag', `W/"${revision.join('-')}"`)
+	response.sendFile(systemPath, {dotfiles: 'allow'})
+}
+
 export function downloadFiles(umbreld: Umbreld) {
 	return async (request: express.Request, response: express.Response) => {
 		// Normalise a single path or multiple paths into an array
@@ -189,7 +222,7 @@ export function downloadFiles(umbreld: Umbreld) {
 			response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
 			response.setHeader('Content-Type', 'application/octet-stream')
 			response.setHeader('X-Content-Type-Options', 'nosniff')
-			return response.sendFile(files[0], {dotfiles: 'allow'})
+			return await sendFileRevision(response, files[0])
 		}
 
 		// For directory or multiple files, create zip archive
@@ -211,7 +244,12 @@ export function downloadFiles(umbreld: Umbreld) {
 type ReceiveUploadOptions = {
 	virtualPath: string
 	collision: 'error' | 'keep-both' | 'replace'
+	// An If-Match header: replace only the revision the client last read
+	ifMatch?: string
 	calculateBlake3?: boolean
+	// Epoch milliseconds to store as the file's modification time, for callers
+	// that know when the uploaded file was last modified on its origin.
+	modifiedMs?: number
 	insufficientStorageHeader?: {name: string; value: string}
 	onBeforePublish?: (hash: Buffer) => Promise<'publish' | 'skip'>
 	onPublished?: (upload: PublishedUpload) => Promise<void>
@@ -222,10 +260,13 @@ export type PublishedUpload = {
 	path: string
 	systemPath: string
 	revision: PublishedFileRevision
+	// What HTTP clients see as the revision, see fileRevision()
+	fileRevision: string
 	blake3?: Buffer
 }
 
 type SkippedUpload = {skipped: true}
+type RevisionMismatch = {revisionMismatch: true}
 
 export async function receiveUpload(
 	umbreld: Umbreld,
@@ -235,7 +276,9 @@ export async function receiveUpload(
 	{
 		virtualPath,
 		collision,
+		ifMatch,
 		calculateBlake3 = false,
+		modifiedMs,
 		insufficientStorageHeader,
 		onBeforePublish,
 		onPublished,
@@ -278,6 +321,17 @@ export async function receiveUpload(
 		// Files client explain why an otherwise accessible Cloud mirror is read-only.
 		const safeError = error instanceof Error && error.message === '[cloud-read-only]' ? error.message : 'invalid path'
 		response.status(400).json({error: safeError})
+		return
+	}
+
+	// Refuse a stale revision before reading the body. The file can still change
+	// while it streams, so publication checks again.
+	if (
+		ifMatch !== undefined &&
+		!satisfiesIfMatch(ifMatch, await lstat(systemPath, {bigint: true}).catch(() => undefined))
+	) {
+		response.setHeader('Connection', 'close')
+		response.status(412).json({error: '[revision-mismatch]'})
 		return
 	}
 
@@ -354,6 +408,10 @@ export async function receiveUpload(
 			}
 			const syncHandle = await open(temporarySystemPath, constants.O_RDONLY | constants.O_NOFOLLOW)
 			try {
+				// Stamp the hidden temporary file, so the published name never
+				// exists with another modification time and the revision read
+				// after publication already includes this change.
+				if (modifiedMs !== undefined) await syncHandle.utimes(new Date(), new Date(modifiedMs))
 				await syncHandle.sync()
 			} finally {
 				await syncHandle.close()
@@ -377,7 +435,7 @@ export async function receiveUpload(
 		// Choose and claim the destination while serialized with other uploads.
 		// link(2) fails atomically if a keep-both/error destination appeared
 		// since the initial check; unlike rename it can never replace that file.
-		const publish = async (): Promise<PublishedUpload | SkippedUpload | undefined> => {
+		const publish = async (): Promise<PublishedUpload | SkippedUpload | RevisionMismatch | undefined> => {
 			// Photos can reject a content duplicate while the complete bytes still
 			// live only in this hidden temporary file. This avoids publishing and
 			// then destructively cleaning up a pathname that another writer can
@@ -393,26 +451,58 @@ export async function receiveUpload(
 				candidate = await umbreld.files.authorizeWritableDestinationSystemPath(candidate, accountId(response), {
 					replace: collision === 'replace',
 				})
+				let stats: BigIntStats
 				if (collision === 'replace') {
-					await fse.rename(temporarySystemPath, candidate)
+					// Check again while serialized with every other upload, right before
+					// the rename. lstat sees the entry being replaced, never a link target.
+					const replaced = await lstat(candidate, {bigint: true}).catch(() => undefined)
+					if (ifMatch !== undefined && !satisfiesIfMatch(ifMatch, replaced)) return {revisionMismatch: true as const}
+					// Work on a descriptor: umbreld runs as root, and SMB clients or apps
+					// writing this directory could swap the temporary path for a link (or a
+					// FIFO, stalling every upload here). After the rename it still names the
+					// file this request published, whatever has been put at its path since.
+					const temporaryFile = await open(
+						temporarySystemPath,
+						constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+					)
+					try {
+						if (replaced?.isFile()) {
+							// A save keeps who can open the file. Only the permission bits carry
+							// over: setuid and setgid would hand a privileged executable's rights
+							// to uploaded bytes, and sticky means nothing on a file. Like the
+							// umbrel chown below, this fails where mount options supply ownership
+							// and modes.
+							await temporaryFile.chown(Number(replaced.uid), Number(replaced.gid)).catch(() => {})
+							await temporaryFile.chmod(Number(replaced.mode) & 0o777).catch(() => {})
+						} else {
+							// A new file, or one replacing a symlink, belongs to the umbrel user
+							const {userId, groupId} = umbreld.files.fileOwner
+							await temporaryFile.chown(userId, groupId).catch(() => {})
+						}
+						await fse.rename(temporarySystemPath, candidate)
+						// Renaming moves the change time, so read the revision after it
+						stats = await temporaryFile.stat({bigint: true})
+					} finally {
+						await temporaryFile.close()
+					}
 				} else {
 					try {
-						await publishUploadWithoutReplacing(temporarySystemPath, candidate)
+						await publishUploadWithoutReplacing(temporarySystemPath, candidate, {modifiedMs})
 					} catch (error) {
 						if ((error as NodeJS.ErrnoException).code === 'EEXIST' && collision === 'keep-both') continue
 						throw error
 					}
+					// Set owner to the umbrel user. This is expected to fail on filesystems
+					// such as exFAT, where ownership is supplied by mount options.
+					await umbreld.files.chownSystemPath(candidate).catch(() => {})
+					stats = await lstat(candidate, {bigint: true})
 				}
-				// Set owner to the umbrel user. This is expected to fail on filesystems
-				// such as exFAT, where ownership is supplied by mount options.
-				await umbreld.files.chownSystemPath(candidate).catch(() => {})
 				const directoryHandle = await open(nodePath.dirname(candidate), constants.O_RDONLY)
 				try {
 					await directoryHandle.sync()
 				} finally {
 					await directoryHandle.close()
 				}
-				const stats = await lstat(candidate, {bigint: true})
 				const upload: PublishedUpload = {
 					path: umbreld.files.systemToVirtualPath(candidate),
 					systemPath: candidate,
@@ -422,6 +512,7 @@ export async function receiveUpload(
 						modifiedNs: stats.mtimeNs.toString(),
 						ctimeNs: stats.ctimeNs.toString(),
 					} satisfies PublishedFileRevision,
+					fileRevision: fileRevision(stats),
 					...(blake3 ? {blake3} : {}),
 				}
 				promoted = true
@@ -445,12 +536,17 @@ export async function receiveUpload(
 		// while an iPhone source is being removed). Acquire it before taking the
 		// box-wide publication slot, while still keeping its active-source check,
 		// publication, and durable registration in one guarded operation.
-		const publication: PublishedUpload | SkippedUpload | undefined = publicationGuard
+		const publication: PublishedUpload | SkippedUpload | RevisionMismatch | undefined = publicationGuard
 			? await publicationGuard(enqueuePublication, {blake3})
 			: await enqueuePublication()
 		if (!publication) {
 			response.setHeader('Connection', 'close')
 			response.status(400).json({error: '[destination-already-exists]'})
+			return
+		}
+		if ('revisionMismatch' in publication) {
+			response.setHeader('Connection', 'close')
+			response.status(412).json({error: '[revision-mismatch]'})
 			return
 		}
 		if ('skipped' in publication) return publication
@@ -472,6 +568,20 @@ export async function receiveUpload(
 	}
 }
 
+const MAX_UPLOAD_LAST_MODIFIED = 253_402_300_799_999
+
+// Reads the browser's File.lastModified from an upload's query string. Older
+// clients omit it; anything but one positive epoch millisecond value up to
+// year 9999 is invalid.
+export function uploadLastModified(value: unknown) {
+	if (value === undefined) return
+	const lastModified = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : 0
+	if (!Number.isSafeInteger(lastModified) || lastModified <= 0 || lastModified > MAX_UPLOAD_LAST_MODIFIED) {
+		return 'invalid' as const
+	}
+	return lastModified
+}
+
 export function uploadFile(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPreflight) {
 	return async (request: express.Request, response: express.Response) => {
 		// We must set Connection: close on early errors so browser XHR does not
@@ -485,11 +595,29 @@ export function uploadFile(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPref
 			response.setHeader('Connection', 'close')
 			return response.status(400).json({error: 'invalid collision parameter'})
 		}
+		// If-Match guards overwriting the revision a client read. Error and
+		// keep-both never write over an existing file, so with them it could only
+		// ever fail or guard nothing.
+		const ifMatch = request.get('If-Match')
+		if (ifMatch !== undefined && collision !== 'replace') {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'If-Match requires collision=replace'})
+		}
+		const lastModified = uploadLastModified(request.query.lastModified)
+		if (lastModified === 'invalid') {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'invalid lastModified parameter'})
+		}
 		const result = await receiveUpload(umbreld, uploadDiskPreflight, request, response, {
 			virtualPath: request.query.path,
 			collision,
+			ifMatch,
+			modifiedMs: lastModified,
 		})
-		if (result && 'path' in result) response.status(200).json({path: result.path})
+		if (result && 'path' in result) {
+			response.setHeader('ETag', `"${result.fileRevision}"`)
+			response.status(200).json({path: result.path, revision: result.fileRevision})
+		}
 		return result && 'path' in result ? result.path : undefined
 	}
 }
@@ -534,6 +662,11 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 			const systemPath = await umbreld.files.virtualToSystemPath(request.query.path, accountId(response))
 			const status = await umbreld.files.status(systemPath, accountId(response))
 			if (status.type === 'directory') return response.status(400).json({error: 'cannot view a directory'})
+			// A regular file goes out with the revision clients send back in If-Match
+			// (send keeps an ETag that is already set and checks conditional and range
+			// requests against it). A symlink's own revision doesn't follow the bytes
+			// served, so it gets the download's weak tag, which If-Match never satisfies.
+			const stats = await lstat(systemPath, {bigint: true})
 			response.setHeader(
 				'Content-Security-Policy',
 				"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
@@ -553,6 +686,8 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 				response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
 				response.setHeader('Content-Type', 'application/octet-stream')
 			}
+			if (!stats.isFile()) return await sendFileRevision(response, systemPath)
+			response.setHeader('ETag', `"${fileRevision(stats)}"`)
 			response.sendFile(systemPath, {dotfiles: 'allow'})
 		} catch {
 			return response.status(404).json({error: 'not found'})
@@ -560,7 +695,7 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 	})
 
 	// Uploads a file
-	// POST /api/files/upload?path=/Home/file.txt&collision=error|keep-both|replace
+	// POST /api/files/upload?path=/Home/file.txt&collision=error|keep-both|replace&lastModified=<ms>
 	api.post('/upload', uploadFile(umbreld, uploadDiskPreflight))
 	return api
 }

@@ -48,7 +48,7 @@ export function ProgressButton({variant, size, progress, state, children, classN
 	}, [state, progressing])
 
 	const progressingStyle: CSSProperties = {
-		['--progress-button-progress' as string]: `${Math.round(progress ?? 0)}%`,
+		['--progress-button-progress' as string]: `${progress ?? 0}%`,
 		backgroundImage:
 			'linear-gradient(to right, var(--progress-button-bg) var(--progress-button-progress), transparent var(--progress-button-progress))',
 		backgroundColor: 'color-mix(in srgb, var(--progress-button-bg) 60%, transparent)',

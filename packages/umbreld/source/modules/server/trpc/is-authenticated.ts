@@ -1,8 +1,8 @@
 import {TRPCError} from '@trpc/server'
 
-import {OWNER_ACCOUNT_ID, type Principal} from '../../auth/auth.js'
-import {browserSessionTokenFromRequest} from '../../auth/browser-session-cookie.js'
-import {type Context} from './context.js'
+import {OWNER_ACCOUNT_ID, type Principal} from '../../auth/auth.ts'
+import {browserSessionTokenFromRequest} from '../../auth/browser-session-cookie.ts'
+import {type Context} from './context.ts'
 
 type MiddlewareOptions = {
 	ctx: Context

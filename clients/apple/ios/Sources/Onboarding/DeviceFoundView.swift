@@ -26,6 +26,12 @@ struct DeviceFoundView: View {
 		) {
 			SignInSheet()
 		}
+		// The last result can go while it's shown, as when Try again finds a saved
+		// Umbrel's identity changed. Move on the same way leaving the address screen does.
+		.onChange(of: model.discoveryResults.isEmpty) { _, empty in
+			guard empty, model.step == .deviceFound else { return }
+			model.advance(to: OnboardingModel.manualAddressReturnDestination(from: .deviceFound, hasDiscoveryResults: false))
+		}
 	}
 
 	// ── Single device ──
@@ -102,6 +108,9 @@ struct DeviceFoundView: View {
 		.padding(30)
 		.background(.white.opacity(0.04), in: shape)
 		.glassGlint(in: shape)
+		// The fixed card has room for the "Couldn't connect" explanation and two
+		// actions only up to this size
+		.dynamicTypeSize(result.isUnverified ? ...DynamicTypeSize.xxxLarge : ...DynamicTypeSize.accessibility5)
 	}
 
 	// ── Shared bits ──
@@ -109,11 +118,10 @@ struct DeviceFoundView: View {
 	private func deviceHero(_ result: OnboardingModel.DiscoveryResult, nameSize: CGFloat) -> some View {
 		let modelName: String? = switch result {
 		case .device(let device): device.model
-		case .updateRequired: nil
+		case .unverified, .updateRequired: nil
 		}
 		return VStack(spacing: 31) {
-			UmbrelDeviceRender(model: modelName)
-				.frame(width: 161)
+			UmbrelDeviceRender(model: modelName, placement: .hero)
 				.shadow(color: .black.opacity(0.5), radius: 16, y: 16)
 				.accessibilityHidden(true)
 			VStack(spacing: 4) {
@@ -123,6 +131,15 @@ struct DeviceFoundView: View {
 				Text(result.subtitle)
 					.font(.callout)
 					.foregroundStyle(Palette.textMuted)
+				if case .unverified(let device) = result {
+					Text(device.reason.explanation)
+						.font(.footnote)
+						.foregroundStyle(Palette.textMuted)
+						.multilineTextAlignment(.center)
+						.fixedSize(horizontal: false, vertical: true)
+						.frame(maxWidth: 280)
+						.padding(.top, 8)
+				}
 			}
 		}
 	}
@@ -138,27 +155,55 @@ struct DeviceFoundView: View {
 			} else {
 				connectButton(title: "Connect") { connect(device) }
 			}
+		case .unverified(let device):
+			let isRetrying = model.retryingHosts.contains(device.host)
+			VStack(spacing: 6) {
+				if fullWidth {
+					OnboardingButton(title: "Try again", isBusy: isRetrying) { retry(device) }
+				} else {
+					connectButton(title: "Try again", isBusy: isRetrying) { retry(device) }
+				}
+				// umbrelOS may still open there
+				Button {
+					open(host: device.host)
+				} label: {
+					Text("Open in browser")
+						.font(.subheadline.weight(.semibold))
+						.foregroundStyle(Palette.textMuted)
+						.frame(maxWidth: .infinity, minHeight: 44)
+						.contentShape(Rectangle())
+				}
+				.buttonStyle(.plain)
+			}
 		case .updateRequired(let device):
 			if fullWidth {
-				OnboardingButton(title: "Update umbrelOS") { open(device) }
+				OnboardingButton(title: "Update umbrelOS") { open(host: device.host) }
 			} else {
-				connectButton(title: "Update umbrelOS") { open(device) }
+				connectButton(title: "Update umbrelOS") { open(host: device.host) }
 			}
 		case nil:
 			EmptyView()
 		}
 	}
 
-	private func connectButton(title: String, _ action: @escaping () -> Void) -> some View {
+	private func connectButton(title: String, isBusy: Bool = false, _ action: @escaping () -> Void) -> some View {
 		Button(action: action) {
-			Text(title)
-				.font(.headline)
-				.foregroundStyle(.white)
-				.frame(maxWidth: .infinity, minHeight: 48)
-				.background(Color(hex: 0x6155F5), in: .capsule)
-				.overlay { SolidButtonRim() }
+			ZStack {
+				Text(title)
+					.font(.headline)
+					.foregroundStyle(.white)
+					.opacity(isBusy ? 0 : 1)
+				if isBusy {
+					ProgressView()
+						.tint(.white)
+				}
+			}
+			.frame(maxWidth: .infinity, minHeight: 48)
+			.background(Color(hex: 0x6155F5), in: .capsule)
+			.overlay { SolidButtonRim() }
 		}
 		.buttonStyle(.plain)
+		.disabled(isBusy)
 	}
 
 	private func isAdded(_ device: IdentifiedDevice) -> Bool {
@@ -178,16 +223,25 @@ struct DeviceFoundView: View {
 		model.advance(to: .signIn)
 	}
 
-	private func open(_ device: Umbreld.UpdateRequiredDevice) {
-		guard let url = URL(string: "http://\(device.host)") else { return }
+	private func retry(_ device: Umbreld.UnverifiedDevice) {
+		Task { await model.retry(device) }
+	}
+
+	private func open(host: String) {
+		guard let url = URL(string: "http://\(host)") else { return }
 		openURL(url)
 	}
 }
 
 private extension OnboardingModel.DiscoveryResult {
+	var isUnverified: Bool {
+		if case .unverified = self { true } else { false }
+	}
+
 	var title: String {
 		switch self {
 		case .device(let device): device.model
+		case .unverified: "Couldn\u{2019}t connect"
 		case .updateRequired: "Update to connect"
 		}
 	}
@@ -195,7 +249,35 @@ private extension OnboardingModel.DiscoveryResult {
 	var subtitle: String {
 		switch self {
 		case .device(let device): device.host
+		case .unverified(let device): device.host
 		case .updateRequired(let device): device.host
 		}
 	}
 }
+
+// Harnesses for finessing the "Couldn't connect" card in the Xcode canvas: seeded
+// scan results, no discovery.
+#if DEBUG
+#Preview("Couldn't Connect") {
+	ZStack {
+		OnboardingBackground()
+		DeviceFoundView()
+	}
+	.environment(OnboardingModel.preview(
+		unverified: [Umbreld.UnverifiedDevice(host: "umbrel.local", reason: .slow)]
+	))
+}
+
+#Preview("Couldn't Connect, Among Others") {
+	ZStack {
+		OnboardingBackground()
+		DeviceFoundView()
+	}
+	.environment(OnboardingModel.preview(
+		unverified: [
+			Umbreld.UnverifiedDevice(host: "umbrel.local", reason: .slow),
+			Umbreld.UnverifiedDevice(host: "umbrel-2.local", reason: .unexpected),
+		]
+	))
+}
+#endif

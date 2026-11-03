@@ -1,8 +1,9 @@
 import {useTranslation} from 'react-i18next'
-import {TbChevronLeft, TbChevronRight} from 'react-icons/tb'
+import {TbChevronRight} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
+import {DialogFooter} from '@/components/ui/dialog'
 import {AnimatedInputError, Input, PasswordInput} from '@/components/ui/input'
 import {listClass} from '@/components/ui/list'
 import {Switch} from '@/components/ui/switch'
@@ -11,10 +12,9 @@ import {useUserName} from '@/hooks/use-user-name'
 import {cn} from '@/lib/utils'
 import {AccountAvatar} from '@/modules/auth/account-avatar'
 import {AccountAvatarEditor} from '@/modules/auth/account-avatar-editor'
-import {ChangePasswordWarning} from '@/routes/settings/_components/shared'
+import {BackButton, ChangePasswordWarning} from '@/routes/settings/_components/shared'
 import {SessionsPanel} from '@/routes/settings/sessions'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
-import {focusRingClass} from '@/utils/element-classes'
 
 type Account = RouterOutput['user']['listAccounts'][number]
 
@@ -246,29 +246,13 @@ function OwnerPasswordPanel({owner, onBack, onSuccess}: {owner: Account; onBack:
 function FormActions({onCancel}: {onCancel: () => void}) {
 	const {t} = useTranslation()
 	return (
-		<div className='flex justify-end gap-2'>
-			<Button type='button' size='dialog' onClick={onCancel}>
-				{t('cancel')}
-			</Button>
+		<DialogFooter>
 			<Button type='submit' size='dialog' variant='primary'>
 				{t('confirm')}
 			</Button>
-		</div>
-	)
-}
-
-function BackButton({onClick, children}: {onClick: () => void; children: React.ReactNode}) {
-	return (
-		<button
-			type='button'
-			onClick={onClick}
-			className={cn(
-				'-mx-1 flex items-center gap-0.5 self-start rounded-4 px-1 text-13 font-medium -tracking-2 text-white/50 transition-colors hover:text-white/70',
-				focusRingClass,
-			)}
-		>
-			<TbChevronLeft className='size-4' />
-			{children}
-		</button>
+			<Button type='button' size='dialog' onClick={onCancel}>
+				{t('cancel')}
+			</Button>
+		</DialogFooter>
 	)
 }

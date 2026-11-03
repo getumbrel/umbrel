@@ -1,6 +1,6 @@
 import {TRPCError} from '@trpc/server'
 
-import {type Context} from './context.js'
+import {type Context} from './context.ts'
 
 type MiddlewareOptions = {
 	ctx: Context

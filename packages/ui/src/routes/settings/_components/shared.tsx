@@ -14,6 +14,12 @@ import {tw} from '@/utils/tw'
 
 export const cardErrorClass = tw`text-14 font-medium -tracking-3 animate-pulse leading-snug text-destructive2-lightest`
 
+// Beside the rows, with the width of the desktop sidebar. The page scrolls as one
+// below the desktop layout, so this pane sticks and scrolls on its own, reaching
+// past the sheet's padding so the avatar and shadows aren't clipped.
+export const settingsPanesGridClass = tw`panes:grid-cols-[280px_minmax(0,1fr)] panes:gap-5 panes:items-start`
+export const settingsSidePaneClass = tw`umbrel-hide-scrollbar panes:sticky panes:top-2 panes:-mx-3 panes:max-h-[calc(100dvh-var(--sheet-top)-16px)] panes:overflow-y-auto panes:overscroll-contain panes:px-3 panes:pb-24`
+
 export function SettingsAccountAvatar({
 	name,
 	userId,

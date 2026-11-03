@@ -30,9 +30,11 @@ export default function DeviceInfoDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogScrollableContent showClose={!isUmbrelPro}>
+			<DialogScrollableContent>
 				<div className={isUmbrelPro ? 'space-y-6 px-5 pb-6' : 'space-y-6 px-5 py-6'}>
-					{!isUmbrelPro && (
+					{isUmbrelPro ? (
+						<DialogTitle className='sr-only'>{title}</DialogTitle>
+					) : (
 						<DialogHeader>
 							<DialogTitle>{title}</DialogTitle>
 						</DialogHeader>

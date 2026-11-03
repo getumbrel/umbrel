@@ -6,9 +6,9 @@ import {execa} from 'execa'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {MAX_AVATAR_UPLOAD_BYTES, removeAccountAvatar, resolveAccountAvatar, setAccountAvatar} from './avatar.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {MAX_AVATAR_UPLOAD_BYTES, removeAccountAvatar, resolveAccountAvatar, setAccountAvatar} from './avatar.ts'
 
 vi.mock('execa', async (importOriginal) => ({
 	...(await importOriginal<typeof import('execa')>()),

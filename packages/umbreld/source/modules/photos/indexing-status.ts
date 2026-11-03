@@ -1,6 +1,6 @@
 import type DatabaseTypes from 'better-sqlite3'
 
-import {sourceScopeSql} from './library-sql.js'
+import {sourceScopeSql} from './library-sql.ts'
 
 type Database = DatabaseTypes.Database
 type Account = {account_id: string; scope_mode: string | null; scope_paths: string | null; rebuild: number}

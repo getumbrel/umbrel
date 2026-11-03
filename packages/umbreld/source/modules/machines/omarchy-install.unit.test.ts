@@ -11,7 +11,7 @@ import {
 	removeOmarchySetupCredentials,
 	renderOmarchyConfiguration,
 	renderOmarchySetupKey,
-} from './omarchy-install.js'
+} from './omarchy-install.ts'
 
 vi.mock('execa', () => ({execa: vi.fn()}))
 afterEach(() => vi.resetAllMocks())
@@ -62,6 +62,27 @@ describe('Omarchy unattended configuration', () => {
 		expect(script.indexOf('systemctl is-active --quiet sddm.service')).toBeLessThan(script.indexOf('curl '))
 		expect(script).toContain('--request POST')
 		expect(script.indexOf('sed -i')).toBeGreaterThan(script.indexOf('curl '))
+	})
+
+	test('sets up clipboard sharing without holding up first boot', () => {
+		const key = renderOmarchySetupKey('ssh-ed25519 AAAATEST umbrel-omarchy-first-boot\n', 'http://umbrel/complete')
+		const script = Buffer.from(key.match(/echo ([A-Za-z0-9+/=]+) \| base64/)![1], 'base64').toString()
+
+		const packages = 'pacman --sync --refresh --noconfirm --needed spice-vdagent xclip clipnotify'
+		expect(script).toContain(`systemd-run --no-block`)
+		expect(script).toContain(packages)
+		expect(script).toContain('systemctl start spice-vdagentd.socket')
+		expect(script).toContain('systemctl --global enable umbrel-clipboard-bridge.service')
+		// Rerunning the script for a later failure must not trip over the first run's unit
+		expect(script).toMatch(/spice-vdagentd\.socket" \|\| true/)
+
+		const [bridge, unit] = [...script.matchAll(/echo ([A-Za-z0-9+/=]+) \| base64 --decode > /g)].map(([, encoded]) =>
+			Buffer.from(encoded, 'base64').toString(),
+		)
+		expect(bridge).toContain('wl-paste --type text --watch')
+		expect(bridge).toContain('clipnotify -s clipboard')
+		expect(unit).toContain('ExecStart=/usr/local/bin/umbrel-clipboard-bridge')
+		expect(unit).toContain('WantedBy=graphical-session.target')
 	})
 
 	test('keeps the setup password off the configuration CD, sends it over stdin, and removes it with the key', async () => {

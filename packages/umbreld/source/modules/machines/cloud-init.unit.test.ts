@@ -11,7 +11,7 @@ import {
 	firstBootTokenMatches,
 	isFirstBootSetupActive,
 	renderCloudInitUserData,
-} from './machines.js'
+} from './machines.ts'
 
 describe('Machines cloud-init seed', () => {
 	test('marks an incomplete first-boot setup delayed after one hour', () => {
@@ -57,16 +57,42 @@ describe('Machines cloud-init seed', () => {
 		expect(config.ssh_pwauth).toBe(true)
 	})
 
-	test('uses Alpine ash without adding Debian-specific privilege groups', () => {
+	test('uses Alpine ash and installs sudo', () => {
 		const document = renderCloudInitUserData('alpine', '$6$test-hash', {shell: '/bin/ash', packages: ['sudo']})
 		const config = yaml.load(document.replace(/^#cloud-config\n/, '')) as {
-			users: Array<{shell: string; sudo: string; groups?: string[]}>
+			users: Array<{shell: string; sudo: string}>
 			packages: string[]
 		}
 
 		expect(config.users[0]).toMatchObject({shell: '/bin/ash', sudo: 'ALL=(ALL) NOPASSWD:ALL'})
-		expect(config.users[0]).not.toHaveProperty('groups')
 		expect(config.packages).toEqual(['sudo'])
+	})
+
+	// Sudo access comes from the sudoers rule, but polkit only accepts the
+	// user's password for desktop admin actions from the distro's admin group
+	test('adds the user of every Linux image to its distro admin group', () => {
+		const adminGroups: Record<string, string> = {
+			ubuntu: 'sudo',
+			debian: 'sudo',
+			android: 'sudo', // Ubuntu guest
+			fedora: 'wheel',
+			alpine: 'wheel',
+		}
+		const images = builtinMachinesCatalog.images.filter(
+			({platform, familyId}) => platform === 'linux' && familyId !== 'omarchy',
+		)
+
+		expect(new Set(images.map(({familyId}) => familyId))).toEqual(new Set(Object.keys(adminGroups)))
+		for (const image of images) {
+			const document = renderCloudInitUserData('umbrel', '$6$test-hash', image.cloudInit)
+			const config = yaml.load(document.replace(/^#cloud-config\n/, '')) as {
+				users: Array<{groups?: string[]; sudo: string}>
+			}
+			expect(config.users[0], image.id).toMatchObject({
+				groups: [adminGroups[image.familyId]],
+				sudo: 'ALL=(ALL) NOPASSWD:ALL',
+			})
+		}
 	})
 
 	test('reports server setup completion without forcing a reboot', () => {
@@ -121,20 +147,18 @@ describe('Machines cloud-init seed', () => {
 	test('runs Fedora Workstation setup before rebooting', () => {
 		const document = renderCloudInitUserData('fedora', '$6$test-hash', {
 			commands: [
-				['dnf', 'install', '-y', '@workstation-product-environment'],
+				['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 				['systemctl', 'enable', 'gdm.service'],
 			],
 			graphical: true,
 		})
 		const config = yaml.load(document.replace(/^#cloud-config\n/, '')) as {
-			users: Array<{groups?: string[]}>
 			runcmd: string[][]
 			power_state: {mode: string}
 		}
 
-		expect(config.users[0]).not.toHaveProperty('groups')
 		expect(config.runcmd).toEqual([
-			['dnf', 'install', '-y', '@workstation-product-environment'],
+			['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 			['systemctl', 'enable', 'gdm.service'],
 			['systemctl', 'set-default', 'graphical.target'],
 		])

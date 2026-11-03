@@ -20,19 +20,30 @@ struct LibraryView: View {
 			ScrollView(showsIndicators: false) {
 				VStack(alignment: .leading, spacing: 24) {
 					titleBlock
+					if model.showsPhotoLibrary, model.canSwitchPhotoBackupHere,
+						let destination = model.otherPhotoBackupDestinationName
+					{
+						PhotoBackupElsewhereNotice(destination: destination)
+					}
 					if let notice = model.photoBackupNotice {
 						PhotoBackupNoticeCard(
 							notice: notice,
 							setUpTailscale: model.presentTailscaleSetup,
+							dismissOffer: model.dismissBackUpAnywhereOffer,
 							retryStorage: model.retryPhotoBackupAfterInsufficientStorage,
 							retryBackup: model.retryPhotoBackupAfterError
 						)
 					}
-					if model.photoLibrary.canReadLibrary {
+					if model.showsPhotoLibrary {
 						statTiles
+						ViewAllInPhotosButton()
 						photoGrid(gridWidth: max(geometry.size.width - (Theme.contentInset * 2) - 16, 0))
 					} else {
 						setupCard
+						if model.photoBackupIsConfiguredElsewhere {
+							// umbrelOS's Photos holds every device's backups, so it stays one tap away
+							ViewAllInPhotosButton()
+						}
 					}
 				}
 				.frame(maxWidth: .infinity, alignment: .leading)
@@ -40,8 +51,7 @@ struct LibraryView: View {
 				.padding(.top, 56)
 				.padding(.bottom, 32)
 			}
-			.background { WallpaperBackground(image: model.wallpaperImage) }
-			.overlay(alignment: .top) { WallpaperTopGradient() }
+			.background { SeeThroughTab() }
 			.environment(\.frostWallpaper, model.blurredWallpaper)
 		}
 		.fullScreenCover(item: $viewerSelection) { selection in
@@ -52,7 +62,8 @@ struct LibraryView: View {
 			)
 		}
 		.sheet(isPresented: $showsPhotoBackupInfo) {
-			PhotoBackupInfoSheet()
+			PhotoBackupInfoSheet(sourceName: model.photoBackupSourceName)
+				.task { await model.refreshPhotoBackupSourceName() }
 		}
 	}
 
@@ -63,7 +74,7 @@ struct LibraryView: View {
 				Text("Library")
 					.font(.largeTitle.bold())
 					.foregroundStyle(.white)
-				if model.photoLibrary.canReadLibrary {
+				if model.showsPhotoLibrary {
 					HStack(spacing: 4) {
 						StatusDot(color: statusColor)
 						Text(statusText)
@@ -74,24 +85,23 @@ struct LibraryView: View {
 					}
 				}
 			}
-			if model.photoLibrary.canReadLibrary {
+			// While backup goes elsewhere, the notice below says where and offers the switch
+			if model.showsPhotoLibrary, !model.photoBackupIsConfiguredElsewhere {
 				Button { showsPhotoBackupInfo = true } label: {
-					Text("\(photoBackupDescription) \(Text("Learn\u{00A0}more\u{00A0}").fontWeight(.semibold))\(Text(Image(systemName: "chevron.right")).font(.system(size: 10, weight: .semibold)))")
+					Text("\(photoBackupDescription) \(Text("How\u{00A0}it\u{00A0}works\u{00A0}").fontWeight(.semibold))\(Text(Image(systemName: "chevron.right")).font(.system(size: 10, weight: .semibold)))")
 						.font(.footnote.weight(.medium))
 						.foregroundStyle(.white.opacity(0.8))
 						.fixedSize(horizontal: false, vertical: true)
 				}
 				.buttonStyle(.plain)
-				.accessibilityLabel("\(photoBackupDescription) Learn more about Photo Backup")
+				.accessibilityLabel("\(photoBackupDescription) How Photo Backup works")
 				.accessibilityHint("Explains background uploads, Tailscale, and photo access")
 			}
 		}
 	}
 
 	private var statusText: String {
-		if let destination = model.otherPhotoBackupDestinationName {
-			return "Set to back up to \(destination)"
-		}
+		if model.photoBackupIsConfiguredElsewhere { return "On another Umbrel" }
 		return model.photoBackupStatus.text
 	}
 
@@ -101,13 +111,15 @@ struct LibraryView: View {
 	}
 
 	private var photoBackupDescription: String {
-		if let destination = model.otherPhotoBackupDestinationName {
-			return "This iPhone can back up to one Umbrel at a time. Turn off Photo Backup on \(destination) to use this Umbrel instead."
-		}
 		if !backupEnabled {
 			return "Photos and videos already backed up remain on your Umbrel."
 		}
-		return "iOS schedules uploads in the background through Tailscale, even when this app is closed."
+		// The status line above says what's happening; How it works has the rest. Home
+		// versus anywhere is the one difference Tailscale makes that people notice.
+		if model.photoBackupRoute == .tailscale {
+			return "Your photos and videos back up to your Umbrel automatically, wherever you are."
+		}
+		return "Your photos and videos back up to your Umbrel automatically when you\u{2019}re home."
 	}
 
 	// The extension maintains these totals incrementally in its durable ledger. The
@@ -222,8 +234,8 @@ struct LibraryView: View {
 		}
 	}
 
-	// Before Photos access exists, the setup card is the only Library content. Once
-	// access exists, the iPhone library remains visible whether backup is on or off.
+	// In place of the library: before Photos access exists, and while backup goes to
+	// another Umbrel that has nothing from this iPhone (see showsPhotoLibrary)
 	private var setupCard: some View {
 		PhotoBackupSetupCard(learnMore: { showsPhotoBackupInfo = true })
 	}
@@ -237,8 +249,11 @@ struct LibraryView: View {
 
 }
 
-private struct PhotoBackupInfoSheet: View {
+// How it works, from Library, its setup card and Profile's Photos section
+struct PhotoBackupInfoSheet: View {
 	@Environment(\.dismiss) private var dismiss
+	// Nil when the Umbrel may know this device by a name the app doesn't have
+	let sourceName: String?
 
 	var body: some View {
 		NavigationStack {
@@ -247,27 +262,41 @@ private struct PhotoBackupInfoSheet: View {
 					hero
 					VStack(spacing: 0) {
 						InfoPageRow(
-							icon: "moon.zzz",
-							title: "Works in the background",
-							message: "iOS handles the timing of uploads based on your connection, power, and device activity. Background App Refresh must be on, but this app doesn’t need to stay open."
+							icon: "house",
+							title: "Automatic at home",
+							message: "Backs up when you open the app, and from time to time while your iPhone charges."
 						)
 						InfoPageDivider()
 						InfoPageRow(
 							icon: "network",
-							title: "Uses Tailscale",
-							message: "Uploads reach your Umbrel through Tailscale’s encrypted network. If Tailscale is unavailable, backup waits. You can allow cellular uploads in Profile."
+							title: "Anywhere with Tailscale",
+							message: "With Tailscale, iOS backs up new photos in the background, even when the app is closed or you\u{2019}re away from home. Your Umbrel also works from anywhere."
+						)
+						InfoPageDivider()
+						InfoPageRow(
+							icon: "bell",
+							title: "Tells you if it stops",
+							message: "If nothing has backed up for a week, Umbrel sends a reminder to open the app."
 						)
 						InfoPageDivider()
 						InfoPageRow(
 							icon: "photo.badge.checkmark",
 							title: "Needs Full Photo Library access",
-							message: "Full Access lets iOS find your existing library and detect changes in the background. In Profile, choose whether to back up photos, videos, or both."
+							message: "Choose Full Access so every photo and video can back up. Choose photos, videos, or both in Profile."
 						)
+						if let sourceName {
+							InfoPageDivider()
+							InfoPageRow(
+								icon: "iphone",
+								title: "Your iPhone on Umbrel",
+								message: "This iPhone shows as \u{201c}\(sourceName)\u{201d} in Photos on your Umbrel."
+							)
+						}
 						InfoPageDivider()
 						InfoPageRow(
 							icon: "wand.and.stars",
 							title: "Keeps up with edits",
-							message: "After you edit a photo or video, the version you see in Photos is backed up again. Photo Backup saves the latest version, not a full history of every edit."
+							message: "When you edit a photo or video, the new version backs up. Your Umbrel keeps the latest version."
 						)
 						InfoPageDivider()
 						InfoPageRow(
@@ -316,6 +345,10 @@ private struct PhotoBackupInfoSheet: View {
 
 }
 
+#Preview("Photo Backup Info") {
+	PhotoBackupInfoSheet(sourceName: "Nate\u{2019}s iPhone")
+}
+
 private struct PhotoViewerSelection: Identifiable {
 	let index: Int
 	let assetIdentifier: String
@@ -345,16 +378,21 @@ private struct CardBoundaryCrop: Shape {
 struct PhotoBackupSetupCard: View {
 	@Environment(MainModel.self) private var model
 	@Environment(\.openURL) private var openURL
+	@State private var isConfirmingSwitch = false
 	var learnMore: (() -> Void)? = nil
 
 	var body: some View {
 		Group {
-			if let destination = model.otherPhotoBackupDestinationName {
-				NoticeCard(
+			if let destination = model.otherPhotoBackupDestinationName, model.canSwitchPhotoBackupHere {
+				EmptyStateCard(
 					icon: "photo.stack",
-					title: "Photo Backup is enabled for \(destination)",
-					message: "This iPhone can back up to one Umbrel at a time. Turn off Photo Backup there to use this Umbrel instead."
+					title: "Photo Backup is on for \(destination)",
+					subtitle: "This iPhone can back up to one Umbrel at a time.",
+					buttonTitle: model.photoBackupSetupInProgress ? "Switching backup\u{2026}" : "Back Up to This Umbrel",
+					buttonLoading: model.photoBackupSetupInProgress,
+					action: { isConfirmingSwitch = true }
 				)
+				.photoBackupSwitchConfirmation(isPresented: $isConfirmingSwitch, destination: destination)
 			} else {
 				EmptyStateCard(
 					icon: "photo.on.rectangle.angled",
@@ -402,11 +440,51 @@ struct PhotoBackupSetupCard: View {
 		switch model.photoLibrary.authorizationStatus {
 		case .limited, .denied, .restricted:
 			"Allow Full Access to view your library and use automatic backup. Existing backups remain on your Umbrel."
-		case .notDetermined:
-			"Back up this iPhone\u{2019}s photos and videos to your Umbrel through Tailscale, even when the app is closed."
 		default:
-			"Back up this iPhone\u{2019}s photos and videos to your Umbrel through Tailscale."
+			// Setup asks to send notifications, so this says what they're for
+			"Back up this iPhone\u{2019}s photos and videos to your Umbrel. You\u{2019}ll get a reminder if backup stops."
 		}
+	}
+}
+
+extension View {
+	// Switching stops backup for the other Umbrel, so it's always confirmed first
+	func photoBackupSwitchConfirmation(isPresented: Binding<Bool>, destination: String) -> some View {
+		modifier(PhotoBackupSwitchConfirmation(isPresented: isPresented, destination: destination))
+	}
+}
+
+// Backup goes to another Umbrel while this one holds older backups from this iPhone,
+// so the gallery stays and this offers the way to move backup here
+private struct PhotoBackupElsewhereNotice: View {
+	@State private var isConfirmingSwitch = false
+	let destination: String
+
+	var body: some View {
+		NoticeCard(
+			icon: "photo.stack",
+			title: "Photo Backup is on for \(destination)",
+			message: "This iPhone can back up to one Umbrel at a time.",
+			actionLabel: "Back Up Here",
+			action: { isConfirmingSwitch = true }
+		)
+		.photoBackupSwitchConfirmation(isPresented: $isConfirmingSwitch, destination: destination)
+	}
+}
+
+private struct PhotoBackupSwitchConfirmation: ViewModifier {
+	@Environment(MainModel.self) private var model
+	@Binding var isPresented: Bool
+	let destination: String
+
+	func body(content: Content) -> some View {
+		content
+			.alert("Back up to this Umbrel instead?", isPresented: $isPresented) {
+				Button("Back Up to This Umbrel", action: model.backUpToThisUmbrelInstead)
+				Button("Cancel", role: .cancel) {}
+			} message: {
+				Text("Photo Backup will stop for \(destination) and start for this Umbrel. Photos already backed up to \(destination) stay there.")
+			}
 	}
 }
 

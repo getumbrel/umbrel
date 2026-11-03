@@ -26,7 +26,7 @@ import {TabSwitcher} from '@/features/backups/components/tab-switcher'
 import {LoadingTile as LoadingCard} from '@/features/backups/components/tiles'
 import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-backup-ignore'
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
-import {useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
+import {normalizeEncryptionPassword, useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
 import {useExistingBackupDetection} from '@/features/backups/hooks/use-existing-backup-detection'
 import {BACKUP_FILE_NAME, getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
@@ -85,8 +85,12 @@ export function BackupsSetupWizard() {
 	// Validation schemas inside the component so t() evaluates with the current language
 	const encryptionSchema = z
 		.object({
-			password: z.string().min(8, {message: t('backups.password-minimum-length')}),
-			confirm: z.string(),
+			// Trimmed like the password that's actually saved (see normalizeEncryptionPassword)
+			password: z
+				.string()
+				.trim()
+				.min(8, {message: t('backups.password-minimum-length')}),
+			confirm: z.string().trim(),
 		})
 		.refine((d) => d.password === d.confirm, {
 			message: t('backups.passwords-do-not-match'),
@@ -97,10 +101,13 @@ export function BackupsSetupWizard() {
 		folder: z.string().min(1, {message: t('backups.please-choose-folder')}),
 		encryption: encryptionSchema,
 	})
+	// Each step only validates its own fields (see next), so the encryption
+	// schema can be used whole. Not .partial(): zod drops the refine on a partial
+	// copy, and the mismatch check would never run
 	const wizardStepSchema = z.object({
 		destination: destinationSchema,
 		folder: z.string().optional(),
-		encryption: encryptionSchema.partial(),
+		encryption: encryptionSchema,
 	})
 
 	const headerMetaForStep = (s: Step) => {
@@ -160,7 +167,7 @@ export function BackupsSetupWizard() {
 			: step === Step.Folder
 				? !!folder
 				: step === Step.Encryption
-					? (enc?.password?.length ?? 0) >= 8 && enc?.password === enc?.confirm
+					? encryptionSchema.safeParse(enc).success
 					: true
 
 	// Validate per-step before advancing
@@ -500,7 +507,7 @@ function DestinationStep({
 			)}
 
 			{tab === 'nas' ? (
-				<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3'>
+				<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-3'>
 					{isLoadingShares ? (
 						<LoadingCard />
 					) : hosts.length === 0 ? (
@@ -551,7 +558,7 @@ function DestinationStep({
 						</div>
 					</div>
 				) : (
-					<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3'>
+					<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-3'>
 						{isLoadingExternalStorage ? (
 							<div className='col-span-full flex items-center justify-start gap-2 py-2 text-sm text-white/60'>
 								<Loader2 className='size-4 animate-spin will-change-transform' />
@@ -703,6 +710,8 @@ function FolderPickerStep({
 						t={t}
 						i18nKey='backups.choose-folder-within-device'
 						values={{device: selectedName || ''}}
+						tOptions={{interpolation: {escapeValue: true}}}
+						shouldUnescape
 						components={{
 							bold: <span className='font-bold text-brand-lightest' />,
 						}}
@@ -777,7 +786,15 @@ function EncryptionStep() {
 							<FormItem>
 								<FormLabel className='text-13 opacity-60'>{t('password')}</FormLabel>
 								<FormControl>
-									<PasswordInput value={field.value} onValueChange={field.onChange} />
+									<PasswordInput
+										value={field.value}
+										onValueChange={(value) => {
+											field.onChange(value)
+											// A mismatch shows under Confirm password, so check that again
+											// once there's a confirmation to compare with
+											if (form.getValues('encryption.confirm')) void form.trigger('encryption.confirm')
+										}}
+									/>
 								</FormControl>
 								<div className='relative'>
 									<FormMessage className='absolute -top-1 left-0 text-xs' />
@@ -839,7 +856,8 @@ function ReviewStep({values}: {values: FormValues}) {
 	}
 
 	const [showPw, setShowPw] = useState(false)
-	const plainPw = values.encryption.password
+	// What will actually be saved, so what's shown and copied is what restores
+	const plainPw = normalizeEncryptionPassword(values.encryption.password)
 	const masked = plainPw ? '•'.repeat(Math.max(8, plainPw.length)) : ''
 	const [, copyToClipboard] = useCopyToClipboard()
 
@@ -859,17 +877,9 @@ function ReviewStep({values}: {values: FormValues}) {
 					{filteredIgnoredPaths.length > 0 || excludedAppsCount > 0
 						? [
 								filteredIgnoredPaths.length > 0
-									? t('{{count}} {{fileFolderText}} excluded', {
-											count: filteredIgnoredPaths.length,
-											fileFolderText: filteredIgnoredPaths.length === 1 ? t('file/folder') : t('files/folders'),
-										})
+									? t('backups.excluded-paths', {count: filteredIgnoredPaths.length})
 									: null,
-								excludedAppsCount > 0
-									? t('{{count}} {{appText}} excluded', {
-											count: excludedAppsCount,
-											appText: excludedAppsCount === 1 ? t('app') : t('apps'),
-										})
-									: null,
+								excludedAppsCount > 0 ? t('backups.excluded-apps', {count: excludedAppsCount}) : null,
 							]
 								.filter(Boolean)
 								.join(' · ')
@@ -878,35 +888,38 @@ function ReviewStep({values}: {values: FormValues}) {
 			</ReviewCard>
 
 			<ReviewCard icon={<TbPassword className='h-5 w-5 opacity-80' />} label={t('backups.encryption')}>
-				<div className='flex items-center gap-2 text-sm'>
+				{/* The field and its buttons wrap as one under the label when they don't fit beside it */}
+				<div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-sm'>
 					{plainPw ? (
 						<>
 							<span className='opacity-90'>{t('backups.password-is-set')}</span>
-							{/* Constrained, selectable password display */}
-							<Input
-								readOnly
-								value={showPw ? plainPw : masked}
-								size={Math.min((showPw ? plainPw : masked).length, 32)}
-								type={showPw ? 'text' : 'text'}
-								className='flex h-6 w-auto max-w-[120px] items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
-							/>
-							<span
-								className='group inline-flex h-6 w-6 items-center justify-center'
-								onClick={() => setShowPw((s) => !s)}
-								title={showPw ? t('backups.hide') : t('backups.show')}
-							>
-								{showPw ? (
-									<EyeOff className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
-								) : (
-									<Eye className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
-								)}
-							</span>
-							<span
-								className='group inline-flex h-6 w-6 items-center justify-center'
-								onClick={() => copyToClipboard(plainPw)}
-								title={t('backups.copy')}
-							>
-								<Copy className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+							<span className='flex min-w-0 items-center gap-2'>
+								{/* Constrained, selectable password display */}
+								<Input
+									readOnly
+									value={showPw ? plainPw : masked}
+									size={Math.min((showPw ? plainPw : masked).length, 32)}
+									type={showPw ? 'text' : 'text'}
+									className='flex h-6 w-auto max-w-[120px] min-w-0 items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
+								/>
+								<span
+									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+									onClick={() => setShowPw((s) => !s)}
+									title={showPw ? t('backups.hide') : t('backups.show')}
+								>
+									{showPw ? (
+										<EyeOff className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+									) : (
+										<Eye className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+									)}
+								</span>
+								<span
+									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+									onClick={() => copyToClipboard(plainPw)}
+									title={t('backups.copy')}
+								>
+									<Copy className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+								</span>
 							</span>
 						</>
 					) : (

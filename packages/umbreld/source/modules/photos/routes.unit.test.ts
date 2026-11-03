@@ -1,9 +1,9 @@
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {NativeSessionRequiredError} from '../auth/auth.js'
-import type {Context} from '../server/trpc/context.js'
-import routes from './routes.js'
+import type Umbreld from '../../index.ts'
+import {NativeSessionRequiredError} from '../auth/auth.ts'
+import type {Context} from '../server/trpc/context.ts'
+import routes from './routes.ts'
 
 const principal = {sessionId: 'native-session', accountId: 'Alice', actor: 'account'} as const
 
@@ -29,29 +29,48 @@ test('creates a source-bound grant only after validating the native session', as
 		name: 'Pixel 9',
 		createdAt: 1,
 	}
-	const validateNativePrincipal = vi.fn(async () => principal)
+	const nativeClient = vi.fn(async () => ({
+		id: 'umbrel',
+		platform: 'android',
+		deviceClass: 'phone',
+		appVersion: '0.1',
+		appBuild: '3',
+		osVersion: '16',
+	}))
 	const createBackupGrant = vi.fn(async () => ({token: 'grant', source}))
-	const context = contextFor({validateNativePrincipal}, {createBackupGrant})
+	const context = contextFor({nativeClient}, {createBackupGrant})
 	const caller = routes.createCaller(context)
 
 	await expect(caller.createBackupGrant({sourceId: source.id, suggestedName: source.name})).resolves.toEqual({
 		token: 'grant',
 		source,
 	})
-	expect(validateNativePrincipal).toHaveBeenCalledWith(principal)
+	expect(nativeClient).toHaveBeenCalledWith(principal)
+	// The source records the platform the app reported for this session.
 	expect(createBackupGrant).toHaveBeenCalledWith({
 		principal,
 		sourceId: source.id,
 		suggestedName: source.name,
+		platform: 'android',
 	})
 	expect(context.response!.set).toHaveBeenCalledWith('Cache-Control', 'no-store')
+
+	// A phone taking the backup over from another says so
+	await caller.createBackupGrant({sourceId: source.id, suggestedName: source.name, continuing: true})
+	expect(createBackupGrant).toHaveBeenLastCalledWith({
+		principal,
+		sourceId: source.id,
+		suggestedName: source.name,
+		continuing: true,
+		platform: 'android',
+	})
 })
 
 test('rejects browser sessions before registering a backup source', async () => {
 	const createBackupGrant = vi.fn()
 	const context = contextFor(
 		{
-			validateNativePrincipal: vi.fn(async () => {
+			nativeClient: vi.fn(async () => {
 				throw new NativeSessionRequiredError()
 			}),
 		},
@@ -122,4 +141,37 @@ test('rejects oversized resource receipt batches before touching storage', async
 		}),
 	).rejects.toMatchObject({code: 'BAD_REQUEST'})
 	expect(confirmedBackupResources).not.toHaveBeenCalled()
+})
+
+test("lists the signed-in account's backup sources with the server's backup capabilities", async () => {
+	const answer = {
+		capabilities: ['continue-source'],
+		sources: [
+			{
+				id: '11111111-1111-4111-8111-111111111111',
+				name: 'iPhone',
+				createdAt: 1,
+				lastImportAt: 2,
+				lastSeenAt: 3,
+				stats: {photos: 1, videos: 0, sizeBytes: 5},
+			},
+		],
+	}
+	const backupSources = vi.fn(async () => answer)
+	const caller = routes.createCaller(contextFor({}, {backupSources}))
+
+	await expect(caller.backupSources()).resolves.toEqual(answer)
+	expect(backupSources).toHaveBeenCalledWith('Alice')
+})
+
+test("counts what removing one of the signed-in account's phone backups would move to Trash", async () => {
+	const sourceRemovalItemCount = vi.fn(async (_accountId: string, id: string) =>
+		id === 'iphone:abc' ? 120 : undefined,
+	)
+	const caller = routes.createCaller(contextFor({}, {sourceRemovalItemCount}))
+
+	await expect(caller.sources.removalItemCount({id: 'iphone:abc'})).resolves.toBe(120)
+	expect(sourceRemovalItemCount).toHaveBeenCalledWith('Alice', 'iphone:abc')
+	// Another account's, or the built-in Umbrel source
+	await expect(caller.sources.removalItemCount({id: 'umbrel:Alice'})).rejects.toMatchObject({code: 'NOT_FOUND'})
 })

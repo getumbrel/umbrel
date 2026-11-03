@@ -2,6 +2,7 @@ import useEmblaCarousel, {type UseEmblaCarouselType} from 'embla-carousel-react'
 import {ArrowLeft, ArrowRight} from 'lucide-react'
 import {useReducedMotion} from 'motion/react'
 import * as React from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbChevronLeft, TbChevronRight} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
@@ -51,6 +52,7 @@ function Carousel({
 	ref,
 	...props
 }: React.HTMLAttributes<HTMLDivElement> & CarouselProps & {ref?: React.Ref<HTMLDivElement>}) {
+	const {t} = useTranslation()
 	const [carouselRef, api] = useEmblaCarousel(
 		{
 			...opts,
@@ -131,7 +133,7 @@ function Carousel({
 				onKeyDownCapture={handleKeyDown}
 				className={cn('relative', className)}
 				role='region'
-				aria-roledescription='carousel'
+				aria-roledescription={t('carousel.roledescription')}
 				{...props}
 			>
 				{children}
@@ -169,13 +171,14 @@ function CarouselItem({
 	ref,
 	...props
 }: React.HTMLAttributes<HTMLDivElement> & {ref?: React.Ref<HTMLDivElement>}) {
+	const {t} = useTranslation()
 	const {orientation} = useCarousel()
 
 	return (
 		<div
 			ref={ref}
 			role='group'
-			aria-roledescription='slide'
+			aria-roledescription={t('carousel.slide-roledescription')}
 			className={cn('min-w-0 shrink-0 grow-0 basis-full', orientation === 'horizontal' ? 'pl-4' : 'pt-4', className)}
 			{...props}
 		/>
@@ -189,6 +192,7 @@ function CarouselPrevious({
 	size = 'icon-only',
 	...props
 }: React.ComponentProps<typeof Button> & {ref?: React.Ref<HTMLButtonElement>}) {
+	const {t} = useTranslation()
 	const {orientation, scrollPrev, canScrollPrev} = useCarousel()
 
 	return (
@@ -208,7 +212,7 @@ function CarouselPrevious({
 			{...props}
 		>
 			<ArrowLeft className='h-4 w-4' />
-			<span className='sr-only'>Previous slide</span>
+			<span className='sr-only'>{t('carousel.previous')}</span>
 		</Button>
 	)
 }
@@ -220,6 +224,7 @@ function CarouselNext({
 	size = 'icon-only',
 	...props
 }: React.ComponentProps<typeof Button> & {ref?: React.Ref<HTMLButtonElement>}) {
+	const {t} = useTranslation()
 	const {orientation, scrollNext, canScrollNext} = useCarousel()
 
 	return (
@@ -239,7 +244,7 @@ function CarouselNext({
 			{...props}
 		>
 			<ArrowRight className='h-4 w-4' />
-			<span className='sr-only'>Next slide</span>
+			<span className='sr-only'>{t('carousel.next')}</span>
 		</Button>
 	)
 }
@@ -340,6 +345,7 @@ function CarouselDots({
 	progress?: number
 	className?: string
 }) {
+	const {t} = useTranslation()
 	if (count <= 1) return null
 
 	return (
@@ -352,7 +358,7 @@ function CarouselDots({
 						key={index}
 						onClick={() => onSelect(index)}
 						className='group rounded-full p-1 outline-hidden transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-white/40 motion-reduce:transition-none'
-						aria-label={`Go to slide ${index + 1}`}
+						aria-label={t('carousel.go-to-slide', {number: index + 1})}
 						aria-current={isActive ? 'true' : undefined}
 					>
 						<div
@@ -411,13 +417,20 @@ function CarouselArrows({
 	disableNext?: boolean
 	className?: string
 }) {
+	const {t} = useTranslation()
 	return (
-		<div className={cn('flex items-center gap-2', className)}>
+		// Touch screens swipe, so only a pointer gets arrows
+		<div className={cn('flex items-center gap-2 pointer-coarse:hidden', className)}>
 			{/* Chevrons, matching the spotlight banners' View pill */}
-			<button aria-label='Previous slide' onClick={onPrev} disabled={disablePrev} className={carouselArrowClass}>
+			<button
+				aria-label={t('carousel.previous')}
+				onClick={onPrev}
+				disabled={disablePrev}
+				className={carouselArrowClass}
+			>
 				<TbChevronLeft className='h-4 w-4' />
 			</button>
-			<button aria-label='Next slide' onClick={onNext} disabled={disableNext} className={carouselArrowClass}>
+			<button aria-label={t('carousel.next')} onClick={onNext} disabled={disableNext} className={carouselArrowClass}>
 				<TbChevronRight className='h-4 w-4' />
 			</button>
 		</div>

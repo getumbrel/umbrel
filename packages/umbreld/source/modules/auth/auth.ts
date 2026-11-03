@@ -5,13 +5,13 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import type {WebSocket} from 'ws'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import FileStore from '../utilities/file-store.js'
-import getOrCreateFile from '../utilities/get-or-create-file.js'
-import randomToken from '../utilities/random-token.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import FileStore from '../utilities/file-store.ts'
+import getOrCreateFile from '../utilities/get-or-create-file.ts'
+import randomToken from '../utilities/random-token.ts'
 
-import type {NativeClient} from './native-client.js'
+import type {NativeClient} from './native-client.ts'
 
 export const OWNER_ACCOUNT_ID = OWNER_USER_ID
 
@@ -200,6 +200,9 @@ export default class Auth {
 		this.#appSockets.clear()
 		for (const timeout of this.#sessionExpiryTimers.values()) clearTimeout(timeout)
 		this.#sessionExpiryTimers.clear()
+		// Wait for queued session writes, such as an expiry timer's cleanup, so
+		// nothing is still writing to the auth directory once stop resolves.
+		await this.#store.getWriteLock(async () => {})
 		this.#sessions = []
 		this.#webSocketTickets.clear()
 		this.#appHandoffs.clear()
@@ -444,6 +447,13 @@ export default class Auth {
 			throw new NativeSessionRequiredError()
 		}
 		return principal
+	}
+
+	// The app behind a native session, as it described itself at sign-in or its latest
+	// refresh. It's descriptive: what the session may do follows from its credentials.
+	async nativeClient(principal: Principal) {
+		await this.validateNativePrincipal(principal)
+		return this.#sessions.find((candidate) => candidate.id === principal.sessionId)?.nativeClient
 	}
 
 	// PhotoKit may upload after the app exits, so it cannot depend on refreshing the

@@ -243,6 +243,8 @@ const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machi
 					<div
 						onClick={(e) => handleClick(e, item, items)}
 						onDoubleClick={() => handleDoubleClick(item)}
+						// The listing's context menu reads this to tell a right-click on an item from one on empty space
+						data-files-item
 						onContextMenu={() => {
 							handleOpenContextMenu()
 						}}

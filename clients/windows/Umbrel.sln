@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Umbrel.Core", "Umbrel.Core\Umbrel.Core.csproj", "{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A01}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Umbrel", "Umbrel\Umbrel.csproj", "{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A02}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Umbrel.Core.Tests", "Umbrel.Core.Tests\Umbrel.Core.Tests.csproj", "{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A03}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B1D6F4B-0E5A-4C2B-9C61-1F2A0C5D9A03}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

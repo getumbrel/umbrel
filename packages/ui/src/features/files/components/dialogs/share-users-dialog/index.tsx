@@ -2,7 +2,6 @@ import {useTranslation} from 'react-i18next'
 import {useSearchParams} from 'react-router-dom'
 
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
-import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useMemberShares} from '@/features/files/hooks/use-member-shares'
 import {MemberSharePicker} from '@/modules/user-sharing'
@@ -51,8 +50,7 @@ export default function ShareUsersDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogContent className='flex max-w-[420px] flex-col gap-5'>
-				<DialogCloseButton className='absolute top-2 right-2 z-50' />
+			<DialogContent className='flex flex-col gap-5'>
 				<DialogHeader>
 					<div className='flex items-center gap-3'>
 						<FileItemIcon

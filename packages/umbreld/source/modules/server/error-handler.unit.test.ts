@@ -6,8 +6,8 @@ import express from 'express'
 import fse from 'fs-extra'
 import {afterAll, beforeAll, expect, test, vi} from 'vitest'
 
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import createErrorHandler from './error-handler.js'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import createErrorHandler from './error-handler.ts'
 
 const directory = temporaryDirectory()
 const immutableCacheControl = 'public, max-age=31536000, immutable'

@@ -97,8 +97,17 @@ targets:
           NSExceptionDomains:
             "100.64.0.0/10":
               NSExceptionAllowsInsecureHTTPLoads: true
+        # Photo backup runs overnight while charging
+        UIBackgroundModes:
+          - processing
+        BGTaskSchedulerPermittedIdentifiers:
+          - $(PRODUCT_BUNDLE_IDENTIFIER).photo-backup-overnight
         # Photo backup reads the library to upload photos and videos to the user's Umbrel
         NSPhotoLibraryUsageDescription: Choose Allow Full Access to automatically back up the photos and videos in your library to your Umbrel.
+        # Apps on the Umbrel run in the in-app browser. Some (voice chat with an AI
+        # assistant, scanning a code) ask for these, behind iOS's own prompt.
+        NSMicrophoneUsageDescription: Apps on your Umbrel can use the microphone when you ask them to, such as for voice chat.
+        NSCameraUsageDescription: Apps on your Umbrel can use the camera when you ask them to, such as for scanning a code.
         # Apple permits an App Group identifier to scope Keychain items shared with an
         # extension. Only the photo upload grant is written into this group.
         UmbrelPhotoBackupKeychainAccessGroup: $(APP_GROUP_IDENTIFIER)
@@ -108,8 +117,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.umbrel.app
         APP_GROUP_IDENTIFIER: group.com.umbrel.app.photos
-        MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: "28"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "41"
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
@@ -123,6 +132,7 @@ targets:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: com.umbrel.app.dev
           APP_GROUP_IDENTIFIER: group.com.umbrel.app.dev
+          CODE_SIGN_ENTITLEMENTS: UmbrelDebug.entitlements
 
   UmbrelPhotoBackgroundUpload:
     type: extensionkit-extension
@@ -156,8 +166,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.umbrel.app.photo-background-upload
         APP_GROUP_IDENTIFIER: group.com.umbrel.app.photos
-        MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: "28"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "41"
         GENERATE_INFOPLIST_FILE: NO
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.9"

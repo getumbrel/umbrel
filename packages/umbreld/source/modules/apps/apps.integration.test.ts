@@ -8,12 +8,12 @@ import getPort from 'get-port'
 import yaml from 'js-yaml'
 import pRetry from 'p-retry'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
-import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
-import {OWNER_ACCOUNT_ID} from '../auth/auth.js'
-import runGitServer from '../test-utilities/run-git-server.js'
-import App from './app.js'
-import type {AppManifest} from './schema.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
+import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.ts'
+import {OWNER_ACCOUNT_ID} from '../auth/auth.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
+import App from './app.ts'
+import type {AppManifest} from './schema.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 let communityAppStoreGitServer: Awaited<ReturnType<typeof runGitServer>>

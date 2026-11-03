@@ -27,33 +27,33 @@ import isValidFilename from 'valid-filename'
 import pRetry from 'p-retry'
 import PQueue from 'p-queue'
 
-import {copyWithProgress} from '../utilities/copy-with-progress.js'
-import getLiveDirectorySize from '../utilities/get-directory-size.js'
+import {copyWithProgress} from '../utilities/copy-with-progress.ts'
+import getLiveDirectorySize from '../utilities/get-directory-size.ts'
 
-import {getDiskUsageByPath} from '../system/system.js'
+import {getDiskUsageByPath} from '../system/system.ts'
 
-import Watcher from './watcher.js'
-import Recents from './recents.js'
-import Favorites from './favorites.js'
-import Archive from './archive.js'
-import Thumbnails from './thumbnails.js'
-import Samba from './samba.js'
-import ExternalStorage from './external-storage.js'
-import NetworkStorage from './network-storage.js'
-import Search from './search.js'
-import MemberShares from './member-shares.js'
+import Watcher from './watcher.ts'
+import Recents from './recents.ts'
+import Favorites from './favorites.ts'
+import Archive from './archive.ts'
+import Thumbnails from './thumbnails.ts'
+import Samba from './samba.ts'
+import ExternalStorage from './external-storage.ts'
+import NetworkStorage from './network-storage.ts'
+import Search from './search.ts'
+import MemberShares from './member-shares.ts'
 import CloudManager, {
 	cloudDestinationDetails,
 	cloudDestinationPath,
 	type SharedDestinationDeleteCandidate,
-} from './cloud.js'
-import {CLOUD_DESTINATION_MISSING_ERROR, isOsJunkBasename, type DestinationRef} from './cloud-types.js'
-import FileIndex, {type FileIndexRoot} from './file-index.js'
-import type {PublishedFileRevision} from './file-index-enrichment.js'
-import {lookupMimeType} from './mime.js'
+} from './cloud.ts'
+import {CLOUD_DESTINATION_MISSING_ERROR, isOsJunkBasename, type DestinationRef} from './cloud-types.ts'
+import FileIndex, {type FileIndexRoot} from './file-index.ts'
+import type {PublishedFileRevision} from './file-index-enrichment.ts'
+import {lookupMimeType} from './mime.ts'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 const ALL_OPERATIONS = [
 	'copy',
@@ -198,6 +198,7 @@ export default class Files {
 			logger: umbreld.logger.createChildLogger('files:file-index'),
 			hiddenFiles: this.hiddenFiles,
 			hiddenExtensions: this.hiddenExtensions,
+			release: umbreld.version,
 			onPhotosChange: (accountIds) => this.#umbreld.eventBus.emit('photos:change', {accountIds}),
 			onPhotosIndexingProgress: (progress) => {
 				for (const update of progress) this.#umbreld.eventBus.emit('photos:indexing-progress', update)
@@ -386,6 +387,10 @@ export default class Files {
 				ownerId: OWNER_USER_ID,
 				kind: 'machines',
 				searchEnabled: false,
+				// Running machines rewrite their large disk images continuously, so
+				// watching this root only generates churn. Machines reports its own
+				// storage usage, so keep only on-demand thumbnail entries, as for /Apps.
+				scanEnabled: false,
 			},
 			{
 				virtualPath: '/External',
@@ -2280,12 +2285,12 @@ export default class Files {
 			if (kind === 'home') return normalizePath(`/Users/${slug}/${rest}`)
 		}
 
-		// Owner base directories
+		// Owner base directories. The path is normalized, so a prefix check is
+		// enough. This runs for every file event, where path.relative() was the
+		// main cost of a large burst.
 		for (const [baseDirectory, basePath] of this.baseDirectories) {
-			if (isPathInsideOrEqual(basePath, systemPath)) {
-				const relativePath = nodePath.relative(basePath, systemPath).split(nodePath.sep).join('/')
-				return normalizePath(nodePath.posix.join(baseDirectory, relativePath))
-			}
+			if (systemPath === basePath) return baseDirectory
+			if (systemPath.startsWith(`${basePath}/`)) return `${baseDirectory}${systemPath.slice(basePath.length)}`
 		}
 
 		throw new Error(`[invalid-path] Path '${systemPath}' is not within any base directory`)
@@ -2365,7 +2370,13 @@ async function isExternalFilesystemMountedAt(filesystemUuid: string, systemMount
 	return result.exitCode === 0 && result.stdout.trim() === filesystemUuid
 }
 
+// Matches `//`, and `.` or `..` path segments
+const NON_CANONICAL_PATH = /\/\/|(^|\/)\.{1,2}(\/|$)/
+
 export function normalizePath(path: string) {
+	// Most paths, such as every file event's, are already canonical
+	if (path.length > 1 && !path.endsWith('/') && !NON_CANONICAL_PATH.test(path)) return path
+
 	// Reduce `.`, `..` and multiple slashes to their canonical form
 	const normalized = nodePath.posix.normalize(path)
 

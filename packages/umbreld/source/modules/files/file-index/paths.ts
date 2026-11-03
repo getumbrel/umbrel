@@ -1,5 +1,5 @@
 import nodePath from 'node:path'
-import type {FileIndexRoot} from '../file-index-engine.js'
+import type {FileIndexRoot} from '../file-index-engine.ts'
 
 export function hasReservedMemberTrashPath(root: FileIndexRoot) {
 	return root.kind === 'home' && root.virtualPath === `/Users/${root.ownerId}`

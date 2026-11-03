@@ -78,13 +78,22 @@ export function DesktopPreviewConnected() {
 							// using var(--app-w) etc. get desktop values regardless of viewport.
 							'--app-w': '120px',
 							'--app-h': '110px',
+							'--app-pad': '12px',
+							'--app-icon': '64px',
+							'--app-icon-radius': '15px',
+							'--app-label': '13px',
 							'--app-x-gap': '30px',
 							'--app-y-gap': '12px',
+							'--app-y-gap-apps': '12px',
 							'--apps-padding-x': '32px',
 							'--widget-h': '150px',
 							'--widget-w': '270px',
 							'--widget-labeled-h': '176px',
 							'--apps-max-w': '934px',
+							'--home-title': '48px',
+							'--home-logo': '96px',
+							'--home-gap': '32px',
+							'--home-pills': '24px',
 						} as React.CSSProperties
 					}
 				>

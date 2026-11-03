@@ -26,6 +26,8 @@ import {useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {getLastFilesPath} from '@/features/files/utils/last-files-path'
 import {useMachinesCmdkEntries} from '@/features/machines/cmdk-entries'
 import type {Item as PhotoItem} from '@/features/photos/hooks/use-items'
+import {takenAtClock} from '@/features/photos/utils/taken-at'
+import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useShortcuts} from '@/hooks/use-shortcuts'
@@ -347,6 +349,7 @@ function useAppStoreResults(requested: string | undefined, limit: number, open: 
 }
 
 function usePhotoResults(query: string | undefined, limit: number, open: (to: string) => void) {
+	const {i18n} = useTranslation()
 	const enabled = query !== undefined
 	const debounced = useDebouncedValue(query ?? '', PHOTOS_DEBOUNCE_MS)
 	// An infinite query like the library's own lists (see use-items.ts): the
@@ -366,15 +369,20 @@ function usePhotoResults(query: string | undefined, limit: number, open: (to: st
 	const items = useMemo<CmdkItem[]>(
 		() =>
 			enabled
-				? (list.data?.pages[0]?.items ?? []).map((item) => ({
-						value: `photo:${item.id}`,
-						title: new Date(item.takenAt).toLocaleDateString(),
-						photo: item,
-						// Straight into the lightbox: a deep link the viewer resolves on its own
-						onSelect: () => open(`/photos?${new URLSearchParams({dialog: 'photos-item', 'photos-item-id': item.id})}`),
-					}))
+				? (list.data?.pages[0]?.items ?? []).map((item) => {
+						// The day by the clock the photo was taken by, as Photos shows it, not the browser's time zone
+						const clock = takenAtClock(item.takenAt, item.takenAtOffsetMinutes)
+						return {
+							value: `photo:${item.id}`,
+							title: clock.date.toLocaleDateString(i18n.language, {timeZone: clock.timeZone}),
+							photo: item,
+							// Straight into the lightbox: a deep link the viewer resolves on its own
+							onSelect: () =>
+								open(`/photos?${new URLSearchParams({dialog: 'photos-item', 'photos-item-id': item.id})}`),
+						}
+					})
 				: [],
-		[enabled, list.data, open],
+		[enabled, list.data, open, i18n.language],
 	)
 	const settling = enabled && (query ?? '') !== debounced
 	// The list items carry no file name to grade, and the library matches on
@@ -456,6 +464,8 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 	const userId = userQ.data?.userId
 	const isMember = userQ.data?.role === 'member'
 	const registryApps = availableApps.apps ?? NO_APPS
+	// Update all apps leads the suggestions only when there's something to update
+	const hasAppUpdates = useAppsWithUpdates().appsWithUpdates.length > 0
 
 	// The list is rebuilt only when a source changes — never per keystroke
 	return useMemo(() => {
@@ -471,6 +481,7 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 		machineEntries,
 		userId,
 		isMember,
+		hasAppUpdates,
 		t,
 		navigate,
 	])
@@ -488,13 +499,18 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 		})
 
 		const systemEntries: CmdkEntry[] = [
-			{
-				id: 'system:update-all-apps',
-				title: t('cmdk.update-all-apps'),
-				default: true,
-				icon: appStore.icon,
-				onSelect: () => navigate('/app-store?dialog=updates'),
-			},
+			// Updating apps is the owner's
+			...(isMember
+				? []
+				: [
+						{
+							id: 'system:update-all-apps',
+							title: t('cmdk.update-all-apps'),
+							default: hasAppUpdates,
+							icon: appStore.icon,
+							onSelect: () => navigate('/app-store?dialog=updates'),
+						},
+					]),
 			{
 				id: 'system:live-usage',
 				title: t('cmdk.live-usage'),
@@ -507,7 +523,7 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 				: [
 						{
 							id: 'system:machines',
-							title: machines.name,
+							title: t('machines'),
 							default: true,
 							icon: machines.icon,
 							onSelect: () => navigate(machines.systemAppTo),
@@ -515,13 +531,13 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 					]),
 			{
 				id: 'system:app-store',
-				title: appStore.name,
+				title: t('app-store.title'),
 				icon: appStore.icon,
 				onSelect: () => navigate(appStore.systemAppTo),
 			},
 			{
 				id: 'system:files',
-				title: files.name,
+				title: t('files'),
 				icon: files.icon,
 				// TODO: THIS IS A HACK
 				// We need a better approach to track the last visited path (possibly scroll position too?)
@@ -533,10 +549,10 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 			filesEntry('apps', t('files-sidebar.apps'), FILES_APPS_PATH),
 			...(isMember ? [] : [filesEntry('machines', t('machines'), FILES_MACHINES_PATH)]),
 			filesEntry('trash', t('files-sidebar.trash'), FILES_TRASH_PATH),
-			{id: 'system:photos', title: photos.name, icon: photos.icon, onSelect: () => navigate(photos.systemAppTo)},
+			{id: 'system:photos', title: t('photos'), icon: photos.icon, onSelect: () => navigate(photos.systemAppTo)},
 			{
 				id: 'system:settings',
-				title: systemAppsKeyed['UMBREL_settings'].name,
+				title: t('settings'),
 				icon: systemAppsKeyed['UMBREL_settings'].icon,
 				onSelect: () => navigate(systemAppsKeyed['UMBREL_settings'].systemAppTo),
 			},
@@ -588,7 +604,7 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 				(app): CmdkEntry => ({
 					id: `store:${app.id}`,
 					title: app.name,
-					subtitle: `${t('generic-in')} App Store`,
+					subtitle: t('cmdk.in-app-store'),
 					icon: app.icon,
 					iconVariant: 'tile',
 					onSelect: () => navigate(`/app-store/${app.id}`),

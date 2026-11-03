@@ -22,7 +22,7 @@ import {Loading} from '@/components/ui/loading'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {Switch} from '@/components/ui/switch'
 import {useAutoHeightAnimation} from '@/hooks/use-auto-height-animation'
-import {useIsSmallMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
 import {RouterOutput, trpcReact, WifiNetwork, WifiStatus, WifiStatusUi} from '@/trpc/trpc'
@@ -120,8 +120,8 @@ export function WifiDrawerOrDialogContent() {
 }
 
 export function WifiDrawerOrDialog(props: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-	const isMobile = useIsSmallMobile()
-	const Wrapper = isMobile ? Drawer : Dialog
+	const isPhone = useIsPhone()
+	const Wrapper = isPhone ? Drawer : Dialog
 
 	return <Wrapper {...props} />
 }
@@ -130,12 +130,12 @@ export function DrawerOrDialogContent({header, children}: {header?: ReactNode; c
 	const {t} = useTranslation()
 	const title = t('wifi')
 
-	const isMobile = useIsSmallMobile()
+	const isPhone = useIsPhone()
 
-	const Content = isMobile ? DrawerContent : DialogContent
-	const Header = isMobile ? DrawerHeader : DialogHeader
-	const Title = isMobile ? DrawerTitle : DialogTitle
-	const Description = isMobile ? DrawerDescription : DialogDescription
+	const Content = isPhone ? DrawerContent : DialogContent
+	const Header = isPhone ? DrawerHeader : DialogHeader
+	const Title = isPhone ? DrawerTitle : DialogTitle
+	const Description = isPhone ? DrawerDescription : DialogDescription
 
 	return (
 		<Content className='mx-auto px-[20px] py-[30px] sm:max-w-[560px]'>
@@ -229,6 +229,9 @@ function Network({
 	setIsOpen: (open: boolean) => void
 }) {
 	const passwordInputRef = useRef<HTMLInputElement>(null)
+	// Kept here rather than in the form, which is hidden while connecting, so a
+	// wrong password comes back selected for fixing instead of cleared
+	const [password, setPassword] = useState('')
 
 	const utils = trpcReact.useUtils()
 	const connectMut = trpcReact.wifi.connect.useMutation({
@@ -236,22 +239,25 @@ function Network({
 			utils.wifi.connected.cancel()
 		},
 		onSuccess: () => setIsOpen(false),
-		onError: () => {
-			setTimeout(() => {
-				passwordInputRef.current?.select()
-				passwordInputRef.current?.focus()
-			}, 200)
-		},
 		onSettled: () => {
 			utils.wifi.connected.invalidate()
 			utils.system.getIpAddresses.invalidate()
 		},
 	})
 
+	// The form comes back once the attempt has failed, so select the password for fixing then.
+	// An effect runs after the form has rendered, where a timer could fire before it.
 	useEffect(() => {
-		// Reset error
+		if (!connectMut.isError) return
+		passwordInputRef.current?.select()
+		passwordInputRef.current?.focus()
+	}, [connectMut.isError])
+
+	useEffect(() => {
+		// Reset error and password
 		if (!isOpen) {
 			connectMut.reset()
+			setPassword('')
 		}
 	}, [isOpen, connectMut])
 
@@ -287,6 +293,8 @@ function Network({
 							passwordInputRef={passwordInputRef}
 							network={network}
 							status={statusUi}
+							password={password}
+							onPasswordChange={setPassword}
 							onConnect={connect}
 							error={passwordError}
 						/>
@@ -339,6 +347,8 @@ type ConnectData = {ssid: string; password?: string}
 type ConnectProps = {
 	network: WifiNetwork
 	status?: WifiStatusUi
+	password: string
+	onPasswordChange: (password: string) => void
 	onConnect: ({ssid, password}: ConnectData) => void
 	error?: string
 	passwordInputRef?: React.RefObject<HTMLInputElement | null>
@@ -383,9 +393,16 @@ function ConnectWithConfirmation({onConnect, ...rest}: ConnectProps) {
 	)
 }
 
-export function Connect({network, status, onConnect, error, passwordInputRef}: ConnectProps) {
+export function Connect({
+	network,
+	status,
+	password,
+	onPasswordChange,
+	onConnect,
+	error,
+	passwordInputRef,
+}: ConnectProps) {
 	const {t} = useTranslation()
-	const [password, setPassword] = useState('')
 
 	if (status === 'loading') {
 		return null
@@ -407,7 +424,7 @@ export function Connect({network, status, onConnect, error, passwordInputRef}: C
 					sizeVariant={'short'}
 					className='flex-1'
 					value={password}
-					onValueChange={setPassword}
+					onValueChange={onPasswordChange}
 					error={error}
 				/>
 				<Button type='submit' variant='primary' size='input-short'>
@@ -429,7 +446,7 @@ export function Connect({network, status, onConnect, error, passwordInputRef}: C
 					<span>{t('wifi-connect-insecure-message')}</span>
 				</div>
 				<Button type='submit' variant='primary' size='input-short' autoFocus>
-					Connect
+					{t('connect')}
 				</Button>
 			</form>
 		)

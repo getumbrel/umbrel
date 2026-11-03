@@ -1,0 +1,32 @@
+<UserControl x:Class="Umbrel.Views.AccountPickerAvatar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="72" Height="72">
+  <!-- macOS AccountAvatar: the account photo, or its gradient with a serif initial,
+       clipped to a circle with a hairline rim and a soft shadow. -->
+  <Grid>
+    <Grid.Effect>
+      <DropShadowEffect Color="Black" Opacity="0.28" BlurRadius="10" ShadowDepth="6" Direction="270" />
+    </Grid.Effect>
+
+    <Grid>
+      <Grid.Clip>
+        <EllipseGeometry Center="36,36" RadiusX="36" RadiusY="36" />
+      </Grid.Clip>
+      <Ellipse x:Name="Gradient" />
+      <!-- 0.48 of the avatar, as on macOS. Sitka is the Windows serif with optical sizes like
+           the macOS one; its Display cut covers this size (about 26pt). -->
+      <TextBlock x:Name="Initial" FontFamily="Sitka Display, Georgia" FontSize="34.56" Foreground="White"
+                 TextWrapping="NoWrap" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock.Effect>
+          <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="2" ShadowDepth="1" Direction="270" />
+        </TextBlock.Effect>
+      </TextBlock>
+      <Image x:Name="Photo" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+    </Grid>
+
+    <!-- The macOS rim is centred on the circle's edge, but an Ellipse strokes inside its
+         bounds, so it is half a line larger on each side. -->
+    <Ellipse Margin="-0.5" Stroke="#38FFFFFF" StrokeThickness="1" />
+  </Grid>
+</UserControl>

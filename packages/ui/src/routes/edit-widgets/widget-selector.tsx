@@ -1,13 +1,12 @@
 import {Minus, Plus} from 'lucide-react'
 import {animate, AnimatePresence, motion, useMotionValue, type PanInfo} from 'motion/react'
-import {ReactNode, useEffect, useRef, useState} from 'react'
+import {CSSProperties, ReactNode, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
 import {useMeasure} from 'react-use'
 import {chunk} from 'remeda'
 
 import {AppIcon} from '@/components/app-icon'
-import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/components/ui/sheet'
 import {ScrollArea} from '@/components/ui/sheet-scroll-area'
@@ -16,38 +15,32 @@ import {useWidgets} from '@/hooks/use-widgets'
 import {cn} from '@/lib/utils'
 import {ArrowButton, PaginatorPills} from '@/modules/desktop/app-grid/paginator'
 import {DockSpacer} from '@/modules/desktop/dock'
+import {useTuckDockOnScroll} from '@/modules/desktop/dock-tuck'
 import {ExampleWidget, Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
+import {MAX_WIDGETS} from '@/modules/widgets/shared/constants'
 
 const carouselSpring = {type: 'spring', stiffness: 400, damping: 40} as const
 
-// How many selected widgets fit per carousel page, matching the homescreen's
-// widget row: derived from the CSS vars the desktop's usePager injects on
-// documentElement. Those vars land only after the desktop grid has measured
-// itself, so keep retrying each frame until they exist — reading them once on
-// mount can race the measurement and stick the wrong count.
+// Set on the document by Home's pager (usePager)
+const widgetRowWidthStyle = {'--widget-w': 'var(--widget-row-w)'} as CSSProperties
+
+// How many selected widgets fit per carousel page: as many as fit side by side in
+// Home's widget row, which usePager publishes on documentElement. It publishes
+// them only once the desktop grid has measured itself, and again as the window
+// changes, so follow the document's style instead of reading it once.
 function useWidgetsPerPage() {
-	const [perPage, setPerPage] = useState(3)
+	const [perPage, setPerPage] = useState(MAX_WIDGETS)
 	useEffect(() => {
-		const compute = () => {
-			const style = getComputedStyle(document.documentElement)
-			const pageW = parseFloat(style.getPropertyValue('--page-w'))
-			const widgetW = parseFloat(style.getPropertyValue('--widget-w'))
-			const gap = parseFloat(style.getPropertyValue('--app-x-gap'))
-			if (!(pageW > 0) || !(widgetW > 0)) return false
-			setPerPage(Math.max(1, Math.floor((pageW + gap) / (widgetW + gap))))
-			return true
+		const el = document.documentElement
+		const read = () => {
+			const fit = parseInt(el.style.getPropertyValue('--widgets-fit'))
+			if (fit > 0) setPerPage(fit)
 		}
-		let raf = 0
-		const tick = () => {
-			if (!compute()) raf = requestAnimationFrame(tick)
-		}
-		tick()
-		window.addEventListener('resize', tick)
-		return () => {
-			cancelAnimationFrame(raf)
-			window.removeEventListener('resize', tick)
-		}
+		read()
+		const observer = new MutationObserver(read)
+		observer.observe(el, {attributeFilter: ['style']})
+		return () => observer.disconnect()
 	}, [])
 	return perPage
 }
@@ -66,12 +59,10 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 	// overflowing a single row. The carousel is transform-driven (no scroll
 	// container), so the widgets' glass shadows are never clipped — off-page
 	// widgets fade out instead, and fade back in while dragging.
-	// Paginating is disabled while the MAX_WIDGETS cap keeps every selection on
-	// one page; flip this back on when the cap is lifted (needs the glass
-	// lenses consolidated into one shared canvas renderer first).
-	const paginate = false
+	// Under the MAX_WIDGETS cap that's one page wherever Home's row fits three
+	// side by side, and two where it doesn't (a 320px phone).
 	const widgetsPerPage = useWidgetsPerPage()
-	const widgetPages = chunk(selected, paginate ? widgetsPerPage : Math.max(selected.length, 1))
+	const widgetPages = chunk(selected, widgetsPerPage)
 	const pageCount = Math.max(1, widgetPages.length)
 	const [page, setPage] = useState(0)
 	const [dragging, setDragging] = useState(false)
@@ -154,8 +145,9 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 									<ArrowButton direction='left' disabled={page <= 0} onClick={() => toPage(page - 1)} />
 								</div>
 							)}
-							{/* Match the widget sheet's max width below */}
-							<div ref={measureRef} className='w-screen max-w-[1040px]'>
+							{/* Match the widget sheet's max width below. Widgets take the width they have in
+							    Home's row, so three fit side by side wherever they do there */}
+							<div ref={measureRef} className='w-screen max-w-[1040px]' style={widgetRowWidthStyle}>
 								<motion.div
 									className='pointer-events-auto flex'
 									style={{x}}
@@ -258,6 +250,10 @@ function WidgetSheet({
 	selectedCssHeight: string
 }) {
 	const {t} = useTranslation()
+	// A phone on its side keeps a sliver of sheet under the widgets row, so the
+	// dock steps out of the way as the widgets scroll
+	const [scroller, setScroller] = useState<HTMLDivElement | null>(null)
+	useTuckDockOnScroll(scroller)
 	return (
 		<BackdropBlurVariantContext value='default'>
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
@@ -268,12 +264,11 @@ function WidgetSheet({
 						height: `calc(100dvh - ${selectedCssHeight})`,
 					}}
 					backdrop={<div className='fixed inset-0 z-30' onClick={() => onOpenChange(false)} />}
-					closeButton={<DialogCloseButton className='absolute top-3 right-3 z-[60] sm:top-5 sm:right-5' />}
 				>
-					<ScrollArea className='umbrel-window-surface-top h-full'>
+					<ScrollArea className='umbrel-window-surface-top h-full' viewportRef={setScroller}>
 						<div
 							className={cn(
-								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-8 md:px-[80px] md:pt-12',
+								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-8 md:px-[80px] md:pt-12 low:gap-4 low:pt-4',
 								'animate-in opacity-100 duration-100 fade-in',
 							)}
 						>

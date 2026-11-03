@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, test} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
 describe('account-scoped notifications', () => {
 	let directory: ReturnType<typeof temporaryDirectory>

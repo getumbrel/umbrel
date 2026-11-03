@@ -317,7 +317,8 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 			instances[offset] = rect.x
 			instances[offset + 1] = rect.y - band.top
 			instances[offset + 2] = rect.size
-			instances[offset + 3] = tileRadius(rect.size)
+			// Below the seam the phone's corner and the desktop's are one ramp (see tileGap)
+			instances[offset + 3] = tileRadius(rect.size, false)
 			instances[offset + 4] = resident ? slot : -1
 			instances[offset + 5] = item.tint ?? NO_TINT
 			instances[offset + 6] =

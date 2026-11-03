@@ -9,7 +9,7 @@ import nodePath from 'node:path'
 
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import {createPinnedLookup, isPrivateAddress, safeDownload} from './safe-download.js'
+import {createPinnedLookup, isPrivateAddress, safeDownload} from './safe-download.ts'
 
 const {lookup} = vi.hoisted(() => ({lookup: vi.fn<(hostname: string) => Promise<LookupAddress[]>>()}))
 vi.mock('node:dns/promises', () => ({lookup}))

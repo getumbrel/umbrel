@@ -1,6 +1,6 @@
 import {describe, test, expect} from 'vitest'
 
-import {resolveSystemDiskNames} from './internal-storage.js'
+import {resolveSystemDiskNames} from './internal-storage.ts'
 
 const blockDevices = [
 	{name: 'nvme0n1', pkname: null, type: 'disk'},

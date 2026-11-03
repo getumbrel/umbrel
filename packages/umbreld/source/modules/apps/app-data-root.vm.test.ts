@@ -1,9 +1,9 @@
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 import pRetry from 'p-retry'
 
-import {waitForExternalStorage} from '../backups/backups.vm-test-helpers.js'
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
+import {waitForExternalStorage} from '../backups/backups.vm-test-helpers.ts'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
 
 const appId = 'sparkles-storage'
 const externalPath = '/External/AppStorage'
@@ -19,6 +19,7 @@ describe.sequential('App data root storage lifecycle', () => {
 	let gitServer: Awaited<ReturnType<typeof runGitServer>>
 	let failed = false
 
+	// Two boots, a format and waiting for apps can outlast the default hook timeout
 	beforeAll(async () => {
 		umbreld = await createTestVm({device: 'umbrel-home'})
 		gitServer = await runGitServer({additionalApps: [appId]})
@@ -45,14 +46,16 @@ describe.sequential('App data root storage lifecycle', () => {
 		await waitForExternalStorage(umbreld, {path: externalPath})
 
 		// Login becomes available while Apps is still starting. Wait for the shared
-		// app framework before installing the fixture app.
+		// app framework before installing the fixture app. After a reboot with
+		// external storage on a busy CI runner this has taken over 2 minutes, so
+		// allow up to 10, like the other post-boot waits.
 		await pRetry(() => umbreld.vm.sshAsRoot("docker inspect --format '{{.State.Running}}' tor_proxy | grep -qx true"), {
-			retries: 120,
+			retries: 600,
 			factor: 1,
 			minTimeout: 1000,
 			maxTimeout: 1000,
 		})
-	})
+	}, 25 * 60_000)
 
 	afterAll(async () => {
 		await umbreld?.cleanup()

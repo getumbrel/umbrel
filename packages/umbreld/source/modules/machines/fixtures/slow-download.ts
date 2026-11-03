@@ -11,7 +11,7 @@ import nodePath from 'node:path'
 
 import {execa} from 'execa'
 
-import {createPinnedLookup, safeDownload} from '../safe-download.js'
+import {createPinnedLookup, safeDownload} from '../safe-download.ts'
 
 // This process runs in its own network namespace. The public fixture addresses
 // exercise the downloader's real validation and pinned lookup without Internet

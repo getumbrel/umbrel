@@ -3,8 +3,8 @@ import {Client, StreamableHTTPClientTransport, type CallToolResult} from '@model
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import runGitServer from '../test-utilities/run-git-server.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import runGitServer from '../test-utilities/run-git-server.ts'
 
 const appId = 'sparkles-hello-world'
 const grantedDirectory = '/Home/mcp-vm-test'
@@ -156,7 +156,7 @@ describe('MCP', () => {
 			const contents = Buffer.from([0, 1, 2, 3])
 			const upload = await uploadThroughMcp(path, contents)
 			expect(upload.status).toBe(200)
-			await expect(upload.json()).resolves.toStrictEqual({path})
+			await expect(upload.json()).resolves.toStrictEqual({path, revision: expect.stringMatching(/^\d+-4-\d+-\d+$/)})
 
 			const download = await downloadThroughMcp(path)
 			expect(download.status).toBe(200)

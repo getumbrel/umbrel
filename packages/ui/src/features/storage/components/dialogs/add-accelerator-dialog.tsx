@@ -58,10 +58,7 @@ export function AddAcceleratorDialog({open, onOpenChange, devices, addAccelerato
 			.catch((error) => {
 				clearPendingOperation()
 				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-				toast.error(t('storage-manager.add-accelerator.failed'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				toast.error(t('storage-manager.add-accelerator.failed'), {area: 'settings'})
 			})
 	}
 
@@ -123,10 +120,10 @@ export function AddAcceleratorDialog({open, onOpenChange, devices, addAccelerato
 					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 
 					<DialogFooter>
-						<Button variant='primary' onClick={handleAdd} disabled={isOperationInProgress}>
+						<Button variant='primary' size='dialog' onClick={handleAdd} disabled={isOperationInProgress}>
 							{t('storage-manager.ssd-acceleration.enable')}
 						</Button>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('cancel')}
 						</Button>
 					</DialogFooter>

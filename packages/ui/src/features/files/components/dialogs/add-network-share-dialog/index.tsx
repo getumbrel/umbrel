@@ -3,7 +3,7 @@ import {Check, ChevronDown, ChevronUp, Loader, Loader2, RotateCcw} from 'lucide-
 import {AnimatePresence, motion} from 'motion/react'
 import {startTransition, useEffect, useState} from 'react'
 import {useForm, useFormContext} from 'react-hook-form'
-import {useTranslation} from 'react-i18next'
+import {Trans, useTranslation} from 'react-i18next'
 import {z} from 'zod'
 
 import {Button} from '@/components/ui/button'
@@ -23,7 +23,7 @@ import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
 import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 
@@ -71,7 +71,7 @@ export default function AddNetworkShareDialog(props?: {
 		open: props?.open ?? internalDialog.open,
 		onOpenChange: props?.onOpenChange ?? internalDialog.onOpenChange,
 	}
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 
 	// wizard vs manual entry
 	const [mode, setMode] = useState<'wizard' | 'manual'>('wizard')
@@ -194,7 +194,7 @@ export default function AddNetworkShareDialog(props?: {
 			// Discover step
 			case Step.Discover:
 				footer = (
-					<DialogFooter className={`${isMobile ? 'flex flex-col items-stretch' : 'flex items-center'} gap-2 pt-4`}>
+					<DialogFooter className={`${isPhone ? 'flex flex-col items-stretch' : 'flex items-center'} gap-2 pt-4`}>
 						<Button
 							variant='primary'
 							size='dialog'
@@ -214,11 +214,11 @@ export default function AddNetworkShareDialog(props?: {
 			case Step.Credentials:
 				footer = (
 					<DialogFooter className='gap-2 pt-4'>
-						<Button size='dialog' onClick={back}>
-							{t('files-add-network-share.back')}
-						</Button>
 						<Button variant='primary' size='dialog' disabled={!(host && username && password)} onClick={next}>
 							{t('files-add-network-share.continue')}
+						</Button>
+						<Button size='dialog' onClick={back}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)
@@ -228,11 +228,11 @@ export default function AddNetworkShareDialog(props?: {
 			case Step.SelectShare:
 				footer = (
 					<DialogFooter className='gap-2 pt-4'>
-						<Button size='dialog' onClick={back}>
-							{t('files-add-network-share.back')}
-						</Button>
 						<Button variant='primary' size='dialog' disabled={!share || isAddingShare} onClick={handleSubmit}>
 							{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+						</Button>
+						<Button size='dialog' onClick={back}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)
@@ -243,24 +243,24 @@ export default function AddNetworkShareDialog(props?: {
 		switch (manualStep) {
 			case ManualStep.Credentials:
 				footer = (
-					<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
-						<Button size='dialog' onClick={() => setMode('wizard')}>
-							{t('files-add-network-share.back')}
-						</Button>
+					<DialogFooter className='gap-2 pt-4'>
 						<Button variant='primary' size='dialog' disabled={!(host && username && password)} onClick={manualNext}>
 							{t('files-add-network-share.continue')}
+						</Button>
+						<Button size='dialog' onClick={() => setMode('wizard')}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)
 				break
 			case ManualStep.SelectShare:
 				footer = (
-					<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
-						<Button size='dialog' onClick={manualBack}>
-							{t('files-add-network-share.back')}
-						</Button>
+					<DialogFooter className='gap-2 pt-4'>
 						<Button variant='primary' size='dialog' disabled={!share || isAddingShare} onClick={handleSubmit}>
 							{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+						</Button>
+						<Button size='dialog' onClick={manualBack}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)
@@ -270,7 +270,7 @@ export default function AddNetworkShareDialog(props?: {
 
 	const header = (
 		<>
-			{isMobile ? (
+			{isPhone ? (
 				<DrawerHeader>
 					<DrawerTitle>{t('files-add-network-share.title')}</DrawerTitle>
 					<DrawerDescription>{t('files-add-network-share.description')}</DrawerDescription>
@@ -397,7 +397,7 @@ export default function AddNetworkShareDialog(props?: {
 		</div>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer open={dialogProps.open} onOpenChange={dialogProps.onOpenChange}>
 				<DrawerContent fullHeight>
@@ -411,7 +411,8 @@ export default function AddNetworkShareDialog(props?: {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogContent className='flex min-h-[480px] flex-col'>
+			{/* Keeps its height as its steps change, short of a window with the keyboard up */}
+			<DialogContent className='flex min-h-[min(480px,calc(100%-16px))] flex-col'>
 				{header}
 				{body}
 				{footer}
@@ -440,10 +441,10 @@ function DiscoverStep({
 }) {
 	const {t} = useTranslation()
 	return (
-		// Fixed columns for fixed-size cards, the same grid as the Backups wizard:
-		// stretching columns need more width for three across than the dialog has
-		// once a scrollbar gutter is reserved
-		<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3 py-2'>
+		// The same grid as the Backups wizard: columns of 125px or more share out the width, so a
+		// phone gets two full columns rather than an empty strip. Three across needs 399px, which
+		// the dialog has even with Chrome's scrollbar gutter reserved.
+		<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-3 py-2'>
 			<AddManuallyCard onClick={onManual} label={t('files-add-network-share.add-manually')} />
 
 			{isLoading ? (
@@ -500,7 +501,15 @@ function CredentialsStep() {
 	return (
 		<div className='space-y-4 py-2'>
 			<p className='text-sm font-medium'>
-				{t('Add credentials for')} <span className='text-brand'>{form.watch('host')}</span>
+				<Trans
+					t={t}
+					i18nKey='files-add-network-share.add-credentials-for'
+					values={{host: form.watch('host')}}
+					components={{host: <span className='text-brand' />}}
+					// The host is typed by the user: escaped, so a "<" in it isn't read as a tag
+					tOptions={{interpolation: {escapeValue: true}}}
+					shouldUnescape
+				/>
 			</p>
 
 			{(['username', 'password'] as const).map((field) => {

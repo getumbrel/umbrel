@@ -1,12 +1,12 @@
 import z from 'zod'
 import ms from 'ms'
 
-import type Umbreld from '../../index.js'
-import {router, privateProcedureWithMembers} from '../server/trpc/trpc.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import {DEFAULT_WIDGETS} from '../user/user.js'
-import {systemWidgets} from '../system/system-widgets.js'
-import {filesWidgets} from '../files/widgets.js'
+import type Umbreld from '../../index.ts'
+import {router, privateProcedureWithMembers} from '../server/trpc/trpc.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import {DEFAULT_WIDGETS} from '../user/user.ts'
+import {systemWidgets} from '../system/system-widgets.ts'
+import {filesWidgets} from '../files/widgets.ts'
 
 const MAX_ALLOWED_WIDGETS = 3
 

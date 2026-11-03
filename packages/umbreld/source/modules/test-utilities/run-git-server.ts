@@ -5,7 +5,7 @@ import {Git} from 'node-git-server'
 import getPort from 'get-port'
 import waitPort from 'wait-port'
 import {$} from 'execa'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 const directory = temporaryDirectory()

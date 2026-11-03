@@ -4,14 +4,14 @@ import nodePath from 'node:path'
 import {CLIENT_INFO_META_KEY} from '@modelcontextprotocol/server'
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
-import {assertSystemPathInsideBase, isPathInsideOrEqual, resolveRealPathForValidation} from '../files/files.js'
-import type {FileChangeEvent} from '../files/watcher.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import randomToken from '../utilities/random-token.js'
-import AsyncBurstCache from '../utilities/async-burst-cache.js'
-import createMcpEndpoint, {type McpEndpoint} from './server.js'
-import {MCP_PERMISSION_REMEDIATION} from './tools/shared.js'
+import type Umbreld from '../../index.ts'
+import {assertSystemPathInsideBase, isPathInsideOrEqual, resolveRealPathForValidation} from '../files/files.ts'
+import type {FileChangeEvent} from '../files/watcher.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import randomToken from '../utilities/random-token.ts'
+import AsyncBurstCache from '../utilities/async-burst-cache.ts'
+import createMcpEndpoint, {type McpEndpoint} from './server.ts'
+import {MCP_PERMISSION_REMEDIATION} from './tools/shared.ts'
 
 export type McpPermissions = {
 	apps: 'all' | string[]
@@ -129,10 +129,7 @@ export default class Mcp {
 
 	#listenForFileChanges() {
 		if (this.#removeFileChangeListener) return
-		this.#removeFileChangeListener = this.#umbreld.eventBus.on(
-			'files:watcher:change',
-			this.#handleFileChange.bind(this),
-		)
+		this.#removeFileChangeListener = this.#umbreld.eventBus.onFileChanges(this.#handleFileChanges.bind(this))
 	}
 
 	#stopListeningForFileChanges() {
@@ -713,13 +710,30 @@ export default class Mcp {
 		})
 	}
 
-	async #handleFileChange(event: FileChangeEvent) {
-		if (event.type !== 'delete') return
-		const path = this.#umbreld.files.systemToVirtualPath(event.path)
-		if (path !== '/Home' && !path.startsWith('/Home/')) return
-		const {files} = await this.#watcherPermissions.get()
-		if (files === 'all' || !files.some((grant) => grant === path || grant.startsWith(`${path}/`))) return
-		await this.removeFileGrantsWithin(path)
+	async #handleFileChanges(events: readonly FileChangeEvent[]) {
+		let grants: McpPermissions['files'] | undefined
+		const removals: string[] = []
+		for (const event of events) {
+			if (event.type !== 'delete') continue
+			try {
+				const path = this.#umbreld.files.systemToVirtualPath(event.path)
+				if (path !== '/Home' && !path.startsWith('/Home/')) continue
+				grants ??= (await this.#watcherPermissions.get()).files
+				if (grants === 'all' || grants.length === 0) return
+				if (grants.some((grant) => grant === path || grant.startsWith(`${path}/`))) removals.push(path)
+			} catch (error) {
+				this.logger.error(`Failed to handle the deletion of '${event.path}'`, error)
+			}
+		}
+		// Remove them independently, so one that stalls (in its listeners, say)
+		// can't hold up the others
+		await Promise.all(
+			removals.map((path) =>
+				this.removeFileGrantsWithin(path).catch((error) =>
+					this.logger.error(`Failed to remove file grants within '${path}'`, error),
+				),
+			),
+		)
 	}
 
 	async #removeStaleFileGrants() {

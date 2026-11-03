@@ -2,7 +2,7 @@
 // loads of stuff from the backend and blows up.
 
 // Export the router type for use in clients in other packages
-export type {AppRouter} from './index.js'
+export type {AppRouter} from './index.ts'
 
 // RPCs that MUST use HTTP (cookie/header semantics). Clients use this list for split-link routing.
 export const httpOnlyPaths = [

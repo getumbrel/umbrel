@@ -10,10 +10,10 @@ import {
 	MIN_LONG_PRESS_SECONDS,
 	SCREENSHOT_MAX_EDGE,
 	type MachineScreenshot,
-} from '../../machines/machine-control.js'
-import {machineIdPattern, MACHINE_ID_MAX_LENGTH} from '../../machines/machine-id.js'
-import type {McpPermissions} from '../mcp.js'
-import {runTool, runToolResult, type McpToolContext} from './shared.js'
+} from '../../machines/machine-control.ts'
+import {machineIdPattern, MACHINE_ID_MAX_LENGTH} from '../../machines/machine-id.ts'
+import type {McpPermissions} from '../mcp.ts'
+import {runTool, runToolResult, type McpToolContext} from './shared.ts'
 
 // Mirrors the canonical validation in machine-id.ts
 const machineIdSchema = z.string().max(MACHINE_ID_MAX_LENGTH).regex(machineIdPattern)
@@ -95,7 +95,7 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 			{
 				title: 'Get machine details',
 				description:
-					'Get the full configuration of a granted machine: network address, username, port forwards, disk location, autostart, firmware, and live CPU and memory usage.',
+					"Get the full configuration of a granted machine: network mode and address, username, port forwards, disk location, autostart, firmware, and live CPU and memory usage. A NAT machine has an address on Umbrel's private machine network and is reached from the LAN through port forwards. A bridged machine is directly on the LAN with an address from the router, which Umbrel doesn't know.",
 				inputSchema: machineInput,
 				annotations: {
 					readOnlyHint: true,
@@ -113,7 +113,9 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 					const cpuUsage = await context.rpc.system.cpuUsage()
 					return {
 						...machineSummary(machine),
-						ipAddress: machine.ipAddress,
+						networkMode: machine.networkMode,
+						// A bridged machine only uses its private address while it sets up
+						ipAddress: machine.networkMode === 'nat' ? machine.ipAddress : undefined,
 						username: machine.username,
 						portForwards: machine.portForwards,
 						autostart: machine.autostart,
@@ -329,7 +331,7 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 			{
 				title: 'List machine OS images',
 				description:
-					'List the operating systems a new machine can be created from, with download size, architecture, whether credentials or a license key are needed, and download state, plus what this host can virtualize.',
+					'List the operating systems a new machine can be created from, with download size, architecture, whether credentials or a license key (and from which licensing channel) are needed, and download state, plus what this host can virtualize.',
 				inputSchema: z.object({}),
 				annotations: {
 					readOnlyHint: true,
@@ -362,6 +364,7 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 							estimatedInstalledSizeMb: image.estimatedInstalledSizeMb,
 							requiresCredentials: image.requiresCredentials,
 							requiresLicenseKey: image.requiresLicenseKey ?? false,
+							...(image.licenseChannel ? {licenseChannel: image.licenseChannel} : {}),
 							manualSetup: image.manualSetup ?? false,
 							evaluation: image.evaluation ?? false,
 							state: image.state,
@@ -406,7 +409,9 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 							.string()
 							.regex(/^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$/i)
 							.optional()
-							.describe('Required by Windows XP and Windows 98 images only.'),
+							.describe(
+								"Required by Windows XP and Windows 98 images only. It must come from the image's licenseChannel: Setup rejects keys from any other channel, genuine retail keys included.",
+							),
 					})
 					.refine((input) => !!input.osId !== !!input.imagePath, {message: 'Provide exactly one of osId or imagePath'}),
 				annotations: {

@@ -6,14 +6,15 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {MachineDefinition} from './domain.js'
-import {MACHINE_INSTALL_COMMAND_TIMEOUT_MS, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.js'
+import type Umbreld from '../../index.ts'
+import type {MachineDefinition} from './domain.ts'
+import {MACHINE_INSTALL_COMMAND_TIMEOUT_MS, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.ts'
 import Libvirt, {
 	audioDevicesForSlot,
 	buildWindows98Mbr,
 	createWithGraphicsFallback,
 	findGpuRenderNode,
+	isClipboardAgentConnected,
 	isMissingDomainError,
 	parseQemuImgProgress,
 	parseDomainResourceStats,
@@ -22,7 +23,7 @@ import Libvirt, {
 	qemuImageFormatForPath,
 	qemuImageInfoArguments,
 	supportsVirglGraphics,
-} from './libvirt.js'
+} from './libvirt.ts'
 
 const execaMock = vi.hoisted(() =>
 	vi.fn(async (_command?: string, _arguments?: string[], _options?: Record<string, unknown>) => ({
@@ -116,6 +117,19 @@ describe('virgl graphics', () => {
 
 		expect(create.mock.calls).toEqual([['/dev/dri/renderD128'], []])
 		expect(onFallback).toHaveBeenCalledWith(error)
+	})
+})
+
+describe('clipboard agent', () => {
+	test('reads whether the guest opened the vdagent port from the live domain XML', () => {
+		const channel = (state: string) =>
+			`<channel type='qemu-vdagent'><source><clipboard copypaste='yes'/><mouse mode='server'/></source><target type='virtio' name='com.redhat.spice.0' state='${state}'/><alias name='channel0'/></channel>`
+		const guestAgent =
+			"<channel type='unix'><target type='virtio' name='org.qemu.guest_agent.0' state='connected'/></channel>"
+
+		expect(isClipboardAgentConnected(`<devices>${channel('connected')}</devices>`)).toBe(true)
+		expect(isClipboardAgentConnected(`<devices>${channel('disconnected')}${guestAgent}</devices>`)).toBe(false)
+		expect(isClipboardAgentConnected('<devices></devices>')).toBe(false)
 	})
 })
 
@@ -309,6 +323,227 @@ describe('libvirt domain state', () => {
 	})
 })
 
+describe('machine firewall', () => {
+	const managedDockerUserRules = [
+		'-A DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
+		'-A DOCKER-USER -o umbrel-vm -m conntrack --ctstate DNAT -m comment --comment umbrel-machines -j ACCEPT',
+		'-A DOCKER-USER -o umbrel-vm -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment umbrel-machines -j ACCEPT',
+		'-A DOCKER-USER -i umbrel-vm -m comment --comment umbrel-machines -j ACCEPT',
+	]
+	const managedLanBridgeRule =
+		'-A DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT'
+	const createLibvirt = () =>
+		new Libvirt({
+			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},
+		} as unknown as Umbreld)
+	const calls = (command: string, prefix: string) =>
+		execaMock.mock.calls
+			.filter(([called, args]) => called === command && args?.join(' ').startsWith(prefix))
+			.map(([, args]) => args!.join(' '))
+	const mockFirewall = ({
+		dockerUser = ['-N DOCKER-USER'],
+		nftDockerUser = '',
+		iptablesReadable = true,
+		dockerUser6 = ['-N DOCKER-USER', managedLanBridgeRule],
+		defaultRoute = () => 'enp1s0' as string | undefined,
+	}: {
+		dockerUser?: string[]
+		nftDockerUser?: string
+		iptablesReadable?: boolean
+		// null when Docker doesn't manage ip6tables
+		dockerUser6?: string[] | null
+		defaultRoute?: () => string | undefined
+	} = {}) =>
+		execaMock.mockImplementation(async (command?: string, args: string[] = [], options: {reject?: boolean} = {}) => {
+			const joined = args.join(' ')
+			if (command === 'ip6tables' && joined === '-w -S DOCKER-USER') {
+				if (dockerUser6) return {stdout: dockerUser6.join('\n'), stderr: '', exitCode: 0}
+				return {stdout: '', stderr: 'ip6tables: No chain/target/match by that name.', exitCode: 1}
+			}
+			if (command === 'ip' && joined === '-json route show default') {
+				const dev = defaultRoute()
+				return {stdout: JSON.stringify(dev ? [{dev, metric: 100}] : []), stderr: '', exitCode: 0}
+			}
+			if (command === 'iptables' && joined === '-w -S DOCKER-USER') {
+				if (iptablesReadable) return {stdout: dockerUser.join('\n'), stderr: '', exitCode: 0}
+				const stderr = "iptables v1.8.11 (nf_tables): chain `DOCKER-USER' in table `filter' is incompatible"
+				if (options.reject === false) return {stdout: '', stderr, exitCode: 1}
+				throw new Error(stderr)
+			}
+			if (command === 'nft' && joined === '-a list chain ip filter DOCKER-USER') {
+				return {stdout: nftDockerUser, stderr: '', exitCode: 0}
+			}
+			if (command === 'nft' && joined.includes('list chain ip libvirt_network')) {
+				return {stdout: 'counter accept comment "umbrel-machines" # handle 100', stderr: '', exitCode: 0}
+			}
+			return {stdout: '', stderr: '', exitCode: 0}
+		})
+
+	test('writes DOCKER-USER rules with iptables so iptables can still read the filter table', async () => {
+		mockFirewall()
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('iptables', '-w -I')).toEqual([
+			'-w -I DOCKER-USER -i umbrel-vm -m comment --comment umbrel-machines -j ACCEPT',
+			'-w -I DOCKER-USER -o umbrel-vm -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment umbrel-machines -j ACCEPT',
+			'-w -I DOCKER-USER -o umbrel-vm -m conntrack --ctstate DNAT -m comment --comment umbrel-machines -j ACCEPT',
+			'-w -I DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
+		])
+		expect(calls('nft', 'insert rule ip filter')).toEqual([])
+	})
+
+	test('lets bridged traffic cross the LAN bridge despite Docker dropping forwarded IPv4 and IPv6', async () => {
+		mockFirewall({dockerUser6: ['-N DOCKER-USER', managedLanBridgeRule, '-A DOCKER-USER -j RETURN']})
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('iptables', '-w -I')).toContain(
+			'-w -I DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
+		)
+		// The IPv6 rule is replaced, not stacked
+		expect(calls('ip6tables', '-w -D')).toEqual([`-w ${managedLanBridgeRule.replace(/^-A/, '-D')}`])
+		expect(calls('ip6tables', '-w -I')).toEqual([
+			'-w -I DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
+		])
+	})
+
+	test('skips IPv6 when Docker does not manage ip6tables', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules], dockerUser6: null})
+
+		await createLibvirt().reconcileFirewall([])
+		expect(calls('ip6tables', '-w -I')).toEqual([])
+
+		// And a missing IPv6 chain doesn't count as missing rules
+		execaMock.mockClear()
+		await createLibvirt().ensureFirewall([])
+		expect(calls('iptables', '-w -I')).toEqual([])
+	})
+
+	test('reinstalls the IPv6 LAN bridge rule when it goes missing', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules], dockerUser6: ['-N DOCKER-USER']})
+
+		await createLibvirt().ensureFirewall([])
+
+		expect(calls('ip6tables', '-w -I')).toHaveLength(1)
+	})
+
+	test('replaces only its own DOCKER-USER rules', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules, '-A DOCKER-USER -j RETURN']})
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('iptables', '-w -D')).toEqual(managedDockerUserRules.map((rule) => `-w ${rule.replace(/^-A/, '-D')}`))
+	})
+
+	test('removes DOCKER-USER rules older versions wrote with nft', async () => {
+		mockFirewall({
+			nftDockerUser: [
+				'oifname "umbrel-vm" ct status dnat counter packets 0 bytes 0 accept comment "umbrel-machines" # handle 7',
+				'counter packets 0 bytes 0 return # handle 4',
+			].join('\n'),
+		})
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('nft', 'delete rule ip filter DOCKER-USER')).toEqual(['delete rule ip filter DOCKER-USER handle 7'])
+		expect(calls('iptables', '-w -I')).toHaveLength(4)
+	})
+
+	test('leaves a complete rule set in place', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules]})
+
+		await createLibvirt().ensureFirewall([])
+
+		expect(calls('iptables', '-w -I')).toEqual([])
+	})
+
+	test('reinstalls DOCKER-USER rules that have gone missing', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', managedDockerUserRules[0]]})
+
+		await createLibvirt().ensureFirewall([])
+
+		expect(calls('iptables', '-w -D')).toHaveLength(1)
+		expect(calls('iptables', '-w -I')).toHaveLength(4)
+	})
+
+	test('rebinds port forwards when Umbrel moves to another LAN interface', async () => {
+		let lanInterface: string | undefined = 'enp1s0'
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules], defaultRoute: () => lanInterface})
+		const forwarded = definition({
+			ipAddress: '10.203.0.2',
+			portForwards: [{id: 'ssh', protocol: 'tcp', hostPort: 40_022, guestPort: 22}],
+		})
+		const libvirt = createLibvirt()
+		const rulesets = () =>
+			execaMock.mock.calls
+				.filter(([command, args]) => command === 'nft' && args?.join(' ') === '-f -')
+				.map(([, , options]) => String(options?.input))
+		await libvirt.reconcileFirewall([forwarded])
+		expect(rulesets().at(-1)).toContain('iifname "enp1s0" fib daddr type local tcp dport 40022')
+
+		// Nothing changed, so nothing is rewritten
+		vi.setSystemTime(Date.now() + 10_000)
+		await libvirt.ensureFirewall([forwarded])
+		expect(rulesets()).toHaveLength(1)
+
+		// While the address is moving there's no default route, so leave the rules
+		lanInterface = undefined
+		vi.setSystemTime(Date.now() + 10_000)
+		await libvirt.ensureFirewall([forwarded])
+		expect(rulesets()).toHaveLength(1)
+
+		// Once it's on the bridge bridged machines join the LAN through, follow it
+		lanInterface = 'umbrel-lan'
+		vi.setSystemTime(Date.now() + 10_000)
+		await libvirt.ensureFirewall([forwarded])
+		expect(rulesets()).toHaveLength(2)
+		expect(rulesets().at(-1)).toContain('iifname "umbrel-lan" fib daddr type local tcp dport 40022')
+		vi.useRealTimers()
+	})
+
+	test('waits for the default route while Umbrel moves onto or off the LAN bridge', async () => {
+		let lookups = 0
+		mockFirewall({defaultRoute: () => (++lookups < 3 ? undefined : 'umbrel-lan')})
+		const forwarded = definition({
+			ipAddress: '10.203.0.2',
+			portForwards: [{id: 'ssh', protocol: 'tcp', hostPort: 40_022, guestPort: 22}],
+		})
+
+		await createLibvirt().reconcileFirewall([forwarded])
+
+		expect(lookups).toBe(3)
+		const ruleset = execaMock.mock.calls.find(([command, args]) => command === 'nft' && args?.join(' ') === '-f -')
+		expect(String(ruleset?.[2]?.input)).toContain('iifname "umbrel-lan" fib daddr type local tcp dport 40022')
+	})
+
+	test('gives up on port forwards when Umbrel stays off the network', async () => {
+		vi.useFakeTimers()
+		try {
+			mockFirewall({defaultRoute: () => undefined})
+			const forwarded = definition({
+				ipAddress: '10.203.0.2',
+				portForwards: [{id: 'ssh', protocol: 'tcp', hostPort: 40_022, guestPort: 22}],
+			})
+
+			const reconcile = expect(createLibvirt().reconcileFirewall([forwarded])).rejects.toThrow(
+				'[machine-lan-interface-unavailable]',
+			)
+			await vi.advanceTimersByTimeAsync(31_000)
+			await reconcile
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	test('does not stack duplicate rules when iptables cannot read DOCKER-USER', async () => {
+		mockFirewall({iptablesReadable: false})
+
+		await expect(createLibvirt().ensureFirewall([])).rejects.toThrow('incompatible')
+		expect(calls('iptables', '-w -I')).toEqual([])
+	})
+})
+
 describe('installation media eject', () => {
 	test('ejects both Omarchy CDs after setup', async () => {
 		const libvirt = new Libvirt({
@@ -394,6 +629,71 @@ describe('disk resize safety', () => {
 			'virsh',
 			['--connect', 'qemu:///system', 'blockresize', 'umbrel-machine-safe-resize', 'vda', '64G'],
 		])
+	})
+})
+
+describe('live USB passthrough', () => {
+	async function libvirtWithRuntime(id: string) {
+		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'umbrel-machine-runtime-'))
+		temporaryDirectories.push(root)
+		const previousRoot = process.env.UMBREL_MACHINES_RUNTIME_DIR
+		process.env.UMBREL_MACHINES_RUNTIME_DIR = root
+		const libvirt = new Libvirt({
+			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},
+		} as unknown as Umbreld)
+		if (previousRoot === undefined) delete process.env.UMBREL_MACHINES_RUNTIME_DIR
+		else process.env.UMBREL_MACHINES_RUNTIME_DIR = previousRoot
+		await fse.ensureDir(libvirt.runtimeDirectory(id))
+		return libvirt
+	}
+
+	test('hotplugs and unplugs a device by its current host address', async () => {
+		const libvirt = await libvirtWithRuntime('miner')
+		const documents: string[] = []
+		execaMock.mockImplementation(async (_command?: string, args?: string[]) => {
+			documents.push(await fsp.readFile(args![4], 'utf8'))
+			return {stdout: '', stderr: '', exitCode: 0}
+		})
+
+		await libvirt.attachUsbDevice('miner', {bus: 3, device: 7})
+		await libvirt.detachUsbDevice('miner', {bus: 3, device: 2})
+
+		expect(
+			execaMock.mock.calls.map(([command, args, options]) => [command, args?.slice(2, 4), args?.[5], options]),
+		).toEqual([
+			['virsh', ['attach-device', 'umbrel-machine-miner'], '--live', {timeout: MACHINE_SHORT_CONTROL_TIMEOUT_MS}],
+			['virsh', ['detach-device', 'umbrel-machine-miner'], '--live', {timeout: MACHINE_SHORT_CONTROL_TIMEOUT_MS}],
+		])
+		expect(documents).toEqual([
+			"<hostdev mode='subsystem' type='usb'><source><address bus='3' device='7'/></source></hostdev>",
+			"<hostdev mode='subsystem' type='usb'><source><address bus='3' device='2'/></source></hostdev>",
+		])
+		// The device XML is only needed for the duration of the command
+		await expect(fsp.readdir(libvirt.runtimeDirectory('miner'))).resolves.toEqual([])
+	})
+
+	test('cleans up the device XML when libvirt refuses the device', async () => {
+		const libvirt = await libvirtWithRuntime('miner')
+		execaMock.mockRejectedValueOnce(new Error('USB device 003:007 is in use by driver QEMU, domain other'))
+
+		await expect(libvirt.attachUsbDevice('miner', {bus: 3, device: 7})).rejects.toThrow('in use by driver QEMU')
+		await expect(fsp.readdir(libvirt.runtimeDirectory('miner'))).resolves.toEqual([])
+	})
+
+	test('reads attached devices from the live domain and none from a stopped one', async () => {
+		const libvirt = await libvirtWithRuntime('miner')
+		execaMock
+			.mockResolvedValueOnce({
+				stdout:
+					"<domain><devices><hostdev mode='subsystem' type='usb' managed='no'><source><address bus='3' device='2'/></source><alias name='hostdev0'/><address type='usb' bus='0' port='1'/></hostdev></devices></domain>",
+				stderr: '',
+				exitCode: 0,
+			})
+			.mockResolvedValueOnce({stdout: '', stderr: "error: failed to get domain 'umbrel-machine-miner'", exitCode: 1})
+
+		await expect(libvirt.attachedUsbDevices('miner')).resolves.toEqual([{bus: 3, device: 2}])
+		await expect(libvirt.attachedUsbDevices('miner')).resolves.toEqual([])
+		expect(execaMock.mock.calls[0][1]).toEqual(['--connect', 'qemu:///system', 'dumpxml', 'umbrel-machine-miner'])
 	})
 })
 

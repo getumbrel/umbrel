@@ -1,0 +1,90 @@
+<Window x:Class="Umbrel.Tray.PopupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Umbrel.ViewModels"
+        xmlns:views="clr-namespace:Umbrel.Views"
+        Title="Umbrel"
+        AutomationProperties.Name="Umbrel"
+        Width="484"
+        SizeToContent="Height"
+        MinHeight="184"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        ShowActivated="True"
+        WindowStartupLocation="Manual"
+        FontFamily="{StaticResource UIFont}"
+        FontSize="13"
+        Foreground="{StaticResource TextBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+  <Window.Resources>
+    <DataTemplate DataType="{x:Type vm:DeviceListViewModel}">
+      <views:DeviceListView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:DeviceDetailViewModel}">
+      <views:DeviceDetailView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:AddressConnectionViewModel}">
+      <views:AddressConnectionView />
+    </DataTemplate>
+  </Window.Resources>
+  <!-- Not Topmost: the always-on-top taskbar must cover the panel as it slides out from
+       behind it. -->
+  <!-- AutomationProperties.Name: WPF names a window from its content before its Title,
+       and the content here ends at a view model, which would read as its type name. -->
+  <!-- Windows rounds window corners to 8 px at most, so the window is transparent and
+       draws the panel itself with the macOS panel's 34 px corners, a border and a shadow.
+       The margin is room for the shadow, which falls downward. The window's Width and
+       MinHeight are the 420 x 120 panel plus this margin. -->
+  <Grid x:Name="Frame" Margin="32,24,32,40">
+    <!-- A sibling of the content, not its parent: an effect on the parent would redraw the
+         shadow whenever the content changes. -->
+    <Border CornerRadius="34" Background="{StaticResource PanelBrush}">
+      <Border.Effect>
+        <DropShadowEffect BlurRadius="32" ShadowDepth="8" Direction="270" Opacity="0.35" />
+      </Border.Effect>
+    </Border>
+    <!-- Text in a transparent window is antialiased in grayscale rather than ClearType, like
+         the Windows 11 taskbar's own text. -->
+    <Border x:Name="PanelShape" CornerRadius="34" Background="{StaticResource PanelBrush}">
+      <DockPanel>
+        <!-- A standing reminder for an update the user put off (macOS UpdateAvailableRow):
+             the update window appears on its own once per version, and this opens it again.
+             On every page, because a single saved Umbrel opens straight to its own page and
+             its owner may never see the device list. Outside the scroller, so a tall page
+             can't scroll it away. -->
+        <Button DockPanel.Dock="Bottom" Style="{StaticResource LinkButton}" HorizontalAlignment="Left"
+                Margin="24,0,24,16" Command="{Binding CheckForUpdatesCommand}"
+                Visibility="{Binding Updates.AvailableVersion, Converter={StaticResource NullToVisibility}}"
+                AutomationProperties.Name="Update available">
+          <StackPanel Orientation="Horizontal" Background="Transparent"
+                      TextElement.FontSize="11" TextElement.FontWeight="SemiBold">
+            <!-- White rather than blue, which device cards use for "ready" statuses. -->
+            <Ellipse Width="6" Height="6" Fill="White" VerticalAlignment="Center">
+              <Ellipse.Effect>
+                <DropShadowEffect Color="White" Opacity="0.8" BlurRadius="3" ShadowDepth="0" />
+              </Ellipse.Effect>
+            </Ellipse>
+            <TextBlock Text="Update available" Foreground="{StaticResource TextBrush}" Margin="6,0,0,0"
+                       VerticalAlignment="Center" />
+            <!-- ChevronRight (macOS chevron.right). -->
+            <TextBlock Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="9"
+                       Foreground="{StaticResource MutedBrush}" Margin="2,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <!-- MaxHeight fits the panel to the work area (see Present); a page taller than that
+             scrolls. Not focusable, so clicking the background leaves focus where it was. -->
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" Focusable="False">
+          <ContentControl Content="{Binding Current}" Focusable="False" />
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+    <!-- The border line sits over the content, like the system border on an 8 px window,
+         so content that runs to the edge, such as the status badge's rings, reaches it. -->
+    <Border CornerRadius="34" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+            IsHitTestVisible="False" />
+  </Grid>
+</Window>

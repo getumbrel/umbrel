@@ -6,6 +6,7 @@ import {toast} from '@/components/ui/toast'
 import {dashboardAuthHeaders} from '@/modules/auth/http-auth'
 import {useConfirmation} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
+import {uploadLastModified} from '@/utils/upload-last-modified'
 
 // The Photos upload queue. Module-scoped — one run for the whole app — so
 // uploads keep going across route changes and the floating island (mounted
@@ -219,6 +220,10 @@ function startNext() {
 
 	const query = new URLSearchParams({name: file.name})
 	if (albumId) query.set('album', albumId)
+	// The stored copy keeps the file's own modification time, which dates media
+	// without an embedded capture date
+	const lastModified = uploadLastModified(file)
+	if (lastModified !== undefined) query.set('lastModified', String(lastModified))
 	const xhr = new XMLHttpRequest()
 	request = xhr
 	xhr.open('POST', `/api/photos/upload?${query}`)
@@ -367,7 +372,10 @@ export function useUpload() {
 			if (media.length > 0) photosUploads.enqueue(media, albumId)
 			if (others.length > 0) {
 				confirm({
-					title: t('photos-upload.not-media-title', {count: others.length, name: others[0]!.name}),
+					title:
+						others.length === 1
+							? t('photos-upload.not-media-title-single', {name: others[0]!.name})
+							: t('photos-upload.not-media-title', {count: others.length}),
 					message: [
 						// Lead with reassurance when the rest of the drop is going up
 						...(media.length > 0 ? [t('photos-upload.not-media-rest')] : []),

@@ -15,10 +15,15 @@ invalid. Invalid metadata disables only the optional passthrough policy.
 
 Only direct app routes whose original Compose services contain no `app_proxy`
 key are eligible. Disabling gateway authentication does not make a gateway
-eligible. HTTP retains its existing path. TLS with a declared SNI goes to the
-app's fixed loopback port without decryption; Umbrel names, unknown names and
-absent SNI keep Umbrel TLS termination. Localhost and `.local` names remain
+eligible. HTTP retains its existing path. TLS with a declared SNI or with no SNI
+goes to the app's fixed loopback port without decryption; Umbrel names and
+unknown names keep Umbrel TLS termination. Localhost and `.local` names remain
 reserved. No destination is resolved or constructed from client input.
+
+Absent SNI passes through because native clients connecting by IP omit it:
+Apple's network stack does, so Plex's iOS and tvOS apps send no SNI. Browsers
+omit it for IP literals too, so `https://<ip>:<port>` presents the app's own
+certificate rather than Umbrel's, as it did before LAN ingress.
 
 The reader supports ClientHello fragmentation across TCP reads and TLS records.
 It validates ClientHello framing and SNI before routing and replays original bytes,
@@ -31,6 +36,6 @@ further five-second deadline. Policy and reserved-name changes replace the
 affected route and close its connections through normal ingress shutdown.
 
 Activation needs both a supporting OS and an app update delivering the manifest
-field. HTTPS-only apps, clients without SNI and undeclared custom domains need
-separate support. The app sees a loopback peer: verify native-client
-authentication and LAN/remote classification before opting a package in.
+field. HTTPS-only apps and undeclared custom domains need separate support. The
+app sees a loopback peer: verify native-client authentication and LAN/remote
+classification before opting a package in.

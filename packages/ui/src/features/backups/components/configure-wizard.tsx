@@ -44,8 +44,8 @@ export function BackupsConfigureWizard() {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const {repositories, forgetRepository, isForgettingRepository} = useBackups()
-	const {doesHostHaveMountedShares} = useNetworkStorage()
-	const {disks} = useExternalStorage()
+	const {doesHostHaveMountedShares, isLoadingShares} = useNetworkStorage()
+	const {disks, isLoadingExternalStorage} = useExternalStorage()
 
 	const [viewRepoId, setViewRepoId] = React.useState<string | null>(null)
 	const viewRepo = (repositories || []).find((r) => r.id === viewRepoId) || null
@@ -102,6 +102,7 @@ export function BackupsConfigureWizard() {
 						repositories={repositories || []}
 						doesHostHaveMountedShares={doesHostHaveMountedShares}
 						disks={disks}
+						isCheckingConnections={isLoadingShares || isLoadingExternalStorage}
 						backupProgressByRepo={backupProgressByRepo}
 						onViewRepo={setViewRepoId}
 						onAddNas={goToSetupNas}
@@ -146,12 +147,12 @@ function ConnectivityDot({connected}: {connected: boolean}) {
 
 // Indicator for in-progress backups
 function CircularProgress({percent, className}: {percent: number; className?: string}) {
-	const p = Math.max(0, Math.min(100, Math.floor(percent || 0)))
+	const p = Math.max(0, Math.min(100, percent || 0))
 	const radius = 7
 	const circumference = 2 * Math.PI * radius
 	const dashoffset = circumference - (p / 100) * circumference
 	return (
-		<svg viewBox='0 0 16 16' className={className} role='img' aria-label={`${p}%`}>
+		<svg viewBox='0 0 16 16' className={className} role='img' aria-label={`${Math.floor(p)}%`}>
 			<circle cx='8' cy='8' r={radius} stroke='currentColor' strokeWidth='2' fill='none' opacity='0.2' />
 			<circle
 				cx='8'
@@ -198,6 +199,7 @@ function LocationsSection({
 	repositories,
 	doesHostHaveMountedShares,
 	disks,
+	isCheckingConnections,
 	backupProgressByRepo,
 	onViewRepo,
 	onAddNas,
@@ -207,6 +209,7 @@ function LocationsSection({
 	repositories: Array<{id: string; path: string; lastBackup?: any}>
 	doesHostHaveMountedShares: (rootPath: string) => boolean
 	disks: any[] | undefined
+	isCheckingConnections: boolean
 	backupProgressByRepo: Map<string, number>
 	onViewRepo: (id: string) => void
 	onAddNas: () => void
@@ -264,10 +267,17 @@ function LocationsSection({
 									<div className='flex items-center gap-2'>
 										<ConnectivityDot connected={isConnected} />
 										<BackupDeviceIcon path={repo.path} connected={isConnected} className='size-8 opacity-90' />
-										<div className='min-w-0 flex-1 truncate'>
-											<span className='block text-sm font-medium'>{deviceName}</span>
-											{isConnected && repo.lastBackup ? (
-												<span className='block text-11 text-white/40'>
+										<div className='min-w-0 flex-1'>
+											<span className='block truncate text-sm font-medium'>{deviceName}</span>
+											{!isConnected ? (
+												// Says so in words, not just with the red dot, once the drives and shares have loaded
+												!isCheckingConnections && (
+													<span className='block truncate text-11 text-white/40'>
+														{t('backups-configure.not-connected')}
+													</span>
+												)
+											) : repo.lastBackup ? (
+												<span className='block truncate text-11 text-white/40'>
 													{backupProgressByRepo.has(repo.id)
 														? t('backups-configure.backing-up-now')
 														: `${t('backups-configure.last-backup')}: ${formatFilesystemDate(Number(repo.lastBackup), lang)}`}
@@ -279,7 +289,8 @@ function LocationsSection({
 												<InlineBackupProgress percent={backupProgressByRepo.get(repo.id) || 0} />
 											) : null}
 											{!isSmallMobile && (
-												<BackupNowButton repoId={repo.id} hidden={backupProgressByRepo.has(repo.id)} />
+												// A location that isn't connected can't be backed up to, as in its details
+												<BackupNowButton repoId={repo.id} hidden={!isConnected || backupProgressByRepo.has(repo.id)} />
 											)}
 											<Button size='sm' variant='default' className='shrink-0' onClick={() => onViewRepo(repo.id)}>
 												{t('backups-configure.view')}
@@ -479,7 +490,6 @@ function RepositoryDetails({
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 						<AlertDialogAction
 							variant='destructive'
 							onClick={() => {
@@ -489,6 +499,7 @@ function RepositoryDetails({
 						>
 							{t('backups-configure.remove-backup-location')}
 						</AlertDialogAction>
+						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

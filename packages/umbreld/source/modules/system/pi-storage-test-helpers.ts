@@ -2,7 +2,7 @@ import {expect} from 'vitest'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 export type PiTestVm = Awaited<ReturnType<typeof createTestVm>>
 

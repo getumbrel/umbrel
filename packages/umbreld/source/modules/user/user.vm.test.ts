@@ -1,10 +1,10 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, test} from 'vitest'
 import got from 'got'
 
-import * as totp from '../utilities/totp.js'
+import * as totp from '../utilities/totp.ts'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {resolveWallpaperAppearance} from './wallpapers.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {resolveWallpaperAppearance} from './wallpapers.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestVm>>
 let httpsPort = 0

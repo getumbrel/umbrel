@@ -74,7 +74,6 @@ export default function PermanentlyDeleteConfirmationDialog() {
 				<AlertDialogFooter>
 					<AlertDialogAction
 						variant='destructive'
-						className='px-6'
 						onClick={() => {
 							deleteSelectedItems()
 							dialogProps.onOpenChange(false)

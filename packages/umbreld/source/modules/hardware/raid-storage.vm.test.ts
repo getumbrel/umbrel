@@ -1,7 +1,7 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 describe('RAID storage mode', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
@@ -71,6 +71,11 @@ describe('RAID storage mode', () => {
 		expect(status.devices![0].id).toBe(firstDeviceId)
 		initialTotalSpace = status.totalSpace!
 		expect(initialTotalSpace).toBeGreaterThan(0)
+	})
+
+	test('creates the pool with the OpenZFS 2.3 feature set', async () => {
+		const compatibility = await umbreld.vm.ssh('zpool get -H -o value compatibility')
+		expect(compatibility.trim()).toBe('openzfs-2.3')
 	})
 
 	test('creates marker directory to verify data consistency', async () => {

@@ -1,0 +1,9 @@
+/* White sheets floating on the dark stage, as PDF pages do. Pages off screen aren't laid out or painted: a long
+   document scrolls and zooms as lightly as a short one (each page's size is set, so skipping it moves nothing). */
+.umbrel-docx-page {
+	content-visibility: auto;
+	box-shadow:
+		0 8px 30px rgb(0 0 0 / 0.35),
+		0 0 0 1px rgb(255 255 255 / 0.05);
+	border-radius: 2px;
+}

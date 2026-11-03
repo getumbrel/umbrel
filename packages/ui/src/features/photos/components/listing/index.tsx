@@ -5,7 +5,9 @@ import {TbLoader} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {PillButton} from '@/components/ui/edge-controls'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {CollectionsListing} from '@/features/photos/components/collections'
+import {EmptyScreen, GhostGrid} from '@/features/photos/components/listing/empty-screen'
 import {ListingSurface, type Frame} from '@/features/photos/components/listing/surface'
 import {TimelineGrid} from '@/features/photos/components/listing/timeline-grid'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
@@ -51,7 +53,8 @@ function Timeline() {
 	const listKey = JSON.stringify(filter)
 
 	return (
-		<ListingSurface>
+		// Edge to edge below lg, like iOS Photos' grid (see ListingSurface)
+		<ListingSurface bleed>
 			{(frame) =>
 				indexingState?.phase === 'indexing' ? (
 					<Indexing frame={frame} />
@@ -81,50 +84,6 @@ function Timeline() {
 				)
 			}
 		</ListingSurface>
-	)
-}
-
-// The grid the photos would fill, sketched behind the timeline's stateful
-// screens: faint rounded tiles fading out radially, so the message floats in
-// the middle of an empty mosaic. Each tile carries one flat opacity from its
-// distance to the centre — a gradient mask over a ~4% fill leaves so few
-// 8-bit alpha levels that its steps show as contour rings inside the tiles.
-// Inline SVG — a data: URI would trip the CSP.
-const GHOST_TILE = 140
-const GHOST_COLS = 15
-const GHOST_ROWS = 11
-function GhostGrid() {
-	const tiles = []
-	for (let row = 0; row < GHOST_ROWS; row++) {
-		for (let col = 0; col < GHOST_COLS; col++) {
-			const dx = (col - (GHOST_COLS - 1) / 2) / (GHOST_COLS / 2)
-			const dy = (row - (GHOST_ROWS - 1) / 2) / (GHOST_ROWS / 2)
-			const fade = Math.max(0, 1 - Math.hypot(dx, dy) / 0.8)
-			const opacity = fade ** 1.8 * 0.02
-			if (opacity < 0.004) continue
-			tiles.push(
-				<rect
-					key={`${col}-${row}`}
-					x={col * GHOST_TILE + 3}
-					y={row * GHOST_TILE + 3}
-					width={GHOST_TILE - 6}
-					height={GHOST_TILE - 6}
-					rx={10}
-					fillOpacity={opacity.toFixed(3)}
-				/>,
-			)
-		}
-	}
-	return (
-		<div aria-hidden className='pointer-events-none absolute inset-0 -z-10 overflow-hidden'>
-			<svg
-				width={GHOST_COLS * GHOST_TILE}
-				height={GHOST_ROWS * GHOST_TILE}
-				className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 fill-white'
-			>
-				{tiles}
-			</svg>
-		</div>
 	)
 }
 
@@ -159,8 +118,9 @@ function Indexing({frame}: {frame: Frame}) {
 // album offers to fill it — the way in is picking items from the library —
 // unless that is already under way; the media sections invite the first
 // upload; Favorites teaches the gesture and Deleted simply explains itself —
-// neither needs a button. An iPhone source fills from the phone, so its
-// screen points there instead of at the picker.
+// neither needs a button. Hints that name a gesture use the one the device
+// has: no drag and drop on touch, no tapping with a mouse. A phone source
+// fills from the phone, so its screen points there instead of at the picker.
 function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 	const {t} = useTranslation()
 	const selection = usePhotosSelection()
@@ -168,6 +128,7 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const {sources} = usePhotoSources()
+	const isTouch = useIsTouchDevice()
 	// An album or source with nothing in it, as opposed to a search that finds
 	// nothing there — from the route, not the filter (a search token also
 	// fills albumIds/sourceIds)
@@ -197,6 +158,8 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 		title = t('photos-empty.source-title')
 		if (source.type === 'iphone') {
 			description = t('photos-empty.source-iphone-description')
+		} else if (source.type === 'android') {
+			description = t('photos-empty.source-android-description')
 		} else {
 			description = t('photos-empty.source-umbrel-description')
 			actions = <UploadPill />
@@ -206,7 +169,7 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 		description = t('photos-empty.deleted-description')
 	} else if (section === 'favorites') {
 		title = t('photos-empty.favorites-title')
-		description = t('photos-empty.favorites-description')
+		description = isTouch ? t('photos-empty.favorites-description') : t('photos-empty.favorites-description-pointer')
 	} else {
 		title =
 			section === 'videos'
@@ -220,7 +183,7 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 							: section === '360'
 								? t('photos-empty.360-title')
 								: t('photos-empty.library-title')
-		description = t('photos-empty.library-description')
+		description = isTouch ? t('photos-empty.library-description-touch') : t('photos-empty.library-description')
 		actions = (
 			<>
 				<UploadPill />
@@ -235,17 +198,7 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 		)
 	}
 
-	return (
-		<div
-			className='relative isolate flex h-full flex-col items-center justify-center gap-1 p-6 text-center'
-			style={{paddingTop: frame.inset}}
-		>
-			<GhostGrid />
-			<p className='text-15 font-medium text-white/80'>{title}</p>
-			{description && <p className='max-w-sm text-13 text-white/50'>{description}</p>}
-			{actions && <div className='mt-3 flex items-center gap-2'>{actions}</div>}
-		</div>
-	)
+	return <EmptyScreen frame={frame} title={title} description={description} actions={actions} />
 }
 
 // The actions bar's picker into the shared upload queue, but always with its

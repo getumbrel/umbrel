@@ -3,15 +3,16 @@ import {mkdtemp, open, rm, stat, writeFile} from 'node:fs/promises'
 import type {AddressInfo} from 'node:net'
 import {tmpdir} from 'node:os'
 import nodePath from 'node:path'
+import {gzipSync} from 'node:zlib'
 
 import cookieParser from 'cookie-parser'
 import express from 'express'
 import got from 'got'
 import {afterAll, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import photosApi from './api.js'
+import type Umbreld from '../../index.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import photosApi from './api.ts'
 
 describe('Photos HTTP account boundaries', () => {
 	let server: ReturnType<express.Express['listen']>
@@ -20,6 +21,8 @@ describe('Photos HTTP account boundaries', () => {
 	const resolveThumbnailRequest = vi.fn()
 	const prepareUpload = vi.fn()
 	const registerUpload = vi.fn()
+	const mapPoints = vi.fn()
+	const mapTile = vi.fn()
 
 	beforeAll(async () => {
 		directory = await mkdtemp(nodePath.join(tmpdir(), 'photos-api-'))
@@ -55,6 +58,8 @@ describe('Photos HTTP account boundaries', () => {
 				listAlbums: async () => [{id: 'album'}],
 				prepareUpload,
 				registerUpload,
+				mapPoints,
+				map: {tile: mapTile},
 			},
 			files: {
 				virtualToSystemPath: async (path: string, accountId: string) => {
@@ -118,6 +123,8 @@ describe('Photos HTTP account boundaries', () => {
 	beforeEach(() => {
 		prepareUpload.mockReset().mockResolvedValue('duplicate')
 		registerUpload.mockReset().mockResolvedValue('imported')
+		mapPoints.mockReset().mockResolvedValue(new Uint8Array([1, 0, 0, 0]))
+		mapTile.mockReset()
 	})
 
 	test.each([
@@ -126,6 +133,8 @@ describe('Photos HTTP account boundaries', () => {
 		['GET', '/api/photos/live/member-item'],
 		['GET', '/api/photos/download?ticket=member-download'],
 		['POST', '/api/photos/upload?name=photo.jpg'],
+		['GET', '/api/photos/map/points'],
+		['GET', '/api/photos/map/tiles/0/0/0'],
 		['GET', '/api/photos/future-route'],
 	] as const)('%s %s is denied without credentials', async (method, path) => {
 		const response = await got(`${origin}${path}`, {method, throwHttpErrors: false})
@@ -169,6 +178,77 @@ describe('Photos HTTP account boundaries', () => {
 			'/Users/member/member.jpg',
 			'member',
 		)
+	})
+
+	test('map points are read for the requesting account, with its filter, and revalidate by ETag', async () => {
+		const filter = {favorite: true, bounds: {west: 170, south: -20, east: -170, north: -10}}
+		const url = `${origin}/api/photos/map/points?filter=${encodeURIComponent(JSON.stringify(filter))}`
+		const headers = {Authorization: 'Bearer member'}
+		const response = await got(url, {headers, responseType: 'buffer'})
+		expect([...response.body]).toEqual([1, 0, 0, 0])
+		expect(mapPoints).toHaveBeenCalledWith('member', filter)
+		expect(response.headers['cache-control']).toBe('private, no-cache')
+		const unchanged = await got(url, {headers: {...headers, 'If-None-Match': response.headers.etag}})
+		expect(unchanged.statusCode).toBe(304)
+		await got(`${origin}/api/photos/map/points`, {headers})
+		expect(mapPoints).toHaveBeenLastCalledWith('member', {})
+	})
+
+	test.each([
+		['not json', 'filter=%7B'],
+		['a field of the wrong type', `filter=${encodeURIComponent('{"favorite":"yes"}')}`],
+		['bounds off the map', `filter=${encodeURIComponent('{"bounds":{"west":-200,"south":0,"east":0,"north":10}}')}`],
+	])('map points reject a filter that is %s', async (_, query) => {
+		const response = await got(`${origin}/api/photos/map/points?${query}`, {
+			headers: {Authorization: 'Bearer member'},
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(mapPoints).not.toHaveBeenCalled()
+	})
+
+	test('a basemap tile goes out gzipped, kept by the browser for good under the build it is of', async () => {
+		const headers = {Authorization: 'Bearer member'}
+		mapTile.mockResolvedValue({build: 'planet-1', data: gzipSync('tile')})
+		const tile = await got(`${origin}/api/photos/map/tiles/3/4/5?build=planet-1`, {headers})
+		expect(mapTile).toHaveBeenCalledWith(3, 4, 5)
+		// got undoes the encoding the response declares, as a browser does
+		expect(tile.body).toBe('tile')
+		expect(tile.headers['content-encoding']).toBe('gzip')
+		expect(tile.headers['content-type']).toBe('application/x-protobuf')
+		expect(tile.headers['cache-control']).toBe('private, max-age=31536000, immutable')
+
+		// Asked for under a build that has gone, or none, it is the current one's, kept no longer
+		for (const query of ['?build=planet-0', '']) {
+			const stale = await got(`${origin}/api/photos/map/tiles/3/4/5${query}`, {headers})
+			expect(stale.body).toBe('tile')
+			expect(stale.headers['cache-control']).toBe('private, no-cache')
+		}
+	})
+
+	test('a tile the build lacks is empty, kept like one it has, and a failed fetch is not kept at all', async () => {
+		const headers = {Authorization: 'Bearer member'}
+		mapTile.mockResolvedValue({build: 'planet-1', data: undefined})
+		const missing = await got(`${origin}/api/photos/map/tiles/9/0/0?build=planet-1`, {headers})
+		expect(missing.statusCode).toBe(204)
+		expect(missing.headers['cache-control']).toBe('private, max-age=31536000, immutable')
+
+		mapTile.mockRejectedValue(new Error('out of reach'))
+		const failed = await got(`${origin}/api/photos/map/tiles/0/0/0?build=planet-1`, {
+			headers,
+			throwHttpErrors: false,
+		})
+		expect(failed.statusCode).toBe(404)
+		expect(failed.headers['cache-control']).toBe('no-store')
+	})
+
+	test.each(['a/0/0', '0/-1/0', '0/0/1.5', '2/4/0', '30/0/0'])('a basemap tile at %s is refused', async (tile) => {
+		const response = await got(`${origin}/api/photos/map/tiles/${tile}`, {
+			headers: {Authorization: 'Bearer member'},
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(mapTile).not.toHaveBeenCalled()
 	})
 
 	test('serves video-compatible byte ranges from the authorized descriptor', async () => {
@@ -228,6 +308,64 @@ describe('Photos HTTP account boundaries', () => {
 			}),
 			'album',
 		)
+	})
+
+	test("stores the browser's last-modified time before the upload is published and registered", async () => {
+		prepareUpload.mockResolvedValue('new')
+		const lastModified = Date.UTC(2015, 5, 1)
+		for (const name of ['dated.jpg', 'dated (2).jpg']) {
+			// The second upload of the same name is kept beside the first.
+			const response = await got(`${origin}/api/photos/upload?name=dated.jpg&lastModified=${lastModified}`, {
+				method: 'POST',
+				headers: {Authorization: 'Bearer member'},
+				body: `bytes of ${name}`,
+			})
+			expect(JSON.parse(response.body)).toStrictEqual({status: 'imported'})
+			const stats = await stat(nodePath.join(directory, 'member-home', 'Photos', name), {bigint: true})
+			expect(Number(stats.mtimeMs)).toBe(lastModified)
+			// The registered revision already describes the final file.
+			expect(registerUpload).toHaveBeenLastCalledWith(
+				'member',
+				nodePath.join(directory, 'member-home', 'Photos', name),
+				expect.objectContaining({length: 32}),
+				expect.objectContaining({modifiedNs: stats.mtimeNs.toString(), ctimeNs: stats.ctimeNs.toString()}),
+				undefined,
+			)
+		}
+	})
+
+	test('an upload without a last-modified time keeps the time it was written', async () => {
+		prepareUpload.mockResolvedValueOnce('new')
+		const before = Date.now()
+		await got(`${origin}/api/photos/upload?name=undated.jpg`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer member'},
+			body: 'undated bytes',
+		})
+		const stats = await stat(nodePath.join(directory, 'member-home', 'Photos', 'undated.jpg'))
+		expect(stats.mtimeMs).toBeGreaterThanOrEqual(before - 1000)
+	})
+
+	test.each([
+		['', 'empty'],
+		['abc', 'not a number'],
+		['1.5', 'fractional'],
+		['1e3', 'exponent'],
+		['0', 'unset'],
+		['-86400000', 'before the epoch'],
+		['253402300800000', 'after the supported range'],
+		['9007199254740993', 'unsafe integer'],
+		['1&lastModified=2', 'repeated'],
+	])('rejects an invalid last-modified time before consuming the upload: %s (%s)', async (lastModified) => {
+		const response = await got(`${origin}/api/photos/upload?name=invalid.jpg&lastModified=${lastModified}`, {
+			method: 'POST',
+			headers: {Authorization: 'Bearer member'},
+			body: 'invalid bytes',
+			throwHttpErrors: false,
+		})
+		expect(response.statusCode).toBe(400)
+		expect(prepareUpload).not.toHaveBeenCalled()
+		await expect(stat(nodePath.join(directory, 'member-home', 'Photos', 'invalid.jpg'))).rejects.toThrow()
 	})
 
 	test('rejects unsupported uploads before consuming them', async () => {

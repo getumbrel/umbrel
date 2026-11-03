@@ -6,16 +6,18 @@ import UmbrelKit
 struct DeviceListView: View {
 	@Environment(AppState.self) private var state
 	let devices: [Device]
+	let unverifiedDevices: [Umbreld.UnverifiedDevice]
 	let updateRequiredDevices: [Umbreld.UpdateRequiredDevice]
 	let onSelect: (String) -> Void
 	let onConnectByAddress: () -> Void
 
 	private var singleUnsaved: Device? {
-		devices.count == 1 && updateRequiredDevices.isEmpty && !devices[0].saved ? devices[0] : nil
+		devices.count == 1 && unverifiedDevices.isEmpty && updateRequiredDevices.isEmpty && !devices[0].saved
+			? devices[0] : nil
 	}
 
 	private var resultCount: Int {
-		devices.count + updateRequiredDevices.count
+		devices.count + unverifiedDevices.count + updateRequiredDevices.count
 	}
 
 	private var subtitle: String {
@@ -67,6 +69,11 @@ struct DeviceListView: View {
 								onSelect(device.id)
 							}
 						}
+						ForEach(unverifiedDevices, id: \.host) { device in
+							UnverifiedDeviceCard(device: device, isRetrying: state.retryingHosts.contains(device.host)) {
+								Task { await state.retry(device) }
+							}
+						}
 						ForEach(updateRequiredDevices, id: \.host) { device in
 							UpdateRequiredDeviceCard(device: device)
 						}
@@ -104,7 +111,7 @@ struct DeviceListView: View {
 				.padding(.bottom, 2)
 			Text(subtitle)
 				.font(.system(size: 11))
-				.foregroundStyle(Palette.gray)
+				.foregroundStyle(.secondary)
 		}
 		.padding(.top, 28) // balances the detail view's 20pt top inset
 		.padding(.horizontal, 6)
@@ -119,10 +126,10 @@ struct DeviceListView: View {
 						+ Text("Connect by address").fontWeight(.semibold)
 				)
 					.font(.system(size: 11))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 				Image(systemName: "chevron.right")
 					.font(.system(size: 9, weight: .semibold))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 			.contentShape(Rectangle())
 		}
@@ -145,7 +152,7 @@ private struct RefreshButton: View {
 						.controlSize(.small)
 				} else {
 					RefreshIcon()
-						.stroke(Palette.gray, style: StrokeStyle(lineWidth: 1.33, lineCap: .round, lineJoin: .round))
+						.stroke(.secondary, style: StrokeStyle(lineWidth: 1.33, lineCap: .round, lineJoin: .round))
 				}
 			}
 			.frame(width: 16, height: 16)
@@ -201,11 +208,9 @@ private struct DeviceCard: View {
 	@State private var hovered = false
 
 	var body: some View {
-		let kind = UmbrelDeviceKind(model: device.model)
-		let isSquareRender = kind == .raspberryPi
 		Button(action: onClick) {
 			HStack(spacing: 16) {
-				DeviceIcon(model: device.model, width: device.isPro ? 45 : 33, height: isSquareRender ? 33 : 31)
+				DeviceIcon(model: device.model, placement: .listRow)
 					.frame(width: 45)
 
 				VStack(alignment: .leading, spacing: 2) {
@@ -223,7 +228,7 @@ private struct DeviceCard: View {
 				Spacer()
 				Image(systemName: "chevron.right")
 					.font(.system(size: 12, weight: .semibold))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 			.padding(16)
 			.background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(hovered ? 0.12 : 0.06)))
@@ -248,7 +253,7 @@ private struct UpdateRequiredDeviceCard: View {
 			openURL(url)
 		} label: {
 			HStack(spacing: 16) {
-				DeviceIcon(model: nil, width: 33, height: 31)
+				DeviceIcon(model: nil, placement: .listRow)
 					.frame(width: 45)
 
 				VStack(alignment: .leading, spacing: 2) {
@@ -263,7 +268,7 @@ private struct UpdateRequiredDeviceCard: View {
 				Spacer()
 				Image(systemName: "arrow.up.right")
 					.font(.system(size: 11, weight: .semibold))
-					.foregroundStyle(Palette.gray)
+					.foregroundStyle(.secondary)
 			}
 			.padding(16)
 			.background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(hovered ? 0.12 : 0.06)))
@@ -274,6 +279,68 @@ private struct UpdateRequiredDeviceCard: View {
 	}
 }
 
+// A current Umbrel at a common hostname that answered but couldn't prove its identity.
+// Like an update hint it's not a `Device`: it can't be selected, authenticated, or
+// saved. It offers another try, or the browser, where umbrelOS may still open.
+private struct UnverifiedDeviceCard: View {
+	@Environment(\.openURL) private var openURL
+	let device: Umbreld.UnverifiedDevice
+	let isRetrying: Bool
+	let onRetry: () -> Void
+
+	var body: some View {
+		HStack(alignment: .top, spacing: 16) {
+			DeviceIcon(model: nil, placement: .listRow)
+				.frame(width: 45)
+
+			VStack(alignment: .leading, spacing: 2) {
+				Text("Couldn\u{2019}t connect")
+					.font(.system(size: 13, weight: .bold))
+					.foregroundStyle(.white.opacity(0.85))
+				Text(device.host)
+					.font(.system(size: 11))
+					.foregroundStyle(.white)
+				Text(device.reason.explanation)
+					.font(.system(size: 10))
+					.foregroundStyle(.secondary)
+					.fixedSize(horizontal: false, vertical: true)
+					.padding(.top, 4)
+
+				HStack(spacing: 14) {
+					Button {
+						onRetry()
+					} label: {
+						Group {
+							if isRetrying {
+								ProgressView().controlSize(.small)
+							} else {
+								Text("Try again")
+							}
+						}
+						.frame(height: 16)
+					}
+					.buttonStyle(PillButtonStyle())
+					.fixedSize()
+					.disabled(isRetrying)
+
+					Button("Open in browser") {
+						guard let url = URL(string: "http://\(device.host)") else { return }
+						openURL(url)
+					}
+					.buttonStyle(.plain)
+					.font(.system(size: 10, weight: .medium))
+					.foregroundStyle(.secondary)
+				}
+				.padding(.top, 10)
+			}
+
+			Spacer(minLength: 0)
+		}
+		.padding(16)
+		.background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(0.06)))
+	}
+}
+
 // Prominent onboarding card when exactly one unsaved device is on the network
 private struct WelcomeCard: View {
 	let device: Device
@@ -281,7 +348,7 @@ private struct WelcomeCard: View {
 
 	var body: some View {
 		VStack(spacing: 0) {
-			DeviceIcon(model: device.model, width: device.isPro ? 162 : 108, height: device.isPro ? 99 : 80)
+			DeviceIcon(model: device.model, placement: .welcomeCard)
 
 			Text(device.displayName)
 				.font(.system(size: 17, weight: .bold))
@@ -302,4 +369,21 @@ private struct WelcomeCard: View {
 		.padding(20)
 		.background(RoundedRectangle(cornerRadius: 20).fill(.white.opacity(0.06)))
 	}
+}
+
+// Harness for finessing the "Couldn't connect" card in the Xcode canvas
+#Preview("Couldn't Connect") {
+	VStack(spacing: 4) {
+		UnverifiedDeviceCard(
+			device: Umbreld.UnverifiedDevice(host: "umbrel.local", reason: .slow),
+			isRetrying: false
+		) {}
+		UnverifiedDeviceCard(
+			device: Umbreld.UnverifiedDevice(host: "umbrel-2.local", reason: .unexpected),
+			isRetrying: true
+		) {}
+	}
+	.padding(24)
+	.frame(width: 360)
+	.background(.black)
 }

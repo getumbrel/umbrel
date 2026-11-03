@@ -2,15 +2,8 @@ import {useTranslation} from 'react-i18next'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerScroller,
-	DrawerTitle,
-} from '@/components/ui/drawer'
+import {DrawerFooter} from '@/components/ui/drawer'
+import {useDrawerOrDialog} from '@/components/ui/drawer-or-dialog'
 import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/components/ui/input'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {usePassword} from '@/hooks/use-password'
@@ -20,11 +13,12 @@ import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_
 import {SessionsPanel} from '@/routes/settings/sessions'
 import {trpcReact} from '@/trpc/trpc'
 
-export function AccountDrawer() {
+export function AccountDrawerOrDialog() {
 	const {t} = useTranslation()
 	const title = t('account')
 
 	const dialogProps = useSettingsDialogProps()
+	const {Root, Content, Header, Title, Description, Scroller} = useDrawerOrDialog()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const closeDialog = () => dialogProps.onOpenChange(false)
@@ -40,13 +34,13 @@ export function AccountDrawer() {
 	const activeTab = tabs.some(({id}) => id === accountTab) ? accountTab! : tabs[0].id
 
 	return (
-		<Drawer {...dialogProps}>
-			<DrawerContent fullHeight>
-				<DrawerHeader>
-					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{t('account-description')}</DrawerDescription>
-				</DrawerHeader>
-				<DrawerScroller>
+		<Root {...dialogProps}>
+			<Content fullHeight>
+				<Header>
+					<Title>{title}</Title>
+					<Description>{t('account-description')}</Description>
+				</Header>
+				<Scroller>
 					{userQ.data && (
 						<div className='mb-5 flex items-center gap-4 px-1'>
 							<AccountAvatarEditor account={userQ.data} size={72} />
@@ -65,9 +59,9 @@ export function AccountDrawer() {
 					{activeTab === 'change-name' && <ChangeName closeDialog={closeDialog} />}
 					{activeTab === 'change-password' && <ChangePassword closeDialog={closeDialog} />}
 					{activeTab === 'sessions' && <SessionsPanel />}
-				</DrawerScroller>
-			</DrawerContent>
-		</Drawer>
+				</Scroller>
+			</Content>
+		</Root>
 	)
 }
 
@@ -86,11 +80,11 @@ function ChangeName({closeDialog}: {closeDialog: () => void}) {
 				</div>
 				<div className='flex-1' />
 				<DrawerFooter>
-					<Button type='button' size='dialog' onClick={closeDialog}>
-						{t('cancel')}
-					</Button>
 					<Button type='submit' size='dialog' variant='primary'>
 						{t('confirm')}
+					</Button>
+					<Button type='button' size='dialog' onClick={closeDialog}>
+						{t('cancel')}
 					</Button>
 				</DrawerFooter>
 				<div className='' />
@@ -119,17 +113,13 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 			<fieldset disabled={isLoading} className='flex flex-1 flex-col gap-5'>
 				<ChangePasswordWarning />
 				<Labeled label={t('change-password.current-password')}>
-					<PasswordInput value={password} onValueChange={setPassword} />
+					<PasswordInput value={password} onValueChange={setPassword} error={fieldErrors.oldPassword} />
 				</Labeled>
 				<Labeled label={t('change-password.new-password')}>
-					<PasswordInput value={newPassword} onValueChange={setNewPassword} error={fieldErrors.oldPassword} />
+					<PasswordInput value={newPassword} onValueChange={setNewPassword} error={fieldErrors.newPassword} />
 				</Labeled>
 				<Labeled label={t('change-password.repeat-password')}>
-					<PasswordInput
-						value={newPasswordRepeat}
-						onValueChange={setNewPasswordRepeat}
-						error={fieldErrors.newPassword}
-					/>
+					<PasswordInput value={newPasswordRepeat} onValueChange={setNewPasswordRepeat} />
 				</Labeled>
 				<div className='flex-1' />
 				<div className='-my-2.5'>
@@ -137,11 +127,11 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 				</div>
 
 				<DrawerFooter>
-					<Button type='button' size='dialog' onClick={closeDialog}>
-						{t('cancel')}
-					</Button>
 					<Button type='submit' size='dialog' variant='primary'>
 						{t('confirm')}
+					</Button>
+					<Button type='button' size='dialog' onClick={closeDialog}>
+						{t('cancel')}
 					</Button>
 				</DrawerFooter>
 			</fieldset>

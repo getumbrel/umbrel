@@ -27,6 +27,14 @@ export const raidStatusLabels: Record<RaidDeviceStatus, string> = {
 	CANT_OPEN: 'storage-manager.raid-status.unavailable',
 }
 
+// Pick a drive to rebuild a failed member onto. Of those large enough, a healthy one comes
+// first, then the member's own disk if it can be repaired in place. A spare with a warning is
+// the last resort: rebuilding onto a failing drive would leave the pool exposed all over again.
+export function pickReplacementDrive(candidates: StorageDevice[], minimumSize: number, ownDisk?: StorageDevice) {
+	const fitting = candidates.filter((drive) => (drive.roundedSize ?? drive.size) >= minimumSize)
+	return fitting.find((drive) => !getDeviceHealth(drive).hasWarning) ?? ownDisk ?? fitting[0]
+}
+
 // Threshold % for lifetime usage warning (100 = the rated endurance being fully used)
 export const LIFETIME_WARNING_THRESHOLD = 80
 

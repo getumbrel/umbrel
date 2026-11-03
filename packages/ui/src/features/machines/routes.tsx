@@ -4,6 +4,7 @@ import {RouteObject} from 'react-router-dom'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {ErrorBoundaryPageFallback} from '@/components/ui/error-boundary-page-fallback'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
+import {EnsureOwner} from '@/modules/auth/ensure-owner'
 
 const MachinesLayout = React.lazy(() => import('@/features/machines'))
 const MachinesIndex = React.lazy(() => import('@/features/machines/components/machines-index'))
@@ -14,11 +15,16 @@ const MachineSettings = React.lazy(() => import('@/features/machines/components/
 const FullscreenConsole = React.lazy(() => import('@/features/machines/components/fullscreen-console'))
 
 // Mounted inside the desktop layout (outside SheetLayout) so the Machines
-// feature renders as an immersive overlay with the dock still visible
+// feature renders as an immersive overlay with the dock still visible.
+// Machines are the owner's, so members are sent home.
 export const machinesRoutes: RouteObject[] = [
 	{
 		path: 'machines',
-		element: <MachinesLayout />,
+		element: (
+			<EnsureOwner>
+				<MachinesLayout />
+			</EnsureOwner>
+		),
 		ErrorBoundary: ErrorBoundaryCardFallback,
 		children: [
 			{
@@ -51,7 +57,9 @@ export const machinesConsoleRoutes: RouteObject[] = [
 		path: 'machines/:machineId/fullscreen',
 		element: (
 			<EnsureLoggedIn>
-				<FullscreenConsole />
+				<EnsureOwner>
+					<FullscreenConsole />
+				</EnsureOwner>
 			</EnsureLoggedIn>
 		),
 		ErrorBoundary: ErrorBoundaryPageFallback,
