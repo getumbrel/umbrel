@@ -1,0 +1,15 @@
+--- umbrelOS Manifest ---
+Schema: 1
+Version: 2.1.0-beta.1
+Name: umbrelOS 2.1 Beta 1
+Date: 2026-11-03T15:54:46Z
+Commit: 6f357e18d0a4faccb69d9fa59e3eae9cc3380538
+Docker-Image: ghcr.io/getumbrel/umbrelos@sha256:7699f6fe3da96800322f8d74cd62e59b8ae0e459514254a74467a0f3196d5733
+File: umbrelos-amd64-legacy.update sha256:17fdb4bb591cfbb4ceb27b5cc0cd7629654f79f34014003e8b979ddc19589ddf bundle:sha512-256:934b152a1b637f50e38ddaad5664843182e43f1aeea83a90c72264bdcb362423 boot-flow:mender-grub arch:amd64
+File: umbrelos-amd64-usb-installer.iso sha256:f45d94d941943beef6abef2928b46c6c7a412deba6e7f5fb54504139bb977d2b
+File: umbrelos-amd64.img sha256:9d2db85ab3252e35a5e73f8f9c2379c372e0d16fd5cb3155cebb3f751485f8e0
+File: umbrelos-amd64.img.xz sha256:855257eb3f286242326125c6d46bde384f69a551b952d01a7770e07fe806abaf
+File: umbrelos-amd64.update sha256:c057b16fcfbca6322b110894f231d82467299175c4afd652a65634b4434b607f bundle:sha512-256:ee4a9f25092aa6b063204ddd6a66d254a776e10075a207f494cb52a4613687cf boot-flow:grub arch:amd64
+File: umbrelos-pi.img sha256:966cf6f8913fa3ca0bb93961c77e86933e8e6aaad774aa93a04e2c4138d4884b
+File: umbrelos-pi.img.zip sha256:547b1ec358d3a21c583be16629ac7c033b2099cd3175b2770ba7087096f549b5
+File: umbrelos-pi.update sha256:1dbe41d8148f2b12c8d9d942686da7c8a562c3688c60ff3afc81589deb43dc5b bundle:sha512-256:f17f21522d1aa5797445ce2e780cea0ea31422970d87aa6b0243d18d3a7e18a9 boot-flow:rpi-tryboot arch:arm64
