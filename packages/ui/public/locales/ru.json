@@ -2818,7 +2818,7 @@
   "settings.language": "Язык",
   "settings.language-description": "Выбери предпочитаемый язык umbrelOS",
   "settings.no-results": "По запросу «{{query}}» ничего не найдено",
-  "settings.owner-heading": "Umbrel — <name>{{name}}</name>",
+  "settings.owner-heading": "Umbrel пользователя <name>{{name}}</name>",
   "shortcut.add.already-exists": "Этот ярлык уже добавлен",
   "shortcut.add.custom-port": "Пользовательский порт",
   "shortcut.add.custom-port-placeholder": "Например, 8080 или 9091/path/web)",

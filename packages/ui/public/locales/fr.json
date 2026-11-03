@@ -2909,7 +2909,7 @@
   "storage-manager.mode.failsafe.info-description-drive": "FailSafe protège vos données en conservant une copie complète sur des paires de disques en miroir. Si un disque tombe en panne, vos données restent protégées et peuvent être restaurées lorsque vous ajoutez un disque de remplacement.",
   "storage-manager.mode.failsafe.info-title": "À propos de FailSafe",
   "storage-manager.mode.full-storage": "Stockage complet",
-  "storage-manager.mode.full-storage.description": "Use all your SSD space together. If an SSD fails, you could lose your data.",
+  "storage-manager.mode.full-storage.description": "Combine l'espace de tous vos SSD. Si un SSD tombe en panne, vous pourriez perdre vos données.",
   "storage-manager.mode.full-storage.description-drive": "Combine tous vos disques en un seul grand espace de stockage. Les données ne sont pas protégées en cas de panne d'un disque.",
   "storage-manager.mode.full-storage.info-description": "Full Storage combine tous vos SSD en un seul grand espace, vous offrant un stockage maximal. Cependant, si un SSD tombe en panne, toutes vos données seront perdues.",
   "storage-manager.mode.full-storage.info-description-drive": "Le stockage intégral regroupe tous vos disques en un seul grand espace afin de maximiser la capacité de stockage. Cependant, si un disque tombe en panne, toutes vos données seront perdues.",
