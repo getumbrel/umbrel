@@ -12,10 +12,13 @@ namespace Umbrel.Views;
 internal static unsafe partial class ConfirmDialog
 {
 	private const int IDOK = 1;
+	private const int IDCANCEL = 2;
 	private const int TDF_POSITION_RELATIVE_TO_WINDOW = 0x1000;
 	private const int TDCBF_CANCEL_BUTTON = 0x8;
 
-	public static bool Show(Window? owner, string title, string message, string confirm)
+	// defaultToCancel makes Enter cancel, for a confirmation the user should only give
+	// deliberately.
+	public static bool Show(Window? owner, string title, string message, string confirm, bool defaultToCancel = false)
 	{
 		var hwnd = owner is null ? IntPtr.Zero : new WindowInteropHelper(owner).Handle;
 		fixed (char* windowTitle = "Umbrel", instruction = title, content = message, confirmText = confirm)
@@ -33,7 +36,7 @@ internal static unsafe partial class ConfirmDialog
 				pszContent = content,
 				cButtons = 1,
 				pButtons = &button,
-				nDefaultButton = IDOK,
+				nDefaultButton = defaultToCancel ? IDCANCEL : IDOK,
 			};
 			int pressed;
 			return TaskDialogIndirect(&config, &pressed, null, null) >= 0 && pressed == IDOK;

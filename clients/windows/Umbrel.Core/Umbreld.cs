@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
@@ -18,15 +19,28 @@ public enum UmbreldErrorKind
 	ProtocolFailure,
 }
 
-public sealed class UmbreldException(int status, string message, UmbreldErrorKind kind = UmbreldErrorKind.Server)
+public sealed class UmbreldException(
+	int status,
+	string message,
+	UmbreldErrorKind kind = UmbreldErrorKind.Server,
+	bool timedOut = false)
 	: Exception(message)
 {
 	public int Status { get; } = status;
 	public UmbreldErrorKind Kind { get; } = kind;
+	// A connectivity failure because the request ran out of time, not because it was refused
+	public bool TimedOut { get; } = timedOut;
 	public bool IsAuthError => Status == 401;
 	public bool IsConnectivityFailure => Kind == UmbreldErrorKind.Connectivity;
 	public bool RequiresTwoFactorAuthentication => Message == "Missing 2FA code";
 }
+
+/// <summary>
+/// Thrown when an Umbrel proved its identity and then didn't answer discoveryInfo in time.
+/// It's slow, not missing, and its other addresses would only wait the same way.
+/// </summary>
+public sealed class IdentityResponseTimeoutException()
+	: Exception("Your Umbrel is taking too long to respond. It may be busy or still starting up.");
 
 public enum ManualDiscoveryErrorKind
 {
@@ -79,7 +93,17 @@ public sealed record IdentifiedDevice
 	// anchor to an explicit claim without exposing trust material to app UI code.
 	internal byte[]? CandidateCaCertificate { get; init; }
 
+	// Proven with a saved Umbrel's pin rather than a candidate CA from this scan
+	public bool ProvedWithSavedPin => CandidateCaCertificate is null;
+
 	public Umbreld.DiscoveryInfo DiscoveryInfo => new(Id, Model, Onboarded);
+
+	// Whether two records are the same Umbrel: the same anchor proved the same id. An id
+	// alone is unauthenticated, as another LAN device can claim it under its own CA.
+	public bool IsSameUmbrel(IdentifiedDevice other) =>
+		Id == other.Id && (CandidateCaCertificate is null || other.CandidateCaCertificate is null
+			? CandidateCaCertificate is null && other.CandidateCaCertificate is null
+			: CandidateCaCertificate.AsSpan().SequenceEqual(other.CandidateCaCertificate));
 }
 
 /// <summary>
@@ -94,6 +118,18 @@ public sealed record IdentifiedDevice
 [SupportedOSPlatform("windows")]
 public static partial class Umbreld
 {
+	/// <summary>
+	/// Whether a failure means the Umbrel answered with a different identity than the one
+	/// this PC paired with, as it does after the Umbrel or its certificate is reset.
+	/// </summary>
+	public static bool IsIdentityChange(Exception error) => error switch
+	{
+		LocalHttpsTransportException transport => transport.Kind == LocalHttpsTransportErrorKind.IdentityChanged,
+		UmbreldException umbreld => umbreld.Kind == UmbreldErrorKind.Trust
+			&& umbreld.Message == LocalHttpsTransportException.Describe(LocalHttpsTransportErrorKind.IdentityChanged),
+		_ => false,
+	};
+
 	// The stable device credential is stored in the secret store and sent only to the
 	// access exchange. Normal API calls carry the short-lived access credential.
 	public sealed record Session(
@@ -125,15 +161,83 @@ public static partial class Umbreld
 
 	public sealed record Share(string Name, string Path, string Sharename);
 
+	/// <summary>
+	/// An Umbrel whose long-standing public version endpoint reports a release older than
+	/// umbrelOS 2.0. This is only an update hint: it is never trusted as an identity or
+	/// admitted to sign-in.
+	/// </summary>
 	public sealed record UpdateRequiredDevice(string Host);
+
+	public enum UnverifiedReason
+	{
+		// It didn't answer in the time allowed
+		Slow,
+		// Anything else, such as a refused connection or a certificate its CA didn't issue
+		Unexpected,
+	}
+
+	/// <summary>
+	/// A current umbrelOS that answered its public version endpoint but didn't prove its
+	/// identity over HTTPS, even after a quiet retry. It is never trusted as an identity or
+	/// admitted to sign-in; the user can try again or open it in a browser.
+	/// </summary>
+	public sealed record UnverifiedDevice(
+		string Host,
+		// IPv4 addresses the host resolved to, so a second name for an Umbrel that did prove
+		// itself isn't shown as a separate failure
+		IReadOnlyList<string> Addresses,
+		UnverifiedReason Reason)
+	{
+		public UnverifiedDevice(string host, UnverifiedReason reason) : this(host, [], reason)
+		{
+		}
+
+		public string Explanation => Reason switch
+		{
+			UnverifiedReason.Slow => "Your Umbrel is taking too long to respond. It may be busy or still starting up.",
+			_ => "Your Umbrel didn’t respond as expected.",
+		};
+	}
+
+	public abstract record HostIdentification
+	{
+		public sealed record Device(IdentifiedDevice Value) : HostIdentification;
+		public sealed record Unverified(UnverifiedDevice Value) : HostIdentification;
+		// The host proved a saved Umbrel's id but not that Umbrel's pin, as after a
+		// certificate reset. Trying again can't fix it, so it's left to the saved device's
+		// own handling rather than shown as a failed connection.
+		public sealed record SavedIdentityChanged : HostIdentification;
+	}
 
 	public abstract record ManualDiscoveryResult
 	{
 		public sealed record Device(IdentifiedDevice Value) : ManualDiscoveryResult;
 		public sealed record UpdateRequired(UpdateRequiredDevice Value) : ManualDiscoveryResult;
+		public sealed record Unverified(UnverifiedDevice Value) : ManualDiscoveryResult;
 	}
 
+	/// <summary>
+	/// Hostnames that answered the public version endpoint: current Umbrels that proved their
+	/// identity like any DNS-SD candidate, current Umbrels that couldn't, and Umbrels too old
+	/// to connect.
+	/// </summary>
+	public sealed record FallbackDiscoveryResult(
+		IReadOnlyList<IdentifiedDevice> Devices,
+		IReadOnlyList<UnverifiedDevice> Unverified,
+		IReadOnlyList<UpdateRequiredDevice> UpdateRequired);
+
+	// Short timeout for identity probes: sweeps hit several hosts in parallel and
+	// nonexistent .local hostnames should fail fast.
 	private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(3);
+	// discoveryInfo after the host has proven itself. It reads the hardware, which can
+	// take seconds on a busy umbrelOS 2.0.0.
+	private static readonly TimeSpan IdentityResponseTimeout = TimeSpan.FromSeconds(8);
+	// One whole identification attempt, across every address it tries
+	private static readonly TimeSpan IdentificationDeadline = TimeSpan.FromSeconds(10);
+	// A host that answered the version probe resolves from the mDNS cache
+	private static readonly TimeSpan FallbackAddressTimeout = TimeSpan.FromSeconds(1);
+	// A current Umbrel that failed unexpectedly is asked once more after this
+	private static readonly TimeSpan QuietRetryDelay = TimeSpan.FromSeconds(2);
 	private static readonly TimeSpan FallbackProbeTimeout = TimeSpan.FromSeconds(2);
 	private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
 	private const int FallbackResponseMaximumBytes = 16 * 1024;
@@ -271,7 +375,7 @@ public static partial class Umbreld
 			throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.IdentityChanged);
 		}
 		var candidate = LocalHttpsTransport.CertificateDataFromPem(bootstrap.CaCertificate);
-		var identity = await DiscoveryInfoOverHttpsAsync(host, candidate, ct).ConfigureAwait(false);
+		var identity = await DiscoveryInfoOverHttpsAsync(host, candidate, bootstrap.Id, ct).ConfigureAwait(false);
 		if (identity.Id != bootstrap.Id) throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.IdentityChanged);
 		return new VerifiedLocalHttpsCandidate(identity, candidate);
 	}
@@ -285,7 +389,7 @@ public static partial class Umbreld
 	{
 		var certificate = device.CandidateCaCertificate
 			?? throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.IdentityChanged);
-		var identity = await DiscoveryInfoOverHttpsAsync(device.Host, certificate, ct).ConfigureAwait(false);
+		var identity = await DiscoveryInfoOverHttpsAsync(device.Host, certificate, device.Id, ct).ConfigureAwait(false);
 		if (identity.Id != device.Id) throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.IdentityChanged);
 		return LocalHttpsTransport.Enroll(certificate, device.Id, replacingExisting: true) switch
 		{
@@ -319,11 +423,7 @@ public static partial class Umbreld
 			SecretStore.ReadSession(target.DeviceId));
 		if (recheck is SavedIdentityRecoveryDecision.AlreadyEnrolled)
 		{
-			var identity = await DiscoveryInfoOverHttpsAsync(claim.Host, target.DeviceId, ct).ConfigureAwait(false);
-			if (identity.Id != target.DeviceId)
-			{
-				throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.IdentityChanged);
-			}
+			await ProvePinnedIdentityAsync(claim.Host, target.DeviceId, ct).ConfigureAwait(false);
 			return true;
 		}
 
@@ -376,24 +476,89 @@ public static partial class Umbreld
 		return DecodeEnvelope<LocalHttpsIdentity>(result, "system.localHttpsIdentity");
 	}
 
-	private static async Task<DiscoveryInfo> DiscoveryInfoOverHttpsAsync(string host, string deviceId, CancellationToken ct)
+	/// <summary>
+	/// Proves a saved Umbrel's pinned identity at host. The anchor is the pinned CA and the
+	/// id must match. system.localHttpsIdentity does no work beyond reading the id and CA,
+	/// so the short timeout still fails a missing or unreachable route fast without cutting
+	/// off a busy Umbrel.
+	/// </summary>
+	private static async Task ProvePinnedIdentityAsync(string host, string deviceId, CancellationToken ct)
 	{
-		var request = LocalHttpsTransport.Request(HttpMethod.Get, HttpsUri(host, "/trpc/system.discoveryInfo"));
+		var request = LocalHttpsTransport.Request(HttpMethod.Get, HttpsUri(host, "/trpc/system.localHttpsIdentity"));
 		var result = await GuardTransportAsync(
 			host,
 			() => LocalHttpsTransport.DataAsync(request, deviceId, ProbeTimeout, ct)).ConfigureAwait(false);
-		return DecodeEnvelope<DiscoveryInfo>(result, "system.discoveryInfo");
+		RequireIdentity(deviceId, result);
+	}
+
+	// The same proof, after checking that this device has a pin to prove it with
+	private static Task RequirePinnedIdentityAsync(string host, string deviceId, CancellationToken ct) =>
+		SecretStore.ReadLocalHttpsCa(deviceId) switch
+		{
+			SecretStore.LocalHttpsCaReadResult.Found => ProvePinnedIdentityAsync(host, deviceId, ct),
+			SecretStore.LocalHttpsCaReadResult.Missing =>
+				throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.NotEnrolled),
+			_ => throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.StorageUnavailable),
+		};
+
+	// The same proof with the candidate CA from a first-use scan
+	private static async Task ProveCandidateIdentityAsync(
+		string host,
+		byte[] candidateCertificate,
+		string deviceId,
+		CancellationToken ct)
+	{
+		var request = LocalHttpsTransport.Request(HttpMethod.Get, HttpsUri(host, "/trpc/system.localHttpsIdentity"));
+		var result = await GuardTransportAsync(
+			host,
+			() => LocalHttpsTransport.DataAsync(request, candidateCertificate, ProbeTimeout, ct)).ConfigureAwait(false);
+		RequireIdentity(deviceId, result);
+	}
+
+	private static void RequireIdentity(string deviceId, HttpResult result)
+	{
+		var identity = DecodeEnvelope<LocalHttpsIdentity>(result, "system.localHttpsIdentity");
+		if (identity.Id != deviceId) throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.IdentityChanged);
+	}
+
+	// The route is proven first, so a missing host still fails fast
+	private static async Task<DiscoveryInfo> DiscoveryInfoOverHttpsAsync(string host, string deviceId, CancellationToken ct)
+	{
+		await ProvePinnedIdentityAsync(host, deviceId, ct).ConfigureAwait(false);
+		return await DiscoveryInfoAfterProofAsync(
+			host,
+			request => LocalHttpsTransport.DataAsync(request, deviceId, IdentityResponseTimeout, ct)).ConfigureAwait(false);
 	}
 
 	private static async Task<DiscoveryInfo> DiscoveryInfoOverHttpsAsync(
 		string host,
 		byte[] candidateCertificate,
+		string deviceId,
 		CancellationToken ct)
 	{
-		var request = LocalHttpsTransport.Request(HttpMethod.Get, HttpsUri(host, "/trpc/system.discoveryInfo"));
-		var result = await GuardTransportAsync(
+		await ProveCandidateIdentityAsync(host, candidateCertificate, deviceId, ct).ConfigureAwait(false);
+		return await DiscoveryInfoAfterProofAsync(
 			host,
-			() => LocalHttpsTransport.DataAsync(request, candidateCertificate, ProbeTimeout, ct)).ConfigureAwait(false);
+			request => LocalHttpsTransport.DataAsync(request, candidateCertificate, IdentityResponseTimeout, ct))
+			.ConfigureAwait(false);
+	}
+
+	// discoveryInfo reads the hardware, which can take seconds on a busy umbrelOS 2.0.0, so
+	// once the host has proven itself it gets the longer budget
+	private static async Task<DiscoveryInfo> DiscoveryInfoAfterProofAsync(
+		string host,
+		Func<HttpRequestMessage, Task<HttpResult>> send)
+	{
+		var request = LocalHttpsTransport.Request(HttpMethod.Get, HttpsUri(host, "/trpc/system.discoveryInfo"));
+		HttpResult result;
+		try
+		{
+			result = await GuardTransportAsync(host, () => send(request)).ConfigureAwait(false);
+		}
+		catch (UmbreldException error) when (error.TimedOut)
+		{
+			throw new IdentityResponseTimeoutException();
+		}
 		return DecodeEnvelope<DiscoveryInfo>(result, "system.discoveryInfo");
 	}
 
@@ -407,8 +572,8 @@ public static partial class Umbreld
 		try
 		{
 			if (SecretStore.ReadLocalHttpsCa(deviceId) is not SecretStore.LocalHttpsCaReadResult.Found) return false;
-			var identity = await DiscoveryInfoOverHttpsAsync(host, deviceId, ct).ConfigureAwait(false);
-			return identity.Id == deviceId;
+			await ProvePinnedIdentityAsync(host, deviceId, ct).ConfigureAwait(false);
+			return true;
 		}
 		catch (OperationCanceledException) when (ct.IsCancellationRequested)
 		{
@@ -417,6 +582,80 @@ public static partial class Umbreld
 		catch (Exception)
 		{
 			return false;
+		}
+	}
+
+	/// <summary>
+	/// Whether the Umbrel answers at one of its addresses with a different identity than the
+	/// one this PC paired with, as it does after the Umbrel or its certificate is reset.
+	/// Asked once a saved Umbrel stops answering, to tell that apart from being unreachable.
+	/// </summary>
+	public static async Task<bool> IdentityChangedAsync(Target target, CancellationToken ct)
+	{
+		var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		var answers = target.Hosts.Select(host => IdentityAnswerAsync(host, target.DeviceId, cts.Token)).ToList();
+		var pending = new List<Task<IdentityAnswer>>(answers);
+		var changed = false;
+		try
+		{
+			while (pending.Count > 0)
+			{
+				var answered = await Task.WhenAny(pending).ConfigureAwait(false);
+				pending.Remove(answered);
+				switch (await answered.ConfigureAwait(false))
+				{
+					case IdentityAnswer.Verified:
+						return false;
+					case IdentityAnswer.Changed:
+						changed = true;
+						break;
+				}
+			}
+		}
+		finally
+		{
+			// The answers still in flight end with the cancellation.
+			cts.Cancel();
+			_ = Task.WhenAll(answers).ContinueWith(_ => cts.Dispose(), TaskScheduler.Default);
+		}
+		ct.ThrowIfCancellationRequested();
+		return changed;
+	}
+
+	private enum IdentityAnswer
+	{
+		Verified,
+		Changed,
+		Other,
+	}
+
+	private static async Task<IdentityAnswer> IdentityAnswerAsync(string host, string deviceId, CancellationToken ct)
+	{
+		try
+		{
+			await RequirePinnedIdentityAsync(host, deviceId, ct).ConfigureAwait(false);
+			return IdentityAnswer.Verified;
+		}
+		catch (Exception error) when (IsIdentityChange(error))
+		{
+			// Any HTTPS server at a saved address (a printer that got the Umbrel's old IP, a
+			// captive portal) refuses the pin the same way. It counts only if it answers with
+			// this Umbrel's id under a new CA, as after a certificate reset. The id is public,
+			// so a device pretending to be the Umbrel can answer the same way; that's why the
+			// app warns and asks before Reconnect instead of trusting the new CA.
+			try
+			{
+				await VerifiedFirstUseCandidateAsync(host, deviceId, ct).ConfigureAwait(false);
+				return IdentityAnswer.Changed;
+			}
+			catch (Exception)
+			{
+				return IdentityAnswer.Other;
+			}
+		}
+		catch (Exception)
+		{
+			return IdentityAnswer.Other;
 		}
 	}
 
@@ -517,23 +756,69 @@ public static partial class Umbreld
 		SavedDevice.IsValidLocalEndpointHost(host) && !SavedDevice.IsTailscaleAddress(host);
 
 	/// <summary>
-	/// Probe a discovery snapshot concurrently and collapse duplicate advertisements by
-	/// the authoritative id returned from each device.
+	/// Probe a discovery snapshot concurrently and collapse duplicate advertisements of the
+	/// same Umbrel.
 	/// </summary>
 	public static async Task<IReadOnlyList<IdentifiedDevice>> IdentifyAsync(
 		IReadOnlyList<Candidate> candidates,
 		IReadOnlySet<string> knownDeviceIds,
 		CancellationToken ct)
 	{
-		var results = await Task.WhenAll(
-			candidates.Select(candidate => IdentifyCandidateAsync(candidate, knownDeviceIds, ct))).ConfigureAwait(false);
+		// Bounded like every other identification, however many addresses it tries
+		var results = await Task.WhenAll(candidates.Select(candidate => WithDeadlineAsync(
+			IdentificationDeadline,
+			token => IdentifyCandidateAsync(candidate, knownDeviceIds, token),
+			ct))).ConfigureAwait(false);
 		ct.ThrowIfCancellationRequested();
-		var byId = new Dictionary<string, IdentifiedDevice>(StringComparer.Ordinal);
-		foreach (var device in results.OfType<IdentifiedDevice>().OrderBy(device => device.Host, StringComparer.Ordinal))
+		return UniqueUmbrels(results.OfType<IdentifiedDevice>());
+	}
+
+	/// <summary>
+	/// One record per Umbrel, the first by host. Records collapse only when the same anchor
+	/// proved the same id: an id alone is unauthenticated, and another LAN device can claim
+	/// it under its own CA.
+	/// </summary>
+	internal static IReadOnlyList<IdentifiedDevice> UniqueUmbrels(IEnumerable<IdentifiedDevice> devices)
+	{
+		var unique = new List<IdentifiedDevice>();
+		foreach (var device in devices.OrderBy(device => device.Host, StringComparer.Ordinal))
 		{
-			byId.TryAdd(device.Id, device);
+			if (!unique.Any(kept => kept.IsSameUmbrel(device))) unique.Add(device);
 		}
-		return byId.Values.OrderBy(device => device.Host, StringComparer.Ordinal).ToList();
+		return unique;
+	}
+
+	/// <summary>
+	/// The operation's result, or null once the deadline passes and the operation is
+	/// cancelled. Caller cancellation still throws.
+	/// </summary>
+	internal static async Task<T?> WithDeadlineAsync<T>(
+		TimeSpan deadline,
+		Func<CancellationToken, Task<T?>> operation,
+		CancellationToken ct)
+		where T : class
+	{
+		var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		var work = operation(cts.Token);
+		try
+		{
+			return await work.WaitAsync(deadline, ct).ConfigureAwait(false);
+		}
+		catch (TimeoutException)
+		{
+			return null;
+		}
+		finally
+		{
+			// Cancels an attempt that's still running. Nothing waits for it, and the token
+			// source is freed once it ends.
+			cts.Cancel();
+			_ = work.ContinueWith(task =>
+			{
+				cts.Dispose();
+				return task.Exception;
+			}, TaskScheduler.Default);
+		}
 	}
 
 	internal abstract record ReidentifyAnchor
@@ -559,7 +844,7 @@ public static partial class Umbreld
 				return anchor switch
 				{
 					ReidentifyAnchor.Candidate candidate =>
-						await DiscoveryInfoOverHttpsAsync(host, candidate.Certificate, token).ConfigureAwait(false),
+						await DiscoveryInfoOverHttpsAsync(host, candidate.Certificate, device.Id, token).ConfigureAwait(false),
 					ReidentifyAnchor.Pinned pinned =>
 						await DiscoveryInfoOverHttpsAsync(host, pinned.DeviceId, token).ConfigureAwait(false),
 					_ => null,
@@ -604,7 +889,9 @@ public static partial class Umbreld
 	/// a Tailscale endpoint. A plain HTTP(S) root URL is normalized to its host. Short
 	/// hostnames may resolve to a LAN or Tailscale address, while full MagicDNS names
 	/// resolve only to a literal Tailscale address because Umbrel's pinned certificate
-	/// covers its interface IP, not a user-controlled tailnet name.
+	/// covers its interface IP, not a user-controlled tailnet name. If identification fails,
+	/// only a public version older than 2.0 is reported as needing an update; a current
+	/// version is asked once more and otherwise reported as unverified.
 	/// </summary>
 	public static async Task<ManualDiscoveryResult> DiscoverManuallyAsync(
 		string input,
@@ -627,15 +914,36 @@ public static partial class Umbreld
 					?? throw new ManualDiscoveryException(ManualDiscoveryErrorKind.NoDeviceFound);
 				break;
 		}
-		var device = await IdentifyCandidateAsync(candidate, knownDeviceIds, ct, allowsTailscaleHost: true)
-			.ConfigureAwait(false);
-		if (device is not null) return new ManualDiscoveryResult.Device(device);
+		Task<HostIdentification> Attempt() => IdentifyWithinDeadlineAsync(
+			candidate,
+			IdentificationDeadline,
+			(resolved, token) => IdentifyReportingFailureAsync(resolved, knownDeviceIds, token, allowsTailscaleHost: true),
+			ct);
+		var identification = await Attempt().ConfigureAwait(false);
 		ct.ThrowIfCancellationRequested();
-		var updateRequired = await ProbeLegacyOnlyHostAsync(candidate.Host, ct).ConfigureAwait(false);
-		if (updateRequired is not null) return new ManualDiscoveryResult.UpdateRequired(updateRequired);
+		if (identification is not HostIdentification.Unverified unverified) return ManualResult(identification);
+		var version = await FallbackVersionAsync(candidate.Host, ct).ConfigureAwait(false);
 		ct.ThrowIfCancellationRequested();
-		throw new ManualDiscoveryException(ManualDiscoveryErrorKind.NoDeviceFound);
+		if (version is null) throw new ManualDiscoveryException(ManualDiscoveryErrorKind.NoDeviceFound);
+		if (RequiresUpdate(version)) return new ManualDiscoveryResult.UpdateRequired(new UpdateRequiredDevice(candidate.Host));
+		// A current Umbrel answered. One that failed unexpectedly may still be starting, so
+		// it's asked once more; a slow one isn't, as that would only double the wait.
+		if (unverified.Value.Reason == UnverifiedReason.Unexpected)
+		{
+			await Task.Delay(QuietRetryDelay, ct).ConfigureAwait(false);
+			identification = await Attempt().ConfigureAwait(false);
+			ct.ThrowIfCancellationRequested();
+		}
+		return ManualResult(identification);
 	}
+
+	private static ManualDiscoveryResult ManualResult(HostIdentification identification) => identification switch
+	{
+		HostIdentification.Device device => new ManualDiscoveryResult.Device(device.Value),
+		HostIdentification.Unverified unverified => new ManualDiscoveryResult.Unverified(unverified.Value),
+		// Explains itself
+		_ => throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.IdentityChanged),
+	};
 
 	internal static Candidate? ManualDiscoveryCandidate(string input, IReadOnlyList<string>? resolvedIPv4Addresses = null)
 	{
@@ -704,9 +1012,11 @@ public static partial class Umbreld
 	}
 
 	// ── Fallback discovery ──
-	// Older umbrelOS releases predate the _umbrel._tcp advertisement. Probe only a small
-	// set of default hostnames in parallel; a custom hostname outside this list remains
-	// intentionally undiscoverable rather than turning onboarding into a subnet scanner.
+	// Older umbrelOS releases predate the _umbrel._tcp advertisement, and some networks
+	// answer .local hostname lookups while filtering DNS-SD service browsing. Probe only a
+	// small set of default hostnames in parallel; a custom hostname outside this list
+	// remains intentionally undiscoverable rather than turning onboarding into a subnet
+	// scanner.
 
 	internal static readonly string[] FallbackDiscoveryHosts =
 	[
@@ -720,61 +1030,240 @@ public static partial class Umbreld
 	];
 
 	/// <summary>
-	/// Runs beside normal discovery and reports hosts that answer system.version as
-	/// umbrelOS but return 404 for system.localHttpsIdentity (see ProbeLegacyOnlyHostAsync).
-	/// These plaintext responses never create trust, store state, or enable
-	/// authentication; they are an update hint only.
+	/// Runs beside normal discovery. A host whose public version endpoint reports umbrelOS
+	/// 2.0 or later is then identified exactly like a DNS-SD candidate, so a current Umbrel
+	/// still appears when DNS-SD misses it; one that can't prove its identity is reported as
+	/// unverified. Only an older version becomes an update hint, handed to onUpdateRequired
+	/// as soon as the version probes finish. The plaintext version response never creates
+	/// trust, stores state, or enables authentication.
 	/// </summary>
-	public static async Task<IReadOnlyList<UpdateRequiredDevice>> DiscoverFallbackHostsAsync(CancellationToken ct)
+	public static Task<FallbackDiscoveryResult> DiscoverFallbackHostsAsync(
+		IReadOnlySet<string> knownDeviceIds,
+		Func<IReadOnlyList<UpdateRequiredDevice>, Task> onUpdateRequired,
+		CancellationToken ct) =>
+		DiscoverFallbackHostsAsync(
+			knownDeviceIds,
+			FallbackVersionAsync,
+			FallbackCandidateAsync,
+			(candidate, known, token) => IdentifyReportingFailureAsync(candidate, known, token),
+			QuietRetryDelay,
+			IdentificationDeadline,
+			onUpdateRequired,
+			ct);
+
+	/// <summary>Try again for an Umbrel the fallback scan reported as unverified.</summary>
+	public static async Task<HostIdentification> IdentifyAsync(
+		UnverifiedDevice device,
+		IReadOnlySet<string> knownDeviceIds,
+		CancellationToken ct)
 	{
-		var probes = await Task.WhenAll(FallbackDiscoveryHosts.Select(host => ProbeLegacyOnlyHostAsync(host, ct)))
-			.ConfigureAwait(false);
+		var candidate = await FallbackCandidateAsync(device.Host, ct).ConfigureAwait(false);
+		return await IdentifyWithinDeadlineAsync(
+			candidate,
+			IdentificationDeadline,
+			(resolved, token) => IdentifyReportingFailureAsync(resolved, knownDeviceIds, token),
+			ct).ConfigureAwait(false);
+	}
+
+	internal delegate Task<string?> FallbackVersionProbe(string host, CancellationToken ct);
+
+	internal delegate Task<Candidate> FallbackCandidateResolver(string host, CancellationToken ct);
+
+	internal delegate Task<HostIdentification> CandidateIdentifier(
+		Candidate candidate,
+		IReadOnlySet<string> knownDeviceIds,
+		CancellationToken ct);
+
+	internal static async Task<FallbackDiscoveryResult> DiscoverFallbackHostsAsync(
+		IReadOnlySet<string> knownDeviceIds,
+		FallbackVersionProbe version,
+		FallbackCandidateResolver candidate,
+		CandidateIdentifier identify,
+		TimeSpan retryDelay,
+		TimeSpan attemptDeadline,
+		Func<IReadOnlyList<UpdateRequiredDevice>, Task> onUpdateRequired,
+		CancellationToken ct)
+	{
+		var probes = await Task.WhenAll(FallbackDiscoveryHosts.Select(async host =>
+			(Host: host, Version: await version(host, ct).ConfigureAwait(false)))).ConfigureAwait(false);
 		ct.ThrowIfCancellationRequested();
-		return probes.OfType<UpdateRequiredDevice>().OrderBy(device => device.Host, StringComparer.Ordinal).ToList();
+		var answered = probes
+			.Where(probe => probe.Version is not null)
+			.Select(probe => (probe.Host, Version: probe.Version!))
+			.ToList();
+
+		// Older Umbrels need nothing more, so they show now, not after the identity checks
+		var updateRequired = answered
+			.Where(answer => RequiresUpdate(answer.Version))
+			.Select(answer => new UpdateRequiredDevice(answer.Host))
+			.OrderBy(device => device.Host, StringComparer.Ordinal)
+			.ToList();
+		await onUpdateRequired(updateRequired).ConfigureAwait(false);
+
+		var identifications = await Task.WhenAll(answered
+			.Where(answer => !RequiresUpdate(answer.Version))
+			.Select(async answer =>
+			{
+				var resolved = await candidate(answer.Host, ct).ConfigureAwait(false);
+				return await IdentifyWithQuietRetryAsync(
+					retryDelay,
+					() => IdentifyWithinDeadlineAsync(
+						resolved,
+						attemptDeadline,
+						(attempted, token) => identify(attempted, knownDeviceIds, token),
+						ct),
+					ct).ConfigureAwait(false);
+			})).ConfigureAwait(false);
+		ct.ThrowIfCancellationRequested();
+
+		// A saved Umbrel whose identity changed is left to the saved device's own handling
+		var devices = UniqueUmbrels(identifications.OfType<HostIdentification.Device>().Select(found => found.Value));
+		// A second name for an Umbrel that did prove itself isn't a separate failure
+		var verifiedLocations = devices
+			.SelectMany(device => new[] { device.Host, device.DiscoveryHost }.Concat(device.Addresses))
+			.Select(location => location.ToLowerInvariant())
+			.ToHashSet(StringComparer.Ordinal);
+		var unverified = identifications
+			.OfType<HostIdentification.Unverified>()
+			.Select(failed => failed.Value)
+			.Where(device => !new[] { device.Host }.Concat(device.Addresses)
+				.Any(location => verifiedLocations.Contains(location.ToLowerInvariant())))
+			.OrderBy(device => device.Host, StringComparer.Ordinal)
+			.ToList();
+		return new FallbackDiscoveryResult(devices, unverified, updateRequired);
+	}
+
+	/// <summary>
+	/// Identifies a candidate as IdentifyCandidateAsync does, and says why it failed. An
+	/// attempt that ran out of time means the Umbrel is slow; once it has answered and then
+	/// run out of time, its other addresses would only wait the same way, so they're skipped.
+	/// </summary>
+	internal static async Task<HostIdentification> IdentifyReportingFailureAsync(
+		Candidate candidate,
+		IReadOnlySet<string> knownDeviceIds,
+		CancellationToken ct,
+		bool allowsTailscaleHost = false)
+	{
+		// IdentifyCandidateAsync probes one address at a time
+		var timedOut = false;
+		var answeredSlowly = false;
+		var failedSavedPin = false;
+		var device = await IdentifyCandidateAsync(
+			candidate,
+			knownDeviceIds,
+			ct,
+			allowsTailscaleHost: allowsTailscaleHost,
+			probe: async (host, expectedDeviceId, token) =>
+			{
+				if (answeredSlowly) return null;
+				try
+				{
+					return await VerifiedLocalHttpsIdentityAsync(host, expectedDeviceId, token).ConfigureAwait(false);
+				}
+				catch (OperationCanceledException) when (token.IsCancellationRequested)
+				{
+					throw;
+				}
+				catch (IdentityResponseTimeoutException)
+				{
+					timedOut = true;
+					answeredSlowly = true;
+				}
+				catch (Exception error) when (IsTimeout(error))
+				{
+					timedOut = true;
+				}
+				catch (Exception error) when (expectedDeviceId is not null && IsIdentityChange(error))
+				{
+					// These candidates carry no TXT hint, so a pinned probe only follows a
+					// first-use proof of a saved id. Only a rejected pin means its identity
+					// changed; a refused connection or unreadable storage is temporary.
+					failedSavedPin = true;
+				}
+				catch (Exception)
+				{
+				}
+				return null;
+			}).ConfigureAwait(false);
+		if (device is not null) return new HostIdentification.Device(device);
+		if (failedSavedPin) return new HostIdentification.SavedIdentityChanged();
+		return new HostIdentification.Unverified(new UnverifiedDevice(
+			candidate.Host,
+			candidate.Addresses,
+			timedOut ? UnverifiedReason.Slow : UnverifiedReason.Unexpected));
+	}
+
+	// A request that ran out of time, including a connection that never completed
+	private static bool IsTimeout(Exception error) =>
+		error is UmbreldException { TimedOut: true } or OperationCanceledException { InnerException: TimeoutException };
+
+	/// <summary>
+	/// One identification attempt, bounded as a whole: however many addresses it tries, a
+	/// host that hasn't proven itself by the deadline is reported as slow.
+	/// </summary>
+	internal static async Task<HostIdentification> IdentifyWithinDeadlineAsync(
+		Candidate candidate,
+		TimeSpan deadline,
+		Func<Candidate, CancellationToken, Task<HostIdentification>> identify,
+		CancellationToken ct) =>
+		await WithDeadlineAsync<HostIdentification>(
+			deadline,
+			async token => await identify(candidate, token).ConfigureAwait(false),
+			ct).ConfigureAwait(false)
+		?? new HostIdentification.Unverified(new UnverifiedDevice(candidate.Host, candidate.Addresses, UnverifiedReason.Slow));
+
+	/// <summary>
+	/// Asks once more after a moment when an attempt failed in an unexpected way, as an
+	/// Umbrel that's still starting can refuse connections briefly. A slow Umbrel isn't
+	/// asked again: that would only double the wait.
+	/// </summary>
+	internal static async Task<HostIdentification> IdentifyWithQuietRetryAsync(
+		TimeSpan retryDelay,
+		Func<Task<HostIdentification>> attempt,
+		CancellationToken ct)
+	{
+		var first = await attempt().ConfigureAwait(false);
+		if (first is not HostIdentification.Unverified { Value.Reason: UnverifiedReason.Unexpected }) return first;
+		await Task.Delay(retryDelay, ct).ConfigureAwait(false);
+		return await attempt().ConfigureAwait(false);
+	}
+
+	// Shaped like a DNS-SD candidate: the hostname, then its IPv4 addresses in case the
+	// hostname's own route fails while an address works
+	private static async Task<Candidate> FallbackCandidateAsync(string host, CancellationToken ct)
+	{
+		var addresses = await IPv4HostResolver.ResolveAsync(host, ct, FallbackAddressTimeout).ConfigureAwait(false);
+		return new Candidate(
+			host,
+			addresses.Where(SavedDevice.IsSupportedManualIPv4Address).ToList(),
+			FallbackDeviceName(host));
+	}
+
+	// DNS-SD names an Umbrel after its hostname, so "umbrel-2.local" becomes "umbrel-2"
+	internal static string FallbackDeviceName(string host) =>
+		host.EndsWith(".local", StringComparison.Ordinal) ? host[..^".local".Length] : host;
+
+	/// <summary>
+	/// umbrelOS 2.0 introduced everything the apps need to connect: the _umbrel._tcp
+	/// advertisement, system.localHttpsIdentity and system.discoveryInfo. Its betas shipped
+	/// them too, so only the major version decides. A version that can't be read is never
+	/// reported as too old.
+	/// </summary>
+	internal static bool RequiresUpdate(string version)
+	{
+		var major = new string(version.TakeWhile(char.IsAsciiDigit).ToArray());
+		return int.TryParse(major, NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value < 2;
 	}
 
 	private sealed record SystemVersion(string Version, string Name);
 
-	// A default name such as umbrel.local is often an alias that a current Umbrel also
-	// answers to, sometimes only over a flaky IPv6 link-local route, so neither hostname
-	// matching nor a failed identity probe proves a host is old. Report an update only
-	// on positive evidence: the host answers the public version endpoint as umbrelOS and
-	// rejects system.localHttpsIdentity as an unknown procedure (HTTP 404), which every
-	// release that supports the native apps serves. A timeout or any other answer is
-	// treated as unknown and produces no hint.
-	private static async Task<UpdateRequiredDevice?> ProbeLegacyOnlyHostAsync(string host, CancellationToken ct)
-	{
-		var device = await ProbeFallbackHostAsync(host, ct).ConfigureAwait(false);
-		if (device is null) return null;
-		return await LacksNativeIdentityEndpointAsync(host, ct).ConfigureAwait(false) ? device : null;
-	}
-
-	private static async Task<bool> LacksNativeIdentityEndpointAsync(string host, CancellationToken ct)
-	{
-		try
-		{
-			var request = LocalHttpsTransport.Request(HttpMethod.Get, PlainUri(host, "/trpc/system.localHttpsIdentity"));
-			var result = await LocalHttpsTransport
-				.FallbackDiscoveryDataAsync(request, FallbackResponseMaximumBytes, ct)
-				.ConfigureAwait(false);
-			return result.Status == 404;
-		}
-		catch (OperationCanceledException) when (ct.IsCancellationRequested)
-		{
-			throw;
-		}
-		catch (Exception)
-		{
-			return false;
-		}
-	}
-
-	private static async Task<UpdateRequiredDevice?> ProbeFallbackHostAsync(string host, CancellationToken ct)
+	private static async Task<string?> FallbackVersionAsync(string host, CancellationToken ct)
 	{
 		if (ct.IsCancellationRequested) return null;
 		try
 		{
-			await SystemVersionAsync(host, ct).ConfigureAwait(false);
+			var version = await SystemVersionAsync(host, ct).ConfigureAwait(false);
+			return ct.IsCancellationRequested ? null : version;
 		}
 		catch (OperationCanceledException) when (ct.IsCancellationRequested)
 		{
@@ -784,21 +1273,21 @@ public static partial class Umbreld
 		{
 			return null;
 		}
-		return ct.IsCancellationRequested ? null : new UpdateRequiredDevice(host);
 	}
 
-	private static async Task SystemVersionAsync(string host, CancellationToken ct)
+	private static async Task<string> SystemVersionAsync(string host, CancellationToken ct)
 	{
 		var request = LocalHttpsTransport.Request(HttpMethod.Get, PlainUri(host, "/trpc/system.version"));
 		var result = await LocalHttpsTransport
 			.FallbackDiscoveryDataAsync(request, FallbackResponseMaximumBytes, ct)
 			.ConfigureAwait(false);
-		ValidateFallbackSystemVersion(result);
+		return ValidateFallbackSystemVersion(result);
 	}
 
 	// system.version has returned both fields since umbrelOS 1.0. Requiring its stable
-	// product name avoids mistaking an unrelated service for an old Umbrel.
-	internal static void ValidateFallbackSystemVersion(HttpResult result)
+	// product name avoids mistaking an unrelated service for an Umbrel. The version is still
+	// only an untrusted HTTP hint; native identity is established elsewhere.
+	internal static string ValidateFallbackSystemVersion(HttpResult result)
 	{
 		var response = DecodeEnvelope<SystemVersion>(result, "system.version");
 		if (!response.Name.StartsWith("umbrelOS ", StringComparison.Ordinal) ||
@@ -807,6 +1296,7 @@ public static partial class Umbreld
 		{
 			throw new UmbreldException(result.Status, "system.version: not an umbrelOS response");
 		}
+		return response.Version;
 	}
 
 	// ── Avatars ──
@@ -1055,11 +1545,8 @@ public static partial class Umbreld
 		{
 			// Treat every endpoint as an untrusted route. The device's pinned CA, not the
 			// shape of its address, proves where native credentials may be sent.
-			var identity = (await VerifiedLocalHttpsIdentityAsync(host, expectedDeviceId, ct).ConfigureAwait(false)).DiscoveryInfo;
-			return identity.Id == expectedDeviceId
-				? new EndpointVerification.Verified()
-				: new EndpointVerification.Rejected(EndpointRejectionKind.Trust,
-					LocalHttpsTransportException.Describe(LocalHttpsTransportErrorKind.IdentityChanged));
+			await RequirePinnedIdentityAsync(host, expectedDeviceId, ct).ConfigureAwait(false);
+			return new EndpointVerification.Verified();
 		}
 		catch (OperationCanceledException)
 		{
@@ -1369,7 +1856,7 @@ public static partial class Umbreld
 		}
 		catch (RequestTimeoutException)
 		{
-			throw new UmbreldException(0, $"Could not reach {host}", UmbreldErrorKind.Connectivity);
+			throw new UmbreldException(0, $"Could not reach {host}", UmbreldErrorKind.Connectivity, timedOut: true);
 		}
 		catch (HttpRequestException error) when (IsServerTrustError(error))
 		{

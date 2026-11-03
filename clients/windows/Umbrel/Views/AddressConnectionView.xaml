@@ -72,13 +72,47 @@
 
     <!-- Replaces Connect: this Umbrel has to be updated in the browser first. -->
     <StackPanel Margin="0,14,0,0" Visibility="{Binding ShowUpdateRequired, Converter={StaticResource BoolToVisibility}}">
-      <TextBlock Text="Update required" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
+      <TextBlock Text="Update to connect" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
       <TextBlock Text="This Umbrel needs to be updated before it can connect to the app." Style="{StaticResource MutedText}" FontSize="10" Margin="0,8,0,0" />
-      <Button Style="{StaticResource PillButton}" Content="Open Umbrel" Margin="0,8,0,0" Command="{Binding OpenUpdateRequiredCommand}" />
+      <Button Style="{StaticResource PillButton}" Content="Update umbrelOS" Margin="0,8,0,0" Command="{Binding OpenUpdateRequiredCommand}" />
+    </StackPanel>
+
+    <!-- Replaces Connect: a current Umbrel answered here but couldn't prove its identity. -->
+    <StackPanel Margin="0,14,0,0" Visibility="{Binding ShowUnverified, Converter={StaticResource BoolToVisibility}}">
+      <TextBlock Text="Couldn&#x2019;t connect" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
+      <TextBlock Text="{Binding Unverified.Explanation}" Style="{StaticResource MutedText}" FontSize="10" Margin="0,8,0,0" />
+      <!-- Try again fills the row like the Connect button it replaces. -->
+      <Grid Margin="0,8,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Button Style="{StaticResource IndigoPillButton}" Command="{Binding ConnectCommand}" AutomationProperties.Name="Try again">
+          <!-- Hidden rather than collapsed so the button keeps its size while the spinner shows. -->
+          <Grid>
+            <TextBlock Text="Try again">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Busy}" Value="True">
+                      <Setter Property="Visibility" Value="Hidden" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+            <v:Spinner Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}" />
+          </Grid>
+        </Button>
+        <Button Grid.Column="1" Style="{StaticResource LinkButton}" Margin="14,0,0,0" VerticalAlignment="Center"
+                Command="{Binding OpenUnverifiedCommand}" AutomationProperties.Name="Open in browser">
+          <TextBlock Text="Open in browser" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
+        </Button>
+      </Grid>
     </StackPanel>
 
     <Button Style="{StaticResource IndigoPillButton}" Margin="0,12,0,0" Command="{Binding ConnectCommand}" AutomationProperties.Name="Connect"
-            Visibility="{Binding ShowUpdateRequired, Converter={StaticResource InverseBoolToVisibility}}">
+            Visibility="{Binding ShowConnect, Converter={StaticResource BoolToVisibility}}">
       <!-- Hidden rather than collapsed so the button keeps its height while the spinner shows. -->
       <Grid>
         <TextBlock Text="Connect">

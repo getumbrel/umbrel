@@ -12,6 +12,10 @@ public partial class DeviceIcon : UserControl
 		nameof(Kind), typeof(UmbrelDeviceKind), typeof(DeviceIcon),
 		new PropertyMetadata(UmbrelDeviceKind.Generic, (sender, _) => ((DeviceIcon)sender).UpdateKind()));
 
+	public static readonly DependencyProperty PlacementProperty = DependencyProperty.Register(
+		nameof(Placement), typeof(DeviceIconPlacement), typeof(DeviceIcon),
+		new PropertyMetadata(DeviceIconPlacement.ListRow, (sender, _) => ((DeviceIcon)sender).UpdateSize()));
+
 	public DeviceIcon()
 	{
 		InitializeComponent();
@@ -25,6 +29,12 @@ public partial class DeviceIcon : UserControl
 		set => SetValue(KindProperty, value);
 	}
 
+	public DeviceIconPlacement Placement
+	{
+		get => (DeviceIconPlacement)GetValue(PlacementProperty);
+		set => SetValue(PlacementProperty, value);
+	}
+
 	private bool IsPi => Kind == UmbrelDeviceKind.RaspberryPi;
 
 	private void UpdateKind()
@@ -34,7 +44,16 @@ public partial class DeviceIcon : UserControl
 		PiMark.Source = IsPi ? source : null;
 		Render.Visibility = IsPi ? Visibility.Collapsed : Visibility.Visible;
 		PiTile.Visibility = IsPi ? Visibility.Visible : Visibility.Collapsed;
+		UpdateSize();
 		UpdateTile();
+	}
+
+	// Explicit width and height for the kind's box in this placement, as on macOS.
+	private void UpdateSize()
+	{
+		var size = Presentation.DeviceIconSize(Placement, Kind);
+		Width = size.Width;
+		Height = size.Height;
 	}
 
 	// macOS proportions: square tile on the shorter side, 27/128 radius, mark at half size.

@@ -48,20 +48,7 @@
     <Border Background="{StaticResource CardBrush}" CornerRadius="20" Padding="20"
             Visibility="{Binding SingleUnsaved, Converter={StaticResource NullToVisibility}}">
       <StackPanel HorizontalAlignment="Center" DataContext="{Binding SingleUnsaved}">
-        <v:DeviceIcon Kind="{Binding Kind}" HorizontalAlignment="Center">
-          <v:DeviceIcon.Style>
-            <Style TargetType="v:DeviceIcon">
-              <Setter Property="Width" Value="108" />
-              <Setter Property="Height" Value="80" />
-              <Style.Triggers>
-                <DataTrigger Binding="{Binding Kind}" Value="Pro">
-                  <Setter Property="Width" Value="162" />
-                  <Setter Property="Height" Value="99" />
-                </DataTrigger>
-              </Style.Triggers>
-            </Style>
-          </v:DeviceIcon.Style>
-        </v:DeviceIcon>
+        <v:DeviceIcon Kind="{Binding Kind}" Placement="WelcomeCard" HorizontalAlignment="Center" />
         <TextBlock Text="{Binding DisplayName}" FontSize="17" FontWeight="Bold" Foreground="{StaticResource TitleBrush}"
                    TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" Margin="0,16,0,8" />
         <!-- No secondary label: an unsaved device has no connected route yet. -->
@@ -102,22 +89,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <v:DeviceIcon Kind="{Binding Kind}" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <v:DeviceIcon.Style>
-                      <Style TargetType="v:DeviceIcon">
-                        <Setter Property="Width" Value="33" />
-                        <Setter Property="Height" Value="31" />
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding Kind}" Value="Pro">
-                            <Setter Property="Width" Value="45" />
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding Kind}" Value="RaspberryPi">
-                            <Setter Property="Height" Value="33" />
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </v:DeviceIcon.Style>
-                  </v:DeviceIcon>
+                  <v:DeviceIcon Kind="{Binding Kind}" Placement="ListRow" HorizontalAlignment="Center" VerticalAlignment="Center" />
                   <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TitleBrush}"
                                TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
@@ -128,6 +100,54 @@
                              Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
                 </Grid>
               </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- Current Umbrels at a common hostname that couldn't prove their identity: try
+             again, or open umbrelOS in a browser, where it may still load. -->
+        <ItemsControl ItemsSource="{Binding UnverifiedRows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="{StaticResource CardBrush}" CornerRadius="16" Padding="16" Margin="0,0,0,4">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="45" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <v:DeviceIcon Placement="ListRow" HorizontalAlignment="Center" VerticalAlignment="Top" />
+                  <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                    <TextBlock Text="Couldn&#x2019;t connect" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TitleBrush}" />
+                    <TextBlock Text="{Binding Host}" FontSize="11" Margin="0,2,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Explanation}" Style="{StaticResource MutedText}" FontSize="10" Margin="0,6,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                      <Button Style="{StaticResource PillButton}" AutomationProperties.Name="Try again"
+                              Command="{Binding DataContext.RetryUnverifiedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}">
+                        <!-- Hidden rather than collapsed so the button keeps its size while the spinner shows. -->
+                        <Grid>
+                          <TextBlock Text="Try again">
+                            <TextBlock.Style>
+                              <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding IsRetrying}" Value="True">
+                                    <Setter Property="Visibility" Value="Hidden" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </TextBlock.Style>
+                          </TextBlock>
+                          <v:Spinner Visibility="{Binding IsRetrying, Converter={StaticResource BoolToVisibility}}" />
+                        </Grid>
+                      </Button>
+                      <Button Style="{StaticResource LinkButton}" Margin="14,0,0,0" VerticalAlignment="Center"
+                              Command="{Binding DataContext.OpenUnverifiedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}" AutomationProperties.Name="Open in browser">
+                        <TextBlock Text="Open in browser" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
+                      </Button>
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -144,7 +164,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <v:DeviceIcon Width="33" Height="31" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <v:DeviceIcon Placement="ListRow" HorizontalAlignment="Center" VerticalAlignment="Center" />
                   <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
                     <TextBlock Text="Update to connect" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TitleBrush}" />
                     <TextBlock Text="{Binding Host}" FontSize="11" Margin="0,2,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />

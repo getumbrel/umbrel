@@ -53,7 +53,53 @@ public class LocalHttpsTrustTests
 		await Assert.ThrowsAsync<HttpRequestException>(() => RequestAsync(ca, leaf));
 	}
 
-	private static async Task<HttpStatusCode> RequestAsync(X509Certificate2 pinned, X509Certificate2 serverCertificate)
+	// A reset Umbrel answers with a new CA. That's a changed identity; a certificate from
+	// the pinned CA that fails another check isn't.
+	[Fact]
+	public async Task ReportsACertificateFromAnotherCaAsAChangedIdentity()
+	{
+		using var ca = CreateCa();
+		using var otherCa = CreateCa();
+		using var leaf = CreateLeaf(otherCa, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30), ServerAuth);
+		var error = await Assert.ThrowsAsync<LocalHttpsTransportException>(() => CandidateRequestAsync(ca, leaf));
+		Assert.Equal(LocalHttpsTransportErrorKind.IdentityChanged, error.Kind);
+	}
+
+	[Fact]
+	public async Task ReportsAnExpiredCertificateFromThePinnedCaAsAFailedCheck()
+	{
+		using var ca = CreateCa();
+		using var leaf = CreateLeaf(ca, DateTimeOffset.UtcNow.AddDays(-5), DateTimeOffset.UtcNow.AddDays(-1), ServerAuth);
+		var error = await Assert.ThrowsAsync<LocalHttpsTransportException>(() => CandidateRequestAsync(ca, leaf));
+		Assert.Equal(LocalHttpsTransportErrorKind.TrustFailed, error.Kind);
+	}
+
+	[Fact]
+	public async Task ReportsAClientCertificateFromThePinnedCaAsAFailedCheck()
+	{
+		using var ca = CreateCa();
+		using var leaf = CreateLeaf(ca, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30), ClientAuth);
+		var error = await Assert.ThrowsAsync<LocalHttpsTransportException>(() => CandidateRequestAsync(ca, leaf));
+		Assert.Equal(LocalHttpsTransportErrorKind.TrustFailed, error.Kind);
+	}
+
+	private static Task<HttpStatusCode> RequestAsync(X509Certificate2 pinned, X509Certificate2 serverCertificate) =>
+		ServeAsync(serverCertificate, async port =>
+		{
+			using var anchor = X509CertificateLoader.LoadCertificate(pinned.RawData);
+			using var http = LocalHttpsTransport.CreatePinnedClient(anchor);
+			using var response = await http.GetAsync($"https://127.0.0.1:{port}/", Ct);
+			return response.StatusCode;
+		});
+
+	private static Task<HttpResult> CandidateRequestAsync(X509Certificate2 pinned, X509Certificate2 serverCertificate) =>
+		ServeAsync(serverCertificate, port => LocalHttpsTransport.DataAsync(
+			LocalHttpsTransport.Request(HttpMethod.Get, new Uri($"https://127.0.0.1:{port}/")),
+			pinned.RawData,
+			TimeSpan.FromSeconds(10),
+			Ct));
+
+	private static async Task<T> ServeAsync<T>(X509Certificate2 serverCertificate, Func<int, Task<T>> request)
 	{
 		var listener = new TcpListener(IPAddress.Loopback, 0);
 		listener.Start();
@@ -85,12 +131,9 @@ public class LocalHttpsTrustTests
 			}
 		}, Ct);
 
-		using var anchor = X509CertificateLoader.LoadCertificate(pinned.RawData);
-		using var http = LocalHttpsTransport.CreatePinnedClient(anchor);
 		try
 		{
-			using var response = await http.GetAsync($"https://127.0.0.1:{port}/", Ct);
-			return response.StatusCode;
+			return await request(port);
 		}
 		finally
 		{

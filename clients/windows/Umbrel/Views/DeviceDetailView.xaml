@@ -49,20 +49,7 @@
     <StackPanel Margin="0,20,0,0">
       <StackPanel Margin="24,0">
         <!-- Header -->
-        <v:DeviceIcon Kind="{Binding Kind}" HorizontalAlignment="Left">
-          <v:DeviceIcon.Style>
-            <Style TargetType="v:DeviceIcon">
-              <Setter Property="Width" Value="62" />
-              <Setter Property="Height" Value="46" />
-              <Style.Triggers>
-                <DataTrigger Binding="{Binding Kind}" Value="Pro">
-                  <Setter Property="Width" Value="80" />
-                  <Setter Property="Height" Value="57" />
-                </DataTrigger>
-              </Style.Triggers>
-            </Style>
-          </v:DeviceIcon.Style>
-        </v:DeviceIcon>
+        <v:DeviceIcon Kind="{Binding Kind}" Placement="DetailHeader" HorizontalAlignment="Left" />
         <TextBlock FontSize="17" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,14,0,4">
           <Run Text="{Binding UserNamePart, Mode=OneWay}" /><Run Text="{Binding ModelPart, Mode=OneWay}">
             <Run.Style>
@@ -85,7 +72,14 @@
 
         <!-- Offline -->
         <StackPanel Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=Offline}">
-          <TextBlock Text="Device is offline" FontSize="13" Foreground="#66FFFFFF" />
+          <TextBlock Text="Device is offline" FontSize="13" Foreground="#66FFFFFF"
+                     Visibility="{Binding ShowIdentityChanged, Converter={StaticResource InverseBoolToVisibility}}" />
+          <!-- A new identity, as after a certificate reset. Reconnect forgets the Umbrel. -->
+          <StackPanel Visibility="{Binding ShowIdentityChanged, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{x:Static vm:IdentityChange.Title}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
+            <TextBlock Text="{x:Static vm:IdentityChange.Message}" FontSize="12" Foreground="#80FFFFFF" Margin="0,6,0,0" />
+            <Button Style="{StaticResource PillButton}" Content="{Binding ReconnectText}" Margin="0,12,0,0" Click="Reconnect_Click" />
+          </StackPanel>
           <Button Style="{StaticResource PillButton}" Content="Connect" Margin="0,12,0,0" Command="{Binding ConnectWhileOfflineCommand}"
                   Visibility="{Binding ShowOfflineConnect, Converter={StaticResource BoolToVisibility}}" />
         </StackPanel>

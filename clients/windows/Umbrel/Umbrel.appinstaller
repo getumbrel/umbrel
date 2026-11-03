@@ -12,12 +12,12 @@
 -->
 <AppInstaller
   xmlns="http://schemas.microsoft.com/appx/appinstaller/2017/2"
-  Version="0.1.2.3"
+  Version="0.1.3.4"
   Uri="https://download.umbrel.com/windows/Umbrel.appinstaller">
   <MainPackage
     Name="Umbrel.Umbrel"
     Publisher="CN=&quot;Umbrel, Inc.&quot;, O=&quot;Umbrel, Inc.&quot;, L=Claymont, S=Delaware, C=US"
-    Version="0.1.2.3"
+    Version="0.1.3.4"
     ProcessorArchitecture="x64"
-    Uri="https://download.umbrel.com/windows/Umbrel-0.1.2.3-x64.msix" />
+    Uri="https://download.umbrel.com/windows/Umbrel-0.1.3.4-x64.msix" />
 </AppInstaller>

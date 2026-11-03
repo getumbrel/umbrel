@@ -2,7 +2,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using System.Windows.Threading;
 using Umbrel.Interop;
 using Umbrel.Services;
 using Umbrel.ViewModels;
@@ -13,13 +12,15 @@ namespace Umbrel.Tray;
 /// The notification-area icon, driven directly through Shell_NotifyIcon with
 /// NOTIFYICON_VERSION_4 so left click, keyboard select, and context-menu requests
 /// arrive as distinct events with anchor coordinates. A hidden top-level tool window
-/// receives the callbacks and the TaskbarCreated broadcast that follows an Explorer
-/// restart, after which the icon is added again.
+/// receives the callbacks and two broadcasts that a message-only window would miss:
+/// TaskbarCreated after an Explorer restart, when the icon is added again, and
+/// WM_SETTINGCHANGE, when the glyph is matched to the Windows colour mode again.
 /// </summary>
 public sealed class TrayIcon : IDisposable
 {
 	private const uint IconId = 1;
 	private const uint CallbackMessage = NativeMethods.WM_APP + 1;
+	private const int WM_SETTINGCHANGE = 0x001A;
 	private const int WS_POPUP = unchecked((int)0x80000000);
 	private const int WS_EX_TOOLWINDOW = 0x80;
 
@@ -28,7 +29,6 @@ public sealed class TrayIcon : IDisposable
 	private readonly ShellViewModel _shell;
 	private readonly HwndSource _source;
 	private readonly uint _taskbarCreatedMessage;
-	private readonly DispatcherTimer _themeTimer;
 	private IntPtr _icon;
 	private bool _added;
 	private bool _alert;
@@ -62,11 +62,6 @@ public sealed class TrayIcon : IDisposable
 			if (e.PropertyName is nameof(AppState.ShowsAlertIcon) or null) Refresh();
 		};
 		_state.Notification += ShowBalloon;
-		// UISettings has no supported change event for desktop apps; re-read the colour
-		// mode occasionally so a light/dark switch does not strand the wrong glyph.
-		_themeTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(30) };
-		_themeTimer.Tick += (_, _) => Refresh();
-		_themeTimer.Start();
 		_ = RefreshLaunchAtLoginAsync();
 	}
 
@@ -114,6 +109,7 @@ public sealed class TrayIcon : IDisposable
 
 	private void Refresh()
 	{
+		if (_disposed) return;
 		var dark = SystemTheme.IsDarkMode();
 		var alert = _state.ShowsAlertIcon;
 		if (dark == _dark && alert == _alert && _icon != IntPtr.Zero) return;
@@ -174,8 +170,19 @@ public sealed class TrayIcon : IDisposable
 			}
 			return IntPtr.Zero;
 		}
+		// Broadcast after a system setting changes, with "ImmersiveColorSet" for a colour mode
+		// change. Any change re-reads the mode, since some senders pass no area name, and
+		// Refresh returns early when the glyph is already right. Posted so the sender isn't
+		// held up while Explorer swaps the icon.
+		if (msg == WM_SETTINGCHANGE)
+		{
+			_source.Dispatcher.BeginInvoke(Refresh);
+			return IntPtr.Zero;
+		}
 		if (_taskbarCreatedMessage != 0 && msg == (int)_taskbarCreatedMessage)
 		{
+			// The new taskbar draws in the current colour mode, so match it before adding.
+			_dark = SystemTheme.IsDarkMode();
 			_added = false;
 			Add();
 			handled = true;
@@ -274,7 +281,6 @@ public sealed class TrayIcon : IDisposable
 	{
 		if (_disposed) return;
 		_disposed = true;
-		_themeTimer.Stop();
 		_state.Notification -= ShowBalloon;
 		if (_added)
 		{

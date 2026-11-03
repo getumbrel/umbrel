@@ -21,9 +21,12 @@ public partial class AddressConnectionView : UserControl
 	}
 
 	// The field is disabled while connecting, which drops focus. After a failure, hand it
-	// back so the address can be corrected right away.
+	// back so the address can be corrected right away, or Enter can try again.
 	private void AddressBox_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
 	{
-		if (AddressBox.IsEnabled && DataContext is AddressConnectionViewModel { HasError: true }) AddressBox.Focus();
+		if (AddressBox.IsEnabled && DataContext is AddressConnectionViewModel { HasError: true } or AddressConnectionViewModel { ShowUnverified: true })
+		{
+			AddressBox.Focus();
+		}
 	}
 }

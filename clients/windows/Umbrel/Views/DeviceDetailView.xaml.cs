@@ -36,6 +36,23 @@ public partial class DeviceDetailView : UserControl
 		}
 	}
 
+	// Reconnecting forgets the Umbrel, so the next sign-in trusts whatever answers then. It
+	// asks first, with Cancel as the default.
+	private void Reconnect_Click(object sender, RoutedEventArgs e)
+	{
+		if (_vm is null || _vm.ReconnectCommand.IsRunning) return;
+		if (!ConfirmDialog.Show(
+			Window.GetWindow(this),
+			IdentityChange.ConfirmTitle,
+			IdentityChange.ConfirmMessage,
+			"Reconnect",
+			defaultToCancel: true))
+		{
+			return;
+		}
+		_vm.ReconnectCommand.Execute(null);
+	}
+
 	// Like macOS, turning HTTPS on asks first; turning it off doesn't.
 	private void HttpsToggle_Click(object sender, RoutedEventArgs e)
 	{

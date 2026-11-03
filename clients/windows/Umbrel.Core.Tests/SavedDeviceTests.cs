@@ -168,7 +168,12 @@ public class SavedDeviceTests
 	[Theory]
 	[InlineData("Umbrel Home", UmbrelDeviceKind.Home)]
 	[InlineData("umbrel pro", UmbrelDeviceKind.Pro)]
+	[InlineData("ASUS NUC 14 Essential", UmbrelDeviceKind.AsusNuc14Essential)]
+	[InlineData("ASUS NUC 16 Pro", UmbrelDeviceKind.AsusNuc16Pro)]
+	[InlineData("ASUS ROG NUC 16", UmbrelDeviceKind.AsusRogNuc16)]
 	[InlineData("Raspberry Pi 5", UmbrelDeviceKind.RaspberryPi)]
+	// umbreld names an ASUS NUC it has no render for just "ASUS NUC"
+	[InlineData("ASUS NUC", UmbrelDeviceKind.Generic)]
 	[InlineData("Docker Container", UmbrelDeviceKind.Generic)]
 	[InlineData(null, UmbrelDeviceKind.Generic)]
 	public void DeviceKindClassifiesModels(string? model, UmbrelDeviceKind expected) =>

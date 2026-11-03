@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Security;
@@ -26,8 +27,7 @@ public sealed class LocalHttpsTransportException(LocalHttpsTransportErrorKind ki
 	{
 		LocalHttpsTransportErrorKind.NotEnrolled => "This Umbrel has not established a secure connection yet",
 		LocalHttpsTransportErrorKind.InvalidCertificate => "This Umbrel returned an invalid security certificate",
-		LocalHttpsTransportErrorKind.IdentityChanged =>
-			"This Umbrel’s security identity changed. Remove it and add it again to reconnect",
+		LocalHttpsTransportErrorKind.IdentityChanged => "Can’t confirm this is your Umbrel. Its security identity changed",
 		LocalHttpsTransportErrorKind.StorageUnavailable => "Secure connection storage is temporarily unavailable",
 		_ => "Couldn’t verify this Umbrel’s secure connection",
 	};
@@ -122,10 +122,31 @@ public static class LocalHttpsTransport
 		{
 			throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.InvalidCertificate);
 		}
+		var refusals = new CertificateRefusals();
 		using (anchor)
-		using (var client = CreatePinnedClient(anchor))
+		using (var client = CreatePinnedClient(anchor, refusals))
 		{
-			return await SendBoundedAsync(client, request, timeout, CandidateResponseMaximumBytes, ct).ConfigureAwait(false);
+			return await ExplainingRefusalAsync(
+				refusals,
+				() => SendBoundedAsync(client, request, timeout, CandidateResponseMaximumBytes, ct)).ConfigureAwait(false);
+		}
+	}
+
+	/// <summary>
+	/// TLS reports a refused certificate only as a failed handshake. Say why it was refused
+	/// when that happened during this request.
+	/// </summary>
+	internal static async Task<HttpResult> ExplainingRefusalAsync(CertificateRefusals refusals, Func<Task<HttpResult>> send)
+	{
+		var started = Stopwatch.GetTimestamp();
+		try
+		{
+			return await send().ConfigureAwait(false);
+		}
+		catch (HttpRequestException error) when (error.InnerException is AuthenticationException &&
+			refusals.Since(started) is { } kind)
+		{
+			throw new LocalHttpsTransportException(kind);
 		}
 	}
 
@@ -170,7 +191,7 @@ public static class LocalHttpsTransport
 		Pool.Remove(deviceId);
 	}
 
-	internal static HttpClient CreatePinnedClient(X509Certificate2 anchor)
+	internal static HttpClient CreatePinnedClient(X509Certificate2 anchor, CertificateRefusals? refusals = null)
 	{
 		// The anchor is copied so the pooled client's lifetime does not depend on the
 		// caller's certificate handle.
@@ -202,7 +223,11 @@ public static class LocalHttpsTransport
 					VerificationFlags = X509VerificationFlags.NoFlag,
 				},
 				RemoteCertificateValidationCallback = (_, certificate, chain, errors) =>
-					ValidateServerCertificate(pinnedAnchor, certificate, chain, errors),
+				{
+					var trusted = ValidateServerCertificate(pinnedAnchor, certificate, chain, errors);
+					if (!trusted) refusals?.Record(RefusalKind(pinnedAnchor, certificate, chain));
+					return trusted;
+				},
 			},
 		};
 		return new HttpClient(handler, disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
@@ -228,6 +253,39 @@ public static class LocalHttpsTransport
 		var root = chain.ChainElements[^1].Certificate;
 		if (!root.RawData.AsSpan().SequenceEqual(anchor.RawData)) return false;
 		return true;
+	}
+
+	// A certificate this Umbrel's CA didn't issue is a different identity, as after the
+	// Umbrel or its certificate is reset. Anything else is a failed check.
+	internal static LocalHttpsTransportErrorKind RefusalKind(
+		X509Certificate2 anchor,
+		X509Certificate? certificate,
+		X509Chain? chain) =>
+		certificate is not null && !IsIssuedBy(anchor, certificate, chain)
+			? LocalHttpsTransportErrorKind.IdentityChanged
+			: LocalHttpsTransportErrorKind.TrustFailed;
+
+	// Whether a refused server's certificate came from this anchor, however else it failed:
+	// dates a wrong clock disagrees with, or the wrong usage. The chain is built again with
+	// the anchor as its only root and judged by its signatures alone, so it reaches the
+	// anchor exactly when the anchor issued the certificate.
+	internal static bool IsIssuedBy(X509Certificate2 anchor, X509Certificate certificate, X509Chain? presented)
+	{
+		using var leaf = X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
+		using var chain = new X509Chain();
+		chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+		chain.ChainPolicy.CustomTrustStore.Add(anchor);
+		chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+		if (presented is not null)
+		{
+			foreach (var element in presented.ChainElements) chain.ChainPolicy.ExtraStore.Add(element.Certificate);
+		}
+		chain.Build(leaf);
+		if (chain.ChainElements.Count == 0) return false;
+		if (!chain.ChainElements[^1].Certificate.RawData.AsSpan().SequenceEqual(anchor.RawData)) return false;
+		const X509ChainStatusFlags notIssued =
+			X509ChainStatusFlags.NotSignatureValid | X509ChainStatusFlags.PartialChain | X509ChainStatusFlags.UntrustedRoot;
+		return chain.ChainElements.All(element => element.ChainElementStatus.All(status => (status.Status & notIssued) == 0));
 	}
 
 	internal static string NormalizeHost(string host) =>
@@ -289,14 +347,44 @@ public static class LocalHttpsTransport
 	}
 }
 
+/// <summary>
+/// Why a pinned client last refused a server's certificate, and when, so a failed request
+/// can say whether the Umbrel answered with a different identity. Accepted certificates
+/// aren't recorded: a handshake that succeeds on another connection meanwhile mustn't hide
+/// this request's refusal.
+/// </summary>
+internal sealed class CertificateRefusals
+{
+	private readonly object _gate = new();
+	private LocalHttpsTransportErrorKind? _kind;
+	private long _at;
+
+	public void Record(LocalHttpsTransportErrorKind kind)
+	{
+		lock (_gate)
+		{
+			_kind = kind;
+			_at = Stopwatch.GetTimestamp();
+		}
+	}
+
+	// The refusal recorded since start, if there was one
+	public LocalHttpsTransportErrorKind? Since(long start)
+	{
+		lock (_gate) return _at >= start ? _kind : null;
+	}
+}
+
 /// <summary>One pinned HttpClient per (device, host), created lazily from the stored CA.</summary>
 [SupportedOSPlatform("windows")]
 internal sealed class LocalHttpsClientPool
 {
 	private readonly record struct Key(string DeviceId, string Host);
 
+	private sealed record Entry(HttpClient Client, CertificateRefusals Refusals);
+
 	private readonly object _gate = new();
-	private readonly Dictionary<Key, HttpClient> _entries = new();
+	private readonly Dictionary<Key, Entry> _entries = new();
 
 	public async Task<HttpResult> DataAsync(
 		HttpRequestMessage request,
@@ -306,13 +394,15 @@ internal sealed class LocalHttpsClientPool
 	{
 		var host = request.RequestUri?.Host;
 		if (string.IsNullOrEmpty(host)) throw new LocalHttpsTransportException(LocalHttpsTransportErrorKind.TrustFailed);
-		var client = Entry(new Key(deviceId, LocalHttpsTransport.NormalizeHost(host)));
+		var entry = EntryFor(new Key(deviceId, LocalHttpsTransport.NormalizeHost(host)));
 		// Requests to an enrolled Umbrel time out only when data stops arriving, matching
 		// the Apple clients' URLSession request timeout, so a wallpaper or app list over a
 		// slow Tailscale route isn't cut off mid-transfer. Unpinned bootstrap, candidate,
 		// and fallback probes keep a hard deadline.
-		return await LocalHttpsTransport
-			.SendBoundedAsync(client, request, timeout, maximumBytes: 32 * 1024 * 1024, ct, resetsOnProgress: true)
+		return await LocalHttpsTransport.ExplainingRefusalAsync(
+			entry.Refusals,
+			() => LocalHttpsTransport.SendBoundedAsync(
+				entry.Client, request, timeout, maximumBytes: 32 * 1024 * 1024, ct, resetsOnProgress: true))
 			.ConfigureAwait(false);
 	}
 
@@ -322,13 +412,13 @@ internal sealed class LocalHttpsClientPool
 		{
 			foreach (var key in _entries.Keys.Where(key => key.DeviceId == deviceId).ToList())
 			{
-				_entries[key].Dispose();
+				_entries[key].Client.Dispose();
 				_entries.Remove(key);
 			}
 		}
 	}
 
-	private HttpClient Entry(Key key)
+	private Entry EntryFor(Key key)
 	{
 		lock (_gate)
 		{
@@ -352,9 +442,10 @@ internal sealed class LocalHttpsClientPool
 			}
 			using (anchor)
 			{
-				var client = LocalHttpsTransport.CreatePinnedClient(anchor);
-				_entries[key] = client;
-				return client;
+				var refusals = new CertificateRefusals();
+				var entry = new Entry(LocalHttpsTransport.CreatePinnedClient(anchor, refusals), refusals);
+				_entries[key] = entry;
+				return entry;
 			}
 		}
 	}

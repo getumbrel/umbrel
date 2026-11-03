@@ -13,6 +13,8 @@ public sealed class AddressConnectionViewModel : ObservableObject, IDisposable
 	private string _input = "";
 	private string? _error;
 	private string? _updateRequiredHost;
+	// A current Umbrel answered here but couldn't prove its identity.
+	private Umbreld.UnverifiedDevice? _unverified;
 	private bool _busy;
 
 	public AddressConnectionViewModel(AppState state, ShellViewModel shell)
@@ -29,6 +31,11 @@ public sealed class AddressConnectionViewModel : ObservableObject, IDisposable
 		{
 			if (UpdateRequiredHost is not null) Browser.Open($"http://{UpdateRequiredHost}");
 		});
+		// umbrelOS may still open in the browser when the app can't verify it.
+		OpenUnverifiedCommand = new RelayCommand(() =>
+		{
+			if (Unverified is not null) Browser.Open($"http://{Unverified.Host}");
+		});
 	}
 
 	public string Input
@@ -37,9 +44,10 @@ public sealed class AddressConnectionViewModel : ObservableObject, IDisposable
 		set
 		{
 			if (!SetProperty(ref _input, value)) return;
-			// A new address makes the last error or update prompt stale.
+			// A new address makes the last error, update prompt or failed connection stale.
 			Error = null;
 			UpdateRequiredHost = null;
+			Unverified = null;
 			ConnectCommand.NotifyCanExecuteChanged();
 		}
 	}
@@ -63,10 +71,27 @@ public sealed class AddressConnectionViewModel : ObservableObject, IDisposable
 		{
 			SetProperty(ref _updateRequiredHost, value);
 			OnPropertyChanged(nameof(ShowUpdateRequired));
+			OnPropertyChanged(nameof(ShowConnect));
 		}
 	}
 
 	public bool ShowUpdateRequired => UpdateRequiredHost is not null;
+
+	public Umbreld.UnverifiedDevice? Unverified
+	{
+		get => _unverified;
+		private set
+		{
+			SetProperty(ref _unverified, value);
+			OnPropertyChanged(nameof(ShowUnverified));
+			OnPropertyChanged(nameof(ShowConnect));
+		}
+	}
+
+	public bool ShowUnverified => Unverified is not null;
+
+	// The update prompt and the failed connection each replace Connect with their own actions.
+	public bool ShowConnect => !ShowUpdateRequired && !ShowUnverified;
 
 	public bool Busy
 	{
@@ -81,6 +106,7 @@ public sealed class AddressConnectionViewModel : ObservableObject, IDisposable
 	public IAsyncRelayCommand ConnectCommand { get; }
 	public IRelayCommand BackCommand { get; }
 	public IRelayCommand OpenUpdateRequiredCommand { get; }
+	public IRelayCommand OpenUnverifiedCommand { get; }
 
 	private async Task ConnectAsync()
 	{
@@ -94,10 +120,16 @@ public sealed class AddressConnectionViewModel : ObservableObject, IDisposable
 		UpdateRequiredHost = null;
 		try
 		{
-			switch (await _state.ConnectByAddressAsync(address, cts.Token))
+			var result = await _state.ConnectByAddressAsync(address, cts.Token);
+			// Try again keeps the previous answer on screen until this one arrives.
+			Unverified = null;
+			switch (result)
 			{
 				case AddressConnectionResult.Device device:
 					_shell.ShowDetail(device.Id);
+					break;
+				case AddressConnectionResult.Unverified unverified:
+					Unverified = unverified.Value;
 					break;
 				case AddressConnectionResult.UpdateRequired update:
 					UpdateRequiredHost = update.Host;
@@ -109,6 +141,7 @@ public sealed class AddressConnectionViewModel : ObservableObject, IDisposable
 		}
 		catch (Exception error)
 		{
+			Unverified = null;
 			Error = error.Message;
 		}
 		finally

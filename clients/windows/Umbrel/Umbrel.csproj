@@ -13,10 +13,10 @@
     <!-- Marketing version and build number, mirroring MARKETING_VERSION and
          CURRENT_PROJECT_VERSION in the Apple project.yml files. The MSIX identity
          version in Package.appxmanifest must be kept equal to AssemblyVersion. -->
-    <Version>0.1.2</Version>
-    <AssemblyVersion>0.1.2.3</AssemblyVersion>
-    <FileVersion>0.1.2.3</FileVersion>
-    <InformationalVersion>0.1.2</InformationalVersion>
+    <Version>0.1.3</Version>
+    <AssemblyVersion>0.1.3.4</AssemblyVersion>
+    <FileVersion>0.1.3.4</FileVersion>
+    <InformationalVersion>0.1.3</InformationalVersion>
     <Company>Umbrel, Inc.</Company>
     <Product>Umbrel</Product>
     <Copyright>Umbrel, Inc.</Copyright>

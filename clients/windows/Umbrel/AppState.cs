@@ -12,11 +12,18 @@ namespace Umbrel;
 public abstract record AddressConnectionResult
 {
 	public sealed record Device(string Id) : AddressConnectionResult;
+	public sealed record Unverified(Umbreld.UnverifiedDevice Value) : AddressConnectionResult;
 	public sealed record UpdateRequired(string Host) : AddressConnectionResult;
 }
 
 public sealed class ShareUnmountException()
 	: Exception("Some shared folders couldn’t be disconnected. Close any files open from this Umbrel, then try again.");
+
+/// <summary>
+/// The user chose to keep a drive with open files rather than force it. Nothing failed, so
+/// the action stops without an error.
+/// </summary>
+public sealed class ShareUnmountCancelledException() : Exception("A drive with open files was kept connected.");
 
 public sealed class DeviceIdentityUnavailableException()
 	: Exception("Couldn’t verify this Umbrel. Scan the network and try again.");
@@ -51,8 +58,13 @@ public sealed class AppState : ObservableObject, IDisposable
 
 	private readonly Dictionary<string, IdentifiedDevice> _mdnsIdentified = new();
 	private readonly Dictionary<string, IdentifiedDevice> _manuallyIdentified = new();
+	// One record per id, like the other sources
+	private List<IdentifiedDevice> _fallbackIdentified = [];
+	private List<Umbreld.UnverifiedDevice> _fallbackUnverified = [];
 	private List<Umbreld.UpdateRequiredDevice> _fallbackUpdateRequired = [];
 	private int _fallbackGeneration;
+	// The first fallback scan, which the first search waits for like DNS-SD's candidates
+	private bool _initialFallbackPending = true;
 	private HashSet<string> _pendingNativeHosts = new(StringComparer.Ordinal);
 	private CancellationTokenSource? _candidateIdentification;
 	private CancellationTokenSource? _setupRefresh; // while the panel is open (PanelDidOpen)
@@ -61,6 +73,11 @@ public sealed class AppState : ObservableObject, IDisposable
 	private bool _completedInitialReachabilityCheck;
 	private readonly Dictionary<string, ProbeRecord> _probes = new();
 	private readonly HashSet<string> _probesInFlight = new();
+	// Saved Umbrels whose last failed probe found them answering under a new CA
+	private readonly HashSet<string> _identityChanged = new();
+	// Bumped by every verified answer from outside a probe and by Forget, so a probe that
+	// started earlier drops its answer when it lands
+	private readonly Dictionary<string, int> _probeGenerations = new();
 	private readonly Dictionary<string, string> _connectionHosts = new();
 	private readonly Dictionary<string, Umbreld.Session> _sessions = new();
 	private readonly HashSet<string> _unavailableSessionIds = new();
@@ -82,6 +99,8 @@ public sealed class AppState : ObservableObject, IDisposable
 	private bool _disposed;
 
 	private IReadOnlyList<Device> _devices = [];
+	private IReadOnlyList<Umbreld.UnverifiedDevice> _unverifiedDevices = [];
+	private IReadOnlySet<string> _retryingHosts = new HashSet<string>();
 	private IReadOnlyList<Umbreld.UpdateRequiredDevice> _updateRequiredDevices = [];
 	private Config.StorageIssue? _configStorageIssue;
 	private bool _initialDiscoveryInProgress = true;
@@ -134,6 +153,20 @@ public sealed class AppState : ObservableObject, IDisposable
 	{
 		get => _devices;
 		private set => SetProperty(ref _devices, value);
+	}
+
+	/// <summary>Current Umbrels at a fallback hostname that couldn't prove their identity.</summary>
+	public IReadOnlyList<Umbreld.UnverifiedDevice> UnverifiedDevices
+	{
+		get => _unverifiedDevices;
+		private set => SetProperty(ref _unverifiedDevices, value);
+	}
+
+	/// <summary>Hosts whose "Couldn't connect" card is asking again.</summary>
+	public IReadOnlySet<string> RetryingHosts
+	{
+		get => _retryingHosts;
+		private set => SetProperty(ref _retryingHosts, value);
 	}
 
 	public IReadOnlyList<Umbreld.UpdateRequiredDevice> UpdateRequiredDevices
@@ -212,7 +245,8 @@ public sealed class AppState : ObservableObject, IDisposable
 	public bool IsSharingHome(string id) => _sharingHome.Contains(id);
 
 	public bool IsUnsavedManualOnlyDevice(string id) =>
-		!_config.SavedDevices.ContainsKey(id) && _manuallyIdentified.ContainsKey(id) && !_mdnsIdentified.ContainsKey(id);
+		!_config.SavedDevices.ContainsKey(id) && _manuallyIdentified.ContainsKey(id) && !_mdnsIdentified.ContainsKey(id)
+		&& !_fallbackIdentified.Any(device => device.Id == id);
 
 	public string? LastAccountId(string id) => _config.SavedDevices.TryGetValue(id, out var saved) ? saved.LastAccountId : null;
 
@@ -233,7 +267,7 @@ public sealed class AppState : ObservableObject, IDisposable
 			ReloadUnavailableSessions();
 			await ProbeSweepAsync();
 			_completedInitialReachabilityCheck = true;
-			PublishUpdateRequiredDevices();
+			PublishFallbackHints();
 			Rebuild();
 		});
 		_ = _dispatcher.InvokeAsync(async () =>
@@ -242,8 +276,8 @@ public sealed class AppState : ObservableObject, IDisposable
 			// candidate is already being verified, that work ends the searching state instead.
 			await Task.Delay(2000);
 			_initialDiscoveryWindowElapsed = true;
-			if (_candidateIdentification is null) InitialDiscoveryInProgress = false;
-			PublishUpdateRequiredDevices();
+			FinishInitialDiscoveryIfIdle();
+			PublishFallbackHints();
 		});
 		_healthTimer.Start();
 		// Microsoft's recommended signal for connectivity changes, like the macOS path
@@ -331,12 +365,12 @@ public sealed class AppState : ObservableObject, IDisposable
 			// Discovery.Stop() publishes an empty list too, so this must end "Searching…".
 			_candidateIdentification = null;
 			_mdnsIdentified.Clear();
-			if (_initialDiscoveryWindowElapsed) InitialDiscoveryInProgress = false;
-			PublishUpdateRequiredDevices();
+			FinishInitialDiscoveryIfIdle();
+			PublishFallbackHints();
 			Rebuild();
 			return;
 		}
-		PublishUpdateRequiredDevices();
+		PublishFallbackHints();
 		var cts = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
 		_candidateIdentification = cts;
 		_ = IdentifyCandidatesAsync(candidates, cts);
@@ -363,77 +397,203 @@ public sealed class AppState : ObservableObject, IDisposable
 		if (ReferenceEquals(_candidateIdentification, cts)) _candidateIdentification = null;
 		_pendingNativeHosts = new HashSet<string>(StringComparer.Ordinal);
 		_mdnsIdentified.Clear();
-		InitialDiscoveryInProgress = false;
+		// Keyed by id, so records for one id under different certificates collapse to the first.
 		foreach (var device in identified)
 		{
-			_mdnsIdentified[device.Id] = device;
+			if (!_mdnsIdentified.TryAdd(device.Id, device)) continue;
 			if (_config.SavedDevices.ContainsKey(device.Id))
 			{
 				TryUpdateConfig(device.Id, saved => saved.MergeVerifiedDiscovery(device));
 			}
 		}
-		PublishUpdateRequiredDevices();
+		FinishInitialDiscoveryIfIdle();
+		PublishFallbackHints();
 		Rebuild();
 	}
 
-	// Older umbrelOS releases don't advertise the native service. Their public version
-	// responses only offer an update link and never enter trust or persistence.
+	// Older umbrelOS releases don't advertise the native service, and some networks filter
+	// DNS-SD browsing. Current Umbrels at the common hostnames are identified like DNS-SD
+	// candidates. The rest stay separate from trusted devices: they can offer a retry or a
+	// browser link, but never enter trust or persistence.
 	private async Task RefreshFallbackDiscoveryAsync()
 	{
 		var generation = ++_fallbackGeneration;
-		IReadOnlyList<Umbreld.UpdateRequiredDevice> found;
+		RetryingHosts = new HashSet<string>();
+		Umbreld.FallbackDiscoveryResult result;
 		try
 		{
-			found = await Umbreld.DiscoverFallbackHostsAsync(_lifetime.Token);
+			result = await Umbreld.DiscoverFallbackHostsAsync(
+				KnownDeviceIds(),
+				// Older Umbrels show as soon as their version answers
+				updateRequired => _dispatcher.InvokeAsync(() => ShowFallbackUpdateHints(updateRequired, generation)).Task,
+				_lifetime.Token);
 		}
-		catch (OperationCanceledException)
+		catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
 		{
 			return;
 		}
+		catch (Exception)
+		{
+			// Still finish the scan: a failed one would keep "Searching…" up.
+			result = new Umbreld.FallbackDiscoveryResult([], [], []);
+		}
+		// Any finished scan ends the first search, so network changes while Wi-Fi and
+		// Tailscale settle at sign-in can't keep it searching.
+		_initialFallbackPending = false;
+		if (generation != _fallbackGeneration)
+		{
+			FinishInitialDiscoveryIfIdle();
+			return;
+		}
+		AdoptFallbackDevices(result.Devices);
+		_fallbackUnverified = result.Unverified.ToList();
+		_fallbackUpdateRequired = result.UpdateRequired.ToList();
+		FinishInitialDiscoveryIfIdle();
+		PublishFallbackHints();
+		Rebuild();
+	}
+
+	private void ShowFallbackUpdateHints(IReadOnlyList<Umbreld.UpdateRequiredDevice> updateRequired, int generation)
+	{
 		if (generation != _fallbackGeneration) return;
-		_fallbackUpdateRequired = found.ToList();
-		PublishUpdateRequiredDevices();
+		_fallbackUpdateRequired = updateRequired.ToList();
+		PublishFallbackHints();
+	}
+
+	// Unsaved Umbrels found at the common hostnames become candidates. Saved ones were
+	// proven against their pin, so they join the normal reachability probes instead, which
+	// keep their online state current after this one-off scan. The device list is keyed by
+	// id, so the scan's records for one id under different certificates collapse to the first.
+	private void AdoptFallbackDevices(IReadOnlyList<IdentifiedDevice> devices)
+	{
+		var seenIds = new HashSet<string>(StringComparer.Ordinal);
+		_fallbackIdentified = devices
+			.Where(device => IsFallbackCandidate(device) && seenIds.Add(device.Id))
+			.ToList();
+		foreach (var device in devices.Where(IsSavedFallbackRoute)) AdoptSavedFallbackDevice(device);
+	}
+
+	// A scan identifies against the saved ids it started with, and an Umbrel can be saved or
+	// forgotten before it lands. Only a record proven with the saved pin is a saved Umbrel's
+	// route, and only one proven with its own candidate CA (or the pin of one the user just
+	// picked) is a candidate. Anything else waits for the next scan.
+	private bool IsSavedFallbackRoute(IdentifiedDevice device) =>
+		_config.SavedDevices.ContainsKey(device.Id) && device.ProvedWithSavedPin;
+
+	private bool IsFallbackCandidate(IdentifiedDevice device) =>
+		!_config.SavedDevices.ContainsKey(device.Id)
+		&& (!device.ProvedWithSavedPin || _explicitlyClaimedDeviceIds.Contains(device.Id));
+
+	// The scan proved this route against the saved pin. Remember it, as Connect by address
+	// does, so probes and connections reach the Umbrel when DNS-SD misses it.
+	private void AdoptSavedFallbackDevice(IdentifiedDevice device)
+	{
+		TryUpdateConfig(device.Id, saved => saved.RememberConnectionCandidates([device.Host, .. device.Addresses]));
+		RecordVerifiedRoute(device.Id, device.Host, device.DiscoveryInfo);
+	}
+
+	// The first search ends once DNS-SD has had its window and both its candidates and the
+	// first fallback scan have finished verifying.
+	private void FinishInitialDiscoveryIfIdle()
+	{
+		if (!_initialDiscoveryWindowElapsed || _candidateIdentification is not null || _initialFallbackPending) return;
+		InitialDiscoveryInProgress = false;
 	}
 
 	private void InvalidateFallbackDiscovery()
 	{
 		_fallbackGeneration++;
+		RetryingHosts = new HashSet<string>();
+		_fallbackIdentified = [];
+		_fallbackUnverified = [];
 		_fallbackUpdateRequired = [];
+		UnverifiedDevices = [];
 		UpdateRequiredDevices = [];
+		Rebuild();
 	}
 
-	private void PublishUpdateRequiredDevices()
+	private void PublishFallbackHints()
 	{
 		if (InitialDiscoveryInProgress || !_completedInitialReachabilityCheck || Scanning)
 		{
+			if (UnverifiedDevices.Count > 0) UnverifiedDevices = [];
 			if (UpdateRequiredDevices.Count > 0) UpdateRequiredDevices = [];
 			return;
 		}
-		var previouslyVisible = UpdateRequiredDevices.Select(device => Mounter.NormalizeHost(device.Host)).ToHashSet(StringComparer.Ordinal);
-		// Every verified route suppresses an update hint, including a device's Bonjour name
-		// when a manually entered address is the one rendered, so it can't look like a
-		// second, older Umbrel.
+		// Every verified route suppresses a hint, including a device's DNS-SD name when a
+		// manually entered address is the one rendered, so it can't look like a second Umbrel.
 		var now = DateTimeOffset.UtcNow;
 		var saved = _config.SavedDevices;
-		var verifiedHosts = _mdnsIdentified.Values.Concat(_manuallyIdentified.Values)
+		var verifiedHosts = _mdnsIdentified.Values.Concat(_fallbackIdentified).Concat(_manuallyIdentified.Values)
 			.SelectMany(device => new[] { device.Host, device.DiscoveryHost }.Concat(device.Addresses))
 			.Concat(_probes
 				.Where(pair => pair.Value.Identity is not null && pair.Value.IsFresh(now) && saved.ContainsKey(pair.Key))
 				.SelectMany(pair => (pair.Value.Host is { } host ? new[] { host } : []).Concat(saved[pair.Key].ConnectionHosts)))
 			.Select(Mounter.NormalizeHost)
 			.ToHashSet(StringComparer.Ordinal);
+		// A failed name that resolves to a verified Umbrel's address is that Umbrel by another name.
+		_fallbackUnverified.RemoveAll(device =>
+			new[] { device.Host }.Concat(device.Addresses).Any(host => verifiedHosts.Contains(Mounter.NormalizeHost(host))));
 		_fallbackUpdateRequired.RemoveAll(device => verifiedHosts.Contains(Mounter.NormalizeHost(device.Host)));
-		var updateRequired = _fallbackUpdateRequired
-			.DistinctBy(device => Mounter.NormalizeHost(device.Host))
-			.Where(device =>
-			{
-				// Hide a host while its native advertisement is still being verified.
-				var host = Mounter.NormalizeHost(device.Host);
-				return !_pendingNativeHosts.Contains(host) || previouslyVisible.Contains(host);
-			})
-			.OrderBy(device => device.Host, StringComparer.Ordinal)
-			.ToList();
+		var unverified = VisibleHints(_fallbackUnverified, UnverifiedDevices, device => device.Host);
+		var updateRequired = VisibleHints(_fallbackUpdateRequired, UpdateRequiredDevices, device => device.Host);
+		if (!unverified.SequenceEqual(UnverifiedDevices)) UnverifiedDevices = unverified;
 		if (!updateRequired.SequenceEqual(UpdateRequiredDevices)) UpdateRequiredDevices = updateRequired;
+	}
+
+	// One card per host, hidden while its DNS-SD candidate is being verified unless it's
+	// already showing.
+	private List<T> VisibleHints<T>(IEnumerable<T> hints, IEnumerable<T> shown, Func<T, string> host)
+	{
+		var previouslyVisible = shown.Select(hint => Mounter.NormalizeHost(host(hint))).ToHashSet(StringComparer.Ordinal);
+		return hints
+			.DistinctBy(hint => Mounter.NormalizeHost(host(hint)))
+			.Where(hint =>
+			{
+				var normalized = Mounter.NormalizeHost(host(hint));
+				return !_pendingNativeHosts.Contains(normalized) || previouslyVisible.Contains(normalized);
+			})
+			.OrderBy(host, StringComparer.Ordinal)
+			.ToList();
+	}
+
+	// Try again on a "Couldn't connect" card. A device that now proves its identity replaces
+	// the card; otherwise the card stays, with the latest reason. An answer that arrives after
+	// a rescan or network change belongs to the old scan and is dropped.
+	public async Task RetryAsync(Umbreld.UnverifiedDevice device)
+	{
+		if (RetryingHosts.Contains(device.Host)) return;
+		RetryingHosts = new HashSet<string>(RetryingHosts) { device.Host };
+		var generation = _fallbackGeneration;
+		Umbreld.HostIdentification identification;
+		try
+		{
+			identification = await Umbreld.IdentifyAsync(device, KnownDeviceIds(), _lifetime.Token);
+		}
+		catch (OperationCanceledException)
+		{
+			return;
+		}
+		if (generation != _fallbackGeneration) return;
+		RetryingHosts = RetryingHosts.Where(host => host != device.Host).ToHashSet();
+		_fallbackUnverified.RemoveAll(unverified => unverified.Host == device.Host);
+		switch (identification)
+		{
+			case Umbreld.HostIdentification.Device found when IsSavedFallbackRoute(found.Value):
+				AdoptSavedFallbackDevice(found.Value);
+				break;
+			case Umbreld.HostIdentification.Device found when IsFallbackCandidate(found.Value):
+				_fallbackIdentified.RemoveAll(existing => existing.Id == found.Value.Id);
+				_fallbackIdentified.Add(found.Value);
+				break;
+			case Umbreld.HostIdentification.Unverified unverified:
+				_fallbackUnverified.Add(unverified.Value);
+				break;
+			// A saved Umbrel whose identity changed is left to its own handling; trying again
+			// can't fix it.
+		}
+		PublishFallbackHints();
+		Rebuild();
 	}
 
 	public async Task RescanAsync()
@@ -445,15 +605,18 @@ public sealed class AppState : ObservableObject, IDisposable
 			InvalidateFallbackDiscovery();
 			_discovery.Stop();
 			_discovery.Start();
-			var work = Task.WhenAll(RefreshFallbackDiscoveryAsync(), ProbeSweepAsync(force: true));
+			// A slow Umbrel can keep the fallback scan busy for a while. Its results publish
+			// whenever they land, and the generation check drops a superseded scan.
+			_ = RefreshFallbackDiscoveryAsync();
+			var probes = ProbeSweepAsync(force: true);
 			// Hold the scanning state long enough for browse results to arrive.
 			await Task.Delay(2000);
-			await work;
+			await probes;
 		}
 		finally
 		{
 			Scanning = false;
-			PublishUpdateRequiredDevices();
+			PublishFallbackHints();
 		}
 	}
 
@@ -499,7 +662,7 @@ public sealed class AppState : ObservableObject, IDisposable
 	private async Task RefreshDevicesAwaitingSetupAsync(CancellationToken ct)
 	{
 		var saved = _config.SavedDevices;
-		var awaitingSetup = _mdnsIdentified.Values.Concat(_manuallyIdentified.Values)
+		var awaitingSetup = _mdnsIdentified.Values.Concat(_fallbackIdentified).Concat(_manuallyIdentified.Values)
 			.Where(device => !device.Onboarded && !saved.ContainsKey(device.Id))
 			.ToList();
 		if (awaitingSetup.Count == 0) return;
@@ -516,6 +679,8 @@ public sealed class AppState : ObservableObject, IDisposable
 			{
 				_mdnsIdentified[asked.Id] = current!;
 			}
+			var fallback = _fallbackIdentified.FindIndex(device => ReferenceEquals(device, asked));
+			if (fallback >= 0) _fallbackIdentified[fallback] = current!;
 			if (_manuallyIdentified.TryGetValue(asked.Id, out var manual) && ReferenceEquals(manual, asked))
 			{
 				_manuallyIdentified[asked.Id] = current!;
@@ -549,26 +714,76 @@ public sealed class AppState : ObservableObject, IDisposable
 
 	private async Task ProbeDeviceAsync(SavedDevice saved)
 	{
-		(string Host, Umbreld.DiscoveryInfo Identity)? result;
+		var generation = _probeGenerations.GetValueOrDefault(saved.Id);
+		(string Host, Umbreld.DiscoveryInfo Identity)? result = null;
+		var identityChanged = false;
 		try
 		{
-			result = await FirstReachableEndpointAsync(saved.NativeTarget, _lifetime.Token);
+			var target = saved.NativeTarget;
+			// Something answered but didn't prove the pin: either this Umbrel with a new
+			// identity or another server, and each needs something different from the user.
+			// When nothing answered at all, there's nothing more to ask.
+			var answeredWithoutPin = false;
+			try
+			{
+				var host = await Umbreld.ResolvedHostAsync(target, _lifetime.Token);
+				var identity = await Umbreld.IdentifyAsync(host, target.DeviceId, _lifetime.Token);
+				if (identity is not null) result = (host, identity);
+				// A cached route that verified before and doesn't now
+				else answeredWithoutPin = true;
+			}
+			catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+			{
+				throw;
+			}
+			catch (Exception error) when (Umbreld.IsIdentityChange(error))
+			{
+				answeredWithoutPin = true;
+			}
+			catch (Exception)
+			{
+			}
+			if (answeredWithoutPin) identityChanged = await Umbreld.IdentityChangedAsync(target, _lifetime.Token);
 		}
 		catch (OperationCanceledException)
 		{
 			_probesInFlight.Remove(saved.Id);
 			return;
 		}
+		// A newer answer, or Forget, came in while this probe ran.
+		if (_probeGenerations.GetValueOrDefault(saved.Id) != generation || !_config.SavedDevices.ContainsKey(saved.Id))
+		{
+			_probesInFlight.Remove(saved.Id);
+			return;
+		}
+		if (identityChanged) _identityChanged.Add(saved.Id);
+		else _identityChanged.Remove(saved.Id);
 		ProbeCompleted(saved.Id, result?.Host, result?.Identity);
 	}
 
 	private void ProbeCompleted(string id, string? host, Umbreld.DiscoveryInfo? identity)
 	{
 		_probesInFlight.Remove(id);
+		RecordProbe(id, host, identity);
+	}
+
+	// A verified answer from outside a probe: the hostname scan, Connect by address or sign-in.
+	// It's newer than any probe still running, which drops its own answer when it lands.
+	private void RecordVerifiedRoute(string id, string host, Umbreld.DiscoveryInfo identity)
+	{
+		SupersedeProbes(id);
+		RecordProbe(id, host, identity);
+	}
+
+	private void SupersedeProbes(string id) => _probeGenerations[id] = _probeGenerations.GetValueOrDefault(id) + 1;
+
+	private void RecordProbe(string id, string? host, Umbreld.DiscoveryInfo? identity)
+	{
 		_probes[id] = new ProbeRecord(host, identity, DateTimeOffset.UtcNow);
+		if (identity is not null) _identityChanged.Remove(id);
 		if (identity is not null && host is not null) _connectionHosts[id] = host;
 		else _connectionHosts.Remove(id);
-		PublishUpdateRequiredDevices();
+		PublishFallbackHints();
 		Rebuild();
 	}
 
@@ -598,17 +813,16 @@ public sealed class AppState : ObservableObject, IDisposable
 	private async Task RefreshAfterNetworkChangeAsync()
 	{
 		// Don't restart the DNS-SD browse: that would blank unsaved devices during route churn.
-		var fallback = RefreshFallbackDiscoveryAsync();
+		// Likewise the last fallback snapshot stays until the next one lands. Only the newest
+		// scan publishes, so a slow one isn't awaited here.
+		_ = RefreshFallbackDiscoveryAsync();
 		var saved = _config.SavedDevices.Values.ToList();
 		var ids = saved.Select(device => device.Id).ToHashSet(StringComparer.Ordinal);
-		if (ids.Count > 0)
-		{
-			while (_probesInFlight.Overlaps(ids)) await Task.Delay(100);
-			foreach (var device in saved) Umbreld.InvalidateResolvedHost(device.NativeTarget);
-			await ProbeDevicesAsync(ids, force: true);
-			foreach (var id in ids.Where(_sessions.ContainsKey)) _ = MountAllInBackgroundAsync(id, silent: true);
-		}
-		await fallback;
+		if (ids.Count == 0) return;
+		while (_probesInFlight.Overlaps(ids)) await Task.Delay(100);
+		foreach (var device in saved) Umbreld.InvalidateResolvedHost(device.NativeTarget);
+		await ProbeDevicesAsync(ids, force: true);
+		foreach (var id in ids.Where(_sessions.ContainsKey)) _ = MountAllInBackgroundAsync(id, silent: true);
 	}
 
 	// ── Health ──
@@ -671,6 +885,16 @@ public sealed class AppState : ObservableObject, IDisposable
 				catch (UmbreldException error) when (error.IsAuthError)
 				{
 					await SessionExpiredAsync(device.Id, session);
+					continue;
+				}
+				catch (Exception error) when (Umbreld.IsIdentityChange(error))
+				{
+					// The Umbrel now refuses its pin, as after a certificate reset. Its DNS-SD record
+					// was verified before that and no longer shows it's online, so drop it and probe
+					// the saved routes, which tells a new identity apart from another server.
+					_mdnsIdentified.Remove(device.Id);
+					Rebuild();
+					await ProbeDevicesAsync([device.Id], force: true);
 					continue;
 				}
 				catch (Exception)
@@ -813,13 +1037,12 @@ public sealed class AppState : ObservableObject, IDisposable
 			if (await Umbreld.PrepareSavedDeviceForSignInAsync(target, ct))
 			{
 				var result = await FirstReachableEndpointAsync(target, ct) ?? throw new DeviceIdentityUnavailableException();
-				ProbeCompleted(id, result.Host, result.Identity);
+				RecordVerifiedRoute(id, result.Host, result.Identity);
 			}
 		}
 		else
 		{
-			var discovered = _manuallyIdentified.GetValueOrDefault(id) ?? _mdnsIdentified.GetValueOrDefault(id)
-				?? throw new DeviceIdentityUnavailableException();
+			var discovered = IdentifiedCandidate(id) ?? throw new DeviceIdentityUnavailableException();
 			if (!_explicitlyClaimedDeviceIds.Contains(id))
 			{
 				await Umbreld.ClaimLocalHttpsIdentityAsync(discovered, ct);
@@ -871,7 +1094,7 @@ public sealed class AppState : ObservableObject, IDisposable
 			if (host is null) _connectionHosts.Remove(id);
 			else _connectionHosts[id] = host;
 
-			var live = _manuallyIdentified.GetValueOrDefault(id) ?? _mdnsIdentified.GetValueOrDefault(id);
+			var live = IdentifiedCandidate(id);
 			var existing = _config.SavedDevices.GetValueOrDefault(id);
 			var saved = existing ?? new SavedDevice
 			{
@@ -892,6 +1115,7 @@ public sealed class AppState : ObservableObject, IDisposable
 			{
 				_config.Save(saved);
 				_explicitlyClaimedDeviceIds.Remove(id);
+				_identityChanged.Remove(id);
 			}
 			catch (Config.StorageException error)
 			{
@@ -903,7 +1127,12 @@ public sealed class AppState : ObservableObject, IDisposable
 			// Once saved, normal reachability probes own the device's online state.
 			if (_manuallyIdentified.Remove(id, out var manual))
 			{
-				ProbeCompleted(id, _connectionHosts.GetValueOrDefault(id) ?? manual.Host, manual.DiscoveryInfo);
+				RecordVerifiedRoute(id, _connectionHosts.GetValueOrDefault(id) ?? manual.Host, manual.DiscoveryInfo);
+			}
+			if (_fallbackIdentified.Find(device => device.Id == id) is { } fallback)
+			{
+				_fallbackIdentified.RemoveAll(device => device.Id == id);
+				RecordVerifiedRoute(id, _connectionHosts.GetValueOrDefault(id) ?? fallback.Host, fallback.DiscoveryInfo);
 			}
 
 			// Post-login work is best-effort and doesn't hold up the "Connected" state.
@@ -1000,10 +1229,28 @@ public sealed class AppState : ObservableObject, IDisposable
 			ConfigStorageIssue = error.Issue;
 		}
 		_probes.Remove(id);
+		SupersedeProbes(id);
+		_identityChanged.Remove(id);
 		_connectionHosts.Remove(id);
 		_manuallyIdentified.Remove(id);
 		_explicitlyClaimedDeviceIds.Remove(id);
 		Rebuild();
+	}
+
+	// For a saved Umbrel with a new identity, once the user confirms they reset it: forget
+	// it, then look again, so it shows up as it is now and is signed in to like a new one.
+	public async Task ReconnectAsync(string id)
+	{
+		await ForgetAsync(id);
+		_ = RescanWhenIdleAsync();
+	}
+
+	// A scan already running took its saved ids before the Umbrel was forgotten, so it would
+	// drop it; look again once that scan ends.
+	private async Task RescanWhenIdleAsync()
+	{
+		while (Scanning) await Task.Delay(100);
+		await RescanAsync();
 	}
 
 	public void DismissConfigStorageIssue() => ConfigStorageIssue = null;
@@ -1011,7 +1258,8 @@ public sealed class AppState : ObservableObject, IDisposable
 	// ── Connect by address ──
 
 	// A navigation flow, not another discovery source: a verified device can drive sign-in
-	// and later become a saved card; a legacy endpoint only shows an update message.
+	// and later become a saved card; an Umbrel that couldn't prove itself offers another try,
+	// and a legacy endpoint only shows an update message.
 	public async Task<AddressConnectionResult> ConnectByAddressAsync(string input, CancellationToken ct)
 	{
 		var result = await Umbreld.DiscoverManuallyAsync(input, KnownDeviceIds(), ct);
@@ -1034,17 +1282,19 @@ public sealed class AppState : ObservableObject, IDisposable
 						throw;
 					}
 					_manuallyIdentified.Remove(device.Id);
-					ProbeCompleted(device.Id, device.Host, device.DiscoveryInfo);
+					RecordVerifiedRoute(device.Id, device.Host, device.DiscoveryInfo);
 				}
 				else
 				{
 					// Kept only while it's needed to drive first sign-in.
 					_manuallyIdentified[device.Id] = device;
 					_connectionHosts[device.Id] = device.Host;
-					PublishUpdateRequiredDevices();
+					PublishFallbackHints();
 					Rebuild();
 				}
 				return new AddressConnectionResult.Device(device.Id);
+			case Umbreld.ManualDiscoveryResult.Unverified unverified:
+				return new AddressConnectionResult.Unverified(unverified.Value);
 			case Umbreld.ManualDiscoveryResult.UpdateRequired update:
 				return new AddressConnectionResult.UpdateRequired(update.Value.Host);
 			default:
@@ -1058,7 +1308,7 @@ public sealed class AppState : ObservableObject, IDisposable
 		_manuallyIdentified.Remove(id);
 		_connectionHosts.Remove(id);
 		var discardedClaim = _explicitlyClaimedDeviceIds.Remove(id);
-		PublishUpdateRequiredDevices();
+		PublishFallbackHints();
 		Rebuild();
 		if (discardedClaim) Umbreld.ForgetLocalHttpsIdentity(id);
 	}
@@ -1435,7 +1685,11 @@ public sealed class AppState : ObservableObject, IDisposable
 			.ToList();
 		Rebuild();
 
+		// failed: a drive is still mapped. refused: Windows wouldn't release one. kept: the
+		// user chose not to force one with open files.
 		var failed = false;
+		var refused = false;
+		var kept = false;
 		foreach (var path in mountedPaths)
 		{
 			var error = await TryUnmountAsync(path, force: false);
@@ -1445,6 +1699,7 @@ public sealed class AppState : ObservableObject, IDisposable
 				{
 					// The user kept this drive; stop asking.
 					failed = true;
+					kept = true;
 					break;
 				}
 				error = await TryUnmountAsync(path, force: true);
@@ -1453,6 +1708,7 @@ public sealed class AppState : ObservableObject, IDisposable
 			if (error is not null && Mounter.IsMounted(path))
 			{
 				failed = true;
+				refused = true;
 				Trace.TraceWarning("Unmount of {0} failed: {1}", path, FileLog.Describe(error));
 			}
 			if (!Mounter.IsMounted(path)) ForgetDrive(id, path);
@@ -1470,7 +1726,8 @@ public sealed class AppState : ObservableObject, IDisposable
 				: share with { MountPath = null, Status = MountStatus.Unmounted }).ToList();
 		}
 		Rebuild();
-		if (failed) throw new ShareUnmountException();
+		if (refused) throw new ShareUnmountException();
+		if (kept) throw new ShareUnmountCancelledException();
 	}
 
 	private async Task<MountException?> TryUnmountAsync(string path, bool force)
@@ -1534,9 +1791,24 @@ public sealed class AppState : ObservableObject, IDisposable
 	private Umbreld.Target? TargetFor(string id)
 	{
 		if (_config.SavedDevices.TryGetValue(id, out var saved)) return saved.NativeTarget;
-		var live = _manuallyIdentified.GetValueOrDefault(id) ?? _mdnsIdentified.GetValueOrDefault(id);
+		var live = IdentifiedCandidate(id);
 		return live is null ? null : new Umbreld.Target(id, new[] { live.Host }.Concat(live.Addresses));
 	}
+
+	// Every verified unsaved record, one per id. A manually checked endpoint wins, then the
+	// DNS-SD record, which carries the advertised addresses, then the hostname scan's.
+	private Dictionary<string, IdentifiedDevice> IdentifiedCandidates()
+	{
+		var identified = new Dictionary<string, IdentifiedDevice>(StringComparer.Ordinal);
+		foreach (var device in _fallbackIdentified) identified.TryAdd(device.Id, device);
+		foreach (var (id, device) in _mdnsIdentified) identified[id] = device;
+		foreach (var (id, device) in _manuallyIdentified) identified[id] = device;
+		return identified;
+	}
+
+	private IdentifiedDevice? IdentifiedCandidate(string id) =>
+		_manuallyIdentified.GetValueOrDefault(id) ?? _mdnsIdentified.GetValueOrDefault(id)
+		?? _fallbackIdentified.Find(device => device.Id == id);
 
 	private void TryUpdateConfig(string id, Func<SavedDevice, SavedDevice> mutate)
 	{
@@ -1560,10 +1832,9 @@ public sealed class AppState : ObservableObject, IDisposable
 		var list = new List<Device>();
 		var seen = new HashSet<string>(StringComparer.Ordinal);
 
-		var identified = new Dictionary<string, IdentifiedDevice>(_mdnsIdentified);
-		// Prefer an explicitly checked endpoint when both sources identify the same Umbrel;
-		// it may be the Tailscale route the user needs right now.
-		foreach (var (id, device) in _manuallyIdentified) identified[id] = device;
+		// Prefer an explicitly checked endpoint when sources identify the same Umbrel; it may
+		// be the Tailscale route the user needs right now.
+		var identified = IdentifiedCandidates();
 		foreach (var live in identified.Values.OrderBy(device => device.Host, StringComparer.Ordinal))
 		{
 			seen.Add(live.Id);
@@ -1601,6 +1872,7 @@ public sealed class AppState : ObservableObject, IDisposable
 				Connection = ConnectionState(record.Id),
 				Shares = [],
 				DashboardUsesHttps = record.DashboardUsesHttps ?? false,
+				IdentityChanged = reachability == DeviceReachability.Offline && _identityChanged.Contains(record.Id),
 			});
 		}
 

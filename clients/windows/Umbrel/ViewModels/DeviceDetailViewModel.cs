@@ -129,6 +129,19 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 				shell.ShowList();
 			});
 		});
+		ReconnectCommand = new AsyncRelayCommand(() =>
+		{
+			_connectCts?.Cancel();
+			return RunActionAsync(async () =>
+			{
+				await state.ReconnectAsync(deviceId);
+				shell.ShowList();
+			});
+		});
+		ReconnectCommand.PropertyChanged += (_, e) =>
+		{
+			if (e.PropertyName == nameof(IAsyncRelayCommand.IsRunning)) OnPropertyChanged(nameof(ReconnectText));
+		};
 		ShowPasswordFormCommand = new RelayCommand(() =>
 		{
 			_showPasswordForm = true;
@@ -223,7 +236,12 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 
 	// ── Offline ──
 
-	public bool ShowOfflineConnect => Device is { Saved: true, Connection: ConnectionState.NotAuthenticated };
+	// Signing in to an Umbrel with a new identity waits until the user has checked it.
+	public bool ShowOfflineConnect => Device is { Saved: true, Connection: ConnectionState.NotAuthenticated, IdentityChanged: false };
+
+	public bool ShowIdentityChanged => Device is { IdentityChanged: true };
+
+	public string ReconnectText => ReconnectCommand.IsRunning ? "Reconnecting…" : "Reconnect";
 
 	// ── Sign in ──
 
@@ -362,6 +380,7 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 	public IRelayCommand ClearErrorCommand { get; }
 	public IAsyncRelayCommand DisconnectCommand { get; }
 	public IAsyncRelayCommand ForgetCommand { get; }
+	public IAsyncRelayCommand ReconnectCommand { get; }
 	public IRelayCommand ShowPasswordFormCommand { get; }
 	public IRelayCommand ConnectWhileOfflineCommand { get; }
 	public IAsyncRelayCommand RetryCommand { get; }
@@ -423,6 +442,10 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 		catch (OperationCanceledException) when (cts.IsCancellationRequested)
 		{
 		}
+		catch (ShareUnmountCancelledException)
+		{
+			// Switching account stopped where the user kept the other account's open files.
+		}
 		catch (UmbreldException error) when (error.RequiresTwoFactorAuthentication)
 		{
 			if (!cts.IsCancellationRequested) _requires2fa = true;
@@ -439,13 +462,18 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 		}
 	}
 
-	// Show Disconnect/Forget failures (a drive Windows won't release) instead of crashing.
+	// Show Disconnect, Forget and Reconnect failures (a drive Windows won't release) instead
+	// of crashing.
 	private async Task RunActionAsync(Func<Task> action)
 	{
 		ActionError = null;
 		try
 		{
 			await action();
+		}
+		catch (ShareUnmountCancelledException)
+		{
+			// The user kept a drive with open files; the action stops there.
 		}
 		catch (Exception error)
 		{
@@ -485,7 +513,7 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 		{
 			nameof(Kind), nameof(UserNamePart), nameof(ModelPart), nameof(Status), nameof(RouteText),
 			nameof(BadgeSource), nameof(BadgeRingColor), nameof(BackText), nameof(ShowFooterActions), nameof(ShowDisconnecting),
-			nameof(ShowDisconnect), nameof(ShowOfflineConnect), nameof(RequiresTwoFactor), nameof(PromptText), nameof(CanUseFileSharing),
+			nameof(ShowDisconnect), nameof(ShowOfflineConnect), nameof(ShowIdentityChanged), nameof(RequiresTwoFactor), nameof(PromptText), nameof(CanUseFileSharing),
 			nameof(SharesLoading), nameof(ShowShareHomePrompt), nameof(ShowShares), nameof(ShareHomeText),
 			nameof(DashboardUsesHttps),
 		})
@@ -500,7 +528,8 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 	{
 		if (_browserSettingsOpen) return DetailMode.BrowserSettings;
 		if (device.Reachability == DeviceReachability.Unverified) return DetailMode.Loading;
-		if (!device.Online && !(device.Saved && _showPasswordForm)) return DetailMode.Offline;
+		// A new identity shows its warning even over a sign-in form opened while offline.
+		if (!device.Online && (device.IdentityChanged || !(device.Saved && _showPasswordForm))) return DetailMode.Offline;
 		if (!device.Saved) return device.Onboarded == false ? DetailMode.Setup : DetailMode.SignIn;
 		// One form across notAuthenticated -> connecting -> notAuthenticated, so a first
 		// attempt that turns up 2FA keeps the typed password. A background connect shows

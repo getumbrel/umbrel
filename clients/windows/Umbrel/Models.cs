@@ -47,6 +47,8 @@ public sealed record Device
 	public IReadOnlyList<Share> Shares { get; init; } = [];
 	public bool? Onboarded { get; init; } // null when unknown (offline)
 	public bool DashboardUsesHttps { get; init; } // browser links only, not native traffic
+	// Offline, and one of its addresses proved its id under a new CA, as after a reset
+	public bool IdentityChanged { get; init; }
 
 	public bool Online => Reachability == DeviceReachability.Online;
 	public string DisplayModel => Model ?? Name;
