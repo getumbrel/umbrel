@@ -185,7 +185,8 @@ export function MiniBrowser({
 			variant='default'
 			onClick={handleNewFolder}
 			disabled={!!newFolder || !canCreateFolderIn(currentPath)}
-			size='default'
+			// In the header on mobile, beside the footer's buttons otherwise
+			size={isMobile ? 'default' : 'dialog'}
 			className={isMobile ? '' : 'mr-auto'}
 		>
 			<FolderPlus className={isMobile ? 'size-4' : 'mr-2 size-4'} />
@@ -240,14 +241,19 @@ export function MiniBrowser({
 				</div>
 
 				<DialogFooter className='mt-4 shrink-0'>
-					{/* Show new folder button on desktop in footer */}
-					{!isMobile && newFolderButton}
-					<Button variant='primary' onClick={() => selected && onSelect?.(selected.path)} disabled={!isSelectionValid}>
+					<Button
+						variant='primary'
+						size='dialog'
+						onClick={() => selected && onSelect?.(selected.path)}
+						disabled={!isSelectionValid}
+					>
 						{finalSelectButtonLabel}
 					</Button>
-					<Button variant='default' onClick={() => onOpenChange(false)}>
+					<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 						{t('cancel')}
 					</Button>
+					{/* Show new folder button on desktop in footer, at the leading edge (last in the reversed row) */}
+					{!isMobile && newFolderButton}
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

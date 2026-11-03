@@ -1,16 +1,18 @@
 import {useTranslation} from 'react-i18next'
 
-import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog'
-import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {PinInput} from '@/components/ui/pin-input'
-import {Separator} from '@/components/ui/separator'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 
+// Laid out like the enable dialog: a left-aligned title over its instruction,
+// then the code boxes
 export default function TwoFactorDisableDialog({closeTo}: {closeTo?: string}) {
 	const {t} = useTranslation()
 	const title = t('2fa.disable.title')
+	const description = t('2fa.enter-code')
 
 	const isPhone = useIsPhone()
 	const dialogProps = useSettingsDialogProps({closeTo})
@@ -23,8 +25,11 @@ export default function TwoFactorDisableDialog({closeTo}: {closeTo?: string}) {
 				<DrawerContent fullHeight>
 					<DrawerHeader>
 						<DrawerTitle>{title}</DrawerTitle>
+						<DrawerDescription>{description}</DrawerDescription>
 					</DrawerHeader>
-					<Inner onCodeCheck={disable} />
+					<div className='flex justify-center'>
+						<PinInput autoFocus length={6} onCodeCheck={disable} />
+					</div>
 				</DrawerContent>
 			</Drawer>
 		)
@@ -32,23 +37,13 @@ export default function TwoFactorDisableDialog({closeTo}: {closeTo?: string}) {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogContent className='flex flex-col items-center gap-5'>
-				<DialogHeader>
-					<DialogTitle className='px-6 text-center'>{title}</DialogTitle>
+			<DialogContent className='items-center'>
+				<DialogHeader className='self-stretch'>
+					<DialogTitle>{title}</DialogTitle>
+					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
-				<Inner onCodeCheck={disable} />
+				<PinInput autoFocus length={6} onCodeCheck={disable} />
 			</DialogContent>
 		</Dialog>
-	)
-}
-
-function Inner({onCodeCheck}: {onCodeCheck: (code: string) => Promise<boolean>}) {
-	const {t} = useTranslation()
-	return (
-		<>
-			<Separator />
-			<p className='text-17 leading-tight font-normal -tracking-2'>{t('2fa.enter-code')}</p>
-			<PinInput autoFocus length={6} onCodeCheck={onCodeCheck} />
-		</>
 	)
 }

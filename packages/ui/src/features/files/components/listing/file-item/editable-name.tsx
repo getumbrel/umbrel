@@ -106,7 +106,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 									})
 								: t('files-extension-change.description-remove', {fileName: initialName}),
 							actions: [
-								{label: t('files-extension-change.confirm'), value: 'confirm', variant: 'destructive'},
+								{label: t('files-extension-change.confirm'), value: 'confirm', variant: 'primary'},
 								{label: t('cancel'), value: 'cancel', variant: 'default'},
 							],
 							icon: AiOutlineFileExclamation,
@@ -211,11 +211,11 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 							</Labeled>
 							<div className='flex-1' />
 							<DrawerFooter>
-								<Button type='button' size='dialog' onClick={handleClose}>
-									{t('cancel')}
-								</Button>
 								<Button type='submit' size='dialog' variant='primary'>
 									{t('ok')}
+								</Button>
+								<Button type='button' size='dialog' onClick={handleClose}>
+									{t('cancel')}
 								</Button>
 							</DrawerFooter>
 						</fieldset>

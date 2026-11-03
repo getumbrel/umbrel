@@ -1,10 +1,10 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {Album, Download, Heart, Info, RotateCcw, Trash2, X} from 'lucide-react'
+import {Album, Download, Heart, Info, Plus, RotateCcw, Trash2, X} from 'lucide-react'
 import {useReducedMotion} from 'motion/react'
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
-import {useParams} from 'react-router-dom'
+import {useNavigate, useParams} from 'react-router-dom'
 import {useMedia} from 'react-use'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
@@ -20,6 +20,7 @@ import {toast} from '@/components/ui/toast'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useRouteFilter} from '@/features/photos/components/listing'
 import {createTileLift} from '@/features/photos/components/listing/tile-lift'
+import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {Filmstrip, FilmstripPlaceholder} from '@/features/photos/components/viewer/filmstrip'
 import {InfoPanel} from '@/features/photos/components/viewer/info-panel'
@@ -49,7 +50,7 @@ import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {useSharedAuthorizedHttpUrl} from '@/modules/auth/http-url-authorizer'
 import {useConfirmation} from '@/providers/confirmation/use-confirmation'
-import {useDialogOpenProps} from '@/utils/dialog'
+import {useDialogOpenProps, useLinkToDialog} from '@/utils/dialog'
 import {formatNumberI18n} from '@/utils/number'
 import {tw} from '@/utils/tw'
 
@@ -149,6 +150,9 @@ export function ItemViewer() {
 	const nextId = index >= 0 && index < items.length - 1 ? items[index + 1]!.id : apiNeighbors?.nextId
 	const {setFavorite, deleteItems, restoreItems, deletePermanently} = useItemActions()
 	const {addToAlbum, removeFromAlbum} = useAlbumActions()
+	const selection = usePhotosSelection()
+	const navigate = useNavigate()
+	const linkToDialog = useLinkToDialog()
 	// The album page the lightbox was opened from, if any — from the route,
 	// not the filter (a search token also fills the filter's albumIds)
 	const routeAlbumId = useParams().albumId
@@ -276,8 +280,10 @@ export function ItemViewer() {
 	const [closingAside, setClosingAside] = useState<{width: number; marginLeft: number} | null>(null)
 	// `from` is where a drag-to-dismiss or a pinch-close let go of the
 	// picture, for the flight to carry on from the finger (see
-	// useStageGestures); a close begun while zoomed starts from the zoom
-	const close = async (from?: FlightStart) => {
+	// useStageGestures); a close begun while zoomed starts from the zoom.
+	// `next` runs once the picture is home, in place of clearing the URL's
+	// dialog slot: another dialog opening there is what closes this one.
+	const close = async (from?: FlightStart, next?: () => void) => {
 		if (closingRef.current) return
 		closingRef.current = true
 		// The URL names the item being closed on (for the close itself, a
@@ -299,7 +305,8 @@ export function ItemViewer() {
 		// the item they were looking at — and the picture has a tile to fly to
 		if (currentId) grid?.revealTile(currentId)
 		await Promise.all([flight.back(start), new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : LEAVE_MS))])
-		dialogProps.onOpenChange(false)
+		if (next) next()
+		else dialogProps.onOpenChange(false)
 		setClosing(false)
 		setClosingAside(null)
 		closingRef.current = false
@@ -463,6 +470,19 @@ export function ItemViewer() {
 	}
 	const handleRemoveFromAlbum = () =>
 		item && routeAlbumId && leaveList(removeFromAlbum({id: routeAlbumId, ids: [item.id]}))
+	// New album… as from the tile's menu: the picture flies home, its tile is
+	// selected, and the new-album dialog takes it from the selection
+	// … and the menu keeps the keyboard from its button on the way out, whose
+	// tooltip would otherwise hang over the close
+	const leavingForNewAlbum = useRef(false)
+	const handleNewAlbum = (id: string) => {
+		leavingForNewAlbum.current = true
+		void close(undefined, () => {
+			leavingForNewAlbum.current = false
+			selection.set([id])
+			navigate(linkToDialog('photos-create-album'))
+		})
+	}
 
 	// From the list's item rather than the fetched detail, so a step shows the
 	// new date in the same frame as the new picture — at the wall clock the
@@ -516,22 +536,30 @@ export function ItemViewer() {
 								<button
 									type='button'
 									aria-label={t('photos-item.add-to-album')}
-									disabled={!item || (!otherAlbums?.length && !routeAlbumId)}
+									disabled={!item}
 									className={lightboxButtonClass}
 								>
 									<Album className='size-5' />
 								</button>
 							</DropdownMenuTrigger>
 						</DarkTooltip>
-						<DropdownMenuContent align='end'>
+						<DropdownMenuContent
+							align='end'
+							onCloseAutoFocus={(event) => leavingForNewAlbum.current && event.preventDefault()}
+						>
 							{routeAlbumId && (
 								<>
 									<DropdownMenuItem onSelect={handleRemoveFromAlbum}>
 										{t('photos-item.remove-from-album')}
 									</DropdownMenuItem>
-									{otherAlbums && otherAlbums.length > 0 && <DropdownMenuSeparator />}
+									<DropdownMenuSeparator />
 								</>
 							)}
+							<DropdownMenuItem onSelect={() => item && handleNewAlbum(item.id)}>
+								<Plus className='mr-2 size-4' />
+								{t('photos-selection.new-album')}
+							</DropdownMenuItem>
+							{otherAlbums && otherAlbums.length > 0 && <DropdownMenuSeparator />}
 							{otherAlbums?.map((album) => (
 								<DropdownMenuItem
 									key={album.id}

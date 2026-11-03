@@ -144,14 +144,14 @@ function useCancelConfirmation(onDialogPending: (pending: boolean) => void) {
 		onDialogPending(true)
 		try {
 			// The dialog treats an action valued "cancel" as a dismissal, so the
-			// destructive choice carries its own value. Keeping going is the safe,
-			// secondary option; stopping is the destructive one.
+			// destructive choice carries its own value. Stopping is the action asked
+			// for, so it comes first; keeping going is the safe, secondary option.
 			const result = await confirm({
 				title,
 				message,
 				actions: [
-					{label: keep, value: 'keep', variant: 'default'},
 					{label: cancel, value: 'stop', variant: 'destructive'},
+					{label: keep, value: 'keep', variant: 'default'},
 				],
 			})
 			if (result.actionValue === 'stop') run()

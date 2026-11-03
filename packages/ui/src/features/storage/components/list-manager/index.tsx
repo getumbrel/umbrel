@@ -1,7 +1,6 @@
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
-import {TbAlertTriangle} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {DialogPortal, DialogTitle} from '@/components/ui/dialog'
@@ -467,12 +466,9 @@ export function ListStorageManager() {
 						    seconds (a yanked drive blocks smartctl until the kernel drops the device),
 						    and an empty device list would otherwise flag every pool member as missing. */}
 						{!isStorageLoading && (hasMissingDrive || hasMissingAccelerator) && (
-							<div className='flex items-center gap-2 rounded-8 bg-[#3C1C1C] p-2.5 text-13 leading-tight -tracking-2 text-[#FF3434]'>
-								<TbAlertTriangle className='h-5 w-5 shrink-0' />
-								<span className='opacity-90'>
-									{isHddPool ? t('storage-manager.missing-drive-warning') : t('storage-manager.missing-ssd-warning')}
-								</span>
-							</div>
+							<StorageNotice tone='danger'>
+								{isHddPool ? t('storage-manager.missing-drive-warning') : t('storage-manager.missing-ssd-warning')}
+							</StorageNotice>
 						)}
 
 						<div className='flex flex-col gap-6 md:flex-row md:items-stretch'>

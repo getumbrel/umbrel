@@ -564,12 +564,13 @@ export function AddToRaidDialog({
 						<DialogFooter>
 							<Button
 								variant='primary'
+								size='dialog'
 								onClick={handleAddDevice}
 								disabled={isBlockedBySize || isOperationInProgress || isPoolUnhealthy}
 							>
 								{isHdd ? t('storage-manager.add-to-raid.add-drive') : t('storage-manager.add-to-raid.add-ssd')}
 							</Button>
-							<Button variant='default' onClick={() => onOpenChange(false)}>
+							<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 								{t('cancel')}
 							</Button>
 						</DialogFooter>

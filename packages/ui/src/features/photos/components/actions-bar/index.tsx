@@ -351,9 +351,8 @@ function CollectionCount({kind}: {kind: CollectionSection}) {
 	const count = albums.data?.length
 	if (count === undefined) return null
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
-	const label =
-		count === 0 ? t('photos-actions.album-count-none') : t('photos-actions.album-count', {count, formattedCount})
-	return <h2 className={countClass}>{label}</h2>
+	// "0 albums" like "0 sources": the empty screen below says there are none yet
+	return <h2 className={countClass}>{t('photos-actions.album-count', {count, formattedCount})}</h2>
 }
 
 // "5 sources"

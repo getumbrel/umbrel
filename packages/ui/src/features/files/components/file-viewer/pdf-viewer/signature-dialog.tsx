@@ -3,6 +3,7 @@ import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {dialogFooterClass} from '@/components/ui/shared/dialog'
 import type {Drawing} from '@/features/files/components/file-viewer/pdf-viewer/markup'
 
 // In the pad's pixels; pdf.js scales the signature, and the pen with it, to
@@ -78,14 +79,9 @@ export function SignatureDialog({onAdd, onCancel}: {onAdd: (drawing: Drawing) =>
 						))}
 					</svg>
 				</div>
+				{/* Cancel and Add on the trailing edge like every dialog, Clear on its own at the leading edge */}
 				<DialogFooter className='md:justify-between'>
-					<Button size='dialog' disabled={strokes.length === 0} onClick={() => setStrokes([])}>
-						{t('files-pdf.signature-clear')}
-					</Button>
-					<div className='flex flex-col gap-2.5 md:flex-row'>
-						<Button size='dialog' onClick={onCancel}>
-							{t('cancel')}
-						</Button>
+					<div className={dialogFooterClass}>
 						<Button
 							size='dialog'
 							variant='primary'
@@ -97,7 +93,13 @@ export function SignatureDialog({onAdd, onCancel}: {onAdd: (drawing: Drawing) =>
 						>
 							{t('files-pdf.signature-add')}
 						</Button>
+						<Button size='dialog' onClick={onCancel}>
+							{t('cancel')}
+						</Button>
 					</div>
+					<Button size='dialog' disabled={strokes.length === 0} onClick={() => setStrokes([])}>
+						{t('files-pdf.signature-clear')}
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

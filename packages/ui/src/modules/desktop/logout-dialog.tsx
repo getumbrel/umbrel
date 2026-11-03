@@ -37,7 +37,7 @@ export default function LogoutDialog() {
 					<AlertDialogTitle>{t('logout.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogAction variant='destructive' className='px-6' onClick={logout}>
+					<AlertDialogAction variant='destructive' onClick={logout}>
 						{t('logout.confirm.submit')}
 					</AlertDialogAction>
 					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>

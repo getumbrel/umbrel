@@ -36,6 +36,7 @@ import {
 	hostReservedMemoryBytes,
 	machinePath,
 	MACHINES_PATH,
+	machineSegmentButtonClass,
 	MAX_DISK_SIZE_GB,
 	MIN_MEMORY_GB,
 } from '@/features/machines/constants'
@@ -46,14 +47,7 @@ import type {Machine} from '@/features/machines/types'
 import {createBrowserUuid} from '@/features/machines/utils'
 import {useCpu} from '@/hooks/use-cpu'
 import {useMemory} from '@/hooks/use-memory'
-import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
-
-const segmentButtonClass = (active: boolean) =>
-	cn(
-		'h-9 rounded-full border px-4 text-11 font-semibold uppercase transition-colors disabled:opacity-35',
-		active ? 'border-brand bg-brand/20 text-white' : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10',
-	)
 
 // Edit a machine's name and resources at /machines/:machineId/settings, in the
 // same spec-sheet layout as the create form. Fields fall back to the machine's
@@ -354,9 +348,9 @@ export default function MachineSettings() {
 												type='button'
 												disabled={disabled || (machine.arch === 'arm64' && option === 'bios')}
 												onClick={() => setFirmwareChoice(option)}
-												className={segmentButtonClass(firmware === option)}
+												className={machineSegmentButtonClass(firmware === option)}
 											>
-												{option}
+												{option.toUpperCase()}
 											</button>
 										))}
 									</div>
@@ -369,9 +363,9 @@ export default function MachineSettings() {
 												type='button'
 												disabled={disabled || (machine.arch === 'arm64' && option === 'sata')}
 												onClick={() => setDiskBusChoice(option)}
-												className={segmentButtonClass(diskBus === option)}
+												className={machineSegmentButtonClass(diskBus === option)}
 											>
-												{option}
+												{option.toUpperCase()}
 											</button>
 										))}
 									</div>

@@ -398,7 +398,7 @@ function CpuSection({colors, chart}: {colors: UsageColors; chart?: Array<{value:
 			<AppList
 				apps={apps}
 				colors={colors}
-				formatValue={(item) => formatNumberI18n({n: item.used, locale: i18n.language}) + '%'}
+				formatValue={(item) => formatNumberI18n({n: item.used, locale: i18n.language, showDecimals: false}) + '%'}
 			/>
 		</>
 	)
@@ -594,10 +594,10 @@ function GpuSection({colors, chart}: {colors: UsageColors; chart?: Array<{value:
 				.sort((a, b) => b.used - a.used || (computeById.get(b.id) ?? 0) - (computeById.get(a.id) ?? 0))
 		: apps
 	const formatListValue = (item: UsageListItem) => {
-		if (!hasMemoryFigures) return formatNumberI18n({n: Math.round(item.used), locale: i18n.language}) + '%'
+		if (!hasMemoryFigures) return formatNumberI18n({n: item.used, locale: i18n.language, showDecimals: false}) + '%'
 		if (item.used > 0) return maybePrettyBytes(item.used, i18n.language)
 		const compute = computeById.get(item.id) ?? 0
-		if (compute > 0) return formatNumberI18n({n: Math.round(compute), locale: i18n.language}) + '%'
+		if (compute > 0) return formatNumberI18n({n: compute, locale: i18n.language, showDecimals: false}) + '%'
 		return maybePrettyBytes(0, i18n.language)
 	}
 

@@ -214,11 +214,11 @@ export default function AddNetworkShareDialog(props?: {
 			case Step.Credentials:
 				footer = (
 					<DialogFooter className='gap-2 pt-4'>
-						<Button size='dialog' onClick={back}>
-							{t('files-add-network-share.back')}
-						</Button>
 						<Button variant='primary' size='dialog' disabled={!(host && username && password)} onClick={next}>
 							{t('files-add-network-share.continue')}
+						</Button>
+						<Button size='dialog' onClick={back}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)
@@ -228,11 +228,11 @@ export default function AddNetworkShareDialog(props?: {
 			case Step.SelectShare:
 				footer = (
 					<DialogFooter className='gap-2 pt-4'>
-						<Button size='dialog' onClick={back}>
-							{t('files-add-network-share.back')}
-						</Button>
 						<Button variant='primary' size='dialog' disabled={!share || isAddingShare} onClick={handleSubmit}>
 							{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+						</Button>
+						<Button size='dialog' onClick={back}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)
@@ -243,24 +243,24 @@ export default function AddNetworkShareDialog(props?: {
 		switch (manualStep) {
 			case ManualStep.Credentials:
 				footer = (
-					<DialogFooter className={`gap-2 pt-4 ${isPhone ? 'flex-col-reverse' : ''}`}>
-						<Button size='dialog' onClick={() => setMode('wizard')}>
-							{t('files-add-network-share.back')}
-						</Button>
+					<DialogFooter className='gap-2 pt-4'>
 						<Button variant='primary' size='dialog' disabled={!(host && username && password)} onClick={manualNext}>
 							{t('files-add-network-share.continue')}
+						</Button>
+						<Button size='dialog' onClick={() => setMode('wizard')}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)
 				break
 			case ManualStep.SelectShare:
 				footer = (
-					<DialogFooter className={`gap-2 pt-4 ${isPhone ? 'flex-col-reverse' : ''}`}>
-						<Button size='dialog' onClick={manualBack}>
-							{t('files-add-network-share.back')}
-						</Button>
+					<DialogFooter className='gap-2 pt-4'>
 						<Button variant='primary' size='dialog' disabled={!share || isAddingShare} onClick={handleSubmit}>
 							{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+						</Button>
+						<Button size='dialog' onClick={manualBack}>
+							{t('files-add-network-share.back')}
 						</Button>
 					</DialogFooter>
 				)

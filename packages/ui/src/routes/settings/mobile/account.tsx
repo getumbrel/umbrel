@@ -80,11 +80,11 @@ function ChangeName({closeDialog}: {closeDialog: () => void}) {
 				</div>
 				<div className='flex-1' />
 				<DrawerFooter>
-					<Button type='button' size='dialog' onClick={closeDialog}>
-						{t('cancel')}
-					</Button>
 					<Button type='submit' size='dialog' variant='primary'>
 						{t('confirm')}
+					</Button>
+					<Button type='button' size='dialog' onClick={closeDialog}>
+						{t('cancel')}
 					</Button>
 				</DrawerFooter>
 				<div className='' />
@@ -131,11 +131,11 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 				</div>
 
 				<DrawerFooter>
-					<Button type='button' size='dialog' onClick={closeDialog}>
-						{t('cancel')}
-					</Button>
 					<Button type='submit' size='dialog' variant='primary'>
 						{t('confirm')}
+					</Button>
+					<Button type='button' size='dialog' onClick={closeDialog}>
+						{t('cancel')}
 					</Button>
 				</DrawerFooter>
 			</fieldset>

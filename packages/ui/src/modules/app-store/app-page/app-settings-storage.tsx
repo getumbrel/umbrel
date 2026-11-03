@@ -883,10 +883,7 @@ export function StorageSettingsView({
 							</div>
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					{/* Cancel sits left of the primary on desktop; reversed stacking keeps
-					    Move on top on mobile */}
-					<AlertDialogFooter className='flex-col-reverse'>
-						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+					<AlertDialogFooter>
 						<AlertDialogAction
 							variant='primary'
 							disabled={pendingMoveWarningKind === 'unsupported-filesystem'}
@@ -901,6 +898,7 @@ export function StorageSettingsView({
 						>
 							{t('app-settings.storage.move')}
 						</AlertDialogAction>
+						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

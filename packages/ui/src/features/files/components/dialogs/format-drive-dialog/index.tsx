@@ -195,8 +195,10 @@ export default function FormatDriveDialog() {
 					/>
 				</AlertDialogDescription>
 
+				{/* Left-aligned like a regular dialog, so its buttons sit on the trailing edge like one
+				    (justify-start, as the row is reversed) */}
 				<AlertDialogFooter className='md:justify-start'>
-					<AlertDialogAction variant='destructive' className='px-6' onClick={handleFormat} disabled={isFormatting}>
+					<AlertDialogAction variant='destructive' onClick={handleFormat} disabled={isFormatting}>
 						{isFormatting ? t('files-format.formatting') : t('files-format.confirm')}
 					</AlertDialogAction>
 					<AlertDialogCancel disabled={isFormatting}>{t('cancel')}</AlertDialogCancel>

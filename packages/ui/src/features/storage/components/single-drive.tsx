@@ -118,9 +118,10 @@ export default function SingleDriveStorageManager({devices}: {devices: StorageDe
 				<div className='truncate text-[15px] font-medium text-white'>
 					{bootDrive ? bootDrive.name : t('storage-manager.boot-storage')}
 				</div>
+				{/* The drive's own size, like every drive card, and the same size as its chip.
+				    The usable capacity is in the stats below. */}
 				<div className='truncate text-13 text-white/50'>
-					{storageSizeLabel}
-					{bootDrive && ` · ${bootDrive.serial}`}
+					{bootDrive ? `${formatStorageSize(bootDrive.size)} · ${bootDrive.serial}` : storageSizeLabel}
 				</div>
 			</div>
 		</div>

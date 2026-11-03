@@ -257,10 +257,15 @@ export function ReplaceFailedDriveDialog({
 					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 
 					<DialogFooter>
-						<Button variant='primary' onClick={handleReplace} disabled={isDeviceTooSmall || isOperationInProgress}>
+						<Button
+							variant='primary'
+							size='dialog'
+							onClick={handleReplace}
+							disabled={isDeviceTooSmall || isOperationInProgress}
+						>
 							{t('storage-manager.replace-failed.replace-now')}
 						</Button>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('cancel')}
 						</Button>
 					</DialogFooter>

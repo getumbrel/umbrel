@@ -33,12 +33,12 @@ export function ReviewData() {
 				bodyText={t('factory-reset.review.following-will-be-removed')}
 				footer={
 					<>
-						<ButtonLink to='/factory-reset/confirm' variant='destructive' size='dialog' className='min-w-0'>
-							{t('factory-reset.review.submit')}
-						</ButtonLink>
 						<Button size='dialog' className='min-w-0' onClick={() => navigate(backPath)}>
 							{t('cancel')}
 						</Button>
+						<ButtonLink to='/factory-reset/confirm' variant='destructive' size='dialog' className='min-w-0'>
+							{t('factory-reset.review.submit')}
+						</ButtonLink>
 					</>
 				}
 			>

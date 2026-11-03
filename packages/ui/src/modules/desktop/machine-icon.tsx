@@ -58,10 +58,7 @@ export function MachineIcon({machine}: {machine: Machine}) {
 						{t('machines.force-shut-down')}
 					</ContextMenuItem>
 				)}
-				<ContextMenuItem
-					className={contextMenuClasses.item.rootDestructive}
-					onSelect={() => setPinned({id: machine.id, pinned: false})}
-				>
+				<ContextMenuItem onSelect={() => setPinned({id: machine.id, pinned: false})}>
 					{t('machines.unpin-from-homescreen')}
 				</ContextMenuItem>
 			</ContextMenuContent>

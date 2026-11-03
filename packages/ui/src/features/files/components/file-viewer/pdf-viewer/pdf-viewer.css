@@ -40,14 +40,14 @@
 
 /* pdf.js brings the current match in 50px below the top of the pages,
    where the find pill floats: it comes in 16px below the pill instead. The
-   pill is 12px from the top and 44px tall (shell/find-pill.tsx), and 68px
+   pill is 12px from the top and 40px tall (shell/find-pill.tsx), and 64px
    from the top while the markup toolbar is up (index.tsx). */
 .umbrel-pdf .textLayer .highlight.selected {
-	scroll-margin-top: 72px;
+	scroll-margin-top: 68px;
 }
 
 .umbrel-pdf-markup .textLayer .highlight.selected {
-	scroll-margin-top: 128px;
+	scroll-margin-top: 120px;
 }
 
 /* The annotation in hand, outlined in Umbrel's colour with round handles.

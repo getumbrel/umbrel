@@ -217,7 +217,7 @@ export function MarkupToolbar({markup}: {markup: Markup}) {
 				onMouseDown={keepFocus}
 				className={cn(
 					floatingGlassClass,
-					'pointer-events-auto flex h-11 max-w-full rounded-full px-1.5 motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in motion-safe:slide-in-from-top-1',
+					'pointer-events-auto flex h-10 max-w-full rounded-full px-1 motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in motion-safe:slide-in-from-top-1',
 				)}
 			>
 				{/* On a phone the tools scroll sideways, and an edge with more beyond it fades */}

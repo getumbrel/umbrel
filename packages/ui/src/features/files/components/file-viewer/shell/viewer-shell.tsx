@@ -19,6 +19,7 @@ import {
 import {ImmersiveDialog} from '@/components/ui/immersive-dialog'
 import {ViewerShellContext, type ViewerSaveHandler} from '@/features/files/components/file-viewer/shell/context'
 import {StageDownload, StageLoading, StageMessage} from '@/features/files/components/file-viewer/shell/stage-states'
+import {toolHeightClass} from '@/features/files/components/file-viewer/shell/tool-button'
 import {useViewerKeys} from '@/features/files/components/file-viewer/shell/use-viewer-keys'
 import {keepFocus} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import type {Viewer} from '@/features/files/components/file-viewer/viewers'
@@ -459,11 +460,13 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 								<AlertDialogTitle>{t('files-viewer.unsaved-title', {name: item.name})}</AlertDialogTitle>
 								<AlertDialogDescription>{t('files-viewer.unsaved-description')}</AlertDialogDescription>
 							</AlertDialogHeader>
+							{/* As on macOS, Don't Save leads, then Cancel, and Save sits on the trailing edge.
+							    Stacked on a phone: Save, Don't Save, Cancel. */}
 							<AlertDialogFooter>
 								<AlertDialogAction onClick={() => prompt && void saveAndResume(prompt)}>
 									{t('files-viewer.save')}
 								</AlertDialogAction>
-								<AlertDialogAction variant='default' onClick={() => prompt && resume(prompt)}>
+								<AlertDialogAction variant='default' className='md:order-last' onClick={() => prompt && resume(prompt)}>
 									{t('files-viewer.dont-save')}
 								</AlertDialogAction>
 								<AlertDialogAction variant='default' onClick={dismissPrompt}>
@@ -488,8 +491,10 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 								>
 									{t('files-viewer.save-copy')}
 								</AlertDialogAction>
+								{/* The other way out sits at the leading edge, as Don't Save does above */}
 								<AlertDialogAction
 									variant='default'
+									className='md:order-last'
 									onClick={() => {
 										setConflict(false)
 										void save({overwrite: true})
@@ -528,7 +533,8 @@ function SaveButton({state, onSave}: {state: SaveState; onSave: () => void}) {
 				onClick={onSave}
 				disabled={state === 'saving' || state === 'saved'}
 				className={cn(
-					'umbrel-button mr-1 inline-flex h-12 items-center gap-2 rounded-full px-5 text-13 font-semibold -tracking-2 text-white transition-[background-color,transform] duration-200 active:scale-95 motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:fade-in',
+					toolHeightClass,
+					'umbrel-button mr-1 inline-flex items-center gap-2 rounded-full px-5 text-13 font-semibold -tracking-2 text-white transition-[background-color,transform] duration-200 active:scale-95 motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:fade-in',
 					state === 'idle' || state === 'saving'
 						? 'bg-brand shadow-button-highlight-hpx hover:bg-brand-lighter'
 						: state === 'saved'

@@ -399,14 +399,11 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 						    getDevices can lag behind raid.getStatus after a drive is yanked, which
 						    would briefly flag every pool member as missing. */}
 						{!isStorageLoading && showMissingDriveWarning && (
-							<div className='flex items-center gap-2 rounded-8 bg-[#3C1C1C] p-2.5 text-13 leading-tight -tracking-2 text-[#FF3434]'>
-								<TbAlertTriangle className='h-5 w-5 shrink-0' />
-								<span className='opacity-90'>
-									{isUmbrelPro || hasKnownSsdPool
-										? t('storage-manager.missing-ssd-warning')
-										: t('storage-manager.missing-drive-warning')}
-								</span>
-							</div>
+							<StorageNotice tone='danger'>
+								{isUmbrelPro || hasKnownSsdPool
+									? t('storage-manager.missing-ssd-warning')
+									: t('storage-manager.missing-drive-warning')}
+							</StorageNotice>
 						)}
 
 						<div className={cn('flex flex-col gap-6 md:flex-1 md:flex-row md:items-stretch', isUmbrelPro && 'md:px-6')}>

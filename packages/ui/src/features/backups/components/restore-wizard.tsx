@@ -327,8 +327,9 @@ export function BackupsRestoreWizard() {
 								sizeVariant='short'
 							/>
 						</div>
-						<AlertDialogFooter className='flex justify-start md:justify-start'>
-							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+						{/* Left-aligned like a regular dialog, so its buttons sit on the trailing edge like one
+						    (justify-start, as the row is reversed) */}
+						<AlertDialogFooter className='md:justify-start'>
 							<AlertDialogAction
 								variant='destructive'
 								disabled={!confirmPassword.trim() || isStartingRestore}
@@ -339,6 +340,7 @@ export function BackupsRestoreWizard() {
 								</span>
 								{isStartingRestore && <Loader2 className='absolute h-4 w-4 animate-spin' />}
 							</AlertDialogAction>
+							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				</AlertDialog>

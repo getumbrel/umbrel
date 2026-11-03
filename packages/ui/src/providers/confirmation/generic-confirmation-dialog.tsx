@@ -73,18 +73,17 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 				</AlertDialogHeader>
 
 				{/* Action Buttons */}
-				<div className='flex flex-col justify-center gap-y-2 md:flex-row md:gap-x-2 md:gap-y-0'>
-					{actions.map((action, index) => (
+				<AlertDialogFooter>
+					{actions.map((action) => (
 						<AlertDialogAction
 							key={action.label}
 							variant={action.variant || 'default'}
-							className='px-6'
 							onClick={() => handleActionClick(action.value)}
 						>
 							{action.label}
 						</AlertDialogAction>
 					))}
-				</div>
+				</AlertDialogFooter>
 
 				{/* "Apply to all" checkbox (only if enabled) */}
 				{showApplyToAll && (

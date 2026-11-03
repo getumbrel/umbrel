@@ -164,10 +164,7 @@ export function AddSourceDialog() {
 					{step === 'umbrel' && (
 						<motion.div key='umbrel' {...stepFade} className='flex flex-col gap-4 py-2'>
 							<UmbrelScopeSettings rootPath={homePath} scope={umbrelScope} onChange={setUmbrelScope} />
-							<DialogFooter className='flex-col-reverse gap-2 pt-2'>
-								<Button size='dialog' onClick={() => setStep('kind')}>
-									{t('back')}
-								</Button>
+							<DialogFooter className='gap-2 pt-2'>
 								<Button
 									variant='primary'
 									size='dialog'
@@ -175,6 +172,9 @@ export function AddSourceDialog() {
 									disabled={!umbrelSource || scopeNeedsFolders}
 								>
 									{t('photos-add-source.save')}
+								</Button>
+								<Button size='dialog' onClick={() => setStep('kind')}>
+									{t('back')}
 								</Button>
 							</DialogFooter>
 						</motion.div>

@@ -185,6 +185,14 @@ export const machineRowButtonClass = cn(
 	tw`size-10 bg-white/6 hover:bg-white/12 disabled:opacity-50`,
 )
 
+// One choice among a few (architecture, firmware, disk bus), the same on
+// Create and in a machine's settings
+export const machineSegmentButtonClass = (active: boolean) =>
+	cn(
+		tw`h-9 rounded-full border px-4 text-13 font-medium transition-colors disabled:opacity-35`,
+		active ? tw`border-brand bg-brand/20 text-white` : tw`border-white/10 bg-white/5 text-white/60 hover:bg-white/10`,
+	)
+
 // Machine view rail: 48px, or 40px where seven won't fit a row or a short
 // column. Same minimal surface as the row buttons plus the settings-card edge
 // material, whose inset top shine separates the floating buttons from the dark

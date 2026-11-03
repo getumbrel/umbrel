@@ -903,10 +903,10 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 							<AlertDialogDescription>{t('onboarding.ssd-raid.erase-dialog.description')}</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
-							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 							<AlertDialogAction onClick={handleContinue}>
 								{t('onboarding.raid.recovery.set-up-new-dialog.confirm')}
 							</AlertDialogAction>
+							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				</AlertDialog>

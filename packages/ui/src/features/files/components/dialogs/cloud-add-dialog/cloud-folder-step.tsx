@@ -117,7 +117,7 @@ export function CloudFolderStep({
 						)}
 					</div>
 				</div>
-				<DialogFooter className='flex-col-reverse justify-center gap-2 pt-6'>
+				<DialogFooter className='justify-center gap-2 pt-6'>
 					<Button size='dialog' onClick={onBack}>
 						{t('back')}
 					</Button>
@@ -141,10 +141,7 @@ export function CloudFolderStep({
 					{state === 'error' && errorMessage && <p className='text-12 leading-relaxed text-white/40'>{errorMessage}</p>}
 				</div>
 			</div>
-			<DialogFooter className='flex-col-reverse justify-center gap-2 pt-4'>
-				<Button size='dialog' onClick={onBack}>
-					{t('back')}
-				</Button>
+			<DialogFooter className='justify-center gap-2 pt-4'>
 				{state === 'auth' ? (
 					<Button variant='primary' size='dialog' onClick={onSignIn}>
 						{t('files-cloud.folder-sign-in')}
@@ -154,6 +151,9 @@ export function CloudFolderStep({
 						{t('try-again')}
 					</Button>
 				)}
+				<Button size='dialog' onClick={onBack}>
+					{t('back')}
+				</Button>
 			</DialogFooter>
 		</div>
 	)

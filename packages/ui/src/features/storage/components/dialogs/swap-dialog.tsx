@@ -163,7 +163,9 @@ export function SwapDialog({
 						{!isMissingMember && <StorageNotice>{t('storage-manager.swap.removal-risk')}</StorageNotice>}
 						{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 						<DialogFooter>
-							<Button onClick={() => onOpenChange(false)}>{t('done')}</Button>
+							<Button size='dialog' onClick={() => onOpenChange(false)}>
+								{t('done')}
+							</Button>
 						</DialogFooter>
 					</div>
 				</DialogScrollableContent>
@@ -176,6 +178,8 @@ export function SwapDialog({
 	// confirm could never enable, so missing members fall through to the instructions.
 	if (isStorageMode && hasAvailableDevices && oldDevice) {
 		const selectedDevice = validReplacementDevices.find((d) => d.id === selectedReplacementId)
+		// Same verb as the button that opened this: Swap for a healthy drive, Replace for a failed one
+		const actionLabel = oldDeviceFailed ? t('storage-manager.replace') : t('storage-manager.swap')
 
 		const handleReplace = () => {
 			if (!selectedDevice?.id || !oldDevice?.id) return
@@ -204,7 +208,7 @@ export function SwapDialog({
 					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							<DialogTitle>
-								{t('storage-manager.replace')} {swappedLabel}
+								{actionLabel} {swappedLabel}
 							</DialogTitle>
 							<DialogDescription>{dv('storage-manager.swap.description-replace')}</DialogDescription>
 						</DialogHeader>
@@ -329,12 +333,13 @@ export function SwapDialog({
 						<DialogFooter>
 							<Button
 								variant='primary'
+								size='dialog'
 								onClick={handleReplace}
 								disabled={!selectedDevice || !oldDevice || isOperationInProgress}
 							>
-								{t('storage-manager.replace')}
+								{actionLabel}
 							</Button>
-							<Button variant='default' onClick={() => onOpenChange(false)}>
+							<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 								{t('cancel')}
 							</Button>
 						</DialogFooter>
@@ -427,10 +432,10 @@ export function SwapDialog({
 							{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 							<DialogFooter>
-								<Button variant='primary' onClick={() => setShowShutdownConfirmation(true)}>
+								<Button variant='primary' size='dialog' onClick={() => setShowShutdownConfirmation(true)}>
 									{t('shut-down')}
 								</Button>
-								<Button variant='default' onClick={() => onOpenChange(false)}>
+								<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 									{t('cancel')}
 								</Button>
 							</DialogFooter>
@@ -512,7 +517,7 @@ export function SwapDialog({
 					</div>
 
 					<DialogFooter>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('done')}
 						</Button>
 					</DialogFooter>
@@ -609,10 +614,10 @@ export function SwapDialog({
 						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 						<DialogFooter>
-							<Button variant='primary' onClick={() => setShowShutdownConfirmation(true)}>
+							<Button variant='primary' size='dialog' onClick={() => setShowShutdownConfirmation(true)}>
 								{t('shut-down')}
 							</Button>
-							<Button variant='default' onClick={() => onOpenChange(false)}>
+							<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 								{t('cancel')}
 							</Button>
 						</DialogFooter>

@@ -479,7 +479,6 @@ function RepositoryDetails({
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 						<AlertDialogAction
 							variant='destructive'
 							onClick={() => {
@@ -489,6 +488,7 @@ function RepositoryDetails({
 						>
 							{t('backups-configure.remove-backup-location')}
 						</AlertDialogAction>
+						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

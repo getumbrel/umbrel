@@ -20,6 +20,7 @@ import {
 	machinePath,
 	MACHINES_ADD_PATH,
 	MACHINES_PATH,
+	machineSegmentButtonClass,
 	MAX_DISK_SIZE_GB,
 	MIN_MEMORY_GB,
 	recommendedCores,
@@ -540,11 +541,7 @@ export default function CreateMachine() {
 												type='button'
 												disabled={isCreating}
 												onClick={() => setArch(option)}
-												className={`h-9 rounded-full border px-4 text-13 font-medium transition-colors ${
-													selectedArch === option
-														? 'border-brand bg-brand/20 text-white'
-														: 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
-												}`}
+												className={machineSegmentButtonClass(selectedArch === option)}
 											>
 												{option === 'amd64' ? 'AMD64' : 'ARM64'}
 												{option === capabilities?.hostArchitecture ? ` · ${t('machines.native')}` : ''}
@@ -613,13 +610,11 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'bios')}
 													onClick={() => setFirmware(option)}
-													className={`h-10 rounded-full border text-13 font-medium uppercase transition-colors disabled:opacity-35 ${
-														(selectedArch === 'arm64' ? 'uefi' : firmware) === option
-															? 'border-brand bg-brand/20 text-white'
-															: 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
-													}`}
+													className={machineSegmentButtonClass(
+														(selectedArch === 'arm64' ? 'uefi' : firmware) === option,
+													)}
 												>
-													{option}
+													{option.toUpperCase()}
 												</button>
 											))}
 										</div>
@@ -634,13 +629,11 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'sata')}
 													onClick={() => setDiskBus(option)}
-													className={`h-10 rounded-full border text-13 font-medium uppercase transition-colors disabled:opacity-35 ${
-														(selectedArch === 'arm64' ? 'virtio' : diskBus) === option
-															? 'border-brand bg-brand/20 text-white'
-															: 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
-													}`}
+													className={machineSegmentButtonClass(
+														(selectedArch === 'arm64' ? 'virtio' : diskBus) === option,
+													)}
 												>
-													{option}
+													{option.toUpperCase()}
 												</button>
 											))}
 										</div>

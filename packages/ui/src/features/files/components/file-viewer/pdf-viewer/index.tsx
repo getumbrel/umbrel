@@ -498,7 +498,7 @@ function PdfDocument({item, mode, url, editable}: ViewerProps & {url: string; ed
 								<FindPill
 									inputRef={findInputRef}
 									// Beneath the markup toolbar when that's up too
-									className={markup.on ? 'top-[68px]' : undefined}
+									className={markup.on ? 'top-16' : undefined}
 									query={find.query}
 									onQuery={(query) => {
 										setFind({query, current: 0, total: 0, searching: !!query})

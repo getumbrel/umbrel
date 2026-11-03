@@ -7,9 +7,9 @@ import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 // The room to leave at the top of a stage while the pill is up, for what would otherwise sit under it: the pill's
-// top-3 and h-11, and a 12px gap. A PDF's current match keeps clear of the pill by scroll margins of its own, which
+// top-3 and h-10, and a 12px gap. A PDF's current match keeps clear of the pill by scroll margins of its own, which
 // restate where the pill is (pdf-viewer.css).
-export const findPillRoom = tw`pt-17`
+export const findPillRoom = tw`pt-16`
 
 // Find in the file, floating at the stage's top right (its edge in line with
 // the header's), the same in every viewer. Enter goes to the next match,
@@ -54,7 +54,7 @@ export function FindPill({
 				role='search'
 				className={cn(
 					floatingGlassClass,
-					'pointer-events-auto flex h-11 items-center gap-0.5 rounded-full pr-1.5 pl-3.5 motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in motion-safe:slide-in-from-top-1',
+					'pointer-events-auto flex h-10 items-center gap-0.5 rounded-full pr-1 pl-3.5 motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in motion-safe:slide-in-from-top-1',
 				)}
 			>
 				<Search className='size-4 shrink-0 text-white/45' />

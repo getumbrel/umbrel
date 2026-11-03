@@ -426,7 +426,6 @@ export default function HddRaidOnboarding() {
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					<AlertDialogAction
 						onClick={() => {
 							if (!pendingConfig) return
@@ -435,6 +434,7 @@ export default function HddRaidOnboarding() {
 					>
 						{t('onboarding.raid.recovery.set-up-new-dialog.confirm')}
 					</AlertDialogAction>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

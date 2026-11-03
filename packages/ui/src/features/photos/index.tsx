@@ -51,7 +51,7 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 							<MobileSearch />
 						</motion.div>
 					) : (
-						<motion.div key='title' className='flex min-w-0 flex-1 items-center gap-2' {...swap(-1)}>
+						<motion.div key='title' className='flex min-w-0 flex-1 items-center gap-4' {...swap(-1)}>
 							{isMobile ? (
 								<HiMenuAlt2 role='button' className='h-5 w-5 text-white/90 phone-side:hidden' onClick={openSidebar} />
 							) : null}

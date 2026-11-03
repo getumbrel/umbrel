@@ -88,10 +88,15 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro, isHdd = false
 						)}
 
 						<DialogFooter>
-							<Button variant='primary' disabled={mustWaitToShutDown} onClick={() => setShowShutdownConfirmation(true)}>
+							<Button
+								variant='primary'
+								size='dialog'
+								disabled={mustWaitToShutDown}
+								onClick={() => setShowShutdownConfirmation(true)}
+							>
 								{t('shut-down')}
 							</Button>
-							<Button variant='default' onClick={() => onOpenChange(false)}>
+							<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 								{t('cancel')}
 							</Button>
 						</DialogFooter>
