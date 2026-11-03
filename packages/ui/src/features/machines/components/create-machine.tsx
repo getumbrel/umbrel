@@ -339,7 +339,8 @@ export default function CreateMachine() {
 					transition={{delay: 0.1, duration: 0.35, ease: 'easeOut'}}
 					className='min-w-0 flex-1'
 				>
-					<div className='umbrel-divide-y'>
+					{/* A container, so a wide row lays out by the list's own width */}
+					<div className='umbrel-divide-y @container'>
 						<SpecRow
 							label={t('machines.configure-processor')}
 							note={t('machines.configure-processor-note', {count: maxCores})}
@@ -510,20 +511,28 @@ export default function CreateMachine() {
 								note={
 									osImage?.licenseChannel && t(`machines.license-key-note.${osImage.licenseChannel}`, {os: sourceName})
 								}
+								wide
 							>
-								<div className='flex w-42 flex-col gap-2 sm:w-44'>
+								<div className='flex flex-col gap-2'>
+									{/* Wide enough to show a whole 29-character key (and its placeholder),
+									    in monospace so the five groups line up for proofreading. 42px is
+									    the Input's horizontal padding and border */}
 									<Input
 										value={licenseKey}
 										onValueChange={(value) => setLicenseKey(value.toUpperCase())}
 										disabled={isCreating}
 										maxLength={29}
 										autoComplete='off'
+										spellCheck={false}
 										placeholder='XXXXX-XXXXX-XXXXX-XXXXX-XXXXX'
 										sizeVariant='short'
 										aria-label={t('machines.license-key')}
+										className='font-mono text-14 @[30rem]:w-[calc(29ch+42px)]'
 									/>
 									{licenseKey !== '' && !licenseKeyValid && (
-										<span className='px-1 text-12 -tracking-2 text-destructive2-lightest'>
+										// Wraps within the field's width instead of widening the column,
+										// which would pull the field sideways as the error appears
+										<span className='w-0 min-w-full px-1 text-12 -tracking-2 text-destructive2-lightest'>
 											{t('machines.license-key-invalid')}
 										</span>
 									)}

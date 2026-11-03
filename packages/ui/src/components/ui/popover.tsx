@@ -19,6 +19,8 @@ function PopoverContent({
 	ref,
 	align = 'center',
 	sideOffset = 4,
+	// Radix lets a popover shift right up to the screen edge; keep it a margin away
+	collisionPadding = 8,
 	...props
 }: React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> & {
 	ref?: React.Ref<React.ComponentRef<typeof PopoverPrimitive.Content>>
@@ -29,6 +31,7 @@ function PopoverContent({
 				ref={ref}
 				align={align}
 				sideOffset={sideOffset}
+				collisionPadding={collisionPadding}
 				className={cn(
 					materialSurfaceClasses.popover,
 					floatingContentAnimationClass,

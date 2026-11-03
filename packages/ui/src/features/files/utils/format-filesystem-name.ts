@@ -8,7 +8,7 @@ export function formatItemName({name, maxLength = 30}: {name: FileSystemItem['na
 	const {name: fileName, extension} = splitFileName(name)
 
 	// Account for extension length when truncating so that truncated files with extensions vs no extensions have the same length
-	const nameMaxLength = extension ? maxLength - extension.length : maxLength
+	const nameMaxLength = extension ? maxLength - Array.from(extension).length : maxLength
 	const truncatedName = truncateName(fileName, nameMaxLength)
 	return extension ? `${truncatedName}${extension}` : truncatedName
 }
@@ -45,15 +45,18 @@ export function splitFileName(fileName: string): {name: string; extension: strin
 // Truncates a name while preserving meaningful parts
 // Example: "very-long-document-name" -> "very-long…name"
 function truncateName(name: string, maxLength: number): string {
-	if (name.length <= maxLength) return name
+	// Count and cut characters, not UTF-16 units, so an emoji is never split in two
+	const characters = Array.from(name)
+	if (characters.length <= maxLength) return name
 
 	// Reserve 1 character for the ellipsis
-	const availableLength = maxLength - 1
+	const availableLength = Math.max(maxLength - 1, 1)
 	const startLength = Math.ceil(availableLength * 0.6) // Keep more characters at start
 	const endLength = availableLength - startLength // Keep remaining at end
 
-	const start = name.slice(0, startLength)
-	const end = name.slice(-endLength)
+	const start = characters.slice(0, startLength).join('')
+	// slice(-0) would keep the whole name
+	const end = endLength > 0 ? characters.slice(-endLength).join('') : ''
 
 	return `${start}…${end}`
 }

@@ -74,12 +74,12 @@ const Ripple = React.memo(function Ripple({
 				const opacity = mainCircleOpacity - i * 0.03
 				const animationDelay = `${i * 0.06}s`
 				const borderStyle = i === numCircles - 1 ? 'dashed' : 'solid'
-				const borderOpacity = 5 + i * 5
 
 				return (
 					<div
 						key={i}
-						className={`absolute animate-files-drop-zone-ripple rounded-full border bg-brand/25 shadow-xl [--i:${i}]`}
+						// White edges over a brand fill, faded by the ring's own opacity
+						className='absolute animate-files-drop-zone-ripple rounded-full border border-white bg-brand/25 shadow-xl'
 						style={
 							{
 								width: `${size}px`,
@@ -88,7 +88,6 @@ const Ripple = React.memo(function Ripple({
 								animationDelay,
 								borderStyle,
 								borderWidth: '1px',
-								borderColor: `hsl(var(--brand), ${borderOpacity / 100})`,
 								top: '50%',
 								left: '50%',
 								transform: 'translate(-50%, -50%) scale(1)',

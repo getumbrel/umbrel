@@ -126,13 +126,16 @@ export function Sidebar({className}: {className?: string}) {
 						</ContextMenu>
 					))}
 				</SidebarSection>
-				<PhoneBackupCard />
 
 				<SidebarDivider />
 				<SidebarSection label={t('photos-sidebar.utilities')}>{utilityItems.map(renderItem)}</SidebarSection>
 
 				<SidebarDivider />
 				<AlbumsSection isActive={pathname === sectionPath('albums')} onClick={() => navigate(sectionPath('albums'))} />
+
+				{/* Last, so the promo never pushes the library's own sections below the
+				    fold, and its arrival once sources load moves nothing above it */}
+				<PhoneBackupCard />
 
 				{/* Spacer */}
 				<div className='h-6' />

@@ -21,6 +21,7 @@ import {useMachineAudio} from '@/features/machines/hooks/use-machine-audio'
 import {useMachineAudioPreference} from '@/features/machines/hooks/use-machine-audio-preference'
 import {createBrowserUuid} from '@/features/machines/utils'
 import {cn} from '@/lib/utils'
+import {useLaneStore} from '@/modules/floating-island/lane'
 import {trpcClient} from '@/trpc/trpc'
 import {isMac} from '@/utils/misc'
 
@@ -50,6 +51,13 @@ export function MachineConsole({
 	const screen = useRef<HTMLDivElement>(null)
 	const {t} = useTranslation()
 	const [connectionState, setConnectionState] = useState<ConnectionState>('connected')
+	// Floating islands rest over the screen's bottom edge, just above the dock,
+	// so while any are up the status pills sit above them
+	const islandsUp = useLaneStore((state) => state.islandCount > 0)
+	const statusPillClass = cn(
+		'absolute inset-x-0 flex justify-center transition-[bottom] duration-300 motion-reduce:transition-none',
+		islandsUp ? 'bottom-14' : 'bottom-4',
+	)
 	const [sessionId, setSessionId] = useState(createBrowserUuid)
 	const {muted} = useMachineAudioPreference(machineId)
 	// This tab's console while noVNC is connected, and so holds the session
@@ -334,7 +342,7 @@ export function MachineConsole({
 				</div>
 			)}
 			{clipboardNotice && connectionState === 'connected' && (
-				<div className='absolute inset-x-0 bottom-4 flex justify-center px-4'>
+				<div className={cn(statusPillClass, 'px-4')}>
 					<div
 						className={cn(
 							'flex items-center gap-3 rounded-full bg-black/70 py-1 pl-3.5 text-12 text-white/60 backdrop-blur',
@@ -355,7 +363,7 @@ export function MachineConsole({
 				</div>
 			)}
 			{connectionState === 'disconnected' && (
-				<div className='pointer-events-none absolute inset-x-0 bottom-4 flex justify-center'>
+				<div className={cn(statusPillClass, 'pointer-events-none')}>
 					<span className='rounded-full bg-black/70 px-3 py-1.5 text-12 text-white/60 backdrop-blur'>
 						{t('machines.console-disconnected')}
 					</span>

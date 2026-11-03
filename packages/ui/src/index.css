@@ -1222,6 +1222,14 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	@apply w-full;
 }
 
+/* Sonner shrinks the toasts stacked behind the front one to its height and
+   hides their content, but only for its own styled toasts. Ours are unstyled,
+   so a taller toast's text spilled out of its shrunken capsule, around and
+   through the front toast. Sonner already fades the content on expand. */
+[data-sonner-toast][data-expanded='false'][data-front='false'] > * {
+	opacity: 0;
+}
+
 .xterm .xterm-viewport {
 	background-color: transparent !important;
 }

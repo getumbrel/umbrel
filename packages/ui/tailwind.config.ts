@@ -28,7 +28,7 @@ export default {
 	theme: {
 		fontFamily: {
 			sans: ['var(--font-inter)', ...defaultSansFonts],
-			mono: ['Roboto', ...defaultMonoFonts],
+			mono: defaultMonoFonts,
 			sticker: ['"Permanent Marker"', 'cursive'],
 		},
 		container: {

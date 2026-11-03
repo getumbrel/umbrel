@@ -14,6 +14,7 @@ import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-n
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import type {Machine} from '@/features/machines/types'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 
 interface IconsViewFileItemProps {
@@ -38,13 +39,17 @@ export const IconsViewFileItem = ({
 	const isTouchDevice = useIsTouchDevice()
 	const {getFolderStorageApps} = useAppStorageFolderTags()
 	const folderApps = getFolderStorageApps(item)
+	// Middle-truncation budgets for the name's two lines: about 30 characters fill a
+	// 112px tile and 26 the 100px ones below lg, and the app stack takes the room of 6
+	const isMobile = useIsMobile()
+	const nameMaxLength = (isMobile ? 26 : 30) - (folderApps ? 6 : 0)
 
 	const [isHovered, setIsHovered] = useState(false)
 
 	return (
 		<div
 			// 100px (w-25) below lg / 112px (w-28) at lg+ — must match getGridItemWidth()
-			className='relative flex h-full w-25 flex-col items-center gap-1 overflow-hidden p-2 text-center break-all text-ellipsis lg:w-28'
+			className='relative flex h-full w-25 flex-col items-center gap-1 overflow-hidden p-2 text-center break-words text-ellipsis lg:w-28'
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>
@@ -75,7 +80,7 @@ export const IconsViewFileItem = ({
 						className='mt-1 line-clamp-2 w-full text-center text-12 leading-tight'
 						// The app stack rides the name's own line flow, so a shorter name
 						// budget keeps it inside the two-line clamp
-						maxLength={folderApps ? 24 : undefined}
+						maxLength={nameMaxLength}
 						suffix={folderApps ? <FolderAppStack apps={folderApps} className='ml-0.5 align-[-3px]' /> : undefined}
 					/>
 				)}

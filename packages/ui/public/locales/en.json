@@ -262,8 +262,6 @@
   "app-store.updates-shelf.names-and-more": "{{names}}, and more",
   "app-store.updates-shelf.os-update-required-count_one": "{{count}} update requires a newer version of umbrelOS",
   "app-store.updates-shelf.os-update-required-count_other": "{{count}} updates require a newer version of umbrelOS",
-  "app-updates.less": "less",
-  "app-updates.more": "more",
   "app-updates.no-updates": "All apps are up-to-date!",
   "app-updates.os-update-needed": "This update requires a newer version of umbrelOS",
   "app-updates.update": "Update",

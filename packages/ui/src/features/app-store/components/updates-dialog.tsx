@@ -1,10 +1,9 @@
 import type {DialogProps} from '@radix-ui/react-dialog'
-import {Fragment, useState} from 'react'
+import {Fragment} from 'react'
 import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
-import {Markdown} from '@/components/markdown'
 import {ProgressButton} from '@/components/progress-button'
 import {AnimatedNumber} from '@/components/ui/animated-number'
 import {Button} from '@/components/ui/button'
@@ -12,11 +11,11 @@ import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {Separator} from '@/components/ui/separator'
 import {UNKNOWN} from '@/constants'
+import {ReadMoreMarkdownSection} from '@/features/app-store/components/app-page/shared'
 import {pollStates, useAppInstallProgress} from '@/hooks/use-app-install'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useUpdateAllApps} from '@/hooks/use-update-all-apps'
 import {useUpdateApp} from '@/hooks/use-update-app'
-import {cn} from '@/lib/utils'
 import {appStateToString} from '@/modules/app-store/app-state-strings'
 import {canExecuteUpdate} from '@/modules/app-store/update-availability'
 import {RegistryApp} from '@/trpc/trpc'
@@ -95,7 +94,6 @@ export function UpdatesDialog({
 }
 function AppItem({app}: {app: RegistryApp}) {
 	const {t} = useTranslation()
-	const [showAll, setShowAll] = useState(false)
 	// Polls the per-app state only while a transition is running, so an open
 	// dialog with many rows doesn't poll for idle apps
 	const {state, progress} = useAppInstallProgress(app.id)
@@ -138,31 +136,17 @@ function AppItem({app}: {app: RegistryApp}) {
 				</ProgressButton>
 			</div>
 			{app.releaseNotes && (
-				<div className='relative mt-2 grid'>
-					<div
-						className={cn('relative overflow-x-auto text-13 opacity-50 transition-all')}
-						style={{
-							maskImage: showAll ? undefined : 'linear-gradient(-45deg, transparent 30px, white 60px, white)',
-						}}
-						ref={(ref) => {
-							ref?.addEventListener('focusin', () => {
-								setShowAll(true)
-							})
-						}}
+				// Same read-more as the app page's release notes, and it only offers
+				// Read more when the notes are actually cut off. The notes recede as a
+				// whole, headings and links too, so the app names lead the list
+				<div className='mt-2 flex flex-col gap-1'>
+					<ReadMoreMarkdownSection
+						key={app.releaseNotes}
+						lines={3}
+						className='text-13 leading-snug -tracking-3 opacity-50'
 					>
-						<Markdown className={cn('text-13 leading-snug -tracking-3', !showAll && 'line-clamp-2')}>
-							{app.releaseNotes}
-						</Markdown>
-					</div>
-					<button
-						className={cn(
-							'justify-self-end text-13 text-brand underline underline-offset-2',
-							!showAll && 'absolute right-0 bottom-0',
-						)}
-						onClick={() => setShowAll((s) => !s)}
-					>
-						{showAll ? t('app-updates.less') : t('app-updates.more')}
-					</button>
+						{app.releaseNotes}
+					</ReadMoreMarkdownSection>
 				</div>
 			)}
 		</div>

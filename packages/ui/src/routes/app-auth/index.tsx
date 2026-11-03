@@ -246,7 +246,8 @@ export default function LoginWithUmbrel() {
 						<div
 							className={cn(
 								'flex w-full flex-col items-center justify-center transition-transform duration-500',
-								!chosen && '-translate-y-10',
+								// Short screens scroll instead: lifted, the top would be out of reach
+								!chosen && '-translate-y-10 low:translate-y-0',
 							)}
 						>
 							{/* umbrelOS + app icons fanned like a card stack (each rotated
@@ -258,7 +259,13 @@ export default function LoginWithUmbrel() {
 								{(!chosen || !hasMultipleAccounts) && (
 									<motion.div
 										key='app-header'
-										className='mb-10 flex flex-col items-center gap-5 overflow-visible'
+										// The account dock's lens rises 48px above the dock's own box, so
+										// the title gets the lock screen's clearance below its logo (just
+										// clear of the lens on short screens)
+										className={cn(
+											'flex flex-col items-center gap-5 overflow-visible',
+											hasMultipleAccounts ? 'mb-24 low:mb-14' : 'mb-10',
+										)}
 										exit={{opacity: 0, y: -28, height: 0, marginBottom: 0}}
 										transition={{duration: 0.2}}
 									>
