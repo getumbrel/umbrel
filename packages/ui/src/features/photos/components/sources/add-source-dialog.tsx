@@ -33,11 +33,11 @@ import {useDialogOpenProps} from '@/utils/dialog'
 
 type Step = 'kind' | 'umbrel'
 
-// Where photos come from. iPhones register themselves from the Umbrel app, so
-// that card only hands over to it; This Umbrel is a permanent source, so its
+// Where photos come from. Phones register themselves from the Umbrel app, so
+// those cards only hand over to it; This Umbrel is a permanent source, so its
 // card shows the live import scope (all folders / except / only) and saves
-// changes to it. Android, drives and NAS are post-v1 — their cards stay
-// visible but locked, so the roadmap reads at a glance.
+// changes to it. Drives and NAS are post-v1: their cards stay visible but
+// locked, so the roadmap reads at a glance.
 export function AddSourceDialog() {
 	const homePath = useHomePath()
 	const dialogProps = useDialogOpenProps('photos-add-source')
@@ -98,8 +98,15 @@ export function AddSourceDialog() {
 			art: <SourceIcon type='iphone' size={40} />,
 			title: t('photos-add-source.kind-iphone'),
 			description: t('photos-add-source.kind-iphone-description'),
-			// The Umbrel app carries the whole flow; the card just hands over to it
+			// The Umbrel app carries the whole flow; the phone cards just hand over to it
 			open: () => window.open('https://link.umbrel.com/ios-app', '_blank', 'noopener,noreferrer'),
+		},
+		{
+			id: 'android',
+			art: <SourceIcon type='android' size={40} />,
+			title: t('photos-add-source.kind-android'),
+			description: t('photos-add-source.kind-android-description'),
+			open: () => window.open('https://link.umbrel.com/android-app', '_blank', 'noopener,noreferrer'),
 		},
 		{
 			id: 'folder',
@@ -112,13 +119,6 @@ export function AddSourceDialog() {
 				setUmbrelScope(umbrelSource?.scope ?? {mode: 'everything', paths: []})
 				setStep('umbrel')
 			},
-		},
-		{
-			id: 'android',
-			art: <SourceIcon type='android' size={40} />,
-			title: t('photos-add-source.kind-android'),
-			description: t('photos-add-source.kind-android-description'),
-			locked: true,
 		},
 		{
 			id: 'external-drive',

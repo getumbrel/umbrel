@@ -160,7 +160,7 @@ function Indexing({frame}: {frame: Frame}) {
 // album offers to fill it — the way in is picking items from the library —
 // unless that is already under way; the media sections invite the first
 // upload; Favorites teaches the gesture and Deleted simply explains itself —
-// neither needs a button. An iPhone source fills from the phone, so its
+// neither needs a button. A phone source fills from the phone, so its
 // screen points there instead of at the picker.
 function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 	const {t} = useTranslation()
