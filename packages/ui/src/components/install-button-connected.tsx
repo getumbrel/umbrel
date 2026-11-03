@@ -16,6 +16,7 @@ import {canPresentUpdateAction, isAppUpdateAvailable} from '@/modules/app-store/
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {RegistryApp, trpcReact} from '@/trpc/trpc'
+import {roundForPrettyBytes} from '@/utils/round-for-pretty-bytes'
 
 import {InstallButton} from './install-button'
 
@@ -138,7 +139,7 @@ export function InstallButtonConnectedController({
 		updateApp.update()
 	}
 
-	const installSize = app.installSize ? prettyBytes(app.installSize) : undefined
+	const installSize = app.installSize ? prettyBytes(roundForPrettyBytes(app.installSize)) : undefined
 	const controller: InstallController = ready
 		? {
 				status: 'ready',

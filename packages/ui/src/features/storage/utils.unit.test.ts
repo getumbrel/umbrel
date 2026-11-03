@@ -5,6 +5,7 @@ import type {RaidDevice, RaidStatus, StorageDevice} from './hooks/use-storage.ts
 import {
 	canDisconnectPoolMember,
 	canRepairInPlace,
+	formatStorageSize,
 	getPoolDeviceType,
 	hasRaidErrors,
 	planFailsafeTransition,
@@ -312,4 +313,15 @@ test('canRepairInPlace treats a mirrored accelerator as its own group', () => {
 		canRepairInPlace({...pool, accelerator: {exists: true, devices: [failed]}} as RaidStatus, failed, attached),
 		false,
 	)
+})
+
+test('formatStorageSize keeps one decimal below 100 and none above', () => {
+	assert.equal(formatStorageSize(4_500_000_000_000), '4.5TB')
+	assert.equal(formatStorageSize(45_240_000_000), '45.2GB')
+	assert.equal(formatStorageSize(256_100_000_000), '256GB')
+})
+
+test('formatStorageSize moves up a unit instead of showing four digits', () => {
+	assert.equal(formatStorageSize(999_600_000_000), '1TB')
+	assert.equal(formatStorageSize(999_400_000_000), '999GB')
 })

@@ -22,7 +22,7 @@ export function ExpandedContent({devices}: {devices: FormattingDevice[]}) {
 				{/* Left side */}
 				<div className='flex min-w-0 flex-1 flex-col gap-2 pr-2'>
 					<div className='truncate text-sm tracking-tight text-white/60'>{t('files-formatting-island.formatting')}</div>
-					<div className='truncate text-3xl font-light tracking-tight text-white'>{`${device.name.slice(0, 9)}${device.name.length > 9 ? '...' : ''}`}</div>
+					<div className='truncate text-3xl font-light tracking-tight text-white'>{`${device.name.slice(0, 9)}${device.name.length > 9 ? '…' : ''}`}</div>
 					<div className='truncate text-sm tracking-tight text-white/60'>{formatFilesystemSize(device.size)}</div>
 				</div>
 

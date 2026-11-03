@@ -217,7 +217,7 @@ export function CloudDetailsDialog({
 					)}
 				</div>
 				<IconButton icon={Trash2} className='text-destructive2-lightest' onClick={handleRemove}>
-					{isPhone ? t('files-cloud.remove') : t('files-cloud.remove-download')}
+					{t('files-cloud.remove-download')}
 				</IconButton>
 			</div>
 		</div>

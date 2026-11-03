@@ -94,20 +94,20 @@ function ButtonContentForState({
 		case 'running':
 			return t('app.open')
 		case 'starting':
-			return t('app.starting') + '...'
+			return t('app.starting') + '…'
 		case 'restarting':
-			return t('app.restarting') + '...'
+			return t('app.restarting') + '…'
 		case 'stopping':
-			return t('app.stopping') + '...'
+			return t('app.stopping') + '…'
 		case 'uninstalling':
-			return t('app.uninstalling') + '...'
+			return t('app.uninstalling') + '…'
 		case 'unknown':
 		case 'stopped':
 			return t('app.offline')
 		case 'loading':
 		case undefined:
 			return <TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-xs' />
-		// return t('loading') + '...'
+		// return t('loading') + '…'
 	}
 	return assertUnreachable(state)
 }

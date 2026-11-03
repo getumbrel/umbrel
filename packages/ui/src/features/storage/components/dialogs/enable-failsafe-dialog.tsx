@@ -65,10 +65,7 @@ export function EnableFailsafeDialog({
 		}).catch((error) => {
 			clearPendingOperation()
 			setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-			toast.error(t('storage-manager.enable-failsafe.failed'), {
-				area: 'settings',
-				description: error instanceof Error ? error.message : t('unknown-error'),
-			})
+			toast.error(t('storage-manager.enable-failsafe.failed'), {area: 'settings'})
 		})
 	}
 

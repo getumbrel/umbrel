@@ -194,10 +194,7 @@ export function SwapDialog({
 			}).catch((error) => {
 				clearPendingOperation()
 				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-				toast.error(t('storage-manager.swap.failed-to-start'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				toast.error(t('storage-manager.swap.failed-to-start'), {area: 'settings'})
 			})
 		}
 

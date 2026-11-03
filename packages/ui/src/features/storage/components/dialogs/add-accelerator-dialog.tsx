@@ -58,10 +58,7 @@ export function AddAcceleratorDialog({open, onOpenChange, devices, addAccelerato
 			.catch((error) => {
 				clearPendingOperation()
 				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-				toast.error(t('storage-manager.add-accelerator.failed'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				toast.error(t('storage-manager.add-accelerator.failed'), {area: 'settings'})
 			})
 	}
 

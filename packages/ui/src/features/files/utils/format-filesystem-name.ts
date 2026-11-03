@@ -43,17 +43,17 @@ export function splitFileName(fileName: string): {name: string; extension: strin
 }
 
 // Truncates a name while preserving meaningful parts
-// Example: "very-long-document-name" -> "very-long...name"
+// Example: "very-long-document-name" -> "very-long…name"
 function truncateName(name: string, maxLength: number): string {
 	if (name.length <= maxLength) return name
 
-	// Reserve 3 characters for "..."
-	const availableLength = maxLength - 3
+	// Reserve 1 character for the ellipsis
+	const availableLength = maxLength - 1
 	const startLength = Math.ceil(availableLength * 0.6) // Keep more characters at start
 	const endLength = availableLength - startLength // Keep remaining at end
 
 	const start = name.slice(0, startLength)
 	const end = name.slice(-endLength)
 
-	return `${start}...${end}`
+	return `${start}…${end}`
 }

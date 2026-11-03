@@ -1,6 +1,7 @@
 import prettyBytes from 'pretty-bytes'
 
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
+import {roundForPrettyBytes} from '@/utils/round-for-pretty-bytes'
 
 import {getGenericSsdRaidDevices} from '../storage-selection'
 
@@ -14,13 +15,13 @@ export type RaidType = 'storage' | 'failsafe'
 // e.g., "4.5TB", "45.2GB", "256GB" - only 256.1GB gets rounded because 256 >= 100
 export const formatSize = (bytes: number) => {
 	// First format with 1 decimal to determine the numeric value
-	const formatted = prettyBytes(bytes, {maximumFractionDigits: 1})
+	const formatted = prettyBytes(roundForPrettyBytes(bytes), {maximumFractionDigits: 1})
 	const numericValue = parseFloat(formatted)
 
 	// If 3+ digits (>=100), round to integer to keep string short
 	const fractionDigits = numericValue >= 100 ? 0 : 1
 
-	return prettyBytes(bytes, {maximumFractionDigits: fractionDigits}).replace(' ', '')
+	return prettyBytes(roundForPrettyBytes(bytes), {maximumFractionDigits: fractionDigits}).replace(' ', '')
 }
 
 // Threshold % for lifetime usage warning (100 = the rated endurance being fully used)

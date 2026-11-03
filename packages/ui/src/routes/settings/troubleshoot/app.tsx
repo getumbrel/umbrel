@@ -41,7 +41,7 @@ function useAppLogs(appId: string) {
 	const {t} = useTranslation()
 	const troubleshootQ = trpcReact.apps.logs.useQuery({appId})
 
-	if (troubleshootQ.isLoading) return t('loading') + '...'
+	if (troubleshootQ.isLoading) return t('loading') + '…'
 	if (troubleshootQ.isError) return troubleshootQ.error.message
 
 	return troubleshootQ.data || t('troubleshoot-no-logs-yet')

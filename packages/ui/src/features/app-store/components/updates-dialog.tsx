@@ -110,13 +110,7 @@ function AppItem({app}: {app: RegistryApp}) {
 				<div className='flex min-w-0 flex-col'>
 					<h3 className='text-13 font-semibold'>{app.name}</h3>
 					<p className='text-13 opacity-40'>{app.version}</p>
-					{!app.compatible && (
-						<p className='text-12 text-amber-300/70'>
-							{t('app-updates.os-update-required', {
-								version: app.manifestVersion.replace(/\.0$/, ''),
-							})}
-						</p>
-					)}
+					{!app.compatible && <p className='text-12 text-amber-300/70'>{t('app-updates.os-update-needed')}</p>}
 				</div>
 				<div className='flex-1' />
 				<ProgressButton
@@ -137,7 +131,7 @@ function AppItem({app}: {app: RegistryApp}) {
 							</span>
 						</>
 					) : inProgress ? (
-						appStateToString(state, t) + '...'
+						appStateToString(state, t) + '…'
 					) : (
 						t('app-updates.update')
 					)}

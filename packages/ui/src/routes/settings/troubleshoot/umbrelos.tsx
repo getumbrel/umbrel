@@ -34,7 +34,7 @@ export function useSystemLogs(type: SystemLogType) {
 	const {t} = useTranslation()
 	const troubleshootQ = trpcReact.system.logs.useQuery({type})
 
-	if (troubleshootQ.isLoading) return t('loading') + '...'
+	if (troubleshootQ.isLoading) return t('loading') + '…'
 	if (troubleshootQ.isError) return troubleshootQ.error.message
 
 	return troubleshootQ.data || t('troubleshoot-no-logs-yet')

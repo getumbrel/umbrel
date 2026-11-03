@@ -115,9 +115,9 @@ export function AppCardAction({
 	// `in-progress` status without a transitioning state can only be a brief
 	// cache mismatch; showing the transition label there too keeps it coherent
 	const label = transitioning
-		? `${appStateToString(state, t)}...`
+		? `${appStateToString(state, t)}…`
 		: status === 'in-progress'
-			? `${t('app-store.status.in-progress')}...`
+			? `${t('app-store.status.in-progress')}…`
 			: {
 					// Incompatible apps get the same Install button; the click explains
 					// the required OS update, exactly like the app page does

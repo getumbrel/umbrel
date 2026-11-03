@@ -1,4 +1,4 @@
-import {FolderX} from 'lucide-react'
+import {FolderLock, FolderX} from 'lucide-react'
 import {ComponentType, useRef} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
@@ -229,12 +229,17 @@ function ErrorView({error}: {error: unknown}) {
 		message.includes('[invalid-path]') ||
 		message.startsWith('EIO')
 
+	// A member following an owner's link: same calm state as a missing folder, not raw backend text
+	const isForbidden = message.includes('[forbidden]')
+
 	return (
 		<div className='flex h-full items-center justify-center p-4 text-center'>
-			{isNotFound ? (
+			{isNotFound || isForbidden ? (
 				<div className='flex flex-col items-center gap-2'>
-					<FolderX className='h-6 w-6 opacity-50' />
-					<span className='text-12 text-white/40'>{t('files-listing.no-such-file')}</span>
+					{isForbidden ? <FolderLock className='h-6 w-6 opacity-50' /> : <FolderX className='h-6 w-6 opacity-50' />}
+					<span className='text-12 text-white/40'>
+						{isForbidden ? t('files-backend-error.forbidden') : t('files-listing.no-such-file')}
+					</span>
 				</div>
 			) : (
 				<span className='text-12 text-white/40'>{getFilesErrorMessage(message)}</span>

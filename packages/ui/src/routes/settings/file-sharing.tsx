@@ -141,7 +141,7 @@ export default function FileSharingDrawerOrDialog() {
 	const smbUrl =
 		selectedPlatform?.id === 'windows' ? `\\\\${window.location.hostname}` : `smb://${window.location.hostname}/`
 	const username = user?.sambaUsername ?? ''
-	const password = isLoadingSharesPassword ? '...' : sharePassword || ''
+	const password = isLoadingSharesPassword ? '…' : sharePassword || ''
 
 	// --- First-run choice screen ---
 	const choiceScreen = (

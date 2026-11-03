@@ -22,6 +22,8 @@ import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 
+import {defaultVolumeLabel, MAX_LABEL_LENGTH} from './default-label'
+
 function FilesystemCard({
 	id,
 	name,
@@ -88,14 +90,13 @@ export default function FormatDriveDialog() {
 	if (!drive || drive.isFormatting) return null
 
 	const requiresFormat = !drive.isMounted
-
-	const MAX_LABEL_LENGTH = 11
+	const defaultLabel = defaultVolumeLabel(drive.name)
 
 	const handleFormat = async () => {
 		await formatExternalStorageDevice({
 			deviceId: drive.id,
 			filesystem,
-			label: label || drive.name.slice(0, MAX_LABEL_LENGTH),
+			label: label || defaultLabel,
 		})
 		dialogProps.onOpenChange(false)
 		resetForm()
@@ -124,9 +125,10 @@ export default function FormatDriveDialog() {
 								{requiresFormat ? t('files-format.title-requires-format') : t('files-format.title')}
 							</AlertDialogTitle>
 							<span className='text-left text-sm text-white/70'>
+								{/* The erase warning has its own alert below, so a drive that can be read just gets a lead-in */}
 								{requiresFormat
 									? t('files-format.description-unreadable', {driveName: drive.name})
-									: t('files-format.description', {driveName: drive.name})}
+									: t('files-format.description-choose', {driveName: drive.name})}
 							</span>
 						</div>
 					</div>
@@ -179,7 +181,7 @@ export default function FormatDriveDialog() {
 									setLabel(newValue)
 								}
 							}}
-							placeholder={drive.name.slice(0, MAX_LABEL_LENGTH)}
+							placeholder={defaultLabel}
 							className='w-full bg-white/5'
 							disabled={isFormatting}
 							autoFocus

@@ -45,6 +45,7 @@ export function CloudFolderStep({
 	layoutKey,
 	morph,
 	state,
+	errorMessage,
 	isPersonalOneDrive,
 	onRetry,
 	onOpenPicker,
@@ -57,6 +58,7 @@ export function CloudFolderStep({
 	layoutKey: string
 	morph: boolean
 	state: CloudFolderState
+	errorMessage?: string
 	isPersonalOneDrive: boolean
 	onRetry: () => void
 	onOpenPicker: () => void
@@ -134,7 +136,10 @@ export function CloudFolderStep({
 		<div className='py-2'>
 			<div className='flex flex-col items-center gap-4 py-6 text-center'>
 				<CloudLinkDiagram layoutKey={layoutKey} logo={logo} morph={morph} />
-				<p className='max-w-[340px] text-13 leading-relaxed text-white/60'>{body}</p>
+				<div className='max-w-[340px]'>
+					<p className='text-13 leading-relaxed text-white/60'>{body}</p>
+					{state === 'error' && errorMessage && <p className='text-12 leading-relaxed text-white/40'>{errorMessage}</p>}
+				</div>
 			</div>
 			<DialogFooter className='flex-col-reverse justify-center gap-2 pt-4'>
 				<Button size='dialog' onClick={onBack}>

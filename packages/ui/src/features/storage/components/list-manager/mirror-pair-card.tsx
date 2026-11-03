@@ -118,7 +118,7 @@ export function PairPlaceholderCell({title, description}: {title: string; descri
 				<TbPlus className='size-4 text-white/80' strokeWidth={2.5} />
 			</div>
 			<div className='flex flex-col gap-0.5'>
-				<span className='text-[14px] font-medium text-white'>{title}</span>
+				<span className='text-[14px] font-medium text-balance text-white'>{title}</span>
 				<span className='text-[12px] leading-snug text-white/50'>{description}</span>
 			</div>
 		</div>

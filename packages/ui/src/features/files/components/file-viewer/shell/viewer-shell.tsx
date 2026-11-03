@@ -22,9 +22,9 @@ import {StageDownload, StageLoading, StageMessage} from '@/features/files/compon
 import {useViewerKeys} from '@/features/files/components/file-viewer/shell/use-viewer-keys'
 import {keepFocus} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import type {Viewer} from '@/features/files/components/file-viewer/viewers'
-import {FILE_TYPE_MAP, type FileType} from '@/features/files/constants'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {fileTypeLabel} from '@/features/files/utils/file-type-label'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {LightboxButton, lightboxButtonClass} from '@/features/photos/components/viewer/lightbox-button'
 import {useIsMobile} from '@/hooks/use-is-mobile'
@@ -284,9 +284,8 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 		ownsArrows: viewer?.ownsArrows,
 	})
 
-	const typeKey = FILE_TYPE_MAP[item.type as FileType]?.nameTKey
 	const subtitle = [
-		typeKey ? t(typeKey) : undefined,
+		fileTypeLabel(item, t),
 		detail,
 		savedSize?.path === item.path
 			? formatFilesystemSize(savedSize.size)

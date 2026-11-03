@@ -1,5 +1,5 @@
 import {useTranslation} from 'react-i18next'
-import {TbServer, TbShoppingBag, TbUser} from 'react-icons/tb'
+import {TbServer, TbShoppingBag, TbUser, TbUsers} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
@@ -15,10 +15,14 @@ export function ReviewData() {
 	const navigate = useNavigate()
 
 	const userQ = trpcReact.user.get.useQuery()
+	const accountsQ = trpcReact.user.listAccounts.useQuery()
 	const userAppsQ = trpcReact.apps.list.useQuery()
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 
 	const installedAppCount = userAppsQ.data?.length
+	// A reset removes every account on the device, not just the owner's
+	const accountCount = accountsQ.data?.length ?? 0
+	const hasMembers = accountCount > 1
 	const used = maybePrettyBytes(diskQ.data?.totalUsed, i18n.language)
 
 	return (
@@ -39,16 +43,20 @@ export function ReviewData() {
 				}
 			>
 				<ImmersiveDialogIconMessageKeyValue
-					icon={TbUser}
-					k={t('factory-reset.review.account-info')}
+					icon={hasMembers ? TbUsers : TbUser}
+					k={hasMembers ? t('factory-reset.review.accounts-info') : t('factory-reset.review.account-info')}
 					v={
-						<>
-							<span>{userQ.data?.name}</span>
-							<span className='max-sm:hidden'>
-								<span className='mr-2 ml-2 opacity-50'>⋅</span>
-								••••••••
-							</span>
-						</>
+						hasMembers ? (
+							t('factory-reset.review.accounts', {count: accountCount})
+						) : (
+							<>
+								<span>{userQ.data?.name}</span>
+								<span className='max-sm:hidden'>
+									<span className='mr-2 ml-2 opacity-50'>⋅</span>
+									••••••••
+								</span>
+							</>
+						)
 					}
 				/>
 				<ImmersiveDialogIconMessageKeyValue

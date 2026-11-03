@@ -7,9 +7,9 @@ import {EditableName} from '@/features/files/components/listing/file-item/editab
 import {FolderAppStack} from '@/features/files/components/listing/file-item/folder-app-stack'
 import {TruncatedFilename} from '@/features/files/components/listing/file-item/truncated-filename'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
-import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useAppStorageFolderTags} from '@/features/files/hooks/use-app-storage-folder-tags'
 import type {FileSystemItem} from '@/features/files/types'
+import {fileTypeLabel} from '@/features/files/utils/file-type-label'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
@@ -45,9 +45,7 @@ export function ListViewFileItem({
 	const isMobile = useIsMobile()
 	const [languageCode] = useLanguage()
 
-	// Get the file type name from the translation key
-	const fileType = item.type ? FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP]?.nameTKey : ''
-	const translatedFileType = fileType ? t(fileType) : item.type
+	const translatedFileType = fileTypeLabel(item, t)
 
 	// Mobile view
 	if (isMobile) {

@@ -30,10 +30,13 @@ export function SearchResults({query}: {query: string}) {
 							<span className='opacity-50'>{t('app-store.search.results-for')}</span> {query}
 						</>
 					}
+					// No count beside the empty state, which already says there are no results
 					rightChildren={
-						<span className='text-13 whitespace-nowrap text-white/40'>
-							{t('app-store.search.result-count', {count: results.length})}
-						</span>
+						results.length > 0 && (
+							<span className='text-13 whitespace-nowrap text-white/40'>
+								{t('app-store.search.result-count', {count: results.length})}
+							</span>
+						)
 					}
 				/>
 			</div>

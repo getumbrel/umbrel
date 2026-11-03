@@ -80,7 +80,7 @@ export default function ShareInfoDialog() {
 	const smbUrl =
 		selectedPlatform?.id === 'windows' ? `\\\\${window.location.hostname}` : `smb://${window.location.hostname}/`
 	const username = user?.sambaUsername ?? ''
-	const password = isLoadingSharesPassword ? '...' : sharePassword || ''
+	const password = isLoadingSharesPassword ? '…' : sharePassword || ''
 
 	const content = (
 		<div className='space-y-6'>

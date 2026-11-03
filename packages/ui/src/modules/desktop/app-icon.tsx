@@ -148,15 +148,15 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 		case 'running':
 			return label
 		case 'starting':
-			return t('app.starting') + '...'
+			return t('app.starting') + '…'
 		case 'restarting':
-			return t('app.restarting') + '...'
+			return t('app.restarting') + '…'
 		case 'stopping':
-			return t('app.stopping') + '...'
+			return t('app.stopping') + '…'
 		case 'uninstalling':
-			return t('app.uninstalling') + '...'
+			return t('app.uninstalling') + '…'
 		case 'updating':
-			return t('app.updating') + '...'
+			return t('app.updating') + '…'
 		case 'loading':
 			return label
 		case 'stopped':

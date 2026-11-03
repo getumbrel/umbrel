@@ -93,10 +93,7 @@ export function ReplaceFailedDriveDialog({
 		}).catch((error) => {
 			clearPendingOperation()
 			setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-			toast.error(t('storage-manager.replace-failed.error'), {
-				area: 'settings',
-				description: error instanceof Error ? error.message : t('unknown-error'),
-			})
+			toast.error(t('storage-manager.replace-failed.error'), {area: 'settings'})
 		})
 	}
 
@@ -185,7 +182,15 @@ export function ReplaceFailedDriveDialog({
 						</div>
 					</div>
 
-					<p className='text-13 leading-relaxed text-white/50'>{t('storage-manager.replace-failed.size-note')}</p>
+					{/* The drive is already chosen and its size is checked below, so only the erase applies -
+					    and not to an in-place repair, which rebuilds the same drive */}
+					{!isSelfReplacement && !isDeviceTooSmall && (
+						<p className='text-13 leading-relaxed text-white/50'>
+							{isHdd
+								? t('storage-manager.replace-failed.erase-note-drive')
+								: t('storage-manager.replace-failed.erase-note')}
+						</p>
+					)}
 					{/* Size validation warning */}
 					{isDeviceTooSmall ? (
 						<div className='flex items-start gap-3 rounded-12 bg-[#F5A623]/10 p-3'>

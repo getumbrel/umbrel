@@ -52,9 +52,6 @@ export function CommunityAppStoreDialog() {
 			appStoresQ.refetch()
 			utils.appStore.registry.invalidate()
 		},
-		onError: (err) => {
-			toast.error(t('community-app-store.add-error', {message: err.message}), {area: 'app-store'})
-		},
 	})
 
 	const removeAppStoreMut = trpcReact.appStore.removeRepository.useMutation({
@@ -74,14 +71,22 @@ export function CommunityAppStoreDialog() {
 		// So setLocalError('') is not batched
 		await setLocalError('')
 		e.preventDefault()
-		if (!url.trim()) {
+		const trimmedUrl = url.trim()
+		if (!trimmedUrl) {
 			setLocalError(t('community-app-stores.url-required'))
 			return
 		}
-		addAppStoreMut.mutate({url: url.trim()})
+		if (appStoresQ.data?.some((store) => store?.url === trimmedUrl)) {
+			setLocalError(t('community-app-stores.already-added'))
+			return
+		}
+		addAppStoreMut.mutate({url: trimmedUrl})
 	}
 
-	const remoteFormError = !addAppStoreMut.error?.data?.zodError && addAppStoreMut.error?.message
+	// Shown under the field only, not also as a toast. The backend's reasons are raw URL and git
+	// errors (a repository that doesn't exist reports "HTTP Error: 401 Unauthorized"), so any
+	// failure gets one plain message.
+	const remoteFormError = addAppStoreMut.error ? t('community-app-stores.add-failed') : ''
 	const formError = localError || remoteFormError
 
 	const nonUmbrelAppStores = (appStoresQ.data ?? [])

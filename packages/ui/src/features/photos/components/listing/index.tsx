@@ -5,6 +5,7 @@ import {TbLoader} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {PillButton} from '@/components/ui/edge-controls'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {CollectionsListing} from '@/features/photos/components/collections'
 import {ListingSurface, type Frame} from '@/features/photos/components/listing/surface'
 import {TimelineGrid} from '@/features/photos/components/listing/timeline-grid'
@@ -160,8 +161,9 @@ function Indexing({frame}: {frame: Frame}) {
 // album offers to fill it — the way in is picking items from the library —
 // unless that is already under way; the media sections invite the first
 // upload; Favorites teaches the gesture and Deleted simply explains itself —
-// neither needs a button. A phone source fills from the phone, so its
-// screen points there instead of at the picker.
+// neither needs a button. Hints that name a gesture use the one the device
+// has: no drag and drop on touch, no tapping with a mouse. A phone source
+// fills from the phone, so its screen points there instead of at the picker.
 function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 	const {t} = useTranslation()
 	const selection = usePhotosSelection()
@@ -169,6 +171,7 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const {sources} = usePhotoSources()
+	const isTouch = useIsTouchDevice()
 	// An album or source with nothing in it, as opposed to a search that finds
 	// nothing there — from the route, not the filter (a search token also
 	// fills albumIds/sourceIds)
@@ -209,7 +212,7 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 		description = t('photos-empty.deleted-description')
 	} else if (section === 'favorites') {
 		title = t('photos-empty.favorites-title')
-		description = t('photos-empty.favorites-description')
+		description = isTouch ? t('photos-empty.favorites-description') : t('photos-empty.favorites-description-pointer')
 	} else {
 		title =
 			section === 'videos'
@@ -223,7 +226,7 @@ function Empty({frame}: {filter: ItemFilter; frame: Frame}) {
 							: section === '360'
 								? t('photos-empty.360-title')
 								: t('photos-empty.library-title')
-		description = t('photos-empty.library-description')
+		description = isTouch ? t('photos-empty.library-description-touch') : t('photos-empty.library-description')
 		actions = (
 			<>
 				<UploadPill />

@@ -94,6 +94,8 @@ export default function CloudAddDialog() {
 	const [cameFromConnect, setCameFromConnect] = useState(false)
 	const [locations, setLocations] = useState<CloudLocations | null>(null)
 	const [folderState, setFolderState] = useState<CloudFolderState>('loading')
+	// Why the folders didn't load, shown in the step rather than a toast that disappears
+	const [folderError, setFolderError] = useState('')
 	const [remote, setRemote] = useState<{ref: CloudSyncRemote; name: string} | null>(null)
 	const [truncated, setTruncated] = useState(false)
 	const [cloudPickerOpen, setCloudPickerOpen] = useState(false)
@@ -175,12 +177,12 @@ export default function CloudAddDialog() {
 				if (message.includes('[cloud-account-busy]')) setFolderState('busy')
 				else if (message.includes('[cloud-account-auth-required]')) setFolderState('auth')
 				else {
+					setFolderError(getFilesErrorMessage(message))
 					setFolderState('error')
-					toast.error(t('files-cloud-error.browse', {message: getFilesErrorMessage(message)}), {area: 'files'})
 				}
 			}
 		},
-		[fetchLocations, t],
+		[fetchLocations],
 	)
 
 	const handleSelectAccount = (account: CloudAccount) => {
@@ -547,6 +549,7 @@ export default function CloudAddDialog() {
 								layoutKey={webdavFlavor ?? provider.id}
 								morph={cameFromConnect}
 								state={folderState}
+								errorMessage={folderError}
 								isPersonalOneDrive={isPersonalOneDrive}
 								onRetry={() => accountId && loadLocations(accountId)}
 								onOpenPicker={() => setCloudPickerOpen(true)}

@@ -155,7 +155,7 @@ describe('UpdatesDialogConnected', () => {
 		fixtures.registryApps = [{...fixtures.registryApps[0], compatible: false}]
 		await render()
 		expect(container.querySelector('h3')?.textContent).toBe('Example')
-		expect(container.textContent).toContain('app-updates.os-update-required')
+		expect(container.textContent).toContain('app-updates.os-update-needed')
 		expect(button('app-updates.update')?.disabled).toBe(true)
 	})
 })

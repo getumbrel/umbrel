@@ -25,7 +25,6 @@ export function OSUpdateRequiredDialog({
 }) {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
-	const version = app.manifestVersion.replace(/\.0$/, '')
 
 	const handleConfirm = () => {
 		onOpenChange(false)
@@ -38,7 +37,7 @@ export function OSUpdateRequiredDialog({
 				<AlertDialogHeader icon={RiArrowUpLine}>
 					<AlertDialogTitle>{t('app.os-update-required.title')}</AlertDialogTitle>
 					<AlertDialogDescription>
-						{t('app.os-update-required.description', {appName: app.name, version})}
+						{t('app.os-update-required.description', {appName: app.name})}
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

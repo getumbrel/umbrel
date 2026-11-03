@@ -1192,9 +1192,7 @@ function MachineRowStatus({machineId}: {machineId: string}) {
 		select: (mutation) => (mutation.state.variables as {id: string} | undefined)?.id,
 	})
 	if (uninstallingIds.includes(machineId)) {
-		return (
-			<span className='shrink-0 text-13 -tracking-2 text-white/40'>{t('machines.state.uninstalling') + '...'}</span>
-		)
+		return <span className='shrink-0 text-13 -tracking-2 text-white/40'>{t('machines.state.uninstalling') + '…'}</span>
 	}
 
 	if (!machine || machine.state === 'running') return null
@@ -1214,7 +1212,7 @@ function MachineRowStatus({machineId}: {machineId: string}) {
 	const transient = (['installing', 'starting', 'stopping', 'restarting'] as MachineState[]).includes(machine.state)
 	return (
 		<span className='shrink-0 text-13 -tracking-2 text-white/40'>
-			{stateLabels[machine.state] + (transient ? '...' : '')}
+			{stateLabels[machine.state] + (transient ? '…' : '')}
 		</span>
 	)
 }
@@ -1293,22 +1291,22 @@ function AppRowStatus({appId}: {appId: string}) {
 	let text: string | undefined
 	switch (state) {
 		case 'installing':
-			text = t('app.installing') + '...'
+			text = t('app.installing') + '…'
 			break
 		case 'starting':
-			text = t('app.starting') + '...'
+			text = t('app.starting') + '…'
 			break
 		case 'restarting':
-			text = t('app.restarting') + '...'
+			text = t('app.restarting') + '…'
 			break
 		case 'stopping':
-			text = t('app.stopping') + '...'
+			text = t('app.stopping') + '…'
 			break
 		case 'uninstalling':
-			text = t('app.uninstalling') + '...'
+			text = t('app.uninstalling') + '…'
 			break
 		case 'updating':
-			text = t('app.updating') + '...'
+			text = t('app.updating') + '…'
 			break
 		case 'stopped':
 			text = t('app.stopped')

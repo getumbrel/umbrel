@@ -104,7 +104,7 @@ export default function CommunityAppStoreHome() {
 						) : (
 							<AppStoreEmptyState
 								title={t('app-store.search.no-results')}
-								description={t('community-app-store.search.no-results-description')}
+								description={t('app-store.search.no-results-description')}
 							/>
 						)}
 					</div>

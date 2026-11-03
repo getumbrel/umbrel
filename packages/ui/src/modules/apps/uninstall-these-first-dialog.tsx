@@ -97,7 +97,7 @@ function DependentRow({appId, icon, name}: {appId: string; icon?: string; name: 
 				<span className='min-w-0 truncate text-14 font-medium'>{name}</span>
 			</span>
 			<Button size='sm' disabled={transitioning} onClick={promptUninstall}>
-				{transitioning ? appStateToString(state, t) + '...' : t('app.uninstall.confirm.submit')}
+				{transitioning ? appStateToString(state, t) + '…' : t('app.uninstall.confirm.submit')}
 			</Button>
 			{dialogs}
 		</div>

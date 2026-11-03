@@ -322,10 +322,7 @@ export function AddToRaidDialog({
 			transitionToFailsafeAsync({newDeviceId: device.id}).catch((error) => {
 				clearPendingOperation()
 				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
-				toast.error(t('storage-manager.add-to-raid.failed-enable-failsafe'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				toast.error(t('storage-manager.add-to-raid.failed-enable-failsafe'), {area: 'settings'})
 			})
 		} else if (raidType === 'failsafe') {
 			// Adding to existing failsafe: non-blocking expansion - we show island immediately
@@ -343,10 +340,7 @@ export function AddToRaidDialog({
 					device.type === 'hdd'
 						? t('storage-manager.add-to-raid.failed-add-drive')
 						: t('storage-manager.add-to-raid.failed-add'),
-					{
-						area: 'settings',
-						description: error instanceof Error ? error.message : t('unknown-error'),
-					},
+					{area: 'settings'},
 				)
 			})
 		} else {
@@ -378,10 +372,7 @@ export function AddToRaidDialog({
 						device.type === 'hdd'
 							? t('storage-manager.add-to-raid.failed-add-drive')
 							: t('storage-manager.add-to-raid.failed-add'),
-						{
-							area: 'settings',
-							description: error instanceof Error ? error.message : t('unknown-error'),
-						},
+						{area: 'settings'},
 					)
 				})
 		}
