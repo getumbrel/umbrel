@@ -62,6 +62,7 @@ const machineDefinitionSchema = z
 			.optional(),
 		uuid: z.string().uuid(),
 		macAddress: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/),
+		networkMode: z.enum(['nat', 'bridged']).optional(),
 		// Address ranges are runtime policy and may change across an OTA. Accept a
 		// stale persisted value here so Machines can migrate it before exposing or
 		// passing the definition to libvirt.

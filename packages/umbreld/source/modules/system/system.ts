@@ -815,28 +815,54 @@ type NetworkInterface = {
 	dns?: string[]
 }
 
+// The bridge an interface is a port of, if any. The interface's IP settings
+// live on the bridge's connection then, like when Machines puts Umbrel's
+// wired interface behind a bridge so machines can join the LAN.
+async function getBridgeOfDevice(device: string) {
+	let controller: string
+	try {
+		controller = await fse.realpath(`/sys/class/net/${device}/master`)
+	} catch {
+		return undefined
+	}
+	if (!controller || !(await fse.pathExists(`${controller}/bridge`))) return undefined
+	return controller.split('/').pop()
+}
+
+// Apply changes made to a connection. A bridge's connection is reapplied in
+// place because taking it down and up would detach running machines from it.
+async function reloadConnection(connection: string, device: string) {
+	if (await fse.pathExists(`/sys/class/net/${device}/bridge`)) {
+		await $`nmcli device reapply ${device}`
+		return
+	}
+	await $`nmcli connection down ${connection}`
+	await $`nmcli connection up ${connection}`
+}
+
 // Get all physical network interfaces with connection details
 export async function getNetworkInterfaces(umbreld?: Umbreld): Promise<NetworkInterface[]> {
 	const {stdout: deviceOutput} = await $`nmcli --terse --fields DEVICE,TYPE,STATE,CONNECTION device status`
 	const configuredStaticSettings = (await umbreld?.store.get('settings.staticIp')) ?? {}
 
+	const devices = deviceOutput
+		.split('\n')
+		.filter((line) => line.trim())
+		.map((line) => {
+			const parts = line.split(':')
+			return {
+				device: parts[0],
+				type: parts[1],
+				state: parts[2],
+				// Connection name could contain colons, so join remaining parts
+				connection: parts.slice(3).join(':'),
+			}
+		})
 	const interfaces = await Promise.all(
-		deviceOutput
-			.split('\n')
-			.filter((line) => line.trim())
-			.map((line) => {
-				const parts = line.split(':')
-				return {
-					device: parts[0],
-					type: parts[1],
-					state: parts[2],
-					// Connection name could contain colons, so join remaining parts
-					connection: parts.slice(3).join(':'),
-				}
-			})
+		devices
 			// Only include ethernet and wifi types
 			.filter(({type}) => type === 'ethernet' || type === 'wifi')
-			.map(async ({device, type, state, connection}) => {
+			.map(async ({device, type, state, connection: deviceConnection}) => {
 				// For ethernet interfaces, verify they're backed by physical hardware
 				// by checking for the presence of a device symlink in sysfs. Virtual
 				// interfaces (veth, bridges, docker) won't have this.
@@ -855,6 +881,9 @@ export async function getNetworkInterfaces(umbreld?: Umbreld): Promise<NetworkIn
 				}
 				const configuredStaticSetting = configuredStaticSettings[mac]
 				if (configuredStaticSetting) iface.configuredStaticSettings = configuredStaticSetting
+
+				const bridge = await getBridgeOfDevice(device)
+				const connection = bridge ? devices.find((entry) => entry.device === bridge)?.connection : deviceConnection
 
 				// If connected, get IP configuration from the active connection
 				if (iface.connected && connection && connection !== '--') {
@@ -903,6 +932,9 @@ async function getInterfaceByMac(mac: string): Promise<NetworkInterface> {
 
 // Find the saved connection name for a device, even if it's not currently connected
 async function getConnectionByDevice(device: string): Promise<string | false> {
+	const bridge = await getBridgeOfDevice(device)
+	if (bridge) return getConnectionByDevice(bridge)
+
 	// `nmcli device status` only shows the active connection, which is not enough
 	// when we need to clear static IP settings from a disconnected interface.
 	const {stdout: uuidsOutput} = await $`nmcli --terse --fields UUID connection show`
@@ -978,10 +1010,7 @@ async function applyStaticIp({
 	await $`nmcli connection modify ${connection} ipv4.method manual ipv4.addresses ${`${ip}/${subnetPrefix}`} ipv4.gateway ${gateway} ipv4.dns ${dns.join(',')}`
 
 	// If we modified an existing connction, hard reload it
-	if (existingConnection) {
-		await $`nmcli connection down ${connection}`
-		await $`nmcli connection up ${connection}`
-	}
+	if (existingConnection) await reloadConnection(connection, (await getBridgeOfDevice(device)) ?? device)
 	return device
 }
 
@@ -1039,10 +1068,7 @@ export async function clearStaticIp(umbreld: Umbreld, {mac}: {mac: string}) {
 		await $`nmcli connection modify ${connection} ipv4.method auto ipv4.addresses ${''} ipv4.gateway ${''} ipv4.dns ${''}`
 		// If the interface is disconnected we still want to clear the saved
 		// profile, but there is no live connection to bounce.
-		if (networkInterface.connected) {
-			await $`nmcli connection down ${connection}`
-			await $`nmcli connection up ${connection}`
-		}
+		if (networkInterface.connected) await reloadConnection(connection, (await getBridgeOfDevice(device)) ?? device)
 	}
 
 	// Remove from store

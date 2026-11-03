@@ -28,6 +28,14 @@ export function getMachinesErrorMessage(message: string) {
 			return t('machines-error.machine-install-retry-credentials-required')
 		case 'machine-port-conflict':
 			return t('machines-error.machine-port-conflict')
+		case 'machine-port-forwards-nat-only':
+			return t('machines-error.machine-port-forwards-nat-only')
+		case 'machine-lan-bridge-unavailable-wifi':
+			return t('machines-error.machine-lan-bridge-unavailable-wifi')
+		case 'machine-lan-bridge-unavailable-no-ethernet':
+			return t('machines-error.machine-lan-bridge-unavailable-no-ethernet')
+		case 'machine-lan-bridge-failed':
+			return t('machines-error.machine-lan-bridge-failed')
 		case 'machine-shutdown-timeout':
 			return t('machines-error.machine-shutdown-timeout')
 		case 'machine-start-failed':

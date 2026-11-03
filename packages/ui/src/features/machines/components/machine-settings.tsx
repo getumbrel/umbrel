@@ -19,6 +19,7 @@ import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 import {Input} from '@/components/ui/input'
 import {Spinner} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
+import {MachineNetworkModeRow, type MachineNetworkMode} from '@/features/machines/components/machine-network-mode'
 import {
 	MachineUsbDevices,
 	supportsUsbPassthrough,
@@ -71,6 +72,7 @@ export default function MachineSettings() {
 	const [diskBusChoice, setDiskBusChoice] = useState<'virtio' | 'sata' | null>(null)
 	const [forwardsChoice, setForwardsChoice] = useState<Machine['portForwards'] | null>(null)
 	const [usbChoice, setUsbChoice] = useState<UsbDeviceIdentity[] | null>(null)
+	const [networkModeChoice, setNetworkModeChoice] = useState<MachineNetworkMode | null>(null)
 	const [isSaving, setIsSaving] = useState(false)
 	const [shutdownDialogOpen, setShutdownDialogOpen] = useState(false)
 
@@ -92,7 +94,10 @@ export default function MachineSettings() {
 	const diskInput = diskChoice ?? String(machine.diskSizeGb)
 	const firmware = firmwareChoice ?? machine.firmware
 	const diskBus = diskBusChoice ?? machine.diskBus ?? 'virtio'
-	const portForwards = forwardsChoice ?? machine.portForwards
+	const networkMode = networkModeChoice ?? machine.networkMode
+	// A bridged machine has its own address on the LAN, so there's nothing for
+	// Umbrel to forward to it
+	const portForwards = networkMode === 'bridged' ? [] : (forwardsChoice ?? machine.portForwards)
 	const usbDevices = usbChoice ?? machine.usbDevices.map(usbDeviceIdentity)
 	const usbKeys = (devices: UsbDeviceIdentity[]) => devices.map(usbDeviceKey).sort().join('\n\n')
 	// USB devices are hotplugged, so changing them never needs a shutdown
@@ -139,6 +144,7 @@ export default function MachineSettings() {
 			diskSizeGb: Math.round(diskValue),
 			firmware: machine.osId === 'custom' ? firmware : machine.firmware,
 			diskBus: machine.osId === 'custom' ? diskBus : machine.diskBus,
+			networkMode,
 		})
 
 	// Save only lights up once something actually differs from the machine's
@@ -150,6 +156,7 @@ export default function MachineSettings() {
 		diskValue !== machine.diskSizeGb ||
 		(machine.osId === 'custom' && (firmware !== machine.firmware || diskBus !== (machine.diskBus ?? 'virtio'))) ||
 		JSON.stringify(portForwards) !== JSON.stringify(machine.portForwards) ||
+		networkMode !== machine.networkMode ||
 		usbChanged
 
 	const canSave = dirty && !disabled && !nameEmpty && !nameTaken && diskValid && forwardsValid
@@ -178,6 +185,7 @@ export default function MachineSettings() {
 				diskSizeGb: Math.round(diskValue),
 				...(machine.osId === 'custom' ? {firmware, diskBus} : {}),
 				portForwards,
+				...(networkMode !== machine.networkMode && {networkMode}),
 				...(usbChanged && {usbDevices}),
 			})
 			toast.success(t('machines.settings-saved'), {area: 'machines'})
@@ -373,164 +381,190 @@ export default function MachineSettings() {
 							</>
 						)}
 
-						{/* Port forwards: the last row of the spec sheet, full-width. The
-						    copy leads with the why (machines live on a private network),
-						    each rule reads in the user's direction (port inside the machine
-						    → the address you actually type), and the network side shows the
-						    real reachable address using the hostname this page is open on. */}
-						<div className='flex flex-col gap-3 py-5'>
-							<div className='flex items-start justify-between gap-4'>
-								<div className='flex flex-col gap-1'>
-									<span className='text-15 font-medium -tracking-2 text-white'>{t('machines.port-forwards')}</span>
-									<p className='max-w-[460px] text-12 leading-snug -tracking-2 text-white/40'>
-										{t('machines.port-forwards-description')}
+						<MachineNetworkModeRow
+							value={networkMode}
+							onChange={setNetworkModeChoice}
+							disabled={disabled}
+							savedMode={machine.networkMode}
+							footer={
+								// Say so before saving deletes forwards, rather than dropping them quietly
+								networkMode === 'bridged' &&
+								machine.networkMode === 'nat' &&
+								machine.portForwards.length > 0 && (
+									<p className='rounded-8 bg-white/4 px-3 py-2.5 text-12 leading-snug -tracking-2 text-white/50'>
+										{t('machines.network-forwards-removed', {count: machine.portForwards.length})}
 									</p>
-								</div>
-								<Button
-									size='sm'
-									className='shrink-0'
-									onClick={() => {
-										const used = new Set(portForwards.map((forward) => forward.hostPort))
-										let hostPort = 40_000
-										while (used.has(hostPort) && hostPort <= 49_999) hostPort++
-										setForwardsChoice([
-											...portForwards,
-											{id: createBrowserUuid(), protocol: 'tcp', hostPort, guestPort: 22},
-										])
-									}}
-									disabled={disabled || portForwards.length >= 32}
-								>
-									{t('machines.add-forward')}
-									<PlusCircle className='h-3 w-3' />
-								</Button>
-							</div>
-							{portForwards.length === 0 ? (
-								<p className='rounded-8 bg-white/4 px-3 py-2.5 text-12 leading-snug -tracking-2 text-white/35'>
-									{t('machines.port-forwards-empty', {address: `${window.location.hostname}:40000`})}
-								</p>
-							) : (
-								<div className='flex flex-col gap-2'>
-									{/* Column labels, once for the whole list. The protocol segment
-									    has a fixed width so the first two line up exactly; the
-									    Umbrel label splits the remaining space with Machine's. */}
-									<div className='flex items-center text-[10px] -tracking-1 text-white/30'>
-										<span className='w-[58px] shrink-0 pl-3.5'>{t('machines.port-forward-protocol')}</span>
-										{/* The machine column is effectively constant (addresses are
-										    always 10.203.0.x); narrower on mobile where it's hidden */}
-										<span className='w-[110px] shrink-0 pl-3 sm:w-[164px]'>
-											{t('machines.port-forward-machine-port')}
-										</span>
-										<span className='min-w-0 flex-1'>{t('machines.port-forward-umbrel-port')}</span>
+								)
+							}
+						/>
+						{networkMode === 'nat' && (
+							<>
+								{/* Port forwards: the last row of the spec sheet, full-width. The
+								    copy leads with the why (machines live on a private network),
+								    each rule reads in the user's direction (port inside the machine
+								    → the address you actually type), and the network side shows the
+								    real reachable address using the hostname this page is open on. */}
+								<div className='flex flex-col gap-3 py-5'>
+									<div className='flex items-start justify-between gap-4'>
+										<div className='flex flex-col gap-1'>
+											<span className='text-15 font-medium -tracking-2 text-white'>{t('machines.port-forwards')}</span>
+											<p className='max-w-[460px] text-12 leading-snug -tracking-2 text-white/40'>
+												{t('machines.port-forwards-description')}
+											</p>
+										</div>
+										<Button
+											size='sm'
+											className='shrink-0'
+											onClick={() => {
+												const used = new Set(portForwards.map((forward) => forward.hostPort))
+												let hostPort = 40_000
+												while (used.has(hostPort) && hostPort <= 49_999) hostPort++
+												setForwardsChoice([
+													...portForwards,
+													{id: createBrowserUuid(), protocol: 'tcp', hostPort, guestPort: 22},
+												])
+											}}
+											disabled={disabled || portForwards.length >= 32}
+										>
+											{t('machines.add-forward')}
+											<PlusCircle className='h-3 w-3' />
+										</Button>
 									</div>
-									{portForwards.map((forward) => (
-										<div key={forward.id} className='flex items-center gap-2'>
-											{/* One pill = one routing rule: protocol, the machine's own
-										    address with its port editable, then the Umbrel address
-										    people will actually type, with its port editable */}
-											<div className='flex h-10 min-w-0 flex-1 items-center rounded-full border-hpx border-white/10 bg-white/6 transition-colors focus-within:border-white/25'>
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<button
-															type='button'
-															disabled={disabled}
-															className='flex h-full w-[58px] shrink-0 items-center gap-1 rounded-l-full border-r border-white/6 pl-3.5 text-11 font-semibold text-white/70 uppercase outline-hidden transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
-														>
-															{forward.protocol}
-															<ChevronDown className='size-3 opacity-50' />
-														</button>
-													</DropdownMenuTrigger>
-													{/* p-1 matches the context menu's density (dropdowns default
-												    to a roomier p-2.5) */}
-													<DropdownMenuContent align='start' className='min-w-24 p-1'>
-														{(['tcp', 'udp'] as const).map((protocol) => (
-															<DropdownMenuItem
-																key={protocol}
+									{portForwards.length === 0 ? (
+										<p className='rounded-8 bg-white/4 px-3 py-2.5 text-12 leading-snug -tracking-2 text-white/35'>
+											{t('machines.port-forwards-empty', {address: `${window.location.hostname}:40000`})}
+										</p>
+									) : (
+										<div className='flex flex-col gap-2'>
+											{/* Column labels, once for the whole list. The protocol segment
+											    has a fixed width so the first two line up exactly; the
+											    Umbrel label splits the remaining space with Machine's. */}
+											<div className='flex items-center text-[10px] -tracking-1 text-white/30'>
+												<span className='w-[58px] shrink-0 pl-3.5'>{t('machines.port-forward-protocol')}</span>
+												{/* The machine column is effectively constant (addresses are
+												    always 10.203.0.x); narrower on mobile where it's hidden */}
+												<span className='w-[110px] shrink-0 pl-3 sm:w-[164px]'>
+													{t('machines.port-forward-machine-port')}
+												</span>
+												<span className='min-w-0 flex-1'>{t('machines.port-forward-umbrel-port')}</span>
+											</div>
+											{portForwards.map((forward) => (
+												<div key={forward.id} className='flex items-center gap-2'>
+													{/* One pill = one routing rule: protocol, the machine's own
+												    address with its port editable, then the Umbrel address
+												    people will actually type, with its port editable */}
+													<div className='flex h-10 min-w-0 flex-1 items-center rounded-full border-hpx border-white/10 bg-white/6 transition-colors focus-within:border-white/25'>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<button
+																	type='button'
+																	disabled={disabled}
+																	className='flex h-full w-[58px] shrink-0 items-center gap-1 rounded-l-full border-r border-white/6 pl-3.5 text-11 font-semibold text-white/70 uppercase outline-hidden transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
+																>
+																	{forward.protocol}
+																	<ChevronDown className='size-3 opacity-50' />
+																</button>
+															</DropdownMenuTrigger>
+															{/* p-1 matches the context menu's density (dropdowns default
+														    to a roomier p-2.5) */}
+															<DropdownMenuContent align='start' className='min-w-24 p-1'>
+																{(['tcp', 'udp'] as const).map((protocol) => (
+																	<DropdownMenuItem
+																		key={protocol}
+																		disabled={disabled}
+																		onSelect={() =>
+																			setForwardsChoice(
+																				portForwards.map((item) =>
+																					item.id === forward.id ? {...item, protocol} : item,
+																				),
+																			)
+																		}
+																	>
+																		{protocol.toUpperCase()}
+																	</DropdownMenuItem>
+																))}
+															</DropdownMenuContent>
+														</DropdownMenu>
+														<label className='flex min-w-0 shrink-0 cursor-text items-center gap-1.5 pl-3'>
+															<OsIcon osId={machine.osId} state={machine.state} className='size-5 shrink-0' />
+															<span className='truncate text-13 -tracking-2 text-white/40 tabular-nums max-sm:hidden'>
+																{machine.ipAddress}:
+															</span>
+															<input
+																type='text'
+																inputMode='numeric'
+																value={forward.guestPort}
 																disabled={disabled}
-																onSelect={() =>
+																onChange={(e) =>
 																	setForwardsChoice(
-																		portForwards.map((item) => (item.id === forward.id ? {...item, protocol} : item)),
+																		portForwards.map((item) =>
+																			item.id === forward.id
+																				? {...item, guestPort: handlePortChange(e.target.value)}
+																				: item,
+																		),
 																	)
 																}
-															>
-																{protocol.toUpperCase()}
-															</DropdownMenuItem>
-														))}
-													</DropdownMenuContent>
-												</DropdownMenu>
-												<label className='flex min-w-0 shrink-0 cursor-text items-center gap-1.5 pl-3'>
-													<OsIcon osId={machine.osId} state={machine.state} className='size-5 shrink-0' />
-													<span className='truncate text-13 -tracking-2 text-white/40 tabular-nums max-sm:hidden'>
-														{machine.ipAddress}:
-													</span>
-													<input
-														type='text'
-														inputMode='numeric'
-														value={forward.guestPort}
+																aria-label={t('machines.guest-port')}
+																// field-sizing keeps the input hugging its digits so the
+																// arrow sits close; the fixed width is the fallback
+																className='field-sizing-content w-11 min-w-6 bg-transparent pr-1.5 pl-0.5 text-13 -tracking-2 text-white tabular-nums outline-none disabled:cursor-not-allowed disabled:text-white/35 supports-[field-sizing:content]:w-auto'
+															/>
+														</label>
+														<MoveRight className='size-4 shrink-0 text-white/30' strokeWidth={1.5} />
+														<label className='flex min-w-0 flex-1 cursor-text items-center gap-1.5 pl-2'>
+															<img
+																src='/favicon/favicon-32x32.png'
+																alt=''
+																draggable={false}
+																className='size-4 shrink-0 rounded-[4px]'
+															/>
+															<span className='truncate text-13 -tracking-2 text-white/40 tabular-nums max-sm:hidden'>
+																{window.location.hostname}:
+															</span>
+															<input
+																type='text'
+																inputMode='numeric'
+																value={forward.hostPort}
+																disabled={disabled}
+																onChange={(e) =>
+																	setForwardsChoice(
+																		portForwards.map((item) =>
+																			item.id === forward.id
+																				? {...item, hostPort: handlePortChange(e.target.value)}
+																				: item,
+																		),
+																	)
+																}
+																aria-label={t('machines.host-port')}
+																className='w-full min-w-0 flex-1 bg-transparent pl-0.5 text-13 -tracking-2 text-white tabular-nums outline-none disabled:cursor-not-allowed disabled:text-white/35'
+															/>
+														</label>
+														<div className='flex shrink-0 items-center pr-2.5 text-14'>
+															<CopyButton value={`${window.location.hostname}:${forward.hostPort}`} />
+														</div>
+													</div>
+													<button
+														type='button'
 														disabled={disabled}
-														onChange={(e) =>
-															setForwardsChoice(
-																portForwards.map((item) =>
-																	item.id === forward.id
-																		? {...item, guestPort: handlePortChange(e.target.value)}
-																		: item,
-																),
-															)
-														}
-														aria-label={t('machines.guest-port')}
-														// field-sizing keeps the input hugging its digits so the
-														// arrow sits close; the fixed width is the fallback
-														className='field-sizing-content w-11 min-w-6 bg-transparent pr-1.5 pl-0.5 text-13 -tracking-2 text-white tabular-nums outline-none disabled:cursor-not-allowed disabled:text-white/35 supports-[field-sizing:content]:w-auto'
-													/>
-												</label>
-												<MoveRight className='size-4 shrink-0 text-white/30' strokeWidth={1.5} />
-												<label className='flex min-w-0 flex-1 cursor-text items-center gap-1.5 pl-2'>
-													<img
-														src='/favicon/favicon-32x32.png'
-														alt=''
-														draggable={false}
-														className='size-4 shrink-0 rounded-[4px]'
-													/>
-													<span className='truncate text-13 -tracking-2 text-white/40 tabular-nums max-sm:hidden'>
-														{window.location.hostname}:
-													</span>
-													<input
-														type='text'
-														inputMode='numeric'
-														value={forward.hostPort}
-														disabled={disabled}
-														onChange={(e) =>
-															setForwardsChoice(
-																portForwards.map((item) =>
-																	item.id === forward.id ? {...item, hostPort: handlePortChange(e.target.value)} : item,
-																),
-															)
-														}
-														aria-label={t('machines.host-port')}
-														className='w-full min-w-0 flex-1 bg-transparent pl-0.5 text-13 -tracking-2 text-white tabular-nums outline-none disabled:cursor-not-allowed disabled:text-white/35'
-													/>
-												</label>
-												<div className='flex shrink-0 items-center pr-2.5 text-14'>
-													<CopyButton value={`${window.location.hostname}:${forward.hostPort}`} />
+														className='grid size-8 shrink-0 place-items-center rounded-full text-white/35 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-white/35'
+														onClick={() => setForwardsChoice(portForwards.filter((item) => item.id !== forward.id))}
+														aria-label={t('remove')}
+													>
+														<Trash2 className='size-3.5' />
+													</button>
 												</div>
-											</div>
-											<button
-												type='button'
-												disabled={disabled}
-												className='grid size-8 shrink-0 place-items-center rounded-full text-white/35 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-white/35'
-												onClick={() => setForwardsChoice(portForwards.filter((item) => item.id !== forward.id))}
-												aria-label={t('remove')}
-											>
-												<Trash2 className='size-3.5' />
-											</button>
+											))}
 										</div>
-									))}
+									)}
+									{!forwardsValid && <p className='text-12 text-destructive2-lightest'>{t('machines.port-invalid')}</p>}
+									{machine.osId.startsWith('windows') && (
+										<p className='text-11 leading-relaxed -tracking-2 text-white/30'>
+											{t('machines.windows-rdp-forward')}
+										</p>
+									)}
 								</div>
-							)}
-							{!forwardsValid && <p className='text-12 text-destructive2-lightest'>{t('machines.port-invalid')}</p>}
-							{machine.osId.startsWith('windows') && (
-								<p className='text-11 leading-relaxed -tracking-2 text-white/30'>{t('machines.windows-rdp-forward')}</p>
-							)}
-						</div>
+							</>
+						)}
 						{supportsUsbPassthrough(machine) && (
 							<MachineUsbDevices
 								machine={machine}

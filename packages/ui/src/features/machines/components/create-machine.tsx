@@ -7,6 +7,7 @@ import {Navigate, useNavigate, useSearchParams} from 'react-router-dom'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {Spinner} from '@/components/ui/loading'
+import {MachineNetworkModeRow, type MachineNetworkMode} from '@/features/machines/components/machine-network-mode'
 import {OsIcon} from '@/features/machines/components/os-icon'
 import {SpecRow, Stepper} from '@/features/machines/components/spec-form'
 import {
@@ -99,6 +100,7 @@ export default function CreateMachine() {
 	const [firmware, setFirmware] = useState<'uefi' | 'bios'>('uefi')
 	const [diskBus, setDiskBus] = useState<'virtio' | 'sata'>('virtio')
 	const [diskDirectory, setDiskDirectory] = useState<string>()
+	const [networkMode, setNetworkMode] = useState<MachineNetworkMode>('nat')
 	const [advancedOpen, setAdvancedOpen] = useState(false)
 	const [diskBrowserOpen, setDiskBrowserOpen] = useState(false)
 	const [isCreating, setIsCreating] = useState(false)
@@ -221,6 +223,7 @@ export default function CreateMachine() {
 				cores: effectiveCores,
 				memoryGb,
 				arch: selectedArch,
+				networkMode,
 				...(isCustomSource && {
 					firmware: selectedArch === 'arm64' ? 'uefi' : firmware,
 					diskBus: selectedArch === 'arm64' ? 'virtio' : diskBus,
@@ -539,6 +542,7 @@ export default function CreateMachine() {
 								</div>
 							</SpecRow>
 						)}
+						<MachineNetworkModeRow value={networkMode} onChange={setNetworkMode} disabled={isCreating} />
 						{/* Custom images may target either supported guest architecture */}
 						{isCustomSource && (
 							<SpecRow label={t('machines.architecture')}>

@@ -54,6 +54,23 @@ describe('MachineStore', () => {
 		await expect(store.list()).resolves.toEqual([machine])
 	})
 
+	test('persists the network mode and rejects unknown modes', async () => {
+		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-store-'))
+		roots.push(root)
+		const store = new MachineStore(root)
+		await store.start()
+		const bridged = {...definition(), networkMode: 'bridged' as const}
+
+		await store.write(bridged)
+		await expect(store.read(bridged.id)).resolves.toEqual(bridged)
+
+		await expect(store.write({...definition(), networkMode: 'host' as any})).rejects.toThrow()
+		const invalid = definition()
+		await fse.ensureDir(store.directory(invalid.id))
+		await fsp.writeFile(store.definitionPath(invalid.id), yaml.dump({...invalid, networkMode: 'host'}))
+		await expect(store.read(invalid.id)).rejects.toThrow()
+	})
+
 	test('ignores hidden staging and invalid directories during recovery', async () => {
 		const root = await fsp.mkdtemp(nodePath.join(os.tmpdir(), 'machine-store-'))
 		roots.push(root)

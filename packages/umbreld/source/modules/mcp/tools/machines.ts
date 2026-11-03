@@ -95,7 +95,7 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 			{
 				title: 'Get machine details',
 				description:
-					'Get the full configuration of a granted machine: network address, username, port forwards, disk location, autostart, firmware, and live CPU and memory usage.',
+					"Get the full configuration of a granted machine: network mode and address, username, port forwards, disk location, autostart, firmware, and live CPU and memory usage. A NAT machine has an address on Umbrel's private machine network and is reached from the LAN through port forwards. A bridged machine is directly on the LAN with an address from the router, which Umbrel doesn't know.",
 				inputSchema: machineInput,
 				annotations: {
 					readOnlyHint: true,
@@ -113,7 +113,9 @@ export default function registerMachineTools(server: McpServer, context: McpTool
 					const cpuUsage = await context.rpc.system.cpuUsage()
 					return {
 						...machineSummary(machine),
-						ipAddress: machine.ipAddress,
+						networkMode: machine.networkMode,
+						// A bridged machine only uses its private address while it sets up
+						ipAddress: machine.networkMode === 'nat' ? machine.ipAddress : undefined,
 						username: machine.username,
 						portForwards: machine.portForwards,
 						autostart: machine.autostart,

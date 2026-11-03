@@ -23,13 +23,17 @@ import {
 	defaultPlatformProfile,
 	hostArchitecture,
 	isLegacyPlatformProfile,
+	MACHINE_LAN_BRIDGE,
 	machineDiskTarget,
+	machineJoinsLan,
 	resolveAcceleration,
 	type MachineArchitecture,
 	type MachineDefinition,
+	type MachineNetworkMode,
 	type PlatformProfile,
 	type PortForward,
 } from './domain.ts'
+import LanBridge from './lan-bridge.ts'
 import Libvirt, {QEMU_GIBIBYTE_BYTES, qemuImageFormatForPath, type QemuImageFormat} from './libvirt.ts'
 import {machineIdCandidate, slugifyMachineId} from './machine-id.ts'
 import {MACHINE_GUEST_HOST_ADDRESS, machineIpAddressSchema, nextMachineIpAddress} from './machine-network.ts'
@@ -61,6 +65,7 @@ import {
 } from './usb-devices.ts'
 
 export const FIRST_BOOT_SETUP_TIMEOUT_MS = 60 * 60 * 1_000
+const JOIN_LAN_AFTER_SETUP_DELAY_MS = 2_000
 export const WINDOWS_ARM_FIRST_BOOT_SETUP_TIMEOUT_MS = 4 * FIRST_BOOT_SETUP_TIMEOUT_MS
 // Guests need a moment to react before the screenshot that follows an input
 // action, otherwise the caller sees the screen from before it acted
@@ -141,6 +146,7 @@ export type Machine = {
 	cores: number
 	memoryGb: number
 	storageUsedGb: number
+	networkMode: MachineNetworkMode
 	ipAddress: string
 	username?: string
 	arch: MachineArchitecture
@@ -1020,6 +1026,14 @@ export function isFirstBootSetupActive(
 	return !!setup && !setup.manual && now - setup.startedAt < timeout
 }
 
+// A bridged machine whose setup never called home still joins the LAN once
+// Umbrel has stopped waiting for it, rather than staying on NAT for good
+export function machineJoinsLanNow(definition: MachineDefinition, now = Date.now()) {
+	const setupExpired =
+		!!definition.firstBootSetup && now - definition.firstBootSetup.startedAt >= firstBootSetupTimeoutMs(definition)
+	return machineJoinsLan(definition, {setupExpired})
+}
+
 export function firstBootTokenMatches(token: string, expectedHash: string) {
 	if (!/^[0-9a-f]{64}$/.test(token)) return false
 	const actual = Buffer.from(createHash('sha256').update(token).digest('hex'))
@@ -1054,6 +1068,8 @@ export default class Machines {
 	#backupMachines = new Set<string>()
 	#backupActive = false
 	#guestApi: MachineGuestApi
+	#lanBridge: LanBridge
+	#lanBridgeRelease?: Promise<void>
 	#imagesDirectory: string
 	#runtimeUsageCache?: {expiresAt: number; value: {cpu: MachineResourceUsage[]; memory: MachineResourceUsage[]}}
 	#runtimeUsageInFlight?: Promise<{cpu: MachineResourceUsage[]; memory: MachineResourceUsage[]}>
@@ -1090,6 +1106,7 @@ export default class Machines {
 		this.logger = umbreld.logger.createChildLogger('machines')
 		this.#store = new MachineStore(umbreld.dataDirectory)
 		this.#libvirt = new Libvirt(umbreld)
+		this.#lanBridge = new LanBridge(umbreld)
 		this.#guestApi = new MachineGuestApi({
 			host: MACHINE_GUEST_HOST_ADDRESS,
 			port: umbreld.port,
@@ -1195,6 +1212,11 @@ export default class Machines {
 				: 'Hardware virtualization is unavailable. Machines will use software emulation and run significantly slower.',
 			portRange: {start: MACHINES_PORT_MIN, end: MACHINES_PORT_MAX},
 			guestHostAddress: MACHINE_GUEST_HOST_ADDRESS,
+			// Whether machines can join the LAN directly, and if not, why not
+			lanBridge: await this.#lanBridge.availability().catch((error) => {
+				this.logger.error('Failed to check whether machines can join the LAN', error)
+				return {available: false as const, reason: 'no-ethernet' as const}
+			}),
 		}
 	}
 
@@ -1205,6 +1227,7 @@ export default class Machines {
 			if (!this.#libvirtActivated && Date.now() >= this.#nextLibvirtProbeAt) await this.#activateLibvirt()
 			const definitions = await this.#store.list()
 			if (this.#libvirtActivated) await this.#libvirt.ensureFirewall(definitions)
+			await this.#releaseLanBridge(definitions)
 			// Pass replugged devices back to their machines and drop ones that went away
 			if (this.#libvirtActivated) {
 				const usbTopology = await usbTopologyFingerprint()
@@ -1651,6 +1674,7 @@ export default class Machines {
 				: undefined)
 		return {
 			...publicDefinition,
+			networkMode: definition.networkMode ?? 'nat',
 			ipAddress: machineIpAddressSchema.parse(definition.ipAddress),
 			memoryGb: definition.memoryMb / 1_024,
 			usbDevices: definition.usbDevices ?? [],
@@ -2227,6 +2251,7 @@ export default class Machines {
 		licenseKey,
 		arch = hostArchitecture(),
 		platformProfile,
+		networkMode = 'nat',
 	}: {
 		name: string
 		osId?: string
@@ -2242,9 +2267,11 @@ export default class Machines {
 		licenseKey?: string
 		arch?: MachineArchitecture
 		platformProfile?: PlatformProfile
+		networkMode?: MachineNetworkMode
 	}) {
 		this.#assertBackupIdle()
 		if (!this.#libvirt.available) throw new Error('[virtualization-unavailable]')
+		if (networkMode === 'bridged') await this.#assertLanBridgeAvailable()
 		await this.#assertUniqueName(name)
 		const profile = platformProfile ?? defaultPlatformProfile(arch)
 		if (architectureForProfile(profile) !== arch) throw new Error('[machine-platform-architecture-mismatch]')
@@ -2331,6 +2358,7 @@ export default class Machines {
 			diskBus: imagePath ? (diskBus ?? 'virtio') : undefined,
 			uuid: randomUUID(),
 			macAddress: randomMacAddress(),
+			networkMode,
 			diskSizeGb,
 			cores,
 			memoryMb: sourceImage?.fixedMemoryMb ?? memoryGb * 1_024,
@@ -2457,8 +2485,45 @@ export default class Machines {
 			await this.#store.write(definition)
 			if (definition.osId === 'omarchy') await removeOmarchySetupCredentials(this.#store.directory(id))
 			await this.#emitMachines()
+			if (machineJoinsLan(definition)) {
+				void this.#joinLanAfterSetup(id).catch((error) =>
+					this.logger.error(`Failed to move machine ${id} onto the LAN after setup`, error),
+				)
+			}
 			return true
 		})
+	}
+
+	// A bridged machine sets up on the private network so it can call home to
+	// Umbrel. Once it has, move it onto the LAN. Wait a moment first so the
+	// guest receives the reply to the call that brought it here.
+	async #joinLanAfterSetup(id: string) {
+		await delay(JOIN_LAN_AFTER_SETUP_DELAY_MS)
+		await this.#withMachineLock(id, async () => {
+			const definition = await this.#definition(id)
+			if (!machineJoinsLan(definition) || (await this.#libvirt.state(id)) !== 'running') return
+			await this.#lanBridge.ensure()
+			await this.#libvirt.joinLan(definition)
+		})
+	}
+
+	async #assertLanBridgeAvailable() {
+		const availability = await this.#lanBridge.availability()
+		if (!availability.available) throw new Error(`[machine-lan-bridge-unavailable-${availability.reason}]`)
+	}
+
+	// Give Umbrel's address back to its wired interface once no machine is
+	// configured to join the LAN. The bridge waits for bridged machines that are
+	// still running to stop.
+	async #releaseLanBridge(definitions: MachineDefinition[]) {
+		const bridged = (list: MachineDefinition[]) => list.some((definition) => definition.networkMode === 'bridged')
+		if (this.#lanBridgeRelease || bridged(definitions)) return
+		if (!(await fse.pathExists(`/sys/class/net/${MACHINE_LAN_BRIDGE}`))) return
+		// Handing the address back can take a while, so don't hold up the poll
+		this.#lanBridgeRelease = this.#lanBridge
+			.remove(async () => bridged(await this.#store.list()))
+			.catch((error) => this.logger.error('Failed to remove the machine LAN bridge', error))
+			.finally(() => (this.#lanBridgeRelease = undefined))
 	}
 
 	async startMachine(id: string) {
@@ -2480,11 +2545,14 @@ export default class Machines {
 				// daemons can forget it while the last VM is stopped, so reconstruct it
 				// before every manual start instead of assuming startup state survived.
 				await this.#libvirt.reconcileNetwork(await this.#store.list())
+				const joinLan = machineJoinsLanNow(definition)
+				if (joinLan) await this.#lanBridge.ensure()
 				await this.#libvirt.start(
 					definition,
 					this.#store.directory(id),
 					await this.#diskSystemPath(definition),
 					(await this.#usbDevicesToAttach(definition)).map(({device}) => ({bus: device.bus, device: device.device})),
+					{joinLan},
 				)
 				definition.autostart = true
 				await this.#store.write(definition)
@@ -2651,6 +2719,7 @@ export default class Machines {
 			autostart?: boolean
 			portForwards?: PortForward[]
 			usbDevices?: UsbDeviceIdentity[]
+			networkMode?: MachineNetworkMode
 		},
 	) {
 		return this.#withMachineLock(id, async () => {
@@ -2668,6 +2737,13 @@ export default class Machines {
 				}
 			}
 			if (settings.portForwards !== undefined) await this.#validatePortForwards(id, settings.portForwards)
+			// A bridged machine has its own address on the LAN, so it has nothing
+			// to forward Umbrel's ports to
+			const networkMode = settings.networkMode ?? definition.networkMode ?? 'nat'
+			if (networkMode === 'bridged' && (settings.portForwards ?? definition.portForwards).length > 0) {
+				throw new Error('[machine-port-forwards-nat-only]')
+			}
+			if (networkMode === 'bridged' && definition.networkMode !== 'bridged') await this.#assertLanBridgeAvailable()
 			const usb =
 				settings.usbDevices !== undefined ? await this.#validateUsbDevices(definition, settings.usbDevices) : undefined
 
@@ -2714,6 +2790,8 @@ export default class Machines {
 			if (settings.diskSizeGb !== undefined) definition.diskSizeGb = settings.diskSizeGb
 			if (settings.autostart !== undefined) definition.autostart = settings.autostart
 			if (settings.portForwards !== undefined) definition.portForwards = settings.portForwards
+			// Takes effect the next time the machine starts
+			if (settings.networkMode !== undefined) definition.networkMode = settings.networkMode
 			if (usb) definition.usbDevices = usb.assignments.length > 0 ? usb.assignments : undefined
 			await this.#store.write(definition)
 			if (settings.portForwards !== undefined) await this.#libvirt.reconcileFirewall(await this.#store.list())

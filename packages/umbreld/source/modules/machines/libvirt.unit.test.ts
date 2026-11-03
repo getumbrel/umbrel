@@ -325,10 +325,13 @@ describe('libvirt domain state', () => {
 
 describe('machine firewall', () => {
 	const managedDockerUserRules = [
+		'-A DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
 		'-A DOCKER-USER -o umbrel-vm -m conntrack --ctstate DNAT -m comment --comment umbrel-machines -j ACCEPT',
 		'-A DOCKER-USER -o umbrel-vm -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment umbrel-machines -j ACCEPT',
 		'-A DOCKER-USER -i umbrel-vm -m comment --comment umbrel-machines -j ACCEPT',
 	]
+	const managedLanBridgeRule =
+		'-A DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT'
 	const createLibvirt = () =>
 		new Libvirt({
 			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},
@@ -341,9 +344,26 @@ describe('machine firewall', () => {
 		dockerUser = ['-N DOCKER-USER'],
 		nftDockerUser = '',
 		iptablesReadable = true,
-	}: {dockerUser?: string[]; nftDockerUser?: string; iptablesReadable?: boolean} = {}) =>
+		dockerUser6 = ['-N DOCKER-USER', managedLanBridgeRule],
+		defaultRoute = () => 'enp1s0' as string | undefined,
+	}: {
+		dockerUser?: string[]
+		nftDockerUser?: string
+		iptablesReadable?: boolean
+		// null when Docker doesn't manage ip6tables
+		dockerUser6?: string[] | null
+		defaultRoute?: () => string | undefined
+	} = {}) =>
 		execaMock.mockImplementation(async (command?: string, args: string[] = [], options: {reject?: boolean} = {}) => {
 			const joined = args.join(' ')
+			if (command === 'ip6tables' && joined === '-w -S DOCKER-USER') {
+				if (dockerUser6) return {stdout: dockerUser6.join('\n'), stderr: '', exitCode: 0}
+				return {stdout: '', stderr: 'ip6tables: No chain/target/match by that name.', exitCode: 1}
+			}
+			if (command === 'ip' && joined === '-json route show default') {
+				const dev = defaultRoute()
+				return {stdout: JSON.stringify(dev ? [{dev, metric: 100}] : []), stderr: '', exitCode: 0}
+			}
 			if (command === 'iptables' && joined === '-w -S DOCKER-USER') {
 				if (iptablesReadable) return {stdout: dockerUser.join('\n'), stderr: '', exitCode: 0}
 				const stderr = "iptables v1.8.11 (nf_tables): chain `DOCKER-USER' in table `filter' is incompatible"
@@ -368,8 +388,44 @@ describe('machine firewall', () => {
 			'-w -I DOCKER-USER -i umbrel-vm -m comment --comment umbrel-machines -j ACCEPT',
 			'-w -I DOCKER-USER -o umbrel-vm -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment umbrel-machines -j ACCEPT',
 			'-w -I DOCKER-USER -o umbrel-vm -m conntrack --ctstate DNAT -m comment --comment umbrel-machines -j ACCEPT',
+			'-w -I DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
 		])
 		expect(calls('nft', 'insert rule ip filter')).toEqual([])
+	})
+
+	test('lets bridged traffic cross the LAN bridge despite Docker dropping forwarded IPv4 and IPv6', async () => {
+		mockFirewall({dockerUser6: ['-N DOCKER-USER', managedLanBridgeRule, '-A DOCKER-USER -j RETURN']})
+
+		await createLibvirt().reconcileFirewall([])
+
+		expect(calls('iptables', '-w -I')).toContain(
+			'-w -I DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
+		)
+		// The IPv6 rule is replaced, not stacked
+		expect(calls('ip6tables', '-w -D')).toEqual([`-w ${managedLanBridgeRule.replace(/^-A/, '-D')}`])
+		expect(calls('ip6tables', '-w -I')).toEqual([
+			'-w -I DOCKER-USER -i umbrel-lan -o umbrel-lan -m comment --comment umbrel-machines -j ACCEPT',
+		])
+	})
+
+	test('skips IPv6 when Docker does not manage ip6tables', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules], dockerUser6: null})
+
+		await createLibvirt().reconcileFirewall([])
+		expect(calls('ip6tables', '-w -I')).toEqual([])
+
+		// And a missing IPv6 chain doesn't count as missing rules
+		execaMock.mockClear()
+		await createLibvirt().ensureFirewall([])
+		expect(calls('iptables', '-w -I')).toEqual([])
+	})
+
+	test('reinstalls the IPv6 LAN bridge rule when it goes missing', async () => {
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules], dockerUser6: ['-N DOCKER-USER']})
+
+		await createLibvirt().ensureFirewall([])
+
+		expect(calls('ip6tables', '-w -I')).toHaveLength(1)
 	})
 
 	test('replaces only its own DOCKER-USER rules', async () => {
@@ -391,7 +447,7 @@ describe('machine firewall', () => {
 		await createLibvirt().reconcileFirewall([])
 
 		expect(calls('nft', 'delete rule ip filter DOCKER-USER')).toEqual(['delete rule ip filter DOCKER-USER handle 7'])
-		expect(calls('iptables', '-w -I')).toHaveLength(3)
+		expect(calls('iptables', '-w -I')).toHaveLength(4)
 	})
 
 	test('leaves a complete rule set in place', async () => {
@@ -408,7 +464,76 @@ describe('machine firewall', () => {
 		await createLibvirt().ensureFirewall([])
 
 		expect(calls('iptables', '-w -D')).toHaveLength(1)
-		expect(calls('iptables', '-w -I')).toHaveLength(3)
+		expect(calls('iptables', '-w -I')).toHaveLength(4)
+	})
+
+	test('rebinds port forwards when Umbrel moves to another LAN interface', async () => {
+		let lanInterface: string | undefined = 'enp1s0'
+		mockFirewall({dockerUser: ['-N DOCKER-USER', ...managedDockerUserRules], defaultRoute: () => lanInterface})
+		const forwarded = definition({
+			ipAddress: '10.203.0.2',
+			portForwards: [{id: 'ssh', protocol: 'tcp', hostPort: 40_022, guestPort: 22}],
+		})
+		const libvirt = createLibvirt()
+		const rulesets = () =>
+			execaMock.mock.calls
+				.filter(([command, args]) => command === 'nft' && args?.join(' ') === '-f -')
+				.map(([, , options]) => String(options?.input))
+		await libvirt.reconcileFirewall([forwarded])
+		expect(rulesets().at(-1)).toContain('iifname "enp1s0" fib daddr type local tcp dport 40022')
+
+		// Nothing changed, so nothing is rewritten
+		vi.setSystemTime(Date.now() + 10_000)
+		await libvirt.ensureFirewall([forwarded])
+		expect(rulesets()).toHaveLength(1)
+
+		// While the address is moving there's no default route, so leave the rules
+		lanInterface = undefined
+		vi.setSystemTime(Date.now() + 10_000)
+		await libvirt.ensureFirewall([forwarded])
+		expect(rulesets()).toHaveLength(1)
+
+		// Once it's on the bridge bridged machines join the LAN through, follow it
+		lanInterface = 'umbrel-lan'
+		vi.setSystemTime(Date.now() + 10_000)
+		await libvirt.ensureFirewall([forwarded])
+		expect(rulesets()).toHaveLength(2)
+		expect(rulesets().at(-1)).toContain('iifname "umbrel-lan" fib daddr type local tcp dport 40022')
+		vi.useRealTimers()
+	})
+
+	test('waits for the default route while Umbrel moves onto or off the LAN bridge', async () => {
+		let lookups = 0
+		mockFirewall({defaultRoute: () => (++lookups < 3 ? undefined : 'umbrel-lan')})
+		const forwarded = definition({
+			ipAddress: '10.203.0.2',
+			portForwards: [{id: 'ssh', protocol: 'tcp', hostPort: 40_022, guestPort: 22}],
+		})
+
+		await createLibvirt().reconcileFirewall([forwarded])
+
+		expect(lookups).toBe(3)
+		const ruleset = execaMock.mock.calls.find(([command, args]) => command === 'nft' && args?.join(' ') === '-f -')
+		expect(String(ruleset?.[2]?.input)).toContain('iifname "umbrel-lan" fib daddr type local tcp dport 40022')
+	})
+
+	test('gives up on port forwards when Umbrel stays off the network', async () => {
+		vi.useFakeTimers()
+		try {
+			mockFirewall({defaultRoute: () => undefined})
+			const forwarded = definition({
+				ipAddress: '10.203.0.2',
+				portForwards: [{id: 'ssh', protocol: 'tcp', hostPort: 40_022, guestPort: 22}],
+			})
+
+			const reconcile = expect(createLibvirt().reconcileFirewall([forwarded])).rejects.toThrow(
+				'[machine-lan-interface-unavailable]',
+			)
+			await vi.advanceTimersByTimeAsync(31_000)
+			await reconcile
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	test('does not stack duplicate rules when iptables cannot read DOCKER-USER', async () => {

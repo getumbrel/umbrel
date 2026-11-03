@@ -620,7 +620,8 @@ set -eu
 test "$(virsh --connect qemu:///system domstate umbrel-machine-${machineId})" = running
 virsh --connect qemu:///system net-info umbrel-machines | grep -q '^Persistent:.*no$'
 nft list table ip umbrel_machines >/dev/null
-test "$(iptables -S DOCKER-USER | grep -c -- '--comment umbrel-machines')" = 3
+test "$(iptables -S DOCKER-USER | grep -c -- '--comment umbrel-machines')" = 4
+test "$(ip6tables -S DOCKER-USER | grep -c -- '--comment umbrel-machines')" = 1
 test "$(nft list chain ip libvirt_network guest_input | grep -c 'comment "umbrel-machines"')" = 1
 test "$(nft list chain ip libvirt_network guest_cross | grep -c 'comment "umbrel-machines"')" = 1
 echo healthy

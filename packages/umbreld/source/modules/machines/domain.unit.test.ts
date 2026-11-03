@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto'
 
 import {describe, expect, test} from 'vitest'
 
-import {buildDomainXml, type MachineDefinition} from './domain.ts'
+import {buildDomainXml, buildInterfaceXml, machineJoinsLan, type MachineDefinition} from './domain.ts'
 
 function definition(overrides: Partial<MachineDefinition> = {}): MachineDefinition {
 	const id = randomUUID()
@@ -499,5 +499,60 @@ describe('libvirt domain XML', () => {
 		expect(xml).toContain("target dev='hdb' bus='ide'/><readonly/><boot order='3'")
 		expect(xml).toContain("source file='/data/machines/windows-98/media/install.iso' startupPolicy='optional'")
 		expect(xml).not.toContain('<acpi/>')
+	})
+
+	test('puts a bridged machine directly on the LAN bridge without NAT isolation or address filtering', () => {
+		const xml = buildDomainXml({
+			definition: definition({networkMode: 'bridged'}),
+			machineDirectory: '/data/machines/test',
+			runtimeDirectory: '/run/umbrel-machines/test',
+			acceleration: 'kvm',
+			firmwareCode: '/usr/share/OVMF/OVMF_CODE_4M.fd',
+		})
+		const networkInterface = xml.match(/<interface\b[\s\S]*?<\/interface>/g)!
+		expect(networkInterface).toHaveLength(1)
+		expect(networkInterface[0]).toContain("<interface type='bridge'>")
+		expect(networkInterface[0]).toContain("<mac address='02:00:00:00:00:01'/>")
+		expect(networkInterface[0]).toContain("<source bridge='umbrel-lan'/>")
+		expect(networkInterface[0]).toContain("<model type='virtio'/>")
+		expect(networkInterface[0]).toContain("<driver name='vhost'/>")
+		expect(networkInterface[0]).not.toContain('umbrel-machines')
+		expect(networkInterface[0]).not.toContain('isolated')
+		expect(networkInterface[0]).not.toContain('filterref')
+	})
+
+	test('keeps a bridged machine on NAT until its first-boot setup has called home', () => {
+		const settingUp = definition({
+			networkMode: 'bridged',
+			firstBootSetup: {startedAt: 1, tokenHash: 'a'.repeat(64)},
+		})
+		expect(machineJoinsLan(settingUp)).toBe(false)
+		expect(buildInterfaceXml(settingUp)).toContain("<source network='umbrel-machines'/>")
+		expect(buildInterfaceXml(settingUp)).toContain("<port isolated='yes'/>")
+
+		const setUp = {...settingUp, firstBootSetup: undefined}
+		expect(machineJoinsLan(setUp)).toBe(true)
+		expect(buildInterfaceXml(setUp)).toContain("<source bridge='umbrel-lan'/>")
+	})
+
+	test('treats machines saved before network modes existed as NAT', () => {
+		const legacy = definition()
+		expect(legacy.networkMode).toBeUndefined()
+		expect(machineJoinsLan(legacy)).toBe(false)
+		expect(machineJoinsLan(definition({networkMode: 'nat'}))).toBe(false)
+		expect(buildInterfaceXml(legacy)).toContain("<interface type='network'>")
+	})
+
+	test.each([
+		['windows-98-x86', 'ne2k_isa', "<address type='isa' iobase='0x200' irq='3'/>"],
+		['windows-7-x86', 'e1000', undefined],
+		['legacy-x86', 'rtl8139', undefined],
+	] as const)('keeps the %s network card when bridged', (platformProfile, model, address) => {
+		const xml = buildInterfaceXml(definition({networkMode: 'bridged', platformProfile}))
+		expect(xml).toContain("<source bridge='umbrel-lan'/>")
+		expect(xml).toContain(`<model type='${model}'/>`)
+		expect(xml).not.toContain('vhost')
+		if (address) expect(xml).toContain(address)
+		else expect(xml).not.toContain('<address')
 	})
 })

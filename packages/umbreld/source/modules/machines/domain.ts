@@ -6,6 +6,13 @@ export type MachineArchitecture = 'amd64' | 'arm64'
 export type PlatformProfile = 'modern-x86' | 'windows-7-x86' | 'legacy-x86' | 'windows-98-x86' | 'modern-arm64'
 export type PortForwardProtocol = 'tcp' | 'udp'
 export const MACHINE_NETWORK_NAME = 'umbrel-machines'
+// The host bridge bridged machines join the LAN through. It carries Umbrel's
+// own address, so the host and these machines can still reach each other.
+export const MACHINE_LAN_BRIDGE = 'umbrel-lan'
+
+// nat: behind Umbrel on the private machine network, reached through port
+// forwards. bridged: directly on the LAN with an address from the router.
+export type MachineNetworkMode = 'nat' | 'bridged'
 
 export type PortForward = {
 	id: string
@@ -45,6 +52,10 @@ export type MachineDefinition = {
 	diskPath?: string
 	uuid: string
 	macAddress: string
+	// Absent on machines created before bridged networking, which are NAT
+	networkMode?: MachineNetworkMode
+	// The machine's address on the private machine network. Bridged machines
+	// keep one too because they use NAT until their first-boot setup is done.
 	ipAddress?: string
 	diskSizeGb: number
 	cores: number
@@ -66,6 +77,47 @@ export type MachineDefinition = {
 	portForwards: PortForward[]
 	// Host USB devices passed through to the guest
 	usbDevices?: UsbDeviceAssignment[]
+}
+
+// First-boot setup calls home to Umbrel over the private machine network, so a
+// bridged machine stays on NAT until its setup is done, or has been given up on.
+export function machineJoinsLan(
+	definition: Pick<MachineDefinition, 'networkMode' | 'firstBootSetup'>,
+	{setupExpired = false} = {},
+) {
+	return definition.networkMode === 'bridged' && (!definition.firstBootSetup || setupExpired)
+}
+
+export function machineNetworkModel(definition: Pick<MachineDefinition, 'platformProfile'>) {
+	switch (definition.platformProfile) {
+		case 'windows-98-x86':
+			return 'ne2k_isa'
+		case 'windows-7-x86':
+			return 'e1000'
+		case 'legacy-x86':
+			return 'rtl8139'
+		default:
+			return 'virtio'
+	}
+}
+
+// NAT machines are isolated from each other and can't spoof addresses on the
+// private network. A bridged machine is an ordinary LAN device, which lets it
+// run things like a router or DHCP server, so it gets no filtering.
+export function buildInterfaceXml(definition: MachineDefinition, joinLan = machineJoinsLan(definition)) {
+	const networkModel = machineNetworkModel(definition)
+	const source = joinLan
+		? `<source bridge='${MACHINE_LAN_BRIDGE}'/>`
+		: `<source network='${MACHINE_NETWORK_NAME}'/>
+			<port isolated='yes'/>
+			<filterref filter='clean-traffic'><parameter name='IP' value='${escapeXml(definition.ipAddress!)}'/></filterref>`
+	return `<interface type='${joinLan ? 'bridge' : 'network'}'>
+			<mac address='${escapeXml(definition.macAddress)}'/>
+			${source}
+			<model type='${networkModel}'/>
+			${networkModel === 'virtio' ? "<driver name='vhost'/>" : ''}
+			${networkModel === 'ne2k_isa' ? "<address type='isa' iobase='0x200' irq='3'/>" : ''}
+		</interface>`
 }
 
 export function machineDiskBus(definition: MachineDefinition) {
@@ -139,6 +191,7 @@ export function buildDomainXml({
 	graphicsRenderNode,
 	audioPlaybackDevice,
 	usbDevices = [],
+	joinLan = machineJoinsLan(definition),
 }: {
 	definition: MachineDefinition
 	machineDirectory: string
@@ -150,6 +203,8 @@ export function buildDomainXml({
 	audioPlaybackDevice?: string
 	// Where the machine's assigned USB devices are connected right now
 	usbDevices?: UsbAddress[]
+	// Whether its network card goes on the LAN bridge rather than the NAT network
+	joinLan?: boolean
 }) {
 	if (!definition.ipAddress) throw new Error('[machine-ip-address-invalid]')
 	const windows7 = definition.platformProfile === 'windows-7-x86'
@@ -164,14 +219,6 @@ export function buildDomainXml({
 	const qemuLog = nodePath.join(runtimeDirectory, 'qemu.log')
 	const diskBus = machineDiskBus(definition)
 	const diskTarget = machineDiskTarget(definition)
-	const networkModel = windows98
-		? 'ne2k_isa'
-		: windows7
-			? 'e1000'
-			: definition.platformProfile === 'legacy-x86'
-				? 'rtl8139'
-				: 'virtio'
-	const networkAddress = windows98 ? "<address type='isa' iobase='0x200' irq='3'/>" : ''
 	const emulator = definition.arch === 'arm64' ? '/usr/bin/qemu-system-aarch64' : '/usr/bin/qemu-system-x86_64'
 	const loader =
 		definition.firmware === 'uefi'
@@ -208,7 +255,6 @@ export function buildDomainXml({
 	const bootFloppy = definition.bootMedia
 		? `<controller type='fdc'/><disk type='file' device='floppy'><driver name='qemu' type='raw'/><source file='${escapeXml(nodePath.join(machineDirectory, definition.bootMedia))}' startupPolicy='optional'/><target dev='fda' bus='fdc'/><boot order='1'/></disk>`
 		: ''
-	const networkDriver = networkModel === 'virtio' ? "<driver name='vhost'/>" : ''
 	const tpm = definition.tpm
 		? `<tpm model='${arm ? 'tpm-tis' : 'tpm-crb'}'><backend type='emulator' version='2.0' persistent_state='yes'/></tpm>`
 		: ''
@@ -298,15 +344,7 @@ export function buildDomainXml({
     ${cdrom}
     ${definition.seedMedia ? `<disk type='file' device='cdrom'><driver name='qemu' type='raw'/><source file='${escapeXml(nodePath.join(machineDirectory, definition.seedMedia))}' startupPolicy='optional'/><target dev='sdb' bus='sata'/><readonly/></disk>` : ''}
     ${bootFloppy}
-		<interface type='network'>
-			<mac address='${escapeXml(definition.macAddress)}'/>
-			<source network='${MACHINE_NETWORK_NAME}'/>
-			<port isolated='yes'/>
-			<filterref filter='clean-traffic'><parameter name='IP' value='${escapeXml(definition.ipAddress)}'/></filterref>
-			<model type='${networkModel}'/>
-			${networkDriver}
-			${networkAddress}
-		</interface>
+		${buildInterfaceXml(definition, joinLan)}
     <graphics type='vnc' socket='${escapeXml(displaySocket)}' sharePolicy='allow-exclusive'/>
     ${acceleratedGraphics}
     ${video}

@@ -90,6 +90,12 @@ type StoreSchema = {
 				dns: string[]
 			}
 		>
+		// Set while Umbrel's wired interface sits behind the bridge that lets
+		// machines join the LAN, so umbrel-static-ip-restore can put it back
+		// before NetworkManager starts on the next boot
+		lanBridge?: {
+			mac: string
+		}
 	}
 	recentlyOpenedApps: string[]
 	files: {

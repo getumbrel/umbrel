@@ -206,6 +206,7 @@ const machineFixture = {
 	memoryGb: 4,
 	diskSizeGb: 40,
 	storageUsedGb: 3.5,
+	networkMode: 'nat',
 	ipAddress: '10.21.0.2',
 	username: 'umbrel',
 	arch: 'amd64',
@@ -1078,6 +1079,15 @@ test('machine lifecycle and detail tools check the grant, use the routes, and an
 		portForwards: [{hostPort: 40_022, guestPort: 22}],
 		usage: {cpu: 20, memory: 4},
 	})
+
+	// A bridged machine's address comes from the router, so there's no private
+	// address to hand an agent
+	vi.mocked(context.rpc.machines.list).mockResolvedValueOnce([
+		{...machineFixture, networkMode: 'bridged', portForwards: []},
+	] as any)
+	const bridged = parseToolResult(await registry.get('get_machine_details').handler({machineId: 'debian'}))
+	expect(bridged).toMatchObject({id: 'debian', networkMode: 'bridged', portForwards: []})
+	expect(bridged).not.toHaveProperty('ipAddress')
 
 	vi.mocked(context.mcp.assertMachineAccess).mockRejectedValueOnce(new Error('[permission-denied] nope'))
 	const denied = await registry.get('delete_machine').handler({machineId: 'debian'})

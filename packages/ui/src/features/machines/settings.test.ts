@@ -18,6 +18,12 @@ describe('machineSettingsRequireShutdown', () => {
 		expect(machineSettingsRequireShutdown(current, {...current, diskSizeGb: 80})).toBe(true)
 		expect(machineSettingsRequireShutdown(current, {...current, firmware: 'bios'})).toBe(true)
 		expect(machineSettingsRequireShutdown(current, {...current, diskBus: 'sata'})).toBe(true)
+		expect(machineSettingsRequireShutdown(current, {...current, networkMode: 'bridged'})).toBe(true)
+	})
+
+	test('treats an omitted network mode as NAT', () => {
+		expect(machineSettingsRequireShutdown(current, {...current, networkMode: 'nat'})).toBe(false)
+		expect(machineSettingsRequireShutdown({...current, networkMode: 'bridged'}, current)).toBe(true)
 	})
 
 	test('treats an omitted disk bus as the default VirtIO bus', () => {

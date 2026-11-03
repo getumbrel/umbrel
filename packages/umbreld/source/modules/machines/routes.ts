@@ -34,6 +34,8 @@ export default router({
 					firmware: z.enum(['uefi', 'bios']).optional(),
 					diskBus: z.enum(['virtio', 'sata']).optional(),
 					diskDirectory: z.string().min(1).optional(),
+					// nat keeps the machine behind Umbrel, bridged puts it directly on the LAN
+					networkMode: z.enum(['nat', 'bridged']).optional(),
 					username: z.string().min(1).max(32).optional(),
 					// Only used during OS setup — never part of the machine definition
 					password: z.string().min(1).max(128).optional(),
@@ -100,6 +102,8 @@ export default router({
 					.optional(),
 				// The complete set of host USB devices passed through to the machine
 				usbDevices: z.array(usbDeviceIdentitySchema).max(MAX_MACHINE_USB_DEVICES).optional(),
+				// Takes effect the next time the machine starts
+				networkMode: z.enum(['nat', 'bridged']).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {

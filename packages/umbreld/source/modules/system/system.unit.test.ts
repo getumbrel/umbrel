@@ -18,6 +18,8 @@ import {
 	shutdown,
 	reboot,
 	restoreStaticIp,
+	clearStaticIp,
+	getNetworkInterfaces,
 	connectToWiFiNetwork,
 	restoreWiFi,
 } from './system.ts'
@@ -209,7 +211,9 @@ describe('restoreStaticIp', () => {
 	// Fake nmcli for a single ethernet interface and return the commands that were run
 	function mockNetworkManager({connection}: {connection?: Record<string, string>}) {
 		const commands: string[] = []
-		vi.mocked(fse.pathExists).mockResolvedValue(true)
+		// A physical interface that isn't behind a bridge
+		vi.mocked(fse.pathExists).mockImplementation(async (path) => !String(path).endsWith('/bridge'))
+		vi.mocked(fse.realpath).mockRejectedValue(Object.assign(new Error('ENOENT'), {code: 'ENOENT'}))
 		vi.mocked(fse.readFile).mockResolvedValue(`${mac}\n`)
 		vi.mocked(execa.$).mockImplementation(async (strings: TemplateStringsArray, ...values: unknown[]) => {
 			const command = strings.reduce((command, string, index) => command + values[index - 1] + string)
@@ -285,6 +289,113 @@ describe('restoreStaticIp', () => {
 		expect(changes[1]).toMatch(
 			/^nmcli connection modify wired-connection-[0-9a-f]{8} ipv4.method manual ipv4.addresses 192.168.1.50\/24 ipv4.gateway 192.168.1.1 ipv4.dns 1.1.1.1,8.8.8.8$/,
 		)
+	})
+})
+
+// Machines puts the wired interface behind the umbrel-lan bridge so machines
+// can join the LAN. Its IP settings then live on the bridge's connection.
+describe('static IP behind a bridge', () => {
+	const mac = '52:54:00:12:34:56'
+	const savedSettings = {ip: '192.168.1.50', subnetPrefix: 24, gateway: '192.168.1.1', dns: ['1.1.1.1']}
+
+	function mockBridgedNetworkManager(bridgeIpv4: Record<string, string>) {
+		const commands: string[] = []
+		vi.mocked(fse.realpath).mockImplementation((async (path: string) => {
+			if (path === '/sys/class/net/enp1s0/master') return '/sys/devices/virtual/net/umbrel-lan'
+			throw Object.assign(new Error('ENOENT'), {code: 'ENOENT'})
+		}) as any)
+		vi.mocked(fse.pathExists).mockImplementation(async (path) =>
+			[
+				'/sys/class/net/enp1s0/device',
+				'/sys/devices/virtual/net/umbrel-lan/bridge',
+				'/sys/class/net/umbrel-lan/bridge',
+			].includes(String(path)),
+		)
+		vi.mocked(fse.readFile).mockResolvedValue(`${mac}\n`)
+		vi.mocked(execa.$).mockImplementation(async (strings: TemplateStringsArray, ...values: unknown[]) => {
+			const command = strings.reduce((command, string, index) => command + values[index - 1] + string)
+			commands.push(command)
+			let stdout = ''
+			if (command.endsWith('device status')) {
+				stdout = 'umbrel-lan:bridge:connected:umbrel-lan\nenp1s0:ethernet:connected:umbrel-lan-port'
+			} else if (command.endsWith('--fields UUID connection show')) {
+				stdout = 'uuid-port\nuuid-bridge'
+			} else if (command.endsWith('connection show uuid-port')) {
+				stdout = 'connection.interface-name:enp1s0\nconnection.id:umbrel-lan-port'
+			} else if (command.endsWith('connection show uuid-bridge')) {
+				stdout = 'connection.interface-name:umbrel-lan\nconnection.id:umbrel-lan'
+			} else if (command.endsWith('connection show umbrel-lan')) {
+				stdout = Object.entries(bridgeIpv4)
+					.map(([key, value]) => `${key}:${value}`)
+					.join('\n')
+			}
+			return {stdout}
+		})
+		return commands
+	}
+
+	function createUmbreld(staticIp: Record<string, typeof savedSettings> = {[mac]: savedSettings}) {
+		return {
+			store: {
+				get: async () => staticIp,
+				getWriteLock: async (callback: any) => callback({get: async () => staticIp, set: async () => {}}),
+			},
+			lanIngress: {refresh: async () => {}},
+			logger: {log: vi.fn(), error: vi.fn()},
+		} as any
+	}
+
+	test('reports the address on the bridge as the interface address', async () => {
+		mockBridgedNetworkManager({
+			'ipv4.method': 'auto',
+			'IP4.ADDRESS[1]': '192.168.1.148/24',
+			'IP4.GATEWAY': '192.168.1.1',
+			'IP4.DNS[1]': '192.168.1.1',
+		})
+
+		const interfaces = await getNetworkInterfaces(createUmbreld({}))
+
+		// The bridge itself isn't a physical interface and stays hidden
+		expect(interfaces).toEqual([
+			{
+				id: 'enp1s0',
+				mac,
+				type: 'ethernet',
+				connected: true,
+				ipMethod: 'dhcp',
+				ip: '192.168.1.148',
+				subnetPrefix: 24,
+				gateway: '192.168.1.1',
+				dns: ['192.168.1.1'],
+			},
+		])
+	})
+
+	test('applies saved settings to the bridge and reapplies it in place so machines stay attached', async () => {
+		const commands = mockBridgedNetworkManager({'ipv4.method': 'auto'})
+		const umbreld = createUmbreld()
+
+		await restoreStaticIp(umbreld)
+
+		expect(umbreld.logger.error).not.toHaveBeenCalled()
+		expect(commands.filter((command) => /connection (add|modify|down|up) |device reapply/.test(command))).toEqual([
+			'nmcli connection modify umbrel-lan ipv4.method manual ipv4.addresses 192.168.1.50/24 ipv4.gateway 192.168.1.1 ipv4.dns 1.1.1.1',
+			'nmcli device reapply umbrel-lan',
+		])
+	})
+
+	test('clears static settings from the bridge and reapplies it in place', async () => {
+		const commands = mockBridgedNetworkManager({
+			'ipv4.method': 'manual',
+			'IP4.ADDRESS[1]': '192.168.1.50/24',
+		})
+
+		await clearStaticIp(createUmbreld(), {mac})
+
+		expect(commands.filter((command) => /connection (add|modify|down|up) |device reapply/.test(command))).toEqual([
+			'nmcli connection modify umbrel-lan ipv4.method auto ipv4.addresses  ipv4.gateway  ipv4.dns ',
+			'nmcli device reapply umbrel-lan',
+		])
 	})
 })
 
