@@ -18,9 +18,9 @@ import {useTranslation} from 'react-i18next'
 import {IoLogoAndroid, IoLogoApple} from 'react-icons/io5'
 import {useLocation, useNavigate} from 'react-router-dom'
 
-import {FadeScroller} from '@/components/fade-scroller'
 import {Button} from '@/components/ui/button'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {contextMenuClasses} from '@/components/ui/shared/menu'
 import {AlbumCard} from '@/features/photos/components/albums/album-card'
 import {LivePhotoIcon} from '@/features/photos/components/live-photo-icon'
@@ -90,10 +90,11 @@ export function Sidebar({className}: {className?: string}) {
 
 	return (
 		<nav className={cn('flex min-h-0 flex-col', className)} aria-label={t('photos-sidebar.navigation')}>
-			{/* Pulled left and padded back so an album card scaling up on hover isn't clipped by the scroll box's edge */}
-			<FadeScroller
-				direction='y'
-				className='umbrel-hide-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain lg:-ml-2 lg:pl-2'
+			{/* `auto` keeps the scroll bar up whenever the list overflows, as in Files' sidebar.
+			    Pulled left and padded back so an album card scaling up on hover isn't clipped by the scroll box's edge */}
+			<ScrollArea
+				type='auto'
+				className='h-full min-h-0 lg:-ml-2 [&>[data-radix-scroll-area-viewport]]:overscroll-contain lg:[&>[data-radix-scroll-area-viewport]]:pl-2'
 			>
 				<SidebarSection>{libraryItems.map(renderItem)}</SidebarSection>
 
@@ -135,7 +136,7 @@ export function Sidebar({className}: {className?: string}) {
 
 				{/* Spacer */}
 				<div className='h-6' />
-			</FadeScroller>
+			</ScrollArea>
 		</nav>
 	)
 }

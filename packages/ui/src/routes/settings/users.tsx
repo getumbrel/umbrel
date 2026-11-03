@@ -1,6 +1,6 @@
 import {Loader2, PlusCircle} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
-import {lazy, Suspense, useRef, useState} from 'react'
+import {lazy, Suspense, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbCheck, TbCopy, TbInfoCircle, TbTrash} from 'react-icons/tb'
 import {useSearchParams} from 'react-router-dom'
@@ -198,6 +198,19 @@ export default function UsersDialog() {
 	const [resetPassword, setResetPassword] = useState('')
 	const [resetPasswordError, setResetPasswordError] = useState('')
 	const deleteInFlightRef = useRef(false)
+
+	// Every view takes its turn in the same scroller. Open each one at its top, as a
+	// new page would, instead of wherever the previous view was left scrolled to.
+	const scrollerRef = useRef<HTMLDivElement>(null)
+	const viewKey =
+		view.view === 'edit'
+			? `edit:${view.userId}:${isManagingSessions}`
+			: view.view === 'owner'
+				? `owner:${view.panel}`
+				: view.view
+	useLayoutEffect(() => {
+		scrollerRef.current?.scrollTo({top: 0})
+	}, [viewKey])
 
 	const setOwnerPanel = (panel: OwnerPanel | null) => {
 		const nextSearchParams = new URLSearchParams(searchParams)
@@ -1107,7 +1120,7 @@ export default function UsersDialog() {
 							<DrawerTitle>{dialogTitle}</DrawerTitle>
 							<DrawerDescription className='sr-only'>{dialogDescription}</DrawerDescription>
 						</DrawerHeader>
-						<DrawerScroller>{content}</DrawerScroller>
+						<DrawerScroller ref={scrollerRef}>{content}</DrawerScroller>
 					</DrawerContent>
 				</Drawer>
 				{folderPicker}
@@ -1119,7 +1132,7 @@ export default function UsersDialog() {
 	return (
 		<>
 			<Dialog {...dialogProps}>
-				<DialogScrollableContent>
+				<DialogScrollableContent viewportRef={scrollerRef}>
 					<DialogHeader className='sr-only'>
 						<DialogTitle>{dialogTitle}</DialogTitle>
 						<DialogDescription>{dialogDescription}</DialogDescription>

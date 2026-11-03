@@ -39,8 +39,8 @@ export function SheetLayout() {
 
 	const isSettingsRoute = /^\/settings(\/|$)/.test(location.pathname)
 	const isAppStoreRoute = /^\/(?:community-)?app-store(\/|$)/.test(location.pathname)
-	// Desktop Files manages its own viewport-relative heights (sidebar reaches
-	// below the dock line), so the dock spacer would only add phantom scroll
+	// Files fits itself to the sheet at every size: its listing and sidebar scroll
+	// inside it, and it handles the dock itself, so the sheet never scrolls
 	const isFilesRoute = /^\/files(\/|$)/.test(location.pathname)
 	const isPhotosRoute = /^\/photos(\/|$)/.test(location.pathname)
 	const isFullHeightFeatureRoute = isFilesRoute || isPhotosRoute
@@ -99,12 +99,13 @@ export function SheetLayout() {
 							viewportRef={setScrollViewport}
 							viewportClassName={cn(
 								isSettingsRoute && 'lg:!overflow-hidden lg:[&>div]:!h-full',
+								isFilesRoute && '!overflow-hidden [&>div]:!h-full',
 								// Search changes the Store header's in-flow height. Let the
 								// scroll-linked motion retain its exact depth instead of having
 								// browser scroll anchoring silently subtract the rail height.
 								isAppStoreRoute && '[overflow-anchor:none]',
 							)}
-							scrollbarClassName={cn(isSettingsRoute && 'lg:hidden')}
+							scrollbarClassName={cn(isSettingsRoute && 'lg:hidden', isFilesRoute && 'hidden')}
 						>
 							<div
 								className={cn(
@@ -118,24 +119,17 @@ export function SheetLayout() {
 									isSettingsRoute
 										? 'lg:h-full lg:min-h-0 lg:gap-0 lg:pt-0 xl:px-[60px] low:gap-3'
 										: isFullHeightFeatureRoute
-											? 'xl:px-[60px]'
+											? cn('xl:px-[60px]', isFilesRoute && 'h-full')
 											: 'xl:px-[70px]',
 								)}
 							>
 								<Suspense fallback={<SheetTitle className='sr-only'>{t('loading')}</SheetTitle>}>
 									<Outlet />
 								</Suspense>
-								{/* Photos runs beneath the dock on every size and keeps the dock's
-								    clearance inside its own scrollers, so a spacer here would only
-								    hold its listings short of the sheet's bottom edge */}
+								{/* Files and Photos keep the dock's clearance inside their own layouts,
+								    so a spacer here would only hold them short of the sheet's bottom edge */}
 								<DockSpacer
-									className={cn(
-										'mt-4',
-										(isSettingsRoute || isFilesRoute) && 'lg:hidden',
-										// Files' two panes and its layout on a phone on its side size themselves
-										isFilesRoute && 'panes:hidden phone-side:hidden',
-										isPhotosRoute && 'hidden',
-									)}
+									className={cn('mt-4', isSettingsRoute && 'lg:hidden', isFullHeightFeatureRoute && 'hidden')}
 								/>
 							</div>
 						</ScrollArea>

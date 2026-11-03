@@ -78,6 +78,7 @@ const DialogScrollableContent = ({
 	onOpenAutoFocus,
 	onCloseAutoFocus,
 	className,
+	viewportRef,
 }: {
 	children: React.ReactNode
 	closeButton?: boolean
@@ -85,6 +86,7 @@ const DialogScrollableContent = ({
 	onOpenAutoFocus?: (e: Event) => void
 	onCloseAutoFocus?: (e: Event) => void
 	className?: string
+	viewportRef?: React.RefObject<HTMLDivElement | null>
 }) => {
 	return (
 		<DialogContent
@@ -94,7 +96,13 @@ const DialogScrollableContent = ({
 			onCloseAutoFocus={onCloseAutoFocus}
 		>
 			{/* The scrollbar starts below the close button */}
-			<ScrollArea className='flex flex-col' dialogInset fade={fade} scrollbarClass={closeButton ? 'mt-10' : undefined}>
+			<ScrollArea
+				className='flex flex-col'
+				dialogInset
+				fade={fade}
+				scrollbarClass={closeButton ? 'mt-10' : undefined}
+				viewportRef={viewportRef}
+			>
 				{children}
 			</ScrollArea>
 		</DialogContent>

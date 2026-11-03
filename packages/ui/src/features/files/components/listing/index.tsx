@@ -152,19 +152,12 @@ export function Listing({
 
 	const content = (
 		// Wrap in a flex column to ensure the context menu works. The column carries the
-		// listing height budget so a top banner shrinks the card instead of pushing it
-		// below the dock. The embedded (Rewind) explorer keeps the original height so
-		// snapshots render unchanged.
+		// listing's height, which Files' layout gives it, so a top banner shrinks the card
+		// instead of pushing it below the dock. The embedded (Rewind) explorer keeps the
+		// original height so snapshots render unchanged.
 		<div
 			ref={listingRef}
-			className={cn(
-				'flex flex-col',
-				isEmbedded
-					? 'h-[calc(100svh-214px)] lg:h-[calc(100vh-300px)]'
-					: // Two panes: the sheet, the page's top space, the title row and the dock's clearance.
-						// On a phone on its side the card runs under the dock, which tucks away on scroll.
-						'h-[calc(100svh-209px)] lg:h-[calc(100vh-262px)] panes:h-[calc(100svh-var(--sheet-top)-var(--page-top)-146px)] phone-side:h-[calc(100svh-var(--sheet-top)-var(--page-top)-46px)]',
-			)}
+			className={cn('flex flex-col', isEmbedded ? 'h-[calc(100svh-214px)] lg:h-[calc(100vh-300px)]' : 'h-full')}
 		>
 			{topBanner}
 			<ListingContent

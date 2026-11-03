@@ -5,7 +5,6 @@ import {useTranslation} from 'react-i18next'
 import {Link, useNavigate, useParams} from 'react-router-dom'
 
 import {ChevronDown} from '@/components/chevron-down'
-import {FadeScroller} from '@/components/fade-scroller'
 import {BetaPill} from '@/components/ui/beta-pill'
 import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
@@ -13,6 +12,7 @@ import {Card} from '@/components/ui/card'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {SearchField} from '@/components/ui/edge-controls'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {Separator} from '@/components/ui/separator'
 import {Switch} from '@/components/ui/switch'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
@@ -20,6 +20,7 @@ import {useBackups} from '@/features/backups/hooks/use-backups'
 import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {DesktopPreviewConnected, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -373,11 +374,14 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 				)}
 			>
 				<aside className={cn('min-h-0 min-w-0 lg:-ml-4 lg:h-full lg:w-[calc(100%+50px)]', settingsSidePaneClass)}>
-					<FadeScroller
+					<PaneScroller
 						ref={sidebarScrollRef}
-						direction='y'
 						data-testid='settings-sidebar-scroller'
-						className='umbrel-hide-scrollbar min-h-0 overscroll-contain lg:h-full lg:overflow-y-auto lg:pr-[34px] lg:pb-24 lg:pl-4 panes:-mx-3 panes:px-3'
+						className='h-full'
+						// The pane reaches across the gap to the rows, so the cards' shadows aren't
+						// clipped. Its bar sits just past the column instead, as the rows' bar does.
+						scrollbarClass='mr-[22px]'
+						contentClassName='lg:pr-[34px] lg:pb-24 lg:pl-4 panes:-mx-3 panes:px-3'
 					>
 						<div className='flex flex-col gap-3'>
 							<div className='flex shrink-0 flex-col items-center gap-5'>
@@ -472,10 +476,10 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								</>
 							)}
 						</div>
-					</FadeScroller>
+					</PaneScroller>
 				</aside>
 
-				<main className='min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden'>
+				<main className='min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-col'>
 					<div
 						data-testid='settings-controls-rail'
 						className={cn(
@@ -501,11 +505,12 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 						/>
 					</div>
 
-					<FadeScroller
+					<PaneScroller
 						ref={rowsScrollRef}
-						direction='y'
 						data-testid='settings-rows-scroller'
-						className='umbrel-hide-scrollbar min-w-0 overscroll-contain pt-2.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-24'
+						// Reaches into the sheet's padding so the bar runs beside the cards, not over them
+						className='-mr-3 min-h-0 flex-1'
+						contentClassName='min-w-0 pt-2.5 lg:pr-3 lg:pb-24'
 					>
 						<div className='flex flex-col gap-5 pb-8'>
 							{settingsPage.categoryIds.map((categoryId) => (
@@ -521,9 +526,50 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								</div>
 							)}
 						</div>
-					</FadeScroller>
+					</PaneScroller>
 				</main>
 			</div>
 		</div>
+	)
+}
+
+// On the desktop each pane scrolls on its own, with the slim scroll bar Files' sidebar
+// and dialogs use, shown while the pane is hovered. Narrower, the panes are part of the
+// sheet's scroll, so they're plain columns there.
+function PaneScroller({
+	ref,
+	className,
+	contentClassName,
+	scrollbarClass,
+	children,
+	'data-testid': testId,
+}: {
+	ref: React.RefObject<HTMLDivElement | null>
+	/** The pane's box on the desktop */
+	className: string
+	contentClassName: string
+	scrollbarClass?: string
+	children: ReactNode
+	'data-testid'?: string
+}) {
+	const isMobile = useIsMobile()
+
+	if (isMobile) {
+		return (
+			<div ref={ref} data-testid={testId} className={contentClassName}>
+				{children}
+			</div>
+		)
+	}
+
+	return (
+		<ScrollArea
+			viewportRef={ref}
+			data-testid={testId}
+			className={cn(className, '[&>[data-radix-scroll-area-viewport]]:overscroll-contain')}
+			scrollbarClass={scrollbarClass}
+		>
+			<div className={contentClassName}>{children}</div>
+		</ScrollArea>
 	)
 }

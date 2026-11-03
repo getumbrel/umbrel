@@ -21,6 +21,7 @@ import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useIsPhoneNow} from '@/hooks/use-is-mobile'
 import {HttpUrlAuthorizerProvider} from '@/modules/auth/http-url-authorizer'
+import {DockSpacer} from '@/modules/desktop/dock'
 import {trpcReact} from '@/trpc/trpc'
 
 const ShareInfoDialog = lazy(() => import('@/features/files/components/dialogs/share-info-dialog'))
@@ -101,24 +102,34 @@ export default function FilesLayout() {
 							{/* FileViewer renders the viewerItem from the store */}
 							<FileViewer />
 
-							<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_1fr] panes:grid-cols-[192px_minmax(0,1fr)] phone-side:mt-0 phone-side:grid-cols-1'>
+							{/* Fills the rest of the sheet. The listing takes the height the actions bar leaves,
+							    above the dock's clearance. On a phone on its side it runs under the dock instead,
+							    which tucks away as it scrolls. */}
+							<div className='mt-[-0.5rem] grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[224px_1fr] panes:grid-cols-[192px_minmax(0,1fr)] phone-side:mt-0 phone-side:grid-cols-1 phone-side:pb-2'>
 								{/* Sidebar */}
 								{hasSidebarDrawer ? (
 									<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
 										<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
 									</MobileSidebarWrapper>
 								) : (
-									// Ends with the listing, so Trash and Rewind stay above the dock
-									<Sidebar className='h-[calc(100vh-176px)] panes:h-[calc(100svh-var(--sheet-top)-var(--page-top)-146px)]' />
+									// Two panes end it with the listing, so Trash and Rewind stay above the dock.
+									// The desktop has room beside the dock, so it carries on down past it.
+									<Sidebar className='lg:row-span-2 lg:pb-5' />
 								)}
 
-								<div className='flex min-w-0 flex-col gap-3 lg:gap-5 phone-side:gap-2'>
+								<div className='flex min-h-0 min-w-0 flex-col gap-3 lg:gap-5 phone-side:gap-2'>
 									<ActionsBarProvider>
 										<ActionsBar onOpenSidebar={hasSidebarDrawer ? () => setIsMobileSidebarOpen(true) : undefined} />
-										{/* Renders either DirectoryListing, AppsListing, RecentsListing, or TrashListing */}
-										<Outlet />
+										{/* Renders either DirectoryListing, AppsListing, RecentsListing, or TrashListing,
+										    each filling the height under the actions bar */}
+										<div className='min-h-0 flex-1'>
+											<Outlet />
+										</div>
 									</ActionsBarProvider>
 								</div>
+
+								{/* Spaced from the listing as the listing is from the actions bar */}
+								<DockSpacer className='col-span-full mt-3 lg:col-start-2 lg:mt-5 phone-side:hidden' />
 							</div>
 
 							{/* Rewind overlay rendered at root so that it doesn't disappear on Files re-render if user changes screensize*/}
