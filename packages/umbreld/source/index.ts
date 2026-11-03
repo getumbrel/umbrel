@@ -25,6 +25,7 @@ import LanIngress from './modules/lan-ingress/lan-ingress.js'
 import Auth from './modules/auth/auth.js'
 import Mcp, {type McpStoreSettings} from './modules/mcp/mcp.js'
 import Photos, {type PhotoBackupSource, type PhotoBackupSourceRemoval} from './modules/photos/photos.js'
+import DockerRegistries, {type DockerRegistryCredential} from './modules/apps/docker-registries.js'
 
 import type {CloudStore} from './modules/files/cloud-types.js'
 
@@ -148,6 +149,7 @@ type StoreSchema = {
 		name?: string
 		vendor?: string
 	}[]
+	dockerRegistries?: DockerRegistryCredential[]
 }
 
 export type UmbreldOptions = {
@@ -183,6 +185,7 @@ export default class Umbreld {
 	auth: Auth
 	mcp: Mcp
 	photos: Photos
+	registries: DockerRegistries
 	isBackupRestoreFirstStart = false
 
 	constructor({
@@ -217,6 +220,7 @@ export default class Umbreld {
 		this.auth = new Auth(this)
 		this.mcp = new Mcp(this)
 		this.photos = new Photos(this)
+		this.registries = new DockerRegistries(this)
 	}
 
 	async start() {
@@ -254,6 +258,7 @@ export default class Umbreld {
 		// Detect first boot after a backup restore (we run after migrations move 'import' into dataDirectory)
 		await this.setBackupRestoreFirstStartFlag()
 		await this.auth.start()
+		await this.registries.init()
 
 		// Start restoring remembered Thunderbolt authorization alongside the
 		// other early boot work. Its result is handled here so a later timeout

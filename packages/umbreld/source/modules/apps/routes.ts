@@ -7,6 +7,7 @@ import {
 	AppCustomMountSchema,
 	AppEnvironmentVariableSchema,
 	AppFolderAccessSelectionSchema,
+	DockerRegistryInputSchema,
 } from './schema.js'
 
 export const appStore = router({
@@ -393,4 +394,35 @@ export const apps = router({
 			}),
 		)
 		.query(async ({ctx, input}) => ctx.apps.getApp(input.appId).getBackupIgnoredFilePaths()),
+
+	// Docker Registries
+	registries: privateProcedure.query(async ({ctx}) => ctx.umbreld.registries.list()),
+
+	addRegistry: privateProcedure
+		.input(DockerRegistryInputSchema)
+		.mutation(async ({ctx, input}) => ctx.umbreld.registries.add(input)),
+
+	removeRegistry: privateProcedure
+		.input(z.object({id: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.registries.remove(input.id)),
+
+	testRegistry: privateProcedure
+		.input(DockerRegistryInputSchema)
+		.mutation(async ({ctx, input}) => ctx.umbreld.registries.testCredentials(input)),
+})
+
+export const registries = router({
+	list: privateProcedure.query(async ({ctx}) => ctx.umbreld.registries.list()),
+
+	add: privateProcedure
+		.input(DockerRegistryInputSchema)
+		.mutation(async ({ctx, input}) => ctx.umbreld.registries.add(input)),
+
+	remove: privateProcedure
+		.input(z.object({id: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.registries.remove(input.id)),
+
+	test: privateProcedure
+		.input(DockerRegistryInputSchema)
+		.mutation(async ({ctx, input}) => ctx.umbreld.registries.testCredentials(input)),
 })

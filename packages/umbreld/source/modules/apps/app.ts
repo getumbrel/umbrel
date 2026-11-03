@@ -2334,10 +2334,15 @@ export default class App {
 		const images = Object.values(compose.services!)
 			.map((service) => service.image)
 			.filter(Boolean) as string[]
-		await pullAll([...defaultImages, ...images], (progress) => {
-			this.stateProgress = Math.max(1, progress * 99)
-			this.logger.log(`Downloaded ${this.stateProgress}% of app ${this.id}`)
-		})
+		await this.#umbreld.registries?.syncDockerConfigFile()
+		await pullAll(
+			[...defaultImages, ...images],
+			(progress) => {
+				this.stateProgress = Math.max(1, progress * 99)
+				this.logger.log(`Downloaded ${this.stateProgress}% of app ${this.id}`)
+			},
+			(image) => this.#umbreld.registries?.getAuthForImage(image),
+		)
 	}
 
 	async install(options: {

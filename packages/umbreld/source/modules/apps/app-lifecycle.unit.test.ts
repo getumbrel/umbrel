@@ -15,6 +15,7 @@ vi.mock('./legacy-compat/app-script.js', () => ({
 	default: vi.fn(async () => ({stdout: ''})),
 }))
 
+import {pullAll} from '../utilities/docker-pull.js'
 vi.mock('../utilities/docker-pull.js', () => ({pullAll: vi.fn(async () => true)}))
 
 vi.mock('execa', () => ({
@@ -37,7 +38,8 @@ afterEach(async () => {
 async function createApp({
 	apps = {},
 	files = {},
-}: {apps?: Record<string, unknown>; files?: Record<string, unknown>} = {}) {
+	registries = {},
+}: {apps?: Record<string, unknown>; files?: Record<string, unknown>; registries?: Record<string, unknown>} = {}) {
 	const dataDirectory = await mkdtemp(path.join(tmpdir(), 'umbreld-app-lifecycle-'))
 	temporaryDirectories.push(dataDirectory)
 	const appId = 'test-app'
@@ -90,6 +92,11 @@ async function createApp({
 		},
 		lanIngress: {refresh: vi.fn(async () => undefined)},
 		notifications: {add: vi.fn(async () => true), clear: vi.fn(async () => undefined)},
+		registries: {
+			syncDockerConfigFile: vi.fn(async () => {}),
+			getAuthForImage: vi.fn(async () => undefined),
+			...registries,
+		},
 		store: globalStore,
 	} as unknown as Umbreld
 
@@ -390,5 +397,38 @@ describe('data root moves and journal recovery', () => {
 
 		await expect(app.moveDataRoot(null)).resolves.toBe(true)
 		await expect(app.store.get('dataRootMove')).resolves.toBeUndefined()
+	})
+})
+
+describe('app pull with private registry', () => {
+	test('injects registry credentials into pullAll and syncs docker config', async () => {
+		const syncDockerConfigFile = vi.fn(async () => {})
+		const getAuthForImage = vi.fn(async (img: string) =>
+			img.includes('gitlab')
+				? {username: 'deploy-token', password: 'secret', serveraddress: 'registry.gitlab.com'}
+				: undefined,
+		)
+		const app = await createApp({
+			registries: {syncDockerConfigFile, getAuthForImage},
+		})
+		await app.writeCompose({
+			services: {
+				server: {image: 'registry.gitlab.com/org/private-app:1.0'},
+			},
+		})
+
+		await app.pull()
+
+		expect(syncDockerConfigFile).toHaveBeenCalledTimes(1)
+		expect(pullAll).toHaveBeenCalled()
+		const lastCall = vi.mocked(pullAll).mock.calls[vi.mocked(pullAll).mock.calls.length - 1]
+		const authResolver = lastCall[2]
+		expect(authResolver).toBeDefined()
+		const auth = await authResolver!('registry.gitlab.com/org/private-app:1.0')
+		expect(auth).toEqual({
+			username: 'deploy-token',
+			password: 'secret',
+			serveraddress: 'registry.gitlab.com',
+		})
 	})
 })

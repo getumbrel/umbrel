@@ -134,11 +134,28 @@ export const AppManifestSchema = z.object({
 		.optional(),
 	folderAccess: z.array(AppManifestFolderAccessSchema).optional(),
 	environment: z.array(AppManifestEnvironmentVariableSchema).optional(),
+	registry: z.string().optional(),
+	registries: z.array(z.string()).optional(),
+})
+
+export const DockerRegistryInputSchema = z.object({
+	url: z.string().min(1),
+	username: z.string().min(1),
+	password: z.string().min(1),
+})
+
+export const DockerRegistryPublicSchema = z.object({
+	id: z.string(),
+	url: z.string(),
+	username: z.string(),
+	createdAt: z.number(),
 })
 
 export type AppManifest = z.infer<typeof AppManifestSchema>
 export type AppManifestFolderAccess = z.infer<typeof AppManifestFolderAccessSchema>
 export type AppManifestEnvironmentVariable = z.infer<typeof AppManifestEnvironmentVariableSchema>
+export type DockerRegistryInput = z.infer<typeof DockerRegistryInputSchema>
+export type DockerRegistryPublic = z.infer<typeof DockerRegistryPublicSchema>
 
 function isRecord(value: unknown): value is Record<string, any> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)

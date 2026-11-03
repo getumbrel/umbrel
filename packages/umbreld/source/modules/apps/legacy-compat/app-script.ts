@@ -41,6 +41,7 @@ export default async function appScript(
 			TOR_PASSWORD: 'mLcLDdt5qqMxlq3wv8Din3UD44bTZHzRFhIktw38kWg=',
 			TOR_HASHED_PASSWORD: '16:158FBE422B1A9D996073BE2B9EC38852C70CE12362CA016F8F6859C426',
 			REMOTE_TOR_ACCESS: torEnabled ? 'true' : 'false',
+			...(umbreld.registries?.dockerConfigDirectory ? {DOCKER_CONFIG: umbreld.registries.dockerConfigDirectory} : {}),
 		},
 	})
 	if (maxOutputBytes) return runScript`${scriptPath} ${command} ${arg} ${maxOutputBytes}`
