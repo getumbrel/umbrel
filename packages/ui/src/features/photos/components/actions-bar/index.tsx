@@ -27,6 +27,7 @@ import {usePhotoSources} from '@/features/photos/hooks/use-photo-sources'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
+import {touchTargetClass} from '@/utils/element-classes'
 import {formatNumberI18n} from '@/utils/number'
 import {tw} from '@/utils/tw'
 
@@ -108,7 +109,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 					type='button'
 					onClick={onOpenSidebar}
 					aria-label={t('photos-sidebar.navigation')}
-					className='hidden shrink-0 self-center pl-1 phone-side:block'
+					className={cn(touchTargetClass, 'hidden shrink-0 self-center pl-1 phone-side:block')}
 				>
 					<HiMenuAlt2 className='h-5 w-5 text-white/90' />
 				</button>

@@ -14,9 +14,9 @@ import {
 	keepFocus,
 	PillButton,
 	PillDivider,
-	touchTargetClass,
 } from '@/features/files/components/file-viewer/shell/zoom-pill'
 import {cn} from '@/lib/utils'
+import {touchTargetClass} from '@/utils/element-classes'
 
 const {NONE, HIGHLIGHT, INK, FREETEXT, SIGNATURE, STAMP} = AnnotationEditorType
 const PARAM = AnnotationEditorParamsType

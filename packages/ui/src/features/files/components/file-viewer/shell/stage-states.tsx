@@ -4,11 +4,12 @@ import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 import {useMedia} from 'react-use'
 
-import {floatingGlassClass, touchTargetClass} from '@/features/files/components/file-viewer/shell/zoom-pill'
+import {floatingGlassClass} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import type {FileSystemItem} from '@/features/files/types'
 import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
+import {touchTargetClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 export const stageButtonClass = tw`umbrel-button inline-flex h-[30px] items-center rounded-full border-[0.5px] border-white/20 bg-white/10 px-4 text-13 font-medium text-white/90 shadow-button-highlight-soft-hpx transition-all duration-300 hover:bg-white/15 active:scale-[0.97] active:bg-white/6`

@@ -11,6 +11,7 @@ import {SortDropdown} from '@/features/files/components/listing/actions-bar/sort
 import {ViewToggle} from '@/features/files/components/listing/actions-bar/view-toggle'
 import {useIsFilesEmbedded, useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {cn} from '@/lib/utils'
+import {touchTargetClass} from '@/utils/element-classes'
 
 // Actions/navigation bar displayed above every files listing.  Its
 // contents are driven by the configuration exposed via the
@@ -33,14 +34,15 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			)}
 			aria-label={t('files-view.actions')}
 		>
-			{/* Left side: Navigation and Path */}
-			<div className='flex min-w-0 flex-1 items-center gap-2 overflow-hidden'>
+			{/* Left side: Navigation and Path. Clipped sideways only, so the buttons' touch targets reach past the 32px row */}
+			<div className='flex min-w-0 flex-1 items-center gap-2 overflow-x-clip'>
 				{onOpenSidebar && (
 					<button
 						type='button'
 						onClick={onOpenSidebar}
 						aria-label={t('files-sidebar.navigation')}
-						className='hidden shrink-0 pl-1 phone-side:block'
+						// The padding past the glyph keeps Back's touch target off it
+						className={cn(touchTargetClass, 'hidden shrink-0 px-1 phone-side:block')}
 					>
 						<HiMenuAlt2 className='h-5 w-5 text-white/90' />
 					</button>

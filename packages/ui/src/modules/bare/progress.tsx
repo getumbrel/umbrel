@@ -18,7 +18,11 @@ export function Progress({value, children}: {value?: number; children?: ReactNod
 					style={{transform: `translateX(-${100 - (value || 0)}%)`}}
 				/>
 			</ProgressPrimitive.Root>
-			{children && <span className='text-15 leading-none font-medium -tracking-2 opacity-80'>{children}</span>}
+			{children && (
+				<span className='text-center text-15 leading-tight font-medium -tracking-2 text-balance opacity-80'>
+					{children}
+				</span>
+			)}
 		</div>
 	)
 }

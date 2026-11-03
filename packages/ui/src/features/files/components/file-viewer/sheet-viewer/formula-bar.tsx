@@ -3,8 +3,8 @@ import {useState, type Ref} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
-import {touchTargetClass} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import {cn} from '@/lib/utils'
+import {touchTargetClass} from '@/utils/element-classes'
 
 // The most lines the formula opens to, past which it scrolls
 const MAX_LINES = 8

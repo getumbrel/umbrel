@@ -96,10 +96,11 @@ export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpo
 	// five both fit three, which two-column widgets left a third on page 2.
 	const gridW = appsPerRow > 0 ? appsPerRow * appW + (appsPerRow - 1) * appXGap : pageW
 	const shareW = (n: number) => (gridW - (n - 1) * appXGap) / n
-	let widgetsPerPage = Math.max(1, widgets.length)
 	// Narrowest a widget gets before the row pages instead: compact on phones, regular from 640px
 	const minWidgetW = responsive([96, 160])
-	while (widgetsPerPage > 1 && shareW(widgetsPerPage) < minWidgetW) widgetsPerPage--
+	// How many fit side by side at that width, however many there are: two on a 320px phone
+	const widgetsFit = Math.max(1, Math.floor((gridW + appXGap) / (minWidgetW + appXGap)))
+	const widgetsPerPage = Math.max(1, Math.min(widgets.length, widgetsFit))
 	// A phone-scale grid wider than a phone (one on its side) lets widgets span three columns
 	const widgetMaxW = breakpoint === 'S' && appsPerRow > 4 ? widgetW + appW + appXGap : widgetW
 	const rowWidgetW = Math.floor(Math.min(widgetMaxW, shareW(widgetsPerPage)))
@@ -145,10 +146,27 @@ export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpo
 		el.style.setProperty('--apps-max-w', `${appsMaxW}px`)
 		el.style.setProperty('--apps-padding-x', `${paddingX}px`)
 		el.style.setProperty('--widget-w', `${widgetW}px`)
+		// What each widget in the row gets, which Edit widgets' preview of the row matches
+		el.style.setProperty('--widget-row-w', `${rowWidgetW}px`)
+		// And how many of them fit on a page, which the preview pages by
+		el.style.setProperty('--widgets-fit', `${widgetsFit}`)
 		el.style.setProperty('--widget-h', `${widgetH}px`)
 		el.style.setProperty('--widget-labeled-h', `${rowH}px`)
 		// All values depend on the breakpoint
-	}, [breakpoint, pageW, forceBreakpoint, rowH, appW, appXGap, appYGap, appYGapAppsOnly, widgetH, paddingX])
+	}, [
+		breakpoint,
+		pageW,
+		forceBreakpoint,
+		rowH,
+		appW,
+		appXGap,
+		appYGap,
+		appYGapAppsOnly,
+		widgetH,
+		paddingX,
+		rowWidgetW,
+		widgetsFit,
+	])
 
 	const pages = groupIntoPages({
 		apps,

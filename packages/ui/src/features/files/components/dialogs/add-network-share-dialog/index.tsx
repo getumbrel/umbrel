@@ -441,10 +441,10 @@ function DiscoverStep({
 }) {
 	const {t} = useTranslation()
 	return (
-		// Fixed columns for fixed-size cards, the same grid as the Backups wizard:
-		// stretching columns need more width for three across than the dialog has
-		// once a scrollbar gutter is reserved
-		<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3 py-2'>
+		// The same grid as the Backups wizard: columns of 125px or more share out the width, so a
+		// phone gets two full columns rather than an empty strip. Three across needs 399px, which
+		// the dialog has even with Chrome's scrollbar gutter reserved.
+		<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-3 py-2'>
 			<AddManuallyCard onClick={onManual} label={t('files-add-network-share.add-manually')} />
 
 			{isLoading ? (

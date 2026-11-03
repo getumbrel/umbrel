@@ -3,6 +3,7 @@ import {useTranslation} from 'react-i18next'
 import {IoLogoApple} from 'react-icons/io5'
 import {TbChevronLeft, TbChevronRight, TbPlayerPlayFilled} from 'react-icons/tb'
 
+import {FadeScroller} from '@/components/fade-scroller'
 import {Button} from '@/components/ui/button'
 import {
 	Carousel,
@@ -25,6 +26,7 @@ import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {cn} from '@/lib/utils'
 import {WHATS_NEW_VERSION_NAME} from '@/routes/whats-new'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {tw} from '@/utils/tw'
 
 // Versions and features are hardcoded and we should update them on every release
 
@@ -33,6 +35,14 @@ const IMAGE_SLIDE_MS = 10000
 
 /** Glass control floating over the media: the lightbox's rail button, tinted for bright footage */
 const mediaButtonClass = cn(lightboxButtonClass, 'bg-black/25 backdrop-blur-md hover:bg-black/40')
+
+/** A link floating over the media in the same glass. Built on its own, because the rail button's
+ * responsive sizes would square the pill off */
+const mediaPillClass = tw`settings-edge-material flex h-12 shrink-0 items-center gap-2 rounded-full bg-black/25 pr-5 pl-4 text-sm font-medium text-white backdrop-blur-md transition-[background-color,transform] duration-200 hover:bg-black/40 focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white/20 active:scale-90`
+
+/** Beside the media, under 500px tall, the footer's buttons stay compact and side by side as on desktop,
+ * leaving the text the room that stacked phone buttons would take */
+const lowFooterButtonClass = 'low:order-none low:h-[30px] low:w-auto low:font-medium'
 
 /** The arrows only surface while the pointer rests on the media (or one has focus) */
 const arrowButtonClass = cn(
@@ -168,13 +178,14 @@ export default function WhatsNewModal() {
 	const [hovered, setHovered] = useState(false)
 	const [videoProgress, setVideoProgress] = useState(0)
 	const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+	const textRef = useRef<HTMLDivElement>(null)
 
 	const feature = FEATURES[currentIndex]
 	const isVideoSlide = !!feature.video
 	// Pro-gated fine print waits for the answer, so a Pro never sees it flash in
 	const umbrelPro = useIsUmbrelPro()
-	const showNote =
-		!!feature.noteTKey && (!feature.noteHiddenOnUmbrelPro || (umbrelPro.hasData && !umbrelPro.isUmbrelPro))
+	const showNote = (slide: Feature) =>
+		!!slide.noteTKey && (!slide.noteHiddenOnUmbrelPro || (umbrelPro.hasData && !umbrelPro.isUmbrelPro))
 	// A looping video holds its slide until the user moves on, so nothing counts down
 	const isLoopingSlide = isVideoSlide && !!feature.loop
 
@@ -228,6 +239,11 @@ export default function WhatsNewModal() {
 		}
 	}, [currentIndex, api])
 
+	// A slide's text starts at its top, wherever the last one was scrolled to
+	useEffect(() => {
+		textRef.current?.scrollTo({top: 0})
+	}, [currentIndex])
+
 	// Pause all videos when dialog closes
 	useEffect(() => {
 		if (!dialogProps.open) {
@@ -264,6 +280,9 @@ export default function WhatsNewModal() {
 				<ImmersiveDialogOverlay />
 				<ImmersiveDialogContent
 					size='sm'
+					// Side by side, under 500px tall, the text needs the width it has above the media: at 600px
+					// it got 252px in Safari's landscape phone, too narrow for its two buttons in a row
+					className='low:max-w-[800px]'
 					onOpenAutoFocus={(e) => {
 						// The dialog opens on its own, so move focus into it (rather than
 						// leaving it behind the overlay) without ringing the first button.
@@ -274,19 +293,21 @@ export default function WhatsNewModal() {
 				>
 					<DialogTitle className='sr-only'>{t('whats-new.title', {version: WHATS_NEW_VERSION_NAME})}</DialogTitle>
 
-					{/* Carousel Container: bleeds to the dialog's edges, the media curving with its top corners */}
-					<div className='relative -mx-6 -mt-4 flex flex-1 flex-col overflow-hidden md:-mx-8 md:-mt-8'>
+					{/* Bleeds to the dialog's edges, the media curving with its corners. The media takes the height
+					    the text and buttons leave, up to 4:3 (75cqw), so a short window crops it rather than
+					    leaving a gap. Under 500px tall it moves beside them instead, where the text scrolls. */}
+					<div className='@container relative -mx-6 -my-4 flex flex-1 flex-col overflow-hidden md:-m-8 low:grid low:grid-cols-2 low:grid-rows-[auto_minmax(0,1fr)_auto]'>
 						{/* Media Carousel */}
 						<Carousel
 							setApi={setApi}
-							className='group w-full overflow-hidden rounded-t-[var(--window-radius)]'
+							className='group max-h-[75cqw] min-h-0 w-full flex-1 overflow-hidden rounded-t-[var(--window-radius)] low:row-span-3 low:max-h-none low:rounded-none low:rounded-s-[var(--window-radius)]'
 							onPointerEnter={() => setHovered(true)}
 							onPointerLeave={() => setHovered(false)}
 						>
-							<CarouselContent className='-ml-0'>
+							<CarouselContent containerClassName='h-full' className='-ml-0 h-full'>
 								{FEATURES.map((feature, index) => (
 									<CarouselItem key={feature.id} className='pl-0'>
-										<div className='relative aspect-[4/3] max-h-[calc(100dvh-440px)] min-h-[200px] w-full overflow-hidden bg-neutral-900'>
+										<div className='relative size-full overflow-hidden bg-neutral-900'>
 											{feature.video ? (
 												<video
 													ref={(el) => {
@@ -310,7 +331,7 @@ export default function WhatsNewModal() {
 														target='_blank'
 														rel='noopener noreferrer'
 														draggable={false}
-														className={cn(mediaButtonClass, 'h-12 w-auto gap-2 pr-5 pl-4 text-sm font-medium')}
+														className={mediaPillClass}
 													>
 														<feature.link.icon className='size-4' />
 														{t(feature.link.labelTKey)}
@@ -350,7 +371,7 @@ export default function WhatsNewModal() {
 						</Carousel>
 
 						{/* Dot Indicators */}
-						<div className='mt-5 px-6 md:px-8'>
+						<div className='mt-5 shrink-0 px-6 md:px-8 low:mt-6'>
 							<CarouselDots
 								activeIndex={currentIndex}
 								count={FEATURES.length}
@@ -360,31 +381,45 @@ export default function WhatsNewModal() {
 							/>
 						</div>
 
-						{/* Feature Content - updates based on currentIndex */}
-						<div className='flex-1 space-y-4 px-6 py-6 md:px-8'>
-							<div className='space-y-3'>
-								<h3 className='text-2xl font-semibold -tracking-3 md:text-3xl'>{t(feature.titleTKey)}</h3>
-								<p className='text-base leading-tight text-white/70'>{t(feature.descriptionTKey)}</p>
-								{showNote && <p className='text-13 leading-tight text-white/40'>{t(feature.noteTKey!)}</p>}
-							</div>
-						</div>
-					</div>
+						{/* Feature Content: every slide's text shares one cell, so the block is as tall as the
+						    longest and the media keeps its size from slide to slide. Beside the media, under
+						    500px tall, the height is fixed anyway and only the current slide takes room. It
+						    scrolls, fading where it's cut, once there's no room left. */}
+						<FadeScroller
+							ref={textRef}
+							direction='y'
+							fadeSize={24}
+							className='grid min-h-0 overflow-y-auto px-6 py-6 md:px-8 low:py-4'
+						>
+							{FEATURES.map((slide, index) => (
+								<div
+									key={slide.id}
+									aria-hidden={index !== currentIndex}
+									className={cn('col-start-1 row-start-1 space-y-3', index !== currentIndex && 'invisible low:hidden')}
+								>
+									<h3 className='text-2xl font-semibold -tracking-3 md:text-3xl low:text-2xl'>{t(slide.titleTKey)}</h3>
+									<p className='text-base leading-tight text-white/70'>{t(slide.descriptionTKey)}</p>
+									{showNote(slide) && <p className='text-13 leading-tight text-white/40'>{t(slide.noteTKey!)}</p>}
+								</div>
+							))}
+						</FadeScroller>
 
-					{/* Footer */}
-					<ImmersiveDialogFooter className='justify-end'>
-						{feature.link && (
-							// Stacked on mobile the footer wraps in reverse, so ordering this last puts it above Next
-							<Button variant='default' size='dialog' className='max-md:order-1' asChild>
-								<a href={feature.link.href} target='_blank' rel='noopener noreferrer'>
-									<feature.link.icon className='size-3.5' />
-									{t(feature.link.labelTKey)}
-								</a>
+						{/* Footer */}
+						<ImmersiveDialogFooter className='mt-auto shrink-0 justify-end px-6 pt-6 pb-4 md:px-8 md:pb-8 low:pt-0 low:pb-6'>
+							{feature.link && (
+								// Stacked on mobile the footer wraps in reverse, so ordering this last puts it above Next
+								<Button variant='default' size='dialog' className={cn('max-md:order-1', lowFooterButtonClass)} asChild>
+									<a href={feature.link.href} target='_blank' rel='noopener noreferrer'>
+										<feature.link.icon className='size-3.5' />
+										{t(feature.link.labelTKey)}
+									</a>
+								</Button>
+							)}
+							<Button variant='secondary' size='dialog' className={lowFooterButtonClass} onClick={handleNext}>
+								{isLastSlide ? t('whats-new.continue') : t('whats-new.next')}
 							</Button>
-						)}
-						<Button variant='secondary' size='dialog' onClick={handleNext}>
-							{isLastSlide ? t('whats-new.continue') : t('whats-new.next')}
-						</Button>
-					</ImmersiveDialogFooter>
+						</ImmersiveDialogFooter>
+					</div>
 				</ImmersiveDialogContent>
 			</DialogPortal>
 		</ImmersiveDialog>

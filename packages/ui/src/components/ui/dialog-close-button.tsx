@@ -20,20 +20,10 @@ const closeSurfaceClass = {
 	sheet: windowClosePlacementClass,
 }
 
-// The touch target only exists on touch, so it can't take clicks from whatever sits
-// beside the corner under a mouse.
 export function CloseButton({className, ...props}: React.ComponentProps<'button'>) {
 	const {t} = useTranslation()
 	return (
-		<button
-			type='button'
-			className={cn(
-				dialogHeaderCircleButtonClass,
-				tw`relative pointer-coarse:after:absolute pointer-coarse:after:-inset-3 [&>svg]:relative`,
-				className,
-			)}
-			{...props}
-		>
+		<button type='button' className={cn(dialogHeaderCircleButtonClass, className)} {...props}>
 			<RiCloseCircleFill className='h-5 w-5 lg:h-6 lg:w-6' />
 			<span className='sr-only'>{t('close')}</span>
 		</button>

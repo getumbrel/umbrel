@@ -507,7 +507,7 @@ function DestinationStep({
 			)}
 
 			{tab === 'nas' ? (
-				<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3'>
+				<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-3'>
 					{isLoadingShares ? (
 						<LoadingCard />
 					) : hosts.length === 0 ? (
@@ -558,7 +558,7 @@ function DestinationStep({
 						</div>
 					</div>
 				) : (
-					<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3'>
+					<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-3'>
 						{isLoadingExternalStorage ? (
 							<div className='col-span-full flex items-center justify-start gap-2 py-2 text-sm text-white/60'>
 								<Loader2 className='size-4 animate-spin will-change-transform' />
@@ -888,35 +888,38 @@ function ReviewStep({values}: {values: FormValues}) {
 			</ReviewCard>
 
 			<ReviewCard icon={<TbPassword className='h-5 w-5 opacity-80' />} label={t('backups.encryption')}>
-				<div className='flex items-center gap-2 text-sm'>
+				{/* The field and its buttons wrap as one under the label when they don't fit beside it */}
+				<div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-sm'>
 					{plainPw ? (
 						<>
 							<span className='opacity-90'>{t('backups.password-is-set')}</span>
-							{/* Constrained, selectable password display */}
-							<Input
-								readOnly
-								value={showPw ? plainPw : masked}
-								size={Math.min((showPw ? plainPw : masked).length, 32)}
-								type={showPw ? 'text' : 'text'}
-								className='flex h-6 w-auto max-w-[120px] items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
-							/>
-							<span
-								className='group inline-flex h-6 w-6 items-center justify-center'
-								onClick={() => setShowPw((s) => !s)}
-								title={showPw ? t('backups.hide') : t('backups.show')}
-							>
-								{showPw ? (
-									<EyeOff className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
-								) : (
-									<Eye className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
-								)}
-							</span>
-							<span
-								className='group inline-flex h-6 w-6 items-center justify-center'
-								onClick={() => copyToClipboard(plainPw)}
-								title={t('backups.copy')}
-							>
-								<Copy className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+							<span className='flex min-w-0 items-center gap-2'>
+								{/* Constrained, selectable password display */}
+								<Input
+									readOnly
+									value={showPw ? plainPw : masked}
+									size={Math.min((showPw ? plainPw : masked).length, 32)}
+									type={showPw ? 'text' : 'text'}
+									className='flex h-6 w-auto max-w-[120px] min-w-0 items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
+								/>
+								<span
+									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+									onClick={() => setShowPw((s) => !s)}
+									title={showPw ? t('backups.hide') : t('backups.show')}
+								>
+									{showPw ? (
+										<EyeOff className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+									) : (
+										<Eye className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+									)}
+								</span>
+								<span
+									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+									onClick={() => copyToClipboard(plainPw)}
+									title={t('backups.copy')}
+								>
+									<Copy className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
+								</span>
 							</span>
 						</>
 					) : (

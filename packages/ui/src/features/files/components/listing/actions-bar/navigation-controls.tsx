@@ -11,7 +11,7 @@ import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-
 import {setLastFilesPath} from '@/features/files/utils/last-files-path'
 import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-import {focusRingClass} from '@/utils/element-classes'
+import {focusRingClass, touchTargetClass} from '@/utils/element-classes'
 
 /**
  * File browser navigation controls that track visited folder paths.
@@ -113,11 +113,12 @@ export function NavigationControls() {
 	const canGoForward = Boolean(navigation.paths[navigation.currentPathIndex + 1])
 
 	return (
-		<div className='flex items-center gap-2'>
+		// Spaced wider on touch so neither's touch target reaches over the other's glyph
+		<div className='flex items-center gap-2 pointer-coarse:gap-4'>
 			<motion.button
 				onClick={handleBack}
 				disabled={!canGoBack}
-				className={cn('rounded-full p-0 hover:bg-transparent', focusRingClass, {
+				className={cn(touchTargetClass, 'rounded-full p-0 hover:bg-transparent', focusRingClass, {
 					'opacity-50': !canGoBack,
 				})}
 				whileTap={{scale: 0.85}}
@@ -128,7 +129,7 @@ export function NavigationControls() {
 			<motion.button
 				onClick={handleForward}
 				disabled={!canGoForward}
-				className={cn('rounded-full p-0 hover:bg-transparent', focusRingClass, {
+				className={cn(touchTargetClass, 'rounded-full p-0 hover:bg-transparent', focusRingClass, {
 					'opacity-50': !canGoForward,
 				})}
 				whileTap={{scale: 0.85}}

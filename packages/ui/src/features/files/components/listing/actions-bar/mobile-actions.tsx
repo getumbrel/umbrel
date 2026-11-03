@@ -22,7 +22,7 @@ import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {cn} from '@/lib/utils'
-import {focusRingClass} from '@/utils/element-classes'
+import {focusRingClass, touchTargetClass} from '@/utils/element-classes'
 
 // Turns tapping into selecting, for screens with no mouse to select with
 export function SelectToggle({className}: {className?: string}) {
@@ -59,7 +59,7 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 			{mobilePrimaryAction ?? <SelectToggle />}
 
 			<DropdownMenu>
-				<DropdownMenuTrigger className={cn('-m-0.5 rounded-full p-0.5', focusRingClass)}>
+				<DropdownMenuTrigger className={cn(touchTargetClass, '-m-0.5 rounded-full p-0.5', focusRingClass)}>
 					<TbDots className='h-5 w-5' />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className='w-44' align='start'>

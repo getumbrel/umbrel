@@ -53,6 +53,7 @@ export function ImmersiveDialogContent({
 	short = false,
 	showScroll = false,
 	ref,
+	className,
 	...contentProps
 }: {
 	children: React.ReactNode
@@ -76,6 +77,7 @@ export function ImmersiveDialogContent({
 				size === 'lg' && 'max-w-[980px]',
 				size === 'xl' && 'max-w-[1440px]',
 				'p-0',
+				className,
 			)}
 			{...contentProps}
 			// Compose after the spread so a caller's handler adds to the toast guard

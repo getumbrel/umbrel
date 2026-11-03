@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {useReturnFocus} from '@/features/files/components/file-viewer/shell/context'
 import {cn} from '@/lib/utils'
+import {touchTargetClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 // Fits follow the stage as it resizes; a number is a fixed scale (1 = 100%)
@@ -28,10 +29,6 @@ const NEAR = 120
 export const floatingGlassClass = tw`settings-edge-material bg-black/65 backdrop-blur-xl`
 // The menus that open from them, made as dense
 export const floatingMenuClass = tw`[--material-brightness:75%] [--material-tint-opacity:0.65]`
-
-// On a touch screen a control smaller than a fingertip answers anywhere
-// within 44pt of its middle, looking no different
-export const touchTargetClass = tw`relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-11 pointer-coarse:before:-translate-1/2`
 
 // A round icon button inside a floating pill
 export const pillButtonClass = cn(
