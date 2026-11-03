@@ -15,6 +15,17 @@ if (process.argv.includes('blacklist-uas')) {
 	process.exit(0)
 }
 
+if (process.argv[2] === 'update') {
+	const {updateCli} = await import('./modules/update/cli.ts')
+	try {
+		await updateCli(process.argv.slice(3))
+	} catch (error) {
+		console.error(`Error: ${(error as Error).message}`)
+		process.exitCode = 1
+	}
+	process.exit()
+}
+
 // Quick trpc client for testing
 if (process.argv.includes('client')) {
 	const clientIndex = process.argv.indexOf('client')

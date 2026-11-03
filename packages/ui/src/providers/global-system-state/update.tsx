@@ -6,22 +6,23 @@ import {ProgressLayout} from '@/modules/bare/progress-layout'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
 
 export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
-	const updateVersionMut = trpcReact.system.update.useMutation({
+	const updateVersionMut = trpcReact.update.install.useMutation({
 		onMutate,
 		onSuccess,
 	})
 
-	const update = () => updateVersionMut.mutate()
+	// Given the manifestHash of the release the user was shown, umbreld only installs that one
+	const update = (manifestHash?: string) => updateVersionMut.mutate({manifestHash})
 
 	return update
 }
 
 export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 	const {t} = useTranslation()
-	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
+	const latestVersionQ = trpcReact.update.check.useQuery()
 	const utils = trpcReact.useUtils()
 	const isOwner = trpcReact.user.get.useQuery().data?.role === 'owner'
-	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
+	const updateStatusQ = trpcReact.update.status.useQuery(undefined, {
 		refetchInterval: 500,
 	})
 	// Events keep progress moving between polls. Polling stays as the fallback
@@ -32,8 +33,8 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 		{
 			enabled: isOwner,
 			onData: (data) => {
-				utils.system.updateStatus.cancel()
-				utils.system.updateStatus.setData(undefined, data as RouterOutput['system']['updateStatus'])
+				utils.update.status.cancel()
+				utils.update.status.setData(undefined, data as RouterOutput['update']['status'])
 			},
 			onError: (error) => console.error('system:update-status subscription error', error),
 		},

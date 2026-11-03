@@ -12,7 +12,7 @@ import {trpcReact} from '@/trpc/trpc'
 export function SoftwareUpdateConfirmDialog() {
 	const {t} = useTranslation()
 	const {update} = useGlobalSystemState()
-	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
+	const latestVersionQ = trpcReact.update.check.useQuery()
 	const dialogProps = useSettingsDialogProps()
 
 	if (latestVersionQ.isLoading) {
@@ -41,7 +41,7 @@ export function SoftwareUpdateConfirmDialog() {
 						size='dialog'
 						onClick={() => {
 							dialogProps.onOpenChange(false)
-							update()
+							update(latestVersionQ.data?.manifestHash)
 						}}
 					>
 						{t('software-update.install-now')}

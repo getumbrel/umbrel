@@ -208,11 +208,11 @@ export default function AdvancedSettingsDrawerOrDialog() {
 
 function useIsBetaChannel() {
 	const {t} = useTranslation()
-	const releaseChannelQ = trpcReact.system.getReleaseChannel.useQuery()
+	const releaseChannelQ = trpcReact.update.getReleaseChannel.useQuery()
 	const isChecked = releaseChannelQ.data === 'beta'
 	const {checkLatest} = useSoftwareUpdate()
 
-	const releaseChannelMut = trpcReact.system.setReleaseChannel.useMutation({
+	const releaseChannelMut = trpcReact.update.setReleaseChannel.useMutation({
 		onSuccess: () => {
 			releaseChannelQ.refetch()
 			checkLatest()

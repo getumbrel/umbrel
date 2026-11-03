@@ -64,9 +64,9 @@ vi.mock('@/trpc/trpc', () => {
 				status: {useQuery: () => mocks.statusQuery},
 				restart: mutation('restart'),
 				shutdown: mutation('shutdown'),
-				update: mutation('update'),
 				factoryReset: mutation('factoryReset'),
 			},
+			update: {install: mutation('update')},
 			migration: {migrate: mutation('migrate')},
 			backups: {
 				restoreStatus: {useQuery: () => ({data: false})},

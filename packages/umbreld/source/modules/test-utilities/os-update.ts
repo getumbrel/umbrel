@@ -31,13 +31,24 @@ export async function downloadReleaseImage(version: string) {
 	return image
 }
 
-// Serve the update bundle over HTTP, with range request support like the real download server.
-// VMs reach it at http://10.0.2.2:<port>.
-export async function serveUpdateBundle() {
-	const {size} = await fs.promises.stat(updateBundle)
+// Serve an update bundle, by default the one this build made, over HTTP at any path ending in .update,
+// if it's been built, with range request support like the real download server, along with any other
+// release files set in files. VMs reach it at http://10.0.2.2:<port>.
+export async function serveUpdateBundle({bundle = updateBundle}: {bundle?: string} = {}) {
+	const files = new Map<string, string>()
 	const requestedPaths: string[] = []
-	const server = http.createServer((request, response) => {
-		requestedPaths.push(request.url ?? '')
+	const server = http.createServer(async (request, response) => {
+		const requestPath = request.url ?? ''
+		requestedPaths.push(requestPath)
+		const file = files.get(requestPath)
+		if (file !== undefined) return response.end(file)
+		const bundleStats = requestPath.endsWith('.update') && (await fs.promises.stat(bundle).catch(() => undefined))
+		if (!bundleStats) {
+			response.writeHead(404)
+			return response.end()
+		}
+
+		const {size} = bundleStats
 		const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/)
 		const start = range ? Number(range[1]) : 0
 		const end = range?.[2] ? Math.min(Number(range[2]), size - 1) : size - 1
@@ -47,13 +58,14 @@ export async function serveUpdateBundle() {
 			...(range && {'Content-Range': `bytes ${start}-${end}/${size}`}),
 		})
 		if (request.method === 'HEAD') return response.end()
-		pipeline(fs.createReadStream(updateBundle, {start, end}), response).catch(() => {})
+		pipeline(fs.createReadStream(bundle, {start, end}), response).catch(() => {})
 	})
 	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
 	const {port} = server.address() as AddressInfo
 
 	return {
 		port,
+		files,
 		requestedPaths,
 		async close() {
 			server.closeAllConnections()
@@ -121,4 +133,24 @@ export async function waitForCommittedBoot(umbreld: TestVm) {
 		{interval: 2000, timeout: 120_000},
 	)
 	return state
+}
+
+// Run Rugix Bundler from the pinned Rugix Bakery image, as this user, with directory mounted at /work
+async function rugixBundler(directory: string, args: string[]) {
+	const buildScript = await fs.promises.readFile(path.join(repoDirectory, 'packages/os/build.sh'), 'utf8')
+	const image = buildScript.match(/^export RUGIX_BAKERY_IMAGE="([^"]+)"/m)![1]
+	const user = `${process.getuid!()}:${process.getgid!()}`
+	const {stdout} =
+		await $`docker run --rm --user ${user} --entrypoint rugix-bundler --volume ${`${directory}:/work`} ${image} ${args}`
+	return stdout.trim()
+}
+
+// Build a Rugix bundle from a bundle directory, holding a rugix-bundle.toml and its payloads, into
+// directory/bundle.update, and return its bundle hash
+export async function createBundle(directory: string) {
+	await rugixBundler(directory, ['bundle', '/work', '/work/bundle.update'])
+	return {
+		bundle: path.join(directory, 'bundle.update'),
+		hash: await rugixBundler(directory, ['hash', '/work/bundle.update']),
+	}
 }

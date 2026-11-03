@@ -281,20 +281,20 @@ jobs:
           lookup-only: true
           fail-on-cache-miss: true
       # The update bundle is cached separately, the same way, so only the OS
-      # update tests restore it.
+      # update tests restore it. The glob includes the bundle hash build.sh records.
       - name: Choose OS update bundle cache key
         id: update-bundle-key
         run: echo "key=umbrelos-amd64-update-bundle-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - name: Cache OS update bundle
         uses: actions/cache/save@v5
         with:
-          path: packages/os/build/umbrelos-amd64.update
+          path: packages/os/build/umbrelos-amd64.update*
           key: ${{ steps.update-bundle-key.outputs.key }}
       - name: Check the OS update bundle was cached
         id: check-update-bundle
         uses: actions/cache/restore@v5
         with:
-          path: packages/os/build/umbrelos-amd64.update
+          path: packages/os/build/umbrelos-amd64.update*
           key: ${{ steps.update-bundle-key.outputs.key }}
           lookup-only: true
       - name: Wait before checking the OS update bundle again
@@ -304,7 +304,7 @@ jobs:
         if: steps.check-update-bundle.outputs.cache-hit != 'true'
         uses: actions/cache/restore@v5
         with:
-          path: packages/os/build/umbrelos-amd64.update
+          path: packages/os/build/umbrelos-amd64.update*
           key: ${{ steps.update-bundle-key.outputs.key }}
           lookup-only: true
           fail-on-cache-miss: true
@@ -469,7 +469,7 @@ jobs:
         if: matrix.test.requiresUpdateBundle
         uses: actions/cache/restore@v5
         with:
-          path: packages/os/build/umbrelos-amd64.update
+          path: packages/os/build/umbrelos-amd64.update*
           key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
       - name: Wait before retrying OS update bundle restore
         if: matrix.test.requiresUpdateBundle && steps.restore-update-bundle.outputs.cache-hit != 'true'
@@ -478,7 +478,7 @@ jobs:
         if: matrix.test.requiresUpdateBundle && steps.restore-update-bundle.outputs.cache-hit != 'true'
         uses: actions/cache/restore@v5
         with:
-          path: packages/os/build/umbrelos-amd64.update
+          path: packages/os/build/umbrelos-amd64.update*
           key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
           fail-on-cache-miss: true
       - name: Install QEMU
@@ -835,6 +835,11 @@ jobs:
       - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
       - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
       - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
+      # create-release-manifest.sh refuses a version tag without its release notes, so fail before the build
+      # rather than after it
+      - name: Check release notes
+        if: env.VERSION_IS_SEMVER == 'true'
+        run: test -f "release-notes/${VERSION}.md" || { echo "Release notes for ${VERSION} are missing from packages/os/release-notes/${VERSION}.md" >&2; exit 1; }
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
       # Go through build.sh rather than pushing with docker buildx build
       # directly. It builds the single-layer umbrelos-docker stage with fixed
@@ -842,7 +847,8 @@ jobs:
       # the digest differ on every build.
       - name: Build and push Docker image
         run: SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true DOCKER_IMAGE_OUTPUT="type=image,name=ghcr.io/${{ env.TAG }},push=true" ./build.sh
-      - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
+      # The image index's digest pins the image for every platform, and the release manifest signs it
+      - run: echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos@$(docker buildx imagetools inspect ghcr.io/${{ env.TAG }} --format '{{json .Manifest}}' | jq --raw-output .digest)" >> $GITHUB_ENV
       # Build OS images
       - uses: actions/setup-node@v5
         with:
@@ -881,17 +887,20 @@ jobs:
       - name: Create release directory
         run: |
           mkdir -p release
-          mv build/docker-umbrelos-* release/
           mv build/*.update release/
           mv build/*.img.zip release/
           mv build/*.img.xz release/
           mv build/*.img release/
           mv build/umbrelos-amd64-usb-installer.iso release/
-      - name: Create SHASUM
-        run: cd release && shasum -a 256 * | tee SHA256SUMS
+          # A release that needs to run something to install has an update script, which the manifest pins
+          if [[ -f update.sh ]]; then cp update.sh release/; fi
+      # The manifest pins every file in the release and gets timestamped here. Release signers sign it
+      # and the release notes separately.
+      - name: Create release manifest
+        run: RELEASE_TAG="${{ env.VERSION }}" ./create-release-manifest.sh release && cat release/manifest.txt
       - name: OpenTimestamps
-        run: npm ci && npx ots-cli.js stamp release/SHA256SUMS
-      - name: Nuke uncompressed images (we just wanted them covered by the SHASUMs)
+        run: npm ci && npx ots-cli.js stamp release/manifest.txt
+      - name: Nuke uncompressed images (we just wanted them covered by the manifest)
         run: rm -rf release/*.img
       - name: Upload to R2
         uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # v1.5
@@ -908,4 +917,5 @@ jobs:
           draft: true
           name: umbrelOS ${{ github.ref_name }}
           files: |
-            packages/os/release/SHA256SUMS*
+            packages/os/release/manifest.txt*
+            packages/os/release/release-notes.md

@@ -19,6 +19,7 @@ import EventBus from './modules/event-bus/event-bus.ts'
 import Dbus from './modules/dbus/dbus.ts'
 import Backups from './modules/backups/backups.ts'
 import SystemNg from './modules/system-ng/system-ng.ts'
+import Update from './modules/update/update.ts'
 import Machines from './modules/machines/machines.ts'
 import LanIngress from './modules/lan-ingress/lan-ingress.ts'
 import Auth from './modules/auth/auth.ts'
@@ -178,6 +179,7 @@ export default class Umbreld {
 	dbus: Dbus
 	backups: Backups
 	systemNg: SystemNg
+	update: Update
 	machines: Machines
 	lanIngress: LanIngress
 	auth: Auth
@@ -213,6 +215,7 @@ export default class Umbreld {
 		this.dbus = new Dbus(this)
 		this.backups = new Backups(this)
 		this.systemNg = new SystemNg(this)
+		this.update = new Update(this)
 		this.machines = new Machines(this)
 		this.lanIngress = new LanIngress(this)
 		this.auth = new Auth(this)
@@ -329,6 +332,7 @@ export default class Umbreld {
 			this.dbus.start(),
 			this.server.start(),
 			this.systemNg.start(),
+			this.update.start(),
 		])
 
 		// Account deletion spans several modules. Retry any cleanup that was
@@ -395,6 +399,7 @@ export default class Umbreld {
 				this.appStore.stop(),
 				this.dbus.stop(),
 				this.systemNg.stop(),
+				this.update.stop(),
 				this.auth.stop(),
 				this.photos.stop(),
 			])

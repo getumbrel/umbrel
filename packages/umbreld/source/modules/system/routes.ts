@@ -10,7 +10,6 @@ import stripAnsi from 'strip-ansi'
 import {performReset} from './factory-reset.ts'
 import {OWNER_USER_ID} from '../user/constants.ts'
 import type Umbreld from '../../index.ts'
-import {getUpdateStatus, performUpdate, getLatestRelease} from './update.ts'
 import {
 	getCpuTemperature,
 	getSystemDiskUsage,
@@ -160,26 +159,7 @@ export default router({
 		])
 		return {id, caCertificate}
 	}),
-	updateStatus: privateProcedure.query(() => getUpdateStatus()),
 	uptime: privateProcedureWithMembers.query(() => os.uptime()),
-	checkUpdate: privateProcedure.query(async ({ctx}) => {
-		let {version, name, releaseNotes} = await getLatestRelease(ctx.umbreld)
-		// v prefix is needed in the tag name for legacy reasons, remove it before comparing to local version
-		const available = version.replace('v', '') !== ctx.umbreld.version
-		return {available, version, name, releaseNotes}
-	}),
-	getReleaseChannel: privateProcedure.query(async ({ctx}) => {
-		return (await ctx.umbreld.store.get('settings.releaseChannel')) || 'stable'
-	}),
-	setReleaseChannel: privateProcedure
-		.input(
-			z.object({
-				channel: z.enum(['stable', 'beta']),
-			}),
-		)
-		.mutation(async ({ctx, input}) => {
-			return ctx.umbreld.store.set('settings.releaseChannel', input.channel)
-		}),
 	isExternalDns: privateProcedure.query(async ({ctx}) => {
 		return await ctx.umbreld.store.get('settings.externalDns', true)
 	}),
@@ -195,21 +175,6 @@ export default router({
 			await ctx.umbreld.store.set('settings.externalDns', previousExternalDns)
 			throw error
 		}
-	}),
-	update: privateProcedure.mutation(async ({ctx}) => {
-		systemStatus = 'updating'
-		let success = false
-		try {
-			success = await performUpdate(ctx.umbreld)
-			if (success) {
-				await setTimeout(1000)
-				await ctx.umbreld.stop()
-				await reboot()
-			}
-		} finally {
-			if (!success) systemStatus = 'running'
-		}
-		return success
 	}),
 	hiddenService: privateProcedure.query(async ({ctx}) => {
 		try {

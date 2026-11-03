@@ -158,18 +158,19 @@ Raspberry Pi images (`umbrelos-amd64.img`, `umbrelos-arm64.img`,
 `umbrelos-arm64.update`, `umbrelos-pi.update`), compressed images
 (`umbrelos-amd64.img.xz`, `umbrelos-pi.img.zip`), USB installer
 (`umbrelos-amd64-usb-installer.iso`) and multi-arch Docker image, on any
-machine. Anyone can rebuild a release and check it against the published
-`SHA256SUMS`:
+machine. Anyone can rebuild a release and check it against its signed
+`manifest.txt`, which pins every file by SHA-256:
 
 ```sh
 git clone https://github.com/getumbrel/umbrel.git && cd umbrel
-git checkout <version>
+git checkout <commit> # The release manifest's Commit:
 cd packages/os
 npm run build:amd64 <version>
-shasum -a 256 build/umbrelos-amd64.img build/umbrelos-amd64.update
+cd ../..
+./scripts/release-signing verify https://download.umbrel.com/release/<version>/ --files packages/os/build
 ```
 
-And the Docker image against the digest in the release's `docker-umbrelos-<version>`:
+And the Docker image against the manifest's `Docker-Image:` digest:
 
 ```sh
 SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true \

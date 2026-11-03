@@ -1,0 +1,6 @@
+--- umbrelOS Signing Keys ---
+Schema: 1
+Date: 2026-11-03T03:37:34Z
+Required-Signatures: 1
+Key: lukechilds-mbp-2026 03a8157ada372e216024b719c32471bf4e534218c245ee9d7846899ee259264771
+Root-Signature: IMZWalwdUM/Xor3sILBdOCmw7ighbL4ZZqnZYPyJ077PFsDXpnM6aZeVSVYbQF/zNlCd7A7AMv67Adcf7dAopv4=

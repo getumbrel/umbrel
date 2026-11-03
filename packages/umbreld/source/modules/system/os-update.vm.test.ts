@@ -1,5 +1,10 @@
 // @vm-requires-update-bundle
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
+import fse from 'fs-extra'
 import pWaitFor from 'p-wait-for'
 
 import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
@@ -11,8 +16,20 @@ import {
 	reboot,
 	runUpdateScript,
 	serveUpdateBundle,
+	updateBundle,
 	waitForCommittedBoot,
 } from '../test-utilities/os-update.ts'
+import {
+	createRootKey,
+	createSigningKeysList,
+	createSigningKey,
+	installLatestRelease,
+	publishRelease,
+	redirectToUmbrelApi,
+	serveUmbrelApi,
+	signingKey,
+	trustRootKey,
+} from '../test-utilities/release-signing.ts'
 
 // The release devices in the field update from. Its Rugix Ctrl installs this build's bundle.
 const fromVersion = '2.0.0'
@@ -23,12 +40,15 @@ const systemPartition = {a: 4, b: 5} as const
 describe(`OS update from umbrelOS ${fromVersion}`, () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let bundleServer: Awaited<ReturnType<typeof serveUpdateBundle>>
+	let api: Awaited<ReturnType<typeof serveUmbrelApi>> | undefined
+	let directory: string
 	let failed = false
 	let newRugixVersion: string
 
 	const markerName = 'os-update-marker.txt'
 
 	beforeAll(async () => {
+		directory = await fse.mkdtemp(path.join(os.tmpdir(), 'umbreld-os-update-vm-test-'))
 		bundleServer = await serveUpdateBundle()
 		umbreld = await createTestVm({device: 'umbrel-home', image: await downloadReleaseImage(fromVersion)})
 		await umbreld.vm.powerOn()
@@ -38,6 +58,8 @@ describe(`OS update from umbrelOS ${fromVersion}`, () => {
 	afterAll(async () => {
 		await umbreld?.cleanup()
 		await bundleServer?.close()
+		await api?.close()
+		await fse.remove(directory)
 	})
 
 	afterEach(({task}) => {
@@ -98,16 +120,27 @@ describe(`OS update from umbrelOS ${fromVersion}`, () => {
 		expect(options.split(',')).toContain('ro')
 	})
 
-	test('installs another update with the updated Rugix Ctrl', async () => {
-		const output = await runUpdateScript(umbreld, bundleServer.port)
-		expect(output).toContain('{"event":"UpdateProgress","progress":100')
+	// Releases from before signing reach this build with the update script, and from then on it only
+	// installs signed releases. Its root key is swapped for a test one.
+	test('installs its next update as a signed release through umbreld, with the updated Rugix Ctrl', async () => {
+		const rootKey = createRootKey()
+		const alice = await createSigningKey('alice-mbp-2026')
+		const signingKeysList = createSigningKeysList({date: '2026-01-01T00:00:00Z', keys: [signingKey(alice)], rootKey})
+		api = await serveUmbrelApi()
+		await redirectToUmbrelApi(umbreld, api)
+		await trustRootKey(umbreld, rootKey, signingKeysList)
+		const bundleHash = (await fs.promises.readFile(`${updateBundle}.hash`, 'utf8')).trim()
+		await publishRelease({api, releases: bundleServer}, {signers: [alice], signingKeysList, bundleHash})
 
-		await rebootAndWaitForUmbreld(umbreld, () => reboot(umbreld))
+		await rebootAndWaitForUmbreld(umbreld, async () => {
+			expect(await installLatestRelease(umbreld)).toEqual({success: true, error: false})
+		})
 
 		const state = await waitForCommittedBoot(umbreld)
 		expect(state.activeGroup).toBe('a')
 		expect(state.version).toBe(newRugixVersion)
-	})
+		// Installing and rebooting take a while on an emulated amd64 VM
+	}, 1_800_000)
 
 	test('falls back to the committed system when the updated system fails to boot', async () => {
 		// GRUB boots the other system once when Rugix sets this flag, clearing it as it does

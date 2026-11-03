@@ -9,7 +9,7 @@ export type UpdateState = 'initial' | 'checking' | 'at-latest' | 'update-availab
 export function useSoftwareUpdate() {
 	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
-	const latestVersionQ = trpcReact.system.checkUpdate.useQuery(undefined, {
+	const latestVersionQ = trpcReact.update.check.useQuery(undefined, {
 		retry: false,
 		refetchOnReconnect: false,
 		refetchOnWindowFocus: false,
@@ -21,8 +21,8 @@ export function useSoftwareUpdate() {
 
 	const checkLatest = useCallback(async () => {
 		try {
-			utils.system.checkUpdate.invalidate()
-			const latestVersion = await utils.system.checkUpdate.fetch()
+			utils.update.check.invalidate()
+			const latestVersion = await utils.update.check.fetch()
 
 			if (!latestVersion) {
 				throw new Error(t('software-update.failed-to-check'))
@@ -30,7 +30,7 @@ export function useSoftwareUpdate() {
 		} catch {
 			toast.error(t('software-update.failed-to-check'), {area: 'umbrelos'})
 		}
-	}, [utils.system.checkUpdate])
+	}, [utils.update.check])
 
 	let state: UpdateState = 'initial'
 	if (latestVersionQ.isLoading) {

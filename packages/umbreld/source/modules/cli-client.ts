@@ -34,7 +34,7 @@ initialConnectionFailed.catch(() => {})
 
 // The CLI client always authenticates with the local system credential; no unauthenticated mode.
 // We use HTTP only for `httpOnlyPaths` (needs request/response semantics like cookies/headers), and WS otherwise.
-const trpc = createTRPCClient<AppRouter>({
+export const trpc = createTRPCClient<AppRouter>({
 	links: [
 		splitLink({
 			condition: (operation) => httpOnlyPaths.includes(operation.path as (typeof httpOnlyPaths)[number]),

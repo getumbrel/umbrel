@@ -1,11 +1,12 @@
 import {createExpressMiddleware} from '@trpc/server/adapters/express'
 import {applyWSSHandler} from '@trpc/server/adapters/ws'
 
-import {router} from './trpc.ts'
+import {router, t} from './trpc.ts'
 import {createContextExpress, createContextWss} from './context.ts'
 import {coalesceWrites} from './coalesce-writes.ts'
 import migration from '../../migration/routes.ts'
 import system from '../../system/routes.ts'
+import update, {legacySystemRoutes as legacySystemUpdateRoutes} from '../../update/routes.ts'
 // Temporary name while migrating from the legacy system module. Will be renamed to "system" once migration is complete.
 import systemNg from '../../system-ng/routes.ts'
 import wifi from '../../system/wifi-routes.ts'
@@ -28,7 +29,8 @@ import type Umbreld from '../../../index.ts'
 
 const appRouter = router({
 	migration,
-	system,
+	system: t.mergeRouters(system, legacySystemUpdateRoutes),
+	update,
 	systemNg,
 	wifi,
 	user,

@@ -206,6 +206,14 @@ function main() {
         fi
     done
 
+    # Record each Rugix bundle's hash for the signed release manifest. Devices pass it to
+    # `rugix-ctrl update install --bundle-hash`, which verifies the bundle as it streams in.
+    for bundle in build/*.update; do
+        if [ -e "${bundle}" ] && [[ "${bundle}" != *-legacy-migration.update ]]; then
+            ./hash-update-bundle.sh "${bundle}" > "${bundle}.hash"
+        fi
+    done
+
     # To boot from QEMU
     # qemu-system-x86_64 -net nic -net user,hostfwd=tcp::2222-:22 -machine accel=tcg -cpu max -smp 4 -m 8192 -hda build/umbrelos.img -bios OVMF.fd
 }
