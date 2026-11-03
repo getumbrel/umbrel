@@ -229,6 +229,9 @@ function Network({
 	setIsOpen: (open: boolean) => void
 }) {
 	const passwordInputRef = useRef<HTMLInputElement>(null)
+	// Kept here rather than in the form, which is hidden while connecting, so a
+	// wrong password comes back selected for fixing instead of cleared
+	const [password, setPassword] = useState('')
 
 	const utils = trpcReact.useUtils()
 	const connectMut = trpcReact.wifi.connect.useMutation({
@@ -236,22 +239,25 @@ function Network({
 			utils.wifi.connected.cancel()
 		},
 		onSuccess: () => setIsOpen(false),
-		onError: () => {
-			setTimeout(() => {
-				passwordInputRef.current?.select()
-				passwordInputRef.current?.focus()
-			}, 200)
-		},
 		onSettled: () => {
 			utils.wifi.connected.invalidate()
 			utils.system.getIpAddresses.invalidate()
 		},
 	})
 
+	// The form comes back once the attempt has failed, so select the password for fixing then.
+	// An effect runs after the form has rendered, where a timer could fire before it.
 	useEffect(() => {
-		// Reset error
+		if (!connectMut.isError) return
+		passwordInputRef.current?.select()
+		passwordInputRef.current?.focus()
+	}, [connectMut.isError])
+
+	useEffect(() => {
+		// Reset error and password
 		if (!isOpen) {
 			connectMut.reset()
+			setPassword('')
 		}
 	}, [isOpen, connectMut])
 
@@ -287,6 +293,8 @@ function Network({
 							passwordInputRef={passwordInputRef}
 							network={network}
 							status={statusUi}
+							password={password}
+							onPasswordChange={setPassword}
 							onConnect={connect}
 							error={passwordError}
 						/>
@@ -339,6 +347,8 @@ type ConnectData = {ssid: string; password?: string}
 type ConnectProps = {
 	network: WifiNetwork
 	status?: WifiStatusUi
+	password: string
+	onPasswordChange: (password: string) => void
 	onConnect: ({ssid, password}: ConnectData) => void
 	error?: string
 	passwordInputRef?: React.RefObject<HTMLInputElement | null>
@@ -383,9 +393,16 @@ function ConnectWithConfirmation({onConnect, ...rest}: ConnectProps) {
 	)
 }
 
-export function Connect({network, status, onConnect, error, passwordInputRef}: ConnectProps) {
+export function Connect({
+	network,
+	status,
+	password,
+	onPasswordChange,
+	onConnect,
+	error,
+	passwordInputRef,
+}: ConnectProps) {
 	const {t} = useTranslation()
-	const [password, setPassword] = useState('')
 
 	if (status === 'loading') {
 		return null
@@ -407,7 +424,7 @@ export function Connect({network, status, onConnect, error, passwordInputRef}: C
 					sizeVariant={'short'}
 					className='flex-1'
 					value={password}
-					onValueChange={setPassword}
+					onValueChange={onPasswordChange}
 					error={error}
 				/>
 				<Button type='submit' variant='primary' size='input-short'>

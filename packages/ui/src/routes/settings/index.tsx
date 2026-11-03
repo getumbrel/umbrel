@@ -31,7 +31,6 @@ const SettingsContentMobile = React.lazy(() =>
 const FileSharingDrawerOrDialog = React.lazy(() => import('@/routes/settings/file-sharing'))
 const AppSettingsListDrawerOrDialog = React.lazy(() => import('@/routes/settings/app-settings'))
 const McpDialog = React.lazy(() => import('@/routes/settings/mcp'))
-const AppStorePreferencesDialog = React.lazy(() => import('@/routes/settings/app-store-preferences'))
 const ChangeNameDialog = React.lazy(() => import('@/routes/settings/change-name'))
 const ChangePasswordDialog = React.lazy(() => import('@/routes/settings/change-password'))
 const UsersDialog = React.lazy(() => import('@/routes/settings/users'))
@@ -58,11 +57,6 @@ const WallpaperDrawerOrDialog = React.lazy(() =>
 const LanguageDrawerOrDialog = React.lazy(() =>
 	import('@/routes/settings/mobile/language').then((m) => ({default: m.LanguageDrawerOrDialog})),
 )
-const AppStorePreferencesDrawer = React.lazy(() =>
-	import('@/routes/settings/mobile/app-store-preferences').then((m) => ({
-		default: m.AppStorePreferencesDrawer,
-	})),
-)
 const DeviceInfoDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/device-info').then((m) => ({default: m.DeviceInfoDrawer})),
 )
@@ -75,7 +69,6 @@ const SoftwareUpdateDrawerOrDialog = React.lazy(() =>
 const StorageManagerDialog = React.lazy(() => import('@/features/storage/index'))
 
 const routeToDialogDesktop = {
-	'app-store-preferences': AppStorePreferencesDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	// Allow drawers in desktop in case someone opens a link to a drawer
@@ -86,7 +79,6 @@ const dialogKeys = keys.strict(routeToDialogDesktop)
 export type SettingsDialogKey = keyof typeof routeToDialogDesktop
 
 const routeToDialogMobile: Record<string, React.ComponentType> = {
-	'app-store-preferences': AppStorePreferencesDrawer,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
@@ -159,29 +151,35 @@ export function Settings() {
 							<Route path='/device-info' Component={isPhone ? DeviceInfoDrawer : DeviceInfoDialog} />
 							{isMember && !isMobile && <Route path='/account/change-name' Component={ChangeNameDialog} />}
 							{isMember && !isMobile && <Route path='/account/change-password' Component={ChangePasswordDialog} />}
-							{!isMember && <Route path='/users' Component={UsersDialog} />}
 							<Route path='/sessions' Component={isMember ? SessionsDialog : OwnerSessionsRedirect} />
 							<Route path='/account/:accountTab' Component={isMember ? AccountDrawerOrDialog : OwnerAccountRedirect} />
 							{isMobile && <Route path='/wallpaper' Component={WallpaperDrawerOrDialog} />}
-							<Route path='/wifi' Component={Wifi} />
-							<Route path='/wifi-unsupported' Component={WifiUnsupported} />
-							{/* Backup: this screen (/backups) opens first on mobile to give same options as desktop */}
-							{isMobile && <Route path='/backups' Component={BackupsDrawerOrDialog} />}
-							<Route path='/backups/*' Component={BackupsRestoreDialog} />
-							{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
-							<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />
 							{isMobile && <Route path='/language' Component={LanguageDrawerOrDialog} />}
 							<Route path='/troubleshoot/*' element={<PickerDialogRedirect dialogKey='troubleshoot' />} />
 							<Route path='/terminal/*' element={<PickerDialogRedirect dialogKey='terminal' />} />
-							{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawerOrDialog} />}
-							<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
 							{(!isMember || userQ.data?.sambaEnabled === true) && (
 								<Route path='/file-sharing' Component={FileSharingDrawerOrDialog} />
 							)}
-							{!isMember && <Route path='/apps' Component={AppSettingsListDrawerOrDialog} />}
-							{!isMember && <Route path='/mcp' Component={McpDialog} />}
-							<Route path='/advanced/:advancedSelection?' Component={AdvancedSettingsDrawerOrDialog} />
-							<Route path='/storage/*' Component={StorageManagerDialog} />
+							{/* The device's own settings are the owner's. A member following a link to one
+							    stays on Settings rather than getting controls the server refuses. */}
+							{!isMember && (
+								<>
+									<Route path='/users' Component={UsersDialog} />
+									<Route path='/wifi' Component={Wifi} />
+									<Route path='/wifi-unsupported' Component={WifiUnsupported} />
+									{/* Backup: this screen (/backups) opens first on mobile to give same options as desktop */}
+									{isMobile && <Route path='/backups' Component={BackupsDrawerOrDialog} />}
+									<Route path='/backups/*' Component={BackupsRestoreDialog} />
+									{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
+									<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />
+									{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawerOrDialog} />}
+									<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
+									<Route path='/apps' Component={AppSettingsListDrawerOrDialog} />
+									<Route path='/mcp' Component={McpDialog} />
+									<Route path='/advanced/:advancedSelection?' Component={AdvancedSettingsDrawerOrDialog} />
+									<Route path='/storage/*' Component={StorageManagerDialog} />
+								</>
+							)}
 						</Routes>
 					)}
 					{!userQ.isLoading && <QueryStringDialog isMember={isMember} />}

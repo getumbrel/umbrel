@@ -77,6 +77,9 @@ function MigrateContent({deviceName}: {deviceName: string}) {
 
 	const canMigrateQ = trpcReact.migration.canMigrate.useQuery(undefined, {
 		refetchOnWindowFocus: false,
+		// A failed check is an answer (no drive, unsupported hardware...), not a
+		// glitch: show it right away instead of silently re-running the checks
+		retry: false,
 		enabled: state === 'check',
 	})
 
@@ -131,7 +134,6 @@ function MigrateContent({deviceName}: {deviceName: string}) {
 					isLoading={isFetching}
 					errors={error ? [error.message] : []}
 					onCheckAgain={retry}
-					onNext={() => setState('ready')}
 					deviceName={deviceName}
 				/>
 			)
@@ -195,13 +197,11 @@ export function MigrationAssistantError({
 	isLoading,
 	errors,
 	onCheckAgain,
-	onNext,
 	deviceName,
 }: {
 	isLoading: boolean
 	errors: string[]
 	onCheckAgain: () => void
-	onNext: () => void
 	deviceName: string
 }) {
 	const {t} = useTranslation()
@@ -224,13 +224,8 @@ export function MigrationAssistantError({
 						size='dialog'
 						className='w-full md:w-auto'
 						disabled={isLoading}
-						onClick={() => {
-							if (errors && errors.length > 0) {
-								onCheckAgain()
-							} else {
-								onNext()
-							}
-						}}
+						// Always re-run the checks: only a passing check can lead to Ready
+						onClick={onCheckAgain}
 					>
 						{t('try-again')}
 						{/* {isLoading ? <Loading /> : t('try-again')} */}

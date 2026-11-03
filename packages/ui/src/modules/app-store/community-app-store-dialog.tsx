@@ -23,6 +23,7 @@ import {toast} from '@/components/ui/toast'
 import {UMBREL_APP_STORE_ID} from '@/constants/app-store'
 import {cn} from '@/lib/utils'
 import {systemAppsKeyed} from '@/providers/apps'
+import {useConfirmation} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 
@@ -63,6 +64,20 @@ export function CommunityAppStoreDialog() {
 			toast.error(t('community-app-store.remove-error', {message: err.message}), {area: 'app-store'})
 		},
 	})
+
+	// Apps installed from a store stay, but lose its page and its updates, so removing asks first
+	const confirm = useConfirmation()
+	const removeAppStore = async ({url, name}: {url: string; name: string}) => {
+		const result = await confirm({
+			title: t('community-app-stores.remove-confirm-title', {name}),
+			message: t('community-app-stores.remove-confirm-message'),
+			actions: [
+				{label: t('community-app-store.remove-button'), value: 'remove', variant: 'destructive'},
+				{label: t('cancel'), value: 'cancel', variant: 'default'},
+			],
+		}).catch(() => undefined)
+		if (result?.actionValue === 'remove') removeAppStoreMut.mutate({url})
+	}
 
 	// handlers
 
@@ -205,7 +220,7 @@ export function CommunityAppStoreDialog() {
 														size='dialog'
 														text='destructive'
 														disabled={removing}
-														onClick={() => removeAppStoreMut.mutate({url})}
+														onClick={() => removeAppStore({url, name: meta.name})}
 													>
 														{removing ? <Spinner /> : removeLabel}
 													</Button>
@@ -220,7 +235,7 @@ export function CommunityAppStoreDialog() {
 															type='button'
 															aria-label={removeLabel}
 															disabled={removing}
-															onClick={() => removeAppStoreMut.mutate({url})}
+															onClick={() => removeAppStore({url, name: meta.name})}
 															className='flex size-[25px] items-center justify-center rounded-full text-white/40 transition-colors duration-300 hover:bg-destructive2/20 hover:text-destructive2-lightest focus:outline-hidden focus-visible:bg-destructive2/20 focus-visible:text-destructive2-lightest'
 														>
 															{removing ? <Spinner /> : <TbTrash className='size-4' />}

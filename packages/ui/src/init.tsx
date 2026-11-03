@@ -28,6 +28,17 @@ document.addEventListener(
 	{passive: false},
 )
 
+// Refuse a file dragged in from the desktop wherever nothing takes it, or the browser opens the
+// file in place of umbrelOS. Upload areas handle their drag and drop before it gets here.
+window.addEventListener('dragover', (event) => {
+	if (event.defaultPrevented || !event.dataTransfer?.types.includes('Files')) return
+	event.preventDefault()
+	event.dataTransfer.dropEffect = 'none'
+})
+window.addEventListener('drop', (event) => {
+	if (event.dataTransfer?.types.includes('Files')) event.preventDefault()
+})
+
 export function init(element: React.ReactNode) {
 	i18next.on('initialized', () => {
 		// React 19 error callbacks — centralized logging for all React errors.

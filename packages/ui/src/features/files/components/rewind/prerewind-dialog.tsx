@@ -1,6 +1,7 @@
 import {ChevronDown, Server} from 'lucide-react'
 import {useTranslation} from 'react-i18next'
 import {TbHistory} from 'react-icons/tb'
+import {useNavigate} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle} from '@/components/ui/dialog'
@@ -31,10 +32,13 @@ export function PreRewindDialog({
 	onStart: (repoId: string) => void
 }) {
 	const {t} = useTranslation()
+	const navigate = useNavigate()
 	const [lang] = useLanguage()
 	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const {disks} = useExternalStorage()
 	const list = repos || []
+	// With nowhere backed up to, setting up Backups is the only way forward
+	const needsBackupsSetup = repos?.length === 0
 	const activeId = pendingRepoId ?? list[0]?.id ?? ''
 	const active = list.find((r) => r.id === activeId) || null
 	const path: string = active?.path || ''
@@ -89,9 +93,7 @@ export function PreRewindDialog({
 					{list.length === 0 ? (
 						<div className='flex w-full min-w-0 flex-wrap items-start gap-1 rounded-xl border border-white/10 bg-white/5 p-3 text-left text-white/80'>
 							<TbHistory className='mt-[1px] size-4 shrink-0' />
-							<span className='min-w-0 flex-1 text-[13px] break-words whitespace-normal md:truncate md:whitespace-nowrap'>
-								{t('rewind.preflight.enable-backups')}
-							</span>
+							<span className='min-w-0 flex-1 text-[13px] break-words'>{t('rewind.preflight.enable-backups')}</span>
 						</div>
 					) : (
 						<>
@@ -186,20 +188,33 @@ export function PreRewindDialog({
 					)}
 				</div>
 				<DialogFooter className='mt-2 gap-2 pt-2'>
-					{/* We disable the Start Rewind button if the selected repo's device isn't connected */}
-					<Button
-						variant='primary'
-						size='dialog'
-						disabled={!list.length || !isActiveConnected}
-						onClick={() => {
-							if (!isActiveConnected) return
-							const repo = pendingRepoId ?? list[0]?.id ?? null
-							if (!repo) return
-							onStart(repo)
-						}}
-					>
-						{t('backups-rewind.start')}
-					</Button>
+					{needsBackupsSetup ? (
+						<Button
+							variant='primary'
+							size='dialog'
+							onClick={() => {
+								onOpenChange(false)
+								navigate('/settings/backups/setup')
+							}}
+						>
+							{t('rewind.preflight.set-up-backups')}
+						</Button>
+					) : (
+						// We disable the Start Rewind button if the selected repo's device isn't connected
+						<Button
+							variant='primary'
+							size='dialog'
+							disabled={!list.length || !isActiveConnected}
+							onClick={() => {
+								if (!isActiveConnected) return
+								const repo = pendingRepoId ?? list[0]?.id ?? null
+								if (!repo) return
+								onStart(repo)
+							}}
+						>
+							{t('backups-rewind.start')}
+						</Button>
+					)}
 					<Button size='dialog' onClick={() => onOpenChange(false)}>
 						{t('cancel')}
 					</Button>

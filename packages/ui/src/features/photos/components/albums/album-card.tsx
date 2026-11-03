@@ -14,6 +14,7 @@ import {BASE_ROUTE_PATH} from '@/features/photos/constants'
 import {useAlbumActions, type Album} from '@/features/photos/hooks/use-library'
 import {useFontReady} from '@/hooks/use-font-ready'
 import {cn} from '@/lib/utils'
+import {useConfirmation} from '@/providers/confirmation/use-confirmation'
 import {useLinkToDialog} from '@/utils/dialog'
 import {formatNumberI18n} from '@/utils/number'
 
@@ -38,6 +39,7 @@ export function AlbumCard({
 	const {pathname} = useLocation()
 	const linkToDialog = useLinkToDialog()
 	const {deleteAlbum} = useAlbumActions()
+	const confirm = useConfirmation()
 	const selection = usePhotosSelection()
 	const isTouchDevice = useIsTouchDevice()
 	const style = ALBUM_STYLES[albumStyleId(album.id)]
@@ -54,7 +56,17 @@ export function AlbumCard({
 	const rename = () => navigate(linkToDialog('photos-rename-album', {id: album.id}))
 	// Opens the album with cover-picking on: the next item clicked is the cover
 	const changeCover = () => selection.coverFor(album.id)
+	// The photos stay in the library, but the album's selection can't be brought back
 	const remove = async () => {
+		const result = await confirm({
+			title: t('photos-album.delete-title', {album: album.name}),
+			message: t('photos-album.delete-message'),
+			actions: [
+				{label: t('photos-album.delete'), value: 'delete', variant: 'destructive'},
+				{label: t('cancel'), value: 'cancel', variant: 'default'},
+			],
+		}).catch(() => undefined)
+		if (result?.actionValue !== 'delete') return
 		try {
 			await deleteAlbum({id: album.id})
 			// The album's own page has nothing left to show

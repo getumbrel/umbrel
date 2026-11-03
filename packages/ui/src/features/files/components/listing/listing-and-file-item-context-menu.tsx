@@ -55,6 +55,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 	// Files related state
 	const selectedItems = useFilesStore((state) => state.selectedItems)
+	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
 	const hasItemsInClipboard = useFilesStore((state) => state.hasItemsInClipboard)
 	const isItemInClipboard = useFilesStore((state) => state.isItemInClipboard)
 
@@ -81,14 +82,8 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 	const linkToDialog = useLinkToDialog()
 
-	const {
-		currentPath,
-		isBrowsingTrash,
-		isBrowsingRecents,
-		isBrowsingSearch,
-		isViewingExternalDrives,
-		navigateToDirectory,
-	} = useFilesNavigate()
+	const {currentPath, isBrowsingTrash, isBrowsingRecents, isBrowsingSearch, isViewingExternalDrives, revealItem} =
+		useFilesNavigate()
 	// Compressing and extracting both write into the current directory (the
 	// archive, or its contents), so both need it to be writable
 	const {listing} = useListDirectory(currentPath)
@@ -259,9 +254,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 				<>
 					{/* if browsing recents or search, show the "show in enclosing folder" option */}
 					{(isBrowsingRecents || isBrowsingSearch) && (
-						<ContextMenuItem onClick={() => navigateToDirectory(item.path.slice(0, -item.name.length))}>
-							{t('files-action.show-in-folder')}
-						</ContextMenuItem>
+						<ContextMenuItem onClick={() => revealItem(item)}>{t('files-action.show-in-folder')}</ContextMenuItem>
 					)}
 					{!isTouchDevice && (
 						<ContextMenuItem
@@ -314,9 +307,12 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 						{t('files-action.paste')}
 						<ContextMenuShortcut>⌘V</ContextMenuShortcut>
 					</ContextMenuItem>
-					<ContextMenuItem disabled={!canShowRewind} onClick={onRewind}>
-						{t('rewind')}
-					</ContextMenuItem>
+					{/* Rewind restores from the owner's backups, which members can't reach */}
+					{!isMember && (
+						<ContextMenuItem disabled={!canShowRewind} onClick={onRewind}>
+							{t('rewind')}
+						</ContextMenuItem>
+					)}
 					{canTrash || canPermanentlyDelete ? <ContextMenuSeparator /> : null}
 					{canTrash && (
 						<ContextMenuItem
@@ -433,7 +429,16 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 	return (
 		<ContextMenu modal={false}>
-			<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+			<ContextMenuTrigger
+				asChild
+				// An item selects itself when right-clicked. A right-click on empty space is about the
+				// folder, so, as in Finder, it drops the selection and the menu offers New Folder and Paste.
+				onContextMenu={(e) => {
+					if (!(e.target as Element).closest('[data-files-item]')) setSelectedItems([])
+				}}
+			>
+				{children}
+			</ContextMenuTrigger>
 			<ContextMenuContent className='w-48'>{contextMenuContent}</ContextMenuContent>
 		</ContextMenu>
 	)

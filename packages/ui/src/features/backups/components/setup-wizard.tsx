@@ -26,7 +26,7 @@ import {TabSwitcher} from '@/features/backups/components/tab-switcher'
 import {LoadingTile as LoadingCard} from '@/features/backups/components/tiles'
 import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-backup-ignore'
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
-import {useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
+import {normalizeEncryptionPassword, useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
 import {useExistingBackupDetection} from '@/features/backups/hooks/use-existing-backup-detection'
 import {BACKUP_FILE_NAME, getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
@@ -85,8 +85,12 @@ export function BackupsSetupWizard() {
 	// Validation schemas inside the component so t() evaluates with the current language
 	const encryptionSchema = z
 		.object({
-			password: z.string().min(8, {message: t('backups.password-minimum-length')}),
-			confirm: z.string(),
+			// Trimmed like the password that's actually saved (see normalizeEncryptionPassword)
+			password: z
+				.string()
+				.trim()
+				.min(8, {message: t('backups.password-minimum-length')}),
+			confirm: z.string().trim(),
 		})
 		.refine((d) => d.password === d.confirm, {
 			message: t('backups.passwords-do-not-match'),
@@ -97,10 +101,13 @@ export function BackupsSetupWizard() {
 		folder: z.string().min(1, {message: t('backups.please-choose-folder')}),
 		encryption: encryptionSchema,
 	})
+	// Each step only validates its own fields (see next), so the encryption
+	// schema can be used whole. Not .partial(): zod drops the refine on a partial
+	// copy, and the mismatch check would never run
 	const wizardStepSchema = z.object({
 		destination: destinationSchema,
 		folder: z.string().optional(),
-		encryption: encryptionSchema.partial(),
+		encryption: encryptionSchema,
 	})
 
 	const headerMetaForStep = (s: Step) => {
@@ -160,7 +167,7 @@ export function BackupsSetupWizard() {
 			: step === Step.Folder
 				? !!folder
 				: step === Step.Encryption
-					? (enc?.password?.length ?? 0) >= 8 && enc?.password === enc?.confirm
+					? encryptionSchema.safeParse(enc).success
 					: true
 
 	// Validate per-step before advancing
@@ -777,7 +784,15 @@ function EncryptionStep() {
 							<FormItem>
 								<FormLabel className='text-13 opacity-60'>{t('password')}</FormLabel>
 								<FormControl>
-									<PasswordInput value={field.value} onValueChange={field.onChange} />
+									<PasswordInput
+										value={field.value}
+										onValueChange={(value) => {
+											field.onChange(value)
+											// A mismatch shows under Confirm password, so check that again
+											// once there's a confirmation to compare with
+											if (form.getValues('encryption.confirm')) void form.trigger('encryption.confirm')
+										}}
+									/>
 								</FormControl>
 								<div className='relative'>
 									<FormMessage className='absolute -top-1 left-0 text-xs' />
@@ -839,7 +854,8 @@ function ReviewStep({values}: {values: FormValues}) {
 	}
 
 	const [showPw, setShowPw] = useState(false)
-	const plainPw = values.encryption.password
+	// What will actually be saved, so what's shown and copied is what restores
+	const plainPw = normalizeEncryptionPassword(values.encryption.password)
 	const masked = plainPw ? '•'.repeat(Math.max(8, plainPw.length)) : ''
 	const [, copyToClipboard] = useCopyToClipboard()
 

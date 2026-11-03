@@ -20,6 +20,14 @@ export type BackupRepository = RouterOutput['backups']['getRepositories'][number
 
 export type Backup = RouterOutput['backups']['listBackups'][number]
 
+// Every backup repository has been created with its encryption password
+// trimmed, so every call that creates, connects to or restores from one trims
+// it the same way. Otherwise a password pasted with a stray space could set up
+// a backup but never restore it.
+export function normalizeEncryptionPassword(password: string) {
+	return password.trim()
+}
+
 export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 	const utils = trpcReact.useUtils()
 
@@ -46,7 +54,7 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 	// Create a repository at the selected folder and immediately start a backup.
 	const setupBackup = async (input: SetupBackupInput) => {
 		const path = input.folder
-		const password = input.encryptionPassword?.trim() ?? ''
+		const password = normalizeEncryptionPassword(input.encryptionPassword ?? '')
 
 		setIsSettingUpBackup(true)
 		try {
@@ -72,7 +80,7 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 	// Connect to an existing repository at the selected folder and immediately start a backup.
 	const connectExistingRepository = async (input: {path: string; password: string}) => {
 		const path = input.path
-		const password = input.password?.trim() ?? ''
+		const password = normalizeEncryptionPassword(input.password ?? '')
 
 		try {
 			const repositoryId = await connectToRepoMutation.mutateAsync({path, password})
@@ -259,17 +267,17 @@ export function useRestoreBackup() {
 	}
 }
 
-export function useConnectToRepository() {
+// A caller that shows the error itself, next to the password, turns the toast off
+export function useConnectToRepository({toastErrors = true}: {toastErrors?: boolean} = {}) {
 	const mutation = trpcReact.backups.connectToExistingRepository.useMutation()
 	const [isConnecting, setIsConnecting] = useState(false)
 
 	const connectToRepository = async (input: {path: string; password: string}) => {
 		setIsConnecting(true)
 		try {
-			return await mutation.mutateAsync(input)
+			return await mutation.mutateAsync({...input, password: normalizeEncryptionPassword(input.password)})
 		} catch (error: any) {
-			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
-			toast.error(userFriendlyMessage, {area: 'settings'})
+			if (toastErrors) toast.error(getUserFriendlyErrorMessage(error), {area: 'settings'})
 			throw error
 		} finally {
 			setIsConnecting(false)

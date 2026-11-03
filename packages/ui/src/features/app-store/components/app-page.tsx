@@ -13,7 +13,7 @@ import {
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Loading} from '@/components/ui/loading'
 import {registryAppPath} from '@/constants/app-store'
-import {AppGrid} from '@/features/app-store/components/app-grid'
+import {AppGrid, AppStoreNotFound} from '@/features/app-store/components/app-grid'
 import {SectionHeading} from '@/features/app-store/components/section-heading'
 import {storeRevealClass, storeRevealDelay} from '@/features/app-store/constants'
 import {getRelatedApps} from '@/features/app-store/data/catalog'
@@ -47,7 +47,14 @@ export default function AppPage() {
 	const installButtonRef = useRef<InstallButtonConnectedHandle>(null)
 
 	if (isLoading || isLoadingApps || isLoadingUserApps) return <Loading />
-	if (!app) throw new Error('App not found')
+	if (!app) {
+		return (
+			<AppStoreNotFound
+				title={t('app-store.app-not-found.title')}
+				description={t('app-store.app-not-found.description')}
+			/>
+		)
+	}
 
 	const userApp = userAppsKeyed?.[app.id]
 	const relatedApps = getRelatedApps(apps ?? [], app.id, 6)

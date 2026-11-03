@@ -83,6 +83,7 @@ export function RewindOverlay() {
 	const {
 		view,
 		repositories,
+		repositoriesLoaded,
 		backupsRaw,
 		backupsLoading,
 		backupsForTimeline,
@@ -233,7 +234,7 @@ export function RewindOverlay() {
 			<PreRewindDialog
 				open={repoOpen}
 				onOpenChange={setRepoOpen}
-				repos={repositories as any[]}
+				repos={repositoriesLoaded ? repositories : undefined}
 				pendingRepoId={pendingRepoId}
 				setPendingRepoId={(id) => setPendingRepoId(id)}
 				onStart={(repo) => {

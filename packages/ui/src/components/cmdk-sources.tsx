@@ -26,6 +26,7 @@ import {useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {getLastFilesPath} from '@/features/files/utils/last-files-path'
 import {useMachinesCmdkEntries} from '@/features/machines/cmdk-entries'
 import type {Item as PhotoItem} from '@/features/photos/hooks/use-items'
+import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useShortcuts} from '@/hooks/use-shortcuts'
@@ -456,6 +457,8 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 	const userId = userQ.data?.userId
 	const isMember = userQ.data?.role === 'member'
 	const registryApps = availableApps.apps ?? NO_APPS
+	// Update all apps leads the suggestions only when there's something to update
+	const hasAppUpdates = useAppsWithUpdates().appsWithUpdates.length > 0
 
 	// The list is rebuilt only when a source changes — never per keystroke
 	return useMemo(() => {
@@ -471,6 +474,7 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 		machineEntries,
 		userId,
 		isMember,
+		hasAppUpdates,
 		t,
 		navigate,
 	])
@@ -488,13 +492,18 @@ export function useCmdkEntries(): CmdkEntry[] | null {
 		})
 
 		const systemEntries: CmdkEntry[] = [
-			{
-				id: 'system:update-all-apps',
-				title: t('cmdk.update-all-apps'),
-				default: true,
-				icon: appStore.icon,
-				onSelect: () => navigate('/app-store?dialog=updates'),
-			},
+			// Updating apps is the owner's
+			...(isMember
+				? []
+				: [
+						{
+							id: 'system:update-all-apps',
+							title: t('cmdk.update-all-apps'),
+							default: hasAppUpdates,
+							icon: appStore.icon,
+							onSelect: () => navigate('/app-store?dialog=updates'),
+						},
+					]),
 			{
 				id: 'system:live-usage',
 				title: t('cmdk.live-usage'),

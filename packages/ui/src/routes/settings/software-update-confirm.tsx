@@ -1,4 +1,5 @@
 import {useTranslation} from 'react-i18next'
+import {Navigate} from 'react-router-dom'
 
 import {Markdown} from '@/components/markdown'
 import {Button} from '@/components/ui/button'
@@ -18,14 +19,21 @@ export function SoftwareUpdateConfirmDialog() {
 		return null
 	}
 
+	// Reachable by a stale link or back/forward after the update was installed or
+	// the check failed. With no newer version there's nothing to install, so
+	// return to Settings, which shows the update status
+	if (!latestVersionQ.data?.available) {
+		return <Navigate to='/settings' replace />
+	}
+
 	return (
 		<Dialog {...dialogProps}>
 			<DialogContent className='px-0'>
 				<DialogHeader className='px-4 sm:px-8'>
-					<DialogTitle>{latestVersionQ.data?.name}</DialogTitle>
+					<DialogTitle>{latestVersionQ.data.name}</DialogTitle>
 				</DialogHeader>
 				<ScrollArea className='flex max-h-[500px] flex-col gap-5 px-4 sm:px-8'>
-					<Markdown>{latestVersionQ.data?.releaseNotes}</Markdown>
+					<Markdown>{latestVersionQ.data.releaseNotes}</Markdown>
 				</ScrollArea>
 				<DialogFooter className='px-4 sm:px-8'>
 					<Button

@@ -1,11 +1,13 @@
 import {ReactNode} from 'react'
 import {useTranslation} from 'react-i18next'
 
+import {ButtonLink} from '@/components/ui/button-link'
 import {AppCard} from '@/features/app-store/components/app-card'
 import {SectionHeading} from '@/features/app-store/components/section-heading'
 import {
 	APP_STORE_EMPTY_STATE_SRC,
 	appGridClass,
+	storeCardClass,
 	storeCardPaddedClass,
 	storeRevealCardClass,
 	storeRevealDelay,
@@ -77,6 +79,19 @@ export function AppGridSection({
 			<AppGrid apps={apps} statuses={statuses} makeTo={makeTo} />
 			{children}
 		</section>
+	)
+}
+
+// In place of an app or app store a link pointed to that's no longer there
+export function AppStoreNotFound({title, description}: {title: string; description: string}) {
+	const {t} = useTranslation()
+	return (
+		<div className={cn(storeCardClass, 'flex flex-col items-center pb-10')}>
+			<AppStoreEmptyState title={title} description={description} />
+			<ButtonLink to='/app-store' size='sm'>
+				{t('app-store.go-to-app-store')}
+			</ButtonLink>
+		</div>
 	)
 }
 

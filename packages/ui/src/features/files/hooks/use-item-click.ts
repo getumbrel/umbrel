@@ -12,7 +12,7 @@ import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-
 export const useItemClick = () => {
 	const isReadOnly = useIsFilesReadOnly()
 	const {selectedItems, setSelectedItems, isSelectingOnMobile, setViewerItem} = useFilesStore()
-	const {extractSelectedItems} = useFilesOperations()
+	const {extractItems} = useFilesOperations()
 	const {navigateToDirectory} = useNavigate()
 	const isTouchDevice = useIsTouchDevice()
 
@@ -112,12 +112,13 @@ export const useItemClick = () => {
 			return setViewerItem(item)
 		}
 
-		// An archive with no viewer is extracted; one Files can show (a ZIP) opens, with Uncompress there
+		// An archive with no viewer is extracted; one Files can show (a ZIP) opens, with Uncompress there.
+		// Extract the item that was opened, not the selection: a tap on a phone selects nothing.
 		if (
 			!getFileViewer(item) &&
 			SUPPORTED_ARCHIVE_EXTRACT_EXTENSIONS.some((ext) => item.name.toLowerCase().endsWith(ext))
 		) {
-			return extractSelectedItems()
+			return extractItems([item])
 		}
 
 		// else set the item as the viewer item

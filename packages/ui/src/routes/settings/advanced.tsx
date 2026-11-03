@@ -13,6 +13,7 @@ import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
+import {toast} from '@/components/ui/toast'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
@@ -206,6 +207,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 }
 
 function useIsBetaChannel() {
+	const {t} = useTranslation()
 	const releaseChannelQ = trpcReact.system.getReleaseChannel.useQuery()
 	const isChecked = releaseChannelQ.data === 'beta'
 	const {checkLatest} = useSoftwareUpdate()
@@ -215,6 +217,8 @@ function useIsBetaChannel() {
 			releaseChannelQ.refetch()
 			checkLatest()
 		},
+		// Otherwise the switch just flips back, with nothing to say it didn't take
+		onError: (error) => toast.error(t('beta-program-error', {message: error.message}), {area: 'settings'}),
 	})
 
 	const change = (checked: boolean) => {

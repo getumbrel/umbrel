@@ -4,6 +4,7 @@ import {arrayIncludes} from 'ts-extras'
 
 import {ProgressButton} from '@/components/progress-button'
 import {UNKNOWN} from '@/constants'
+import {canStart} from '@/hooks/use-app-install'
 import {cn} from '@/lib/utils'
 import {AppStateOrLoading} from '@/trpc/trpc'
 import {assertUnreachable} from '@/utils/misc'
@@ -18,10 +19,23 @@ type Props = {
 	state: AppStateOrLoading
 	onInstallClick?: () => void
 	onOpenClick?: () => void
+	/** Starts an app that isn't running. Without it (members) the button reads Not running */
+	onStartClick?: () => void
 	disabled?: boolean
 }
 
-export function InstallButton({installSize, progress, state, onInstallClick, onOpenClick, disabled, ...props}: Props) {
+export function InstallButton({
+	installSize,
+	progress,
+	state,
+	onInstallClick,
+	onOpenClick,
+	onStartClick,
+	disabled,
+	...props
+}: Props) {
+	const action = getInstallButtonAction(state)
+	const canAct = action === 'start' ? !!onStartClick : !!action
 	return (
 		<ProgressButton
 			variant={state === 'updating' ? 'default' : 'primary'}
@@ -29,11 +43,13 @@ export function InstallButton({installSize, progress, state, onInstallClick, onO
 			state={state}
 			progress={progress}
 			onClick={() => {
-				switch (getInstallButtonAction(state)) {
+				switch (action) {
 					case 'install':
 						return onInstallClick?.()
 					case 'open':
 						return onOpenClick?.()
+					case 'start':
+						return onStartClick?.()
 					case undefined:
 						return
 				}
@@ -45,17 +61,20 @@ export function InstallButton({installSize, progress, state, onInstallClick, onO
 			style={{
 				['--progress-button-bg' as string]: state === 'updating' ? 'hsl(0 0 30%)' : 'hsl(var(--color-brand))',
 			}}
-			disabled={disabled || !getInstallButtonAction(state)}
+			disabled={disabled || !canAct}
 			{...props}
 		>
-			<ButtonContentForState state={state} installSize={installSize} progress={progress} />
+			<ButtonContentForState state={state} installSize={installSize} progress={progress} startable={!!onStartClick} />
 		</ProgressButton>
 	)
 }
 
-export function getInstallButtonAction(state: AppStateOrLoading): 'install' | 'open' | undefined {
+export function getInstallButtonAction(state: AppStateOrLoading): 'install' | 'open' | 'start' | undefined {
 	if (state === 'not-installed') return 'install'
 	if (arrayIncludes(['ready', 'running'], state)) return 'open'
+	// An app that isn't running can't be opened, but it can be started, the
+	// same as tapping its home screen icon
+	if (canStart(state)) return 'start'
 	return undefined
 }
 
@@ -63,10 +82,12 @@ function ButtonContentForState({
 	state,
 	installSize,
 	progress,
+	startable,
 }: {
 	state: AppStateOrLoading
 	installSize?: string
 	progress?: number
+	startable: boolean
 }) {
 	const {t} = useTranslation()
 	switch (state) {
@@ -103,7 +124,7 @@ function ButtonContentForState({
 			return t('app.uninstalling') + '…'
 		case 'unknown':
 		case 'stopped':
-			return t('app.offline')
+			return startable ? t('start') : t('app.offline')
 		case 'loading':
 		case undefined:
 			return <TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-xs' />

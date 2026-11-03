@@ -9,6 +9,11 @@ describe('getInstallButtonAction', () => {
 		expect(getInstallButtonAction('running')).toBe('open')
 	})
 
+	test('offers Start for an installed app that is not running', () => {
+		expect(getInstallButtonAction('stopped')).toBe('start')
+		expect(getInstallButtonAction('unknown')).toBe('start')
+	})
+
 	test('offers Install only before installation', () => {
 		expect(getInstallButtonAction('not-installed')).toBe('install')
 	})

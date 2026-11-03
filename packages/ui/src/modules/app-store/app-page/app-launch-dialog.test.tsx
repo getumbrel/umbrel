@@ -255,6 +255,13 @@ describe('app launch dialog', () => {
 		expect(window.open).not.toHaveBeenCalled()
 	})
 
+	test('members get no HTTPS instructions link, since only the owner can open them', async () => {
+		fixtures.role = 'member'
+		await launch()
+		expect(dialog()?.textContent).toContain('app-requires-https-dialog-always-open')
+		expect(dialog()?.textContent).not.toContain('app-requires-https-dialog-learn')
+	})
+
 	test.each([
 		['https://umbrel.local', 'https://umbrel.local:1234/app/'],
 		['http://umbrel.onion', 'http://demo.onion/app/'],

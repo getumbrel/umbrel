@@ -4,6 +4,7 @@ import React, {useEffect, useRef, useState} from 'react'
 import {Trans, useTranslation} from 'react-i18next'
 import {BsEthernet} from 'react-icons/bs'
 import {TbAlertTriangle, TbCheck, TbChevronRight, TbInfoCircle, TbPencil, TbWifi} from 'react-icons/tb'
+import {z} from 'zod'
 
 import {AlertDialog, AlertDialogContent} from '@/components/ui/alert-dialog'
 import {Button} from '@/components/ui/button'
@@ -31,6 +32,17 @@ import {HttpsAccessInstructions} from '@/routes/settings/https-access'
 import {linkClass} from '@/utils/element-classes'
 
 const NETWORK_INTERFACES_REFETCH_INTERVAL_MS = 2000
+
+// The same IPv4 check umbreld's schema applies, so an address the backend would
+// refuse (999.300.1.1) is caught here, before the confirmation flow starts
+const isValidIpv4 = (value: string) => z.ipv4().safeParse(value).success
+
+// A whole number of bits, so "24abc" isn't read as 24
+function parseSubnetPrefix(value: string): number | null {
+	if (!/^\d{1,2}$/.test(value)) return null
+	const prefix = Number(value)
+	return prefix <= 32 ? prefix : null
+}
 
 function prefixToSubnetMask(prefix: number): string | null {
 	if (prefix < 0 || prefix > 32 || !Number.isInteger(prefix)) return null
@@ -244,14 +256,26 @@ function HostnameSection() {
 
 	useEffect(() => {
 		if (!isEditing) return
+		const stopEditing = () => {
+			setIsEditing(false)
+			setValidationError(null)
+		}
 		const handleClickOutside = (e: MouseEvent) => {
-			if (editingRef.current && !editingRef.current.contains(e.target as Node)) {
-				setIsEditing(false)
-				setValidationError(null)
-			}
+			if (editingRef.current && !editingRef.current.contains(e.target as Node)) stopEditing()
+		}
+		// Escape cancels the edit, not the dialog around it. The dialog hears Escape on the
+		// document before the field does, so it is caught on its way down from the window.
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key !== 'Escape' || !editingRef.current?.contains(e.target as Node)) return
+			e.stopPropagation()
+			stopEditing()
 		}
 		document.addEventListener('mousedown', handleClickOutside)
-		return () => document.removeEventListener('mousedown', handleClickOutside)
+		window.addEventListener('keydown', handleEscape, {capture: true})
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside)
+			window.removeEventListener('keydown', handleEscape, {capture: true})
+		}
 	}, [isEditing])
 
 	const startEditing = () => {
@@ -308,7 +332,6 @@ function HostnameSection() {
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter') handleSave()
-		if (e.key === 'Escape') setIsEditing(false)
 	}
 
 	const displayedHostname = isEditing ? editValue || hostname : hostname
@@ -619,15 +642,13 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 
 	const confirm = useConfirmation()
 
-	const isValidIpv4 = (value: string) => /^(\d{1,3}\.){3}\d{1,3}$/.test(value)
-
 	const handleApply = async () => {
 		if (ipMethod === 'dhcp') {
 			clearStaticIp()
 			return
 		}
 
-		const subnetPrefix = parseInt(subnet, 10)
+		const subnetPrefix = parseSubnetPrefix(subnet)
 		const dnsServers = dns
 			.split(',')
 			.map((s) => s.trim())
@@ -636,8 +657,7 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 		// Basic client-side validation matching the backend's zod schema.
 		// First error stops — keeps it simple for an advanced settings form.
 		if (!ip || !isValidIpv4(ip)) return toast.error(t('network.invalid-ip'), {area: 'settings'})
-		if (Number.isNaN(subnetPrefix) || subnetPrefix < 0 || subnetPrefix > 32)
-			return toast.error(t('network.invalid-subnet'), {area: 'settings'})
+		if (subnetPrefix === null) return toast.error(t('network.invalid-subnet'), {area: 'settings'})
 		if (!gateway || !isValidIpv4(gateway)) return toast.error(t('network.invalid-gateway'), {area: 'settings'})
 		if (dnsServers.length === 0 || dnsServers.some((s) => !isValidIpv4(s)))
 			return toast.error(t('network.invalid-dns'), {area: 'settings'})
@@ -662,16 +682,22 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 
 		// Suppress global "checking backend" errors while the interface bounces
 		suppressErrors()
-		setStaticIp({ip, subnetPrefix, gateway, dns: dnsServers})
+		const request = setStaticIp({ip, subnetPrefix, gateway, dns: dnsServers})
 
 		// Wait for the interface to bounce (nmcli down/up) before opening the new tab,
 		// reducing the chance of the browser showing a brief "can't reach" error.
 		// Keep this on HTTP: the new IP may not be in the HTTPS cert until after confirmation.
-		setTimeout(() => {
+		const openTab = setTimeout(() => {
 			window.open(`http://${ip}/confirm-static-ip`, '_blank')
 			setTabOpened(true)
 			setCountdownSeconds(CONFIRMATION_TIMEOUT_SECONDS - TAB_OPEN_DELAY)
 		}, TAB_OPEN_DELAY * 1000)
+		// A server error means the settings were refused and never applied, so there's
+		// no new address to confirm. A connection error is expected while the interface
+		// bounces, and still needs the tab. (The hook toasts the server error.)
+		request.catch((error) => {
+			if (error?.data) clearTimeout(openTab)
+		})
 	}
 
 	const displayName = iface.type === 'wifi' ? t('network.detail-type-wifi') : t('network.interface-ethernet')
@@ -681,7 +707,8 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 		{value: 'static' as const, label: t('network.ipv4-static'), description: t('network.ipv4-static-description')},
 	]
 
-	const subnetMask = prefixToSubnetMask(parseInt(subnet, 10))
+	const subnetPrefix = parseSubnetPrefix(subnet)
+	const subnetMask = subnetPrefix === null ? null : prefixToSubnetMask(subnetPrefix)
 	const subnetLabel = subnetMask ? `${t('network.ipv4-subnet')} · ${subnetMask}` : t('network.ipv4-subnet')
 
 	const isApplying = isSettingStaticIp || isClearing

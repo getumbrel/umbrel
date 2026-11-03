@@ -18,7 +18,7 @@ export function TroubleshootApp({appId}: {appId: string}) {
 
 	const {app} = useUserApp(appId)
 
-	const appLogs = useAppLogs(appId)
+	const {logs, text: logsText} = useAppLogs(appId)
 
 	return (
 		<ImmersivePickerDialogContent>
@@ -26,9 +26,14 @@ export function TroubleshootApp({appId}: {appId: string}) {
 				<TroubleshootTitleBackLink />
 				<AppDropdown appId={appId} setAppId={setAppId} />
 			</div>
-			{appLogs && <LogResults>{appLogs}</LogResults>}
+			{logsText && <LogResults>{logsText}</LogResults>}
 			<ImmersiveDialogFooter className='justify-center'>
-				<Button variant='primary' size='dialog' disabled={!appId} onClick={() => downloadUtf8Logs(appLogs, appId)}>
+				<Button
+					variant='primary'
+					size='dialog'
+					disabled={!appId || !logs}
+					onClick={() => logs && downloadUtf8Logs(logs, appId)}
+				>
 					{t('troubleshoot.app-download', {app: app?.name || LOADING_DASH})}
 				</Button>
 				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
@@ -37,12 +42,18 @@ export function TroubleshootApp({appId}: {appId: string}) {
 	)
 }
 
+// The logs to download, apart from the text shown in their place while there are none,
+// so a download can never save "Loading..." or an error as the app's logs
 function useAppLogs(appId: string) {
 	const {t} = useTranslation()
 	const troubleshootQ = trpcReact.apps.logs.useQuery({appId})
+	const logs = troubleshootQ.data || undefined
 
-	if (troubleshootQ.isLoading) return t('loading') + '…'
-	if (troubleshootQ.isError) return troubleshootQ.error.message
+	const text = troubleshootQ.isLoading
+		? t('loading') + '…'
+		: troubleshootQ.isError
+			? troubleshootQ.error.message
+			: logs || t('troubleshoot-no-logs-yet')
 
-	return troubleshootQ.data || t('troubleshoot-no-logs-yet')
+	return {logs, text}
 }

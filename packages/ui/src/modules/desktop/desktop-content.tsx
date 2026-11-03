@@ -125,7 +125,8 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 			if (item.type === 'shortcut') return item.shortcut.title
 			return item.machine.name
 		}
-		items.sort((a, b) => itemName(a).localeCompare(itemName(b)))
+		// Numeric so that "App 2" comes before "App 10"
+		items.sort((a, b) => itemName(a).localeCompare(itemName(b), undefined, {numeric: true}))
 
 		return items
 	}, [userApps, shortcuts, pinnedMachines])

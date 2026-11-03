@@ -38,11 +38,9 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 			onError: (error) => console.error('system:update-status subscription error', error),
 		},
 	)
+	// The version name comes from a separate check that can fail or lag mid-update,
+	// so the cover never waits for it
 	const latestVersion = latestVersionQ.data
-
-	if (!latestVersion) {
-		return null
-	}
 
 	const {progress, description, running, error} = updateStatusQ.data ?? {}
 	const indeterminate = updateStatusQ.isLoading || !running
@@ -51,7 +49,9 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 		<BarePage>
 			{!error && (
 				<ProgressLayout
-					title={t('software-update.updating-to', {name: latestVersion.name})}
+					title={
+						latestVersion ? t('software-update.updating-to', {name: latestVersion.name}) : t('software-update.updating')
+					}
 					callout={t('software-update.callout')}
 					progress={indeterminate ? undefined : progress}
 					message={description}

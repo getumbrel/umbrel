@@ -39,6 +39,8 @@ type ReadyController = {
 	installState: ReturnType<typeof useAppInstall>['state']
 	install: () => void
 	open: () => void
+	/** Undefined for members, who can't start apps */
+	start: (() => void) | undefined
 	update: () => void
 	updatePending: boolean
 	canOfferUpdate: boolean
@@ -149,6 +151,9 @@ export function InstallButtonConnectedController({
 				installState: appInstall.state,
 				install,
 				open: () => openApp(app.id),
+				// Same as tapping the app's home screen icon: start a stopped app,
+				// restart one whose state is unknown
+				start: isMember ? undefined : appInstall.state === 'unknown' ? appInstall.restart : appInstall.start,
 				update,
 				updatePending: updateApp.isPending,
 				canOfferUpdate,
@@ -211,6 +216,7 @@ export function InstallButtonConnectedView() {
 					state={controller.installState}
 					onInstallClick={controller.install}
 					onOpenClick={controller.open}
+					onStartClick={controller.start}
 					disabled={controller.isAppIdAmbiguous && controller.installState === 'not-installed'}
 				/>
 				{controller.canOfferUpdate && (

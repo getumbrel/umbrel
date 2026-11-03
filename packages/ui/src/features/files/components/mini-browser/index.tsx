@@ -196,7 +196,15 @@ export function MiniBrowser({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
+			<DialogContent
+				// The dialog hears Escape before the new folder's name field can stop it,
+				// so while a name is being typed, Escape only cancels the new folder
+				onEscapeKeyDown={(e) => {
+					if (!newFolder) return
+					e.preventDefault()
+					setNewFolder(null)
+				}}
+			>
 				<DialogHeader>
 					<div className='flex items-center justify-between gap-2'>
 						<div className='min-w-0 flex-1'>

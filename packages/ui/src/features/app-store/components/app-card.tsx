@@ -8,7 +8,7 @@ import {appPath} from '@/features/app-store/constants'
 import {getAppStoreAction, type AppStoreStatus} from '@/features/app-store/data/catalog'
 import {preloadFirstFewGalleryImages} from '@/features/app-store/data/gallery-preload'
 import {useStoreActions} from '@/features/app-store/providers/store-actions'
-import {pollStates} from '@/hooks/use-app-install'
+import {canStart, pollStates} from '@/hooks/use-app-install'
 import {cn} from '@/lib/utils'
 import {appStateToString} from '@/modules/app-store/app-state-strings'
 import {canPresentUpdateAction} from '@/modules/app-store/update-availability'
@@ -19,7 +19,7 @@ import {tw} from '@/utils/tw'
 // - AppCard: standard grid tile (icon, name, two-line tagline, working action)
 // - AppCardCompact: horizontal rails and related-apps lists
 // Cards navigate to details; the action button offers the one obvious verb
-// (Install / Open / Update) without leaving the page.
+// (Install / Open / Start / Update) without leaving the page.
 
 export function AppCard({
 	app,
@@ -75,8 +75,8 @@ const cardActionClass = tw`relative z-10 h-7 shrink-0 rounded-full border-0 bg-w
 const cardActionProgressBg = {['--progress-button-bg' as string]: 'hsl(0 0 30%)'}
 
 /**
- * The one obvious action for an app's current status: Install, Open, or
- * Update. One button per card, always mounted, so state changes (idle → live
+ * The one obvious action for an app's current status: Install, Open, Start
+ * or Update. One button per card, always mounted, so state changes (idle → live
  * progress fill → done) play out inside a single element with no shared
  * animation machinery — an app listed several times on one page just renders
  * several independent buttons.
@@ -103,7 +103,11 @@ export function AppCardAction({
 	// optimistically the moment a mutation starts, ahead of the derived status
 	const transitioning = arrayIncludes(pollStates, state)
 	const showProgress = transitioning && arrayIncludes(['installing', 'updating'], state) && progress !== undefined
-	const candidateAction = getAppStoreAction(status, transitioning)
+	const storeAction = getAppStoreAction(status, transitioning)
+	// An installed app that isn't running can't be opened, so offer what tapping
+	// its home screen icon does: start it. Members can't, so theirs reads Not running
+	const notRunning = storeAction === 'open' && canStart(state)
+	const candidateAction = notRunning ? (actions.startApp ? 'start' : undefined) : storeAction
 	const appIdConflict =
 		actions.isAppIdAmbiguous(app.id) && (candidateAction === 'install' || candidateAction === 'update')
 	const action = appIdConflict
@@ -123,7 +127,7 @@ export function AppCardAction({
 					// the required OS update, exactly like the app page does
 					available: t('app.install'),
 					incompatible: t('app.install'),
-					installed: t('app.open'),
+					installed: notRunning ? (actions.startApp ? t('start') : t('app.offline')) : t('app.open'),
 					'update-available': t('app-updates.update'),
 				}[status]
 
@@ -133,6 +137,8 @@ export function AppCardAction({
 				return actions.installApp(app)
 			case 'open':
 				return actions.openApp(app.id)
+			case 'start':
+				return actions.startApp?.(app.id)
 			case 'update':
 				return actions.updateApp(app)
 			case undefined:

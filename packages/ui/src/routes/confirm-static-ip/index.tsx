@@ -15,7 +15,6 @@ import {trpcReact} from '@/trpc/trpc'
 export default function ConfirmStaticIp() {
 	const {t} = useTranslation()
 	const [status, setStatus] = useState<'confirming' | 'success' | 'error'>('confirming')
-	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 	const hasFiredRef = useRef(false)
 
 	const ip = window.location.hostname
@@ -27,8 +26,9 @@ export default function ConfirmStaticIp() {
 
 	const confirmMut = trpcReact.system.confirmStaticIp.useMutation({
 		onSuccess: () => setStatus('success'),
+		// The server's reason is for debugging. What the user needs is what happens next.
 		onError: (err) => {
-			setErrorMessage(err.message)
+			console.error('Could not confirm the static IP', err)
 			setStatus('error')
 		},
 	})
@@ -58,7 +58,7 @@ export default function ConfirmStaticIp() {
 				<div className='flex flex-col items-center gap-2'>
 					<TbAlertCircle className='size-12 text-destructive2-lightest' />
 					<h2 className='text-15 font-semibold -tracking-2'>{t('confirm-static-ip.error-title')}</h2>
-					<CoverMessageParagraph>{errorMessage ?? t('confirm-static-ip.error-description')}</CoverMessageParagraph>
+					<CoverMessageParagraph>{t('confirm-static-ip.error-description')}</CoverMessageParagraph>
 				</div>
 			</BareCoverMessage>
 		)

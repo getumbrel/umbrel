@@ -28,8 +28,6 @@ export function useFilesOperations() {
 	const utils = trpcReact.useUtils()
 	const confirm = useConfirmation()
 
-	const clipboardMode = useFilesStore((s) => s.clipboardMode)
-	const clipboardItems = useFilesStore((s) => s.clipboardItems)
 	const clearClipboard = useFilesStore((s) => s.clearClipboard)
 	const selectedItems = useFilesStore((s) => s.selectedItems)
 	const draggedItems = useFilesStore((s) => s.draggedItems)
@@ -314,8 +312,10 @@ export function useFilesOperations() {
 		return true
 	}
 
-	// Paste (copy or move) items from clipboard
+	// Paste (copy or move) items from clipboard. The clipboard is read when Paste runs,
+	// because menus can hold on to this function from an earlier render.
 	const pasteItemsFromClipboard = async ({toDirectory}: {toDirectory: string}) => {
+		const {clipboardMode, clipboardItems} = useFilesStore.getState()
 		if (clipboardMode === 'copy') {
 			await copyItems({sourceItems: clipboardItems, toDirectory})
 		} else if (clipboardMode === 'cut') {

@@ -70,6 +70,7 @@ function Screen({machine}: {machine: Machine}) {
 		case 'error':
 			return <ErrorScreen machine={machine} />
 		case 'stopped':
+		case 'suspended':
 			return <StoppedScreen machine={machine} />
 	}
 }
@@ -261,7 +262,9 @@ function StoppedScreen({machine}: {machine: Machine}) {
 	return (
 		<div className={statusScreenClass}>
 			<Power className='size-8 text-white/25' />
-			<span className='text-13 -tracking-2 text-white/40'>{t('machines.machine-off')}</span>
+			<span className='text-13 -tracking-2 text-white/40'>
+				{machine.state === 'suspended' ? t('machines.machine-sleeping') : t('machines.machine-off')}
+			</span>
 			<button onClick={() => start({id: machine.id})} className={screenActionButtonClass}>
 				{t('machines.turn-on')}
 			</button>

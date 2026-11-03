@@ -113,17 +113,13 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 			<fieldset disabled={isLoading} className='flex flex-1 flex-col gap-5'>
 				<ChangePasswordWarning />
 				<Labeled label={t('change-password.current-password')}>
-					<PasswordInput value={password} onValueChange={setPassword} />
+					<PasswordInput value={password} onValueChange={setPassword} error={fieldErrors.oldPassword} />
 				</Labeled>
 				<Labeled label={t('change-password.new-password')}>
-					<PasswordInput value={newPassword} onValueChange={setNewPassword} error={fieldErrors.oldPassword} />
+					<PasswordInput value={newPassword} onValueChange={setNewPassword} error={fieldErrors.newPassword} />
 				</Labeled>
 				<Labeled label={t('change-password.repeat-password')}>
-					<PasswordInput
-						value={newPasswordRepeat}
-						onValueChange={setNewPasswordRepeat}
-						error={fieldErrors.newPassword}
-					/>
+					<PasswordInput value={newPasswordRepeat} onValueChange={setNewPasswordRepeat} />
 				</Labeled>
 				<div className='flex-1' />
 				<div className='-my-2.5'>

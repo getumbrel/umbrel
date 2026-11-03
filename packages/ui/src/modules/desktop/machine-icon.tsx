@@ -15,7 +15,7 @@ import {t} from '@/utils/i18n'
 // (see Figma "Pinning VMs to Homepage").
 export function MachineIcon({machine}: {machine: Machine}) {
 	const navigate = useNavigate()
-	const {start, stop, forceStop, setPinned} = useMachineActions()
+	const {start, stop, forceStop, retryInstall, setPinned} = useMachineActions()
 
 	return (
 		<ContextMenu>
@@ -42,9 +42,16 @@ export function MachineIcon({machine}: {machine: Machine}) {
 			<ContextMenuContent>
 				<ContextMenuItem onSelect={() => navigate(machinePath(machine.id))}>{t('machines.open')}</ContextMenuItem>
 				{isMachineStartable(machine.state) ? (
-					<ContextMenuItem onSelect={() => start({id: machine.id})}>
-						{machine.state === 'error' ? t('machines.turn-on-again') : t('machines.turn-on')}
-					</ContextMenuItem>
+					// An install that stopped partway can only be retried, as in the list and the machine's window
+					machine.state === 'error' && machine.installPending ? (
+						<ContextMenuItem onSelect={() => retryInstall({id: machine.id})}>
+							{t('machines.retry-install')}
+						</ContextMenuItem>
+					) : (
+						<ContextMenuItem onSelect={() => start({id: machine.id})}>
+							{machine.state === 'error' ? t('machines.turn-on-again') : t('machines.turn-on')}
+						</ContextMenuItem>
+					)
 				) : (
 					<ContextMenuItem disabled={machine.state !== 'running'} onSelect={() => stop({id: machine.id})}>
 						{t('machines.shut-down')}

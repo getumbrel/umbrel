@@ -152,6 +152,8 @@ export function useRewind({overlayOpen, repoOpen}: {overlayOpen: boolean; repoOp
 
 		// entities
 		repositories,
+		// Until the list arrives, repositories is empty without meaning there are none
+		repositoriesLoaded: repositoriesRaw !== undefined,
 		backupsRaw,
 		backupsLoading,
 		backupsForTimeline,

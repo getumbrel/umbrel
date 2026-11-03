@@ -1,4 +1,5 @@
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {useParams} from 'react-router-dom'
 
 import {InstallButton} from '@/components/install-button'
@@ -6,6 +7,7 @@ import {InstallButtonConnectedController, InstallButtonConnectedView} from '@/co
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Loading} from '@/components/ui/loading'
 import {registryAppPath} from '@/constants/app-store'
+import {AppStoreNotFound} from '@/features/app-store/components/app-grid'
 import {AppPageHero} from '@/features/app-store/components/app-page/app-hero'
 import {AppPageContent} from '@/features/app-store/components/app-page/app-page-content'
 import {appPageWrapperClass} from '@/features/app-store/components/app-page/shared'
@@ -13,6 +15,7 @@ import {CommunityBadge} from '@/modules/community-app-store/community-badge'
 import {trpcReact} from '@/trpc/trpc'
 
 export default function CommunityAppPage() {
+	const {t} = useTranslation()
 	const {appStoreId, appId} = useParams<{appStoreId: string; appId: string}>()
 
 	const registryQ = trpcReact.appStore.registry.useQuery()
@@ -22,7 +25,23 @@ export default function CommunityAppPage() {
 
 	if (!appStoreId) throw new Error('App store id expected.') // Before isLoading so we don't show a loading state
 	if (registryQ.isLoading) return <Loading />
-	if (!app) throw new Error('App not found. It may have been removed from the registry.')
+	if (registryQ.isError) throw registryQ.error
+	if (!appStore) {
+		return (
+			<AppStoreNotFound
+				title={t('community-app-store.not-found.title')}
+				description={t('community-app-store.not-found.description')}
+			/>
+		)
+	}
+	if (!app) {
+		return (
+			<AppStoreNotFound
+				title={t('app-store.app-not-found.title')}
+				description={t('app-store.app-not-found.description')}
+			/>
+		)
+	}
 
 	return (
 		// Keyed by app so navigating between app pages remounts and replays the reveal

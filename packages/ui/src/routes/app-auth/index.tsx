@@ -5,13 +5,13 @@ import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {PinInput} from '@/components/ui/pin-input'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {SubTitle, Title} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'
 import {AccountDock} from '@/modules/auth/account-dock'
 import {OWNER_USER_ID} from '@/modules/auth/constants'
 import {LoginForm} from '@/modules/auth/login-form'
+import {TwoFactorForm} from '@/modules/auth/two-factor-form'
 import {useAccountLanguage} from '@/modules/auth/use-account-language'
 import {useAccountPicker, type Account} from '@/modules/auth/use-account-picker'
 import {
@@ -180,6 +180,7 @@ export default function LoginWithUmbrel() {
 	const handleSubmit2fa = async (totpToken: string): Promise<boolean> => {
 		const attempt = beginLoginAttempt()
 		if (!attempt) return false
+		setError(undefined)
 		try {
 			const data = await login({userId: attempt.userId, password, totpToken}, () => isCurrentLoginAttempt(attempt))
 			if (!isCurrentLoginAttempt(attempt)) {
@@ -191,14 +192,23 @@ export default function LoginWithUmbrel() {
 			if ('url' in data) {
 				return true
 			}
+			if ('error' in data && data.error) setError(data.error.message)
 			finishLoginAttempt(attempt)
 			return false
 		} catch (error) {
 			const isCurrent = isCurrentLoginAttempt(attempt)
 			finishLoginAttempt(attempt)
 			if (!isCurrent) return false
+			setError(error instanceof Error ? error.message : String(error))
 			throw error
 		}
+	}
+
+	// Back from the code step to the password, where another account can be chosen too
+	const handleBackFrom2fa = () => {
+		if (activeLoginAttemptRef.current || isPending) return
+		resetEntry()
+		setStep('password')
 	}
 
 	const captionAccount = activeAccount
@@ -225,7 +235,12 @@ export default function LoginWithUmbrel() {
 								<Title>{t('login-2fa.title')}</Title>
 								<SubTitle>{t('login-2fa.subtitle')}</SubTitle>
 							</div>
-							<PinInput autoFocus length={6} onCodeCheck={handleSubmit2fa} />
+							<TwoFactorForm
+								onCodeCheck={handleSubmit2fa}
+								error={error}
+								isPending={loginIsPending}
+								onBack={handleBackFrom2fa}
+							/>
 						</div>
 					) : (
 						<div
