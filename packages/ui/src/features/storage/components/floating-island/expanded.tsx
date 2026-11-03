@@ -48,9 +48,9 @@ export function ExpandedContent({
 	const isCanceled = operation.state === 'canceled'
 
 	return (
-		<div className='flex size-full items-center justify-between overflow-hidden px-8 py-6'>
+		<div className='flex size-full items-center justify-between gap-4 overflow-hidden px-8 py-6'>
 			{/* Left side */}
-			<div className='flex flex-col gap-1'>
+			<div className='flex min-w-0 flex-col gap-1'>
 				<div className='truncate text-sm tracking-tight text-white/90'>{label}</div>
 				<div className='truncate text-xs font-normal text-white/50'>{stateDescription}</div>
 				<div className='mt-2 flex items-baseline gap-1'>

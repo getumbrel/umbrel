@@ -1227,6 +1227,13 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 /* Override Tailwind truncate class because  */
 /* https://github.com/tailwindlabs/tailwindcss/issues/10939 */
 .truncate {
+	/* Tailwind's overflow: hidden also let a truncating flex or grid item shrink
+	   below its text, because a scroll container's automatic minimum width is 0.
+	   clip doesn't make one, so without this the item would keep its full text
+	   width and spill out of its row instead of ending in an ellipsis. Being
+	   outside Tailwind's layers, this also beats a min-w-* class on the same
+	   element: give a truncating element's minimum width to a wrapper instead. */
+	min-width: 0;
 	overflow: initial;
 	overflow-x: hidden; /* for older browsers, though top and bottom of text in `tight-inter-trim` is going to be clipped at the top and bottom */
 	overflow-x: clip;

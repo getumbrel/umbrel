@@ -159,8 +159,15 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 
 			{/* Right side: the page's actions, or the selection's. Clipped above and
 			    below (with room for focus rings), not at the sides: menus and
-			    tooltips are portaled, and the wider face must not be cut while it rolls */}
-			<div className='relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5'>
+			    tooltips are portaled, and the wider face must not be cut while it rolls.
+			    While picking, the album's name in Add can give way, so this side
+			    narrows with the title instead of squeezing it to a sliver */}
+			<div
+				className={cn(
+					'relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5',
+					selection.pickingFor && 'min-w-0',
+				)}
+			>
 				<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 					{selection.coveringFor ? (
 						<motion.div key='covering' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
@@ -172,7 +179,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 							<PillButton onClick={() => selection.done()}>{t('cancel')}</PillButton>
 						</motion.div>
 					) : selection.pickingFor ? (
-						<motion.div key='picking' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
+						<motion.div key='picking' className='flex min-w-0 items-center gap-2' {...faceProps(pillsRoll)}>
 							{isTimeline && (
 								<div className='hidden items-center gap-2 md:flex'>
 									<TimelineZoom slider={!pinchZooms} />
@@ -331,13 +338,13 @@ function SelectionCount({count}: {count: number}) {
 	const {t, i18n} = useTranslation()
 	if (count === 0)
 		return (
-			<span key='none' className={cn('block', riseClass)}>
+			<span key='none' className={cn('block truncate', riseClass)}>
 				{t('photos-selection.none')}
 			</span>
 		)
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
 	return (
-		<span key='count' className={cn('block', riseClass)}>
+		<span key='count' className={cn('block truncate', riseClass)}>
 			<CountText text={t('photos-selection.count', {count, formattedCount})} number={formattedCount} />
 		</span>
 	)

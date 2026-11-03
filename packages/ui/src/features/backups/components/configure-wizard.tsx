@@ -267,15 +267,17 @@ function LocationsSection({
 									<div className='flex items-center gap-2'>
 										<ConnectivityDot connected={isConnected} />
 										<BackupDeviceIcon path={repo.path} connected={isConnected} className='size-8 opacity-90' />
-										<div className='min-w-0 flex-1 truncate'>
-											<span className='block text-sm font-medium'>{deviceName}</span>
+										<div className='min-w-0 flex-1'>
+											<span className='block truncate text-sm font-medium'>{deviceName}</span>
 											{!isConnected ? (
 												// Says so in words, not just with the red dot, once the drives and shares have loaded
 												!isCheckingConnections && (
-													<span className='block text-11 text-white/40'>{t('backups-configure.not-connected')}</span>
+													<span className='block truncate text-11 text-white/40'>
+														{t('backups-configure.not-connected')}
+													</span>
 												)
 											) : repo.lastBackup ? (
-												<span className='block text-11 text-white/40'>
+												<span className='block truncate text-11 text-white/40'>
 													{backupProgressByRepo.has(repo.id)
 														? t('backups-configure.backing-up-now')
 														: `${t('backups-configure.last-backup')}: ${formatFilesystemDate(Number(repo.lastBackup), lang)}`}

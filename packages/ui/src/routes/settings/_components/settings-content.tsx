@@ -428,30 +428,27 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 							<SettingsSummary />
 
 							<div className='mt-1.5 mb-3 flex shrink-0 gap-2'>
-								<ButtonLink to={linkToDialog('logout')} className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'>
+								<ButtonLink to={linkToDialog('logout')} className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 									{t('logout')}
 								</ButtonLink>
 								{isMember ? (
 									<>
-										<Button disabled className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'>
+										<Button disabled className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 											{t('restart')}
 										</Button>
-										<Button disabled text='destructive' className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'>
+										<Button disabled text='destructive' className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 											{t('shut-down')}
 										</Button>
 									</>
 								) : (
 									<>
-										<ButtonLink
-											to={linkToDialog('restart')}
-											className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'
-										>
+										<ButtonLink to={linkToDialog('restart')} className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 											{t('restart')}
 										</ButtonLink>
 										<ButtonLink
 											to={linkToDialog('shutdown')}
 											text='destructive'
-											className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'
+											className='flex-1 px-1.5 text-11 whitespace-nowrap'
 										>
 											{t('shut-down')}
 										</ButtonLink>

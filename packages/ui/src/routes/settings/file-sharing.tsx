@@ -251,7 +251,7 @@ export default function FileSharingDrawerOrDialog() {
 												className='h-7 w-7 shrink-0'
 											/>
 											<div className='min-w-0 flex-1'>
-												<span className='truncate text-14 font-medium'>{share.name}</span>
+												<span className='block truncate text-14 font-medium'>{share.name}</span>
 												{unavailableReason && (
 													<div className='flex items-center gap-1 text-[#F5A623]'>
 														<TbAlertTriangle className='size-3 shrink-0' />

@@ -947,15 +947,20 @@ export default function UsersDialog() {
 					<div className='flex flex-col gap-5'>
 						<div className='flex flex-col gap-3'>
 							<BackButton onClick={returnToList}>{t('users')}</BackButton>
-							<div className={cn('flex gap-4 pt-2', isPhone ? 'flex-wrap' : 'items-center')}>
-								<AccountAvatarEditor account={editingMember} size={72} />
-								<div className='min-w-0 flex-1'>
-									<h2 className='text-20 truncate leading-snug font-semibold -tracking-2'>{editingMember.name}</h2>
-									<p className='text-13 leading-normal tracking-normal text-white/40 opacity-100'>
-										{t('users.member')}
-									</p>
+							{/* The buttons sit beside the name while the whole name fits next to
+							    them; otherwise (a long name, a phone, a longer language) they move
+							    to a row of their own, at its end */}
+							<div className='flex flex-wrap items-center gap-x-4 gap-y-3 pt-2'>
+								<div className='flex min-w-0 flex-auto items-center gap-4'>
+									<AccountAvatarEditor account={editingMember} size={72} />
+									<div className='min-w-0'>
+										<h2 className='text-20 truncate leading-snug font-semibold -tracking-2'>{editingMember.name}</h2>
+										<p className='text-13 leading-normal tracking-normal text-white/40 opacity-100'>
+											{t('users.member')}
+										</p>
+									</div>
 								</div>
-								<div className={cn('flex shrink-0 items-center gap-2', isPhone && 'w-full justify-end')}>
+								<div className='ml-auto flex shrink-0 items-center gap-2'>
 									<Button size='default' className='shrink-0' onClick={() => setIsManagingSessions(true)}>
 										{t('active-logins.title')}
 									</Button>

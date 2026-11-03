@@ -84,6 +84,7 @@ function ContextMenuSubContent({
 
 function ContextMenuContent({
 	className,
+	collisionPadding = 8,
 	ref,
 	...props
 }: React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content> & {
@@ -93,6 +94,7 @@ function ContextMenuContent({
 		<ContextMenuPrimitive.Portal>
 			<ContextMenuPrimitive.Content
 				ref={ref}
+				collisionPadding={collisionPadding}
 				className={cn(contextMenuClasses.content, className)}
 				{...props}
 				// Keep right-clicks inside from opening an ancestor's context menu, while text fields keep the browser's own

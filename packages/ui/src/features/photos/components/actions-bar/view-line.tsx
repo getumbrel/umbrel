@@ -85,11 +85,20 @@ export function ViewLine() {
 							<span className='shrink-0'>
 								<CountText text={t('photos-actions.item-count', {count, formattedCount})} number={formattedCount} />
 							</span>
+							{/* When the line runs out of room, the size gives way first, then the
+							    name, so the count always shows in full. The size shows whole or
+							    not at all: once it doesn't fit, it wraps onto a second line this
+							    one-line box clips, instead of ending in a lone ellipsis. The
+							    empty first item holds the first line at full height, or the
+							    second would start at the top */}
 							{size && (
-								<>
-									<Slash />
-									<span className='shrink-0'>{size}</span>
-								</>
+								<span className='flex h-[1lh] min-w-0 shrink-[999] flex-wrap overflow-hidden'>
+									<span aria-hidden className='h-full' />
+									<span className='whitespace-nowrap'>
+										<Slash />
+										<span className='ms-2'>{size}</span>
+									</span>
+								</span>
 							)}
 						</>
 					)}

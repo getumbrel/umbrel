@@ -338,10 +338,12 @@ function HostnameSection() {
 
 	return (
 		<div className='flex flex-col gap-1'>
+			{/* A long hostname gets at most half the row and truncates there, so the
+			    address beside it keeps room and breaks inside the name only if it must */}
 			<div className='flex items-start justify-between gap-4'>
-				<div className='flex-1'>
+				<div className='min-w-0 flex-1'>
 					<div className='text-13 font-medium -tracking-2'>{t('network.hostname')}</div>
-					<div className='text-12 leading-tight text-white/40'>
+					<div className='text-12 leading-tight wrap-anywhere text-white/40'>
 						<Trans
 							i18nKey='network.hostname-accessible-at'
 							values={{hostname: displayedHostname}}
@@ -388,10 +390,10 @@ function HostnameSection() {
 				) : (
 					<button
 						onClick={startEditing}
-						className='flex items-center gap-1.5 rounded-8 px-2 py-1 text-white/60 transition-colors hover:bg-white/6 hover:text-white/80'
+						className='flex max-w-1/2 items-center gap-1.5 rounded-8 px-2 py-1 text-white/60 transition-colors hover:bg-white/6 hover:text-white/80'
 					>
-						<span className='text-13 font-medium -tracking-2'>{hostname}</span>
-						<TbPencil className='size-3 text-white/30' />
+						<span className='truncate text-13 font-medium -tracking-2'>{hostname}</span>
+						<TbPencil className='size-3 shrink-0 text-white/30' />
 					</button>
 				)}
 			</div>

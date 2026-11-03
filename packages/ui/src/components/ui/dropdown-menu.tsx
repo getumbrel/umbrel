@@ -65,6 +65,7 @@ function DropdownMenuSubContent({
 function DropdownMenuContent({
 	className,
 	sideOffset = 4,
+	collisionPadding = 8,
 	ref,
 	...props
 }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> & {
@@ -75,6 +76,7 @@ function DropdownMenuContent({
 			<DropdownMenuPrimitive.Content
 				ref={ref}
 				sideOffset={sideOffset}
+				collisionPadding={collisionPadding}
 				className={cn(dropdownClasses.content, className)}
 				{...props}
 				// Keep right-clicks inside from opening an ancestor's context menu, while text fields keep the browser's own

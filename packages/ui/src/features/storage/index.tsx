@@ -445,8 +445,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 												{/* Left: Status + SSD info */}
 												<div className='flex min-w-0 flex-1 items-center gap-2'>
 													{/* Checkmark when device is in RAID, warning if issues, NEW badge for a
-											    freshly detected drive (teal matches SsdShape) or its ready-to-replace
-											    state when it's reserved for a failed drive, empty otherwise */}
+											    freshly detected drive (teal matches SsdShape), empty otherwise */}
 													{isInRaid ? (
 														hasWarning ? (
 															<TbAlertTriangle className='size-5 shrink-0 text-[#F5A623]' />
@@ -454,28 +453,36 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 															<TbCircleCheckFilled className='size-5 shrink-0 text-brand' />
 														)
 													) : isReadyToAdd ? (
-														replacementCandidate && device?.id === replacementCandidate.id ? (
-															<span className='shrink-0 rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#2DD4BF]'>
-																{t('storage-manager.ready-to-replace')}
-															</span>
-														) : (
-															<span className='shrink-0 rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[#2DD4BF] uppercase'>
-																{t('storage-manager.new')}
-															</span>
-														)
+														<span className='shrink-0 rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[#2DD4BF] uppercase'>
+															{t('storage-manager.new')}
+														</span>
 													) : (
 														<div className='size-5 shrink-0' />
 													)}
-													<span className='min-w-0 truncate text-[14px] font-medium text-white/60'>
-														{slotNumber ? `SSD ${slotNumber}` : device?.name}
-														{device && (
-															<>
-																{' · '}
-																<span className='text-white'>{formatStorageSize(device.size)}</span>
-															</>
+													<div className='min-w-0'>
+														{/* Only a model name truncates, so the size after it stays in view */}
+														<div className='flex text-[14px] font-medium text-white/60'>
+															<span className='truncate'>{slotNumber ? `SSD ${slotNumber}` : device?.name}</span>
+															<span className='shrink-0 whitespace-pre'>
+																{device ? (
+																	<>
+																		{' · '}
+																		<span className='text-white'>{formatStorageSize(device.size)}</span>
+																	</>
+																) : (
+																	<span className='text-white/40'> · {t('storage-manager.empty')}</span>
+																)}
+															</span>
+														</div>
+														{/* A spare held for a failed drive says so under its name. It has no
+														    action of its own (that's on the failed drive's row), so its row
+														    gives the name the action's room too, and the words fit on one line */}
+														{replacementCandidate && device?.id === replacementCandidate.id && (
+															<span className='mt-0.5 inline-block max-w-full truncate rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#2DD4BF]'>
+																{t('storage-manager.ready-to-replace')}
+															</span>
 														)}
-														{!device && <span className='text-white/40'> · {t('storage-manager.empty')}</span>}
-													</span>
+													</div>
 												</div>
 
 												{/* Right: Health pill + Action button */}
@@ -498,8 +505,9 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 														</button>
 													)}
 
-													{/* Action button - fixed width container for alignment */}
-													<div className='w-[76px]'>{renderSsdAction(ssdStates[i], 'wide')}</div>
+													{/* Action button - a minimum width keeps the usual labels aligned,
+													    and a longer one widens it instead of crushing its icon */}
+													<div className='min-w-[76px] empty:hidden'>{renderSsdAction(ssdStates[i], 'wide')}</div>
 												</div>
 											</div>
 										))}

@@ -437,10 +437,11 @@ function GpuRing({fraction, className}: {fraction: number; className?: string}) 
 	)
 }
 
-// Single-GPU identity whisper in the summary card's title row
+// Single-GPU identity whisper in the summary card's title row. Like the
+// card's warnings, it gives way before the title beside it
 function GpuModelWhisper({device}: {device: GpuDevice}) {
 	return (
-		<span className='min-w-0 animate-in truncate text-13 font-normal -tracking-2 text-white/30 duration-300 fade-in'>
+		<span className='min-w-0 shrink-[999] animate-in truncate text-13 font-normal -tracking-2 text-white/30 duration-300 fade-in'>
 			{cleanGpuName(device.model)}
 		</span>
 	)
@@ -1012,9 +1013,10 @@ function UsageCard({
 	)
 }
 
+// A warning in a card's title row. It wraps and gives way before the title
 function ErrorMessage({children}: {children?: ReactNode}) {
 	return (
-		<div className='flex items-center gap-2 text-[#F45A5A]'>
+		<div className='flex shrink-[999] items-center gap-2 text-[#F45A5A]'>
 			<div className='h-[5px] w-[5px] animate-pulse rounded-full bg-current ring-3 ring-[#F45A5A]/20'></div>
 			<div className={cn('text-13 font-medium -tracking-2', 'leading-inter-trimmed')}>{children}</div>
 		</div>
@@ -1180,7 +1182,7 @@ function AppRowMenu({appId, onOpenChange}: {appId: string; onOpenChange?: (open:
 	)
 }
 
-// Machine counterpart of AppRowStatus: grayed state label next to the name,
+// Machine counterpart of AppRowStatus: the state label shown with the name,
 // hidden while running, with transient states marked like the app rows
 function MachineRowStatus({machineId}: {machineId: string}) {
 	const {t} = useTranslation()
@@ -1192,7 +1194,7 @@ function MachineRowStatus({machineId}: {machineId: string}) {
 		select: (mutation) => (mutation.state.variables as {id: string} | undefined)?.id,
 	})
 	if (uninstallingIds.includes(machineId)) {
-		return <span className='shrink-0 text-13 -tracking-2 text-white/40'>{t('machines.state.uninstalling') + '…'}</span>
+		return t('machines.state.uninstalling') + '…'
 	}
 
 	if (!machine || machine.state === 'running') return null
@@ -1210,11 +1212,7 @@ function MachineRowStatus({machineId}: {machineId: string}) {
 		suspended: t('machines.state.suspended'),
 	}
 	const transient = (['installing', 'starting', 'stopping', 'restarting'] as MachineState[]).includes(machine.state)
-	return (
-		<span className='shrink-0 text-13 -tracking-2 text-white/40'>
-			{stateLabels[machine.state] + (transient ? '…' : '')}
-		</span>
-	)
+	return stateLabels[machine.state] + (transient ? '…' : '')
 }
 
 // Power actions for machine rows, mirroring AppRowMenu's shape. Uninstall
@@ -1280,7 +1278,7 @@ function MachineRowMenuContent({machine, onOpenChange}: {machine: Machine; onOpe
 	)
 }
 
-// Grayed helper text next to the app name while the app is in a transient
+// Helper text shown with the app name while the app is in a transient
 // state, mirroring the desktop icon labels
 function AppRowStatus({appId}: {appId: string}) {
 	const {t} = useTranslation()
@@ -1315,9 +1313,7 @@ function AppRowStatus({appId}: {appId: string}) {
 			text = t('app.offline')
 			break
 	}
-	if (!text) return null
-
-	return <span className='shrink-0 text-13 -tracking-2 text-white/40'>{text}</span>
+	return text ?? null
 }
 
 export function AppListSkeleton({systemApps}: {systemApps?: Array<AppT>}) {
@@ -1396,9 +1392,13 @@ function AppListRow({
 					className={cn('rounded-8 shadow-md', systemApp && 'border-0', disabled && 'grayscale')}
 				/>
 			)}
-			<div className='flex min-w-0 flex-1 items-center gap-1.5'>
-				<span className='min-w-0 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
-				{status}
+			{/* The name comes first. On a phone the status goes under it, and on wider
+			    screens the status is what truncates when the two don't fit */}
+			<div className='flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:gap-1.5'>
+				<span className='min-w-0 truncate text-15 leading-tight font-medium -tracking-4 opacity-90'>{title}</span>
+				<span className='min-w-0 shrink-[999] truncate text-13 leading-tight -tracking-2 text-white/40 empty:hidden'>
+					{status}
+				</span>
 			</div>
 			{barShare !== undefined && (
 				<span className='h-1 w-14 shrink-0 overflow-hidden rounded-full bg-white/10 sm:w-24'>

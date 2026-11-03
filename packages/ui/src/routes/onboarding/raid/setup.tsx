@@ -735,7 +735,12 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 							{/* Storage breakdown bar - only shown when enabled */}
 							{failSafeEnabled && (
 								<div className='flex flex-col gap-2'>
-									<div className='flex text-[14px]'>
+									{/* Each label is as wide as its segment while there's room. With
+									    mixed drive sizes a segment can be thinner than its label's
+									    longest word: the label then keeps that width, and wraps its
+									    size under its name, while the others give way, instead of
+									    overprinting the next one */}
+									<div className='flex text-[14px] *:min-w-min *:pr-3'>
 										<span style={{width: `${(availableBytes / totalRoundedBytes) * 100}%`}}>
 											<span className='text-brand'>{t('onboarding.raid.storage-label')}</span>{' '}
 											<span className='font-medium text-brand opacity-60'>{availableStorage}</span>

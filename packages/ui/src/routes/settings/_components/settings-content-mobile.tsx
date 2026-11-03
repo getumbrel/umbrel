@@ -39,7 +39,7 @@ import {SettingsAccountAvatar, settingsPanesGridClass, settingsSidePaneClass} fr
 import {StorageCardContent} from './storage-card-content'
 
 const statCardClass = 'settings-edge-material h-full min-h-[104px] !rounded-24 !p-4 panes:min-h-0 panes:!p-5'
-const mobileActionButtonClass = 'settings-edge-material h-9 min-w-0 flex-1 rounded-full px-2 text-12 whitespace-nowrap'
+const mobileActionButtonClass = 'settings-edge-material h-9 flex-1 rounded-full px-2 text-12 whitespace-nowrap'
 
 export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) {
 	const {t} = useTranslation()
