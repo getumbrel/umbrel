@@ -616,6 +616,28 @@ export function Filmstrip({
 	)
 
 	const last = items.length - 1
+	const windows = snapWindows(range, currentIndex, last)
+	const windowsKey = windows.map(({start, end}) => `${start}-${end}`).join()
+	// A snapped scroller holds on to its snap point when the snap points change
+	// under it, and browsers disagree on which one that is: Chrome keeps the
+	// element, WebKit (every iPhone browser, and Safari) keeps its index. The
+	// strip's snap points are windowed, so whenever a window's start moves the
+	// count before the current item changes, and WebKit carried the strip to
+	// whichever item now sat at the old count — then on to the next, as the
+	// windows followed it there. The strip took each move for the user's scrub
+	// and put the item on stage: a lightbox opened deep into the library ran
+	// off towards its end. So when the snap points change under a strip at
+	// rest, snapping goes off for one layout, which drops the browser's
+	// snapped point, and back on: the browser then snaps to the nearest, the
+	// current item the strip already rests on. During the user's own scroll
+	// browsers don't re-snap, and a settle or the drive has snapping off.
+	useLayoutEffect(() => {
+		const el = scrollerRef.current
+		if (!el || state.current.owner !== 'none' || el.style.scrollSnapType !== 'x mandatory') return
+		setSnap(false)
+		void el.scrollLeft
+		setSnap(true)
+	}, [windowsKey, setSnap])
 	return (
 		<div
 			ref={scrollerRef}
@@ -661,7 +683,7 @@ export function Filmstrip({
 					className='absolute inset-y-0'
 					style={{left: `calc(50% - ${(Math.max(0, last) * SLOT) / 2}px)`}}
 				>
-					{snapWindows(range, currentIndex, last).flatMap(({start, end}) =>
+					{windows.flatMap(({start, end}) =>
 						items
 							.slice(start, end + 1)
 							.map((item, i) => (
