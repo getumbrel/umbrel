@@ -49,6 +49,7 @@ type _userMethod = Expect<IsQuery<Procedures['user']['get']>>
 type _createPhotoBackupGrantMethod = Expect<IsMutation<Procedures['photos']['createBackupGrant']>>
 type _revokePhotoBackupGrantMethod = Expect<IsMutation<Procedures['photos']['revokeBackupGrant']>>
 type _confirmedPhotoBackupResourcesMethod = Expect<IsMutation<Procedures['photos']['confirmedBackupResources']>>
+type _photoSourcesMethod = Expect<IsQuery<Procedures['photos']['sources']['list']>>
 type _appsMethod = Expect<IsQuery<Procedures['apps']['list']>>
 type _hideCredentialsMethod = Expect<IsMutation<Procedures['apps']['hideCredentialsBeforeOpen']>>
 type _appUpdatesMethod = Expect<IsQuery<Procedures['apps']['updates']>>
@@ -60,6 +61,8 @@ type _addShareMethod = Expect<IsMutation<Procedures['files']['addShare']>>
 // MARK: - Device identity and system data
 
 type _systemVersion = Expect<ServerProvides<Outputs['system']['version'], {version: string; name: string}>>
+// Also UmbrelKit's identity and liveness check for saved routes (HTTPS) and the in-app
+// browser's route (HTTP or HTTPS), with short timeouts: keep it public and cheap
 type _localHttpsIdentity = Expect<
 	ServerProvides<Outputs['system']['localHttpsIdentity'], {id: string; caCertificate: string}>
 >
@@ -206,6 +209,16 @@ type _confirmedPhotoBackupResourcesInput = Expect<
 >
 type _confirmedPhotoBackupResourcesOutput = Expect<
 	ServerProvides<Outputs['photos']['confirmedBackupResources'], Array<{resourceKey: string; bytes: number}>>
+>
+// Before starting a new backup source, the iOS app checks whether the account already
+// has iPhone backups that a new or restored iPhone would store again. It also finds its
+// own source by id, to show the name it has in Photos after a rename there. It derives
+// that id itself (backupLibrarySourceId), which a type can't pin; a unit test does.
+type _photoSourcesOutput = Expect<
+	ServerProvides<
+		Outputs['photos']['sources']['list'],
+		Array<{id: string; type: string; name: string; lastImportAt?: number; stats: {photos: number; videos: number}}>
+	>
 >
 
 // MARK: - Apps

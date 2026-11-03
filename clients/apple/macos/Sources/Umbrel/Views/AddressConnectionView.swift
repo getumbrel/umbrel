@@ -1,4 +1,5 @@
 import SwiftUI
+import UmbrelKit
 
 // Alternate first-connection route for networks where Bonjour cannot find the
 // Umbrel, including remote access over an already-configured Tailscale connection.
@@ -12,6 +13,8 @@ struct AddressConnectionView: View {
 	@State private var address = ""
 	@State private var error: String?
 	@State private var updateRequiredHost: String?
+	// A current Umbrel answered here but couldn't prove its identity
+	@State private var unverified: Umbreld.UnverifiedDevice?
 	@State private var isConnecting = false
 	@State private var connectionTask: Task<Void, Never>?
 	@FocusState private var addressFocused: Bool
@@ -51,6 +54,7 @@ struct AddressConnectionView: View {
 				.onChange(of: address) {
 					error = nil
 					updateRequiredHost = nil
+					unverified = nil
 				}
 				.accessibilityLabel("Umbrel address")
 				.padding(.top, 18)
@@ -65,18 +69,54 @@ struct AddressConnectionView: View {
 
 			if let updateRequiredHost {
 				VStack(alignment: .leading, spacing: 8) {
-					Text("Update required")
+					Text("Update to connect")
 						.font(.system(size: 12, weight: .semibold))
 						.foregroundStyle(.white.opacity(0.85))
 					Text("This Umbrel needs to be updated before it can connect to the app.")
 						.font(.system(size: 10))
 						.foregroundStyle(.secondary)
 						.fixedSize(horizontal: false, vertical: true)
-					Button("Open Umbrel") {
+					Button("Update umbrelOS") {
 						guard let url = URL(string: "http://\(updateRequiredHost)") else { return }
 						openURL(url)
 					}
 					.buttonStyle(PillButtonStyle())
+				}
+				.padding(.top, 14)
+			} else if let unverified {
+				VStack(alignment: .leading, spacing: 8) {
+					Text("Couldn\u{2019}t connect")
+						.font(.system(size: 12, weight: .semibold))
+						.foregroundStyle(.white.opacity(0.85))
+					Text(unverified.reason.explanation)
+						.font(.system(size: 10))
+						.foregroundStyle(.secondary)
+						.fixedSize(horizontal: false, vertical: true)
+					HStack(spacing: 14) {
+						Button {
+							connect()
+						} label: {
+							Group {
+								if isConnecting {
+									ProgressView().controlSize(.small)
+								} else {
+									Text("Try again")
+								}
+							}
+							.frame(height: 16)
+						}
+						.buttonStyle(PillButtonStyle(tint: Palette.indigo, pressedTint: Color(hex: 0x4840B8)))
+						.disabled(isConnecting)
+
+						// umbrelOS may still open there
+						Button("Open in browser") {
+							guard let url = URL(string: "http://\(unverified.host)") else { return }
+							openURL(url)
+						}
+						.buttonStyle(.plain)
+						.font(.system(size: 10, weight: .medium))
+						.foregroundStyle(.secondary)
+					}
 				}
 				.padding(.top, 14)
 			} else {
@@ -136,15 +176,20 @@ struct AddressConnectionView: View {
 				try Task.checkCancellation()
 				isConnecting = false
 				connectionTask = nil
+				// Try again keeps the previous answer on screen until this one arrives
+				unverified = nil
 				switch result {
 				case .device(let deviceId):
 					onSelect(deviceId)
+				case .unverified(let device):
+					unverified = device
 				case .updateRequired(let host):
 					updateRequiredHost = host
 				}
 			} catch is CancellationError {
 				return
 			} catch {
+				unverified = nil
 				self.error = error.localizedDescription
 				isConnecting = false
 				connectionTask = nil

@@ -146,6 +146,9 @@ export default router({
 	}),
 	// Public for first-use trust: native clients validate HTTPS with this CA before
 	// persisting it or sending credentials. The CA private key stays in LAN ingress.
+	// Native clients also call it as their identity and liveness check for every saved
+	// route (over HTTPS) and for the in-app browser's route (over HTTP or HTTPS), with
+	// short timeouts, so it must stay public and cheap.
 	localHttpsIdentity: publicProcedure.query(async ({ctx}) => {
 		if (!ctx.response) {
 			throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})

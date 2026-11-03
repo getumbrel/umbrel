@@ -3,12 +3,7 @@ import SwiftUI
 enum BrandColor {
 	private static let fallback = (hue: 259.0, saturation: 1.0, lightness: 0.59)
 
-	static func hsl(_ value: String?) -> String {
-		let color = components(from: value)
-		return "hsl(\(color.hue), \(color.saturation * 100)%, \(color.lightness * 100)%)"
-	}
-
-	// The same brand color as a SwiftUI Color, for buttons and the storage donut. `mixWhite`
+	// The brand color as a SwiftUI Color, for folders, buttons and the storage donut. `mixWhite`
 	// (0…1) blends it toward white, matching umbrelOS's `color-mix(..., white)` lighter shades.
 	static func color(_ value: String?, mixWhite: Double = 0) -> Color {
 		let color = components(from: value)

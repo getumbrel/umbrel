@@ -90,7 +90,9 @@ const validateAccountId = (accountId: string) => {
 	return accountId
 }
 
-// Every phone's id starts with iphone:, Android phones too (see migration v10)
+// Every phone's id starts with iphone:, Android phones too (see migration v10). The iOS
+// app derives this id itself to find its own source in sources.list, so changing it
+// strands released apps (rename-source.unit.test.ts pins it)
 const backupLibrarySourceId = (accountId: string, sourceId: string) =>
 	`iphone:${createHash('sha256').update(accountId).update('\0').update(sourceId).digest('hex')}`
 

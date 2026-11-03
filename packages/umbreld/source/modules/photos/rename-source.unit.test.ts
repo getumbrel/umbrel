@@ -75,6 +75,19 @@ test('renames only the display name and retains it across reconnects and restart
 	await expect(fse.pathExists(nodePath.join(dataDirectory, 'home', 'Photos', 'Holiday phone'))).resolves.toBe(false)
 })
 
+// The iOS app derives this id itself (UmbrelKit's NativeAPIContractTests pins the same
+// value), so it can't change without stranding released apps
+test('keeps the source id the iOS app derives', async () => {
+	await register()
+	await expect(
+		umbreld.photos.renameSource(
+			'0',
+			'iphone:90c71c0f96dda691311fcada2a00ec595e7b14c2e58206f70e1f743bb998a749',
+			'Holiday phone',
+		),
+	).resolves.toBe(true)
+})
+
 test('cannot rename another account’s source or the built-in Umbrel source', async () => {
 	const original = await register()
 	vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mockClear()

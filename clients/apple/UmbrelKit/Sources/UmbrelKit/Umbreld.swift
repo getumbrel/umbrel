@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // Minimal hand-written client for the umbreld tRPC endpoints the apps use. Wire shapes
 // are declared as plain Codable structs rather than generated from the router. Calls are
@@ -94,6 +95,23 @@ public enum Umbreld {
 		public let bytes: Int64
 	}
 
+	// A file this iPhone would upload, matched instead to one its backup already has:
+	// by this iPhone's key, or by its iCloud identity
+	public struct PhotoBackupResourceClaim: Encodable, Sendable, Equatable {
+		public let resourceKey: String
+		public let fileExtension: String
+		// Without these the file is only found under this iPhone's own key
+		public let cloudIdentifier: String?
+		public let role: String?
+
+		public init(resourceKey: String, fileExtension: String, identity: PhotoBackupCloudIdentity?) {
+			self.resourceKey = resourceKey
+			self.fileExtension = fileExtension
+			cloudIdentifier = identity?.cloudIdentifier
+			role = identity?.role.rawValue
+		}
+	}
+
 	public struct Wallpaper: Decodable, Sendable, Equatable {
 		public let id: String
 		public let brandColorHsl: String
@@ -166,16 +184,59 @@ public enum Umbreld {
 		public let onboarded: Bool
 	}
 
-	// A likely older device found through Umbrel's long-standing public version
-	// endpoint. This is only an update hint: it is never trusted as an identity or
-	// admitted to sign-in.
+	// An Umbrel whose long-standing public version endpoint reports a release older
+	// than umbrelOS 2.0. This is only an update hint: it is never trusted as an identity
+	// or admitted to sign-in.
 	public struct UpdateRequiredDevice: Equatable, Sendable {
 		public let host: String
+	}
+
+	// A current umbrelOS that answered its public version endpoint but didn't prove its
+	// identity over HTTPS, even after a quiet retry. It is never trusted as an identity
+	// or admitted to sign-in; the user can try again or open it in a browser.
+	public struct UnverifiedDevice: Equatable, Sendable {
+		public enum Reason: Equatable, Sendable {
+			// It didn't answer in the time allowed
+			case slow
+			// Anything else, such as a refused connection or a certificate its CA didn't issue
+			case unexpected
+
+			public var explanation: String {
+				switch self {
+				case .slow:
+					"Your Umbrel is taking too long to respond. It may be busy or still starting up."
+				case .unexpected:
+					"Your Umbrel didn\u{2019}t respond as expected."
+				}
+			}
+		}
+
+		public let host: String
+		// IPv4 addresses the host resolved to, so a second name for an Umbrel that did
+		// prove itself isn't shown as a separate failure
+		public let addresses: [String]
+		public let reason: Reason
+
+		public init(host: String, addresses: [String] = [], reason: Reason) {
+			self.host = host
+			self.addresses = addresses
+			self.reason = reason
+		}
+	}
+
+	public enum HostIdentification: Equatable, Sendable {
+		case device(IdentifiedDevice)
+		case unverified(UnverifiedDevice)
+		// The host proved a saved Umbrel's id but not that Umbrel's pin, as after a
+		// certificate reset. Trying again can't fix it, so it's left to the saved
+		// device's own handling rather than shown as a failed connection.
+		case savedIdentityChanged
 	}
 
 	public enum ManualDiscoveryResult: Equatable, Sendable {
 		case device(IdentifiedDevice)
 		case updateRequired(UpdateRequiredDevice)
+		case unverified(UnverifiedDevice)
 	}
 
 	public enum ManualDiscoveryError: Swift.Error, LocalizedError, Equatable, Sendable {
@@ -189,6 +250,25 @@ public enum Umbreld {
 			case .noDeviceFound:
 				"Couldn\u{2019}t find an Umbrel at this address. Make sure it\u{2019}s online and reachable."
 			}
+		}
+	}
+
+	// Hostnames that answered the public version endpoint: current Umbrels that proved
+	// their identity like any Bonjour candidate, current Umbrels that couldn't, and
+	// Umbrels too old to connect.
+	public struct FallbackDiscoveryResult: Equatable, Sendable {
+		public var devices: [IdentifiedDevice] = []
+		public var unverified: [UnverifiedDevice] = []
+		public var updateRequired: [UpdateRequiredDevice] = []
+
+		public init(
+			devices: [IdentifiedDevice] = [],
+			unverified: [UnverifiedDevice] = [],
+			updateRequired: [UpdateRequiredDevice] = []
+		) {
+			self.devices = devices
+			self.unverified = unverified
+			self.updateRequired = updateRequired
 		}
 	}
 
@@ -280,7 +360,10 @@ public enum Umbreld {
 			throw LocalHTTPSTransportError.identityChanged
 		}
 		let candidate = try LocalHTTPSTransport.certificateData(fromPEM: bootstrap.caCertificate)
-		let identity = try await discoveryInfoOverHTTPS(host: host, candidateCertificate: candidate)
+		let identity = try await discoveryInfoOverHTTPS(
+			host: host,
+			candidateCertificate: candidate,
+			deviceId: bootstrap.id)
 		guard identity.id == bootstrap.id else { throw LocalHTTPSTransportError.identityChanged }
 		return VerifiedLocalHTTPSCandidate(discoveryInfo: identity, certificate: candidate)
 	}
@@ -296,7 +379,8 @@ public enum Umbreld {
 		}
 		let identity = try await discoveryInfoOverHTTPS(
 			host: device.host,
-			candidateCertificate: certificate
+			candidateCertificate: certificate,
+			deviceId: device.id
 		)
 		guard identity.id == device.id else { throw LocalHTTPSTransportError.identityChanged }
 		switch await LocalHTTPSTransport.enroll(
@@ -342,13 +426,7 @@ public enum Umbreld {
 				sessionRead: Keychain.readSession(deviceId: target.deviceId)
 			) {
 			case .alreadyEnrolled:
-				let identity = try await discoveryInfoOverHTTPS(
-					host: host,
-					deviceId: target.deviceId
-				)
-				guard identity.id == target.deviceId else {
-					throw LocalHTTPSTransportError.identityChanged
-				}
+				try await provePinnedIdentity(host: host, deviceId: target.deviceId)
 				return true
 			case .claim:
 				break
@@ -414,18 +492,84 @@ public enum Umbreld {
 			path: "system.localHttpsIdentity")
 	}
 
-	private static func discoveryInfoOverHTTPS(host: String, deviceId: String) async throws -> DiscoveryInfo {
-		let request = try httpsRequest(host: host, path: "system.discoveryInfo", timeout: probeTimeout)
+	// Thrown when an Umbrel proved its identity and then didn't answer discoveryInfo in
+	// time. It's slow, not missing, and its other addresses would only wait the same way.
+	struct IdentityResponseTimeout: Swift.Error {}
+
+	// Proves a saved Umbrel's pinned identity at host. The anchor is the pinned CA and
+	// the id must match. system.localHttpsIdentity does no work beyond reading the id
+	// and CA, so the short timeout still fails a missing or unreachable route fast
+	// without cutting off a busy Umbrel.
+	private static func provePinnedIdentity(host: String, deviceId: String) async throws {
+		let request = try httpsRequest(host: host, path: "system.localHttpsIdentity", timeout: probeTimeout)
 		let (data, response) = try await LocalHTTPSTransport.data(for: request, deviceId: deviceId)
-		return try decodeDiscoveryInfo(data: data, response: response)
+		try requireIdentity(deviceId, data: data, response: response)
 	}
 
-	private static func discoveryInfoOverHTTPS(host: String, candidateCertificate: Data) async throws -> DiscoveryInfo {
-		let request = try httpsRequest(host: host, path: "system.discoveryInfo", timeout: probeTimeout)
+	// The same proof, after checking that this device has a pin to prove it with
+	private static func requirePinnedIdentity(host: String, deviceId: String) async throws {
+		switch Keychain.readLocalHTTPSCA(deviceId: deviceId) {
+		case .found:
+			try await provePinnedIdentity(host: host, deviceId: deviceId)
+		case .missing:
+			throw LocalHTTPSTransportError.notEnrolled
+		case .unavailable:
+			throw LocalHTTPSTransportError.storageUnavailable
+		}
+	}
+
+	// The same proof with the candidate CA from a first-use scan
+	private static func proveCandidateIdentity(host: String, candidateCertificate: Data, deviceId: String) async throws {
+		let request = try httpsRequest(host: host, path: "system.localHttpsIdentity", timeout: probeTimeout)
 		let (data, response) = try await LocalHTTPSTransport.data(
 			for: request,
 			candidateCertificate: candidateCertificate)
-		return try decodeDiscoveryInfo(data: data, response: response)
+		try requireIdentity(deviceId, data: data, response: response)
+	}
+
+	private static func requireIdentity(_ deviceId: String, data: Data, response: URLResponse) throws {
+		guard let response = response as? HTTPURLResponse else {
+			throw Umbreld.Error(status: 0, message: "system.localHttpsIdentity: unexpected response")
+		}
+		let identity: LocalHTTPSIdentity = try decodeEnvelope(
+			data: data,
+			status: response.statusCode,
+			path: "system.localHttpsIdentity")
+		guard identity.id == deviceId else { throw LocalHTTPSTransportError.identityChanged }
+	}
+
+	// The route is proven first, so a missing host still fails fast
+	private static func discoveryInfoOverHTTPS(host: String, deviceId: String) async throws -> DiscoveryInfo {
+		try await provePinnedIdentity(host: host, deviceId: deviceId)
+		return try await discoveryInfoAfterProof(host: host) { request in
+			try await LocalHTTPSTransport.data(for: request, deviceId: deviceId)
+		}
+	}
+
+	private static func discoveryInfoOverHTTPS(
+		host: String,
+		candidateCertificate: Data,
+		deviceId: String
+	) async throws -> DiscoveryInfo {
+		try await proveCandidateIdentity(host: host, candidateCertificate: candidateCertificate, deviceId: deviceId)
+		return try await discoveryInfoAfterProof(host: host) { request in
+			try await LocalHTTPSTransport.data(for: request, candidateCertificate: candidateCertificate)
+		}
+	}
+
+	// discoveryInfo reads the hardware, which can take seconds on a busy umbrelOS 2.0.0,
+	// so once the host has proven itself it gets the longer budget
+	private static func discoveryInfoAfterProof(
+		host: String,
+		send: (URLRequest) async throws -> (Data, URLResponse)
+	) async throws -> DiscoveryInfo {
+		let request = try httpsRequest(host: host, path: "system.discoveryInfo", timeout: identityResponseTimeout)
+		do {
+			let (data, response) = try await send(request)
+			return try decodeDiscoveryInfo(data: data, response: response)
+		} catch let error as URLError where error.code == .timedOut {
+			throw IdentityResponseTimeout()
+		}
 	}
 
 	// A read-only availability check for addresses already learned from a saved Umbrel.
@@ -434,8 +578,8 @@ public enum Umbreld {
 	public static func isKnownEndpointAvailable(host: String, deviceId: String) async -> Bool {
 		do {
 			guard case .found = Keychain.readLocalHTTPSCA(deviceId: deviceId) else { return false }
-			let identity = try await discoveryInfoOverHTTPS(host: host, deviceId: deviceId)
-			return identity.id == deviceId
+			try await provePinnedIdentity(host: host, deviceId: deviceId)
+			return true
 		} catch {
 			return false
 		}
@@ -450,7 +594,7 @@ public enum Umbreld {
 			for host in target.hosts {
 				group.addTask {
 					do {
-						_ = try await verifiedLocalHTTPSIdentity(host: host, expectedDeviceId: target.deviceId)
+						try await requirePinnedIdentity(host: host, deviceId: target.deviceId)
 						return .verified
 					} catch LocalHTTPSTransportError.identityChanged {
 						// Any HTTPS server at a saved address (a printer that got the Umbrel's
@@ -585,7 +729,10 @@ public enum Umbreld {
 		let identified = await withTaskGroup(of: IdentifiedDevice?.self) { group in
 			for candidate in candidates {
 				group.addTask {
-					await identifyCandidate(candidate, knownDeviceIds: knownDeviceIds)
+					// Bounded like every other identification, however many addresses it tries
+					await withDeadline(identificationDeadline) {
+						await identifyCandidate(candidate, knownDeviceIds: knownDeviceIds)
+					} ?? nil
 				}
 			}
 
@@ -597,11 +744,37 @@ public enum Umbreld {
 		}
 
 		guard !Task.isCancelled else { return [] }
-		var byId: [String: IdentifiedDevice] = [:]
-		for device in identified.sorted(by: { $0.host < $1.host }) where byId[device.id] == nil {
-			byId[device.id] = device
+		return uniqueUmbrels(identified)
+	}
+
+	// One record per Umbrel, the first by host. Records collapse only when the same
+	// anchor proved the same id: an id alone is unauthenticated, and another LAN device
+	// can claim it under its own CA.
+	static func uniqueUmbrels(_ devices: [IdentifiedDevice]) -> [IdentifiedDevice] {
+		var unique: [IdentifiedDevice] = []
+		for device in devices.sorted(by: { $0.host < $1.host })
+		where !unique.contains(where: { $0.isSameUmbrel(as: device) }) {
+			unique.append(device)
 		}
-		return byId.values.sorted { $0.host < $1.host }
+		return unique
+	}
+
+	// The operation's result, or nil once the deadline passes and the operation is
+	// cancelled
+	static func withDeadline<T: Sendable>(
+		_ deadline: Duration,
+		_ operation: @escaping @Sendable () async -> T
+	) async -> T? {
+		await withTaskGroup(of: T?.self) { group in
+			group.addTask { await operation() }
+			group.addTask {
+				try? await Task.sleep(for: deadline)
+				return nil
+			}
+			let first = await group.next() ?? nil
+			group.cancelAll()
+			return first
+		}
 	}
 
 	enum ReidentifyAnchor: Equatable, Sendable {
@@ -620,7 +793,7 @@ public enum Umbreld {
 		await reidentify(device) { host, anchor in
 			switch anchor {
 			case .candidate(let certificate):
-				try? await discoveryInfoOverHTTPS(host: host, candidateCertificate: certificate)
+				try? await discoveryInfoOverHTTPS(host: host, candidateCertificate: certificate, deviceId: device.id)
 			case .pinned(let deviceId):
 				try? await discoveryInfoOverHTTPS(host: host, deviceId: deviceId)
 			}
@@ -652,6 +825,8 @@ public enum Umbreld {
 	// covers its interface IP, not a user-controlled tailnet name. The address still supplies
 	// no identity authority: the bootstrap CA must prove the same discovery id over HTTPS,
 	// and a saved device is revalidated against its existing pin before it is returned.
+	// If that fails, only a public version older than 2.0 is reported as needing an update;
+	// a current version is asked once more and otherwise reported as unverified.
 	public static func discoverManually(
 		at input: String,
 		knownDeviceIds: Set<String> = []
@@ -680,19 +855,41 @@ public enum Umbreld {
 			}
 			candidate = resolved
 		}
-		if let device = await identifyCandidate(
-			candidate,
-			knownDeviceIds: knownDeviceIds,
-			allowsTailscaleHost: true
-		) {
-			return .device(device)
+		let attempt: @Sendable () async -> HostIdentification = {
+			await identifyWithinDeadline(candidate, deadline: identificationDeadline) {
+				await identifyReportingFailure($0, knownDeviceIds: knownDeviceIds, allowsTailscaleHost: true)
+			}
+		}
+		var identification = await attempt()
+		try Task.checkCancellation()
+		guard case .unverified(let unverified) = identification else {
+			return try manualResult(identification)
+		}
+		guard let version = await fallbackVersion(host: candidate.host) else {
+			try Task.checkCancellation()
+			throw ManualDiscoveryError.noDeviceFound
 		}
 		try Task.checkCancellation()
-		if let updateRequired = await probeFallbackHost(candidate.host) {
-			return .updateRequired(updateRequired)
+		if requiresUpdate(version: version) {
+			return .updateRequired(UpdateRequiredDevice(host: candidate.host))
 		}
-		try Task.checkCancellation()
-		throw ManualDiscoveryError.noDeviceFound
+		// A current Umbrel answered. One that failed unexpectedly may still be starting,
+		// so it's asked once more; a slow one isn't, as that would only double the wait.
+		if unverified.reason == .unexpected {
+			try await Task.sleep(for: quietRetryDelay)
+			identification = await attempt()
+			try Task.checkCancellation()
+		}
+		return try manualResult(identification)
+	}
+
+	private static func manualResult(_ identification: HostIdentification) throws -> ManualDiscoveryResult {
+		switch identification {
+		case .device(let device): return .device(device)
+		case .unverified(let device): return .unverified(device)
+		// Explains itself: the saved Umbrel has to be removed and added again
+		case .savedIdentityChanged: throw LocalHTTPSTransportError.identityChanged
+		}
 	}
 
 	static func manualDiscoveryCandidate(
@@ -767,11 +964,12 @@ public enum Umbreld {
 		return host.lowercased()
 	}
 
-	// Older umbrelOS releases predate the _umbrel._tcp advertisement, so Bonjour has
-	// nothing to enumerate. Probe only the small set of default and common hostnames in
-	// parallel; the slowest missing name therefore costs one short timeout, not seven.
-	// A custom hostname outside this list remains intentionally undiscoverable rather
-	// than turning onboarding into a noisy subnet scanner.
+	// Older umbrelOS releases predate the _umbrel._tcp advertisement, and some networks
+	// answer .local hostname lookups while filtering Bonjour service browsing. Probe only
+	// the small set of default and common hostnames in parallel; the slowest missing name
+	// therefore costs one short timeout, not seven. A custom hostname outside this list
+	// remains intentionally undiscoverable rather than turning onboarding into a noisy
+	// subnet scanner.
 	static let fallbackDiscoveryHosts = [
 		"umbrel.local",
 		"umbrel-2.local",
@@ -782,25 +980,217 @@ public enum Umbreld {
 		"umbrel-pro.local",
 	]
 
-	// Runs beside normal Bonjour discovery and reports only hosts answering the public
-	// version endpoint. The app removes anything that subsequently proves a current
-	// native identity; what remains is shown as an update hint. These plaintext responses
-	// never create trust, store state, or enable authentication.
-	public static func discoverFallbackHosts() async -> [UpdateRequiredDevice] {
-		let probes = await withTaskGroup(of: UpdateRequiredDevice?.self) { group in
+	// Runs beside normal Bonjour discovery. A host whose public version endpoint reports
+	// umbrelOS 2.0 or later is then identified exactly like a Bonjour candidate, so a
+	// current Umbrel still appears when Bonjour misses it; one that can't prove its
+	// identity is reported as unverified. Only an older version becomes an update hint,
+	// handed to onUpdateRequired as soon as the version probes finish. The plaintext
+	// version response never creates trust, stores state, or enables authentication.
+	public static func discoverFallbackHosts(
+		knownDeviceIds: Set<String> = [],
+		onUpdateRequired: @escaping @Sendable ([UpdateRequiredDevice]) async -> Void = { _ in }
+	) async -> FallbackDiscoveryResult {
+		await discoverFallbackHosts(
+			knownDeviceIds: knownDeviceIds,
+			version: { host in await fallbackVersion(host: host) },
+			candidate: { host in await fallbackCandidate(host: host) },
+			identify: { candidate, knownDeviceIds in
+				await identifyReportingFailure(candidate, knownDeviceIds: knownDeviceIds)
+			},
+			retryDelay: quietRetryDelay,
+			attemptDeadline: identificationDeadline,
+			onUpdateRequired: onUpdateRequired
+		)
+	}
+
+	// The longest a fallback scan takes: the version probes (their resource timer can
+	// fire up to a second late), resolving a host's addresses, an identification
+	// attempt, the quiet retry and a second attempt. Screens that wait for it use this.
+	public static let fallbackDiscoveryTimeLimit: Duration = .seconds(fallbackProbeTimeout + 1 + fallbackAddressTimeout)
+		+ identificationDeadline * 2 + quietRetryDelay
+
+	// Try again for an Umbrel the fallback scan reported as unverified
+	public static func identify(
+		_ device: UnverifiedDevice,
+		knownDeviceIds: Set<String> = []
+	) async -> HostIdentification {
+		await identifyWithinDeadline(await fallbackCandidate(host: device.host), deadline: identificationDeadline) {
+			await identifyReportingFailure($0, knownDeviceIds: knownDeviceIds)
+		}
+	}
+
+	typealias FallbackVersionProbe = @Sendable (_ host: String) async -> String?
+	typealias FallbackCandidate = @Sendable (_ host: String) async -> Candidate
+	typealias CandidateIdentifier = @Sendable (_ candidate: Candidate, _ knownDeviceIds: Set<String>) async
+		-> HostIdentification
+
+	static func discoverFallbackHosts(
+		knownDeviceIds: Set<String>,
+		version: @escaping FallbackVersionProbe,
+		candidate: @escaping FallbackCandidate,
+		identify: @escaping CandidateIdentifier,
+		retryDelay: Duration,
+		attemptDeadline: Duration,
+		onUpdateRequired: @Sendable ([UpdateRequiredDevice]) async -> Void
+	) async -> FallbackDiscoveryResult {
+		let answered = await withTaskGroup(of: (host: String, version: String)?.self) { group in
 			for host in fallbackDiscoveryHosts {
-				group.addTask { await probeFallbackHost(host) }
+				group.addTask { await version(host).map { (host, $0) } }
 			}
 
-			var results: [UpdateRequiredDevice] = []
+			var results: [(host: String, version: String)] = []
 			for await result in group {
 				if let result { results.append(result) }
 			}
 			return results
 		}
+		guard !Task.isCancelled else { return FallbackDiscoveryResult() }
 
-		guard !Task.isCancelled else { return [] }
-		return probes.sorted { $0.host < $1.host }
+		// Older Umbrels need nothing more, so they show now, not after the identity checks
+		let updateRequired = answered
+			.filter { requiresUpdate(version: $0.version) }
+			.map { UpdateRequiredDevice(host: $0.host) }
+			.sorted { $0.host < $1.host }
+		await onUpdateRequired(updateRequired)
+
+		let identifications = await withTaskGroup(of: HostIdentification.self) { group in
+			for answer in answered where !requiresUpdate(version: answer.version) {
+				let host = answer.host
+				group.addTask {
+					let resolved = await candidate(host)
+					return await identifyWithQuietRetry(retryDelay: retryDelay) {
+						await identifyWithinDeadline(resolved, deadline: attemptDeadline) {
+							await identify($0, knownDeviceIds)
+						}
+					}
+				}
+			}
+
+			var results: [HostIdentification] = []
+			for await result in group {
+				results.append(result)
+			}
+			return results
+		}
+		guard !Task.isCancelled else { return FallbackDiscoveryResult() }
+
+		var devices: [IdentifiedDevice] = []
+		var unverified: [UnverifiedDevice] = []
+		for identification in identifications {
+			switch identification {
+			case .device(let device): devices.append(device)
+			case .unverified(let device): unverified.append(device)
+			// Left to the saved device's own handling
+			case .savedIdentityChanged: break
+			}
+		}
+		devices = uniqueUmbrels(devices)
+		// A second name for an Umbrel that did prove itself isn't a separate failure
+		let verifiedLocations = Set(devices.flatMap { [$0.host, $0.discoveryHost] + $0.addresses }.map { $0.lowercased() })
+		unverified.removeAll { ([$0.host] + $0.addresses).contains { verifiedLocations.contains($0.lowercased()) } }
+		return FallbackDiscoveryResult(
+			devices: devices,
+			unverified: unverified.sorted { $0.host < $1.host },
+			updateRequired: updateRequired
+		)
+	}
+
+	// Identifies a candidate as identifyCandidate does, and says why it failed. An
+	// attempt that ran out of time means the Umbrel is slow; once it has answered and
+	// then run out of time, its other addresses would only wait the same way, so they're
+	// skipped.
+	static func identifyReportingFailure(
+		_ candidate: Candidate,
+		knownDeviceIds: Set<String>,
+		allowsTailscaleHost: Bool = false
+	) async -> HostIdentification {
+		struct Failures {
+			var timedOut = false
+			var answeredSlowly = false
+			var failedSavedPin = false
+		}
+		let failures = OSAllocatedUnfairLock(initialState: Failures())
+		let device = await identifyCandidate(
+			candidate,
+			knownDeviceIds: knownDeviceIds,
+			allowsTailscaleHost: allowsTailscaleHost
+		) { host, expectedDeviceId in
+			guard !failures.withLock({ $0.answeredSlowly }) else { return nil }
+			do {
+				return try await verifiedLocalHTTPSIdentity(host: host, expectedDeviceId: expectedDeviceId)
+			} catch is IdentityResponseTimeout {
+				failures.withLock {
+					$0.timedOut = true
+					$0.answeredSlowly = true
+				}
+			} catch let error as URLError where error.code == .timedOut {
+				failures.withLock { $0.timedOut = true }
+			} catch LocalHTTPSTransportError.identityChanged where expectedDeviceId != nil {
+				// These candidates carry no TXT hint, so a pinned probe only follows a
+				// first-use proof of a saved id. Only a rejected pin means its identity
+				// changed; a refused connection or an unreadable Keychain is temporary.
+				failures.withLock { $0.failedSavedPin = true }
+			} catch {}
+			return nil
+		}
+		if let device { return .device(device) }
+		let failure = failures.withLock { $0 }
+		if failure.failedSavedPin { return .savedIdentityChanged }
+		return .unverified(UnverifiedDevice(
+			host: candidate.host,
+			addresses: candidate.addresses,
+			reason: failure.timedOut ? .slow : .unexpected
+		))
+	}
+
+	// One identification attempt, bounded as a whole: however many addresses it tries,
+	// a host that hasn't proven itself by the deadline is reported as slow
+	static func identifyWithinDeadline(
+		_ candidate: Candidate,
+		deadline: Duration,
+		identify: @escaping @Sendable (Candidate) async -> HostIdentification
+	) async -> HostIdentification {
+		await withDeadline(deadline) { await identify(candidate) }
+			?? .unverified(UnverifiedDevice(host: candidate.host, addresses: candidate.addresses, reason: .slow))
+	}
+
+	// Asks once more after a moment when an attempt failed in an unexpected way, as an
+	// Umbrel that's still starting can refuse connections briefly. A slow Umbrel isn't
+	// asked again: that would only double the wait.
+	static func identifyWithQuietRetry(
+		retryDelay: Duration,
+		attempt: @Sendable () async -> HostIdentification
+	) async -> HostIdentification {
+		let first = await attempt()
+		guard case .unverified(let device) = first, device.reason == .unexpected else { return first }
+		try? await Task.sleep(for: retryDelay)
+		guard !Task.isCancelled else { return first }
+		return await attempt()
+	}
+
+	// Shaped like a Bonjour candidate: the hostname, then its IPv4 addresses in case the
+	// hostname's own route fails while an address works
+	private static func fallbackCandidate(host: String) async -> Candidate {
+		let addresses = (try? await IPv4HostResolver.resolve(host, timeout: fallbackAddressTimeout)) ?? []
+		return Candidate(
+			host: host,
+			addresses: addresses.filter(SavedDevice.isSupportedManualIPv4Address),
+			name: fallbackDeviceName(host: host)
+		)
+	}
+
+	// Bonjour names an Umbrel after its hostname, so "umbrel-2.local" becomes "umbrel-2"
+	static func fallbackDeviceName(host: String) -> String {
+		host.hasSuffix(".local") ? String(host.dropLast(".local".count)) : host
+	}
+
+	// umbrelOS 2.0 introduced everything the apps need to connect: the _umbrel._tcp
+	// advertisement, system.localHttpsIdentity and system.discoveryInfo. Its betas
+	// shipped them too, so only the major version decides. A version that can't be read
+	// is never reported as too old.
+	static func requiresUpdate(version: String) -> Bool {
+		guard let major = Int(version.prefix(while: \.isNumber)) else { return false }
+		return major < 2
 	}
 
 	private struct SystemVersion: Decodable {
@@ -808,18 +1198,14 @@ public enum Umbreld {
 		let name: String
 	}
 
-	private static func probeFallbackHost(_ host: String) async -> UpdateRequiredDevice? {
+	private static func fallbackVersion(host: String) async -> String? {
 		guard !Task.isCancelled else { return nil }
-		do {
-			try await systemVersion(host: host)
-		} catch {
-			return nil
-		}
+		let version = try? await systemVersion(host: host)
 		guard !Task.isCancelled else { return nil }
-		return UpdateRequiredDevice(host: host)
+		return version
 	}
 
-	private static func systemVersion(host: String) async throws {
+	private static func systemVersion(host: String) async throws -> String {
 		guard let url = URL(string: "http://\(host)/trpc/system.version") else {
 			throw Error(status: 0, message: "Invalid host: \(host)")
 		}
@@ -836,13 +1222,14 @@ public enum Umbreld {
 		guard let response = response as? HTTPURLResponse else {
 			throw Error(status: 0, message: "system.version: unexpected response")
 		}
-		try validateFallbackSystemVersion(data: data, status: response.statusCode)
+		return try validateFallbackSystemVersion(data: data, status: response.statusCode)
 	}
 
 	// system.version has returned both fields since umbrelOS 1.0. Requiring its stable
-	// product name avoids mistaking an unrelated service for an old Umbrel. This is
-	// still only an untrusted HTTP update hint; native identity is established elsewhere.
-	static func validateFallbackSystemVersion(data: Data, status: Int) throws {
+	// product name avoids mistaking an unrelated service for an Umbrel. The version is
+	// still only an untrusted HTTP hint; native identity is established elsewhere.
+	@discardableResult
+	static func validateFallbackSystemVersion(data: Data, status: Int) throws -> String {
 		let response: SystemVersion = try decodeEnvelope(data: data, status: status, path: "system.version")
 		guard response.name.hasPrefix("umbrelOS "),
 			!response.version.isEmpty,
@@ -850,6 +1237,7 @@ public enum Umbreld {
 		else {
 			throw Error(status: status, message: "system.version: not an umbrelOS response")
 		}
+		return response.version
 	}
 
 	// ── Wallpaper ──
@@ -1146,16 +1534,23 @@ public enum Umbreld {
 		await LocalHTTPSTransport.forget(deviceId: deviceId)
 	}
 
+	// A phone continuing another's backup renames it to `suggestedName`. Otherwise
+	// umbrelOS keeps the name of a backup it already has.
 	public static func createPhotoBackupGrant(
 		host: String,
 		session: Session,
 		sourceId: String,
-		suggestedName: String
+		suggestedName: String,
+		continuing: Bool = false
 	) async throws -> PhotoBackupGrant {
 		return try await mutate(
 			host: host,
 			path: "photos.createBackupGrant",
-			input: PhotoBackupGrantInput(sourceId: sourceId, suggestedName: suggestedName),
+			input: PhotoBackupGrantInput(
+				sourceId: sourceId,
+				suggestedName: suggestedName,
+				continuing: continuing ? true : nil
+			),
 			session: session)
 	}
 
@@ -1163,14 +1558,243 @@ public enum Umbreld {
 		target: Target,
 		session: Session,
 		sourceId: String,
-		suggestedName: String
+		suggestedName: String,
+		continuing: Bool = false
 	) async throws -> PhotoBackupGrant {
 		try await withResolvedHost(for: target, replay: .never) { host in
 			try await createPhotoBackupGrant(
 				host: host,
 				session: session,
 				sourceId: sourceId,
-				suggestedName: suggestedName)
+				suggestedName: suggestedName,
+				continuing: continuing)
+		}
+	}
+
+	// One Photos source of the signed-in account: this Umbrel's own library, or an
+	// iPhone that backs up to it. Available since umbrelOS 2.0.
+	public struct PhotoSourceSummary: Decodable, Sendable, Equatable {
+		public struct Stats: Decodable, Sendable, Equatable {
+			public let photos: Int
+			public let videos: Int
+
+			public init(photos: Int, videos: Int) {
+				self.photos = photos
+				self.videos = videos
+			}
+		}
+
+		public let id: String?
+		public let type: String
+		public let name: String
+		public let stats: Stats
+		// Kept in the Photos database; the counts come from the file index and read 0
+		// while it rebuilds
+		public let lastImportAt: Double?
+
+		public init(id: String? = nil, type: String, name: String, stats: Stats, lastImportAt: Double? = nil) {
+			self.id = id
+			self.type = type
+			self.name = name
+			self.stats = stats
+			self.lastImportAt = lastImportAt
+		}
+	}
+
+	// An iPhone's backup on the account, with the id to continue it on another iPhone
+	public struct PhotoBackupSourceDetails: Decodable, Sendable, Equatable {
+		public let id: String
+		public let name: String
+		public let stats: PhotoSourceSummary.Stats
+		public let lastImportAt: Double?
+		// When the iPhone last set up backup, which it does each time backup restarts
+		public let lastSeenAt: Double?
+		// "ios" or "android", from the phone's app. Backups from before umbrelOS recorded
+		// it have none, and are iPhones.
+		public let platform: String?
+
+		public init(
+			id: String,
+			name: String,
+			stats: PhotoSourceSummary.Stats,
+			lastImportAt: Double? = nil,
+			lastSeenAt: Double? = nil,
+			platform: String? = nil
+		) {
+			self.id = id
+			self.name = name
+			self.stats = stats
+			self.lastImportAt = lastImportAt
+			self.lastSeenAt = lastSeenAt
+			self.platform = platform
+		}
+	}
+
+	public struct PhotoBackupSources: Decodable, Sendable, Equatable {
+		public let capabilities: [String]
+		public let sources: [PhotoBackupSourceDetails]
+
+		public init(capabilities: [String], sources: [PhotoBackupSourceDetails]) {
+			self.capabilities = capabilities
+			self.sources = sources
+		}
+
+		// An iPhone restored from another can carry on its backup and claim the files it has
+		public var canContinueSource: Bool { capabilities.contains("continue-source") }
+
+		// Whether an iPhone set up from the one that made this backup can carry it on. An
+		// iPhone can't carry on an Android phone's backup.
+		public func canContinue(sourceId: String) -> Bool {
+			canContinueSource && sources.contains { $0.id == sourceId && ($0.platform == nil || $0.platform == "ios") }
+		}
+
+	}
+
+	// The account's iPhone backups with the ids to continue them. Nil from umbrelOS that
+	// can't continue a backup, which doesn't have this.
+	public static func photoBackupSources(target: Target, session: Session) async throws -> PhotoBackupSources? {
+		do {
+			return try await withResolvedHost(for: target, replay: .safe) { host in
+				// The server totals the whole library for this, which can take a while
+				try await query(host: host, path: "photos.backupSources", session: session, timeout: 30)
+			}
+		} catch let error as Error where error.status == 404 {
+			return nil
+		}
+	}
+
+	// Asks over this Umbrel's pinned connection which files the backup already has, so
+	// they aren't uploaded again. The grant names the backup, as for uploads. Matched
+	// files are recorded under this iPhone's keys, and a file this iPhone sent before
+	// gets its iCloud identity. Asking again is harmless.
+	public static func claimPhotoBackupResources(
+		target: Target,
+		grant: String,
+		resources: [PhotoBackupResourceClaim]
+	) async throws -> [PhotoBackupResourceReceipt] {
+		guard !resources.isEmpty else { return [] }
+		return try await withResolvedHost(for: target, replay: .safe) { host in
+			guard let url = URL(string: "https://\(host)\(PhotoBackupUpload.claimPath)") else {
+				throw Error(status: 0, message: "Invalid host: \(host)")
+			}
+			let request = try PhotoBackupUpload.claimRequest(url: url, grant: grant, resources: resources)
+			do {
+				let (data, response) = try await secureData(for: request, deviceId: target.deviceId)
+				guard let response = response as? HTTPURLResponse else {
+					throw Error(status: 0, message: "Unexpected claim response", kind: .protocolFailure)
+				}
+				guard let receipts = PhotoBackupUpload.claimedResources(
+					statusCode: response.statusCode,
+					data: data,
+					requested: resources
+				) else {
+					throw Error(status: response.statusCode, message: "The Umbrel didn\u{2019}t claim photo backup files")
+				}
+				return receipts
+			} catch let error as Error {
+				throw error
+			} catch is CancellationError {
+				throw CancellationError()
+			} catch let error as URLError where error.code == .cancelled {
+				throw CancellationError()
+			} catch let error as URLError where isConnectivityError(error) {
+				throw Error(status: 0, message: "Could not reach \(host)", kind: .connectivity)
+			} catch {
+				throw Error(status: 0, message: "Could not reach \(host)", kind: .protocolFailure)
+			}
+		}
+	}
+
+	public static func photoSources(host: String, session: Session) async throws -> [PhotoSourceSummary] {
+		// The server totals the whole library for this, which can take a while
+		try await query(host: host, path: "photos.sources.list", session: session, timeout: 30)
+	}
+
+	public static func photoSources(target: Target, session: Session) async throws -> [PhotoSourceSummary] {
+		try await withResolvedHost(for: target, replay: .safe) { host in
+			try await photoSources(host: host, session: session)
+		}
+	}
+
+	// This iPhone's name in Photos on the Umbrel, where it can be renamed. Nil when the
+	// source isn't listed. A timeout isn't tried again on another address, which would
+	// only add to a slow library's work for a name.
+	public static func photoBackupSourceName(
+		target: Target,
+		session: Session,
+		source: PhotoBackupSource
+	) async throws -> String? {
+		let libraryId = source.libraryId
+		let sources = try await withResolvedHost(for: target, replay: .never) { host in
+			try await photoSources(host: host, session: session)
+		}
+		return sources.first { $0.id == libraryId }?.name
+	}
+
+	public struct PhotoBackupUploadResponse: Sendable {
+		public let statusCode: Int
+		// Lowercased names
+		public let headers: [String: String]
+	}
+
+	// Sends one photo backup resource from a file over this Umbrel's pinned connection,
+	// on whichever route the resolver picks, home network or Tailscale. The backup grant
+	// authorizes it, as it does PhotoKit's own uploads.
+	public static func uploadPhotoBackupResource(
+		target: Target,
+		fileURL: URL,
+		headers: [String: String],
+		allowsCellularAccess: Bool
+	) async throws -> PhotoBackupUploadResponse {
+		// Each upload names its resource and umbreld keeps the first copy of the same
+		// bytes, so trying it again on another route is safe
+		try await withResolvedHost(for: target, replay: .safe) { host in
+			guard let url = URL(string: "https://\(host)\(PhotoBackupUpload.path)") else {
+				throw Error(status: 0, message: "Invalid host: \(host)")
+			}
+			// umbreld hashes the whole file before it answers, which takes a while for a
+			// long video
+			var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 120)
+			request.httpMethod = "POST"
+			request.allowsCellularAccess = allowsCellularAccess
+			for (field, value) in headers {
+				request.setValue(value, forHTTPHeaderField: field)
+			}
+			do {
+				let (_, response) = try await LocalHTTPSTransport.upload(
+					for: request,
+					fromFile: fileURL,
+					deviceId: target.deviceId)
+				guard let response = response as? HTTPURLResponse else {
+					throw Error(status: 0, message: "Unexpected upload response", kind: .protocolFailure)
+				}
+				var fields = [String: String]()
+				for (name, value) in response.allHeaderFields {
+					if let name = name as? String, let value = value as? String {
+						fields[name.lowercased()] = value
+					}
+				}
+				return PhotoBackupUploadResponse(statusCode: response.statusCode, headers: fields)
+			} catch let error as Error {
+				throw error
+			} catch is CancellationError {
+				throw CancellationError()
+			} catch let error as LocalHTTPSTransportError {
+				let mapped = transportError(error)
+				// Backup retries on its own, so the next try resolves the route again
+				// instead of reading another file for this one
+				if mapped.kind == .trust { await endpointResolver.invalidate(deviceId: target.deviceId, host: host) }
+				throw mapped
+			} catch let error as URLError where error.code == .cancelled {
+				throw CancellationError()
+			} catch let error as URLError where isConnectivityError(error) {
+				throw Error(status: 0, message: "Could not reach \(host)", kind: .connectivity)
+			} catch let error as URLError where isServerTrustError(error) {
+				await endpointResolver.invalidate(deviceId: target.deviceId, host: host)
+				throw Error(status: 0, message: LocalHTTPSTransportError.trustFailed.localizedDescription, kind: .trust)
+			} catch {
+				throw Error(status: 0, message: "Could not reach \(host)", kind: .protocolFailure)
+			}
 		}
 	}
 
@@ -1462,16 +2086,19 @@ public enum Umbreld {
 	}
 
 	// Browser routing has more hostname choices than native transport, but it keeps the
-	// same identity rule: a name or address is usable only when the public discovery
+	// same identity rule: a name or address is usable only when the public identity
 	// endpoint reports the saved device id. No session or other secret is sent here.
 	// Over HTTPS it trusts only the certificates this device trusts, as Safari does.
+	// system.localHttpsIdentity answers over HTTP and HTTPS on every umbrelOS 2.0 and
+	// does no work beyond reading the id, so these short timeouts don't cut off a busy
+	// Umbrel.
 	public static func isBrowserEndpoint(
 		host: String,
 		expectedDeviceId: String,
 		secure: Bool = false,
 		timeout: TimeInterval = 3
 	) async -> Bool {
-		guard let url = URL(string: "\(secure ? "https" : "http")://\(host)/trpc/system.discoveryInfo") else {
+		guard let url = URL(string: "\(secure ? "https" : "http")://\(host)/trpc/system.localHttpsIdentity") else {
 			return false
 		}
 		var request = URLRequest(
@@ -1481,7 +2108,12 @@ public enum Umbreld {
 		request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
 		do {
 			let (data, response) = try await browserProbeSession.data(for: request)
-			return try decodeDiscoveryInfo(data: data, response: response).id == expectedDeviceId
+			guard let response = response as? HTTPURLResponse else { return false }
+			let identity: LocalHTTPSIdentity = try decodeEnvelope(
+				data: data,
+				status: response.statusCode,
+				path: "system.localHttpsIdentity")
+			return identity.id == expectedDeviceId
 		} catch {
 			return false
 		}
@@ -1555,11 +2187,17 @@ public enum Umbreld {
 	struct PhotoBackupGrantInput: Encodable {
 		let sourceId: String
 		let suggestedName: String
+		// Only sent as true
+		var continuing: Bool? = nil
 	}
 
 	struct PhotoBackupResourceReceiptInput: Encodable {
 		let sourceId: String
 		let resources: [PhotoBackupResourceQuery]
+	}
+
+	struct PhotoBackupResourceClaimInput: Encodable {
+		let resources: [PhotoBackupResourceClaim]
 	}
 
 	struct HideCredentialsInput: Encodable {
@@ -1610,6 +2248,15 @@ public enum Umbreld {
 	// Short timeout for identity probes: sweeps hit several hosts in parallel and
 	// nonexistent .local hostnames should fail fast
 	private static let probeTimeout: TimeInterval = 3
+	// discoveryInfo after the host has proven itself. It reads the hardware, which can
+	// take seconds on a busy umbrelOS 2.0.0.
+	private static let identityResponseTimeout: TimeInterval = 8
+	// One whole identification attempt, across every address it tries
+	private static let identificationDeadline: Duration = .seconds(10)
+	// A host that answered the version probe resolves from the mDNS cache
+	private static let fallbackAddressTimeout: TimeInterval = 1
+	// A current Umbrel that failed unexpectedly is asked once more after this
+	private static let quietRetryDelay: Duration = .seconds(2)
 	private static let fallbackProbeTimeout: TimeInterval = 2
 	private static let fallbackResponseMaximumBytes = 16 * 1024
 	private static let sessionCoordinator = SessionCoordinator()
@@ -1659,12 +2306,8 @@ public enum Umbreld {
 		do {
 			// Treat every endpoint as an untrusted route. The device's pinned CA, not
 			// the shape of its address, proves where native credentials may be sent.
-			let identity = try await verifiedLocalHTTPSIdentity(
-				host: host,
-				expectedDeviceId: expectedDeviceId
-			).discoveryInfo
-			return identity.id == expectedDeviceId ? .verified : .rejected(.trust(
-				LocalHTTPSTransportError.identityChanged.localizedDescription))
+			try await requirePinnedIdentity(host: host, deviceId: expectedDeviceId)
+			return .verified
 		} catch is CancellationError {
 			return .unavailable
 		} catch let error as LocalHTTPSTransportError {

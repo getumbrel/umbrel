@@ -67,7 +67,7 @@ struct DeviceDetailView: View {
 
 	private func header(_ device: Device) -> some View {
 		VStack(alignment: .leading, spacing: 0) {
-			DeviceIcon(model: device.model, width: device.isPro ? 80 : 62, height: device.isPro ? 57 : 46)
+			DeviceIcon(model: device.model, placement: .detailHeader)
 
 			nameText(device)
 				.font(.system(size: 17, weight: .bold))

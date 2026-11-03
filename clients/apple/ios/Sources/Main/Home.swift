@@ -24,7 +24,7 @@ struct HomeView: View {
 				AppsSection(model: model)
 				FilesSection(
 					paths: model.favoritePaths,
-					brandHSL: BrandColor.hsl(model.wallpaperBrandColorHsl),
+					brandColor: BrandColor.color(model.wallpaperBrandColorHsl),
 					loaded: model.didLoad,
 					// /files resolves to the home of the signed-in umbrelOS account.
 					onViewAll: { openUmbrel(path: "/files") },
@@ -63,7 +63,7 @@ struct HomeView: View {
 		} message: {
 			Text(model.unreachableMessage)
 		}
-		.alert("Reconnect your Umbrel?", isPresented: $isConfirmingReconnect) {
+		.alert(IdentityChange.confirmTitle, isPresented: $isConfirmingReconnect) {
 			Button("Reconnect") {
 				isReconnecting = true
 				Task {
@@ -73,7 +73,7 @@ struct HomeView: View {
 			}
 			Button("Cancel", role: .cancel) {}
 		} message: {
-			Text("You’ll sign in again. If photo backup is on, you’ll need to turn it back on. Everything on your Umbrel stays as it is.")
+			Text(IdentityChange.confirmMessage)
 		}
 		.task(id: model.connectionState == .unverified) {
 			showsConnectionProgress = false
@@ -134,7 +134,7 @@ struct HomeView: View {
 					Text("Connected")
 				case .unavailable, .localNetworkDenied:
 					StatusDot(color: Theme.gray)
-					Text(model.identityChanged ? "Not recognized" : "Offline")
+					Text(model.identityChanged ? "Can’t verify" : "Offline")
 				}
 			}
 			.frame(minHeight: 18, alignment: .leading)
@@ -151,7 +151,7 @@ struct HomeView: View {
 		switch model.connectionState {
 		case .unverified: "Checking connection"
 		case .connected: "Connected"
-		case .unavailable, .localNetworkDenied: model.identityChanged ? "Not recognized" : "Offline"
+		case .unavailable, .localNetworkDenied: model.identityChanged ? "Can’t verify" : "Offline"
 		}
 	}
 
@@ -162,7 +162,12 @@ struct HomeView: View {
 
 	@ViewBuilder
 	private var photoBackupIssueCard: some View {
+		// While the Umbrel is unreachable, the connection card already says so. Home
+		// never shows "not connected" for backup: Home's own connection decides that.
 		if let notice = model.photoBackupNotice,
+			notice != .awayFromUmbrel,
+			// An offer, not news: Library is where it belongs
+			notice != .backUpAnywhere,
 			notice != .waitingForTailscale || model.connectionState == .connected
 		{
 			PhotoBackupNoticeCard(
@@ -182,8 +187,8 @@ struct HomeView: View {
 		case .unavailable where model.identityChanged:
 			NoticeCard(
 				icon: "lock.trianglebadge.exclamationmark",
-				title: "Umbrel not recognized",
-				message: "This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel to keep using it in this app.",
+				title: IdentityChange.title,
+				message: IdentityChange.message,
 				actionLabel: isReconnecting ? "Reconnecting…" : "Reconnect",
 				action: isReconnecting ? nil : { isConfirmingReconnect = true }
 			)
@@ -307,6 +312,32 @@ struct CircleIconButton: View {
 				.glassControl(in: Circle())
 		}
 		.accessibilityLabel(Text(accessibilityLabel))
+	}
+}
+
+// The way back to an app that opened umbrelOS, in the same glass as the header's
+// other controls.
+struct ReturnToAppButton: View {
+	let name: String
+	var action: () -> Void
+	var body: some View {
+		Button(action: action) {
+			HStack(spacing: 4) {
+				Image(systemName: "chevron.left")
+					.font(.system(size: 15, weight: .semibold))
+				// Capped so the name stays inside the header's fixed-height capsule
+				Text(name)
+					.font(.subheadline.weight(.medium))
+					.lineLimit(1)
+					.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+			}
+			.foregroundStyle(.white.opacity(0.85))
+			.padding(.leading, 12)
+			.padding(.trailing, 16)
+			.frame(height: 42)
+			.glassControl(in: Capsule())
+		}
+		.accessibilityLabel("Back to \(name)")
 	}
 }
 
@@ -699,7 +730,7 @@ private struct OverflowTile: View {
 // out 2×2 when there are four and collapsing to a single row (1×3 / 1×2 / 1×1) with fewer.
 private struct FilesSection: View {
 	let paths: [String]
-	let brandHSL: String
+	let brandColor: Color
 	let loaded: Bool
 	let onViewAll: () -> Void
 	let onOpenPath: (String) -> Void
@@ -730,7 +761,7 @@ private struct FilesSection: View {
 			ForEach(Array(paths.enumerated()), id: \.offset) { index, path in
 				let shape = Bento.tile(row: index / cols, col: index % cols, rows: rows, cols: cols)
 				Button { onOpenPath(path) } label: {
-					FolderTile(path: path, brandHSL: brandHSL)
+					FolderTile(path: path, brandColor: brandColor)
 						.frame(maxWidth: .infinity)
 						.frame(height: 100)
 						.background(Theme.tile, in: shape)
@@ -747,13 +778,13 @@ private struct FilesSection: View {
 
 private struct FolderTile: View {
 	let path: String
-	let brandHSL: String
+	let brandColor: Color
 
 	private var name: String { (path as NSString).lastPathComponent }
 
 	var body: some View {
 		VStack(spacing: 8) {
-			FolderIconView(path: path, brandHSL: brandHSL)
+			FolderIconView(path: path, brandColor: brandColor)
 				.frame(width: 44, height: 40)
 			Text(name)
 				.font(.caption2.weight(.medium))
@@ -764,14 +795,14 @@ private struct FolderTile: View {
 	}
 }
 
-// MARK: - Library preview (visible whenever the user has granted Photos access)
+// MARK: - Library preview (matches the Library tab: photos, or its setup card)
 
 private struct LibraryPreviewSection: View {
 	@Environment(MainModel.self) private var model
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 12) {
-			if model.photoLibrary.canReadLibrary {
+			if model.showsPhotoLibrary {
 				// The sync status sits in the header's trailing slot, like Apps' update
 				// count, and the card is all photos. Header + card are one tap
 				// target opening the Library tab.

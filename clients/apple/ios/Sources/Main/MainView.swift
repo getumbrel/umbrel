@@ -276,20 +276,29 @@ struct MainView: View {
 
 	private func headerBar(_ model: MainModel, browser: Browser) -> some View {
 		// Back leads from Home out to the list of Umbrels. umbrelOS has its own navigation,
-		// and the pill's X closes it.
+		// and the pill's X closes it. When an app opened umbrelOS with a link, the same
+		// corner leads back to that app, like the system's own way back to the previous app.
 		let showsBack = selection == .home && !browser.showsUmbrel
+		let returnTarget = browser.showsUmbrel ? browser.returnTarget : nil
 		return HStack {
-			// Keep the glass compositor alive across tab changes, like the browser pill.
-			// Elsewhere the control is hidden without being removed from the hierarchy.
-			CircleIconButton(system: "chevron.left", accessibilityLabel: "All Umbrels") { model.onBack() }
-				.opacity(showsBack ? 1 : 0)
-				.allowsHitTesting(showsBack)
-				.accessibilityHidden(!showsBack)
+			ZStack(alignment: .leading) {
+				// Keep the glass compositor alive across tab changes, like the browser pill.
+				// Elsewhere the control is hidden without being removed from the hierarchy.
+				CircleIconButton(system: "chevron.left", accessibilityLabel: "All Umbrels") { model.onBack() }
+					.opacity(showsBack ? 1 : 0)
+					.allowsHitTesting(showsBack)
+					.accessibilityHidden(!showsBack)
+				if let returnTarget {
+					ReturnToAppButton(name: returnTarget.identity.name) { browser.returnToApp() }
+						.transition(.opacity)
+				}
+			}
 			Spacer()
 			HeaderAccessPill(model: model)
 		}
 		.padding(.horizontal, Theme.contentInset)
 		.animation(.easeOut(duration: 0.2), value: showsBack)
+		.animation(.easeOut(duration: 0.2), value: returnTarget)
 	}
 
 	private var tabSelection: Binding<Tab> {
@@ -374,7 +383,7 @@ private struct TailscaleSetupContent: View {
 					Text("Connect from anywhere")
 						.font(.title2.bold())
 						.foregroundStyle(.white)
-					Text("Tailscale privately connects this iPhone to your Umbrel. It also powers Photo Backup.")
+					Text("Tailscale privately connects this iPhone to your Umbrel, and lets Photo Backup run in the background wherever you are.")
 						.font(.subheadline)
 						.foregroundStyle(Theme.gray)
 						.multilineTextAlignment(.center)

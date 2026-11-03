@@ -63,18 +63,23 @@ final class OnboardingModel {
 	// ── Discovery (UmbrelKit) ──
 	private let discovery = Discovery()
 
-	// Umbrel devices found through mDNS and identified by system.discoveryInfo.
-	// Raw candidates never cross into the UI or persistence path.
+	// Umbrel devices found through mDNS or the fallback hostnames and identified by
+	// system.discoveryInfo. Raw candidates never cross into the UI or persistence path.
 	private(set) var devices: [IdentifiedDevice] = []
+	// Current Umbrels at a fallback hostname that couldn't prove their identity
+	private(set) var unverifiedDevices: [Umbreld.UnverifiedDevice] = []
 	private(set) var updateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 
 	enum DiscoveryResult: Identifiable {
 		case device(IdentifiedDevice)
+		case unverified(Umbreld.UnverifiedDevice)
 		case updateRequired(Umbreld.UpdateRequiredDevice)
 
 		var id: String {
 			switch self {
-			case .device(let device): "device:\(device.id)"
+			// Two records can share an id when another LAN device claims it under its own CA
+			case .device(let device): "device:\(device.id)@\(device.host)"
+			case .unverified(let device): "unverified:\(device.host)"
 			case .updateRequired(let device): "update:\(device.host)"
 			}
 		}
@@ -82,7 +87,14 @@ final class OnboardingModel {
 
 	var discoveryResults: [DiscoveryResult] {
 		devices.map(DiscoveryResult.device)
+			+ unverifiedDevices.map(DiscoveryResult.unverified)
 			+ updateRequiredDevices.map(DiscoveryResult.updateRequired)
+	}
+
+	// Whether an Umbrel that answered is still proving its identity. A slow Umbrel can
+	// take longer than the Finding screen's grace period.
+	var isVerifyingCandidates: Bool {
+		!pendingNativeHosts.isEmpty || fallbackDiscoveryInProgress
 	}
 
 	// The device the user chose to sign in to.
@@ -91,10 +103,17 @@ final class OnboardingModel {
 	private var discoveryStarted = false
 	private var identificationTask: Task<Void, Never>?
 	private var fallbackDiscoveryTask: Task<Void, Never>?
+	private var fallbackDiscoveryInProgress = false
 	private var mdnsDevices: [IdentifiedDevice] = []
+	private var fallbackDevices: [IdentifiedDevice] = []
+	private var fallbackUnverifiedDevices: [Umbreld.UnverifiedDevice] = []
 	private var fallbackUpdateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 	private var pendingNativeHosts: Set<String> = []
 	private var manualAddressReturnStep: Step = .noDevice
+	// Bumped by every rescan, so an answer from an earlier scan can't add a stale card
+	private var scanGeneration = 0
+	// Hosts whose "Couldn't connect" card is asking again
+	private(set) var retryingHosts: Set<String> = []
 
 	// ── Local Network permission ──
 	// iOS exposes no query or request API for this permission: the dialog fires as a
@@ -272,39 +291,96 @@ final class OnboardingModel {
 	}
 
 	// Bonjour remains the primary path. This bounded fallback starts only after Local
-	// Network access is granted and checks legacy default hostnames concurrently.
+	// Network access is granted and checks default hostnames concurrently, so a current
+	// Umbrel that Bonjour misses still appears (or says why it couldn't connect) and an
+	// older one shows an update hint.
 	func startFallbackDiscoveryIfNeeded() {
 		guard fallbackDiscoveryTask == nil else { return }
+		let knownDeviceIds = savedIds
+		fallbackDiscoveryInProgress = true
 		fallbackDiscoveryTask = Task { [weak self] in
-			let devices = await Umbreld.discoverFallbackHosts()
+			let result = await Umbreld.discoverFallbackHosts(knownDeviceIds: knownDeviceIds) { [weak self] updateRequired in
+				// Older Umbrels show as soon as their version answers
+				await self?.showFallbackUpdateHints(updateRequired)
+			}
 			guard !Task.isCancelled, let self else { return }
-			fallbackUpdateRequiredDevices = devices
+			fallbackDevices = result.devices
+			fallbackUnverifiedDevices = result.unverified
+			fallbackUpdateRequiredDevices = result.updateRequired
+			fallbackDiscoveryInProgress = false
 			publishDiscoveryResults()
 		}
 	}
 
+	private func showFallbackUpdateHints(_ updateRequired: [Umbreld.UpdateRequiredDevice]) {
+		guard fallbackDiscoveryInProgress else { return }
+		fallbackUpdateRequiredDevices = updateRequired
+		publishDiscoveryResults()
+	}
+
+	// Try again on a "Couldn't connect" card. A device that now proves its identity
+	// replaces the card; otherwise the card stays, with the latest reason. An answer
+	// that arrives after a rescan belongs to the old scan and is dropped.
+	func retry(
+		_ device: Umbreld.UnverifiedDevice,
+		identify: (Umbreld.UnverifiedDevice, Set<String>) async -> Umbreld.HostIdentification
+			= Umbreld.identify(_:knownDeviceIds:)
+	) async {
+		guard retryingHosts.insert(device.host).inserted else { return }
+		let generation = scanGeneration
+		let identification = await identify(device, savedIds)
+		guard generation == scanGeneration else { return }
+		retryingHosts.remove(device.host)
+		guard !Task.isCancelled else { return }
+		fallbackUnverifiedDevices.removeAll { $0.host == device.host }
+		switch identification {
+		case .device(let identified):
+			fallbackDevices.removeAll { $0.isSameUmbrel(as: identified) }
+			fallbackDevices.append(identified)
+		case .unverified(let unverified):
+			fallbackUnverifiedDevices.append(unverified)
+		case .savedIdentityChanged:
+			// Left to the saved device's own handling; trying again can't fix it
+			break
+		}
+		publishDiscoveryResults()
+	}
+
 	private func publishDiscoveryResults() {
-		devices = mdnsDevices.sorted { $0.host < $1.host }
-		let previouslyVisible = Set(updateRequiredDevices.map { normalizedDiscoveryHost($0.host) })
+		// Bonjour's record for an Umbrel both sources found carries its addresses. A
+		// record proven under another CA is a different device, even with the same id.
+		devices = (mdnsDevices + fallbackDevices.filter { fallback in
+			!mdnsDevices.contains { $0.isSameUmbrel(as: fallback) }
+		}).sorted { $0.host < $1.host }
 		let verifiedLocations = Set(
 			devices.flatMap { [$0.host, $0.discoveryHost] + $0.addresses }.map(normalizedDiscoveryHost)
 		)
-		// Once a host proves the current native identity, consume its fallback hint so a
-		// later Bonjour loss cannot mislabel the now-offline device as needing an update.
-		fallbackUpdateRequiredDevices.removeAll {
-			verifiedLocations.contains(normalizedDiscoveryHost($0.host))
+		// Once a host proves the current native identity, consume its fallback hints so a
+		// later Bonjour loss cannot mislabel the now-offline device. A failed name that
+		// resolves to a verified Umbrel's address is that Umbrel by another name.
+		fallbackUnverifiedDevices.removeAll {
+			([$0.host] + $0.addresses).contains { verifiedLocations.contains(normalizedDiscoveryHost($0)) }
 		}
-		let updatesByHost = Dictionary(
-			fallbackUpdateRequiredDevices.map { (normalizedDiscoveryHost($0.host), $0) },
+		fallbackUpdateRequiredDevices.removeAll { verifiedLocations.contains(normalizedDiscoveryHost($0.host)) }
+		unverifiedDevices = visibleHints(fallbackUnverifiedDevices, shown: unverifiedDevices, host: \.host)
+		updateRequiredDevices = visibleHints(fallbackUpdateRequiredDevices, shown: updateRequiredDevices, host: \.host)
+	}
+
+	// One card per host. Hide a newly found fallback card while its Bonjour candidate is
+	// being verified, but keep an already-visible card (such as through the post-update
+	// handoff) until that verification succeeds.
+	private func visibleHints<Hint>(_ hints: [Hint], shown: [Hint], host: (Hint) -> String) -> [Hint] {
+		let previouslyVisible = Set(shown.map { normalizedDiscoveryHost(host($0)) })
+		let byHost = Dictionary(
+			hints.map { (normalizedDiscoveryHost(host($0)), $0) },
 			uniquingKeysWith: { first, _ in first }
 		)
-		updateRequiredDevices = updatesByHost.values.filter {
-			let host = normalizedDiscoveryHost($0.host)
-			// Hide a newly found fallback while its Bonjour candidate is being verified,
-			// but keep an already-visible update card through the post-update handoff.
-			return !pendingNativeHosts.contains(host)
-				|| (step == .deviceFound && previouslyVisible.contains(host))
-		}.sorted { $0.host < $1.host }
+		// Steps that sit on top of the results keep their cards, so Back returns to them
+		let resultsAreShowing = [Step.deviceFound, .manualAddress, .signIn].contains(step)
+		return byHost.filter { normalizedHost, _ in
+			!pendingNativeHosts.contains(normalizedHost)
+				|| (resultsAreShowing && previouslyVisible.contains(normalizedHost))
+		}.values.sorted { host($0) < host($1) }
 	}
 
 	// Keep an explicitly checked address out of scan results. The dedicated route
@@ -314,6 +390,7 @@ final class OnboardingModel {
 		try Task.checkCancellation()
 		return switch result {
 		case .device(let device): .device(device)
+		case .unverified(let device): .unverified(device)
 		case .updateRequired(let device): .updateRequired(device)
 		}
 	}
@@ -402,10 +479,16 @@ final class OnboardingModel {
 		identificationTask?.cancel()
 		fallbackDiscoveryTask?.cancel()
 		fallbackDiscoveryTask = nil
+		fallbackDiscoveryInProgress = false
+		scanGeneration += 1
+		retryingHosts = []
 		mdnsDevices = []
+		fallbackDevices = []
+		fallbackUnverifiedDevices = []
 		fallbackUpdateRequiredDevices = []
 		pendingNativeHosts = []
 		devices = []
+		unverifiedDevices = []
 		updateRequiredDevices = []
 		discovery.stop()
 		discovery.start()
@@ -419,6 +502,19 @@ final class OnboardingModel {
 		onFinished(connectedDeviceId)
 	}
 }
+
+#if DEBUG
+extension OnboardingModel {
+	// Canvas harness: scan results seeded on the results step, without discovery
+	static func preview(unverified: [Umbreld.UnverifiedDevice]) -> OnboardingModel {
+		let model = OnboardingModel()
+		model.step = .deviceFound
+		model.fallbackUnverifiedDevices = unverified
+		model.publishDiscoveryResults()
+		return model
+	}
+}
+#endif
 
 private func normalizedDiscoveryHost(_ host: String) -> String {
 	let withoutTrailingDot = host.hasSuffix(".") ? String(host.dropLast()) : host

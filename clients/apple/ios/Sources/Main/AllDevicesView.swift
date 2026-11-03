@@ -102,10 +102,8 @@ private struct DeviceCard: View {
 	}
 
 	var body: some View {
-		let isSquareRender = UmbrelDeviceKind(model: device.model) == .raspberryPi
 		HStack(spacing: 16) {
-			UmbrelDeviceRender(model: device.model)
-				.frame(width: 71, height: isSquareRender ? 60 : 52)
+			UmbrelDeviceRender(model: device.model, placement: .deviceRow)
 				.shadow(color: .black.opacity(0.16), radius: 8, y: 8)
 
 			VStack(alignment: .leading, spacing: 4) {

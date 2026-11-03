@@ -346,9 +346,7 @@ final class BrowserPage: NSObject, Identifiable {
 	}
 
 	private var notRecognized: Failure {
-		Failure(
-			title: "Can’t Open \(identity.name)",
-			message: "This app no longer recognizes your Umbrel. This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app.")
+		Failure(title: IdentityChange.alertTitle, message: IdentityChange.blockedMessage)
 	}
 }
 

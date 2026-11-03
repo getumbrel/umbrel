@@ -4,11 +4,11 @@ import SwiftUI
 import UIKit
 
 // umbreld serves app icons as external URLs, mostly SVG, which AsyncImage/UIImage can't
-// decode. We fetch the SVG (cached by URL), render it in a small on-screen WKWebView, and
-// snapshot that once to a UIImage cached in memory and on disk. After an icon renders
-// once it appears instantly forever after (scrolling, tab switches, next launch), so
-// the slow WebKit path only runs the very first time an icon is seen. Community app
-// stores often use PNG or JPEG icons instead; those are decoded directly.
+// decode. We fetch the SVG (cached by URL), draw it once with SVGRasterizer, and cache the
+// bitmap in memory and on disk. After an icon draws once it appears instantly forever
+// after (scrolling, tab switches, next launch), so WebKit only runs the very first time
+// an icon is seen. Community app stores often use PNG or JPEG icons instead; those are
+// decoded directly.
 
 // ── Rasterized-icon cache (memory + disk) ──
 @MainActor
@@ -20,7 +20,9 @@ final class IconCache {
 
 	init() {
 		let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-		directory = caches.appendingPathComponent("app-icons", isDirectory: true)
+		directory = caches.appendingPathComponent("app-icons-2", isDirectory: true)
+		// Snapshots of an on-screen web view could be saved blank, so those are drawn again
+		try? FileManager.default.removeItem(at: caches.appendingPathComponent("app-icons", isDirectory: true))
 		memory.countLimit = 128
 		memory.totalCostLimit = 32 * 1_024 * 1_024
 		try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -134,7 +136,8 @@ private final class IconNoRedirectDelegate: NSObject, URLSessionTaskDelegate {
 }
 
 // A rounded app icon: instant from cache when available, otherwise the umbrelOS
-// placeholder plus an on-screen web view that renders the SVG and caches a snapshot.
+// placeholder until the icon is drawn. One that can't be drawn keeps the placeholder
+// and is tried again the next time it appears.
 struct AppIconView: View {
 	let url: URL?
 	var size: CGFloat = 50
@@ -142,18 +145,13 @@ struct AppIconView: View {
 
 	@Environment(\.displayScale) private var displayScale
 	@State private var image: UIImage?
-	@State private var svgRender: SVGRender?
 
-	private struct SVGRender {
-		let cacheKey: String
-		let svg: String
-	}
+	private var pixelSize: Int { Int((size * displayScale).rounded(.up)) }
 
-	// WebKit snapshots at the view's rendered size. Include that pixel size so a
-	// small overflow icon is never reused and enlarged in a full-size app card.
+	// Icons are drawn at the view's pixel size. Include it so a small overflow icon is
+	// never reused and enlarged in a full-size app card.
 	private var cacheKey: String? {
 		guard let url else { return nil }
-		let pixelSize = Int((size * displayScale).rounded(.up))
 		return "\(url.absoluteString)#\(pixelSize)px"
 	}
 
@@ -166,14 +164,6 @@ struct AppIconView: View {
 					.scaledToFill()
 			} else {
 				placeholder
-				if let svgRender, svgRender.cacheKey == cacheKey {
-					SVGWebView(svg: svgRender.svg) { snapshot in
-						guard svgRender.cacheKey == cacheKey else { return }
-						IconCache.shared.store(snapshot, forKey: svgRender.cacheKey)
-						image = snapshot
-						self.svgRender = nil
-					}
-				}
 			}
 		}
 		.frame(width: size, height: size)
@@ -183,7 +173,6 @@ struct AppIconView: View {
 		.animation(.easeOut(duration: 0.25), value: image)
 		.task(id: cacheKey) {
 			image = nil
-			svgRender = nil
 			guard let url, let cacheKey else { return }
 			if let cached = IconCache.shared.image(forKey: cacheKey) {
 				image = cached
@@ -193,19 +182,21 @@ struct AppIconView: View {
 				!Task.isCancelled,
 				cacheKey == self.cacheKey
 			else { return }
+			let drawn: UIImage?
 			switch source {
 			case .svg(let svg):
-				svgRender = SVGRender(cacheKey: cacheKey, svg: svg)
+				drawn = await SVGRasterizer.shared.image(from: svg, pixelSize: pixelSize)
 			case .raster(let data):
-				guard let raster = Self.rasterIcon(data, pixelSize: (size * displayScale).rounded(.up)) else { return }
-				IconCache.shared.store(raster, forKey: cacheKey)
-				image = raster
+				drawn = Self.rasterIcon(data, pixelSize: CGFloat(pixelSize))
 			}
+			guard let drawn, !Task.isCancelled, cacheKey == self.cacheKey else { return }
+			IconCache.shared.store(drawn, forKey: cacheKey)
+			image = drawn
 		}
 	}
 
 	// Draw a PNG or JPEG icon filling a square at the icon's on-screen pixel size, like
-	// an SVG snapshot, so a large source image isn't kept in memory or on disk.
+	// an SVG icon, so a large source image isn't kept in memory or on disk.
 	private static func rasterIcon(_ data: Data, pixelSize: CGFloat) -> UIImage? {
 		guard let decoded = UIImage(data: data),
 			decoded.size.width > 0,

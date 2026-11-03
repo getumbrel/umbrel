@@ -202,7 +202,7 @@ struct UmbrelSignInForm: View {
 		} message: {
 			Text("This removes the saved Umbrel from this iPhone. Any photo and video backups will remain on your Umbrel. You can add it again at any time.")
 		}
-		.alert("Reconnect your Umbrel?", isPresented: $isConfirmingReconnect) {
+		.alert(IdentityChange.confirmTitle, isPresented: $isConfirmingReconnect) {
 			Button("Reconnect") {
 				isReconnecting = true
 				Task {
@@ -212,7 +212,7 @@ struct UmbrelSignInForm: View {
 			}
 			Button("Cancel", role: .cancel) {}
 		} message: {
-			Text("You’ll sign in again. If photo backup is on, you’ll need to turn it back on. Everything on your Umbrel stays as it is.")
+			Text(IdentityChange.confirmMessage)
 		}
 	}
 
@@ -307,7 +307,7 @@ struct UmbrelSignInForm: View {
 			return .setup
 		case .pro:
 			return .browserSetup
-		case .generic:
+		case .asusNuc14Essential, .asusNuc16Pro, .asusRogNuc16, .generic:
 			guard let devices = try? await Umbreld.internalStorageDevices(target: target) else { return .browserSetup }
 			return devices.contains(where: \.isRAIDCandidate) ? .browserSetup : .setup
 		}
@@ -334,10 +334,8 @@ struct UmbrelSignInForm: View {
 	// finds it again as it is now.
 	private var notRecognized: some View {
 		message(
-			title: "Umbrel not recognized",
-			description: onReconnect == nil
-				? "Go back and choose your Umbrel again."
-				: "This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel to keep using it in this app.",
+			title: IdentityChange.title,
+			description: onReconnect == nil ? "Go back and choose your Umbrel again." : IdentityChange.message,
 			actionTitle: onReconnect == nil ? "Go Back" : isReconnecting ? "Reconnecting…" : "Reconnect"
 		) {
 			if onReconnect == nil {

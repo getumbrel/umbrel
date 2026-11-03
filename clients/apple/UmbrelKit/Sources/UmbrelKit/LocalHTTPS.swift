@@ -16,7 +16,7 @@ enum LocalHTTPSTransportError: LocalizedError, Equatable {
 		case .invalidCertificate:
 			return "This Umbrel returned an invalid security certificate"
 		case .identityChanged:
-			return "This Umbrel’s security identity changed. Remove it and add it again to reconnect"
+			return "Can’t confirm this is your Umbrel. Its security identity changed"
 		case .storageUnavailable:
 			return "Secure connection storage is temporarily unavailable"
 		case .trustFailed:
@@ -106,6 +106,15 @@ enum LocalHTTPSTransport {
 
 	static func data(for request: URLRequest, deviceId: String) async throws -> (Data, URLResponse) {
 		try await sessions.data(for: request, deviceId: deviceId)
+	}
+
+	// The body streams from the file, so a long video never has to fit in memory
+	static func upload(
+		for request: URLRequest,
+		fromFile fileURL: URL,
+		deviceId: String
+	) async throws -> (Data, URLResponse) {
+		try await sessions.upload(for: request, fromFile: fileURL, deviceId: deviceId)
 	}
 
 	// Candidate anchors remain in memory until the live HTTPS endpoint proves both
@@ -227,6 +236,21 @@ private actor LocalHTTPSSessionPool {
 		} catch let error as URLError where error.code == .cancelled {
 			// URLSession reports a refused handshake only as a cancelled request. Say why
 			// it was refused when that happened during this request.
+			throw entry.delegate.refusal(since: started) ?? error
+		}
+	}
+
+	func upload(
+		for request: URLRequest,
+		fromFile fileURL: URL,
+		deviceId: String
+	) async throws -> (Data, URLResponse) {
+		guard let host = request.url?.host else { throw LocalHTTPSTransportError.trustFailed }
+		let entry = try entry(for: Key(deviceId: deviceId, host: normalizedHost(host)))
+		let started = ContinuousClock.now
+		do {
+			return try await entry.session.upload(for: request, fromFile: fileURL)
+		} catch let error as URLError where error.code == .cancelled {
 			throw entry.delegate.refusal(since: started) ?? error
 		}
 	}

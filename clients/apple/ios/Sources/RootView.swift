@@ -193,8 +193,15 @@ struct RootView: View {
 			}
 			await BrowserContext.removeOrphanedData(keeping: signedIn)
 		}
-		.onAppear { updateSavedDeviceDiscovery() }
+		.onAppear {
+			updateSavedDeviceDiscovery()
+			PhotoBackupAppRunner.shared.setActive(scenePhase == .active)
+		}
 		.onDisappear { savedDeviceDiscovery.stop() }
+		// Backup the app sends runs while the app is open, whichever screen shows
+		.onChange(of: scenePhase) { _, phase in
+			PhotoBackupAppRunner.shared.setActive(phase == .active)
+		}
 		.onChange(of: shouldDiscoverSavedDevices) { _, _ in
 			updateSavedDeviceDiscovery()
 		}

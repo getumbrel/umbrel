@@ -69,6 +69,7 @@ struct PopupView: View {
 			} else {
 				DeviceListView(
 					devices: listedDevices,
+					unverifiedDevices: state.unverifiedDevices,
 					updateRequiredDevices: state.updateRequiredDevices
 				) { deviceId in
 					selectedId = deviceId

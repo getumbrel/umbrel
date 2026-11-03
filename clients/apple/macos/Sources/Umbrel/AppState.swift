@@ -24,6 +24,7 @@ import UserNotifications
 final class AppState {
 	enum AddressConnectionResult {
 		case device(String)
+		case unverified(Umbreld.UnverifiedDevice)
 		case updateRequired(host: String)
 	}
 
@@ -44,6 +45,10 @@ final class AppState {
 
 	// The snapshot the UI renders from
 	private(set) var devices: [Device] = []
+	// Current Umbrels at a fallback hostname that couldn't prove their identity
+	private(set) var unverifiedDevices: [Umbreld.UnverifiedDevice] = []
+	// Hosts whose "Couldn't connect" card is asking again
+	private(set) var retryingHosts: Set<String> = []
 	private(set) var updateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 	private(set) var configStorageIssue: Config.StorageIssue?
 	// Read the service directly whenever the context menu opens so a decision made
@@ -69,6 +74,8 @@ final class AppState {
 	private var config: Config
 	private var mdnsIdentifiedCandidates: [IdentifiedDevice] = []
 	private var manuallyIdentifiedCandidates: [String: IdentifiedDevice] = [:]
+	private var fallbackIdentifiedCandidates: [IdentifiedDevice] = []
+	private var fallbackUnverifiedDevices: [Umbreld.UnverifiedDevice] = []
 	private var fallbackUpdateRequiredDevices: [Umbreld.UpdateRequiredDevice] = []
 	private var fallbackDiscoveryGeneration = 0
 	private var pendingNativeHosts: Set<String> = []
@@ -76,6 +83,8 @@ final class AppState {
 	@ObservationIgnored private var setupRefreshTask: Task<Void, Never>?
 	private var explicitlyClaimedDeviceIds = Set<String>()
 	private var initialDiscoveryWindowElapsed = false
+	// The first fallback scan, which the first search waits for like Bonjour's candidates
+	private var initialFallbackPending = true
 	private var probes: [String: ProbeRecord] = [:] // deviceId -> latest identity probe
 	private var probesInFlight: Set<String> = [] // device ids
 	private var connectionHosts: [String: String] = [:] // actual endpoint selected by UmbrelKit
@@ -122,7 +131,11 @@ final class AppState {
 	private let probeCooldown: TimeInterval = 30
 
 	private var identifiedCandidates: [IdentifiedDevice] {
-		var byId = Dictionary(uniqueKeysWithValues: mdnsIdentifiedCandidates.map { ($0.id, $0) })
+		var byId = Dictionary(fallbackIdentifiedCandidates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+		// Bonjour's record for an Umbrel both sources found carries its addresses
+		for device in mdnsIdentifiedCandidates {
+			byId[device.id] = device
+		}
 		// Prefer an explicitly checked endpoint when both sources identify the same
 		// Umbrel; it may be the Tailscale route the user needs right now.
 		for (id, device) in manuallyIdentifiedCandidates {
@@ -173,7 +186,7 @@ final class AppState {
 			reloadUnavailableSessions()
 			await self.probeSweep()
 			completedInitialReachabilityCheck = true
-			publishUpdateRequiredDevices()
+			publishFallbackHints()
 			rebuild()
 		}
 		Task {
@@ -183,10 +196,8 @@ final class AppState {
 			// period—controls when the searching state ends.
 			try? await Task.sleep(for: .seconds(2))
 			initialDiscoveryWindowElapsed = true
-			if candidateIdentificationTask == nil {
-				initialDiscoveryInProgress = false
-			}
-			publishUpdateRequiredDevices()
+			finishInitialDiscoveryIfIdle()
+			publishFallbackHints()
 		}
 		startHealthLoop()
 		startNetworkPathMonitor()
@@ -336,14 +347,12 @@ final class AppState {
 		if list.isEmpty {
 			candidateIdentificationTask = nil
 			mdnsIdentifiedCandidates = []
-			if initialDiscoveryWindowElapsed {
-				initialDiscoveryInProgress = false
-			}
-			publishUpdateRequiredDevices()
+			finishInitialDiscoveryIfIdle()
+			publishFallbackHints()
 			rebuild()
 			return
 		}
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 
 		candidateIdentificationTask = Task { [weak self] in
 			guard let self else { return }
@@ -366,8 +375,8 @@ final class AppState {
 			candidateIdentificationTask = nil
 			pendingNativeHosts = []
 			mdnsIdentifiedCandidates = identified
-			initialDiscoveryInProgress = false
-			publishUpdateRequiredDevices()
+			finishInitialDiscoveryIfIdle()
+			publishFallbackHints()
 
 			// A matching API response, never its TXT hint, authorizes remembering the
 			// route that answered. The authenticated address API later replaces this
@@ -389,34 +398,100 @@ final class AppState {
 		}
 	}
 
-	// Older umbrelOS releases do not advertise the native discovery service. Keep
-	// their public version responses separate from trusted devices: they can offer an
-	// update link, but can never enter authentication or persistence.
+	// Older umbrelOS releases do not advertise the native discovery service, and some
+	// networks filter Bonjour browsing. Current Umbrels at the common hostnames are
+	// identified like Bonjour candidates. The rest stay separate from trusted devices:
+	// they can offer a retry or a browser link, but can never enter authentication or
+	// persistence.
 	private func refreshFallbackDiscovery() async {
 		fallbackDiscoveryGeneration += 1
+		retryingHosts = []
 		let generation = fallbackDiscoveryGeneration
-		let devices = await Umbreld.discoverFallbackHosts()
+		let knownDeviceIds = Set(config.savedDevices.keys).union(explicitlyClaimedDeviceIds)
+		let result = await Umbreld.discoverFallbackHosts(knownDeviceIds: knownDeviceIds) { [weak self] updateRequired in
+			// Older Umbrels show as soon as their version answers
+			await self?.showFallbackUpdateHints(updateRequired, generation: generation)
+		}
+		// Any finished scan ends the first search, so network changes while Wi-Fi and
+		// Tailscale settle at login can't keep it searching
+		initialFallbackPending = false
+		guard generation == fallbackDiscoveryGeneration else {
+			finishInitialDiscoveryIfIdle()
+			return
+		}
+		adoptFallbackDevices(result.devices)
+		fallbackUnverifiedDevices = result.unverified
+		fallbackUpdateRequiredDevices = result.updateRequired
+		finishInitialDiscoveryIfIdle()
+		publishFallbackHints()
+		rebuild()
+	}
+
+	private func showFallbackUpdateHints(_ updateRequired: [Umbreld.UpdateRequiredDevice], generation: Int) {
 		guard generation == fallbackDiscoveryGeneration else { return }
-		fallbackUpdateRequiredDevices = devices
-		publishUpdateRequiredDevices()
+		fallbackUpdateRequiredDevices = updateRequired
+		publishFallbackHints()
+	}
+
+	// Unsaved Umbrels found at the common hostnames become candidates. Saved ones were
+	// proven against their pin, so they join the normal reachability probes instead,
+	// which keep their online state current after this one-off scan.
+	// The device list is keyed by id, so the scan's records for one id under different
+	// certificates collapse to the first.
+	private func adoptFallbackDevices(_ devices: [IdentifiedDevice]) {
+		var seenIds = Set<String>()
+		fallbackIdentifiedCandidates = devices.filter {
+			config.savedDevices[$0.id] == nil && seenIds.insert($0.id).inserted
+		}
+		for device in devices where config.savedDevices[device.id] != nil {
+			adoptSavedFallbackDevice(device)
+		}
+	}
+
+	// The scan proved this route against the saved pin. Remember it, as Connect by
+	// address does, so probes and connections reach the Umbrel when Bonjour misses it.
+	private func adoptSavedFallbackDevice(_ device: IdentifiedDevice) {
+		guard var saved = config.savedDevices[device.id] else { return }
+		saved.rememberConnectionCandidates([device.host] + device.addresses)
+		if saved != config.savedDevices[device.id] {
+			do {
+				try config.save(saved)
+			} catch {
+				reportConfigStorageIssue(error)
+			}
+		}
+		probeCompleted(deviceId: device.id, host: device.host, identity: device.discoveryInfo)
+	}
+
+	// The first search ends once Bonjour has had its window and both its candidates and
+	// the first fallback scan have finished verifying
+	private func finishInitialDiscoveryIfIdle() {
+		guard initialDiscoveryWindowElapsed, candidateIdentificationTask == nil, !initialFallbackPending else { return }
+		initialDiscoveryInProgress = false
 	}
 
 	private func invalidateFallbackDiscovery() {
 		fallbackDiscoveryGeneration += 1
+		retryingHosts = []
+		fallbackIdentifiedCandidates = []
+		fallbackUnverifiedDevices = []
 		fallbackUpdateRequiredDevices = []
+		unverifiedDevices = []
 		updateRequiredDevices = []
+		rebuild()
 	}
 
-	private func publishUpdateRequiredDevices() {
+	private func publishFallbackHints() {
 		guard !initialDiscoveryInProgress, completedInitialReachabilityCheck, !scanning else {
+			unverifiedDevices = []
 			updateRequiredDevices = []
 			return
 		}
-		let previouslyVisible = Set(updateRequiredDevices.map { normalizedDiscoveryHost($0.host) })
 		// Keep every verified route when suppressing legacy update hints. The rendered
 		// candidate prefers a manually entered endpoint for the same device id, but that
 		// must not make its verified Bonjour hostname look like a second, older Umbrel.
-		let allIdentifiedCandidates = mdnsIdentifiedCandidates + Array(manuallyIdentifiedCandidates.values)
+		let allIdentifiedCandidates = mdnsIdentifiedCandidates + fallbackIdentifiedCandidates
+			+ Array(manuallyIdentifiedCandidates.values)
 		let verifiedHosts = Set((
 			allIdentifiedCandidates.flatMap { [$0.host, $0.discoveryHost] + $0.addresses }
 				+ probes.flatMap { deviceId, probe -> [String] in
@@ -427,17 +502,58 @@ final class AppState {
 					return [probe.host].compactMap { $0 } + saved.connectionHosts
 				}
 		).map(normalizedDiscoveryHost))
-		fallbackUpdateRequiredDevices.removeAll {
-			verifiedHosts.contains(normalizedDiscoveryHost($0.host))
+		// A failed name that resolves to a verified Umbrel's address is that Umbrel by
+		// another name
+		fallbackUnverifiedDevices.removeAll {
+			([$0.host] + $0.addresses).contains { verifiedHosts.contains(normalizedDiscoveryHost($0)) }
 		}
-		let updatesByHost = Dictionary(
-			fallbackUpdateRequiredDevices.map { (normalizedDiscoveryHost($0.host), $0) },
+		fallbackUpdateRequiredDevices.removeAll { verifiedHosts.contains(normalizedDiscoveryHost($0.host)) }
+		unverifiedDevices = visibleHints(fallbackUnverifiedDevices, shown: unverifiedDevices, host: \.host)
+		updateRequiredDevices = visibleHints(fallbackUpdateRequiredDevices, shown: updateRequiredDevices, host: \.host)
+	}
+
+	// One card per host, hidden while its Bonjour candidate is being verified unless
+	// it's already showing
+	private func visibleHints<Hint>(_ hints: [Hint], shown: [Hint], host: (Hint) -> String) -> [Hint] {
+		let previouslyVisible = Set(shown.map { normalizedDiscoveryHost(host($0)) })
+		let byHost = Dictionary(
+			hints.map { (normalizedDiscoveryHost(host($0)), $0) },
 			uniquingKeysWith: { first, _ in first }
 		)
-		updateRequiredDevices = updatesByHost.values.filter {
-			let host = normalizedDiscoveryHost($0.host)
-			return !pendingNativeHosts.contains(host) || previouslyVisible.contains(host)
-		}.sorted { $0.host < $1.host }
+		return byHost.filter { normalizedHost, _ in
+			!pendingNativeHosts.contains(normalizedHost) || previouslyVisible.contains(normalizedHost)
+		}.values.sorted { host($0) < host($1) }
+	}
+
+	// Try again on a "Couldn't connect" card. A device that now proves its identity
+	// replaces the card; otherwise the card stays, with the latest reason. An answer
+	// that arrives after a rescan or network change belongs to the old scan and is
+	// dropped.
+	func retry(_ device: Umbreld.UnverifiedDevice) async {
+		guard retryingHosts.insert(device.host).inserted else { return }
+		let generation = fallbackDiscoveryGeneration
+		let knownDeviceIds = Set(config.savedDevices.keys).union(explicitlyClaimedDeviceIds)
+		let identification = await Umbreld.identify(device, knownDeviceIds: knownDeviceIds)
+		guard generation == fallbackDiscoveryGeneration else { return }
+		retryingHosts.remove(device.host)
+		fallbackUnverifiedDevices.removeAll { $0.host == device.host }
+		switch identification {
+		case .device(let identified):
+			if config.savedDevices[identified.id] != nil {
+				adoptSavedFallbackDevice(identified)
+			} else {
+				// Keyed by id here, unlike iOS: one record per id
+				fallbackIdentifiedCandidates.removeAll { $0.id == identified.id }
+				fallbackIdentifiedCandidates.append(identified)
+			}
+		case .unverified(let unverified):
+			fallbackUnverifiedDevices.append(unverified)
+		case .savedIdentityChanged:
+			// Left to the saved device's own handling; trying again can't fix it
+			break
+		}
+		publishFallbackHints()
+		rebuild()
 	}
 
 	// Saved hosts need periodic liveness probes when no identified mDNS candidate
@@ -457,12 +573,14 @@ final class AppState {
 		invalidateFallbackDiscovery()
 		discovery.stop()
 		discovery.start()
-		async let fallback: Void = refreshFallbackDiscovery()
+		// A slow Umbrel can keep the fallback scan busy for a while. Its results publish
+		// whenever they land, and the generation check drops a superseded scan.
+		Task { await refreshFallbackDiscovery() }
 		async let savedDeviceProbes: Void = probeSweep(force: true)
 		try? await Task.sleep(for: .seconds(2))
-		_ = await (fallback, savedDeviceProbes)
+		await savedDeviceProbes
 		scanning = false
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 	}
 
 	// Connect-by-address is a navigation flow, not another discovery source. A verified
@@ -497,10 +615,12 @@ final class AppState {
 				// Keep the candidate only while it is needed to drive first sign-in.
 				manuallyIdentifiedCandidates[device.id] = device
 				connectionHosts[device.id] = device.host
-				publishUpdateRequiredDevices()
+				publishFallbackHints()
 				rebuild()
 			}
 			return .device(device.id)
+		case .unverified(let device):
+			return .unverified(device)
 		case .updateRequired(let device):
 			return .updateRequired(host: device.host)
 		}
@@ -513,6 +633,7 @@ final class AppState {
 		config.savedDevices[deviceId] == nil
 			&& manuallyIdentifiedCandidates[deviceId] != nil
 			&& !mdnsIdentifiedCandidates.contains(where: { $0.id == deviceId })
+			&& !fallbackIdentifiedCandidates.contains(where: { $0.id == deviceId })
 	}
 
 	func discardUnsavedManualDevice(_ deviceId: String) {
@@ -520,7 +641,7 @@ final class AppState {
 		manuallyIdentifiedCandidates[deviceId] = nil
 		connectionHosts[deviceId] = nil
 		let discardedClaim = explicitlyClaimedDeviceIds.remove(deviceId) != nil
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 		rebuild()
 		if discardedClaim {
 			Task { await Umbreld.forgetLocalHTTPSIdentity(deviceId: deviceId) }
@@ -553,7 +674,7 @@ final class AppState {
 	}
 
 	private func refreshDevicesAwaitingSetup() async {
-		let awaitingSetup = (mdnsIdentifiedCandidates + manuallyIdentifiedCandidates.values)
+		let awaitingSetup = (mdnsIdentifiedCandidates + fallbackIdentifiedCandidates + manuallyIdentifiedCandidates.values)
 			.filter { !$0.onboarded && config.savedDevices[$0.id] == nil }
 		guard !awaitingSetup.isEmpty else { return }
 		let finished = await withTaskGroup(of: (IdentifiedDevice, IdentifiedDevice)?.self) { group in
@@ -576,6 +697,9 @@ final class AppState {
 		for (checked, current) in finished {
 			if let index = mdnsIdentifiedCandidates.firstIndex(of: checked) {
 				mdnsIdentifiedCandidates[index] = current
+			}
+			if let index = fallbackIdentifiedCandidates.firstIndex(of: checked) {
+				fallbackIdentifiedCandidates[index] = current
 			}
 			if manuallyIdentifiedCandidates[checked.id] == checked {
 				manuallyIdentifiedCandidates[checked.id] = current
@@ -633,7 +757,7 @@ final class AppState {
 		} else {
 			connectionHosts[deviceId] = nil
 		}
-		publishUpdateRequiredDevices()
+		publishFallbackHints()
 		rebuild()
 	}
 
@@ -724,6 +848,14 @@ final class AppState {
 				deviceId: deviceId,
 				host: connectionHosts[deviceId] ?? manualDevice.host,
 				identity: manualDevice.discoveryInfo
+			)
+		}
+		if let fallbackDevice = fallbackIdentifiedCandidates.first(where: { $0.id == deviceId }) {
+			fallbackIdentifiedCandidates.removeAll { $0.id == deviceId }
+			probeCompleted(
+				deviceId: deviceId,
+				host: connectionHosts[deviceId] ?? fallbackDevice.host,
+				identity: fallbackDevice.discoveryInfo
 			)
 		}
 
@@ -1446,14 +1578,12 @@ final class AppState {
 		// (for example when Tailscale updates its routes). Likewise, keep the last bounded
 		// fallback snapshot visible until the replacement probe completes instead of
 		// briefly clearing every legacy device. The generation check in
-		// refreshFallbackDiscovery ensures only the newest path refresh can publish.
-		async let fallback: Void = refreshFallbackDiscovery()
+		// refreshFallbackDiscovery ensures only the newest path refresh can publish, so
+		// a slow scan isn't awaited here.
+		Task { await refreshFallbackDiscovery() }
 		let savedDevices = Array(config.savedDevices.values)
 		let deviceIds = Set(savedDevices.map(\.id))
-		guard !deviceIds.isEmpty else {
-			await fallback
-			return
-		}
+		guard !deviceIds.isEmpty else { return }
 
 		while !probesInFlight.isDisjoint(with: deviceIds) {
 			do {
@@ -1469,7 +1599,6 @@ final class AppState {
 		for deviceId in deviceIds where sessions[deviceId] != nil {
 			mountAllInBackground(deviceId, silent: true)
 		}
-		await fallback
 	}
 
 	private func startHealthLoop() {

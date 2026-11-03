@@ -127,6 +127,39 @@ final class NativeAPIContractTests: XCTestCase {
 		XCTAssertTrue(result)
 	}
 
+	func testPhotoSourcesDecode() throws {
+		let sources: [Umbreld.PhotoSourceSummary] = try decode(
+			#"{"result":{"data":[{"id":"umbrel","type":"umbrel","name":"Umbrel","createdAt":0,"stats":{"photos":120,"videos":4,"sizeBytes":9},"scope":{"mode":"everything","paths":[]}},{"id":"iphone:a","type":"iphone","name":"iPhone","createdAt":1,"stats":{"photos":0,"videos":0,"sizeBytes":0}},{"id":"iphone:b","type":"iphone","name":"Nate\u2019s iPhone","createdAt":1,"stats":{"photos":0,"videos":3,"sizeBytes":5},"future":true},{"id":"iphone:c","type":"iphone","name":"Old iPhone","createdAt":1,"lastImportAt":1700000000000,"stats":{"photos":0,"videos":0,"sizeBytes":0}}]}}"#)
+		XCTAssertEqual(sources.map(\.name), ["Umbrel", "iPhone", "Nate\u{2019}s iPhone", "Old iPhone"])
+		XCTAssertEqual(sources.map(\.id), ["umbrel", "iphone:a", "iphone:b", "iphone:c"])
+		XCTAssertEqual(sources.map(\.type), ["umbrel", "iphone", "iphone", "iphone"])
+		XCTAssertEqual(sources.map(\.lastImportAt), [nil, nil, nil, 1_700_000_000_000])
+	}
+
+	// umbreld's backupLibrarySourceId: "iphone:" and the SHA-256 of the account id, a NUL
+	// and the source id. The app finds its own source in Photos by it. umbreld's
+	// rename-source tests pin the same value.
+	func testBackupSourceIdMatchesThePhotosLibraryId() {
+		let source = PhotoBackupSource(id: "11111111-1111-4111-8111-111111111111", accountId: "0", name: "iPhone")
+		XCTAssertEqual(source.libraryId, "iphone:90c71c0f96dda691311fcada2a00ec595e7b14c2e58206f70e1f743bb998a749")
+	}
+
+	func testBackupSourcesDecodeAndSayWhichAnIPhoneCanContinue() throws {
+		let sources: Umbreld.PhotoBackupSources = try decode(
+			#"{"result":{"data":{"capabilities":["continue-source","future"],"sources":[{"id":"11111111-1111-4111-8111-111111111111","name":"Old iPhone","createdAt":1,"lastImportAt":5,"stats":{"photos":10,"videos":0,"sizeBytes":9}},{"id":"22222222-2222-4222-8222-222222222222","name":"Nate\u2019s iPhone","createdAt":2,"lastImportAt":3,"lastSeenAt":8,"platform":"ios","stats":{"photos":0,"videos":2,"sizeBytes":4}},{"id":"44444444-4444-4444-8444-444444444444","name":"Pixel 9","createdAt":4,"lastImportAt":9,"platform":"android","stats":{"photos":5,"videos":0,"sizeBytes":5}}]}}}"#)
+		XCTAssertTrue(sources.canContinueSource)
+		XCTAssertEqual(sources.sources.map(\.name), ["Old iPhone", "Nate\u{2019}s iPhone", "Pixel 9"])
+		// A backup from before umbrelOS recorded a platform is an iPhone's
+		XCTAssertTrue(sources.canContinue(sourceId: "11111111-1111-4111-8111-111111111111"))
+		XCTAssertTrue(sources.canContinue(sourceId: "22222222-2222-4222-8222-222222222222"))
+		// Never an Android phone's, or one the Umbrel doesn't have
+		XCTAssertFalse(sources.canContinue(sourceId: "44444444-4444-4444-8444-444444444444"))
+		XCTAssertFalse(sources.canContinue(sourceId: "33333333-3333-4333-8333-333333333333"))
+		// Nor on an Umbrel that can't continue one
+		let older = Umbreld.PhotoBackupSources(capabilities: [], sources: sources.sources)
+		XCTAssertFalse(older.canContinue(sourceId: "11111111-1111-4111-8111-111111111111"))
+	}
+
 	func testShippedMutationPayloadsKeepTheirWireKeys() throws {
 		XCTAssertEqual(
 			try jsonObject(
@@ -161,6 +194,17 @@ final class NativeAPIContractTests: XCTestCase {
 			])
 		XCTAssertEqual(
 			try jsonObject(
+				Umbreld.PhotoBackupGrantInput(
+					sourceId: "123e4567-e89b-12d3-a456-426614174000",
+					suggestedName: "Alice’s iPhone",
+					continuing: true)),
+			[
+				"sourceId": "123e4567-e89b-12d3-a456-426614174000",
+				"suggestedName": "Alice’s iPhone",
+				"continuing": true,
+			])
+		XCTAssertEqual(
+			try jsonObject(
 				Umbreld.PhotoBackupResourceReceiptInput(
 					sourceId: "123e4567-e89b-12d3-a456-426614174000",
 					resources: [
@@ -177,6 +221,40 @@ final class NativeAPIContractTests: XCTestCase {
 					"resourceKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 					"fileExtension": "heic",
 				]],
+			]
+		)
+		// The cloud identifier goes as it is here, unlike its Base64 upload header
+		XCTAssertEqual(
+			try jsonObject(
+				Umbreld.PhotoBackupResourceClaimInput(
+					resources: [
+						.init(
+							resourceKey: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+							fileExtension: "mov",
+							identity: try XCTUnwrap(PhotoBackupCloudIdentity(cloudIdentifier: "ABC:001:xyz", role: .livePhotoMotion))
+						),
+						// An edited file is only found by its key
+						.init(
+							resourceKey: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+							fileExtension: "heic",
+							identity: nil
+						),
+					]
+				)
+			),
+			[
+				"resources": [
+					[
+						"resourceKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+						"fileExtension": "mov",
+						"cloudIdentifier": "ABC:001:xyz",
+						"role": "live-photo-motion",
+					],
+					[
+						"resourceKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+						"fileExtension": "heic",
+					],
+				],
 			]
 		)
 		XCTAssertEqual(

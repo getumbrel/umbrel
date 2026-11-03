@@ -12,12 +12,21 @@ import UmbrelKit
 @MainActor
 @Observable
 final class Browser {
+	struct ReturnTarget: Equatable {
+		let origin: String
+		let identity: BrowserPage.Identity
+		let url: URL
+	}
+
 	// An app, presented over everything with its own title bar.
 	private(set) var page: BrowserPage?
 	private(set) var isPresented = false
 	// umbrelOS, shown in place of the native screens on the same wallpaper.
 	private(set) var umbrel: BrowserPage?
 	private(set) var showsUmbrel = false
+	// The app that opened umbrelOS with a link, so umbrelOS can offer the way back to
+	// it. Only where it was is kept, not its page, so this holds nothing open.
+	private(set) var returnTarget: ReturnTarget?
 	// Whether the status bar should use light (white) content over the current page.
 	var prefersLightStatusBar = true
 
@@ -79,6 +88,18 @@ final class Browser {
 
 	func closeUmbrel() {
 		showsUmbrel = false
+		returnTarget = nil
+	}
+
+	// Back to the app that opened umbrelOS, where it was. If its page was released in
+	// the meantime, it opens again at the same place.
+	func returnToApp() {
+		guard let target = returnTarget, let context else { return }
+		show(
+			page(origin: target.origin, identity: target.identity, in: context),
+			at: target.url,
+			resuming: true,
+			from: nil)
 	}
 
 	// The presentation ended, by the close button or by gesture.
@@ -120,11 +141,19 @@ final class Browser {
 		context?.updateHosts(model.browserHosts)
 		page.open(url, resuming: resuming)
 		if page === umbrel {
-			// umbrelOS takes over in place; any app on top steps aside for it.
-			isPresented = false
+			// umbrelOS takes over in place; any app on top steps aside for it. A page
+			// covers the whole screen, and the views under it aren't updated while it
+			// does, so the page is dismissed directly. Its icon is hidden behind
+			// umbrelOS, so it fades away instead of shrinking into it.
+			if isPresented, let app = self.page, let location = app.shownURL ?? app.currentURL {
+				returnTarget = ReturnTarget(origin: app.origin, identity: app.identity, url: location)
+			}
 			showsUmbrel = true
+			sourceID = nil
+			close()
 			return
 		}
+		returnTarget = nil
 		pages.removeAll { $0 === page }
 		pages.insert(page, at: 0)
 		for stale in pages.dropFirst(Self.warmPageLimit) where stale !== self.page {
@@ -194,6 +223,7 @@ final class Browser {
 		pages = []
 		umbrel = nil
 		showsUmbrel = false
+		returnTarget = nil
 		let context = BrowserContext(deviceId: deviceId, accountId: accountId, hosts: model.browserHosts)
 		self.context = context
 		return context

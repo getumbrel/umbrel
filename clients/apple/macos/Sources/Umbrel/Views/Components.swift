@@ -32,6 +32,9 @@ enum Assets {
 	static let logo = image("umbrel-logo", "webp")
 	static let deviceHome = image("umbrel-home", "webp")
 	static let devicePro = image("umbrel-pro", "webp")
+	static let deviceAsusNuc14Essential = image("system-asus-nuc-14-essential", "webp")
+	static let deviceAsusNuc16Pro = image("system-asus-nuc-16-pro", "webp")
+	static let deviceAsusRogNuc16 = image("system-asus-rog-nuc-16", "webp")
 	static let devicePi = image("system-pi", "svg")
 	static let deviceGeneric = image("system-generic-device", "svg")
 	static let folder = image("folder", "webp")
@@ -43,13 +46,16 @@ enum Assets {
 	static let trayAlert = template("IconAlertTemplate")
 
 	// Model strings come from umbreld's detectDevice() via the TXT hint or the
-	// discoveryInfo probe: "Umbrel Home (2025)", "Umbrel Pro", "Raspberry Pi 5",
-	// or a raw SMBIOS product name for generic x86. nil = offline saved device
-	// with no stored model, shown as generic hardware.
+	// discoveryInfo probe: "Umbrel Home (2025)", "Umbrel Pro", "ASUS NUC 16 Pro",
+	// "Raspberry Pi 5", or a raw SMBIOS product name for generic x86. nil = offline
+	// saved device with no stored model, shown as generic hardware.
 	static func deviceImage(model: String?) -> NSImage {
 		switch UmbrelDeviceKind(model: model) {
 		case .home: deviceHome
 		case .pro: devicePro
+		case .asusNuc14Essential: deviceAsusNuc14Essential
+		case .asusNuc16Pro: deviceAsusNuc16Pro
+		case .asusRogNuc16: deviceAsusRogNuc16
 		case .raspberryPi: devicePi
 		case .generic: deviceGeneric
 		}
@@ -107,15 +113,46 @@ struct VisualEffectBackground: NSViewRepresentable {
 
 // ── Device art ──
 
+// Where a device image is drawn. The renders have very different proportions, so each
+// gets its own box per place, giving it about the area of the Umbrel Home render there
+// (the Pro keeps its larger box). The upright ROG stops at about 1.4x the Home's height,
+// and list rows keep their 45pt column so names line up.
+enum DeviceIconPlacement {
+	case listRow
+	case welcomeCard
+	case detailHeader
+
+	func size(for kind: UmbrelDeviceKind) -> CGSize {
+		switch (self, kind) {
+		case (.listRow, .home), (.listRow, .generic): CGSize(width: 33, height: 31)
+		case (.listRow, .pro): CGSize(width: 45, height: 31)
+		case (.listRow, .raspberryPi): CGSize(width: 33, height: 33)
+		case (.listRow, .asusNuc14Essential): CGSize(width: 45, height: 17)
+		case (.listRow, .asusNuc16Pro): CGSize(width: 42, height: 19)
+		case (.listRow, .asusRogNuc16): CGSize(width: 17, height: 34)
+		case (.welcomeCard, .home), (.welcomeCard, .raspberryPi), (.welcomeCard, .generic): CGSize(width: 108, height: 80)
+		case (.welcomeCard, .pro): CGSize(width: 162, height: 99)
+		case (.welcomeCard, .asusNuc14Essential): CGSize(width: 151, height: 56)
+		case (.welcomeCard, .asusNuc16Pro): CGSize(width: 139, height: 61)
+		case (.welcomeCard, .asusRogNuc16): CGSize(width: 56, height: 110)
+		case (.detailHeader, .home), (.detailHeader, .raspberryPi), (.detailHeader, .generic): CGSize(width: 62, height: 46)
+		case (.detailHeader, .pro): CGSize(width: 80, height: 57)
+		case (.detailHeader, .asusNuc14Essential): CGSize(width: 87, height: 32)
+		case (.detailHeader, .asusNuc16Pro): CGSize(width: 80, height: 35)
+		case (.detailHeader, .asusRogNuc16): CGSize(width: 32, height: 63)
+		}
+	}
+}
+
 // Device images must get explicit width AND height: letting scaledToFit derive the
 // height from the aspect ratio collapses the image inside these row layouts.
 struct DeviceIcon: View {
 	let model: String?
-	let width: CGFloat
-	let height: CGFloat
+	let placement: DeviceIconPlacement
 
 	var body: some View {
 		let kind = UmbrelDeviceKind(model: model)
+		let frame = placement.size(for: kind)
 		// Match umbrelOS: the bare Pi mark sits in a device-shaped tile so it has
 		// comparable visual weight to the hardware renders.
 		if kind == .raspberryPi {
@@ -140,12 +177,12 @@ struct DeviceIcon: View {
 				.frame(width: size, height: size)
 				.frame(maxWidth: .infinity, maxHeight: .infinity)
 			}
-			.frame(width: width, height: height)
+			.frame(width: frame.width, height: frame.height)
 		} else {
 			Image(nsImage: Assets.deviceImage(model: model))
 				.resizable()
 				.scaledToFit()
-				.frame(width: width, height: height)
+				.frame(width: frame.width, height: frame.height)
 		}
 	}
 }
