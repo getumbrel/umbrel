@@ -14,8 +14,8 @@ wait_for_devices() {
     local devices=("$@")
     local missing_devices=()
     echo ">>> Waiting for devices to appear: ${devices[*]}"
-    # 50 checks with 0.1s sleep = 5 second timeout
-    for i in {1..50}; do
+    # 150 checks with 0.2s sleep = 30 second timeout (allows SAS HBAs/drives time to negotiate and register)
+    for i in {1..150}; do
         local all_devices_present="true"
         missing_devices=()
         for dev in "${devices[@]}"; do
@@ -28,11 +28,11 @@ wait_for_devices() {
             echo ">>> All devices present"
             break
         fi
-        if [ "$i" = "50" ]; then
-            echo ">>> wait_for_devices timeout reached after 5 seconds, missing: ${missing_devices[*]}"
+        if [ "$i" = "150" ]; then
+            echo ">>> wait_for_devices timeout reached after 30 seconds, missing: ${missing_devices[*]}"
             break
         fi
-        sleep 0.1
+        sleep 0.2
     done
 }
 
@@ -105,7 +105,8 @@ fi
 if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
     echo ">>> Found RAID config for pool '${POOL_NAME}' with ${#DEVICES[@]} devices"
 
-    # Load zfs
+    # Load storage controller drivers and zfs
+    modprobe mpt3sas 2>/dev/null || true
     modprobe zfs
 
     # Attempt to wait for devices

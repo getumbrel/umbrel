@@ -15,7 +15,7 @@ function kelvinToCelsius(kelvin: number): number {
 
 export type SsdDevice = {
 	type: 'ssd'
-	transport: 'nvme' | 'sata'
+	transport: 'nvme' | 'sata' | 'sas'
 	device: string
 	id?: string
 	pciSlotNumber?: number
@@ -35,7 +35,7 @@ export type SsdDevice = {
 
 export type HddDevice = {
 	type: 'hdd'
-	transport: 'sata'
+	transport: 'sata' | 'sas'
 	device: string
 	id?: string
 	slot?: number
@@ -194,7 +194,7 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 	const {blockdevices} = JSON.parse(stdout) as {blockdevices: LsBlkDevice[]}
 
 	// Filter to internal disk devices by transport protocol
-	const supportedTransports = ['nvme', 'sata']
+	const supportedTransports = ['nvme', 'sata', 'sas']
 	const internalBlockDevices = blockdevices.filter(
 		(device) => device.type === 'disk' && supportedTransports.includes(device.tran ?? ''),
 	)
@@ -206,7 +206,10 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 			const id = await getDeviceId(device.name).catch(() => undefined)
 			const size = device.size ?? 0
 			const isNvme = device.tran === 'nvme'
-			const name = device.model?.trim() ?? (isNvme ? 'Unknown NVMe Device' : 'Unknown SATA Device')
+			const isSas = device.tran === 'sas'
+			const name =
+				device.model?.trim() ??
+				(isNvme ? 'Unknown NVMe Device' : isSas ? 'Unknown SAS Device' : 'Unknown SATA Device')
 			const model = device.model?.trim() ?? 'Unknown'
 			const serial = device.serial?.trim() ?? 'Unknown'
 			const roundedSize = getRoundedDeviceSize(size)
@@ -223,7 +226,7 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 			if (isSsd) {
 				return {
 					type: 'ssd' as const,
-					transport: device.tran as 'nvme' | 'sata',
+					transport: (device.tran === 'sas' ? 'sas' : isNvme ? 'nvme' : 'sata') as 'nvme' | 'sata' | 'sas',
 					device: device.name,
 					id,
 					pciSlotNumber,
@@ -242,7 +245,7 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 
 			return {
 				type: 'hdd' as const,
-				transport: 'sata' as const,
+				transport: (device.tran === 'sas' ? 'sas' : 'sata') as 'sata' | 'sas',
 				device: device.name,
 				id,
 				name,
