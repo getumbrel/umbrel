@@ -117,8 +117,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.umbrel.app
         APP_GROUP_IDENTIFIER: group.com.umbrel.app.photos
-        MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: "40"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "41"
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
@@ -166,8 +166,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.umbrel.app.photo-background-upload
         APP_GROUP_IDENTIFIER: group.com.umbrel.app.photos
-        MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: "40"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "41"
         GENERATE_INFOPLIST_FILE: NO
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.9"

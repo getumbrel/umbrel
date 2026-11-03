@@ -624,15 +624,19 @@ struct StatusDot: View {
 }
 
 // What the app says when a saved Umbrel answers with a new identity. That's expected
-// after the user resets it, but it's also what someone pretending to be the Umbrel
-// looks like, so the words ask them to check before they sign in again.
+// after its certificate is reset or it's restored from a backup (backups leave out the
+// certificates), and anyone with access to the Umbrel may have done it. It's also what
+// someone pretending to be the Umbrel looks like, so the words ask people to check
+// before they reconnect. A factory reset or new storage gives a new id, so Home never
+// shows this for them, but the sign-in sheet still can: it only sees the refused
+// certificate.
 enum IdentityChange {
 	static let title = "Can’t confirm this is your Umbrel"
 	static let alertTitle = "Can’t Confirm This Is Your Umbrel"
-	static let message = "Its security identity changed. That’s expected if you recently reset your Umbrel or its certificate, restored a backup or set up its storage again. If you didn’t, don’t sign in. Someone on this network could be pretending to be your Umbrel."
+	static let message = "Its security identity changed. That’s expected if it was restored from a backup or its certificate was reset since this iPhone last connected. If neither happened, don’t reconnect. Someone on this network could be pretending to be your Umbrel."
 	static let blockedMessage = "Its security identity changed, so this didn’t open. Check Home before reconnecting."
-	static let confirmTitle = "Did you reset your Umbrel?"
-	static let confirmMessage = "Only reconnect if you recently reset your Umbrel or its certificate, restored a backup or set up its storage again. Not sure? Reconnect at home, on your own Wi-Fi.\n\nYou’ll sign in again. If photo backup is on, you’ll need to turn it back on."
+	static let confirmTitle = "Was your Umbrel restored or its certificate reset?"
+	static let confirmMessage = "Only reconnect if one of these happened, and do it at home, on your own Wi-Fi. Not sure? Ask whoever manages your Umbrel.\n\nYou’ll sign in again. If photo backup is on, you’ll need to turn it back on."
 }
 
 // MARK: - Loading states
