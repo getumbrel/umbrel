@@ -20,7 +20,6 @@ import {
 } from '../test-utilities/os-update.ts'
 import {
 	createRootKey,
-	createRootKeyHandover,
 	createSigningKeysList,
 	createManifest,
 	createReleaseManifestFiles,
@@ -243,11 +242,13 @@ describe('Release signing', () => {
 			])
 		})
 
-		test('fetches and saves a newer approved keys list when it starts', async () => {
-			await pWaitFor(async () => (await savedSigningKeys()) === publishedList.trimEnd(), {
-				interval: 1000,
-				timeout: 60_000,
-			})
+		// Starting only saves the list the release ships with, since a list's revocations only matter when
+		// the device checks for or installs an update
+		test('fetches and saves a newer approved keys list when it checks for an update, not before', async () => {
+			expect(await savedSigningKeys()).not.toBe(publishedList.trimEnd())
+			await publish({signer: alice})
+			await umbreld.client.update.check.query()
+			expect(await savedSigningKeys()).toBe(publishedList.trimEnd())
 		})
 
 		test('shows the name and release notes from the signed release, not the update server', async () => {
@@ -484,8 +485,6 @@ describe('Release signing', () => {
 
 		// In an emergency the root key can sign a release by itself, and it can move to a new hardware wallet
 		describe('the root key', () => {
-			const newRootKey = createRootKey()
-
 			test('can sign a release by itself, whatever the list requires', async () => {
 				const twoSignerList = createSigningKeysList({
 					date: '2026-07-15T00:00:00Z',
@@ -503,32 +502,14 @@ describe('Release signing', () => {
 				)
 			})
 
-			test('moves to a new key with a handover the list a release carries ends with', async () => {
-				const handedOver = createSigningKeysList({
+			test('can sign a later list that needs one signer again', async () => {
+				const oneSignerList = createSigningKeysList({
 					date: '2026-08-01T00:00:00Z',
 					keys: [signingKey(alice), signingKey(carol), signingKey(dave)],
-					rootKey: newRootKey,
-					handovers: [createRootKeyHandover({date: '2026-07-20T00:00:00Z', from: rootKey, to: newRootKey})],
+					rootKey,
 				})
-				await expectVerified(await publish({signer: alice, signingKeysList: handedOver}))
-				expect(await savedSigningKeys()).toBe(handedOver.trimEnd())
-			})
-
-			test('only the new key can sign releases by itself', async () => {
-				await expectRefused(
-					await publish({signers: [], rootKey}),
-					'This release has an invalid signature from the root key',
-				)
-				await expectVerified(await publish({signers: [], rootKey: newRootKey}))
-			})
-
-			test("ignores the old key's lists from then on", async () => {
-				api.respond(
-					apiSigningKeysUrl,
-					createSigningKeysList({date: '2026-09-01T00:00:00Z', keys: [signingKey(mallory)], rootKey}),
-				)
-				await expectRefused(await publish({signer: mallory}), "This release is signed by a key that isn't approved")
-				expect(await savedSigningKeys()).toContain(newRootKey.publicKey)
+				await expectVerified(await publish({signer: alice, signingKeysList: oneSignerList}))
+				expect(await savedSigningKeys()).toBe(oneSignerList.trimEnd())
 			})
 		})
 

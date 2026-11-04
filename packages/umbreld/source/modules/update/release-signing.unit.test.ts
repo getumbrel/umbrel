@@ -111,7 +111,6 @@ describe('verifySigningKeysList()', () => {
 			requiredSignatures: 1,
 			keys,
 			revokedReleases: [],
-			handovers: [],
 			rootKey: rootKey.publicKey,
 			text,
 		})
@@ -303,157 +302,37 @@ describe('verifySigningKeysList()', () => {
 	})
 })
 
-// The root key can move to a new hardware wallet: it signs a handover to the new key, which signs lists
-// from then on. Handovers chain, so it can move again.
+// umbrelOS 2.1.0 Beta 1 followed root key handovers in keys lists, so a stolen root key could hand every
+// device over to a key of its own for good. This release ignores them, so only its own root key ever
+// signs a list.
 describe('root key handovers', () => {
-	const [first, second, third, other] = [createRootKey(), createRootKey(), createRootKey(), createRootKey()]
+	const [first, second] = [createRootKey(), createRootKey()]
 	const keys = [
 		{name: 'alice-mbp-2026', publicKey: '026935f7c9f454e1d2be6168a78fe99b877468031d5fd2a4f0c5c0cd486d743cee'},
 	]
-	const firstToSecond = createRootKeyHandover({date: '2027-01-01T00:00:00Z', from: first, to: second})
-	const secondToThird = createRootKeyHandover({date: '2028-01-01T00:00:00Z', from: second, to: third})
-	const list = (rootKey: RootKey, handovers: string[], date = '2028-06-01T00:00:00Z') =>
-		createSigningKeysList({date, keys, rootKey, handovers})
-	const verify = (text: string) => verifySigningKeysList(text, first.publicKey)
-	// A handover from one key to another that the key it hands over from never signed
-	const unsignedHandover = (from: RootKey, to: RootKey) =>
-		createRootKeyHandover({date: '2029-01-01T00:00:00Z', from, to}).replace(
-			/^Root-Signature: .*$/m,
-			`Root-Signature: ${signBitcoinMessage('x', to.privateKey)}`,
-		)
+	const handover = createRootKeyHandover({date: '2027-01-01T00:00:00Z', from: first, to: second})
+	const list = (rootKey: RootKey) =>
+		createSigningKeysList({date: '2027-06-01T00:00:00Z', keys, rootKey, handovers: [handover]})
 
-	test('accepts a list signed by the root key a handover moved to', () => {
-		const verified = verify(list(second, [firstToSecond]))
-		expect(verified.rootKey).toBe(second.publicKey)
-		expect(verified.handovers).toMatchObject([
-			{date: new Date('2027-01-01T00:00:00Z'), from: first.publicKey, to: second.publicKey},
-		])
+	test('refuses a list signed by the key a handover hands over to', () => {
+		expect(() => verifySigningKeysList(list(second), first.publicKey)).toThrow(
+			'Approved signing keys list is not signed by the root key',
+		)
+	})
+
+	test('accepts a list its own root key signed, ignoring a handover with it', () => {
+		const verified = verifySigningKeysList(list(first), first.publicKey)
+		expect(verified.rootKey).toBe(first.publicKey)
 		expect(verified.keys).toEqual(keys)
-	})
-
-	test('follows a chain of handovers', () => {
-		expect(verify(list(third, [firstToSecond, secondToThird])).rootKey).toBe(third.publicKey)
-	})
-
-	test('rejects a list signed by a root key it handed over from', () => {
-		for (const text of [list(first, [firstToSecond]), list(second, [firstToSecond, secondToThird])]) {
-			expect(() => verify(text)).toThrow('not signed by the root key')
-		}
-	})
-
-	test('rejects handovers not signed by the root key they hand over from', () => {
-		const forged = createRootKeyHandover({date: '2027-01-01T00:00:00Z', from: first, to: other}).replace(
-			/^Root-Signature: .*$/m,
-			`Root-Signature: ${signBitcoinMessage('x', other.privateKey)}`,
-		)
-		expect(() => verify(list(other, [forged]))).toThrow('not signed by the root key it hands over from')
-	})
-
-	test('rejects handovers out of order', () => {
-		// One that doesn't start from the root key at the end of the chain so far
-		const fromFirstAgain = createRootKeyHandover({date: '2028-01-01T00:00:00Z', from: first, to: third})
-		expect(() => verify(list(third, [firstToSecond, fromFirstAgain]))).toThrow('out of order')
-		// One that doesn't start from the release's root key
-		expect(() => verify(list(third, [secondToThird]))).toThrow('out of order')
-		// Dated before the one before it
-		const earlier = createRootKeyHandover({date: '2026-01-01T00:00:00Z', from: second, to: third})
-		expect(() => verify(list(third, [firstToSecond, earlier]))).toThrow('out of order')
-	})
-
-	test('rejects malformed handovers', () => {
-		for (const handover of [
-			firstToSecond.replace(`To: ${second.publicKey}`, 'To: not a key'),
-			firstToSecond.replace(`To: ${second.publicKey}`, `To: ${first.publicKey}`),
-			firstToSecond.replace('Schema: 1', 'Schema: 2'),
-			firstToSecond.replace(/Root-Signature: .*\n$/, ''),
-		]) {
-			expect(() => verify(list(second, [handover])), handover).toThrow()
-		}
-	})
-
-	test('follows handovers past blocks it does not know', () => {
-		const text = list(third, [firstToSecond, `--- Something Later ---\nSchema: 2\n`, secondToThird])
-		expect(verify(text).rootKey).toBe(third.publicKey)
-	})
-
-	// Whoever has a retired root key can copy the real handovers into a list they sign, and add their own
-	describe('a retired root key', () => {
-		test("can't get back in with a fake handover to it", () => {
-			const fake = unsignedHandover(other, first)
-			for (const handovers of [
-				[firstToSecond, fake],
-				[firstToSecond, secondToThird, fake],
-				[fake, firstToSecond],
-				[fake],
-			]) {
-				expect(() => verify(list(first, handovers))).toThrow('out of order')
-			}
-		})
-
-		test("can't hand over again with a fake handover from it", () => {
-			const fake = unsignedHandover(first, other)
-			expect(() => verify(list(other, [fake, firstToSecond]))).toThrow('not signed by the root key it hands over from')
-		})
-
-		// A device that has seen it handed over only takes lists that continue the chain from it
-		test("can't replace the list of a device that has seen it handed over", () => {
-			const handedOver = verify(list(second, [firstToSecond], '2027-06-01T00:00:00Z'))
-			const firstToOther = createRootKeyHandover({date: '2027-02-01T00:00:00Z', from: first, to: other})
-			expect(newestSigningKeysList([handedOver, verify(list(other, [firstToOther], '2030-01-01T00:00:00Z'))])).toBe(
-				handedOver,
-			)
-			// Or by copying the handover with where it comes from changed, so a chain could start after it
-			const rewritten = firstToSecond.replace(`From: ${first.publicKey}`, `From: ${other.publicKey}`)
-			expect(() => verify(list(other, [rewritten, firstToOther], '2030-01-01T00:00:00Z'))).toThrow('out of order')
-		})
-
-		// Once the root key was handed back, an older handover from it is still validly signed
-		test("can't replay a handover from before the root key was handed back to it", () => {
-			const secondToFirst = createRootKeyHandover({date: '2028-01-01T00:00:00Z', from: second, to: first})
-			const handedBack = verify(list(first, [firstToSecond, secondToFirst], '2028-06-01T00:00:00Z'))
-			const secondToOther = createRootKeyHandover({date: '2029-01-01T00:00:00Z', from: second, to: other})
-			const replayed = verify(list(other, [firstToSecond, secondToOther], '2030-01-01T00:00:00Z'))
-			expect(newestSigningKeysList([handedBack, replayed])).toBe(handedBack)
-		})
-	})
-
-	// A list's root signature only covers its own block, so anyone serving a list can attach handovers to it
-	test("doesn't take a list with a handover attached that isn't part of its chain", () => {
-		const junk = unsignedHandover(other, third)
-		const current = verify(list(first, [], '2026-01-01T00:00:00Z'))
-		for (const handovers of [[junk], [firstToSecond, junk], [junk, firstToSecond]]) {
-			const signer = handovers.includes(firstToSecond) ? second : first
-			expect(() => verify(list(signer, handovers, '2027-06-01T00:00:00Z'))).toThrow()
-		}
-		// So later lists, like one revoking a key or handing the root key over, are still taken
-		const handedOver = verify(list(second, [firstToSecond], '2027-06-01T00:00:00Z'))
-		expect(newestSigningKeysList([current, handedOver])).toBe(handedOver)
-	})
-
-	test('follows a chain that hands back to an earlier root key', () => {
-		const secondToFirst = createRootKeyHandover({date: '2028-01-01T00:00:00Z', from: second, to: first})
-		expect(verify(list(first, [firstToSecond, secondToFirst])).rootKey).toBe(first.publicKey)
-		expect(() => verify(list(second, [firstToSecond, secondToFirst]))).toThrow('not signed by the root key')
-	})
-
-	test('formats lists with handovers the way they are signed', () => {
-		const text = list(third, [firstToSecond, secondToThird])
-		const parsed = parseSigningKeysList(text)
-		expect(formatSigningKeysList(parsed)).toBe(text)
 	})
 })
 
-// Rather than particular attacks: every list someone could make from the real handovers, changed copies of
-// them and the keys they hold
 describe('keys lists from anyone without the root key a device trusts', () => {
-	const [k0, k1, k2, attacker] = [createRootKey(), createRootKey(), createRootKey(), createRootKey()]
+	const [k0, k1, attacker] = [createRootKey(), createRootKey(), createRootKey()]
 	const keys = [
 		{name: 'alice-mbp-2026', publicKey: '026935f7c9f454e1d2be6168a78fe99b877468031d5fd2a4f0c5c0cd486d743cee'},
 	]
-	const real = [
-		createRootKeyHandover({date: '2027-01-01T00:00:00Z', from: k0, to: k1}),
-		createRootKeyHandover({date: '2028-01-01T00:00:00Z', from: k1, to: k2}),
-	]
+	const real = createRootKeyHandover({date: '2027-01-01T00:00:00Z', from: k0, to: k1})
 	const list = (rootKey: RootKey, handovers: string[], date: string) =>
 		createSigningKeysList({date, keys, rootKey, handovers})
 	const verifyOrUndefined = (text: string) => {
@@ -464,70 +343,42 @@ describe('keys lists from anyone without the root key a device trusts', () => {
 		}
 	}
 
-	// The handovers someone holding these keys could put in a list: the real ones, their own from the keys
-	// they hold, real ones with a field changed or their signature removed, and an unsigned one
-	const handoversFrom = (held: RootKey[]) => [
-		...real,
-		...held.map((key) => createRootKeyHandover({date: '2029-01-01T00:00:00Z', from: key, to: attacker})),
-		...real.flatMap((handover) => [
-			handover.replace(/^From: .*$/m, `From: ${attacker.publicKey}`),
-			handover.replace(/^To: .*$/m, `To: ${attacker.publicKey}`),
-			handover.replace(/^Date: .*$/m, 'Date: 2029-06-01T00:00:00Z'),
-			handover.replace(/^Root-Signature: .*\n/m, ''),
-		]),
+	// The handovers someone could put in a list: one the root key really signed, their own, the real one
+	// with a field changed or its signature removed, and an unsigned one back to the root key
+	const handovers = [
+		real,
+		createRootKeyHandover({date: '2029-01-01T00:00:00Z', from: k0, to: attacker}),
+		createRootKeyHandover({date: '2029-01-01T00:00:00Z', from: k1, to: attacker}),
+		real.replace(/^To: .*$/m, `To: ${attacker.publicKey}`),
+		real.replace(/^Root-Signature: .*\n/m, ''),
 		`--- umbrelOS Root Key Handover ---\nSchema: 1\nDate: 2029-01-01T00:00:00Z\nFrom: ${attacker.publicKey}\nTo: ${k0.publicKey}\n`,
 	]
+	// Every sequence of up to two of them, repeats included
+	const sequences = [
+		[],
+		...handovers.map((first) => [first]),
+		...handovers.flatMap((a) => handovers.map((b) => [a, b])),
+	]
 
-	// Every sequence of up to three of them, repeats included
-	const sequences = (pool: string[]) => {
-		let current: string[][] = [[]]
-		const all = [...current]
-		for (let length = 1; length <= 3; length++) {
-			current = current.flatMap((sequence) => pool.map((handover) => [...sequence, handover]))
-			all.push(...current)
-		}
-		return all
-	}
-
-	test("never takes a list whose chain doesn't continue its own", () => {
-		// Devices that have seen the first handover, and both
-		for (const seen of [1, 2]) {
-			const current = verifyOrUndefined(list([k1, k2][seen - 1], real.slice(0, seen), '2028-06-01T00:00:00Z'))!
-			// Every root key it has seen handed over, and their own, but never the one it trusts now
-			const held = [k0, k1, k2].slice(0, seen)
-			for (const handovers of sequences(handoversFrom(held))) {
-				for (const signer of [...held, attacker]) {
-					const candidate = verifyOrUndefined(list(signer, handovers, '2030-01-01T00:00:00Z'))
-					expect(newestSigningKeysList([current, candidate])).toBe(current)
-				}
+	test('only takes a list its own root key signed, whatever handovers it carries', () => {
+		const current = verifyOrUndefined(list(k0, [], '2028-01-01T00:00:00Z'))!
+		for (const carried of sequences) {
+			for (const signer of [k1, attacker]) {
+				expect(verifyOrUndefined(list(signer, carried, '2030-01-01T00:00:00Z'))).toBeUndefined()
 			}
-		}
-	})
-
-	// Like handovers attached to a genuine newer list, which its root signature doesn't cover
-	test('never takes a list that stops it taking later genuine ones', () => {
-		const current = verifyOrUndefined(list(k0, [], '2026-01-01T00:00:00Z'))!
-		const later = verifyOrUndefined(list(k2, real, '2031-01-01T00:00:00Z'))!
-		for (const handovers of sequences(handoversFrom([k0, k1]))) {
-			for (const signer of [k0, k1, k2]) {
-				const taken = newestSigningKeysList([
-					current,
-					verifyOrUndefined(list(signer, handovers, '2029-01-01T00:00:00Z')),
-				])!
-				expect(newestSigningKeysList([taken, later])).toBe(later)
-			}
+			const genuine = verifyOrUndefined(list(k0, carried, '2030-01-01T00:00:00Z'))!
+			expect(genuine.rootKey).toBe(k0.publicKey)
+			expect(newestSigningKeysList([current, genuine])).toBe(genuine)
 		}
 	})
 })
 
 describe('newestSigningKeysList()', () => {
-	const [first, second, other] = [createRootKey(), createRootKey(), createRootKey()]
+	const rootKey = createRootKey()
 	const keys = [
 		{name: 'alice-mbp-2026', publicKey: '026935f7c9f454e1d2be6168a78fe99b877468031d5fd2a4f0c5c0cd486d743cee'},
 	]
-	const handover = createRootKeyHandover({date: '2027-01-01T00:00:00Z', from: first, to: second})
-	const list = (date: string, rootKey = first, handovers: string[] = []) =>
-		verifySigningKeysList(createSigningKeysList({date, keys, rootKey, handovers}), first.publicKey)
+	const list = (date: string) => verifySigningKeysList(createSigningKeysList({date, keys, rootKey}), rootKey.publicKey)
 
 	test('picks the most recently dated list, preferring the first on a tie', () => {
 		const [older, newer, sameDate] = [
@@ -538,41 +389,6 @@ describe('newestSigningKeysList()', () => {
 		expect(newestSigningKeysList([older, undefined, newer])).toBe(newer)
 		expect(newestSigningKeysList([newer, older])).toBe(newer)
 		expect(newestSigningKeysList([newer, sameDate])).toBe(newer)
-	})
-
-	test('picks a later list that hands the root key over', () => {
-		const handedOver = list('2027-01-02T00:00:00Z', second, [handover])
-		expect(newestSigningKeysList([list('2026-12-01T00:00:00Z'), handedOver])).toBe(handedOver)
-	})
-
-	// So whoever has a retired root key can't undo the handover for a device that has seen it
-	test("never replaces a list with a later one that doesn't continue its handovers", () => {
-		const handedOver = list('2027-01-02T00:00:00Z', second, [handover])
-		const fromRetiredRoot = list('2030-01-01T00:00:00Z')
-		const otherHandover = list('2030-01-01T00:00:00Z', other, [
-			createRootKeyHandover({date: '2029-01-01T00:00:00Z', from: first, to: other}),
-		])
-		expect(newestSigningKeysList([handedOver, fromRetiredRoot, otherHandover])).toBe(handedOver)
-	})
-
-	// Two sources serving different handovers means a retired root key signed one, so neither is trusted
-	// whichever source answers first
-	// Like any other lists, so a device that hasn't seen the real handover can be fooled by the retired key
-	test('picks the most recently dated of lists that hand the root key over to different keys', () => {
-		const current = list('2026-12-01T00:00:00Z')
-		const handedOver = list('2027-01-02T00:00:00Z', second, [handover])
-		const otherHandover = list('2027-01-03T00:00:00Z', other, [
-			createRootKeyHandover({date: '2026-12-31T00:00:00Z', from: first, to: other}),
-		])
-		expect(newestSigningKeysList([current, otherHandover, handedOver])).toBe(otherHandover)
-		expect(newestSigningKeysList([current, handedOver, otherHandover])).toBe(otherHandover)
-	})
-
-	// A device that took one before seeing the handover keeps it, as nothing tells the two apart
-	test('keeps a later list from the retired root key it took before seeing the handover', () => {
-		const handedOver = list('2027-01-02T00:00:00Z', second, [handover])
-		const fromRetiredRoot = list('2030-01-01T00:00:00Z')
-		expect(newestSigningKeysList([fromRetiredRoot, handedOver])).toBe(fromRetiredRoot)
 	})
 })
 
@@ -915,16 +731,18 @@ describe('readSignatureFile()', () => {
 		}
 	})
 
-	test('follows handovers past blocks it does not know', () => {
+	test('ignores a root key handover, so only its own root key can sign the list it carries', () => {
 		const next = createRootKey()
 		const handover = createRootKeyHandover({date: '2026-12-01T00:00:00Z', from: rootKey, to: next})
-		const list = createSigningKeysList({
-			date: '2026-12-02T00:00:00Z',
-			keys: [{name: alice.name, publicKey: alice.publicKey}],
-			rootKey: next,
-		})
-		const signatureFile = [list, '--- Something Later ---\nSchema: 2\n', handover].join('\n')
-		expect(readSignatureFile(signatureFile, rootKey.publicKey).signingKeys?.rootKey).toBe(next.publicKey)
+		const signedBy = (key: RootKey) =>
+			createSigningKeysList({
+				date: '2026-12-02T00:00:00Z',
+				keys: [{name: alice.name, publicKey: alice.publicKey}],
+				rootKey: key,
+			})
+		const signatureFile = (key: RootKey) => [signedBy(key), '--- Something Later ---\nSchema: 2\n', handover].join('\n')
+		expect(readSignatureFile(signatureFile(next), rootKey.publicKey).signingKeys).toBeUndefined()
+		expect(readSignatureFile(signatureFile(rootKey), rootKey.publicKey).signingKeys?.rootKey).toBe(rootKey.publicKey)
 	})
 
 	test('reads no signatures from a file without any', () => {
@@ -1225,7 +1043,7 @@ describe('verifyRelease()', () => {
 			}
 		})
 
-		test('rejects one from another key, like a root key it handed over from', async () => {
+		test('rejects one from another key', async () => {
 			await expect(verify([], {rootSignatures: rootSignature(manifestMessage, createRootKey())})).rejects.toThrow(
 				'This release has an invalid signature from the root key',
 			)
@@ -1436,8 +1254,9 @@ describe('schema 1', () => {
 		expect(createManifest('2.1.0', {name, dockerImage, files})).toBe(manifest)
 	})
 
-	// A release signed by the root key alone, after the root key moved to a new hardware wallet
-	test('verifies a root key handover and a release signed by the root key', async () => {
+	// A release signed by the root key alone, after a handover moved the root key to a new hardware wallet,
+	// which umbrelOS 2.1.0 Beta 1 would install. This release ignores handovers, so it refuses it.
+	test('refuses a release signed by a root key a handover moved to', async () => {
 		const firstRootKey = '03edb93d7304bd66f7f4c4e370bd1a64edeacda9f6381c12927bd4781d3a368998'
 		const manifest = [
 			'--- umbrelOS Manifest ---',
@@ -1493,25 +1312,23 @@ describe('schema 1', () => {
 
 		const manifestSignatures = readSignatureFile(manifestSignatureFile, firstRootKey)
 		const releaseNotesSignatures = readSignatureFile(releaseNotesSignatureFile, firstRootKey)
-		expect(manifestSignatures.signingKeys!.rootKey).toBe(
-			'03e5a72c06b5be97b001e9542f167e76f0fb552d20d323f4d5712260834a2d333f',
+		expect(manifestSignatures.signingKeys).toBeUndefined()
+		expect(manifestSignatures.signingKeysError?.message).toBe(
+			'Approved signing keys list is not signed by the root key',
 		)
-		const release = await verifyRelease({
-			manifest,
-			manifestSignatures,
-			releaseNotes,
-			releaseNotesSignatures,
-			signingKeys: manifestSignatures.signingKeys!,
-		})
-		expect(release).toMatchObject({
-			version: '2.1.1',
-			name: 'umbrelOS 2.1.1',
-			signedByRootKey: true,
-			releaseNotes: releaseNotes.trimEnd(),
-		})
-		const {signingKeys, signatures, rootSignatures} = manifestSignatures
-		expect(formatSignatureFile({signingKeysList: signingKeys!.text, signatures, rootSignatures})).toBe(
-			manifestSignatureFile,
+		expect(releaseNotesSignatures.signingKeys).toBeUndefined()
+		// Even with the device's own list, the new key's signature doesn't count
+		const ownList = {
+			keys: [
+				{name: 'alice-mbp-2026', publicKey: '0325b090113c820cd564045d90af830f942ea431a746a8657872871a41a491529e'},
+				{name: 'bob-mbp-2025', publicKey: '02c1fdd986a41fcb0cb6fa6507442dba03bb8067d61a3274bbb6d9328ac2ee3743'},
+			],
+			requiredSignatures: 2,
+			revokedReleases: [],
+			rootKey: firstRootKey,
+		}
+		await expect(verifyRelease({manifest, manifestSignatures, releaseNotes, signingKeys: ownList})).rejects.toThrow(
+			'This release has an invalid signature from the root key',
 		)
 	})
 })

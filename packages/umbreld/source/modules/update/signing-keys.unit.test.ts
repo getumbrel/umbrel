@@ -19,6 +19,7 @@ describe('SigningKeys', () => {
 	let directory: string
 	let bundledSigningKeysPath: string
 	let files: Record<string, string>
+	let requests: string[]
 	let server: http.Server
 	let baseUrl: string
 
@@ -34,6 +35,7 @@ describe('SigningKeys', () => {
 
 	beforeAll(async () => {
 		server = http.createServer((request, response) => {
+			requests.push(request.url ?? '')
 			const file = files[request.url ?? '']
 			response.writeHead(file === undefined ? 404 : 200)
 			response.end(file)
@@ -54,6 +56,7 @@ describe('SigningKeys', () => {
 			createSigningKeysList({date: '2026-10-01T00:00:00Z', keys: [alice, bob], rootKey}),
 		)
 		files = {}
+		requests = []
 	})
 
 	afterEach(async () => {
@@ -203,26 +206,32 @@ describe('SigningKeys', () => {
 		expect((await createSigningKeys().get()).keys).toEqual([alice])
 	})
 
-	test('follows a root key handover, then ignores lists from the old root key', async () => {
+	// umbrelOS 2.1.0 Beta 1 followed handovers like this one, which this release ignores
+	test('ignores a list signed by the key a root key handover moves to', async () => {
 		const newRootKey = createRootKey()
-		const handedOver = createSigningKeysList({
+		files['/keys-a'] = createSigningKeysList({
 			date: '2026-10-05T00:00:00Z',
 			keys: [alice],
 			rootKey: newRootKey,
 			handovers: [createRootKeyHandover({date: '2026-10-04T00:00:00Z', from: rootKey, to: newRootKey})],
 		})
-		files['/keys-a'] = handedOver
-		const signingKeys = createSigningKeys()
-		expect((await signingKeys.refresh()).rootKey).toBe(newRootKey.publicKey)
+		const list = await createSigningKeys().refresh()
+		expect(list.rootKey).toBe(rootKey.publicKey)
+		expect(list.date).toEqual(new Date('2026-10-01T00:00:00Z'))
+	})
 
-		// The old root key's later lists don't count any more, even after a restart
-		files['/keys-a'] = createSigningKeysList({date: '2026-12-01T00:00:00Z', keys: [alice, bob], rootKey})
-		for (const restarted of [signingKeys, createSigningKeys()]) {
-			const list = await restarted.refresh()
-			expect(list.rootKey).toBe(newRootKey.publicKey)
-			expect(list.keys).toEqual([alice])
-		}
-		expect(await fse.readFile(`${directory}/umbrelos-signing-keys.txt`, 'utf8')).toBe(handedOver)
+	// Like going back to an older release after updating to one that bundles a newer list, before the device
+	// has checked for an update
+	test('saves a newer bundled list when it starts, without fetching any', async () => {
+		const older = createSigningKeysList({date: '2026-09-01T00:00:00Z', keys: [alice, bob], rootKey})
+		await fse.writeFile(`${directory}/umbrelos-signing-keys.txt`, older)
+		files['/keys-a'] = createSigningKeysList({date: '2026-10-20T00:00:00Z', keys: [alice], rootKey})
+
+		await createSigningKeys().start()
+		expect(await fse.readFile(`${directory}/umbrelos-signing-keys.txt`, 'utf8')).toBe(
+			await fse.readFile(bundledSigningKeysPath, 'utf8'),
+		)
+		expect(requests).toEqual([])
 	})
 
 	test('fails without any valid list', async () => {

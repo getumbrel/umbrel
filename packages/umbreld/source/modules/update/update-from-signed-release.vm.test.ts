@@ -19,7 +19,6 @@ import {
 } from '../test-utilities/os-update.ts'
 import {
 	createRootKey,
-	createRootKeyHandover,
 	createSigningKeysList,
 	createSigningKey,
 	installLatestRelease,
@@ -120,23 +119,6 @@ describe.each(fromReleases)('Updating from $name', ({image}) => {
 		const release = await publishRelease({api, releases}, {signers: [], signingKeysList, rootKey})
 		expect((await installLatestRelease(umbreld)).success).toBe(false)
 		expect(release.bundleRequested()).toBe(true)
-	})
-
-	test('follows a root key handover the list a release carries ends with', async () => {
-		const newRootKey = createRootKey()
-		const handedOver = createSigningKeysList({
-			date: '2026-03-01T00:00:00Z',
-			keys: [signingKey(alice), signingKey(bob)],
-			rootKey: newRootKey,
-			handovers: [createRootKeyHandover({date: '2026-02-15T00:00:00Z', from: rootKey, to: newRootKey})],
-		})
-		const release = await publishRelease(
-			{api, releases},
-			{signers: [], signingKeysList: handedOver, rootKey: newRootKey},
-		)
-		expect((await installLatestRelease(umbreld)).success).toBe(false)
-		expect(release.bundleRequested()).toBe(true)
-		signingKeysList = handedOver
 	})
 
 	test('installs this build as a signed release and boots into it', async () => {

@@ -1,7 +1,6 @@
 import fse from 'fs-extra'
 
 import type Umbreld from '../../index.ts'
-import runEvery from '../utilities/run-every.ts'
 import {writeFileDurably} from '../utilities/durable-filesystem.ts'
 import {
 	BUNDLED_SIGNING_KEYS_PATH,
@@ -15,13 +14,13 @@ import {
 
 // The approved signing keys list the device trusts: the newest one signed by the root key out of the
 // list this release shipped with, the device's saved copy, every published source and the lists releases
-// carry with their signatures
+// carry with their signatures. The sources are only fetched before checking for or installing an update,
+// since that's when a list's revocations matter.
 export default class SigningKeys {
 	#umbreld: Umbreld
 	readonly rootPublicKey: string
 	#signingKeysUrls: string[]
 	#bundledSigningKeysPath: string
-	#stopRefreshing?: () => void
 	#refreshing?: Promise<SigningKeysList>
 	#saving: Promise<unknown> = Promise.resolve()
 	// The newest list this has seen if saving it failed, like on a full disk
@@ -48,14 +47,10 @@ export default class SigningKeys {
 		return `${this.#umbreld.dataDirectory}/umbrelos-signing-keys.txt`
 	}
 
+	// Save the list this release shipped with if it's newer than the saved copy, so going back to an older
+	// release, like when this one fails to boot, can't forget it
 	async start() {
-		this.#stopRefreshing = runEvery('1 day', async () => {
-			await this.refresh().catch((error) => this.logger.error('Failed to refresh signing keys', error))
-		})
-	}
-
-	async stop() {
-		this.#stopRefreshing?.()
+		await this.#keepNewest([]).catch((error) => this.logger.error('Failed to save signing keys', error))
 	}
 
 	// The newest valid list the device has: its saved copy, the one this release shipped with or one it

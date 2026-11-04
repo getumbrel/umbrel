@@ -26,10 +26,8 @@ import {
 	RELEASE_NOTES_SIGNATURE_FILE,
 	ROOT_PUBLIC_KEY,
 	SIGNING_KEYS_URLS,
-	followRootKeyHandovers,
 	formatManifestMessage,
 	formatReleaseNotesMessage,
-	formatRootKeyHandoverMessage,
 	formatSignatureFile,
 	formatSigningKeysList,
 	formatSigningKeysListMessage,
@@ -69,7 +67,6 @@ const usage = `
         revoke-release <manifest>         Stop devices installing a signed release, given its manifest's
                                           URL or path, like releases/2.1.0-manifest.txt
         sign-keys-list                    Sign the approved keys list with the root key in Sparrow
-        hand-over-root <public key>       Hand the root key over to a new hardware wallet's key
         sign <release>                    Sign a release's manifest and release notes with this Mac's
                                           signing key, adding to any signatures they already have
         root-sign <release>               Sign a release with the root key alone, for emergencies
@@ -88,11 +85,11 @@ const usage = `
     Options
         --confirm <code>                  sign: sign what it showed, given the confirmation code it printed.
                                           delete-key: delete the key, given the key it showed.
-        --signature <signature>           sign-keys-list, hand-over-root, root-sign: the root key's
+        --signature <signature>           sign-keys-list, root-sign: the root key's
                                           signature of the message it showed, from Sparrow. root-sign: of
                                           the manifest.
         --release-notes-signature <sig>   root-sign: the root key's signature of the release notes
-        --date <date>                     sign-keys-list, hand-over-root: the date the message it showed
+        --date <date>                     sign-keys-list: the date the message it showed
                                           has, which the signature covers
         --release-notes <file>            sign, root-sign: sign only these release notes, like to fix
                                           them. verify: check them instead of the release's.
@@ -227,16 +224,10 @@ type ListChange = {keys: SigningKey[]; requiredSignatures: number; revokedReleas
 
 // Write the bundled list with a change, unsigned until the root key holder signs it
 async function updateKeysList(change: (list: ListChange) => Partial<ListChange>) {
-	const {keys, requiredSignatures, revokedReleases, handovers} = parseSigningKeysList(
+	const {keys, requiredSignatures, revokedReleases} = parseSigningKeysList(
 		await fs.readFile(BUNDLED_SIGNING_KEYS_PATH, 'utf8'),
 	)
-	const list = {
-		keys,
-		requiredSignatures,
-		revokedReleases,
-		handovers,
-		...change({keys, requiredSignatures, revokedReleases}),
-	}
+	const list = {keys, requiredSignatures, revokedReleases, ...change({keys, requiredSignatures, revokedReleases})}
 	if (list.requiredSignatures > list.keys.length) {
 		console.warn(
 			`\nReleases need ${list.requiredSignatures} signatures but only ${list.keys.length} keys are approved, so no release can be installed.`,
@@ -247,49 +238,6 @@ async function updateKeysList(change: (list: ListChange) => Partial<ListChange>)
 		`\nUpdated ${path.relative(process.cwd(), BUNDLED_SIGNING_KEYS_PATH)}. Commit it and open a pull request.`,
 	)
 	console.log("CI fails until it's signed with the root key, using ./scripts/release-signing sign-keys-list.")
-}
-
-// Hand the root key over to a new hardware wallet's key, like before retiring the current one. The current
-// root key signs the handover, and the list then needs signing with the new key. Without the signature it
-// shows the handover to sign.
-async function handOverRoot(newRootKey: string, {signature, date: dateString}: RootSignatureOptions = {}) {
-	if (!/^0[23][0-9a-f]{64}$/.test(newRootKey)) {
-		throw new Error(
-			"Give the new root key as a compressed public key in hex, like the one in the wallet's output descriptor",
-		)
-	}
-	const list = verifySigningKeysList(await fs.readFile(BUNDLED_SIGNING_KEYS_PATH, 'utf8'))
-	if (newRootKey === list.rootKey) throw new Error("That's already the root key")
-
-	const date = signedDate(dateString, list.date, ...list.handovers.map((handover) => handover.date))
-	const message = formatRootKeyHandoverMessage({date, from: list.rootKey, to: newRootKey})
-	if (!signature) {
-		printRootSigningSteps(list.rootKey, message)
-		console.log('Then save the handover with the signature:')
-		console.log(`  ${tool(`hand-over-root ${newRootKey} --date ${formatDate(date)} --signature <signature>`)}`)
-		return
-	}
-	if (!verifyBitcoinMessage(message, signature, list.rootKey)) {
-		throw new Error(`That isn't a signature of the handover by the root key ${list.rootKey}`)
-	}
-
-	await fs.writeFile(
-		BUNDLED_SIGNING_KEYS_PATH,
-		formatSigningKeysList({
-			...list,
-			date,
-			rootSignatures: [],
-			handovers: [...list.handovers, {message, rootSignatures: [signature]}],
-		}),
-	)
-	console.log(
-		`\nHanded the root key over to ${newRootKey} in ${path.relative(process.cwd(), BUNDLED_SIGNING_KEYS_PATH)}.`,
-	)
-	console.log('Sign the list with the new root key using ./scripts/release-signing sign-keys-list, then commit')
-	console.log("and publish it. CI fails until it's signed. Devices accept lists from the old root key until they")
-	console.log('see the handover, so keep the old hardware wallet safe until the list is published.')
-	console.log('\nLeave ROOT_PUBLIC_KEY as it is: every list carries the chain of handovers from it, which devices')
-	console.log('follow to the new key.')
 }
 
 // Whether the bundled list approves a key, or an earlier root-signed list did, and what to do about it if
@@ -448,7 +396,7 @@ function signedDate(dateString: string | undefined, ...after: Date[]) {
 	if (Number.isNaN(date.getTime()) || formatDate(date) !== dateString) {
 		throw new Error(`Give the date as it was shown, like 2026-11-03T10:00:00Z: ${dateString}`)
 	}
-	if (after.some((other) => date <= other)) throw new Error(`${dateString} doesn't follow the last list or handover`)
+	if (after.some((other) => date <= other)) throw new Error(`${dateString} doesn't follow the last list`)
 	return date
 }
 
@@ -456,24 +404,13 @@ type RootSignatureOptions = {signature?: string; date?: string}
 
 // Sign the bundled list with the root key. Without the signature it shows the message to sign.
 async function signKeysList({signature, date: dateString}: RootSignatureOptions = {}) {
-	const {keys, requiredSignatures, revokedReleases, handovers} = parseSigningKeysList(
+	const {keys, requiredSignatures, revokedReleases} = parseSigningKeysList(
 		await fs.readFile(BUNDLED_SIGNING_KEYS_PATH, 'utf8'),
 	)
-	// The root key at the end of the list's handovers, like the new one after a handover
-	const rootKey = followRootKeyHandovers(handovers)
+	const rootKey = ROOT_PUBLIC_KEY
 
 	const previous = await findSigningKeys().catch(() => undefined)
-	// Devices only take a list whose handovers start with exactly the ones of the list they have
-	if (previous && !previous.handovers.every((handover, index) => handovers[index]?.message === handover.message)) {
-		throw new Error(
-			"Its handovers don't continue the published list's, so devices wouldn't take it. Start from the published list's handovers.",
-		)
-	}
-	const date = signedDate(
-		dateString,
-		...(previous ? [previous.date] : []),
-		...handovers.map((handover) => handover.date),
-	)
+	const date = signedDate(dateString, ...(previous ? [previous.date] : []))
 	const message = formatSigningKeysListMessage({date, requiredSignatures, keys, revokedReleases})
 	if (!signature) {
 		printRootSigningSteps(rootKey, message)
@@ -491,7 +428,6 @@ async function signKeysList({signature, date: dateString}: RootSignatureOptions 
 		keys,
 		revokedReleases,
 		rootSignatures: [signature],
-		handovers,
 	})
 	verifySigningKeysList(text)
 	const archived = path.join(KEYS_ARCHIVE_DIRECTORY, archivedSigningKeysListName(date))
@@ -500,7 +436,7 @@ async function signKeysList({signature, date: dateString}: RootSignatureOptions 
 	console.log(
 		`\nSigned ${path.relative(process.cwd(), BUNDLED_SIGNING_KEYS_PATH)}, copied it to ${path.relative(process.cwd(), PUBLISHED_SIGNING_KEYS_PATH)} and archived it to ${path.relative(process.cwd(), archived)}.`,
 	)
-	console.log("Commit them, and once they're merged publish the list so devices pick it up within a day:")
+	console.log("Commit them, and once they're merged publish the list so devices pick it up at their next update check:")
 	console.log(`  ${SIGNING_KEYS_URLS[0]}`)
 	console.log(`  ${SIGNING_KEYS_URLS[1]}, by publishing the repo`)
 }
@@ -1197,8 +1133,6 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1] ?? '')).href)
 			await revokeRelease(commandArguments[0])
 		} else if (command === 'sign-keys-list' && commandArguments.length === 0) {
 			await signKeysList(options)
-		} else if (command === 'hand-over-root' && commandArguments.length === 1) {
-			await handOverRoot(commandArguments[0], options)
 		} else if (command === 'root-sign' && commandArguments.length === 1) {
 			await rootSign(commandArguments[0], options)
 		} else if (command === 'sign' && commandArguments.length === 1) {

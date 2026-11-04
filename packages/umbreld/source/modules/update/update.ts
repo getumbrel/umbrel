@@ -60,7 +60,6 @@ export default class Update {
 
 	async stop() {
 		this.logger.log('Stopping update')
-		await this.signingKeys.stop()
 	}
 
 	getStatus() {
