@@ -1,6 +1,6 @@
 import nodePath from 'node:path'
 import type {BigIntStats, Stats} from 'node:fs'
-import {opendir, lstat} from 'node:fs/promises'
+import {opendir, lstat, stat} from 'node:fs/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
 import type DatabaseTypes from 'better-sqlite3'
@@ -118,7 +118,6 @@ type PhotoEntrySnapshot = {
 	size: number
 	modified_ms: number
 	birthtime_ms: number | null
-	device: string
 	inode: string
 	modified_ns: string
 	thumbnail_identity_kind: ThumbnailIdentityKind | null
@@ -973,6 +972,20 @@ export default class FileIndexEngine {
 			root.scanGeneration = generation
 			if (root.kind === 'home' && root.lastSuccessfulScanAt === undefined) this.#notifyPhotosChanged([root.ownerId])
 
+			// An update can renumber the filesystem a root lives on (see fileIdentity).
+			// Rewrite every renumbered entry in one statement, so the walk below finds
+			// them unchanged instead of writing each one back and journaling its size.
+			const rootDevice = (await stat(root.systemPath, {bigint: true}).catch(() => undefined))?.dev.toString()
+			if (rootDevice !== undefined) {
+				const previousDevice = await this.#mutate(
+					(database) => remapRenumberedDevice(database, root.id!, rootDevice),
+					SCAN_DATABASE_PRIORITY,
+				)
+				if (previousDevice !== undefined) {
+					this.logger.log(`Renumbered '${root.virtualPath}' entries from device ${previousDevice} to ${rootDevice}`)
+				}
+			}
+
 			// Root scans are serialized, so this table contains only the current
 			// snapshot. An unqualified delete lets SQLite clear it efficiently after
 			// a failed scan without walking every temporary row.
@@ -1718,7 +1731,7 @@ export default class FileIndexEngine {
 					const rows = database
 						.prepare(
 							`SELECT entries.relative_path, entries.name, entries.type, entries.size,
-								entries.modified_ms, entries.birthtime_ms, entries.device, entries.inode,
+								entries.modified_ms, entries.birthtime_ms, entries.inode,
 								entries.modified_ns, entries.thumbnail_identity_kind, entries.hidden
 							FROM entries
 							JOIN index_roots ON index_roots.id = entries.root_id
@@ -1735,10 +1748,13 @@ export default class FileIndexEngine {
 			for (const entry of mutation.entries) {
 				markSeenStatement?.run(entry.rootId, entry.relativePath)
 				const previous = previousPhotoEntries.get(entry.rootId)?.get(entry.relativePath)
+				// A Photos item that's already indexed only needs refreshing when an input
+				// Photos reads changes. Other columns still update the entry but leave
+				// Photos alone, such as ctime or the device number, which an update can
+				// change for every entry at once (see fileIdentity).
+				const photoInputsChanged = !previous || photoEntrySortInputsChanged(previous, entry)
 				const detached =
-					previous && photoEntrySortInputsChanged(previous, entry)
-						? this.#photos.detachEntry(database, entry.rootId, entry.relativePath)
-						: []
+					previous && photoInputsChanged ? this.#photos.detachEntry(database, entry.rootId, entry.relativePath) : []
 				const observationCutoff = entry.observedAt === null ? null : entry.observedAt - TRANSIENT_OBSERVATION_REFRESH_MS
 				const result = writeStatement.run(
 					entry.rootId,
@@ -1761,7 +1777,7 @@ export default class FileIndexEngine {
 					observationCutoff,
 					observationCutoff,
 				)
-				if (result.changes > 0 && this.#photosAvailable) {
+				if (result.changes > 0 && photoInputsChanged && this.#photosAvailable) {
 					if (this.#photos.syncEntry(database, entry)) {
 						const owner = database.prepare('SELECT owner_id FROM index_roots WHERE id = ?').get(entry.rootId) as
 							| {owner_id: string}
@@ -2606,6 +2622,13 @@ function entryType(stats: FileStats): EntryType {
 	return 'file'
 }
 
+// The device and inode together identify a file, because inode numbers are only
+// unique within one filesystem. On local filesystems an inode lasts as long as
+// the file does, but the device number can change between boots. Filesystems
+// without a block device, such as ZFS datasets, are numbered in mount order, and
+// block devices in the order they're detected. An update that mounts one more
+// filesystem earlier, as kernel 7.2 did, renumbers every entry, so a device-only
+// change must stay cheap to apply.
 function fileIdentity(stats: FileStats) {
 	if (isBigIntStats(stats)) {
 		return {
@@ -2639,7 +2662,6 @@ function photoEntrySortInputsChanged(previous: PhotoEntrySnapshot, next: EntryWr
 		Number(previous.size) !== next.size ||
 		Number(previous.modified_ms) !== next.modifiedMs ||
 		(previous.birthtime_ms === null ? null : Number(previous.birthtime_ms)) !== next.birthtimeMs ||
-		previous.device !== next.device ||
 		previous.inode !== next.inode ||
 		previous.modified_ns !== next.modifiedNs ||
 		previous.thumbnail_identity_kind !== next.thumbnailIdentityKind ||
@@ -2678,6 +2700,30 @@ function indexedEntry(row: EntryRow): IndexedEntry {
 		observedAt: row.observed_at === null ? undefined : Number(row.observed_at),
 		hidden: Boolean(row.hidden),
 	}
+}
+
+// Returns the device number the root's entries were moved from, if they were.
+function remapRenumberedDevice(database: Database, rootId: number, rootDevice: string) {
+	// The usual case: the root's filesystem kept its number. The index makes this
+	// lookup and the count below cheap.
+	if (database.prepare('SELECT 1 FROM entries WHERE root_id = ? AND device = ? LIMIT 1').get(rootId, rootDevice)) {
+		return
+	}
+	// The number most entries recorded is the root filesystem's previous one.
+	// Filesystems mounted inside the root keep their own entries. A wrong guess,
+	// such as a root holding only a mount, costs a wasted rewrite: the walk still
+	// compares every entry with lstat and writes back any device that differs.
+	const previous = database
+		.prepare(
+			`SELECT device FROM entries WHERE root_id = ? AND device != ''
+			GROUP BY device ORDER BY COUNT(*) DESC LIMIT 1`,
+		)
+		.get(rootId) as {device: string} | undefined
+	if (!previous) return
+	// Folder sizes journal every rewritten file, and a journal this large makes
+	// them rebuild the root once instead of applying each file.
+	run(database, 'UPDATE entries SET device = ? WHERE root_id = ? AND device = ?', rootDevice, rootId, previous.device)
+	return previous.device
 }
 
 function run(database: Database, sql: string, ...parameters: unknown[]) {

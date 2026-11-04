@@ -2624,6 +2624,89 @@ test('preserves Photos identity and user state across a watcher-reported rename'
 	)
 })
 
+test('updates a renumbered device or changed ctime without refreshing or rehashing Photos items', async () => {
+	// ZFS datasets have no block device, so their device number depends on mount
+	// order and can change across boots. An index written before such a change
+	// stores the old number on every row.
+	const hashFile = vi.fn(async (systemPath: string) => Buffer.alloc(32, nodePath.basename(systemPath).charCodeAt(0)))
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const photos = nodePath.join(homeDirectory, 'Photos')
+	await fse.ensureDir(photos)
+	await Promise.all(['A.jpg', 'B.heic', 'C.mp4'].map((name) => writeFile(nodePath.join(photos, name), name)))
+	await index.reconcileRoot('/Home', 'initial')
+	await index.initializePhotos('owner')
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const items = (await index.photosListItems('owner', {}, undefined, 10)).items
+	expect(items).toHaveLength(3)
+	const hashes = hashFile.mock.calls.length
+
+	const database = new BetterSqlite3(index.databasePath)
+	const generation = () => database.prepare('SELECT generation FROM photos_projection_state WHERE id = 1').pluck().get()
+	const before = generation()
+	const {device} = await indexedContentRevision(homeDirectory)
+	database.prepare('UPDATE entries SET device = ?').run(String(Number(device) + 1))
+
+	await index.reconcileRoot('/Home', 'renumbered')
+	expect(database.prepare('SELECT DISTINCT device FROM entries').pluck().all()).toStrictEqual([device])
+	expect(generation()).toBe(before)
+
+	// A permission change only moves ctime, which Photos doesn't read either
+	const ctime = () => database.prepare("SELECT ctime_ns FROM entries WHERE name = 'A.jpg'").pluck().get()
+	const previousCtime = ctime()
+	await new Promise((resolve) => setTimeout(resolve, 10))
+	await chmod(nodePath.join(photos, 'A.jpg'), 0o600)
+	await index.reconcileRoot('/Home', 'permissions')
+	expect(ctime()).not.toBe(previousCtime)
+	expect(generation()).toBe(before)
+	database.close()
+	expect(hashFile).toHaveBeenCalledTimes(hashes)
+	await expect(index.photosListItems('owner', {}, undefined, 10)).resolves.toMatchObject({items})
+	await expect(index.directorySizes(['/Home/Photos'])).resolves.toStrictEqual([
+		{virtualPath: '/Home/Photos', size: 'A.jpgB.heicC.mp4'.length},
+	])
+})
+
+test('remaps a renumbered root filesystem in one statement and corrects any other device', async () => {
+	const {index, homeDirectory} = await fixture()
+	await fse.outputFile(nodePath.join(homeDirectory, 'a/one.txt'), 'one')
+	await fse.outputFile(nodePath.join(homeDirectory, 'a/b/two.txt'), 'two!')
+	await link(nodePath.join(homeDirectory, 'a/one.txt'), nodePath.join(homeDirectory, 'a/b/one-link.txt'))
+	await index.reconcileRoot('/Home', 'initial')
+	const sizes = await index.directorySizes(['/Home/a', '/Home/a/b'])
+	expect(sizes).toStrictEqual([
+		{virtualPath: '/Home/a', size: 'onetwo!'.length},
+		{virtualPath: '/Home/a/b', size: 'onetwo!'.length},
+	])
+
+	const database = new BetterSqlite3(index.databasePath)
+	const {device} = await indexedContentRevision(homeDirectory)
+	const previous = String(Number(device) + 1)
+	database.prepare('UPDATE entries SET device = ?').run(previous)
+	// A minority number, as if this file had been on another filesystem, isn't
+	// the root's previous number. The walk corrects it from lstat instead.
+	database.prepare("UPDATE entries SET device = ? WHERE name = 'two.txt'").run(String(Number(device) + 2))
+	logger.log.mockClear()
+	await index.reconcileRoot('/Home', 'renumbered')
+	expect(logger.log).toHaveBeenCalledWith(`Renumbered '/Home' entries from device ${previous} to ${device}`)
+	expect(database.prepare('SELECT DISTINCT device FROM entries').pluck().all()).toStrictEqual([device])
+	await expect(index.directorySizes(['/Home/a', '/Home/a/b'])).resolves.toStrictEqual(sizes)
+
+	logger.log.mockClear()
+	await index.reconcileRoot('/Home', 'unchanged')
+	expect(logger.log).not.toHaveBeenCalledWith(expect.stringContaining('Renumbered'))
+	database.close()
+})
+
 test('selects one canonical shared Live Photo companion and moves it only with every referencing still', async () => {
 	const {index, homeDirectory, trashDirectory} = await fixture(undefined, {
 		includeTrash: true,
