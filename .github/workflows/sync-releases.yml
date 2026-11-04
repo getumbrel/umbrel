@@ -1,0 +1,57 @@
+# Uploads what releases/ adds to the download server once it's merged into staging: more signatures of a
+# release, later signed release notes and completed timestamps, which ./scripts/release-signing sync
+# decides. It never uploads a release's manifest or files, which only CI's tag builds do, and nothing a
+# device wouldn't accept. It only runs on staging, where releases/ is reviewed, and never on pull requests,
+# so they can't reach the R2 credentials.
+name: Sync releases
+
+on:
+  push:
+    branches: [staging]
+    paths: ['releases/**']
+  workflow_dispatch:
+
+# One at a time, so two syncs never upload over each other
+concurrency:
+  group: sync-releases
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync releases to the download server
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+      # The tool only needs umbreld's JavaScript dependencies, not its native modules
+      - name: Install umbreld's dependencies
+        run: |
+          npm --prefix packages/umbreld clean-install --ignore-scripts || {
+            echo "::warning title=Retried npm install::npm clean-install failed, retrying once"
+            npm --prefix packages/umbreld clean-install --ignore-scripts
+          }
+      - name: Find what adds to the download server
+        id: plan
+        run: |
+          ./scripts/release-signing sync --output sync-upload
+          echo "files=$(find sync-upload -type f 2>/dev/null | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+      - name: Upload to R2
+        if: steps.plan.outputs.files != '0'
+        uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # v1.5
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          source-dir: sync-upload
+          # Files are laid out in sync-upload like the bucket, so they upload to their own keys
+          destination-dir: .
+      - name: Check the download server is up to date
+        if: steps.plan.outputs.files != '0'
+        run: ./scripts/release-signing sync | tee /dev/stderr | grep --quiet 'The download server is up to date'

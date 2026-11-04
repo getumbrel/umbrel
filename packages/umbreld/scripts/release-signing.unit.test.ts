@@ -35,8 +35,12 @@ import {
 	addReleaseSignature,
 	confirmationCode,
 	archivedSigningKeysListName,
+	addsSigners,
 	keepValidSignatures,
+	planReleaseSync,
 	readRelease,
+	releaseNotesDate,
+	type ServerFile,
 	shellQuote,
 	showHidden,
 } from './release-signing.ts'
@@ -465,5 +469,206 @@ describe('releases/keys/', () => {
 		if (!list) return
 		const archived = path.join(KEYS_ARCHIVE_DIRECTORY, archivedSigningKeysListName(list.date))
 		expect(await fs.readFile(archived, 'utf8').catch(() => undefined), `${archived} is missing`).toBe(bundled)
+	})
+})
+
+describe('releaseNotesDate()', () => {
+	test('reads the date on the first line of release notes', () => {
+		const date = '2026-11-04T07:00:00Z'
+		expect(releaseNotesDate(`<!-- umbrelOS release notes ${date} -->\nNotes`)).toEqual(new Date(date))
+		expect(releaseNotesDate('Notes')).toBeUndefined()
+		expect(releaseNotesDate(`Notes\n<!-- umbrelOS release notes ${date} -->`)).toBeUndefined()
+		expect(releaseNotesDate('<!-- umbrelOS release notes 2026-11-04 -->\nNotes')).toBeUndefined()
+		expect(releaseNotesDate('<!-- umbrelOS release notes 2026-13-04T07:00:00Z -->\nNotes')).toBeUndefined()
+	})
+})
+
+describe('addsSigners()', () => {
+	test('only replaces a signature file with one that keeps every signer and adds more', () => {
+		const signers = (...names: string[]) => new Set(names)
+		expect(addsSigners(signers('alice'), undefined)).toBe(true)
+		expect(addsSigners(signers('alice', 'bob'), signers('alice'))).toBe(true)
+		expect(addsSigners(signers('alice', 'bob'), signers('alice', 'bob'))).toBe(false)
+		expect(addsSigners(signers('alice', 'bob'), signers('alice', 'carol'))).toBe(false)
+		expect(addsSigners(signers('alice'), signers('alice', 'bob'))).toBe(false)
+	})
+})
+
+// Keeping the download server in step with releases/, against a download server kept in memory
+describe('planReleaseSync()', () => {
+	const rootKey = createRootKey()
+	const version = '2.1.0'
+	const manifest = createManifest(version)
+	let alice: SignerKey
+	let bob: SignerKey
+	let carol: SignerKey
+	let signingKeysList: string
+	let directory: string
+	let server: Map<string, Buffer | undefined>
+
+	const base = `https://download.umbrel.com/release/${version}/`
+	const fixture = (file: string) => fs.readFile(new URL(`./fixtures/opentimestamps/${file}`, import.meta.url))
+	const merkleRoots: Record<number, string> = {
+		974104: '759530470124cc585e59cff0d5ed626bf7acb17baa97dbce67241f3374f8a35c',
+		974149: 'e2e497ba461edaef909c581db78760fc7ac63d1e536a20e16e7e4f65276b6233',
+		974152: '952f24f261b12b05dcb62dd728b3abf609acceb37f0861cfb95cf4eb75c9fd62',
+	}
+
+	// The server holds every URL in the map as an R2 object, missing if its data is undefined
+	const readServer = async (url: string): Promise<ServerFile | undefined> => {
+		if (!server.has(url)) return undefined
+		return {key: url.replace('https://download.umbrel.com/release/', ''), data: server.get(url)}
+	}
+	const plan = () =>
+		planReleaseSync({
+			directory,
+			readServer,
+			findKeys: async () => verifySigningKeysList(signingKeysList, rootKey.publicKey),
+			merkleRootAt: async (height) => merkleRoots[height],
+		})
+	const archive = (file: string, data: string | Buffer) => fs.writeFile(path.join(directory, file), data)
+	const serve = (file: string, data?: string | Buffer, release = base) =>
+		server.set(`${release}${file}`, data === undefined ? undefined : Buffer.from(data))
+	const signed = (signers: SignerKey[], releaseNotes = 'Notes') =>
+		signRelease(manifest, {signingKeysList, signers, releaseNotes})
+
+	beforeAll(async () => {
+		;[alice, bob, carol] = await Promise.all(['alice', 'bob', 'carol'].map((name) => createSigningKey(name)))
+		signingKeysList = createSigningKeysList({
+			date: '2026-11-01T00:00:00Z',
+			requiredSignatures: 2,
+			keys: [signingKey(alice), signingKey(bob), signingKey(carol)],
+			rootKey,
+		})
+	})
+
+	// A release archived with alice and bob's signatures, which the server has with only alice's
+	async function setUp({releaseNotes = 'Notes'}: {releaseNotes?: string} = {}) {
+		directory = await fs.mkdtemp(path.join(os.tmpdir(), 'umbrel-release-sync-test-'))
+		server = new Map()
+		const archived = await signed([alice, bob], releaseNotes)
+		await archive(`${version}-manifest.txt`, manifest)
+		await archive(`${version}-manifest.txt.sig`, archived.manifestSignature)
+		await archive(`${version}-release-notes.md`, releaseNotes)
+		await archive(`${version}-release-notes.md.sig`, archived.releaseNotesSignature)
+		const served = await signed([alice])
+		serve('manifest.txt', manifest)
+		serve('manifest.txt.sig', served.manifestSignature)
+		serve('release-notes.md', 'Notes')
+		serve('release-notes.md.sig', served.releaseNotesSignature)
+		return archived
+	}
+
+	test("uploads a signature file that adds signers, and never one that would drop the server's", async () => {
+		const archived = await setUp()
+		expect((await plan()).map(({key, reason}) => ({key, reason}))).toEqual([
+			{key: `${version}/manifest.txt.sig`, reason: `${version} manifest.txt.sig, adding bob`},
+			{key: `${version}/release-notes.md.sig`, reason: `${version} release-notes.md.sig, adding bob`},
+		])
+		expect((await plan())[0].data.toString()).toBe(archived.manifestSignature)
+
+		// The server already has them
+		serve('manifest.txt.sig', archived.manifestSignature)
+		serve('release-notes.md.sig', archived.releaseNotesSignature)
+		expect(await plan()).toEqual([])
+
+		// The server has more, or a different pair
+		for (const signers of [
+			[alice, bob, carol],
+			[alice, carol],
+		]) {
+			const served = await signed(signers)
+			serve('manifest.txt.sig', served.manifestSignature)
+			serve('release-notes.md.sig', served.releaseNotesSignature)
+			expect(await plan()).toEqual([])
+		}
+	})
+
+	test("uploads a signature file where the server doesn't have one", async () => {
+		await setUp()
+		serve('manifest.txt.sig', undefined)
+		expect((await plan()).map(({key}) => key)).toContain(`${version}/manifest.txt.sig`)
+	})
+
+	test('only uploads release notes that are signed and dated later than the ones on the server', async () => {
+		const date = '2026-11-04T07:00:00Z'
+		const fixed = `<!-- umbrelOS release notes ${date} -->\nFixed notes`
+		await setUp({releaseNotes: fixed})
+		const keys = async () => (await plan()).map(({key}) => key)
+		const notes = [`${version}/release-notes.md`, `${version}/release-notes.md.sig`]
+
+		// The server's signed notes aren't dated, so ours are later
+		serve('manifest.txt.sig', (await signed([alice, bob])).manifestSignature)
+		const servedNotes = async (releaseNotes: string, signers = [alice, bob]) => {
+			serve('release-notes.md', releaseNotes)
+			serve('release-notes.md.sig', (await signed(signers, releaseNotes)).releaseNotesSignature)
+		}
+		await servedNotes('Notes')
+		expect(await keys()).toEqual(notes)
+		expect((await plan())[0].reason).toBe(`${version} release-notes.md, dated ${date}, later than the server's`)
+
+		// The server's are dated later, or the same
+		await servedNotes(`<!-- umbrelOS release notes 2026-11-05T00:00:00Z -->\nLater notes`)
+		expect(await keys()).toEqual([])
+		await servedNotes(`<!-- umbrelOS release notes ${date} -->\nOther notes`)
+		expect(await keys()).toEqual([])
+
+		// The server's aren't signed by enough approved keys
+		await servedNotes(`<!-- umbrelOS release notes 2026-11-05T00:00:00Z -->\nLater notes`, [alice])
+		expect(await keys()).toEqual(notes)
+	})
+
+	test("doesn't upload release notes that don't verify", async () => {
+		await setUp()
+		await archive(`${version}-release-notes.md`, '<!-- umbrelOS release notes 2026-11-04T07:00:00Z -->\nUnsigned')
+		expect((await plan()).map(({key}) => key)).toEqual([`${version}/manifest.txt.sig`])
+	})
+
+	test("refuses to sync a release whose manifest on the server isn't the archived one", async () => {
+		await setUp()
+		serve('manifest.txt', createManifest(version, {name: 'Another release'}))
+		await expect(plan()).rejects.toThrow(
+			`The download server's manifest for ${version} isn't the one archived in releases/`,
+		)
+	})
+
+	test("leaves releases the download server doesn't serve from R2", async () => {
+		await setUp()
+		server.clear()
+		expect(await plan()).toEqual([])
+	})
+
+	test('only uploads a completed upgrade of exactly the pending timestamp on the server', async () => {
+		directory = await fs.mkdtemp(path.join(os.tmpdir(), 'umbrel-release-sync-test-'))
+		server = new Map()
+		const old = 'https://download.umbrel.com/release/2.0.1/'
+		await archive('2.0.1-SHA256SUMS', await fixture('SHA256SUMS'))
+		await archive('2.0.1-SHA256SUMS.ots', await fixture('completed.ots'))
+		serve('SHA256SUMS', await fixture('SHA256SUMS'), old)
+		const keys = async () => (await plan()).map(({key}) => key)
+
+		serve('SHA256SUMS.ots', await fixture('pending.ots'), old)
+		expect(await keys()).toEqual(['2.0.1/SHA256SUMS.ots'])
+
+		// Another timestamp of the same file, one that's already complete, or none at all
+		serve('SHA256SUMS.ots', await fixture('another-pending.ots'), old)
+		expect(await keys()).toEqual([])
+		serve('SHA256SUMS.ots', await fixture('completed.ots'), old)
+		expect(await keys()).toEqual([])
+		serve('SHA256SUMS.ots', undefined, old)
+		expect(await keys()).toEqual([])
+
+		// Attestations that don't match the blocks they name
+		serve('SHA256SUMS.ots', await fixture('pending.ots'), old)
+		const genuine = {...merkleRoots}
+		merkleRoots[974104] = genuine[974149]
+		expect(await keys()).toEqual([])
+		Object.assign(merkleRoots, genuine)
+
+		// A release whose SHA256SUMS on the server isn't the archived one
+		serve('SHA256SUMS', 'different', old)
+		await expect(plan()).rejects.toThrow(
+			"The download server's SHA256SUMS for 2.0.1 isn't the one archived in releases/",
+		)
 	})
 })
