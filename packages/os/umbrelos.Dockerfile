@@ -452,7 +452,8 @@ RUN export DEB_BUILD_PROFILES="nogir pkg.avahi.nogui nocheck" DEB_BUILD_OPTIONS=
     done && \
     { \
         printf 'avahi (%s+umbrel1) %s; urgency=medium\n\n' "$(dpkg-parsechangelog --show-field Version)" "$(dpkg-parsechangelog --show-field Distribution)" && \
-        printf '  * Backport upstream fix to ignore tentative IPv6 addresses.\n\n' && \
+        printf '  * Backport upstream fix to ignore tentative IPv6 addresses.\n' && \
+        printf '  * Make service-types.db reproducible with a fixed block size.\n\n' && \
         printf ' -- umbrelOS <noreply@umbrel.com>  %s\n\n' "$(dpkg-parsechangelog --show-field Date)" && \
         cat debian/changelog; \
     } > debian/changelog.new && \
@@ -776,7 +777,11 @@ RUN update-initramfs -u -k all
 #   pools with --force, so the host ID only needs to be stable.
 # - Homebrew's Python writes sitecustomize.py when it's poured, and build steps
 #   that run Python afterwards compile it with that time embedded.
+# - man-db's index is a GDBM database, sized by the build host filesystem's
+#   st_blksize, so it differs between build hosts (4KiB blocks on ext4, 128KiB
+#   on ZFS). man-db.timer rebuilds it on the device.
 RUN rm -f /etc/ssh/ssh_host_*_key* /var/lib/dbus/machine-id /var/cache/ldconfig/aux-cache && \
+    find /var/cache/man -name index.db -delete && \
     truncate -s 0 /etc/machine-id && \
     if command -v zgenhostid > /dev/null; then zgenhostid -f 756d6272; fi && \
     if [ -d /etc/nvme ]; then \
