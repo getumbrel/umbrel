@@ -11,13 +11,7 @@ BACKGROUND_IMAGE="$PACKAGE_DIR/Resources/dmg-background.png"
 PACKAGING_DIR="$PACKAGE_DIR/packaging"
 DMG_SETTINGS="$PACKAGING_DIR/dmg-settings.py"
 DMG_VALIDATOR="$PACKAGING_DIR/validate-dmg.py"
-SIGNING_IDENTITY="${UMBREL_SIGNING_IDENTITY:-}"
 UV_BIN="$(command -v uv || true)"
-
-if [[ -z "$SIGNING_IDENTITY" ]]; then
-	echo "Set UMBREL_SIGNING_IDENTITY to your Developer ID Application identity" >&2
-	exit 1
-fi
 
 if [[ ! -d "$APP" ]]; then
 	echo "Build the app before packaging it: bash scripts/build-app.sh" >&2
@@ -119,6 +113,10 @@ UV_PROJECT_ENVIRONMENT="$TEMP_DIR/.venv" "$UV_BIN" run \
 rm -f "$DMG"
 mv "$UNSIGNED_DMG" "$DMG"
 
+# Sign the DMG with the certificate Xcode chose for the app. Renewed Developer ID
+# certificates share a name, so select it by SHA-1.
+codesign -d --extract-certificates="$TEMP_DIR/app-certificate" "$APP" 2>/dev/null
+SIGNING_IDENTITY="$(shasum -a 1 "$TEMP_DIR/app-certificate0" | cut -d ' ' -f 1)"
 codesign \
 	--force \
 	--sign "$SIGNING_IDENTITY" \

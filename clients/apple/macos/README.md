@@ -28,9 +28,13 @@ Distribution requires a `Developer ID Application` certificate, a `notarytool`
 Keychain profile, and [`uv`](https://docs.astral.sh/uv/). Keep all signing and Apple
 credentials outside the repository.
 
+Developer ID certificates last a year. Renew on the developer website and choose the
+G2 Sub-CA when asked. Xcode signs the app with the newest Developer ID Application
+certificate in the keychain, and `package-dmg.sh` signs the DMG with the same one.
+
 ```bash
 cd clients/apple/macos
-export UMBREL_SIGNING_IDENTITY="Developer ID Application: Umbrel, Inc. (JABS8D63XG)"
+export UMBREL_SIGNING_IDENTITY="Developer ID Application"
 bash scripts/build-app.sh
 ```
 
