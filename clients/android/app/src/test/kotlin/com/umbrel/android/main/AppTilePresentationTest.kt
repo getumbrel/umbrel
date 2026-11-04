@@ -98,9 +98,9 @@ class AppTilePresentationTest {
 
 		assertEquals("Can’t Reach Umbrel", AppLaunchAlert.Unavailable().title)
 		assertNull(AppLaunchAlert.Unavailable().ownerDestination(canManageApps = true))
-		// After a reset the Umbrel answers as a different one, which needs Reconnect, not patience.
-		assertEquals("Umbrel Not Recognized", AppLaunchAlert.Unavailable(identityChanged = true).title)
-		assertTrue(AppLaunchAlert.Unavailable(identityChanged = true).message(canManageApps = true).contains("Reconnect"))
+		// A changed identity sends people to Home to check before reconnecting, not to try again.
+		assertEquals("Can’t Confirm This Is Your Umbrel", AppLaunchAlert.Unavailable(identityChanged = true).title)
+		assertTrue(AppLaunchAlert.Unavailable(identityChanged = true).message(canManageApps = true).contains("Check Home"))
 	}
 
 	@Test

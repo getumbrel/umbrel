@@ -98,6 +98,24 @@ class PhotoBackupEngineTest {
 		assertEquals(PhotoBackupLedger.AssetState.UPLOADED, ledger.assetRecord("source", kept)?.state)
 	}
 
+	// A phone carrying on another's backup says so until it has caught up. An item it can't
+	// read is tried again later and doesn't hold that up.
+	@Test
+	fun aTakenOverBackupStopsSayingSoOnceNothingIsLeftToSend() {
+		preferences.setContinuingName("Pixel 7", "source")
+		preferences.setContinuingName("Pixel 6", "other-source")
+		repeat(5_000) { library.add(PhotoBackupLedger.MEDIA_TYPE_IMAGE) }
+		library.items.getValue(library.add()).unreadable = true
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals("Pixel 7", preferences.continuingName("source"))
+
+		while (pass() == PassOutcome.MoreWork) Unit
+		assertEquals(1L, preferences.snapshot.statistics?.unreadableCount)
+		assertNull(preferences.continuingName("source"))
+		assertEquals("Pixel 6", preferences.continuingName("other-source"))
+	}
+
 	// A camera that replaces its provisional file in place can keep DATE_MODIFIED; the size
 	// still changes, and the new version gets a key of its own.
 	@Test

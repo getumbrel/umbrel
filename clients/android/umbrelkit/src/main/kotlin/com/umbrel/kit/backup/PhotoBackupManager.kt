@@ -125,6 +125,13 @@ class PhotoBackupManager internal constructor(
 		preferences.libraryPermissionRequested = true
 	}
 
+	/** As [libraryPermissionRequested], for the notification permission backup asks for. */
+	val notificationPermissionRequested: Boolean get() = preferences.notificationPermissionRequested
+
+	fun noteNotificationPermissionRequested() {
+		preferences.notificationPermissionRequested = true
+	}
+
 	/** The preference the toggles show: media choices only while this account owns backup. */
 	fun preference(deviceId: String, accountId: String): PhotoBackupPreference {
 		val saved = preferences.preference(deviceId, accountId)
@@ -184,13 +191,12 @@ class PhotoBackupManager internal constructor(
 				ledgerStatistics = ledgerStatistics,
 				setupInProgress = state.setupInProgress,
 				setupFailed = state.setupFailure != null,
+				continuingName = sourceId?.let(preferences::continuingName),
 				storageRetryRequested = configuration?.let { preferences.storageRetryRequested(it.source.id) } == true,
 				recoveryRetryRequested = configuration?.let { preferences.recoveryRetryRequested(it.source.id) } == true,
 				backgroundRestricted = backgroundRestricted(),
 				library = library,
 				defaultNetwork = defaultNetwork(),
-				// A question left unanswered shows straight away, not after setup asks again
-				newSourceQuestion = preferences.newSourceQuestion(device.id, accountId).takeIf { storedSource is SecretStore.TokenReadResult.Missing },
 				sourceResolved = storedSource !is SecretStore.TokenReadResult.Unavailable,
 			),
 		)
@@ -221,53 +227,13 @@ class PhotoBackupManager internal constructor(
 		setPreference(device, session, current.copy(includesPhotos = true, includesVideos = true))
 	}
 
-	sealed class SwitchOutcome {
-		data object Done : SwitchOutcome()
-
-		/**
-		 * The account already has phone backups, so switching would start a new source that
-		 * stores them again. Nothing has changed yet.
-		 */
-		data class AskNewSource(val existing: String) : SwitchOutcome()
-
-		/** The Umbrel couldn't be asked whether this would store photos twice. Nothing has changed. */
-		data object CouldNotCheck : SwitchOutcome()
-	}
-
 	/**
 	 * Moves backup here from the target it's set up for, including an Umbrel this app can no
 	 * longer open or an account that has signed out, so there's always a way to switch. Only
 	 * on the user's confirmed request: opening or signing in to another Umbrel never moves it.
-	 * Backups already on the other Umbrel stay there. When the switch would start a new source
-	 * on an account with phone backups, it asks before anything is stopped, and [asNewSource]
-	 * is the answer. The caller shows the check in progress: the setup state here belongs to
-	 * the target that owns backup until the switch.
+	 * Backups already on the other Umbrel stay there.
 	 */
-	suspend fun switchHere(device: SavedDevice, session: Umbreld.Session, asNewSource: Boolean = false, canRequestAccess: Boolean = false): SwitchOutcome {
-		val accountId = session.accountId
-		if (otherTarget(device.id, accountId) == null || !canSwitchHere(canRequestAccess)) return SwitchOutcome.Done
-		var check: Umbreld.NewPhotoBackupSourceCheck = Umbreld.NewPhotoBackupSourceCheck.Proceed
-		if (withContext(ioDispatcher) { secrets.sourceId(device.id, accountId) } is SecretStore.TokenReadResult.Missing) {
-			if (asNewSource) {
-				if (!withContext(ioDispatcher) { secrets.setSourceId(newSourceId(), device.id, accountId) }) return SwitchOutcome.CouldNotCheck
-			} else {
-				check = checkNewSource(device, session)
-			}
-		}
-		// The account may have signed out, or the destination changed, during the storage calls
-		// or the check
-		val signedIn = withContext(ioDispatcher) { secrets.session(device.id) }.sessionOrCached?.accountId == accountId
-		if (!signedIn || otherTarget(device.id, accountId) == null) return SwitchOutcome.Done
-		when (check) {
-			Umbreld.NewPhotoBackupSourceCheck.Proceed -> Unit
-			is Umbreld.NewPhotoBackupSourceCheck.Ask -> return SwitchOutcome.AskNewSource(check.existing.first())
-			Umbreld.NewPhotoBackupSourceCheck.Wait, is Umbreld.NewPhotoBackupSourceCheck.Fail -> return SwitchOutcome.CouldNotCheck
-		}
-		claimBackup(device, session, canRequestAccess)
-		return SwitchOutcome.Done
-	}
-
-	private fun claimBackup(device: SavedDevice, session: Umbreld.Session, canRequestAccess: Boolean) {
+	fun switchHere(device: SavedDevice, session: Umbreld.Session, canRequestAccess: Boolean = false) {
 		val accountId = session.accountId
 		val other = otherTarget(device.id, accountId) ?: return
 		if (!canSwitchHere(canRequestAccess)) return
@@ -296,27 +262,6 @@ class PhotoBackupManager internal constructor(
 			// back through libraryAccessChanged.
 			if (libraryAccess().canReadLibrary) sync(device, session, userInitiated = true) else setSetup(inProgress = false, failure = null)
 		}
-	}
-
-	/**
-	 * The user chose to back up this phone as a new source. Its identity is created now, in
-	 * secure storage that never moves to another phone, so a reinstall or a new phone asks
-	 * again instead of carrying this answer along.
-	 */
-	suspend fun backUpAsNewSource(device: SavedDevice, session: Umbreld.Session) {
-		val accountId = session.accountId
-		val created = withContext(ioDispatcher) {
-			secrets.sourceId(device.id, accountId) !is SecretStore.TokenReadResult.Missing || secrets.setSourceId(newSourceId(), device.id, accountId)
-		}
-		if (!created) return
-		setNewSourceQuestion(null, device.id, accountId)
-		sync(device, session, userInitiated = true)
-	}
-
-	fun turnOffBackup(device: SavedDevice, session: Umbreld.Session) {
-		setNewSourceQuestion(null, device.id, session.accountId)
-		val current = preferences.preference(device.id, session.accountId)
-		setPreference(device, session, current.copy(includesPhotos = false, includesVideos = false))
 	}
 
 	/**
@@ -368,6 +313,9 @@ class PhotoBackupManager internal constructor(
 	 */
 	fun sync(device: SavedDevice, session: Umbreld.Session, userInitiated: Boolean) {
 		val accountId = session.accountId
+		val storedSourceId = (secrets.sourceId(device.id, accountId) as? SecretStore.TokenReadResult.Found)?.value
+		// Phones that set up backup before the copy existed get one, so their backup can move too
+		if (storedSourceId != null) preferences.setCarriedSourceId(storedSourceId, device.id, accountId)
 		val current = preferences.configuration
 		val belongsToAccount = current?.deviceId == device.id && current.source.accountId == accountId
 		if (current != null && !belongsToAccount) {
@@ -376,17 +324,10 @@ class PhotoBackupManager internal constructor(
 		}
 		if (!preferences.isActive(device.id, accountId)) {
 			setSetup(inProgress = false, failure = null)
-			setNewSourceQuestion(null, device.id, accountId)
 			if (belongsToAccount) {
 				val revision = ++setupRevision
 				enqueue(revision) { disable(revokeServerGrant = true) }
 			}
-			return
-		}
-		// An unanswered new-phone question waits for the user. Only their own action asks the
-		// Umbrel again, so returning to the app or reaching the Umbrel doesn't.
-		if (!userInitiated && newSourceQuestionPending(device.id, accountId)) {
-			setSetup(inProgress = false, failure = null)
 			return
 		}
 		val preference = preferences.preference(device.id, accountId)
@@ -394,7 +335,6 @@ class PhotoBackupManager internal constructor(
 			setSetup(inProgress = false, failure = null)
 			return
 		}
-		val storedSourceId = (secrets.sourceId(device.id, accountId) as? SecretStore.TokenReadResult.Found)?.value
 		val desired = current?.takeIf { it.source.id == storedSourceId }?.copy(
 			includePhotos = preference.includesPhotos,
 			includeVideos = preference.includesVideos,
@@ -424,7 +364,6 @@ class PhotoBackupManager internal constructor(
 		if (!intentEnabled(device.id, session.accountId) || state.setupInProgress || state.setupFailure != null) return false
 		if (configuration(device.id, session.accountId) != null) return false
 		if (awaitsFolderChoice(preferences.preference(device.id, session.accountId), configured = false)) return false
-		if (newSourceQuestionPending(device.id, session.accountId)) return false
 		sync(device, session, userInitiated = false)
 		return true
 	}
@@ -582,45 +521,34 @@ class PhotoBackupManager internal constructor(
 			previous = null
 		}
 
-		// Without a backup identity for this account, setup would start a new source. On a new or
-		// reinstalled phone that stores the whole library again, because umbrelOS keys backups by
-		// source, so when the account already has phone backups it asks first.
-		if (withContext(ioDispatcher) { secrets.sourceId(device.id, accountId) } is SecretStore.TokenReadResult.Missing) {
-			val check = checkNewSource(device, session)
-			if (!isCurrent(revision, device.id, accountId)) return
-			when (check) {
-				// The old source may have been removed since the question was asked
-				Umbreld.NewPhotoBackupSourceCheck.Proceed -> setNewSourceQuestion(null, device.id, accountId)
-				is Umbreld.NewPhotoBackupSourceCheck.Ask -> {
-					setSetup(inProgress = false, failure = null)
-					setNewSourceQuestion(check.existing.first(), device.id, accountId)
-					return
-				}
-				Umbreld.NewPhotoBackupSourceCheck.Wait -> {
-					// This is setup's first request, so an Umbrel it can't reach waits, as turning
-					// backup on away from it does, and the check runs again once the app reaches it.
-					// One that still answers, as when it takes longer than the check allows to total
-					// a large library, would be asked again on every refresh, so setup fails and Try
-					// Again asks again.
-					val reachable = server.resolveEndpoint(device.nativeTarget) is EndpointResolution.Resolved
-					if (!isCurrent(revision, device.id, accountId)) return
-					return if (previous == null && !reachable) waitForUmbrel(revision) else failed("Couldn’t reach your Umbrel", revision)
-				}
-				is Umbreld.NewPhotoBackupSourceCheck.Fail -> return failed(check.message, revision)
-			}
-		}
-
 		var issuedGrant = false
 		var shouldRevokeIssuedGrant = false
 		var canRestorePrevious = true
 		var committed = false
 		try {
-			val sourceId = when (val read = withContext(ioDispatcher) { secrets.sourceId(device.id, accountId) }) {
+			// The account's backups, when setup had to read them
+			var listed: Umbreld.PhotoBackupSources? = null
+			val storedSourceId = withContext(ioDispatcher) { secrets.sourceId(device.id, accountId) }
+			var sourceId = when (val read = storedSourceId) {
 				is SecretStore.TokenReadResult.Found -> read.value
-				is SecretStore.TokenReadResult.Missing -> newSourceId().also {
-					if (!withContext(ioDispatcher) { secrets.setSourceId(it, device.id, accountId) }) {
-						throw SetupException("The photo backup identity couldn’t be saved")
-					}
+				is SecretStore.TokenReadResult.Missing -> {
+					// A phone set up from another, or this app installed again, carries on the
+					// backup Android's backup brought along, if the Umbrel still has it. Any other
+					// phone starts its own.
+					val carried = preferences.carriedSourceId(device.id, accountId)
+					listed = carried?.let { server.photoBackupSources(device.nativeTarget, session) }
+					if (!isCurrent(revision, device.id, accountId)) return
+					val continued = carried?.let { listed?.continuable(it) }
+					val id = continued?.id ?: newSourceId()
+					// Another phone's backup is renamed after this one, as on iOS. This phone's own,
+					// after a reinstall, keeps its name, which the user may have chosen. Both are
+					// saved before the id, so a setup cut short still renames on the next try.
+					val takesOver = continued != null && !preferences.carriedFromThisPhone(device.id, accountId)
+					preferences.setRenamePending(id.takeIf { takesOver }, device.id, accountId)
+					if (takesOver) preferences.setContinuingName(continued?.name, id)
+					storeSourceId(id, device.id, accountId)
+					if (takesOver) bump()
+					id
 				}
 				// A temporarily unreadable id is not proof there is none; minting a new one
 				// would create a second source and upload the library again.
@@ -631,33 +559,56 @@ class PhotoBackupManager internal constructor(
 				is SecretStore.TokenReadResult.Missing -> null
 				is SecretStore.TokenReadResult.Unavailable -> throw SetupException("Secure storage is temporarily unavailable")
 			}
+			val keepsAccess = previous != null && previous.source.id == sourceId && storedGrant != null
+			if (!keepsAccess && storedSourceId is SecretStore.TokenReadResult.Found &&
+				removedFromUmbrel(device, session, sourceId)
+			) {
+				// A backup removed in umbrelOS took its uploads with it, but this phone's ledger
+				// still counts them as sent, so carrying on would send nothing. A new backup
+				// uploads the library again.
+				sourceId = newSourceId()
+				preferences.setRenamePending(null, device.id, accountId)
+				storeSourceId(sourceId, device.id, accountId)
+			}
+			if (!isCurrent(revision, device.id, accountId)) return
 			val source: Umbreld.PhotoBackupSource
 			val grantToken: String
-			if (previous != null && previous.source.id == sourceId && storedGrant != null) {
+			if (keepsAccess) {
 				// Preference changes keep the existing account and source capability.
 				source = previous.source
 				grantToken = storedGrant
 			} else {
-				// After a relaunch, or Back Up Anyway, setup skips the check that reads the
-				// account's sources, so read the names here. umbrelOS ignores the name for a source
-				// it already has. An account with no phone sources has an empty list, which is
-				// an answer too.
-				val target = PhotoBackupTarget(device.id, accountId)
-				if (target !in knownPhoneSourceNames) {
-					val sources = try {
-						server.photoSources(device.nativeTarget, session)
-					} catch (cancelled: CancellationException) {
-						throw cancelled
-					} catch (error: Exception) {
-						null
+				val continuing = preferences.renamePending(device.id, accountId) == sourceId
+				val takenNames = if (continuing) {
+					// A backup taken over from another phone is renamed apart from the account's
+					// other backups, not from itself, as on iOS. Without the list, setup fails
+					// rather than guess.
+					val backups = listed ?: server.photoBackupSources(device.nativeTarget, session)
+					if (!isCurrent(revision, device.id, accountId)) return
+					backups?.sources.orEmpty().filter { it.id != sourceId }.map { it.name }
+				} else {
+					// Read the account's phone backup names so this one gets its own. umbrelOS ignores
+					// the name for a source it already has. An account with no phone sources has an
+					// empty list, which is an answer too.
+					val target = PhotoBackupTarget(device.id, accountId)
+					if (target !in knownPhoneSourceNames) {
+						val sources = try {
+							server.photoSources(device.nativeTarget, session)
+						} catch (cancelled: CancellationException) {
+							throw cancelled
+						} catch (error: Exception) {
+							null
+						}
+						if (sources != null) {
+							knownPhoneSourceNames[target] = sources.filter { it.isPhone }.map { it.name }
+							if (!isCurrent(revision, device.id, accountId)) return
+						}
 					}
-					if (sources != null) {
-						knownPhoneSourceNames[target] = sources.filter { it.isPhone }.map { it.name }
-						if (!isCurrent(revision, device.id, accountId)) return
-					}
+					knownPhoneSourceNames[target].orEmpty()
 				}
-				val name = PhotoBackupSourceName.unique(suggestedName(), knownPhoneSourceNames[target].orEmpty())
-				val grant = server.createGrant(device.nativeTarget, session, sourceId, name)
+				val name = PhotoBackupSourceName.unique(suggestedName(), takenNames)
+				val grant = server.createGrant(device.nativeTarget, session, sourceId, name, continuing)
+				if (continuing) preferences.setRenamePending(null, device.id, accountId)
 				issuedGrant = true
 				shouldRevokeIssuedGrant = storedGrant == null
 				source = grant.source
@@ -754,25 +705,20 @@ class PhotoBackupManager internal constructor(
 		bump()
 	}
 
-	private suspend fun checkNewSource(device: SavedDevice, session: Umbreld.Session): Umbreld.NewPhotoBackupSourceCheck {
-		val sources = try {
-			Result.success(server.photoSources(device.nativeTarget, session))
+	/**
+	 * Whether the Umbrel answered that it no longer has this phone's backup, as after it was
+	 * removed in umbrelOS. umbrelOS 2.0 can't list backups and a failed read proves nothing,
+	 * so without an answer the phone carries on with its own, as iOS does.
+	 */
+	private suspend fun removedFromUmbrel(device: SavedDevice, session: Umbreld.Session, sourceId: String): Boolean {
+		val listed = try {
+			server.photoBackupSources(device.nativeTarget, session)
 		} catch (cancelled: CancellationException) {
 			throw cancelled
 		} catch (error: Exception) {
-			Result.failure(error)
+			null
 		}
-		sources.onSuccess { list -> knownPhoneSourceNames[PhotoBackupTarget(device.id, session.accountId)] = list.filter { it.isPhone }.map { it.name } }
-		return Umbreld.NewPhotoBackupSourceCheck.resolve(sources)
-	}
-
-	private fun newSourceQuestionPending(deviceId: String, accountId: String): Boolean =
-		preferences.newSourceQuestion(deviceId, accountId) != null && secrets.sourceId(deviceId, accountId) is SecretStore.TokenReadResult.Missing
-
-	private fun setNewSourceQuestion(existing: String?, deviceId: String, accountId: String) {
-		if (preferences.newSourceQuestion(deviceId, accountId) == existing) return
-		preferences.setNewSourceQuestion(existing, deviceId, accountId)
-		bump()
+		return listed != null && listed.canContinueSource && listed.sources.none { it.id == sourceId }
 	}
 
 	private fun newSourceId(): String = UUID.randomUUID().toString().lowercase()
@@ -801,6 +747,14 @@ class PhotoBackupManager internal constructor(
 
 	private fun setSetup(inProgress: Boolean, failure: String?) =
 		_state.update { it.copy(setupInProgress = inProgress, setupFailure = failure, revision = it.revision + 1) }
+
+	/** Saves the backup id, with a copy Android's backup can carry to a new phone. */
+	private suspend fun storeSourceId(sourceId: String, deviceId: String, accountId: String) {
+		if (!withContext(ioDispatcher) { secrets.setSourceId(sourceId, deviceId, accountId) }) {
+			throw SetupException("The photo backup identity couldn’t be saved")
+		}
+		preferences.setCarriedSourceId(sourceId, deviceId, accountId)
+	}
 
 	private fun bump() = _state.update { it.copy(revision = it.revision + 1) }
 }

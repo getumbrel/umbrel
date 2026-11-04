@@ -36,18 +36,22 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.umbrel.android.BuildConfig
+import com.umbrel.android.IdentityChange
 import com.umbrel.android.onboarding.RenderShadow
 import com.umbrel.android.onboarding.UmbrelDeviceRender
 import com.umbrel.android.onboarding.UmbrelRenderPlacement
@@ -65,6 +69,7 @@ import com.umbrel.android.ui.SheetToolbar
 import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.formatStorageSize
 import com.umbrel.android.ui.glassControl
+import com.umbrel.android.ui.openUrl
 import kotlinx.coroutines.launch
 
 /** The pages pushed inside the Profile sheet. */
@@ -170,15 +175,9 @@ private fun ProfileRoot(
 		DeviceCard(state, Modifier.padding(top = 20.dp, bottom = 10.dp))
 		ConnectionSection(state, onOpen)
 		PhotosSection(model, state, photoBackup, folders, onOpenFolders = { onOpen(ProfileDestination.FOLDERS) })
-		NotificationSection()
 		PermissionsSection(photoBackup)
 		SignOutButton(Modifier.padding(vertical = 10.dp)) { confirmingSignOut = true }
-		Text(
-			"Umbrel, Inc. · Version ${BuildConfig.VERSION_NAME}",
-			style = AppleType.footnote,
-			color = MainTheme.gray,
-			modifier = Modifier.padding(vertical = 10.dp),
-		)
+		Footer()
 	}
 	if (confirmingSignOut) {
 		AlertDialog(
@@ -259,20 +258,22 @@ private fun ConnectionSection(state: MainUiState, onOpen: (ProfileDestination) -
 	}
 }
 
-/** A static preview of the notification settings, under a "Coming Soon" badge. */
+/** The same privacy policy umbrelOS links to. Google Play asks for it in the app too. */
 @Composable
-private fun NotificationSection() {
-	SettingsSection("Notifications", badge = "Coming Soon") {
-		Column(Modifier.alpha(0.45f)) {
-			SettingsToggleRow(Symbols.PowerSettingsNew, "Device offline alert", checked = false, onCheckedChange = {}, enabled = false)
-			SettingsDivider()
-			SettingsToggleRow(Symbols.DriveWarning, "Storage alert", checked = false, onCheckedChange = {}, enabled = false, iconSize = 24.dp)
-			SettingsDivider()
-			SettingsToggleRow(Symbols.ArrowCircleUp, "umbrelOS updates", checked = false, onCheckedChange = {}, enabled = false)
-			SettingsDivider()
-			SettingsToggleRow(Symbols.AppBadge, "umbrelOS app updates", checked = false, onCheckedChange = {}, enabled = false)
-		}
-	}
+private fun Footer() {
+	val context = LocalContext.current
+	Text(
+		buildAnnotatedString {
+			append("Umbrel, Inc. · Version ${BuildConfig.VERSION_NAME} · ")
+			withLink(LinkAnnotation.Clickable("privacy", TextLinkStyles(SpanStyle(color = Color.White.copy(alpha = 0.65f)))) {
+				context.openUrl("https://umbrel.com/legal/privacy")
+			}) { append("Privacy\u00A0Policy") }
+		},
+		style = AppleType.footnote,
+		color = MainTheme.gray,
+		textAlign = TextAlign.Center,
+		modifier = Modifier.padding(vertical = 10.dp),
+	)
 }
 
 /**
@@ -284,9 +285,7 @@ private fun PermissionsSection(photoBackup: PhotoBackupControls) {
 	SettingsSection("Permissions") {
 		PhotoLibraryAccessRow(photoBackup)
 		SettingsDivider()
-		SettingsRow(Symbols.Notifications, "Notifications") {
-			SettingsValue("Coming Soon")
-		}
+		NotificationsRow(photoBackup)
 	}
 }
 
@@ -313,5 +312,5 @@ internal fun currentConnectionLabel(connection: ConnectionState, route: Connecti
 		ConnectionRoute.TAILSCALE -> "Tailscale"
 		null -> "Connected"
 	}
-	ConnectionState.UNAVAILABLE -> if (identityChanged) "Not recognized" else "Offline"
+	ConnectionState.UNAVAILABLE -> if (identityChanged) IdentityChange.STATUS else "Offline"
 }

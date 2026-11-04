@@ -2,12 +2,15 @@ package com.umbrel.android.main
 
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +35,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -67,8 +71,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,9 +101,11 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
+import com.umbrel.android.browser.Browser
 import com.umbrel.android.browser.LocalBrowserSources
 import com.umbrel.android.browser.PresentedBrowser
 import com.umbrel.android.browser.UmbrelOSLayer
+import com.umbrel.android.ui.AppleType
 import com.umbrel.android.ui.CircleIconButton
 import com.umbrel.android.ui.GlassMenuHost
 import com.umbrel.android.ui.LocalBrandColor
@@ -108,6 +117,7 @@ import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.WallpaperBackground
 import com.umbrel.android.ui.WallpaperTopGradient
 import com.umbrel.android.ui.frostBackground
+import com.umbrel.android.ui.glassControl
 import com.umbrel.android.ui.glassGlint
 import com.umbrel.android.ui.interFor
 import com.umbrel.android.ui.liquid.DampedDragAnimation
@@ -171,8 +181,9 @@ fun MainScreen(device: SavedDevice, onSignedOut: () -> Unit, onShowAllDevices: (
 	val browser = model.browser
 	val browserScope = rememberCoroutineScope()
 	val showsUmbrel = browser.showsUmbrel
-	// Back from umbrelOS returns to the tabs it took over from.
-	BackHandler(enabled = showsUmbrel, onBack = browser::closeUmbrel)
+	// Back from umbrelOS returns to the app that opened it with a link, if one did, as
+	// Android's back does to the previous screen, and otherwise to the tabs it took over from.
+	BackHandler(enabled = showsUmbrel) { if (browser.returnTarget != null) browser.returnToApp() else browser.closeUmbrel() }
 	// umbrelOS takes over the screen itself, so anything presented over the tabs (Profile, a
 	// setup guide) gets out of its way.
 	LaunchedEffect(showsUmbrel) {
@@ -283,7 +294,15 @@ fun MainScreen(device: SavedDevice, onSignedOut: () -> Unit, onShowAllDevices: (
 				Box(Modifier.fillMaxWidth().zIndex(2f)) {
 					WallpaperTopGradient()
 					CompositionLocalProvider(LocalGlassBackdrop provides underHeader) {
-						HeaderBar(model, state, showsBack = tab == MainTab.HOME && !showsUmbrel, onBack = onShowAllDevices, modifier = Modifier.align(Alignment.TopCenter))
+						HeaderBar(
+							model,
+							state,
+							showsBack = tab == MainTab.HOME && !showsUmbrel,
+							onBack = onShowAllDevices,
+							returnTarget = browser.returnTarget.takeIf { showsUmbrel },
+							onReturn = browser::returnToApp,
+							modifier = Modifier.align(Alignment.TopCenter),
+						)
 					}
 				}
 			}
@@ -311,23 +330,68 @@ fun MainScreen(device: SavedDevice, onSignedOut: () -> Unit, onShowAllDevices: (
 
 /**
  * The controls shared by every tab: back to all Umbrels (Home only) and the browser pill.
- * Other tabs hide the back button without removing it, so the pill never shifts.
+ * Other tabs hide the back button without removing it, so the pill never shifts. When an app
+ * opened umbrelOS with a link, the same corner leads back to that app ([returnTarget]).
  */
 @Composable
-private fun HeaderBar(model: MainViewModel, state: MainUiState, showsBack: Boolean, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun HeaderBar(
+	model: MainViewModel,
+	state: MainUiState,
+	showsBack: Boolean,
+	onBack: () -> Unit,
+	returnTarget: Browser.ReturnTarget?,
+	onReturn: () -> Unit,
+	modifier: Modifier = Modifier,
+) {
+	// Kept while the button fades out, so its name doesn't vanish first
+	var returnName by remember { mutableStateOf("") }
+	returnTarget?.let { returnName = it.identity.name }
 	Row(
 		modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = MainTheme.contentInset),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
-		CircleIconButton(
-			Symbols.ArrowBackIosNewMedium,
-			contentDescription = "All Umbrels",
-			modifier = if (showsBack) Modifier else Modifier.alpha(0f).clearAndSetSemantics {},
-			iconSize = 18.dp,
-			onClick = { if (showsBack) onBack() },
-		)
+		Box(contentAlignment = Alignment.CenterStart) {
+			CircleIconButton(
+				Symbols.ArrowBackIosNewMedium,
+				contentDescription = "All Umbrels",
+				modifier = if (showsBack) Modifier else Modifier.alpha(0f).clearAndSetSemantics {},
+				iconSize = 18.dp,
+				onClick = { if (showsBack) onBack() },
+			)
+			ReturnToAppButton(returnTarget != null, returnName, onReturn)
+		}
 		Spacer(Modifier.weight(1f))
 		HeaderAccessPill(model, state)
+	}
+}
+
+/** The way back to an app that opened umbrelOS, in the same glass as the header's other controls. */
+@Composable
+private fun ReturnToAppButton(visible: Boolean, name: String, onClick: () -> Unit) {
+	AnimatedVisibility(visible, enter = fadeIn(tween(200)), exit = fadeOut(tween(200))) {
+		ReturnToAppCapsule(name, onClick)
+	}
+}
+
+@Composable
+private fun ReturnToAppCapsule(name: String, onClick: () -> Unit) {
+	val shape = RoundedCornerShape(percent = 50)
+	Row(
+		Modifier
+			.height(42.dp)
+			.clip(shape)
+			.glassControl(shape)
+			.clickable(role = Role.Button, onClick = onClick)
+			.clearAndSetSemantics {
+				contentDescription = "Back to $name"
+				role = Role.Button
+			}
+			.padding(start = 12.dp, end = 16.dp),
+		horizontalArrangement = Arrangement.spacedBy(4.dp),
+		verticalAlignment = Alignment.CenterVertically,
+	) {
+		Icon(Symbols.ArrowBackIosNewMedium, contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(15.dp))
+		Text(name, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.85f), maxLines = 1, overflow = TextOverflow.Ellipsis)
 	}
 }
 

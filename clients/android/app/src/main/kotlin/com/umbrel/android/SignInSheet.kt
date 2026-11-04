@@ -151,7 +151,7 @@ fun SignInSheet(
 	onDismiss: () -> Unit,
 	onRemove: (suspend () -> Unit)?,
 	// Removes a saved Umbrel the app no longer recognizes and starts adding it again. Without
-	// one, "not recognized" goes back to the list, where it can be found again.
+	// one, a changed identity goes back to the list, where it can be found again.
 	onReconnect: (suspend () -> Unit)? = null,
 	// Its Umbrel is being removed. The sheet stays as it is until it's gone, as on iOS, but
 	// nothing in it acts meanwhile.
@@ -340,11 +340,11 @@ private fun SignInForm(
 			// Without a saved Umbrel to reconnect (first-time onboarding), going back to the list
 			// finds it again as it is now.
 			SignInStep.NOT_RECOGNIZED -> Message(
-				title = "Umbrel not recognized",
+				title = IdentityChange.TITLE,
 				description = if (onReconnect == null) {
 					"Go back and choose your Umbrel again."
 				} else {
-					"This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel to keep using it in this app."
+					IdentityChange.MESSAGE
 				},
 				actionTitle = if (onReconnect == null) "Go Back" else if (reconnecting) "Reconnecting…" else "Reconnect",
 				onAction = {
@@ -373,8 +373,8 @@ private fun SignInForm(
 	if (confirmingReconnect && onReconnect != null) {
 		AlertDialog(
 			onDismissRequest = { confirmingReconnect = false },
-			title = { Text("Reconnect your Umbrel?") },
-			text = { Text("You’ll sign in again. If photo backup is on, you’ll need to turn it back on. Everything on your Umbrel stays as it is.") },
+			title = { Text(IdentityChange.CONFIRM_TITLE) },
+			text = { Text(IdentityChange.CONFIRM_MESSAGE) },
 			confirmButton = {
 				TextButton(onClick = {
 					confirmingReconnect = false

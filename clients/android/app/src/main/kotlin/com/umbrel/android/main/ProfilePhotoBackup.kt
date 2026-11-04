@@ -1,6 +1,7 @@
 package com.umbrel.android.main
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -27,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +39,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
+import androidx.core.content.PackageManagerCompat
+import androidx.core.content.UnusedAppRestrictionsConstants
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.umbrel.android.container
@@ -52,6 +59,7 @@ import com.umbrel.android.ui.SettingsToggleRow
 import com.umbrel.android.ui.SettingsValue
 import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.openAppSettings
+import com.umbrel.android.ui.openNotificationSettings
 import com.umbrel.kit.backup.PhotoBackupPreference
 import com.umbrel.kit.backup.PhotoLibraryAccess
 import java.time.Instant
@@ -59,6 +67,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import kotlin.coroutines.resume
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * Photo library access as the Permissions row shows it. Android reports only granted or
@@ -89,6 +100,71 @@ internal enum class PhotoAccess(val label: String) {
 	}
 }
 
+/**
+ * Notifications as the Permissions row shows them. Backup uses them for user-started transfers.
+ * As with photos, the rationale check and whether they were ever requested tell a first request
+ * from one that needs Settings. Before Android 13 there's no request: only Settings turns them
+ * back on.
+ */
+internal enum class NotificationAccess(val label: String) {
+	ON("On"),
+	NOT_DETERMINED("Set Up"),
+	DENIED("Off"),
+	BLOCKED("Off");
+
+	companion object {
+		fun of(enabled: Boolean, showsRationale: Boolean, requested: Boolean): NotificationAccess = when {
+			enabled -> ON
+			showsRationale -> DENIED
+			requested -> BLOCKED
+			else -> NOT_DETERMINED
+		}
+	}
+}
+
+/**
+ * Android's "Pause app activity if unused": after a few months without the app being opened,
+ * Android resets its permissions, photo access included, and stops its background work.
+ * Backup running in the background doesn't count as use, so a phone that only backs up would
+ * stop without anyone knowing. Android's own API reports the setting and opens the App info
+ * page where the user turns it off; apps can't exempt themselves.
+ */
+internal enum class PauseIfUnused {
+	ON,
+	OFF;
+
+	companion object {
+		/** Null when the device doesn't have the feature or its status couldn't be read. */
+		fun of(status: Int): PauseIfUnused? = when (status) {
+			UnusedAppRestrictionsConstants.DISABLED -> OFF
+			UnusedAppRestrictionsConstants.API_30_BACKPORT, UnusedAppRestrictionsConstants.API_30, UnusedAppRestrictionsConstants.API_31 -> ON
+			else -> null
+		}
+
+		/**
+		 * What the switch is called in App info. Android has renamed it as the feature grew: Android
+		 * 16 says "Manage app if unused" (it can now archive the app too), 13 and 14 "Pause app
+		 * activity if unused". Android 15 is assumed to use the older name; it hasn't been checked.
+		 */
+		val settingName: String
+			get() = when {
+				Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA -> "Manage app if unused"
+				Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> "Pause app activity if unused"
+				Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> "Remove permissions and free up space"
+				else -> "Remove permissions if app isn’t used"
+			}
+
+	}
+}
+
+private suspend fun Context.readPauseIfUnused(): PauseIfUnused? = suspendCancellableCoroutine { continuation ->
+	val status = PackageManagerCompat.getUnusedAppRestrictionsStatus(this)
+	status.addListener(
+		{ continuation.resume(runCatching { PauseIfUnused.of(status.get()) }.getOrNull()) },
+		ContextCompat.getMainExecutor(this),
+	)
+}
+
 /** The photo library and notification requests behind backup setup, shared by Profile and Home. */
 internal class PhotoAccessRequests(
 	val access: PhotoAccess,
@@ -105,7 +181,15 @@ internal class PhotoAccessRequests(
 	 * asked for next, and a refusal turns backup back off.
 	 */
 	val requestLibraryAccess: (turningBackupOn: Boolean) -> Unit,
+	/** Asks for notifications when Android still shows its request; never opens Settings. */
 	val requestNotifications: () -> Unit,
+	val notifications: NotificationAccess,
+	/** The Notifications row: asks while Android still shows its request, otherwise opens Settings. */
+	val changeNotifications: () -> Unit,
+	/** Null until read, or when the device doesn't have the feature. */
+	val pauseIfUnused: PauseIfUnused?,
+	/** Opens App info, where the user turns "Pause app activity if unused" off or on. */
+	val changePauseIfUnused: () -> Unit,
 	val openSettings: () -> Unit,
 )
 
@@ -126,19 +210,47 @@ internal fun rememberPhotoAccessRequests(model: MainViewModel, state: MainUiStat
 	var turningBackupOn by remember { mutableStateOf(false) }
 
 	fun readRationale(): Boolean = activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, libraryPermissions.first())
+	fun readNotificationRationale(): Boolean = activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+		ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
+	fun readNotificationsEnabled(): Boolean = NotificationManagerCompat.from(context).areNotificationsEnabled()
+	var notificationRationale by remember { mutableStateOf(false) }
+	var notificationsEnabled by remember { mutableStateOf(readNotificationsEnabled()) }
+	var pauseIfUnused by remember { mutableStateOf<PauseIfUnused?>(null) }
+	val scope = rememberCoroutineScope()
+	fun refreshPauseIfUnused() {
+		scope.launch { pauseIfUnused = context.readPauseIfUnused() }
+	}
 
 	// Access can change in Settings while the app is in the background.
-	LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { showsRationale = readRationale() }
+	LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+		showsRationale = readRationale()
+		notificationRationale = readNotificationRationale()
+		notificationsEnabled = readNotificationsEnabled()
+		refreshPauseIfUnused()
+	}
+	// Android asks for a result here, even though it doesn't return one
+	val unusedAppSettings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { refreshPauseIfUnused() }
 
-	val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+	val notificationRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+		notificationRationale = readNotificationRationale()
+		notificationsEnabled = readNotificationsEnabled()
+	}
+	fun askForNotifications() {
+		if (!needsNotificationPermission(context)) return
+		backup.noteNotificationPermissionRequested()
+		notificationRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+	}
 	val library = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
 		showsRationale = readRationale()
 		model.onPermissionsChanged(turningBackupOn)
-		if (turningBackupOn && backup.libraryAccess().canReadLibrary && needsNotificationPermission(context)) {
-			notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-		}
+		if (turningBackupOn && backup.libraryAccess().canReadLibrary) askForNotifications()
 		turningBackupOn = false
 	}
+	val notifications = NotificationAccess.of(
+		enabled = notificationsEnabled,
+		showsRationale = notificationRationale,
+		requested = backup.notificationPermissionRequested || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU,
+	)
 	val access = PhotoAccess.of(
 		full = state.photoLibraryAccess == PhotoLibraryAccess.FULL,
 		partial = state.photoLibraryAccess == PhotoLibraryAccess.SELECTED,
@@ -158,7 +270,19 @@ internal fun rememberPhotoAccessRequests(model: MainViewModel, state: MainUiStat
 				library.launch(libraryPermissions)
 			}
 		},
-		requestNotifications = { if (needsNotificationPermission(context)) notifications.launch(Manifest.permission.POST_NOTIFICATIONS) },
+		requestNotifications = ::askForNotifications,
+		notifications = notifications,
+		changeNotifications = {
+			if (notifications == NotificationAccess.BLOCKED) context.openNotificationSettings() else askForNotifications()
+		},
+		pauseIfUnused = pauseIfUnused,
+		changePauseIfUnused = {
+			try {
+				unusedAppSettings.launch(IntentCompat.createManageUnusedAppRestrictionsIntent(context, context.packageName))
+			} catch (error: ActivityNotFoundException) {
+				context.openAppSettings()
+			}
+		},
 		openSettings = context::openAppSettings,
 	)
 }
@@ -171,6 +295,8 @@ internal class PhotoBackupControls(
 	val setPreference: (PhotoBackupPreference) -> Unit,
 	val requestLibraryAccess: () -> Unit,
 	val openSettings: () -> Unit,
+	val notifications: NotificationAccess,
+	val changeNotifications: () -> Unit,
 )
 
 /**
@@ -195,6 +321,8 @@ internal fun rememberPhotoBackupControls(model: MainViewModel, state: MainUiStat
 		},
 		requestLibraryAccess = { requests.requestLibraryAccess(false) },
 		openSettings = requests.openSettings,
+		notifications = requests.notifications,
+		changeNotifications = requests.changeNotifications,
 	)
 }
 
@@ -204,7 +332,10 @@ private fun needsNotificationPermission(context: Context): Boolean =
 
 @Composable
 internal fun PhotosSection(model: MainViewModel, state: MainUiState, controls: PhotoBackupControls, folders: List<LibraryFolder>, onOpenFolders: () -> Unit) {
-	SettingsSection("Photos") {
+	// The same How it works as Library
+	var showsInfo by rememberSaveable { mutableStateOf(false) }
+	if (showsInfo) PhotoBackupInfoSheet(state.backupSourceName, onDismiss = { showsInfo = false })
+	SettingsSection("Photos", learnMore = { showsInfo = true }) {
 		val destination = state.otherBackupDeviceName
 		if (destination != null) {
 			PhotoBackupDestinationRow(model, state, destination, controls.access)
@@ -351,6 +482,26 @@ internal fun PhotoLibraryAccessRow(controls: PhotoBackupControls) {
 					menu()
 				}
 			}
+		}
+	}
+}
+
+/** Like full photo access, notifications that are on show as done. */
+@Composable
+internal fun NotificationsRow(controls: PhotoBackupControls) {
+	val on = controls.notifications == NotificationAccess.ON
+	SettingsRow(
+		Symbols.Notifications,
+		"Notifications",
+		modifier = if (on) Modifier else Modifier.clickable(role = Role.Button, onClick = controls.changeNotifications),
+	) {
+		if (on) {
+			Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+				Icon(Symbols.CheckMedium, contentDescription = null, tint = MainTheme.gray, modifier = Modifier.size(16.dp))
+				Text(controls.notifications.label, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray)
+			}
+		} else {
+			SettingsValue(controls.notifications.label, chevron = true)
 		}
 	}
 }

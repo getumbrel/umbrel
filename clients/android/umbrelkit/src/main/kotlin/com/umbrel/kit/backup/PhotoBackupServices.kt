@@ -66,12 +66,15 @@ interface PhotoBackupServer {
 
 	suspend fun upload(endpoint: UploadEndpoint, grant: String, upload: PhotoUpload, source: UploadSource): PhotoUploadResult
 
-	suspend fun createGrant(target: Umbreld.Target, session: Umbreld.Session, sourceId: String, suggestedName: String): Umbreld.PhotoBackupGrant
+	suspend fun createGrant(target: Umbreld.Target, session: Umbreld.Session, sourceId: String, suggestedName: String, continuing: Boolean = false): Umbreld.PhotoBackupGrant
 
 	suspend fun revokeGrant(target: Umbreld.Target, session: Umbreld.Session)
 
 	/** The account's Photos sources, read before a new source would store the account's phone backups again. */
 	suspend fun photoSources(target: Umbreld.Target, session: Umbreld.Session): List<Umbreld.PhotoSourceSummary>
+
+	/** The account's phone backups by source id; null from umbrelOS 2.0, which can't list them. */
+	suspend fun photoBackupSources(target: Umbreld.Target, session: Umbreld.Session): Umbreld.PhotoBackupSources?
 
 	suspend fun confirmedResources(
 		target: Umbreld.Target,
@@ -135,12 +138,15 @@ class UmbrelPhotoBackupServer internal constructor(
 		if (error.isConnectivityFailure) EndpointResolution.Unreachable else EndpointResolution.Refused(error.message ?: "Couldn’t verify this Umbrel")
 	}
 
-	override suspend fun createGrant(target: Umbreld.Target, session: Umbreld.Session, sourceId: String, suggestedName: String) =
-		Umbreld.createPhotoBackupGrant(target, session, sourceId, suggestedName)
+	override suspend fun createGrant(target: Umbreld.Target, session: Umbreld.Session, sourceId: String, suggestedName: String, continuing: Boolean) =
+		Umbreld.createPhotoBackupGrant(target, session, sourceId, suggestedName, continuing)
 
 	override suspend fun revokeGrant(target: Umbreld.Target, session: Umbreld.Session) = Umbreld.revokePhotoBackupGrant(target, session)
 
 	override suspend fun photoSources(target: Umbreld.Target, session: Umbreld.Session) = Umbreld.photoSources(target, session)
+
+	override suspend fun photoBackupSources(target: Umbreld.Target, session: Umbreld.Session) =
+		Umbreld.photoBackupSources(target, session)
 
 	override suspend fun confirmedResources(
 		target: Umbreld.Target,

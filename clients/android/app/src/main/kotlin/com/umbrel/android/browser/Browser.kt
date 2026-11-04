@@ -35,6 +35,9 @@ internal class Browser(
 	private val model: MainViewModel,
 	private val scope: CoroutineScope,
 ) {
+	/** Where an app was when it opened umbrelOS with a link. */
+	data class ReturnTarget(val origin: String, val identity: BrowserPage.Identity, val url: Uri)
+
 	/** An app, presented over everything with its own title bar. */
 	var page by mutableStateOf<BrowserPage?>(null)
 		private set
@@ -49,6 +52,13 @@ internal class Browser(
 	var umbrel by mutableStateOf<BrowserPage?>(null)
 		private set
 	var showsUmbrel by mutableStateOf(false)
+		private set
+
+	/**
+	 * The app that opened umbrelOS with a link, so umbrelOS can offer the way back to it. Only
+	 * where it was is kept, not its page, so this holds nothing open.
+	 */
+	var returnTarget by mutableStateOf<ReturnTarget?>(null)
 		private set
 
 	/** Where the presented page grows out of and shrinks back into. */
@@ -101,6 +111,14 @@ internal class Browser(
 
 	fun closeUmbrel() {
 		showsUmbrel = false
+		returnTarget = null
+	}
+
+	/** Back to the app that opened umbrelOS, where it was. A released page opens again at the same place. */
+	fun returnToApp() {
+		val target = returnTarget ?: return
+		val context = context ?: return
+		show(page(target.origin, target.identity, context), target.url, resuming = true, source = null)
 	}
 
 	/** The presentation ended, by the close button or by gesture. */
@@ -146,6 +164,7 @@ internal class Browser(
 		isPresented = false
 		showsPresentation = false
 		showsUmbrel = false
+		returnTarget = null
 		context = null
 	}
 
@@ -155,11 +174,18 @@ internal class Browser(
 		context?.updateHosts(model.browserHosts)
 		page.open(url, resuming)
 		if (page === umbrel) {
-			// umbrelOS takes over in place; any app on top steps aside for it.
+			// umbrelOS takes over in place; any app on top steps aside for it, remembered so
+			// umbrelOS can lead back. Its icon is hidden behind umbrelOS, so it fades away
+			// instead of shrinking into it.
+			val app = this.page
+			val location = app?.shownUrl ?: app?.currentUrl
+			if (isPresented && app != null && location != null) returnTarget = ReturnTarget(app.origin, app.identity, location)
+			sourceId = null
 			isPresented = false
 			showsUmbrel = true
 			return
 		}
+		returnTarget = null
 		pages.remove(page)
 		pages.add(0, page)
 		for (stale in pages.drop(WARM_PAGE_LIMIT)) {

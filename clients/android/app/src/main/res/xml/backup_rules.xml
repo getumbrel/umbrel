@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 11 and lower. Sealed secrets live under no_backup already; the photo ledger
      holds device-specific MediaStore ids that must not follow a restore to another phone;
-     WebView's storage holds each signed-in Umbrel's browser cookie and token. -->
+     WebView's storage holds each signed-in Umbrel's browser cookie and token.
+     photo_backup_identity.xml is deliberately left in, so a restored phone can carry on its
+     photo backup. -->
 <full-backup-content>
     <exclude domain="database" path="photo-backup.sqlite" />
     <exclude domain="database" path="photo-backup.sqlite-wal" />

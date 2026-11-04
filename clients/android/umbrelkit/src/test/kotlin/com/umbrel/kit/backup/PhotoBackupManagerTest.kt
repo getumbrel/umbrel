@@ -1,6 +1,7 @@
 package com.umbrel.kit.backup
 
 import android.content.Context
+import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.umbrel.kit.SavedDevice
@@ -14,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -56,6 +58,8 @@ class PhotoBackupManagerTest {
 	fun setUp() {
 		val context = ApplicationProvider.getApplicationContext<Context>()
 		context.getSharedPreferences(PhotoBackupPreferences.FILE_NAME, Context.MODE_PRIVATE).edit().clear().commit()
+		context.getSharedPreferences(PhotoBackupPreferences.IDENTITY_FILE_NAME, Context.MODE_PRIVATE).edit().clear().commit()
+		Settings.Secure.putString(context.contentResolver, Settings.Secure.ANDROID_ID, "this-phone")
 		preferences = PhotoBackupPreferences(context)
 		directory = File(System.getProperty("java.io.tmpdir"), "umbrel-manager-" + System.nanoTime()).apply { mkdirs() }
 		secrets.sessions["umbrel"] = session
@@ -366,6 +370,279 @@ class PhotoBackupManagerTest {
 	}
 
 	@Test
+	fun reconnectAfterTheBackupWasRemovedStartsANewOne() = runTest {
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+		val removed = preferences.configuration!!.source.id
+		preferences.publish(PhotoBackupSnapshot(PhotoBackupPhase.NEEDS_ATTENTION, PhotoBackupIssue.AUTHENTICATION_REQUIRED, sourceId = removed))
+		server.backupSources = Umbreld.PhotoBackupSources(listOf("continue-source"), emptyList())
+
+		manager.retryAfterError(device, session)
+		advanceUntilIdle()
+
+		val source = preferences.configuration?.source?.id
+		assertNotNull(source)
+		assertNotEquals(removed, source)
+		assertEquals(source, secrets.sourceIds["umbrel:0"])
+		assertEquals(source, server.grantsCreated.last())
+		assertEquals(PhotoBackupPhase.WAITING, preferences.snapshot.phase)
+	}
+
+	@Test
+	fun reconnectKeepsTheBackupTheUmbrelStillHas() = runTest {
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+		val sourceId = preferences.configuration!!.source.id
+		preferences.publish(PhotoBackupSnapshot(PhotoBackupPhase.NEEDS_ATTENTION, PhotoBackupIssue.AUTHENTICATION_REQUIRED, sourceId = sourceId))
+		server.backupSources = Umbreld.PhotoBackupSources(
+			listOf("continue-source"),
+			listOf(Umbreld.PhotoBackupSourceDetails(sourceId, "Pixel", "android")),
+		)
+
+		manager.retryAfterError(device, session)
+		advanceUntilIdle()
+
+		assertEquals(sourceId, preferences.configuration?.source?.id)
+		assertEquals(sourceId, server.grantsCreated.last())
+	}
+
+	@Test
+	fun reconnectKeepsTheBackupWhenTheUmbrelCantListBackups() = runTest {
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+		val sourceId = preferences.configuration!!.source.id
+		preferences.publish(PhotoBackupSnapshot(PhotoBackupPhase.NEEDS_ATTENTION, PhotoBackupIssue.AUTHENTICATION_REQUIRED, sourceId = sourceId))
+		server.backupSourcesError = Umbreld.Error(500, "Internal server error")
+
+		manager.retryAfterError(device, session)
+		advanceUntilIdle()
+
+		assertEquals(1, server.backupSourceReads)
+		assertEquals(sourceId, preferences.configuration?.source?.id)
+		assertEquals(sourceId, server.grantsCreated.last())
+	}
+
+	// ── A phone set up from another ──
+
+	private fun carried(vararg sources: Umbreld.PhotoBackupSourceDetails) = Umbreld.PhotoBackupSources(listOf("continue-source"), sources.toList())
+
+	private val oldBackup = Umbreld.PhotoBackupSourceDetails("old-source", "Pixel 7", "android")
+
+	/** As Android's backup or phone-to-phone transfer brings it from the old phone. */
+	private fun carriedFromAnotherPhone(sourceId: String = "old-source") {
+		val context = ApplicationProvider.getApplicationContext<Context>()
+		Settings.Secure.putString(context.contentResolver, Settings.Secure.ANDROID_ID, "old-phone")
+		PhotoBackupPreferences(context).setCarriedSourceId(sourceId, device.id, session.accountId)
+		Settings.Secure.putString(context.contentResolver, Settings.Secure.ANDROID_ID, "this-phone")
+	}
+
+	private fun PhotoBackupManager.continuingName() = presentation(device, session.accountId, PhotoLibraryCounts(), null).continuingName
+
+	@Test
+	fun aPhoneSetUpFromAnotherCarriesOnItsBackup() = runTest {
+		carriedFromAnotherPhone()
+		server.backupSources = carried(oldBackup)
+
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+
+		assertEquals("old-source", secrets.sourceIds["umbrel:0"])
+		assertEquals("old-source", preferences.configuration?.source?.id)
+		// Renamed after this phone, and Library names the old backup until it has caught up
+		assertEquals(listOf(true), server.continuations)
+		assertEquals(listOf("Android phone"), server.suggestedNames)
+		assertNull(preferences.renamePending(device.id, session.accountId))
+		assertEquals("Pixel 7", manager.continuingName())
+	}
+
+	@Test
+	fun aBackupFromBeforePlatformsWereRecordedIsCarriedOn() = runTest {
+		carriedFromAnotherPhone()
+		server.backupSources = carried(oldBackup.copy(platform = null))
+
+		manager().setPreference(device, session, photos)
+		advanceUntilIdle()
+
+		assertEquals(listOf("old-source"), server.grantsCreated)
+		assertEquals(listOf(true), server.continuations)
+	}
+
+	// The same phone after a reinstall keeps its backup's name, which the user may have chosen
+	@Test
+	fun aReinstallCarriesOnWithoutRenaming() = runTest {
+		preferences.setCarriedSourceId("old-source", device.id, session.accountId)
+		server.backupSources = carried(oldBackup.copy(name = "Nate’s photos"))
+
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+
+		assertEquals(listOf("old-source"), server.grantsCreated)
+		assertEquals(listOf(false), server.continuations)
+		assertNull(manager.continuingName())
+	}
+
+	@Test
+	fun theOldPhonesNameIsntTakenWhenItMatchesThisOne() = runTest {
+		carriedFromAnotherPhone()
+		server.sources += Umbreld.PhotoSourceSummary("android", "Android phone", Umbreld.PhotoSourceSummary.Stats(900, 20))
+		server.backupSources = carried(oldBackup.copy(name = "Android phone"))
+
+		manager().setPreference(device, session, photos)
+		advanceUntilIdle()
+
+		assertEquals(listOf("Android phone"), server.suggestedNames)
+	}
+
+	// The first grant renamed the backup but its answer never arrived: the retry mustn't count
+	// the new name as another backup's
+	@Test
+	fun aRetryAfterALostGrantKeepsTheName() = runTest {
+		carriedFromAnotherPhone()
+		server.backupSources = carried(oldBackup)
+		server.grantError = Umbreld.Error(0, "Could not reach this Umbrel", Umbreld.ErrorKind.CONNECTIVITY)
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+		assertEquals("old-source", secrets.sourceIds["umbrel:0"])
+		assertEquals(PhotoBackupStatus.WaitingForUmbrel, manager.presentation(device, session.accountId, PhotoLibraryCounts(), null).status)
+
+		server.grantError = null
+		server.backupSources = carried(oldBackup.copy(name = "Android phone"))
+		server.sources += Umbreld.PhotoSourceSummary("android", "Android phone", Umbreld.PhotoSourceSummary.Stats(900, 20))
+		assertTrue(manager.resumeWaitingSetup(device, session))
+		advanceUntilIdle()
+
+		assertEquals(listOf("Android phone"), server.suggestedNames)
+		assertEquals(listOf(true), server.continuations)
+		assertNull(preferences.renamePending(device.id, session.accountId))
+	}
+
+	// Without the account's backups the rename can't be named apart from them
+	@Test
+	fun aRetryThatCantReadTheBackupsFails() = runTest {
+		carriedFromAnotherPhone()
+		server.backupSources = carried(oldBackup)
+		server.grantError = Umbreld.Error(0, "Could not reach this Umbrel", Umbreld.ErrorKind.CONNECTIVITY)
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+
+		server.grantError = null
+		server.backupSourcesError = Umbreld.Error(500, "Photos library is unavailable")
+		assertTrue(manager.resumeWaitingSetup(device, session))
+		advanceUntilIdle()
+
+		assertTrue(server.grantsCreated.isEmpty())
+		assertEquals("Photos library is unavailable", manager.state.value.setupFailure)
+	}
+
+	@Test
+	fun anUmbrelOutOfReachIsWaitedForBeforeChoosing() = runTest {
+		carriedFromAnotherPhone()
+		server.backupSourcesError = Umbreld.Error(0, "Could not reach this Umbrel", Umbreld.ErrorKind.CONNECTIVITY)
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+		assertNull(secrets.sourceIds["umbrel:0"])
+		assertNull(manager.state.value.setupFailure)
+
+		server.backupSourcesError = null
+		server.backupSources = carried(oldBackup)
+		assertTrue(manager.resumeWaitingSetup(device, session))
+		advanceUntilIdle()
+
+		assertEquals(listOf("old-source"), server.grantsCreated)
+		assertEquals(listOf(true), server.continuations)
+	}
+
+	@Test
+	fun onlyABackupTheUmbrelStillHasIsCarriedOn() = runTest {
+		val refused = listOf(
+			"umbrelOS 2.0" to null,
+			"removed" to carried(),
+			"an iPhone's" to carried(oldBackup.copy(platform = "ios")),
+			"not supported" to Umbreld.PhotoBackupSources(emptyList(), listOf(oldBackup)),
+		)
+		for ((case, listed) in refused) {
+			secrets.sourceIds.clear()
+			secrets.grants.clear()
+			server.continuations.clear()
+			preferences.clearConfiguration()
+			carriedFromAnotherPhone()
+			server.backupSources = listed
+
+			manager().setPreference(device, session, photos)
+			advanceUntilIdle()
+
+			val source = secrets.sourceIds["umbrel:0"]
+			assertNotNull(case, source)
+			assertNotEquals(case, "old-source", source)
+			assertEquals(case, listOf(false), server.continuations)
+			assertNull(case, preferences.renamePending(device.id, session.accountId))
+		}
+	}
+
+	// Without the answer the phone can't tell whether to carry on its backup, so it doesn't start a new one
+	@Test
+	fun aFailedReadOfTheBackupsStartsNoNewOne() = runTest {
+		carriedFromAnotherPhone()
+		server.backupSourcesError = Umbreld.Error(500, "Photos library is unavailable")
+
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+
+		assertNull(secrets.sourceIds["umbrel:0"])
+		assertTrue(server.grantsCreated.isEmpty())
+		assertEquals("Photos library is unavailable", manager.state.value.setupFailure)
+	}
+
+	@Test
+	fun aPhoneWithoutACarriedIdDoesntAsk() = runTest {
+		manager().setPreference(device, session, photos)
+		advanceUntilIdle()
+
+		assertEquals(0, server.backupSourceReads)
+		assertEquals(listOf(false), server.continuations)
+	}
+
+	@Test
+	fun anotherAccountsIdIsntCarriedOn() = runTest {
+		carriedFromAnotherPhone()
+		server.backupSources = carried(oldBackup)
+		val member = Umbreld.Session("umbrel", "nate", "access", Long.MAX_VALUE, "device-token")
+		secrets.sessions["umbrel"] = member
+
+		manager().setPreference(device, member, photos)
+		advanceUntilIdle()
+
+		assertEquals(0, server.backupSourceReads)
+		assertNotEquals("old-source", secrets.sourceIds["umbrel:nate"])
+	}
+
+	// Android's backup carries the copy to a new phone, including from phones set up before it
+	// existed and phones whose backup is off for now
+	@Test
+	fun theBackupIdIsCopiedWhereAndroidBacksItUp() = runTest {
+		val manager = manager()
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+		assertEquals(secrets.sourceIds["umbrel:0"], preferences.carriedSourceId(device.id, session.accountId))
+
+		secrets.sourceIds["umbrel:0"] = "existing-source"
+		manager.setPreference(device, session, PhotoBackupPreference())
+		advanceUntilIdle()
+		manager.sync(device, session, userInitiated = false)
+		assertEquals("existing-source", preferences.carriedSourceId(device.id, session.accountId))
+		assertTrue(preferences.carriedFromThisPhone(device.id, session.accountId))
+	}
+
+	@Test
 	fun insufficientStorageRetryIsExplicitAndScopedToTheSource() = runTest {
 		val manager = manager()
 		manager.setPreference(device, session, photos)
@@ -416,52 +693,20 @@ class PhotoBackupManagerTest {
 
 	private fun PhotoBackupManager.presentation() = presentation(device, session.accountId, PhotoLibraryCounts(), null)
 
-	// A new or reinstalled phone has no backup identity, so setup would start a new source and
-	// store the account's photos again.
+	// A new or reinstalled phone starts its own backup without asking, as on iOS, even when the
+	// account has other phones' backups.
 	@Test
-	fun aNewPhoneAsksBeforeStoringTheAccountsPhotosAgain() = runTest {
+	fun aNewPhoneStartsItsOwnBackupWithoutAsking() = runTest {
 		server.sources += oldPhone
 		val manager = manager()
 
 		manager.setPreference(device, session, photos)
-		advanceUntilIdle()
-
-		assertTrue(server.grantsCreated.isEmpty())
-		assertTrue(secrets.sourceIds.isEmpty())
-		assertTrue(work.events.isEmpty())
-		assertFalse(manager.state.value.setupInProgress)
-		assertNull(manager.state.value.setupFailure)
-		val asking = manager.presentation()
-		assertEquals(PhotoBackupStatus.Paused, asking.status)
-		assertEquals(PhotoBackupNotice.MAY_BACK_UP_TWICE, asking.notice)
-		assertEquals(PhotoBackupNotice.Action.BACK_UP_ANYWAY, asking.notice?.action)
-		assertEquals("Nate’s Pixel", asking.newSourceQuestion)
-
-		manager.backUpAsNewSource(device, session)
 		advanceUntilIdle()
 
 		assertNotNull(preferences.configuration)
 		assertEquals(preferences.configuration?.source?.id, secrets.sourceIds["umbrel:0"])
 		assertEquals(listOf("start", "transfer"), work.events)
-		assertNull(manager.presentation().newSourceQuestion)
-		assertNull(preferences.newSourceQuestion(device.id, session.accountId))
-	}
-
-	@Test
-	fun turnOffBackupAnswersTheQuestion() = runTest {
-		server.sources += oldPhone
-		val manager = manager()
-		manager.setPreference(device, session, photos)
-		advanceUntilIdle()
-
-		manager.turnOffBackup(device, session)
-		advanceUntilIdle()
-
-		assertFalse(manager.preference(device.id, session.accountId).isEnabled)
-		assertNull(preferences.activeTarget)
-		assertNull(preferences.newSourceQuestion(device.id, session.accountId))
-		assertTrue(secrets.sourceIds.isEmpty())
-		assertTrue(server.grantsCreated.isEmpty())
+		assertNull(manager.presentation().notice)
 	}
 
 	// An account with no phone sources yet reads them once: an empty list is an answer.
@@ -474,61 +719,19 @@ class PhotoBackupManagerTest {
 		assertEquals(1, server.grantsCreated.size)
 	}
 
-	// The question stays until it's answered. Returning to the app or reaching the Umbrel
-	// doesn't ask the Umbrel again.
 	@Test
-	fun anUnansweredQuestionIsKeptAndWaitsForTheUser() = runTest {
-		server.sources += oldPhone
-		manager().setPreference(device, session, photos)
-		advanceUntilIdle()
-		val reads = server.sourceReads
-
-		val relaunched = manager()
-		assertEquals(PhotoBackupNotice.MAY_BACK_UP_TWICE, relaunched.presentation().notice)
-		assertFalse(relaunched.resumeWaitingSetup(device, session))
-		relaunched.libraryAccessChanged(device, session, userInitiated = false)
-		advanceUntilIdle()
-
-		assertEquals(reads, server.sourceReads)
-		assertTrue(server.grantsCreated.isEmpty())
-		assertEquals(PhotoBackupNotice.MAY_BACK_UP_TWICE, relaunched.presentation().notice)
-	}
-
-	// After a relaunch, Back Up Anyway skips the check that read the names, so naming reads them.
-	@Test
-	fun backingUpAnywayAfterARelaunchTakesAFreeName() = runTest {
+	fun aNewBackupTakesAFreeName() = runTest {
 		server.sources += Umbreld.PhotoSourceSummary("iphone", "Android phone", Umbreld.PhotoSourceSummary.Stats(10, 0))
 		manager().setPreference(device, session, photos)
-		advanceUntilIdle()
-
-		manager().backUpAsNewSource(device, session)
 		advanceUntilIdle()
 
 		assertEquals(listOf("Android phone (2)"), server.suggestedNames)
 		assertNotNull(preferences.configuration)
 	}
 
-	// The old source may be removed in umbrelOS after the question was asked.
+	// Nothing asks the Umbrel or uploads before the folder choice is answered.
 	@Test
-	fun aCheckThatPassesClearsTheQuestion() = runTest {
-		server.sources += oldPhone
-		val manager = manager()
-		manager.setPreference(device, session, photos)
-		advanceUntilIdle()
-
-		server.sources -= oldPhone
-		manager.setPreference(device, session, photos.copy(allowsCellular = true))
-		advanceUntilIdle()
-
-		assertNull(manager.presentation().newSourceQuestion)
-		assertNull(preferences.newSourceQuestion(device.id, session.accountId))
-		assertNotNull(preferences.configuration)
-		assertEquals(listOf("start", "transfer"), work.events)
-	}
-
-	// The folder choice comes first, then the question, and nothing uploads before both are answered.
-	@Test
-	fun theQuestionFollowsTheFolderChoiceAndComesBeforeAnyUpload() = runTest {
+	fun setupWaitsForTheFolderChoice() = runTest {
 		server.sources += oldPhone
 		val manager = manager()
 
@@ -539,16 +742,11 @@ class PhotoBackupManagerTest {
 
 		manager.confirmFolderChoice(device, session)
 		advanceUntilIdle()
-		assertEquals(PhotoBackupNotice.MAY_BACK_UP_TWICE, manager.presentation().notice)
-		assertTrue(work.events.isEmpty())
-
-		manager.backUpAsNewSource(device, session)
-		advanceUntilIdle()
 		assertEquals(listOf("start", "transfer"), work.events)
 	}
 
 	@Test
-	fun aPhoneWithABackupIdentityIsNotAsked() = runTest {
+	fun aPhoneWithABackupIdentityKeepsIt() = runTest {
 		server.sources += oldPhone
 		secrets.sourceIds["umbrel:0"] = "existing-source"
 		val manager = manager()
@@ -557,59 +755,6 @@ class PhotoBackupManagerTest {
 		advanceUntilIdle()
 
 		assertEquals("existing-source", preferences.configuration?.source?.id)
-		assertNull(manager.presentation().newSourceQuestion)
-	}
-
-	@Test
-	fun onlyAnUnreachableUmbrelWaitsForTheCheck() = runTest {
-		server.sourcesError = Umbreld.Error(0, "Could not reach this Umbrel", Umbreld.ErrorKind.CONNECTIVITY)
-		server.reachable = false
-		val manager = manager()
-
-		manager.setPreference(device, session, photos)
-		advanceUntilIdle()
-		assertNull(manager.state.value.setupFailure)
-		assertEquals(PhotoBackupStatus.WaitingForUmbrel, manager.presentation().status)
-		assertTrue(server.grantsCreated.isEmpty())
-
-		// Reaching the Umbrel checks again; a server error needs attention.
-		server.reachable = true
-		server.sourcesError = Umbreld.Error(500, "Photos library is unavailable")
-		assertTrue(manager.resumeWaitingSetup(device, session))
-		advanceUntilIdle()
-		assertEquals("Photos library is unavailable", manager.state.value.setupFailure)
-		assertEquals(PhotoBackupNotice.NEEDS_ATTENTION, manager.presentation().notice)
-		assertTrue(server.grantsCreated.isEmpty())
-
-		server.sourcesError = null
-		manager.retryAfterError(device, session)
-		advanceUntilIdle()
-		assertNotNull(preferences.configuration)
-	}
-
-	// An Umbrel that answers but can't total its library in time would otherwise be asked again
-	// on every refresh, so the check needs Try Again instead of waiting.
-	@Test
-	fun aCheckTheUmbrelCantFinishNeedsTryAgain() = runTest {
-		server.sourcesError = Umbreld.Error(0, "Could not reach umbrel.local", Umbreld.ErrorKind.CONNECTIVITY, timedOut = true)
-		val manager = manager()
-
-		manager.setPreference(device, session, photos)
-		advanceUntilIdle()
-
-		assertEquals("Couldn’t reach your Umbrel", manager.state.value.setupFailure)
-		assertEquals(PhotoBackupNotice.NEEDS_ATTENTION, manager.presentation().notice)
-		assertEquals(PhotoBackupNotice.Action.RETRY_BACKUP, manager.presentation().notice?.action)
-		val reads = server.sourceReads
-		assertFalse(manager.resumeWaitingSetup(device, session))
-		advanceUntilIdle()
-		assertEquals(reads, server.sourceReads)
-
-		server.sourcesError = null
-		manager.retryAfterError(device, session)
-		advanceUntilIdle()
-		assertTrue(server.sourceReads > reads)
-		assertNotNull(preferences.configuration)
 	}
 
 	// ── Switching backup here ──
@@ -636,11 +781,9 @@ class PhotoBackupManagerTest {
 		advanceUntilIdle()
 		assertEquals("other", preferences.configuration?.deviceId)
 
-		assertEquals(PhotoBackupManager.SwitchOutcome.Done, manager.switchHere(device, session))
+		manager.switchHere(device, session)
 		advanceUntilIdle()
 
-		// The check went to this Umbrel and account.
-		assertEquals(device.id to session.accountId, server.sourceRequests.last())
 		assertNull(manager.otherTarget(device.id, session.accountId))
 		assertFalse(preferences.preference("other", "0").isEnabled)
 		assertTrue(preferences.isActive(device.id, session.accountId))
@@ -657,106 +800,23 @@ class PhotoBackupManagerTest {
 		advanceUntilIdle()
 		assertEquals(device.id, preferences.configuration?.deviceId)
 		assertEquals(listOf("cancel", "start", "transfer"), work.events)
+		// Naming the new backup asked this Umbrel and account.
+		assertEquals(device.id to session.accountId, server.sourceRequests.last())
 	}
 
-	// Asked before anything stops, so Cancel leaves backup where it is.
 	@Test
-	fun switchingAsksFirstWhenItWouldStorePhotosTwice() = runTest {
+	fun switchingDoesntAskAboutOtherPhonesBackups() = runTest {
 		val manager = backingUpToTheOtherUmbrel()
-		val configuration = preferences.configuration
 		server.sources += oldPhone
 
-		assertEquals(PhotoBackupManager.SwitchOutcome.AskNewSource("Nate’s Pixel"), manager.switchHere(device, session))
+		manager.switchHere(device, session)
 		advanceUntilIdle()
-		assertEquals(configuration, preferences.configuration)
-		assertTrue(preferences.isActive("other", "0"))
-		assertFalse(manager.state.value.setupInProgress)
-		assertNull(secrets.sourceIds["umbrel:0"])
-
-		assertEquals(PhotoBackupManager.SwitchOutcome.Done, manager.switchHere(device, session, asNewSource = true))
-		advanceUntilIdle()
-		assertNotNull(secrets.sourceIds["umbrel:0"])
-		assertTrue(preferences.isActive(device.id, session.accountId))
-		assertNull(manager.otherTarget(device.id, session.accountId))
-	}
-
-	@Test
-	fun switchingChangesNothingWhenTheUmbrelCantBeAsked() = runTest {
-		val manager = backingUpToTheOtherUmbrel()
-		val configuration = preferences.configuration
-		server.sourcesError = Umbreld.Error(0, "Could not reach this Umbrel", Umbreld.ErrorKind.CONNECTIVITY)
-
-		assertEquals(PhotoBackupManager.SwitchOutcome.CouldNotCheck, manager.switchHere(device, session))
+		manager.confirmFolderChoice(device, session)
 		advanceUntilIdle()
 
-		assertEquals(configuration, preferences.configuration)
-		assertTrue(preferences.isActive("other", "0"))
-		assertTrue(work.events.isEmpty())
-	}
-
-	// Nothing changes when the check fails, and the owner's setup state is left alone.
-	@Test
-	fun aFailedSwitchCheckChangesNothing() = runTest {
-		val manager = backingUpToTheOtherUmbrel()
-		val configuration = preferences.configuration
-		// The other Umbrel's setup has failed, which its own screens show.
-		secrets.grants.remove("other:0")
-		server.grantError = Umbreld.Error(500, "Internal error")
-		manager.sync(otherDevice, otherSession, userInitiated = true)
-		advanceUntilIdle()
-		val ownerState = manager.state.value
-		assertEquals("Internal error", ownerState.setupFailure)
-		server.sourcesError = Umbreld.Error(500, "Photos library is unavailable")
-
-		assertEquals(PhotoBackupManager.SwitchOutcome.CouldNotCheck, manager.switchHere(device, session))
-		advanceUntilIdle()
-
-		assertEquals(configuration, preferences.configuration)
-		assertTrue(preferences.isActive("other", "0"))
-		assertEquals(ownerState.setupFailure, manager.state.value.setupFailure)
-		assertEquals(ownerState.setupInProgress, manager.state.value.setupInProgress)
-	}
-
-	@Test
-	fun signingOutDuringTheSwitchCheckChangesNothing() = runTest {
-		val manager = backingUpToTheOtherUmbrel()
-		server.whileReadingSources = { secrets.sessions.remove(device.id) }
-
-		assertEquals(PhotoBackupManager.SwitchOutcome.Done, manager.switchHere(device, session))
-		advanceUntilIdle()
-
-		assertTrue(preferences.isActive("other", "0"))
-		assertFalse(preferences.isActive(device.id, session.accountId))
-		assertNull(secrets.sourceIds["umbrel:0"])
-	}
-
-	// Back Up Anyway skips the check, and the account can sign out during its storage call.
-	@Test
-	fun aSwitchForAnAccountThatSignedOutClaimsNothing() = runTest {
-		val manager = backingUpToTheOtherUmbrel()
-		secrets.sessions.remove(device.id)
-
-		assertEquals(PhotoBackupManager.SwitchOutcome.Done, manager.switchHere(device, session, asNewSource = true))
-		advanceUntilIdle()
-
-		assertTrue(preferences.isActive("other", "0"))
-		assertFalse(preferences.isActive(device.id, session.accountId))
-	}
-
-	@Test
-	fun aDestinationThatChangesDuringTheSwitchCheckIsLeftAlone() = runTest {
-		val manager = backingUpToTheOtherUmbrel()
-		// Backup is turned off on the other Umbrel meanwhile.
-		server.whileReadingSources = {
-			preferences.clearConfiguration()
-			preferences.save(PhotoBackupPreference(), "other", "0", activate = false)
-		}
-
-		assertEquals(PhotoBackupManager.SwitchOutcome.Done, manager.switchHere(device, session))
-		advanceUntilIdle()
-
-		assertFalse(preferences.isActive(device.id, session.accountId))
-		assertNull(preferences.configuration)
+		assertEquals(device.id, preferences.configuration?.deviceId)
+		assertEquals(preferences.configuration?.source?.id, secrets.sourceIds["umbrel:0"])
+		assertNull(manager.presentation().notice)
 	}
 
 	// Android asks for photo access from the app, so a switch it can still ask for goes ahead
@@ -766,7 +826,7 @@ class PhotoBackupManagerTest {
 		val manager = backingUpToTheOtherUmbrel()
 		access = PhotoLibraryAccess.NONE
 
-		assertEquals(PhotoBackupManager.SwitchOutcome.Done, manager.switchHere(device, session, canRequestAccess = true))
+		manager.switchHere(device, session, canRequestAccess = true)
 		advanceUntilIdle()
 		assertTrue(preferences.isActive(device.id, session.accountId))
 		assertNull(preferences.configuration)
@@ -811,7 +871,7 @@ class PhotoBackupManagerTest {
 
 		access = PhotoLibraryAccess.NONE
 		assertFalse(manager.canSwitchHere())
-		assertEquals(PhotoBackupManager.SwitchOutcome.Done, manager.switchHere(device, session))
+		manager.switchHere(device, session)
 		advanceUntilIdle()
 		assertTrue(preferences.isActive("other", "0"))
 		assertEquals("other", preferences.configuration?.deviceId)

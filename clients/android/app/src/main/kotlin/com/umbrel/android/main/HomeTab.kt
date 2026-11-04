@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.umbrel.android.IdentityChange
 import com.umbrel.android.ui.AppleEaseOut
 import com.umbrel.android.ui.AppleType
 import com.umbrel.android.ui.BentoGrid
@@ -164,7 +165,7 @@ private fun ConnectionStatusLabel(connection: ConnectionState, identityChanged: 
 	val label = when (connection) {
 		ConnectionState.UNVERIFIED -> "Checking connection"
 		ConnectionState.CONNECTED -> "Connected"
-		ConnectionState.UNAVAILABLE -> if (identityChanged) "Not recognized" else "Offline"
+		ConnectionState.UNAVAILABLE -> if (identityChanged) IdentityChange.STATUS else "Offline"
 	}
 	Row(
 		Modifier
@@ -223,16 +224,16 @@ private fun ReconnectCard(onReconnect: suspend () -> Unit) {
 	NoticeCard(
 		icon = Symbols.LockWarningMedium,
 		iconSize = 24.dp,
-		title = "Umbrel not recognized",
-		message = "This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel to keep using it in this app.",
+		title = IdentityChange.TITLE,
+		message = IdentityChange.MESSAGE,
 		actionLabel = if (reconnecting) "Reconnecting…" else "Reconnect",
 		onClick = { if (!reconnecting) confirming = true },
 	)
 	if (confirming) {
 		AlertDialog(
 			onDismissRequest = { confirming = false },
-			title = { Text("Reconnect your Umbrel?") },
-			text = { Text("You’ll sign in again. If photo backup is on, you’ll need to turn it back on. Everything on your Umbrel stays as it is.") },
+			title = { Text(IdentityChange.CONFIRM_TITLE) },
+			text = { Text(IdentityChange.CONFIRM_MESSAGE) },
 			dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } },
 			confirmButton = {
 				TextButton(onClick = {

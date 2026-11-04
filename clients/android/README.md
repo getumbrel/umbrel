@@ -45,7 +45,12 @@ Android has no system uploader like iOS's, so the app runs backup itself:
 - "Select photos" access backs up the selection. With access to everything, setup asks
   once which folders to skip, since Android's library includes every app's media.
 - Losing photo access pauses backup rather than turning it off, because Android resets the
-  permissions of apps left unused for months.
+  permissions of apps left unused for months. While backup runs, Library asks to turn that
+  off for Umbrel.
+- A phone set up from this one, or the app installed again, carries on the same backup if
+  the Umbrel still has it: Android's backup and phone-to-phone transfer bring the backup's
+  id, and cloud backup runs about once a day. The phone signs in again, sends its library
+  again, and the Umbrel keeps one copy.
 
 ## In-app browser
 
@@ -86,4 +91,5 @@ re-signs it with the app signing key, which Google holds.
 The only native code is AndroidX's `libandroidx.graphics.path.so`, which is 16 KB-aligned.
 Play warns that it has no debug symbols; AndroidX doesn't publish any.
 
-Backup can't be tested in CI, so try it on a real phone before uploading a build.
+Backup can't be tested in CI, so try it on a real phone before uploading a build. Check a
+restore too: `adb shell bmgr backupnow com.umbrel.android.dev`, then reinstall the app.

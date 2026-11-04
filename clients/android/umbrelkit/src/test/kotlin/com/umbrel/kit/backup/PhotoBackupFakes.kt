@@ -164,6 +164,9 @@ internal class FakeServer : PhotoBackupServer {
 
 	/** The name each new grant suggested for its source. */
 	val suggestedNames = mutableListOf<String>()
+
+	/** Whether each new grant carried on another phone's backup. */
+	val continuations = mutableListOf<Boolean>()
 	var revocations = 0
 	var receipts: List<Umbreld.PhotoBackupResourceReceipt> = emptyList()
 
@@ -177,6 +180,11 @@ internal class FakeServer : PhotoBackupServer {
 
 	/** Runs while a read of the sources is in flight, as a change made meanwhile would. */
 	var whileReadingSources: () -> Unit = {}
+
+	/** The account's phone backups by source id; null, as from umbrelOS 2.0, by default. */
+	var backupSources: Umbreld.PhotoBackupSources? = null
+	var backupSourcesError: Exception? = null
+	var backupSourceReads = 0
 
 	/** The Umbrel each revoked grant belonged to. */
 	val revokedDevices = mutableListOf<String>()
@@ -194,10 +202,11 @@ internal class FakeServer : PhotoBackupServer {
 		return respond(upload)
 	}
 
-	override suspend fun createGrant(target: Umbreld.Target, session: Umbreld.Session, sourceId: String, suggestedName: String): Umbreld.PhotoBackupGrant {
+	override suspend fun createGrant(target: Umbreld.Target, session: Umbreld.Session, sourceId: String, suggestedName: String, continuing: Boolean): Umbreld.PhotoBackupGrant {
 		grantError?.let { throw it }
 		grantsCreated += sourceId
 		suggestedNames += suggestedName
+		continuations += continuing
 		return Umbreld.PhotoBackupGrant(grantToken, grantSource(sourceId))
 	}
 
@@ -212,6 +221,12 @@ internal class FakeServer : PhotoBackupServer {
 		whileReadingSources()
 		sourcesError?.let { throw it }
 		return sources
+	}
+
+	override suspend fun photoBackupSources(target: Umbreld.Target, session: Umbreld.Session): Umbreld.PhotoBackupSources? {
+		backupSourceReads++
+		backupSourcesError?.let { throw it }
+		return backupSources
 	}
 
 	override suspend fun confirmedResources(

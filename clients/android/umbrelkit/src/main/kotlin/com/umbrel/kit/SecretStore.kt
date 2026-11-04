@@ -269,7 +269,8 @@ object SecretStore {
 		delete(PHOTO_BACKUP_GRANT_SERVICE, "$deviceId:$accountId")
 
 	/** This non-secret id survives disabling backup, signing out, and removing a saved connection
-	 * so the same account-owned folder can resume without duplicates. */
+	 * so the same account-owned folder can resume without duplicates. A copy in
+	 * PhotoBackupPreferences travels in Android's backup so a new phone can carry it on. */
 	fun setPhotoBackupSourceId(sourceId: String, deviceId: String, accountId: String): Boolean =
 		isUuid(sourceId) && write(PHOTO_BACKUP_SOURCE_SERVICE, "$deviceId:$accountId", sourceId.toByteArray(Charsets.UTF_8))
 

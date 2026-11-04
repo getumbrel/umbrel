@@ -371,6 +371,19 @@ class PhotoBackupModelTest {
 		setupInProgress: Boolean = false,
 		setupFailed: Boolean = false,
 	) = PhotoBackupPresentationMode.resolve(intentEnabled, targetActive, configurationMatchesTarget, snapshotMatchesSource, snapshotPhase, setupInProgress, setupFailed)
+
+	// ── A backup taken over from another phone ──
+
+	@Test
+	fun settingUpAndBackingUpNameTheBackupBeingCarriedOn() {
+		assertEquals("Continuing “Pixel 7” backup…", PhotoBackupStatus.SettingUp.continuingText("Pixel 7"))
+		assertEquals("Continuing “Pixel 7” backup · 12,400 left", PhotoBackupStatus.BackingUp(12_400).continuingText("Pixel 7"))
+		assertEquals("Continuing “Pixel 7” backup…", PhotoBackupStatus.BackingUp(null).continuingText("Pixel 7"))
+		// Anything in the way of backup says so instead
+		for (status in listOf(PhotoBackupStatus.WaitingForWiFi, PhotoBackupStatus.WaitingForUmbrel, PhotoBackupStatus.Paused, PhotoBackupStatus.Error, PhotoBackupStatus.UpToDate)) {
+			assertNull(status.toString(), status.continuingText("Pixel 7"))
+		}
+	}
 }
 
 /** Port of PhotoBackupRecoveryStateTests. */

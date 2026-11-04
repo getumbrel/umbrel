@@ -198,40 +198,30 @@ object Umbreld {
 		 */
 		val isPhone: Boolean get() = type == "iphone" || type == "android"
 
-		val isPhoneWithBackups: Boolean get() = isPhone && (stats.photos + stats.videos > 0 || lastImportAt != null)
 	}
 
-	/**
-	 * Asked before a phone starts a new backup source. umbrelOS 2.0 keys backups by source, so a
-	 * new or reinstalled phone backing up as a new source stores every photo the account
-	 * already has from its old one again.
-	 */
-	sealed class NewPhotoBackupSourceCheck {
-		data object Proceed : NewPhotoBackupSourceCheck()
-
-		/** Names of the account's phone sources that hold backups, most recent first. */
-		data class Ask(val existing: List<String>) : NewPhotoBackupSourceCheck()
+	@Serializable
+	data class PhotoBackupSources(val capabilities: List<String>, val sources: List<PhotoBackupSourceDetails>) {
+		val canContinueSource: Boolean get() = "continue-source" in capabilities
 
 		/**
-		 * The check didn't get through. Setup waits only while the Umbrel itself can't be
-		 * reached; one that answers but couldn't complete the check needs Try Again.
+		 * The backup this phone can carry on, when the Umbrel still has it. Not an iPhone's. One
+		 * without a platform predates umbrelOS recording it, and the id this app saved makes it
+		 * an Android phone's.
 		 */
-		data object Wait : NewPhotoBackupSourceCheck()
-		data class Fail(val message: String) : NewPhotoBackupSourceCheck()
-
-		companion object {
-			/** Cancellation isn't a result here: callers let it propagate. */
-			fun resolve(sources: Result<List<PhotoSourceSummary>>): NewPhotoBackupSourceCheck = sources.fold(
-				onSuccess = { list ->
-					val existing = list.filter { it.isPhoneWithBackups }.sortedByDescending { it.lastImportAt ?: 0.0 }.map { it.name }
-					if (existing.isEmpty()) Proceed else Ask(existing)
-				},
-				onFailure = { error ->
-					if ((error as? Error)?.isConnectivityFailure == true || error is IOException) Wait else Fail(error.message.orEmpty())
-				},
-			)
-		}
+		fun continuable(sourceId: String): PhotoBackupSourceDetails? =
+			sources.firstOrNull { it.id == sourceId && (it.platform == null || it.platform == "android") }?.takeIf { canContinueSource }
 	}
+
+	/** A phone's backup on the account, by the source id its app chose. */
+	@Serializable
+	data class PhotoBackupSourceDetails(
+		val id: String,
+		val name: String,
+		// "ios" or "android", from the phone's app. Backups from before umbrelOS recorded it
+		// have none, and are iPhones.
+		val platform: String? = null,
+	)
 
 	/**
 	 * An Umbrel whose long-standing public version endpoint reports a release older than
@@ -1212,7 +1202,12 @@ object Umbreld {
 	)
 
 	@Serializable
-	internal data class PhotoBackupGrantInput(val sourceId: String, val suggestedName: String)
+	internal data class PhotoBackupGrantInput(
+		val sourceId: String,
+		val suggestedName: String,
+		// Only sent when carrying on another phone's backup, which umbrelOS then renames
+		val continuing: Boolean? = null,
+	)
 
 	@Serializable
 	internal data class PhotoBackupResourceReceiptInput(val sourceId: String, val resources: List<PhotoBackupResourceQuery>)
@@ -1305,11 +1300,16 @@ object Umbreld {
 	/** Signing out keeps the enrolled CA. Removing the Umbrel discards first-use trust. */
 	fun forgetLocalHttpsIdentity(deviceId: String) = LocalHttpsTransport.forget(deviceId)
 
-	suspend fun createPhotoBackupGrant(host: String, session: Session, sourceId: String, suggestedName: String): PhotoBackupGrant =
-		mutate(host, "photos.createBackupGrant", json.encodeToString(PhotoBackupGrantInput.serializer(), PhotoBackupGrantInput(sourceId, suggestedName)), session)
+	suspend fun createPhotoBackupGrant(host: String, session: Session, sourceId: String, suggestedName: String, continuing: Boolean = false): PhotoBackupGrant =
+		mutate(
+			host,
+			"photos.createBackupGrant",
+			json.encodeToString(PhotoBackupGrantInput.serializer(), PhotoBackupGrantInput(sourceId, suggestedName, continuing.takeIf { it })),
+			session,
+		)
 
-	suspend fun createPhotoBackupGrant(target: Target, session: Session, sourceId: String, suggestedName: String): PhotoBackupGrant =
-		withResolvedHost(target, ReplayPolicy.NEVER) { createPhotoBackupGrant(it, session, sourceId, suggestedName) }
+	suspend fun createPhotoBackupGrant(target: Target, session: Session, sourceId: String, suggestedName: String, continuing: Boolean = false): PhotoBackupGrant =
+		withResolvedHost(target, ReplayPolicy.NEVER) { createPhotoBackupGrant(it, session, sourceId, suggestedName, continuing) }
 
 	suspend fun revokePhotoBackupGrant(host: String, session: Session) {
 		mutate<Boolean>(host, "photos.revokeBackupGrant", json.encodeToString(EmptyInput.serializer(), EmptyInput()), session)
@@ -1347,6 +1347,19 @@ object Umbreld {
 
 	suspend fun photoSources(target: Target, session: Session): List<PhotoSourceSummary> =
 		withResolvedHost(target, ReplayPolicy.SAFE) { photoSources(it, session) }
+
+	/**
+	 * The account's phone backups by the ids their apps chose, so a phone can tell whether the
+	 * Umbrel still has its own. Null from umbrelOS 2.0, which doesn't have this.
+	 */
+	suspend fun photoBackupSources(target: Target, session: Session): PhotoBackupSources? = try {
+		withResolvedHost(target, ReplayPolicy.SAFE) { host ->
+			// The server totals the whole library for this, which can take a while
+			query<PhotoBackupSources>(host, "photos.backupSources", session = session, timeoutMillis = 30_000)
+		}
+	} catch (error: Error) {
+		if (error.status == 404) null else throw error
+	}
 
 	suspend fun user(host: String, session: Session): UserInfo = query(host, "user.get", session = session)
 	suspend fun user(target: Target, session: Session): UserInfo = withResolvedHost(target, ReplayPolicy.SAFE) { user(it, session) }

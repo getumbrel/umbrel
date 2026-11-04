@@ -585,20 +585,21 @@ fun SheetToolbar(title: String, onClose: (() -> Unit)?, modifier: Modifier = Mod
 	}
 }
 
-/** A gray section header above a rounded #2C2C2E card of rows. */
+/** A gray section header above a rounded #2C2C2E card of rows, with "How it works" when [learnMore] is set. */
 @Composable
-fun SettingsSection(title: String, modifier: Modifier = Modifier, badge: String? = null, content: @Composable () -> Unit) {
+fun SettingsSection(title: String, modifier: Modifier = Modifier, learnMore: (() -> Unit)? = null, content: @Composable () -> Unit) {
 	Column(modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
 		Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-			Text(title, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray)
-			if (badge != null) {
-				Text(
-					badge,
-					style = AppleType.caption2,
-					fontWeight = FontWeight.SemiBold,
-					color = Color.White.copy(alpha = 0.55f),
-					modifier = Modifier.background(Color.White.copy(alpha = 0.08f), CircleShape).padding(horizontal = 8.dp, vertical = 4.dp),
-				)
+			Text(title, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray, modifier = Modifier.weight(1f))
+			if (learnMore != null) {
+				Row(
+					Modifier.clickable(role = Role.Button, onClick = learnMore),
+					horizontalArrangement = Arrangement.spacedBy(4.dp),
+					verticalAlignment = Alignment.CenterVertically,
+				) {
+					Text("How it works", style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.65f))
+					Icon(Symbols.ArrowForwardIosSemibold, contentDescription = null, tint = Color.White.copy(alpha = 0.65f), modifier = Modifier.size(12.dp))
+				}
 			}
 		}
 		Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MainTheme.sheetRow)) { content() }

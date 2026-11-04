@@ -186,6 +186,11 @@ class PhotoBackupEngine(
 				else -> PhotoBackupPhase.UP_TO_DATE
 			}
 			publish(phase, sourceId, statistics, recovery.issue ?: PhotoBackupIssue.AUTHENTICATION_REQUIRED.takeIf { authenticationRequired })
+			// A backup taken over from another phone has caught up once nothing is left to send.
+			// Unreadable items are tried again later and don't hold it up.
+			if (!authenticationRequired && !recovery.storagePaused && ingestion != Ingestion.MORE_WORK && !hasQueuedWork) {
+				preferences.setContinuingName(null, sourceId)
+			}
 			when {
 				authenticationRequired || recovery.storagePaused -> PassOutcome.WaitingForUser
 				ingestion == Ingestion.MORE_WORK || hasQueuedWork -> PassOutcome.MoreWork

@@ -112,6 +112,7 @@ fun LibraryTab(model: MainViewModel, library: PhotoLibraryViewModel, state: Main
 		if (showsLibrary && destination != null) PhotoBackupElsewhereNotice(model, state, destination)
 		PhotoBackupNoticeCard(model, state)
 		if (showsLibrary) {
+			PauseIfUnusedCard(model, state)
 			if (libraryState.access == PhotoLibraryAccess.SELECTED) SelectedPhotosCard(model, state)
 			StatTiles(state.backupStatistics)
 			ViewAllInPhotosButton(model)
@@ -205,7 +206,7 @@ private fun TitleBlock(state: MainUiState, showsLibrary: Boolean, skippedFolders
 			Text(
 				buildAnnotatedString {
 					append("$description ")
-					withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append("Learn\u00A0more\u00A0") }
+					withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append("How\u00A0it\u00A0works\u00A0") }
 					appendInlineContent(CHEVRON)
 				},
 				inlineContent = mapOf(
@@ -220,7 +221,7 @@ private fun TitleBlock(state: MainUiState, showsLibrary: Boolean, skippedFolders
 				modifier = Modifier
 					.clickable(role = Role.Button, onClick = onLearnMore)
 					.clearAndSetSemantics {
-						contentDescription = "$description Learn more about Photo Backup"
+						contentDescription = "$description How Photo Backup works"
 						role = Role.Button
 					},
 			)
@@ -229,6 +230,23 @@ private fun TitleBlock(state: MainUiState, showsLibrary: Boolean, skippedFolders
 }
 
 private const val CHEVRON = "chevron"
+
+/**
+ * Asks to turn off "Pause app activity if unused" while backup is on, as Android's guidance for
+ * apps that sync in the background suggests. It shows once setup is done, so it doesn't add to
+ * setup, and goes away once the switch is off.
+ */
+@Composable
+private fun PauseIfUnusedCard(model: MainViewModel, state: MainUiState) {
+	val requests = rememberPhotoAccessRequests(model, state)
+	if (!backupIsSetUp(state) || requests.pauseIfUnused != PauseIfUnused.ON) return
+	NoticeCard(
+		icon = Symbols.PauseCircleMedium,
+		title = "Keep backing up when you don’t open Umbrel",
+		message = "Android pauses apps that aren’t opened for a few months, which stops backup. Turn off “${PauseIfUnused.settingName}” in Settings.",
+		onClick = requests.changePauseIfUnused,
+	)
+}
 
 /**
  * Android 14 and later can share only the photos the user selected; backup then covers the
@@ -333,12 +351,13 @@ private fun GridSkeleton() {
 }
 
 /**
- * How Photo Backup works, from the Library's "Learn more" and the setup card. [sourceName]
- * is null when the Umbrel may know this phone by a name the app doesn't have.
+ * How Photo Backup works, from the Library's "How it works", the setup card and Profile's
+ * "How it works". [sourceName] is null when the Umbrel may know this phone by a name the
+ * app doesn't have.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PhotoBackupInfoSheet(sourceName: String?, onDismiss: () -> Unit) {
+internal fun PhotoBackupInfoSheet(sourceName: String?, onDismiss: () -> Unit) {
 	val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 	PageSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
 		Column(Modifier.fillMaxHeight().navigationBarsPadding()) {

@@ -1,6 +1,8 @@
 package com.umbrel.android.main
 
+import androidx.core.content.UnusedAppRestrictionsConstants
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ProfilePresentationTest {
@@ -28,6 +30,26 @@ class ProfilePresentationTest {
 			listOf("Full Access", "Limited", "Set Up", "Off", "Off"),
 			listOf(PhotoAccess.FULL, PhotoAccess.LIMITED, PhotoAccess.NOT_DETERMINED, PhotoAccess.DENIED, PhotoAccess.BLOCKED).map { it.label },
 		)
+	}
+
+	@Test
+	fun notificationAccessDistinguishesAskingAgainFromSettings() {
+		assertEquals(NotificationAccess.ON, NotificationAccess.of(enabled = true, showsRationale = false, requested = true))
+		assertEquals(NotificationAccess.NOT_DETERMINED, NotificationAccess.of(enabled = false, showsRationale = false, requested = false))
+		assertEquals(NotificationAccess.DENIED, NotificationAccess.of(enabled = false, showsRationale = true, requested = true))
+		// Once Android stops asking, and before Android 13, only Settings turns them on.
+		assertEquals(NotificationAccess.BLOCKED, NotificationAccess.of(enabled = false, showsRationale = false, requested = true))
+		assertEquals(listOf("On", "Set Up", "Off", "Off"), NotificationAccess.entries.map { it.label })
+	}
+
+	@Test
+	fun pauseIfUnusedShowsOnlyWhereAndroidHasIt() {
+		assertEquals(PauseIfUnused.OFF, PauseIfUnused.of(UnusedAppRestrictionsConstants.DISABLED))
+		assertEquals(PauseIfUnused.ON, PauseIfUnused.of(UnusedAppRestrictionsConstants.API_31))
+		assertEquals(PauseIfUnused.ON, PauseIfUnused.of(UnusedAppRestrictionsConstants.API_30))
+		assertEquals(PauseIfUnused.ON, PauseIfUnused.of(UnusedAppRestrictionsConstants.API_30_BACKPORT))
+		assertNull(PauseIfUnused.of(UnusedAppRestrictionsConstants.FEATURE_NOT_AVAILABLE))
+		assertNull(PauseIfUnused.of(UnusedAppRestrictionsConstants.ERROR))
 	}
 
 	@Test

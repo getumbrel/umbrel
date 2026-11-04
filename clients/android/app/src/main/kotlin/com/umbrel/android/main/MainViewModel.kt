@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.umbrel.android.AppContainer
+import com.umbrel.android.IdentityChange
 import com.umbrel.android.SavedDeviceRemovalSteps
 import com.umbrel.android.browser.Browser
 import com.umbrel.android.browser.BrowserContext
@@ -100,6 +101,8 @@ data class MainUiState(
 	/** The toggles: photos and videos are on only while this account owns backup. */
 	val backupPreference: PhotoBackupPreference = PhotoBackupPreference(),
 	val backupStatus: PhotoBackupStatus = PhotoBackupStatus.Off,
+	/** The backup this phone took over from another, until it's first up to date. */
+	val backupContinuingName: String? = null,
 	val backupNotice: PhotoBackupNotice? = null,
 	val backupSetupInProgress: Boolean = false,
 	val backupStatistics: PhotoBackupStatistics? = null,
@@ -112,10 +115,6 @@ data class MainUiState(
 	 * from this phone before they know whether there are any.
 	 */
 	val backupSourceResolved: Boolean = false,
-	/** The existing source the unanswered new-phone question names. */
-	val backupNewSourceQuestion: String? = null,
-	/** A confirmed "Back Up to This Umbrel" is checking this Umbrel, before anything changes. */
-	val backupSwitchChecking: Boolean = false,
 	/** What a confirmed switch came back needing, until it's answered. */
 	val backupSwitchPrompt: BackupSwitchPrompt? = null,
 	/** Changes whenever receipts may have changed, so visible thumbnails re-check their badge. */
@@ -148,10 +147,10 @@ data class MainUiState(
 	val hasTailscaleBrowserAddress: Boolean get() = BrowserRouting.hasTailscaleAddress(device)
 
 	/** What to say when the Umbrel can't be opened. */
-	val unreachableTitle: String get() = if (identityChanged) "Umbrel Not Recognized" else "Can’t Reach Umbrel"
+	val unreachableTitle: String get() = if (identityChanged) IdentityChange.ALERT_TITLE else "Can’t Reach Umbrel"
 	val unreachableMessage: String
 		get() = if (identityChanged) {
-			"This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app."
+			IdentityChange.BLOCKED_MESSAGE
 		} else {
 			"Check your connection and try again."
 		}
@@ -223,7 +222,6 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	private val deviceData = container.deviceData
 	private var ledger: PhotoBackupLedger? = null
 	private var presentationJob: Job? = null
-	private var switchJob: Job? = null
 
 	// Work that runs only while the screen is started, like scenePhase-bound tasks on iOS.
 	private var foreground: CoroutineScope? = null
@@ -929,7 +927,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 			val session = state.session
 			val access = backup.libraryAccess()
 			if (session == null) {
-				_state.update { it.copy(photoLibraryAccess = access, backupPreference = PhotoBackupPreference(), backupStatus = PhotoBackupStatus.Off, backupNotice = null) }
+				_state.update { it.copy(photoLibraryAccess = access, backupPreference = PhotoBackupPreference(), backupStatus = PhotoBackupStatus.Off, backupContinuingName = null, backupNotice = null) }
 				return@launch
 			}
 			val device = state.device
@@ -946,13 +944,13 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 					photoLibraryAccess = access,
 					backupPreference = backup.preference(device.id, session.accountId),
 					backupStatus = presentation.status,
+					backupContinuingName = presentation.continuingName,
 					backupNotice = presentation.notice,
 					backupSetupInProgress = manager.setupInProgress,
 					backupStatistics = presentation.statistics,
 					backupSourceId = presentation.sourceId,
 					backupSourceName = backupSourceName(presentation.sourceName, presentation.sourceId) { PhotoBackupSourceName.current(appContext) },
 					backupSourceResolved = presentation.sourceResolved,
-					backupNewSourceQuestion = presentation.newSourceQuestion,
 					backupReceiptRevision = manager.revision,
 					otherBackupDeviceName = other,
 				)
@@ -996,62 +994,28 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	}
 
 	/**
-	 * "Back Up to This Umbrel", once confirmed. [asNewSource] answers the new-phone question,
-	 * which the switch asks before anything stops. [canRequestAccess] says Android still shows
-	 * its photo access request, which then comes next. One switch at a time.
+	 * "Back Up to This Umbrel", once confirmed. [canRequestAccess] says Android still shows its
+	 * photo access request, which then comes next.
 	 */
-	fun backUpToThisUmbrel(asNewSource: Boolean, canRequestAccess: Boolean) {
+	fun backUpToThisUmbrel(canRequestAccess: Boolean) {
 		val state = _state.value
 		val session = state.session ?: return
-		val destination = state.otherBackupDeviceName ?: return
-		if (switchJob?.isActive == true) return
 		val device = state.device
-		_state.update { it.copy(backupSwitchChecking = true, backupSwitchPrompt = null) }
-		switchJob = viewModelScope.launch {
-			try {
-				val prompt = when (val outcome = backup.switchHere(device, session, asNewSource, canRequestAccess)) {
-					PhotoBackupManager.SwitchOutcome.Done -> BackupSwitchPrompt.AccessRequest.takeIf {
-						backup.preference(device.id, session.accountId).isEnabled && !backup.libraryAccess().canReadLibrary
-					}
-					is PhotoBackupManager.SwitchOutcome.AskNewSource -> BackupSwitchPrompt.NewSource(destination, outcome.existing, canRequestAccess)
-					PhotoBackupManager.SwitchOutcome.CouldNotCheck -> BackupSwitchPrompt.CouldNotCheck(destination)
-				}
-				_state.update { it.copy(backupSwitchPrompt = prompt) }
-			} finally {
-				// The switch's setup state is read here too, so the button doesn't show idle until
-				// the refresh below lands.
-				_state.update {
-					it.copy(
-						backupSwitchChecking = false,
-						backupSetupInProgress = backup.state.value.setupInProgress,
-						backupPreference = backup.preference(device.id, session.accountId),
-					)
-				}
-				refreshBackupPresentation()
-			}
+		backup.switchHere(device, session, canRequestAccess)
+		val enabled = backup.preference(device.id, session.accountId).isEnabled
+		// The switch's setup state is read here too, so the button doesn't show idle until the
+		// refresh below lands.
+		_state.update {
+			it.copy(
+				backupSwitchPrompt = BackupSwitchPrompt.AccessRequest.takeIf { enabled && !backup.libraryAccess().canReadLibrary },
+				backupSetupInProgress = backup.state.value.setupInProgress,
+				backupPreference = backup.preference(device.id, session.accountId),
+			)
 		}
+		refreshBackupPresentation()
 	}
 
 	fun dismissBackupSwitchPrompt() = _state.update { it.copy(backupSwitchPrompt = null) }
-
-	/** The new-phone question's "Back Up Anyway". */
-	fun backUpAsNewSource() {
-		val session = _state.value.session ?: return
-		val device = _state.value.device
-		viewModelScope.launch {
-			backup.backUpAsNewSource(device, session)
-			refreshBackupPresentation()
-		}
-	}
-
-	/** The new-phone question's "Turn Off Backup". */
-	fun turnOffBackup() {
-		val session = _state.value.session ?: return
-		val device = _state.value.device
-		backup.turnOffBackup(device, session)
-		_state.update { it.copy(backupPreference = backup.preference(device.id, session.accountId)) }
-		refreshBackupPresentation()
-	}
 
 	/** "Start Backup", or leaving the folder choice that comes with turning backup on. */
 	fun confirmFolderChoice() {

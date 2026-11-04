@@ -37,6 +37,7 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.umbrel.android.BuildConfig
+import com.umbrel.android.IdentityChange
 import com.umbrel.kit.LocalHttpsTransport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -440,10 +441,7 @@ internal class BrowserPage(
 	}
 
 	private val notRecognized: Failure
-		get() = Failure(
-			"Can’t Open ${identity.name}",
-			"This app no longer recognizes your Umbrel. This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app.",
-		)
+		get() = Failure(IdentityChange.ALERT_TITLE, IdentityChange.BLOCKED_MESSAGE)
 
 	// ── Dialogs ──
 
