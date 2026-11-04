@@ -25,4 +25,9 @@ Verify one with `gpg --verify <version>-SHA256SUMS.asc <version>-SHA256SUMS`, af
 
 ## Adding a release
 
-Once a release is signed, download its manifest, timestamp, release notes and both signature files here, named `<version>-<file>`, and commit them. Later, run `ots upgrade` on its `.ots` once the timestamp is in a Bitcoin block. CI checks every release here.
+1. Tag the release. CI builds it and uploads it to `https://download.umbrel.com/release/<version>/`.
+2. Open a pull request adding its manifest, timestamp, release notes and signature files here, named `<version>-<file>`.
+3. Signers each run `./scripts/release-signing sign https://download.umbrel.com/release/<version>/` and add their `Signature:` lines to the pull request. CI checks every release here, so it fails until there are enough.
+4. Merge it. CI then uploads what this directory adds to the download server: more signatures, and release notes that are signed and dated later. It never uploads a manifest or release files. See what it would upload with `./scripts/release-signing sync`.
+
+Once a timestamp is in a Bitcoin block, complete it with `ots upgrade` and merge that too, and CI replaces the pending one on the download server. To fix a release's notes, start them with `<!-- umbrelOS release notes <date> -->`, dated now, so they replace the ones already published.
