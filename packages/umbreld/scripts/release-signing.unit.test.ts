@@ -384,7 +384,9 @@ async function checkArchivedReleases(directory: string, rootPublicKey = ROOT_PUB
 	const files = (await fs.readdir(directory)).filter(
 		(file) => !['README.md', 'keys', path.basename(PUBLISHED_SIGNING_KEYS_PATH)].includes(file),
 	)
-	for (const file of files) expect(file).toMatch(/^.+-(manifest\.txt(\.ots|\.sig)?|release-notes\.md(\.sig)?)$/)
+	for (const file of files) {
+		expect(file).toMatch(/^.+-(manifest\.txt(\.ots|\.sig)?|release-notes\.md(\.sig)?|SHA256SUMS(\.ots|\.asc)?)$/)
+	}
 	for (const file of files.filter((file) => file.endsWith('-manifest.txt'))) {
 		const read = (name: string) => fs.readFile(path.join(directory, name), 'utf8')
 		const manifest = await read(file)
@@ -432,6 +434,36 @@ async function checkArchivedReleases(directory: string, rootPublicKey = ROOT_PUB
 describe('releases/', () => {
 	test('holds the manifest, timestamp, release notes and signatures of each archived release', async () => {
 		await checkArchivedReleases(ARCHIVE_DIRECTORY)
+	})
+
+	// Releases from before release signing, which CI only published the SHA256SUMS of, timestamped with
+	// OpenTimestamps. Luke signed them with his PGP key afterwards, which README.md says how to verify.
+	test('holds the timestamped and signed SHA256SUMS of each release from before signing', async () => {
+		const openTimestampsHeader = Buffer.from('004f70656e54696d657374616d7073000050726f6f6600bf89e2e884e89294', 'hex')
+		const files = await fs.readdir(ARCHIVE_DIRECTORY)
+		for (const file of files.filter((file) => /-SHA256SUMS\.(ots|asc)$/.test(file))) {
+			expect(files).toContain(file.slice(0, -4))
+		}
+		for (const file of files.filter((file) => file.endsWith('-SHA256SUMS'))) {
+			const version = file.slice(0, -'-SHA256SUMS'.length)
+			expect(semver.valid(version), `${file} isn't named after a version`).toBeTruthy()
+			expect(await fs.readFile(path.join(ARCHIVE_DIRECTORY, file), 'utf8')).toMatch(/^([0-9a-f]{64} {2}\S+\n)+$/)
+			const timestamp = await fs.readFile(path.join(ARCHIVE_DIRECTORY, `${file}.ots`))
+			expect(timestamp.subarray(0, openTimestampsHeader.length), `${file}.ots isn't an OpenTimestamps proof`).toEqual(
+				openTimestampsHeader,
+			)
+			expect(
+				await fs.readFile(path.join(ARCHIVE_DIRECTORY, `${file}.asc`), 'utf8').catch(() => ''),
+				`${file}.asc isn't a detached PGP signature`,
+			).toMatch(/^-----BEGIN PGP SIGNATURE-----\n[\s\S]+\n-----END PGP SIGNATURE-----\n$/)
+			// A release is either signed or from before signing
+			expect(
+				await fs
+					.stat(path.join(ARCHIVE_DIRECTORY, archivedReleaseFileName(version, 'manifest.txt')))
+					.catch(() => undefined),
+				`${version} is archived as a signed release too`,
+			).toBeUndefined()
+		}
 	})
 
 	// Devices fetch it from the public repo on GitHub
