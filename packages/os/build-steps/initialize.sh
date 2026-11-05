@@ -28,6 +28,12 @@ EOF
 # This is also needed to avoid issues with apt refusing to install old packages from snapshot repos.
 echo 'Acquire::Check-Valid-Until "false";' | tee /etc/apt/apt.conf.d/90snapshot-validuntil
 
+# snapshot.debian.org regularly answers 503 or 504 for minutes at a time, and a
+# build fetches over a thousand packages. apt retries those errors 3 times over
+# about 7 seconds by default. Retry 10 times instead, which backs off up to
+# 30 seconds between attempts and keeps trying each file for about 3 minutes.
+echo 'Acquire::Retries "10";' | tee /etc/apt/apt.conf.d/90snapshot-retries
+
 apt-get update --yes
 
 # Install systemd
