@@ -38,6 +38,20 @@ export function indexRegistryApps(registries: readonly (AppRegistry | null)[]): 
 	return {appsKeyed, ambiguousAppIds}
 }
 
+/** First-repository-wins lookup, matching umbreld's install/update resolution. */
+export function resolveRegistryAppsFirstWins(registries: readonly (AppRegistry | null)[]): Record<string, RegistryApp> {
+	const appsKeyed: Record<string, RegistryApp> = {}
+
+	for (const registry of registries) {
+		if (!registry) continue
+		for (const app of registry.apps) {
+			if (!appsKeyed[app.id]) appsKeyed[app.id] = app
+		}
+	}
+
+	return appsKeyed
+}
+
 /** Resolve a dependency only when exactly one loaded registry provides it. */
 export function resolveDependencyRegistryApp({
 	dependencyId,
