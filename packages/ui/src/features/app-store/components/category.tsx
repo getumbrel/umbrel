@@ -23,6 +23,7 @@ import {useAppCardStateMap, useAppStatusMap} from '@/features/app-store/hooks/us
 import {useStorefront} from '@/features/app-store/hooks/use-storefront'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
+import {useHomeFit} from '@/modules/desktop/home-fit'
 import {useAvailableApps} from '@/providers/available-apps'
 import type {AppStateOrLoading, RegistryApp} from '@/trpc/trpc'
 
@@ -43,9 +44,11 @@ function CategoryContent() {
 	const appStates = useAppCardStateMap(apps ?? [])
 	const availableSorts = getAvailableSorts(storefront.dates)
 	const sort = useSortParam(availableSorts)
-	// Below md the tall featured cards would stack into a wall above the grid;
-	// dropping them (not just hiding) also skips their gallery image loads
+	// Below md the tall featured cards would stack into a wall above the grid,
+	// and on a phone on its side one card fills the screen; dropping them (not
+	// just hiding) also skips their gallery image loads
 	const isSmallMobile = useIsSmallMobile()
+	const {low} = useHomeFit()
 
 	if (!categoryId) return null
 	// Category data is local truth; optional editorial metadata can enhance it
@@ -62,12 +65,20 @@ function CategoryContent() {
 
 	const sortedApps = sortApps(categoryApps, sort, storefront.dates)
 	const icon = categoryIcon(categoryId)
-	const featuredApps = isAll || isSmallMobile ? [] : (storefront.featuredByCategory.get(categoryId)?.slice(0, 3) ?? [])
+	const featuredApps =
+		isAll || isSmallMobile || low ? [] : (storefront.featuredByCategory.get(categoryId)?.slice(0, 3) ?? [])
 
 	return (
 		<>
 			<header className={cn('flex items-center gap-2 md:gap-2.5', storeRevealClass)}>
-				{icon && <img src={icon} alt='' className='h-14 w-14 object-contain md:h-18 md:w-18' draggable={false} />}
+				{icon && (
+					<img
+						src={icon}
+						alt=''
+						className='h-14 w-14 object-contain md:h-18 md:w-18 low:h-9 low:w-9'
+						draggable={false}
+					/>
+				)}
 				<h2 className='min-w-0 flex-1 truncate text-24 leading-tight font-semibold -tracking-3 md:text-32'>
 					{getCategoryLabel(categoryId)}
 				</h2>

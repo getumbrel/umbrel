@@ -20,6 +20,7 @@ export const PHOTOS_SECTIONS = [
 	'deleted',
 	'sources',
 	'albums',
+	'map',
 ] as const
 
 export type PhotosSection = (typeof PHOTOS_SECTIONS)[number]

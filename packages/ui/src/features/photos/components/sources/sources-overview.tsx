@@ -26,10 +26,10 @@ export function SourcesOverview() {
 	return (
 		// The one Photos page still on a card (by choice). Its height budget runs
 		// to the sheet's bottom edge beneath the dock (mobile: the stack above is
-		// ListingSurface's 136/164 — see its height note); on desktop the box
+		// ListingSurface's --page-top + 112, or + 56 on a phone on its side — see its height note); on desktop the box
 		// starts 12px under the actions bar, which sits 10px below the sheet's
 		// top edge (see ListingSurface).
-		<div className='flex h-[calc(100dvh-var(--sheet-top)-136px)] flex-col md:h-[calc(100dvh-var(--sheet-top)-164px)] lg:mt-(--umbrel-photos-drop) lg:h-[calc(100vh-146px-var(--umbrel-photos-drop))]'>
+		<div className='flex h-[calc(100dvh-var(--sheet-top)-var(--page-top)-112px)] flex-col lg:mt-(--umbrel-photos-drop) lg:h-[calc(100vh-146px-var(--umbrel-photos-drop))] phone-side:h-[calc(100dvh-var(--sheet-top)-var(--page-top)-56px)]'>
 			<Card className='relative min-h-0 flex-1 rounded-24 bg-white/4 !p-0'>
 				<ScrollArea className='h-full'>
 					<div className='grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3 p-4 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:p-5'>

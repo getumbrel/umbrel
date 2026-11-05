@@ -1,14 +1,11 @@
 import {PlusCircle} from 'lucide-react'
-import {matchSorter} from 'match-sorter'
 import {AnimatePresence} from 'motion/react'
-import {lazy, Suspense, useEffect, useRef, useState} from 'react'
+import {lazy, Suspense, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {AppIcon} from '@/components/app-icon'
 import {Button} from '@/components/ui/button'
-import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
-import {Input} from '@/components/ui/input'
-import {ScrollArea} from '@/components/ui/scroll-area'
+import {SearchablePicker} from '@/components/ui/searchable-picker'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {MachineAppIcon} from '@/features/machines/components/machine-app-icon'
@@ -52,80 +49,26 @@ export function AppAccessDetail({
 }) {
 	const {t} = useTranslation()
 
-	// App picker dropdown with search, same pattern as the users dialog
-	const [appPickerOpen, setAppPickerOpen] = useState(false)
-	const [appQuery, setAppQuery] = useState('')
-	const appQueryInputRef = useRef<HTMLInputElement>(null)
-
-	useEffect(() => {
-		if (!appPickerOpen) return
-		const timer = window.setTimeout(() => {
-			appQueryInputRef.current?.focus()
-			appQueryInputRef.current?.select()
-		}, 0)
-		return () => window.clearTimeout(timer)
-	}, [appPickerOpen])
-
 	const allApps = permissions.apps === 'all'
 	const grantedAppIds = permissions.apps === 'all' ? [] : permissions.apps
 	const appById = new Map(installedApps.map((app) => [app.id, app]))
 	const availableApps = installedApps.filter((app) => !grantedAppIds.includes(app.id))
 
 	const addAppMenu = (
-		<DropdownMenu
-			open={appPickerOpen}
-			onOpenChange={(open) => {
-				setAppPickerOpen(open)
-				if (!open) setAppQuery('')
-			}}
+		<SearchablePicker
+			placeholder={t('app-picker.search')}
+			items={availableApps.map((app) => ({
+				value: app.id,
+				label: app.name || app.id,
+				icon: <AppIcon size={24} src={app.icon} className='shrink-0 rounded-6' />,
+			}))}
+			onSelect={(id) => onUpdate({apps: [...grantedAppIds, id]})}
 		>
-			<DropdownMenuTrigger asChild>
-				<Button size='sm' aria-label={t('mcp-add-app')} disabled={availableApps.length === 0 || busy}>
-					{t('mcp-add')}
-					<PlusCircle className='h-3 w-3' />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align='end' className='flex max-h-72 min-w-64 flex-col gap-3'>
-				<Input
-					value={appQuery}
-					className='shrink-0'
-					onChange={(e) => setAppQuery(e.target.value)}
-					onKeyDown={(e) => {
-						e.stopPropagation()
-						if (e.key === 'Escape') setAppPickerOpen(false)
-					}}
-					sizeVariant={'short-square'}
-					placeholder={t('app-picker.search')}
-					ref={appQueryInputRef}
-				/>
-				{(() => {
-					const results = matchSorter(availableApps, appQuery, {
-						keys: ['name', 'id'],
-						threshold: matchSorter.rankings.WORD_STARTS_WITH,
-					})
-					if (results.length === 0) {
-						return <div className='px-2 text-14 text-white/50'>{t('no-results-found')}</div>
-					}
-					return (
-						<ScrollArea className='relative -mx-1 flex h-full flex-col px-1'>
-							{results.map((app) => (
-								<DropdownMenuItem
-									key={app.id}
-									onSelect={() => {
-										onUpdate({apps: [...grantedAppIds, app.id]})
-										setAppPickerOpen(false)
-									}}
-									className='flex items-center gap-2'
-								>
-									<AppIcon size={20} src={app.icon} className='rounded-4' />
-									<span className='truncate'>{app.name}</span>
-								</DropdownMenuItem>
-							))}
-						</ScrollArea>
-					)
-				})()}
-			</DropdownMenuContent>
-		</DropdownMenu>
+			<Button size='sm' aria-label={t('mcp-add-app')} disabled={availableApps.length === 0 || busy}>
+				{t('mcp-add')}
+				<PlusCircle className='h-3 w-3' />
+			</Button>
+		</SearchablePicker>
 	)
 
 	return (
@@ -197,79 +140,26 @@ export function MachineAccessDetail({
 }) {
 	const {t} = useTranslation()
 
-	const [machinePickerOpen, setMachinePickerOpen] = useState(false)
-	const [machineQuery, setMachineQuery] = useState('')
-	const machineQueryInputRef = useRef<HTMLInputElement>(null)
-
-	useEffect(() => {
-		if (!machinePickerOpen) return
-		const timer = window.setTimeout(() => {
-			machineQueryInputRef.current?.focus()
-			machineQueryInputRef.current?.select()
-		}, 0)
-		return () => window.clearTimeout(timer)
-	}, [machinePickerOpen])
-
 	const allMachines = permissions.machines === 'all'
 	const grantedMachineIds = permissions.machines === 'all' ? [] : permissions.machines
 	const machineById = new Map(machines.map((machine) => [machine.id, machine]))
 	const availableMachines = machines.filter((machine) => !grantedMachineIds.includes(machine.id))
 
 	const addMachineMenu = (
-		<DropdownMenu
-			open={machinePickerOpen}
-			onOpenChange={(open) => {
-				setMachinePickerOpen(open)
-				if (!open) setMachineQuery('')
-			}}
+		<SearchablePicker
+			placeholder={t('app-picker.search')}
+			items={availableMachines.map((machine) => ({
+				value: machine.id,
+				label: machine.name,
+				icon: <MachineAppIcon osId={machine.osId} state={machine.state} className='size-6' />,
+			}))}
+			onSelect={(id) => onUpdate({machines: [...grantedMachineIds, id]})}
 		>
-			<DropdownMenuTrigger asChild>
-				<Button size='sm' aria-label={t('mcp-add-machine')} disabled={availableMachines.length === 0 || busy}>
-					{t('mcp-add')}
-					<PlusCircle className='h-3 w-3' />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align='end' className='flex max-h-72 min-w-64 flex-col gap-3'>
-				<Input
-					value={machineQuery}
-					className='shrink-0'
-					onChange={(e) => setMachineQuery(e.target.value)}
-					onKeyDown={(e) => {
-						e.stopPropagation()
-						if (e.key === 'Escape') setMachinePickerOpen(false)
-					}}
-					sizeVariant={'short-square'}
-					placeholder={t('app-picker.search')}
-					ref={machineQueryInputRef}
-				/>
-				{(() => {
-					const results = matchSorter(availableMachines, machineQuery, {
-						keys: ['name', 'id'],
-						threshold: matchSorter.rankings.WORD_STARTS_WITH,
-					})
-					if (results.length === 0) {
-						return <div className='px-2 text-14 text-white/50'>{t('no-results-found')}</div>
-					}
-					return (
-						<ScrollArea className='relative -mx-1 flex h-full flex-col px-1'>
-							{results.map((machine) => (
-								<DropdownMenuItem
-									key={machine.id}
-									onSelect={() => {
-										onUpdate({machines: [...grantedMachineIds, machine.id]})
-										setMachinePickerOpen(false)
-									}}
-									className='flex items-center gap-2'
-								>
-									<MachineAppIcon osId={machine.osId} state={machine.state} className='size-5' />
-									<span className='truncate'>{machine.name}</span>
-								</DropdownMenuItem>
-							))}
-						</ScrollArea>
-					)
-				})()}
-			</DropdownMenuContent>
-		</DropdownMenu>
+			<Button size='sm' aria-label={t('mcp-add-machine')} disabled={availableMachines.length === 0 || busy}>
+				{t('mcp-add')}
+				<PlusCircle className='h-3 w-3' />
+			</Button>
+		</SearchablePicker>
 	)
 
 	return (

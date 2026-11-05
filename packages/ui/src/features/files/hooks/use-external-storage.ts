@@ -1,9 +1,9 @@
-import {keepPreviousData} from '@tanstack/react-query'
 import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {getActiveAppsUsingStoragePaths, showStorageInUseDialog} from '@/features/files/components/storage-in-use'
 import {HOME_PATH} from '@/features/files/constants'
+import {useExternalStorageDevices} from '@/features/files/hooks/use-external-storage-devices'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
@@ -19,42 +19,13 @@ export function useExternalStorage() {
 	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const confirm = useConfirmation()
-	// External storage is an owner-only feature, don't run its queries for
-	// member accounts. Note this must key off 'not a member' rather than 'is the
-	// owner' because this hook is also used during onboarding before any user
-	// (or token) exists, e.g. the backup restore flow.
 	const userQ = trpcReact.user.get.useQuery()
-	const isMember = userQ.data?.role === 'member'
 	const isExternalStorageSupported = true
 	// For the blocked-eject dialog: which active apps keep storage on the drive.
 	// Plain query rather than useApps() so the hook stays provider-independent.
 	const appsQ = trpcReact.apps.list.useQuery(undefined, {enabled: userQ.data?.role === 'owner'})
 
-	// Subscribe to files:external-storage:change events that fire when devices are mounted/unmounted
-	// and invalidate the external storage queries
-	trpcReact.eventBus.listen.useSubscription(
-		{event: 'files:external-storage:change'},
-		{
-			enabled: !isMember,
-			onData() {
-				utils.files.externalDevices.invalidate()
-			},
-			onError(err) {
-				console.error('eventBus.listen(files:external-storage:change) subscription error', err)
-			},
-		},
-	)
-
-	// Query for external storage
-	const {data: disks, isLoading: isLoadingDisks} = trpcReact.files.externalDevices.useQuery(undefined, {
-		placeholderData: keepPreviousData,
-		// The change event cannot fire after a device has already been physically
-		// removed, so poll while any device is present to notice it going away —
-		// and slowly while none is, in case a plug-in event was missed
-		refetchInterval: (query) => (query.state.data?.length ? 5000 : 30_000),
-		staleTime: 0, // Don't cache the data
-		enabled: !isMember,
-	})
+	const {data: disks, isLoading: isLoadingDisks} = useExternalStorageDevices()
 	const {currentPath, navigateToDirectory} = useNavigate()
 
 	// Eject disk mutation

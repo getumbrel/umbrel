@@ -43,7 +43,9 @@ vi.mock('@/features/files/hooks/use-preferences', () => ({
 	usePreferences: () => ({preferences: {sortBy: 'name', sortOrder: 'ascending'}}),
 }))
 vi.mock('@/features/files/transfers/use-transfers', () => ({useUploadListingItems: () => mocks.uploads}))
-vi.mock('@/features/files/transfers/transfers', () => ({transfers: {acknowledgeListed: mocks.acknowledgeListed}}))
+vi.mock('@/features/files/transfers/transfers', () => ({
+	transfers: {acknowledgeListed: mocks.acknowledgeListed, onTransition: () => () => {}},
+}))
 vi.mock('@/features/files/store/use-files-store', () => ({
 	useFilesStore: Object.assign((selector: (state: typeof mocks.store) => unknown) => selector(mocks.store), {
 		getState: () => mocks.store,
@@ -91,6 +93,66 @@ beforeEach(() => {
 	root = createRoot(container)
 })
 afterEach(() => act(() => root.unmount()))
+
+describe('virtual views', () => {
+	const paths = ['/Search', '/Recents', '/Cloud', '/Cloud/account-id']
+
+	test.each(paths)('%s has no directory request, loading state, error, or pagination', async (path) => {
+		mocks.directory.isLoading = true
+		await act(() => root.render(<Harness path={path} />))
+
+		expect(mocks.query).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({enabled: false}))
+		expect(result.listing).toBeUndefined()
+		expect(result.isLoading).toBe(false)
+		expect(result.isError).toBe(false)
+		expect(result.error).toBeNull()
+		expect(await result.fetchMoreItems()).toBe(false)
+		expect(mocks.utils.files.list.fetch).not.toHaveBeenCalled()
+	})
+
+	test.each(paths)('entering %s clears the previous directory and its writable capabilities', async (path) => {
+		mocks.directory.isError = false
+		mocks.directory.data = {
+			path: '/Home',
+			operations: ['writable'],
+			files: [{name: 'document.txt', path: '/Home/document.txt', type: 'text/plain'}],
+			hasMore: true,
+		}
+		await act(() => root.render(<Harness path='/Home' />))
+		expect(result.listing?.operations).toContain('writable')
+
+		mocks.directory.isPlaceholderData = true
+		await act(() => root.render(<Harness path={path} />))
+		expect(result.listing).toBeUndefined()
+		expect(result.isLoading).toBe(false)
+		expect(await result.fetchMoreItems()).toBe(false)
+		expect(mocks.utils.files.list.fetch).not.toHaveBeenCalled()
+
+		// The listing must stay hidden whatever the query reports: the hook clears
+		// the placeholder flag (the view would otherwise read as loading forever),
+		// so it has to drop the data itself rather than rely on the stale guard.
+		mocks.directory.isPlaceholderData = false
+		await act(() => root.render(<Harness path={path} />))
+		expect(result.listing).toBeUndefined()
+
+		await act(() => root.render(<Harness path='/Home' />))
+		expect(mocks.query).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({enabled: true}))
+		expect(result.listing?.operations).toContain('writable')
+		expect(result.listing?.items.map((item) => item.path)).toEqual(['/Home/document.txt'])
+	})
+
+	test.each(['/Home/Search', '/Home/Recents', '/Home/Cloud', '/Users/alice/Search'])(
+		'keeps listing real directories such as %s',
+		async (path) => {
+			mocks.directory.isError = false
+			mocks.directory.data = {path, files: [], operations: ['writable']}
+			await act(() => root.render(<Harness path={path} />))
+			expect(mocks.query).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({enabled: true}))
+			expect(result.listing?.path).toBe(path)
+			expect(result.listing?.operations).toContain('writable')
+		},
+	)
+})
 
 describe('network listings during an outage', () => {
 	test('lists configured shares without requesting a missing host directory', async () => {

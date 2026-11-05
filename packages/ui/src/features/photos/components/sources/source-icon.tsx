@@ -9,7 +9,7 @@ import {cn} from '@/lib/utils'
 
 // The add dialog's coming-soon cards still draw the post-v1 device kinds, so
 // the icon keeps their artwork beyond the API's own SourceType
-type IconType = SourceType | 'android' | 'external-drive' | 'network-share'
+type IconType = SourceType | 'external-drive' | 'network-share'
 
 // Same device artwork the Files sidebar uses for drives, NAS and phones; the
 // umbrelOS mark for this device. `size` is the box in px.

@@ -2,8 +2,8 @@ import nodePath from 'node:path'
 
 import z from 'zod'
 
-import {accountAvatarUrl} from '../user/avatar-api.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import {accountAvatarUrl} from '../user/avatar-api.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 import {
 	router,
@@ -11,10 +11,11 @@ import {
 	privateProcedureWithMembers,
 	publicProcedureWhenNoUserExists,
 	publicProcedureWhenNoUserExistsWithMembers,
-} from '../server/trpc/trpc.js'
-import {CLOUD_SYNC_MODE_IDS, CLOUD_WEBDAV_FLAVOR_IDS} from './cloud-types.js'
-import {supportsAppDataRootFilesystem} from './external-storage.js'
-import {getDirectoryStream} from './files.js'
+} from '../server/trpc/trpc.ts'
+import {CLOUD_SYNC_MODE_IDS, CLOUD_WEBDAV_FLAVOR_IDS} from './cloud-types.ts'
+import {supportsAppDataRootFilesystem} from './external-storage.ts'
+import {getDirectoryStream} from './files.ts'
+import {THUMBNAIL_VARIANT_NAMES} from './thumbnail-support.ts'
 
 // Numeric collation matches the Files UI. Distinct names can collate equally
 // (for example 1.txt and 01.txt), so use the raw name as a tie-breaker to make
@@ -324,11 +325,12 @@ export default router({
 		.input(z.object({path: z.string()}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.files.archive.unarchive(input.path, ctx.principal?.accountId)),
 
-	// Get/generate a thumbnail for a file on demand
+	// Get/generate a thumbnail for a file on demand: the listing's, or a larger
+	// rendition (the viewer shows formats browsers can't decode from one)
 	getThumbnail: privateProcedureWithMembers
-		.input(z.object({path: z.string()}))
+		.input(z.object({path: z.string(), variant: z.enum(THUMBNAIL_VARIANT_NAMES).optional()}))
 		.mutation(async ({ctx, input}) =>
-			ctx.umbreld.files.thumbnails.getThumbnailOnDemand(input.path, ctx.principal?.accountId),
+			ctx.umbreld.files.thumbnails.getThumbnailOnDemand(input.path, ctx.principal?.accountId, input.variant),
 		),
 
 	// ── Member shares ───────────────────────────────────────────────────────

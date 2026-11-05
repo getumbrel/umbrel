@@ -3,9 +3,9 @@ import {setTimeout} from 'node:timers/promises'
 
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
-import runEvery from '../utilities/run-every.js'
-import {detectDevice} from '../system/system.js'
+import type Umbreld from '../../index.ts'
+import runEvery from '../utilities/run-every.ts'
+import {detectDevice} from '../system/system.ts'
 
 // Embedded Controller (EC) Communication
 //

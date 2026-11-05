@@ -45,11 +45,13 @@ export function useCpuForUi(options: {poll?: boolean} = {}) {
 		} as const
 	}
 
+	const cappedPercent = Math.min(100, percentUsed)
+
 	return {
 		isLoading: false,
-		value: Math.ceil(percentUsed) + '%',
-		progress: percentUsed / 100,
+		value: Math.ceil(cappedPercent) + '%',
+		progress: cappedPercent / 100,
 		secondaryValue: t('cpu-core-count', {cores: threads}),
-		apps,
+		apps: apps.map((app) => ({...app, used: Math.min(100, app.used)})),
 	} as const
 }

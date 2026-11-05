@@ -3,7 +3,7 @@
 import {TFunction} from 'i18next'
 import {useEffect, useState} from 'react'
 import {Trans, useTranslation} from 'react-i18next'
-import {TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
+import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 import {TiInfoLarge} from 'react-icons/ti'
 import {Link, useLocation, useNavigate} from 'react-router-dom'
 
@@ -24,6 +24,8 @@ import {useAuth} from '@/modules/auth/use-auth'
 import {Progress} from '@/modules/bare/progress'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {AccountCredentials} from '@/routes/onboarding/create-account'
+import {ReturnToStart} from '@/routes/onboarding/raid/return-to-start'
+import {useStorageWait} from '@/routes/onboarding/raid/use-storage-wait'
 import {RecommendedBadge} from '@/routes/onboarding/recommended-badge'
 import {isTransportError} from '@/trpc/is-transport-error'
 import {trpcReact} from '@/trpc/trpc'
@@ -57,7 +59,7 @@ function getHealthWarningMessage(device: StorageDevice, t: TFunction): string | 
 // Format bytes, but if 0, use the same unit as the reference value (e.g., "0TB" instead of "0B")
 const formatSizeWithUnit = (bytes: number, referenceBytes: number) => {
 	if (bytes === 0 && referenceBytes > 0) {
-		const unit = formatSize(referenceBytes).replace(/[\d.]/g, '')
+		const unit = formatSize(referenceBytes).replace(/[^A-Za-z]/g, '') // "1,5TB" → "TB"
 		return `0${unit}`
 	}
 	return formatSize(bytes)
@@ -240,7 +242,13 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 	const credentials = location.state?.credentials as AccountCredentials | undefined
 
 	// Always fetch fresh devices from server in case user shut down to change an SSD and refreshes current url
-	const {devices, isDetecting} = useDetectStorageDevices({genericSsd: isGeneric})
+	const {
+		devices,
+		isDetecting,
+		isFetching,
+		error: inventoryError,
+		refetch: refetchDevices,
+	} = useDetectStorageDevices({genericSsd: isGeneric})
 	const recoverableInstallQ = trpcReact.hardware.raid.hasRecoverableInstall.useQuery(undefined, {
 		enabled: !!credentials,
 		refetchOnWindowFocus: false,
@@ -276,6 +284,12 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 
 	// Setup phase: null | 'setting-up' | 'restarting' | 'complete' | 'error'
 	const [setupPhase, setSetupPhase] = useState<null | 'setting-up' | 'restarting' | 'complete' | 'error'>(null)
+	const showRecovery = !setupPhase && recoverableInstallQ.data === true && !setUpAsNew
+
+	const [requestStartedAt, setRequestStartedAt] = useState<number | null>(null)
+	const showWaitNotice = useStorageWait(
+		setupPhase === 'setting-up' || setupPhase === 'restarting' ? requestStartedAt : null,
+	)
 
 	// Track if we're launching (stays true through navigation to prevent button flash)
 	const [isLaunching, setIsLaunching] = useState(false)
@@ -332,8 +346,8 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 			// Transition to restarting phase
 			setSetupPhase('restarting')
 		},
-		onError: () => {
-			setSetupPhase(null)
+		onError: (error) => {
+			setSetupPhase(isTransportError(error) ? 'restarting' : 'error')
 		},
 	})
 
@@ -344,20 +358,27 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 		}
 	}, [credentials, navigate])
 
-	// Redirect to detect page if still detecting or no devices found
+	// Fresh setup needs drives; recovery owns its own completion and redirect.
 	useEffect(() => {
-		if (!credentials) return
-		if (isDetecting || devices.length === 0) {
+		if (!credentials || setupPhase || showRecovery || inventoryError || isDetecting) return
+		if (devices.length === 0) {
 			navigate(basePath, {state: {credentials}, replace: true})
 		}
-	}, [basePath, isDetecting, devices.length, credentials, navigate])
+	}, [basePath, isDetecting, devices.length, credentials, navigate, setupPhase, showRecovery, inventoryError])
+
+	if (!credentials) return null
+
+	// Keep recovery mounted through inventory failures or empty reads during reboot.
+	if (showRecovery) {
+		return <RecoverExistingInstall devices={devices} variant={variant} onSetUpAsNew={() => setSetUpAsNew(true)} />
+	}
 
 	// Don't render while redirecting
-	if (!credentials || isDetecting || devices.length === 0) {
+	if (!setupPhase && !inventoryError && (isDetecting || devices.length === 0)) {
 		return null
 	}
 
-	if (recoverableInstallQ.isLoading) {
+	if (!setupPhase && recoverableInstallQ.isLoading) {
 		return (
 			<Layout
 				title={t('onboarding.raid.recovery.checking.title')}
@@ -380,17 +401,19 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 		)
 	}
 
-	if (recoverableInstallQ.error) {
+	if (!setupPhase && (recoverableInstallQ.error || inventoryError)) {
 		return (
 			<RaidError
 				title={t('onboarding.raid.error.detection-failed')}
+				onRetry={() => {
+					void refetchDevices()
+					void recoverableInstallQ.refetch()
+				}}
+				retrying={isFetching || recoverableInstallQ.isFetching}
+				detail={inventoryError ?? recoverableInstallQ.error?.message}
 				instructions={t('onboarding.raid.recovery.checking.failed')}
 			/>
 		)
-	}
-
-	if (recoverableInstallQ.data && !setUpAsNew) {
-		return <RecoverExistingInstall devices={devices} variant={variant} onSetUpAsNew={() => setSetUpAsNew(true)} />
 	}
 
 	// --- Event Handlers ---
@@ -407,6 +430,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 		// This prevents the error boundary from showing "Something went wrong" during the expected network downtime
 		suppressErrors()
 
+		setRequestStartedAt(Date.now())
 		setSetupPhase('setting-up')
 
 		// Get device IDs for RAID setup
@@ -422,11 +446,6 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 			raidDevices,
 			raidType,
 		})
-	}
-
-	// Handle shutdown
-	const handleShutdown = () => {
-		shutdown()
 	}
 
 	// --- Derived State & Calculations ---
@@ -501,46 +520,27 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 
 	// --- Render: Error State ---
 
-	// Show error state if registration failed (pre-reboot) or RAID setup failed (post-reboot)
-	const errorMessage =
-		registerMut.error?.message ||
-		raidStatusQ.error?.message ||
-		'The storage pool could not be mounted after the device restarted.'
-	if (registerMut.error || setupPhase === 'error') {
-		const canRetry = !!registerMut.error // Can only retry pre-reboot errors
+	if (setupPhase === 'error') {
+		const canRetry = !!registerMut.error && !isTransportError(registerMut.error)
 		return (
-			<div className='flex flex-1 flex-col items-center justify-center gap-4'>
-				<TbAlertTriangleFilled className='size-[22px] text-[#F5A623]' />
-				<h1
-					className='text-[20px] font-bold text-white/85'
-					style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
-				>
-					{t('onboarding.raid.setup-failed.title')}
-				</h1>
-				<p className='max-w-[300px] text-center text-[15px] text-white/70'>{errorMessage}</p>
-				<p className='max-w-[300px] text-center text-[13px] text-white/50'>
-					{canRetry
-						? t('onboarding.raid.setup-failed.description-retry')
-						: t('onboarding.raid.setup-failed.description-no-retry')}
-				</p>
-				<div className='mt-0 flex gap-3'>
-					{canRetry && (
-						<button
-							onClick={() => {
+			<RaidError
+				title={t('onboarding.raid.setup-failed.title')}
+				instructions={t(
+					canRetry
+						? 'onboarding.raid.setup-failed.description-retry'
+						: 'onboarding.raid.setup-failed.description-no-retry',
+				)}
+				detail={registerMut.error?.message ?? raidStatusQ.error?.message}
+				onRetry={
+					canRetry
+						? () => {
 								registerMut.reset()
 								setSetupPhase(null)
-							}}
-							className={primaryButtonProps.className}
-							style={primaryButtonProps.style}
-						>
-							{t('onboarding.raid.try-again')}
-						</button>
-					)}
-					<button onClick={handleShutdown} className={secondaryButtonClasss}>
-						{t('shut-down')}
-					</button>
-				</div>
-			</div>
+							}
+						: undefined
+				}
+				retryLabel={t('onboarding.raid.try-again')}
+			/>
 		)
 	}
 
@@ -556,7 +556,9 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 				showLogo={false}
 				footer={
 					<div className='w-full max-w-sm'>
-						<p className='text-center text-sm text-white/60'>{t('onboarding.raid.configuring.warning')}</p>
+						<p className='text-center text-sm text-white/60'>
+							{t(showWaitNotice ? 'onboarding.raid.wait-warning' : 'onboarding.raid.configuring.warning')}
+						</p>
 					</div>
 				}
 			>
@@ -574,6 +576,23 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 				{/* Progress bar */}
 				<div className='mt-4 w-full max-w-sm'>
 					<Progress />
+					{showWaitNotice && (
+						<div className='mt-5 flex flex-col items-center gap-3'>
+							<p className='text-center text-13 leading-relaxed text-white/50'>{t('onboarding.raid.still-working')}</p>
+							{setupPhase === 'restarting' && (
+								<button
+									className={secondaryButtonClasss}
+									disabled={raidStatusQ.isFetching}
+									onClick={() => {
+										void raidStatusQ.refetch()
+									}}
+								>
+									{t('storage-status.check-again')}
+								</button>
+							)}
+							<ReturnToStart />
+						</div>
+					)}
 				</div>
 			</Layout>
 		)
@@ -594,6 +613,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 					<Trans
 						t={t}
 						i18nKey='onboarding.account-created.by-clicking-button-you-agree'
+						values={{button: t('onboarding.launch-umbrelos')}}
 						components={{
 							linked: <Link to={links.legal.tos} className={linkClass} target='_blank' />,
 						}}
@@ -715,7 +735,12 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 							{/* Storage breakdown bar - only shown when enabled */}
 							{failSafeEnabled && (
 								<div className='flex flex-col gap-2'>
-									<div className='flex text-[14px]'>
+									{/* Each label is as wide as its segment while there's room. With
+									    mixed drive sizes a segment can be thinner than its label's
+									    longest word: the label then keeps that width, and wraps its
+									    size under its name, while the others give way, instead of
+									    overprinting the next one */}
+									<div className='flex text-[14px] *:min-w-min *:pr-3'>
 										<span style={{width: `${(availableBytes / totalRoundedBytes) * 100}%`}}>
 											<span className='text-brand'>{t('onboarding.raid.storage-label')}</span>{' '}
 											<span className='font-medium text-brand opacity-60'>{availableStorage}</span>
@@ -838,9 +863,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 						/>
 					)}
 				</div>
-				<div
-					className={`flex flex-col items-center gap-1 ${isGeneric ? 'mt-2 w-full' : '-mt-20 w-[95%] translate-x-4'}`}
-				>
+				<div className={`flex flex-col items-center gap-1 ${isGeneric ? 'mt-2 w-full' : '-mt-20 w-[95%] pl-8'}`}>
 					<p className='text-[20px] font-semibold text-white/50'>
 						{t('onboarding.raid.available-storage')} <span className='text-brand'>{availableStorage}</span>
 					</p>
@@ -886,10 +909,10 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 							<AlertDialogDescription>{t('onboarding.ssd-raid.erase-dialog.description')}</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
-							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 							<AlertDialogAction onClick={handleContinue}>
 								{t('onboarding.raid.recovery.set-up-new-dialog.confirm')}
 							</AlertDialogAction>
+							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				</AlertDialog>

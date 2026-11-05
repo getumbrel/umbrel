@@ -11,8 +11,7 @@ struct ConnectedView: View {
 		VStack(spacing: 0) {
 			Spacer()
 
-			UmbrelDeviceRender(model: model.selectedDevice?.model)
-				.frame(width: 161)
+			UmbrelDeviceRender(model: model.selectedDevice?.model, placement: .hero)
 				.shadow(color: .black.opacity(0.5), radius: 16, y: 16)
 				.accessibilityHidden(true)
 

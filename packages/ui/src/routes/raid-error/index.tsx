@@ -1,7 +1,5 @@
 import {useState} from 'react'
-import {Trans, useTranslation} from 'react-i18next'
-import {TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
-import {TiInfoLarge} from 'react-icons/ti'
+import {useTranslation} from 'react-i18next'
 import {Navigate} from 'react-router-dom'
 
 import {
@@ -15,267 +13,190 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {Button} from '@/components/ui/button'
-import {BareCoverMessage} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
+import {StorageDeviceCard} from '@/features/storage/components/storage-device-card'
+import {StorageHeader, StorageNotice, StoragePage, StorageReadError} from '@/features/storage/components/storage-page'
+import {deviceInfoToHostEnvironment} from '@/hooks/use-device-info'
 import {OnboardingPage} from '@/layouts/bare/onboarding-page'
+import {primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {useGlobalSystemState} from '@/providers/global-system-state'
 import {SsdHealthDialog, useSsdHealthDialog} from '@/routes/onboarding/raid/ssd-health-dialog'
 import {SsdSlot, SsdTray} from '@/routes/onboarding/raid/ssd-tray'
-import {formatSize, getDeviceHealth, useDetectStorageDevices} from '@/routes/onboarding/raid/use-raid-setup'
+import {formatSize, getDeviceHealth} from '@/routes/onboarding/raid/use-raid-setup'
 import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {trpcReact} from '@/trpc/trpc'
 
-const Highlight = ({children}: {children?: React.ReactNode}) => <span className='text-white'>{children}</span>
-
-function TroubleshootingStep({
-	number,
-	title,
-	description,
-	buttonText,
-	onClick,
-	disabled,
-}: {
-	number: number
-	title: string
-	description: string
-	buttonText: string
-	onClick: () => void
-	disabled?: boolean
-}) {
-	return (
-		<div className='flex items-center gap-3 p-3'>
-			<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold'>
-				{number}
-			</span>
-			<div className='flex flex-1 flex-col gap-0.5'>
-				<span className='text-12 font-semibold text-white'>{title}</span>
-				<span className='text-12 text-white/50'>{description}</span>
-			</div>
-			<Button size='sm' variant='default' onClick={onClick} disabled={disabled} className='h-7 px-3 text-11'>
-				{buttonText}
-			</Button>
-		</div>
-	)
-}
-
 export default function RaidErrorScreen() {
 	const {t} = useTranslation()
-	// Dialog states
 	const [showShutdownDialog, setShowShutdownDialog] = useState(false)
 	const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false)
-
-	// Check if there's actually a RAID mount failure - we redirect away if not
-	const mountFailureQ = trpcReact.hardware.raid.checkRaidMountFailure.useQuery(undefined, {
+	const mountFailureQ = trpcReact.hardware.raid.checkRaidMountFailure.useQuery(undefined, {retry: false})
+	const raidDevicesQ = trpcReact.hardware.raid.checkRaidMountFailureDevices.useQuery(undefined, {
+		enabled: mountFailureQ.data === true,
 		retry: false,
 	})
-
-	// Get RAID status for each device (which drives were in RAID and their status)
-	const raidDevicesQ = trpcReact.hardware.raid.checkRaidMountFailureDevices.useQuery()
-
-	// Get detailed device info (for drives that ARE detected)
-	const {devices: availableDevices} = useDetectStorageDevices()
-
-	// SSD Health dialog state
+	const devicesQ = trpcReact.hardware.internalStorage.getDevices.useQuery(undefined, {
+		enabled: mountFailureQ.data === true,
+		retry: false,
+	})
+	const identityQ = trpcReact.systemNg.device.getIdentity.useQuery(undefined, {
+		enabled: mountFailureQ.data === true,
+		retry: false,
+	})
+	const isUmbrelPro = deviceInfoToHostEnvironment(identityQ.data) === 'umbrel-pro'
 	const healthDialog = useSsdHealthDialog()
-
-	// System actions - we use global state here for proper overlay covers
 	const {restart, shutdown, isPowerActionPending} = useGlobalSystemState()
-
-	// In recovery mode (RAID mount failure), factory reset doesn't require a password
-	// We call the mutation directly - global state will show ResettingCover based on status
 	const factoryResetMut = trpcReact.system.factoryReset.useMutation({
 		onError: (error) => {
-			toast.error(t('raid-error.factory-reset-failed'), {
-				area: 'umbrelos',
-				description: error.message,
-			})
+			toast.error(t('raid-error.factory-reset-failed'), {area: 'umbrelos', description: error.message})
 		},
 	})
-
-	// If no mount failure, we redirect to home
-	if (mountFailureQ.isLoading) {
-		return (
-			<BareCoverMessage>
-				<Loading />
-			</BareCoverMessage>
-		)
+	const busy = isPowerActionPending || factoryResetMut.isPending
+	const refreshing = mountFailureQ.isFetching || raidDevicesQ.isFetching || devicesQ.isFetching || identityQ.isFetching
+	const retry = () => {
+		void mountFailureQ.refetch()
+		if (mountFailureQ.data === true) {
+			void raidDevicesQ.refetch()
+			void devicesQ.refetch()
+			void identityQ.refetch()
+		}
 	}
+	if (mountFailureQ.data === false && !mountFailureQ.isError) return <Navigate to='/' replace />
 
-	if (mountFailureQ.data === false || mountFailureQ.isError) {
-		return <Navigate to='/' replace />
-	}
-
-	const raidDevices = raidDevicesQ.data
-
-	// Build list of DETECTED drives only (with accurate slot info)
-	// Filter out any drives without a known slot number
-	const detectedDrives = availableDevices
-		.filter((device) => device.slot !== undefined)
-		.map((device) => {
-			const hasHealthWarning = getDeviceHealth(device).hasWarning
-			return {
-				slotNum: device.slot as number,
-				device,
-				hasHealthWarning,
-			}
-		})
-
-	// Count missing RAID drives (configured but not detected)
-	const missingDriveCount = raidDevices?.filter((rd) => !rd.isOk).length ?? 0
-
-	// Convert to SsdTray format - only show detected drives in their actual slots
-	const traySlots: (SsdSlot | null)[] = [1, 2, 3, 4].map((slotNum) => {
-		const detected = detectedDrives.find((d) => d.slotNum === slotNum)
-		if (!detected) return null
+	const members = raidDevicesQ.data ?? []
+	const memberIds = new Set(members.map((member) => member.name))
+	const detected = (devicesQ.data ?? []).filter(
+		(device) => !device.isSystemDrive || (device.id && memberIds.has(device.id)),
+	)
+	const rows = [
+		...members.map((member) => ({
+			id: member.name,
+			member,
+			device: detected.find((device) => device.id === member.name),
+		})),
+		...detected
+			.filter((device) => !device.id || !memberIds.has(device.id))
+			.map((device) => ({id: device.id ?? device.device, device, member: undefined})),
+	]
+	const loading = mountFailureQ.isLoading || devicesQ.isLoading || raidDevicesQ.isLoading
+	const checkError = mountFailureQ.error ?? devicesQ.error ?? raidDevicesQ.error ?? identityQ.error
+	// Slots are only an illustration. The list above preserves every configured and
+	// detected drive, including missing members and Pro devices without a known slot.
+	const traySlots: (SsdSlot | null)[] = [1, 2, 3, 4].map((slot) => {
+		const device = detected.find((device) => device.slot === slot)
+		if (!device) return null
 		return {
-			size: formatSize(detected.device.size),
-			hasWarning: detected.hasHealthWarning,
+			size: formatSize(device.size),
+			hasWarning:
+				getDeviceHealth(device).hasWarning ||
+				members.some((member) => member.name === device.id && member.isOk === false),
 		}
 	})
 
+	const header = (
+		<StorageHeader
+			title={t(mountFailureQ.isError ? 'storage-status.unavailable-title' : 'raid-error.title')}
+			subTitle={mountFailureQ.data === true ? t('raid-error.description') : undefined}
+		/>
+	)
+
 	return (
 		<OnboardingPage>
-			<div className='flex flex-1 flex-col md:flex-row'>
-				{/* Left side - content */}
-				<div className='flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6 md:items-start md:justify-start md:py-8 md:pr-0 md:pl-6'>
-					{/* Header */}
-					<div className='flex flex-col items-center gap-2 md:items-start'>
-						<div className='flex items-center gap-2'>
-							<TbAlertTriangleFilled className='size-[22px] text-[#F5A623]' />
-							<h1
-								className='text-[18px] font-bold text-white/85 md:text-[20px]'
-								style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
-							>
-								{t('raid-error.title')}
-							</h1>
+			<StoragePage
+				footer={
+					<>
+						<div className='flex flex-wrap gap-3'>
+							<button {...primaryButtonProps} onClick={retry} disabled={refreshing || busy}>
+								{t('storage-status.check-again')}
+							</button>
+							{mountFailureQ.data === true && (
+								<>
+									<button className={secondaryButtonClasss} onClick={() => restart()} disabled={busy}>
+										{t('restart')}
+									</button>
+									<button className={secondaryButtonClasss} onClick={() => setShowShutdownDialog(true)} disabled={busy}>
+										{t('shut-down')}
+									</button>
+								</>
+							)}
 						</div>
-						<p className='max-w-[500px] text-center text-[14px] text-white/50 md:text-left md:text-[15px]'>
-							{t('raid-error.description')}
-						</p>
-					</div>
-
-					{/* Drive status */}
-					<div className='flex w-full max-w-[420px] flex-col rounded-xl bg-white/5 p-3 md:max-w-none'>
-						{/* Detected drives */}
-						{detectedDrives.map((drive) => {
-							return (
-								<button
-									key={drive.slotNum}
-									type='button'
-									onClick={() => healthDialog.openDialog(drive.device, drive.slotNum)}
-									className='-mx-1 flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5'
-								>
-									<div className='flex flex-col gap-0.5'>
-										<div className='flex items-center gap-2'>
-											{drive.hasHealthWarning ? (
-												<TbAlertTriangle className='size-5 text-[#F5A623]' />
-											) : (
-												<TbCircleCheckFilled className='size-5 text-brand' />
-											)}
-											<span className='text-[14px] font-medium text-white/60 md:text-[15px]'>
-												<Trans
-													t={t}
-													i18nKey='raid-error.ssd-in-slot'
-													values={{size: formatSize(drive.device.size), slot: drive.slotNum}}
-													components={{highlight: <Highlight />}}
-												/>
-											</span>
+						<LanguageDropdown />
+					</>
+				}
+			>
+				{loading ? (
+					<>
+						{header}
+						<div className='min-h-40' aria-busy='true' aria-label={t('loading')} />
+					</>
+				) : (
+					<>
+						<div className='flex min-w-0 flex-col gap-6 md:flex-row'>
+							<div className='flex min-w-0 flex-1 flex-col gap-3'>
+								<div className='mb-2'>{header}</div>
+								{checkError && <StorageReadError detail={checkError.message} />}
+								{rows.map(({id, member, device}) => (
+									<StorageDeviceCard
+										key={id}
+										device={device}
+										fallbackType={isUmbrelPro ? 'ssd' : undefined}
+										identifier={id}
+										role={member ? t('storage-status.data-drive') : undefined}
+										status={
+											!device
+												? t(devicesQ.isError ? 'storage-status.unknown' : 'storage-status.not-detected')
+												: member
+													? raidDevicesQ.isError
+														? t('storage-status.unknown')
+														: member.isOk === false
+															? t('storage-status.pool-unavailable')
+															: t('storage-status.detected')
+													: t('storage-status.connected')
+										}
+										onDetails={
+											device ? () => healthDialog.openDialog(device, isUmbrelPro ? device.slot : undefined) : undefined
+										}
+									/>
+								))}
+								{!checkError && rows.length === 0 && (
+									<StorageNotice tone='neutral'>{t('storage-status.no-drives')}</StorageNotice>
+								)}
+								{mountFailureQ.data === true && (
+									<p className='text-13 leading-relaxed text-white/50'>{t('raid-error.connection-help')}</p>
+								)}
+								{mountFailureQ.data === true && (
+									<details className='mt-4 text-13 text-white/40'>
+										<summary className='w-fit cursor-pointer transition-colors hover:text-white/70'>
+											{t('raid-error.reset-options')}
+										</summary>
+										<div className='mt-3 flex flex-col items-start gap-3'>
+											<p className='max-w-[600px] leading-relaxed'>{t('raid-error.reset-help')}</p>
+											<Button size='sm' onClick={() => setShowFactoryResetDialog(true)} disabled={busy}>
+												{t('factory-reset')}
+											</Button>
 										</div>
-										{drive.hasHealthWarning && (
-											<p className='ml-7 text-[12px] text-[#F5A623]/80 md:text-[13px]'>
-												{t('raid-error.health-warning')}
-											</p>
-										)}
-									</div>
-									{/* Round info button, matching the onboarding SSD tray */}
-									<div className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1'>
-										<TiInfoLarge className='size-4 text-white/60' />
-										{drive.hasHealthWarning && (
-											<span className='absolute -top-0.5 -right-0.5'>
-												<span className='absolute inset-0 size-2.5 rounded-full bg-[#F5A623]' />
-												<span className='absolute inset-0 size-2.5 animate-ping rounded-full bg-[#F5A623] opacity-75' />
-											</span>
-										)}
-									</div>
-								</button>
-							)
-						})}
-
-						{/* Missing SSDs warning - at bottom of card */}
-						{missingDriveCount > 0 && (
-							<div className='flex items-center gap-2 px-1 pt-2'>
-								<TbAlertTriangleFilled className='size-5 shrink-0 text-[#FF3434]' />
-								<span className='text-[14px] text-white/50 md:text-[15px]'>
-									{missingDriveCount === 1
-										? t('raid-error.missing-ssd-one')
-										: t('raid-error.missing-ssd-multiple', {count: missingDriveCount})}
-								</span>
+									</details>
+								)}
 							</div>
-						)}
-					</div>
-
-					{/* Troubleshooting steps */}
-					<div className='w-full max-w-[420px] md:max-w-none'>
-						<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
-							<TroubleshootingStep
-								number={1}
-								title={t('raid-error.step-restart.title')}
-								description={t('raid-error.step-restart.description')}
-								buttonText={t('raid-error.step-restart.button')}
-								onClick={() => {
-									restart()
-								}}
-								disabled={isPowerActionPending}
-							/>
-							<TroubleshootingStep
-								number={2}
-								title={t('raid-error.step-check-connections.title')}
-								description={t('raid-error.step-check-connections.description')}
-								buttonText={t('raid-error.step-check-connections.button')}
-								onClick={() => setShowShutdownDialog(true)}
-							/>
-							<TroubleshootingStep
-								number={3}
-								title={t('raid-error.step-factory-reset.title')}
-								description={t('raid-error.step-factory-reset.description')}
-								buttonText={t('raid-error.step-factory-reset.button')}
-								onClick={() => setShowFactoryResetDialog(true)}
-							/>
+							{/* The photo's trailing shadow should not add empty scroll space. */}
+							{isUmbrelPro && (
+								<div
+									className='hidden aspect-[511/560] w-[50%] shrink-0 self-start overflow-hidden md:-mr-12 md:block'
+									style={{maskImage: 'linear-gradient(to bottom, black 97%, transparent 100%)'}}
+								>
+									<SsdTray
+										slots={traySlots}
+										onHealthClick={(index) => {
+											const device = detected.find((device) => device.slot === index + 1)
+											if (device) healthDialog.openDialog(device, device.slot)
+										}}
+									/>
+								</div>
+							)}
 						</div>
-					</div>
-				</div>
-
-				{/* Right side - SSD tray visualization (hidden on mobile) */}
-				<div className='hidden flex-1 flex-col items-end justify-center md:-mr-6 md:flex'>
-					<div
-						className='w-[95%]'
-						style={{
-							maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
-							WebkitMaskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
-						}}
-					>
-						<SsdTray
-							slots={traySlots}
-							failsafeSlot={-1}
-							onHealthClick={(slotIndex) => {
-								const slotNum = slotIndex + 1
-								const drive = detectedDrives.find((d) => d.slotNum === slotNum)
-								if (drive) {
-									healthDialog.openDialog(drive.device, slotNum)
-								}
-							}}
-						/>
-					</div>
-				</div>
-			</div>
-
-			{/* Language selector - needed for edge case of fresh browser + RAID failure (defaults to English) */}
-			<div className='flex items-center justify-center pb-2'>
-				<LanguageDropdown />
-			</div>
-
-			{/* SSD Health dialog */}
+					</>
+				)}
+			</StoragePage>
 			{healthDialog.selectedDevice && (
 				<SsdHealthDialog
 					device={healthDialog.selectedDevice.device}
@@ -284,7 +205,6 @@ export default function RaidErrorScreen() {
 					onOpenChange={healthDialog.onOpenChange}
 				/>
 			)}
-
 			{/* Shutdown confirmation dialog */}
 			<AlertDialog open={showShutdownDialog} onOpenChange={setShowShutdownDialog}>
 				<AlertDialogContent>
@@ -299,11 +219,11 @@ export default function RaidErrorScreen() {
 								e.preventDefault()
 								shutdown()
 							}}
-							disabled={isPowerActionPending}
+							disabled={busy}
 						>
 							{t('shut-down')}
 						</AlertDialogAction>
-						<AlertDialogCancel disabled={isPowerActionPending}>{t('cancel')}</AlertDialogCancel>
+						<AlertDialogCancel disabled={busy}>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -322,11 +242,11 @@ export default function RaidErrorScreen() {
 								e.preventDefault()
 								factoryResetMut.mutate({})
 							}}
-							disabled={factoryResetMut.isPending}
+							disabled={busy}
 						>
 							{t('factory-reset')}
 						</AlertDialogAction>
-						<AlertDialogCancel disabled={factoryResetMut.isPending}>{t('cancel')}</AlertDialogCancel>
+						<AlertDialogCancel disabled={busy}>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

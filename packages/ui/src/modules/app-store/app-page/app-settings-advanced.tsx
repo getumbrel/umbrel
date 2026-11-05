@@ -1,8 +1,11 @@
-import {type Dispatch, type SetStateAction} from 'react'
+import {useEffect, type Dispatch, type SetStateAction} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbFileText, TbTerminal2, TbVariable} from 'react-icons/tb'
+import {type To} from 'react-router-dom'
 
+import {prefetchGlobalDialog} from '@/modules/global-dialogs'
 import {UserApp} from '@/trpc/trpc'
+import {useLinkToDialog} from '@/utils/dialog'
 
 import {
 	EnvironmentVariablesSettings,
@@ -25,9 +28,16 @@ export function AdvancedSettingsView({
 	onBack: () => void
 	onEnvironmentVariables: () => void
 	// Routed through the dialog so unsaved changes are confirmed before leaving
-	onNavigate: (to: string) => void
+	onNavigate: (to: To) => void
 }) {
 	const {t} = useTranslation()
+	const linkToDialog = useLinkToDialog()
+
+	// The terminal and logs are a click away, and take this dialog's place the moment they can mount
+	useEffect(() => {
+		prefetchGlobalDialog('terminal')
+		prefetchGlobalDialog('troubleshoot')
+	}, [])
 
 	return (
 		<div className='flex flex-col gap-y-5'>
@@ -54,14 +64,14 @@ export function AdvancedSettingsView({
 				<SettingsNavigationRow
 					title={t('app-settings.advanced.open-terminal')}
 					description={t('app-settings.advanced.open-terminal-description', {app: app.name})}
-					onClick={() => onNavigate(`/settings/terminal/app/${app.id}`)}
+					onClick={() => onNavigate(linkToDialog('terminal', {for: app.id}))}
 					icon={TbTerminal2}
 					tone={2}
 				/>
 				<SettingsNavigationRow
 					title={t('app-settings.advanced.view-logs')}
 					description={t('app-settings.advanced.view-logs-description', {app: app.name})}
-					onClick={() => onNavigate(`/settings/troubleshoot/app/${app.id}`)}
+					onClick={() => onNavigate(linkToDialog('troubleshoot', {for: app.id}))}
 					icon={TbFileText}
 					tone={3}
 				/>

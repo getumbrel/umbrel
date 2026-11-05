@@ -28,7 +28,7 @@ import {
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {cloudAccountBrand, cloudBrandName} from '@/features/files/utils/cloud'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {languageCodeToDateLocale} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -54,7 +54,7 @@ export function CloudAccountDialog({
 	onDisconnect: (account: CloudAccount) => void
 }) {
 	const {t, i18n} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const open = Boolean(account)
 	const {data: providers} = useCloudProviders({enabled: open})
 	const {data: clouds} = useCloudSyncs()
@@ -259,7 +259,7 @@ export function CloudAccountDialog({
 
 	// The identity block carries the visible title; the structural title and
 	// description stay for screen readers only
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer open={open} onOpenChange={onOpenChange}>
 				<DrawerContent>

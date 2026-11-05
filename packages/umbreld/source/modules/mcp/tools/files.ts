@@ -3,8 +3,8 @@ import nodePath from 'node:path'
 import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
-import type {McpPermissions} from '../mcp.js'
-import {MCP_PERMISSION_REMEDIATION, runTool, type McpToolContext} from './shared.js'
+import type {McpPermissions} from '../mcp.ts'
+import {MCP_PERMISSION_REMEDIATION, runTool, type McpToolContext} from './shared.ts'
 
 type FileDto = {
 	name: string

@@ -44,7 +44,7 @@ export function MemberAppUnavailableDialog({
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogAction variant='primary' className='px-6' onClick={() => onOpenChange(false)}>
+					<AlertDialogAction variant='primary' onClick={() => onOpenChange(false)}>
 						{t('ok')}
 					</AlertDialogAction>
 				</AlertDialogFooter>

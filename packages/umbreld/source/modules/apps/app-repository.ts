@@ -3,15 +3,15 @@ import crypto from 'node:crypto'
 
 import fse from 'fs-extra'
 import * as git from 'isomorphic-git'
-import http from 'isomorphic-git/http/node/index.js'
+import http from 'isomorphic-git/http/node'
 import yaml from 'js-yaml'
 import {globby} from 'globby'
 import {$} from 'execa'
 
-import type Umbreld from '../../index.js'
-import randomToken from '../utilities/random-token.js'
-import {type AppRepositoryMeta, type AppManifest, validateManifest} from './schema.js'
-import {UMBREL_APP_STORE_REPO} from '../../constants.js'
+import type Umbreld from '../../index.ts'
+import randomToken from '../utilities/random-token.ts'
+import {type AppRepositoryMeta, type AppManifest, validateManifest} from './schema.ts'
+import {UMBREL_APP_STORE_REPO} from '../../constants.ts'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))

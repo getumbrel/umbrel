@@ -56,5 +56,5 @@ const PathBarContent = ({
 		return <PathBarMobile path={currentPath} />
 	}
 
-	return <PathBarDesktop path={currentPath} />
+	return <PathBarDesktop />
 }

@@ -1,7 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import yaml from 'js-yaml'
-import {validateManifest} from '../source/modules/apps/schema.js'
+import {validateManifest} from '../source/modules/apps/schema.ts'
 
 // TODO: Integrate into umbrel-apps CI?
 

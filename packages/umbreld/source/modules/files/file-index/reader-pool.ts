@@ -1,15 +1,15 @@
 import {Worker, type WorkerOptions} from 'node:worker_threads'
 
-import {deserializeError} from '../file-index-worker-protocol.js'
+import {deserializeError} from '../file-index-worker-protocol.ts'
 import {
 	readLane,
 	type FileIndexReadArgs,
 	type FileIndexReadMethod,
 	type FileIndexReaderPaths,
 	type FileIndexReadResult,
-} from './reader.js'
-import type {ReadLane} from './read-database.js'
-import type {FileIndexReaderRequest, FileIndexReaderResponse} from './reader-worker.js'
+} from './reader.ts'
+import type {ReadLane} from './read-database.ts'
+import type {FileIndexReaderRequest, FileIndexReaderResponse} from './reader-worker.ts'
 
 export type FileIndexReaderPoolOptions = {
 	size?: number
@@ -171,7 +171,7 @@ export default class FileIndexReaderPool {
 
 	async #boot(slot: Slot) {
 		if (slot.worker) return slot.ready!.promise
-		const worker = this.#createWorker(new URL('./reader-worker-bootstrap.js', import.meta.url), {
+		const worker = this.#createWorker(new URL('./reader-worker.ts', import.meta.url), {
 			workerData: this.#paths,
 			execArgv: [],
 			name: `file-index-reader-${slot.lane ?? 'shared'}`,

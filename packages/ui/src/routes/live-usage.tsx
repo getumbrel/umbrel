@@ -1,4 +1,3 @@
-import {DialogPortal} from '@radix-ui/react-dialog'
 import {useMutationState} from '@tanstack/react-query'
 import {getMutationKey} from '@trpc/react-query'
 import {MoreHorizontal} from 'lucide-react'
@@ -11,6 +10,7 @@ import {Area, AreaChart, ResponsiveContainer, XAxis, YAxis} from 'recharts'
 
 import {AppIcon} from '@/components/app-icon'
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
+import {DialogPortal} from '@/components/ui/dialog'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {
@@ -398,7 +398,7 @@ function CpuSection({colors, chart}: {colors: UsageColors; chart?: Array<{value:
 			<AppList
 				apps={apps}
 				colors={colors}
-				formatValue={(item) => formatNumberI18n({n: item.used, locale: i18n.language}) + '%'}
+				formatValue={(item) => formatNumberI18n({n: item.used, locale: i18n.language, showDecimals: false}) + '%'}
 			/>
 		</>
 	)
@@ -437,10 +437,11 @@ function GpuRing({fraction, className}: {fraction: number; className?: string}) 
 	)
 }
 
-// Single-GPU identity whisper in the summary card's title row
+// Single-GPU identity whisper in the summary card's title row. Like the
+// card's warnings, it gives way before the title beside it
 function GpuModelWhisper({device}: {device: GpuDevice}) {
 	return (
-		<span className='min-w-0 animate-in truncate text-13 font-normal -tracking-2 text-white/30 duration-300 fade-in'>
+		<span className='min-w-0 shrink-[999] animate-in truncate text-13 font-normal -tracking-2 text-white/30 duration-300 fade-in'>
 			{cleanGpuName(device.model)}
 		</span>
 	)
@@ -594,10 +595,10 @@ function GpuSection({colors, chart}: {colors: UsageColors; chart?: Array<{value:
 				.sort((a, b) => b.used - a.used || (computeById.get(b.id) ?? 0) - (computeById.get(a.id) ?? 0))
 		: apps
 	const formatListValue = (item: UsageListItem) => {
-		if (!hasMemoryFigures) return formatNumberI18n({n: Math.round(item.used), locale: i18n.language}) + '%'
+		if (!hasMemoryFigures) return formatNumberI18n({n: item.used, locale: i18n.language, showDecimals: false}) + '%'
 		if (item.used > 0) return maybePrettyBytes(item.used, i18n.language)
 		const compute = computeById.get(item.id) ?? 0
-		if (compute > 0) return formatNumberI18n({n: Math.round(compute), locale: i18n.language}) + '%'
+		if (compute > 0) return formatNumberI18n({n: compute, locale: i18n.language, showDecimals: false}) + '%'
 		return maybePrettyBytes(0, i18n.language)
 	}
 
@@ -1012,9 +1013,10 @@ function UsageCard({
 	)
 }
 
+// A warning in a card's title row. It wraps and gives way before the title
 function ErrorMessage({children}: {children?: ReactNode}) {
 	return (
-		<div className='flex items-center gap-2 text-[#F45A5A]'>
+		<div className='flex shrink-[999] items-center gap-2 text-[#F45A5A]'>
 			<div className='h-[5px] w-[5px] animate-pulse rounded-full bg-current ring-3 ring-[#F45A5A]/20'></div>
 			<div className={cn('text-13 font-medium -tracking-2', 'leading-inter-trimmed')}>{children}</div>
 		</div>
@@ -1029,16 +1031,16 @@ function useResolveApp() {
 
 	return useMemo(
 		() =>
-			(id: string): {name: string; icon?: string} => {
+			(id: string): {name: string; icon?: string; systemApp?: boolean} => {
 				if (id === 'umbreld-system') {
-					return {name: systemAppsKeyed.UMBREL_system.name, icon: systemAppsKeyed.UMBREL_system.icon}
+					return {name: t('live-usage.system'), icon: systemAppsKeyed.UMBREL_system.icon, systemApp: true}
 				}
 				if (id === 'umbreld-files') {
-					return {name: systemAppsKeyed.UMBREL_files.name, icon: systemAppsKeyed.UMBREL_files.icon}
+					return {name: systemAppsKeyed.UMBREL_files.name, icon: systemAppsKeyed.UMBREL_files.icon, systemApp: true}
 				}
 				// Apps a member can't see are folded into a single entry server-side
 				if (id === 'other') {
-					return {name: t('other'), icon: systemAppsKeyed.UMBREL_system.icon}
+					return {name: t('other'), icon: systemAppsKeyed.UMBREL_system.icon, systemApp: true}
 				}
 				return {name: userAppsKeyed?.[id]?.name || t('unknown-app'), icon: userAppsKeyed?.[id]?.icon}
 			},
@@ -1052,7 +1054,7 @@ function useResolveUsageItem() {
 
 	return useMemo(
 		() =>
-			(item: UsageListItem): {name: string; icon?: string} =>
+			(item: UsageListItem): {name: string; icon?: string; systemApp?: boolean} =>
 				item.entity === 'machine' ? {name: item.name || t('machines')} : resolveApp(item.id),
 		[resolveApp, t],
 	)
@@ -1092,13 +1094,14 @@ function AppList({
 		<div className={appListClass}>
 			{displayApps.map((item) => {
 				const {id, used, entity, osId} = item
-				const {name, icon} = resolveItem(item)
+				const {name, icon, systemApp} = resolveItem(item)
 				// System entries (System, Files, "other") aren't manageable apps
 				const isUserApp = entity !== 'machine' && Boolean(userAppsKeyed[id])
 				return (
 					<AppListRow
 						key={usageItemKey(item)}
 						icon={icon}
+						systemApp={systemApp}
 						osId={entity === 'machine' ? osId : undefined}
 						machineId={entity === 'machine' ? id : undefined}
 						title={name}
@@ -1179,7 +1182,7 @@ function AppRowMenu({appId, onOpenChange}: {appId: string; onOpenChange?: (open:
 	)
 }
 
-// Machine counterpart of AppRowStatus: grayed state label next to the name,
+// Machine counterpart of AppRowStatus: the state label shown with the name,
 // hidden while running, with transient states marked like the app rows
 function MachineRowStatus({machineId}: {machineId: string}) {
 	const {t} = useTranslation()
@@ -1191,9 +1194,7 @@ function MachineRowStatus({machineId}: {machineId: string}) {
 		select: (mutation) => (mutation.state.variables as {id: string} | undefined)?.id,
 	})
 	if (uninstallingIds.includes(machineId)) {
-		return (
-			<span className='shrink-0 text-13 -tracking-2 text-white/40'>{t('machines.state.uninstalling') + '...'}</span>
-		)
+		return t('machines.state.uninstalling') + '…'
 	}
 
 	if (!machine || machine.state === 'running') return null
@@ -1211,11 +1212,7 @@ function MachineRowStatus({machineId}: {machineId: string}) {
 		suspended: t('machines.state.suspended'),
 	}
 	const transient = (['installing', 'starting', 'stopping', 'restarting'] as MachineState[]).includes(machine.state)
-	return (
-		<span className='shrink-0 text-13 -tracking-2 text-white/40'>
-			{stateLabels[machine.state] + (transient ? '...' : '')}
-		</span>
-	)
+	return stateLabels[machine.state] + (transient ? '…' : '')
 }
 
 // Power actions for machine rows, mirroring AppRowMenu's shape. Uninstall
@@ -1281,7 +1278,7 @@ function MachineRowMenuContent({machine, onOpenChange}: {machine: Machine; onOpe
 	)
 }
 
-// Grayed helper text next to the app name while the app is in a transient
+// Helper text shown with the app name while the app is in a transient
 // state, mirroring the desktop icon labels
 function AppRowStatus({appId}: {appId: string}) {
 	const {t} = useTranslation()
@@ -1292,22 +1289,22 @@ function AppRowStatus({appId}: {appId: string}) {
 	let text: string | undefined
 	switch (state) {
 		case 'installing':
-			text = t('app.installing') + '...'
+			text = t('app.installing') + '…'
 			break
 		case 'starting':
-			text = t('app.starting') + '...'
+			text = t('app.starting') + '…'
 			break
 		case 'restarting':
-			text = t('app.restarting') + '...'
+			text = t('app.restarting') + '…'
 			break
 		case 'stopping':
-			text = t('app.stopping') + '...'
+			text = t('app.stopping') + '…'
 			break
 		case 'uninstalling':
-			text = t('app.uninstalling') + '...'
+			text = t('app.uninstalling') + '…'
 			break
 		case 'updating':
-			text = t('app.updating') + '...'
+			text = t('app.updating') + '…'
 			break
 		case 'stopped':
 			text = t('app.stopped')
@@ -1316,19 +1313,27 @@ function AppRowStatus({appId}: {appId: string}) {
 			text = t('app.offline')
 			break
 	}
-	if (!text) return null
-
-	return <span className='shrink-0 text-13 -tracking-2 text-white/40'>{text}</span>
+	return text ?? null
 }
 
 export function AppListSkeleton({systemApps}: {systemApps?: Array<AppT>}) {
+	const {t} = useTranslation()
 	const {userApps} = useApps()
 	// Show a list of user-installed and system apps
 	// with no values
 	return (
 		<div className={appListClass}>
 			{[...(systemApps || []), ...(userApps || [])].map((app) => {
-				return <AppListRow key={app.id} title={app.name} icon={app.icon} value='' />
+				return (
+					<AppListRow
+						key={app.id}
+						// Named as in the loaded list
+						title={app.id === systemAppsKeyed.UMBREL_system.id ? t('live-usage.system') : app.name}
+						icon={app.icon}
+						systemApp={'systemApp' in app && app.systemApp}
+						value=''
+					/>
+				)
 			})}
 		</div>
 	)
@@ -1338,6 +1343,7 @@ const appListClass = tw`settings-edge-material overflow-hidden rounded-24`
 
 function AppListRow({
 	icon,
+	systemApp,
 	osId,
 	machineId,
 	title,
@@ -1350,6 +1356,7 @@ function AppListRow({
 	menu,
 }: {
 	icon?: string
+	systemApp?: boolean
 	osId?: string
 	/** Set for machine rows so the icon can reflect the machine's power state */
 	machineId?: string
@@ -1379,11 +1386,19 @@ function AppListRow({
 			{osId ? (
 				<MachineAppIcon osId={osId} state={machine?.state} className={cn('size-7', disabled && 'grayscale')} />
 			) : (
-				<AppIcon src={icon} size={28} className={cn('rounded-8 shadow-md', disabled && 'grayscale')} />
+				<AppIcon
+					src={icon}
+					size={28}
+					className={cn('rounded-8 shadow-md', systemApp && 'border-0', disabled && 'grayscale')}
+				/>
 			)}
-			<div className='flex min-w-0 flex-1 items-center gap-1.5'>
-				<span className='min-w-0 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
-				{status}
+			{/* The name comes first. On a phone the status goes under it, and on wider
+			    screens the status is what truncates when the two don't fit */}
+			<div className='flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:gap-1.5'>
+				<span className='min-w-0 truncate text-15 leading-tight font-medium -tracking-4 opacity-90'>{title}</span>
+				<span className='min-w-0 shrink-[999] truncate text-13 leading-tight -tracking-2 text-white/40 empty:hidden'>
+					{status}
+				</span>
 			</div>
 			{barShare !== undefined && (
 				<span className='h-1 w-14 shrink-0 overflow-hidden rounded-full bg-white/10 sm:w-24'>

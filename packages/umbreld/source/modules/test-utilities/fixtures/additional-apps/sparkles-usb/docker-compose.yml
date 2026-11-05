@@ -1,0 +1,32 @@
+version: '3.7'
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: sparkles-usb_server_1
+      APP_PORT: 3000
+
+  server:
+    image: getumbrel/community-app-store-hello-world:latest
+    init: true
+    # The host's devices, the way apps like Home Assistant get them. The image
+    # runs as an unprivileged user otherwise, which can't open them.
+    user: root
+    privileged: true
+    volumes:
+      - /dev:/dev
+    command:
+      - node
+      - -e
+      - |
+        const fs = require('fs')
+        const http = require('http')
+        for (const name of fs.readdirSync('/dev').filter((name) => name.startsWith('ttyUSB'))) {
+          // A machine may take an adapter while this is starting up
+          try {
+            fs.openSync(`/dev/$${name}`, fs.constants.O_RDWR | fs.constants.O_NONBLOCK | fs.constants.O_NOCTTY)
+          } catch (error) {
+            console.error(error.message)
+          }
+        }
+        http.createServer((_request, response) => response.end('USB test app')).listen(3000)

@@ -1,14 +1,12 @@
 import {useEffect, useId, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-// TODO: Consider changing TbBattery1 (low life) and TbHeartBroken (unhealthy) icons to something more intuitive
-import {TbAlertTriangle, TbAlertTriangleFilled, TbBattery1, TbFlame, TbHeartBroken} from 'react-icons/tb'
 import {TiInfoLarge} from 'react-icons/ti'
 
 import {cn} from '@/lib/utils'
-import {formatTemperature} from '@/utils/temperature'
 
-import {getDeviceHealth, RaidDevice, raidStatusLabels, StorageDevice} from '../hooks/use-storage'
-import {formatStorageSize, hasRaidErrors} from '../utils'
+import {RaidDevice, StorageDevice} from '../hooks/use-storage'
+import {formatStorageSize, getSsdCapacity} from '../utils'
+import {describeSsdWarning, getSsdSeverity, getSsdWarnings} from './ssd-warnings'
 
 type SsdShapeProps = {
 	device: StorageDevice
@@ -19,8 +17,6 @@ type SsdShapeProps = {
 	isReadyToAdd?: boolean
 	/** Overrides the "New SSD detected" caption, e.g. "Ready to replace SSD 2" */
 	readyToAddLabel?: string
-	/** Renders the device name inside the shape, faded, below the size (slotless trays) */
-	verticalName?: string
 	/** RAID device info - undefined if device is not in RAID */
 	raidDevice?: RaidDevice
 }
@@ -33,35 +29,14 @@ export function SsdShape({
 	temperatureUnit,
 	isReadyToAdd = false,
 	readyToAddLabel,
-	verticalName,
 	raidDevice,
 }: SsdShapeProps) {
 	const {t} = useTranslation()
-	// Check for RAID device failure (not ONLINE means the drive has issues in the RAID array)
-	const isRaidDeviceFailed = raidDevice && raidDevice.raidStatus !== 'ONLINE'
-
-	// Check for warnings
-	const {hasWarning, smartUnhealthy, lifeWarning, lifeRemaining, tempWarning, tempCritical} = getDeviceHealth(device)
-	const raidHasErrors = hasRaidErrors(raidDevice)
-
-	// A failed RAID member or a SMART/temperature/wear issue stays red. ZFS error
-	// counters on an otherwise healthy online member are a lower-severity amber warning.
-	const hasCriticalWarning = hasWarning || isRaidDeviceFailed
-	const hasAmberWarning = raidHasErrors && !hasCriticalWarning
-	const hasAnyWarning = hasCriticalWarning || hasAmberWarning
-
-	// Build array of active warnings for cycling
-	// If RAID failure, only show that since any other warnings are not as important and can be seen in the health dialog
-	type WarningType = 'temperature' | 'unhealthy' | 'lowLife' | 'raidFailed' | 'raidErrors'
-	const activeWarnings: WarningType[] = []
-	if (isRaidDeviceFailed) {
-		activeWarnings.push('raidFailed')
-	} else {
-		if (raidHasErrors) activeWarnings.push('raidErrors')
-		if (tempWarning || tempCritical) activeWarnings.push('temperature')
-		if (smartUnhealthy) activeWarnings.push('unhealthy')
-		if (lifeWarning) activeWarnings.push('lowLife')
-	}
+	const activeWarnings = getSsdWarnings(device, raidDevice)
+	const severity = getSsdSeverity(device, raidDevice)
+	const hasCriticalWarning = severity === 'critical'
+	const hasAmberWarning = severity === 'attention'
+	const hasAnyWarning = !!severity
 
 	// Cycle through warnings with fade transition
 	const [currentWarningIndex, setCurrentWarningIndex] = useState(0)
@@ -81,12 +56,10 @@ export function SsdShape({
 	}, [activeWarnings.length])
 
 	const currentWarning = activeWarnings[currentWarningIndex % activeWarnings.length]
+	const warningDisplay = currentWarning && describeSsdWarning(currentWarning, {device, raidDevice, temperatureUnit, t})
 
-	// In failsafe mode, drives with larger roundedSize than the minimum have wasted space
-	const wastedBytes =
-		raidType === 'failsafe' && minRoundedDriveSize > 0 ? Math.max(0, device.roundedSize - minRoundedDriveSize) : 0
+	const {wastedBytes, usableSize} = getSsdCapacity(device, raidType, minRoundedDriveSize)
 	const hasWastedSpace = wastedBytes > 0
-	const usableSize = hasWastedSpace ? minRoundedDriveSize : device.roundedSize
 
 	// Dimensions
 	const width = 85
@@ -212,7 +185,7 @@ export function SsdShape({
 
 			{/* Content overlay div */}
 			<div
-				className='absolute z-10 flex flex-col items-center justify-between rounded-[4px] border py-3'
+				className='absolute z-10 flex flex-col items-center gap-3 rounded-[4px] border py-3'
 				style={{
 					top: fingerHeight + 20,
 					left: 10,
@@ -234,28 +207,26 @@ export function SsdShape({
 								: 'linear-gradient(177.39deg, hsl(var(--color-brand) / 0.48) 0.11%, hsl(var(--color-brand) / 0.12) 99.89%)',
 				}}
 			>
-				{/* SSD Size - one vertical line reading bottom-to-top: the usable size on top,
-				    with the crossed-out actual size (wasted space) or the new-SSD callout
-				    continuing below it. writing-mode gives the line a real vertical layout box,
-				    so the extra text can't overflow the shape the way a rotate() transform would. */}
-				<div className='mt-1 flex items-center gap-4' style={{writingMode: 'vertical-rl', transform: 'rotate(180deg)'}}>
+				{/* Reserve the footer's height; only the secondary vertical text may shrink. */}
+				<div
+					className='mt-1 flex min-h-0 flex-1 items-center justify-end gap-3'
+					style={{writingMode: 'vertical-rl', transform: 'rotate(180deg)'}}
+				>
 					{hasWastedSpace && (
-						<span className='font-bold text-white/40 line-through' style={{fontSize: '25px'}}>
+						<span className='shrink-0 text-[18px] font-bold whitespace-nowrap text-white/40 line-through'>
 							{formatStorageSize(device.size)}
 						</span>
 					)}
 					{isReadyToAdd && (
-						<span className='text-[12px] font-semibold whitespace-nowrap text-white/50'>
+						<span
+							className='min-h-0 overflow-hidden text-[12px] font-semibold text-ellipsis whitespace-nowrap text-white/50'
+							title={readyToAddLabel ?? t('storage-manager.new-ssd-detected')}
+						>
 							{readyToAddLabel ?? t('storage-manager.new-ssd-detected')}
 						</span>
 					)}
-					{verticalName && !isReadyToAdd && (
-						<span className='max-h-[160px] overflow-hidden text-[12px] font-semibold text-ellipsis whitespace-nowrap text-white/35'>
-							{verticalName}
-						</span>
-					)}
 					<span
-						className='font-bold text-white'
+						className='shrink-0 font-bold whitespace-nowrap text-white'
 						style={{
 							fontSize: '25px',
 							textShadow: '0px 0px 6px rgba(255, 255, 255, 0.25)',
@@ -266,9 +237,9 @@ export function SsdShape({
 				</div>
 
 				{/* Warning indicators + Health pulse pill grouped together at bottom */}
-				<div className='flex flex-col items-center gap-3'>
+				<div className='flex w-full shrink-0 flex-col items-center gap-2 px-1'>
 					{hasWastedSpace && (
-						<span className='text-center text-[13px] leading-tight font-medium text-white/50'>
+						<span className='w-full text-center text-[11px] leading-tight font-medium break-words text-white/50'>
 							{t('storage-manager.wasted-size', {size: formatStorageSize(wastedBytes)})}
 						</span>
 					)}
@@ -280,66 +251,13 @@ export function SsdShape({
 								className='flex flex-col items-center gap-0.5 transition-opacity duration-200'
 								style={{opacity: isVisible ? 1 : 0}}
 							>
-								{currentWarning === 'raidFailed' && raidDevice && (
+								{warningDisplay && (
 									<>
-										<TbAlertTriangleFilled
-											className='size-4 text-white'
-											style={{
-												filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.8))',
-											}}
-										/>
-										<span className='text-[13px] font-bold text-white'>
-											{raidStatusLabels[raidDevice.raidStatus]
-												? t(raidStatusLabels[raidDevice.raidStatus])
-												: raidDevice.raidStatus}
-										</span>
-									</>
-								)}
-								{currentWarning === 'raidErrors' && (
-									<>
-										<TbAlertTriangle
-											className='size-4 text-white'
+										<warningDisplay.icon
+											className={cn('size-4 text-white', currentWarning === 'temperature' && 'fill-current')}
 											style={{filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.8))'}}
 										/>
-										<span className='text-center text-[13px] font-bold text-white'>
-											{t('storage-manager.health.warnings')}
-										</span>
-									</>
-								)}
-								{currentWarning === 'temperature' && (
-									<>
-										<TbFlame
-											className='size-4 text-white'
-											style={{
-												fill: 'currentColor',
-												filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.8))',
-											}}
-										/>
-										<span className='text-[13px] font-bold text-white'>
-											{formatTemperature(device.temperature, temperatureUnit)}
-										</span>
-									</>
-								)}
-								{currentWarning === 'unhealthy' && (
-									<>
-										<TbHeartBroken
-											className='size-4 text-white'
-											style={{
-												filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.8))',
-											}}
-										/>
-										<span className='text-[13px] font-bold text-white'>{t('storage-manager.ssd-failing')}</span>
-									</>
-								)}
-								{currentWarning === 'lowLife' && (
-									<>
-										<TbBattery1
-											className='size-4 text-white'
-											style={{
-												filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.8))',
-											}}
-										/>
-										<span className='text-[13px] font-bold text-white'>{lifeRemaining}%</span>
+										<span className='text-center text-[13px] font-bold text-white'>{warningDisplay.label}</span>
 									</>
 								)}
 							</div>
@@ -365,6 +283,7 @@ export function SsdShape({
 					<button
 						type='button'
 						onClick={onHealthClick}
+						aria-label={t('storage-status.drive-details', {name: device.name})}
 						className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1.5 transition-colors hover:bg-white/[0.12]'
 					>
 						<TiInfoLarge className='size-4 text-white' />

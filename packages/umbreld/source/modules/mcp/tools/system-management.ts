@@ -3,7 +3,7 @@ import {setTimeout as delay} from 'node:timers/promises'
 import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
-import {MAX_LOG_BYTES, newestLogs, runTool, type McpToolContext} from './shared.js'
+import {MAX_LOG_BYTES, newestLogs, runTool, type McpToolContext} from './shared.ts'
 
 export default function registerSystemManagementTools(server: McpServer, context: McpToolContext) {
 	server.registerTool(
@@ -11,8 +11,14 @@ export default function registerSystemManagementTools(server: McpServer, context
 		{
 			title: 'Install OS update',
 			description:
-				'Install the currently available umbrelOS update in the background and auto-restart the device when it succeeds.',
-			inputSchema: z.object({}),
+				'Install the currently available umbrelOS update in the background and auto-restart the device when it succeeds. Pass the manifestHash check_os_update returned to install only the update it showed.',
+			inputSchema: z.object({
+				manifestHash: z
+					.string()
+					.regex(/^[0-9a-f]{64}$/)
+					.optional()
+					.describe('The manifestHash check_os_update returned, so only the update it showed installs'),
+			}),
 			annotations: {
 				readOnlyHint: false,
 				destructiveHint: true,
@@ -23,10 +29,10 @@ export default function registerSystemManagementTools(server: McpServer, context
 		(input) =>
 			runTool(context, 'install_os_update', input, async () => {
 				await context.mcp.assertSystemAccess()
-				if ((await context.rpc.system.updateStatus()).running) throw new Error('[update-in-progress]')
+				if ((await context.rpc.update.status()).running) throw new Error('[update-in-progress]')
 
 				void delay(1_000)
-					.then(() => context.rpc.system.update())
+					.then(() => context.rpc.update.install({manifestHash: input.manifestHash}))
 					.catch((error) => context.mcp.logger.error('Background OS update failed', error))
 				return {accepted: true, operation: 'install-os-update'}
 			}),
@@ -48,7 +54,7 @@ export default function registerSystemManagementTools(server: McpServer, context
 		(input) =>
 			runTool(context, 'get_os_update_status', input, async () => {
 				await context.mcp.assertSystemAccess()
-				return context.rpc.system.updateStatus()
+				return context.rpc.update.status()
 			}),
 	)
 
@@ -117,7 +123,7 @@ export default function registerSystemManagementTools(server: McpServer, context
 		(input) =>
 			runTool(context, 'set_release_channel', input, async () => {
 				await context.mcp.assertSystemAccess()
-				await context.rpc.system.setReleaseChannel({channel: input.channel})
+				await context.rpc.update.setReleaseChannel({channel: input.channel})
 				return {channel: input.channel}
 			}),
 	)

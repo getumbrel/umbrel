@@ -1,6 +1,6 @@
 import nodePath from 'node:path'
 
-import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.js'
+import {isAppleDouble, PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.ts'
 
 export const SUPPORTED_THUMBNAIL_EXTENSIONS = new Set([...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS])
 
@@ -13,6 +13,7 @@ export const THUMBNAIL_VARIANTS = {
 } as const
 
 export type ThumbnailVariant = keyof typeof THUMBNAIL_VARIANTS
+export const THUMBNAIL_VARIANT_NAMES = Object.keys(THUMBNAIL_VARIANTS) as [ThumbnailVariant, ...ThumbnailVariant[]]
 
 export const FILES_THUMBNAIL_VARIANT: ThumbnailVariant = 'preview-192-webp-v1'
 export const PHOTOS_THUMBNAIL_VARIANTS = [
@@ -38,7 +39,7 @@ export type ThumbnailIdentity = {
 const THUMBNAIL_KEY_PATTERN = /^[a-f0-9]{64}$/
 
 export function supportsThumbnail(name: string) {
-	return SUPPORTED_THUMBNAIL_EXTENSIONS.has(nodePath.extname(name).toLowerCase())
+	return !isAppleDouble(name) && SUPPORTED_THUMBNAIL_EXTENSIONS.has(nodePath.extname(name).toLowerCase())
 }
 
 export function isThumbnailVariant(value: string): value is ThumbnailVariant {

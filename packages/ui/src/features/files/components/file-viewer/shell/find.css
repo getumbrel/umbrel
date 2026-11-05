@@ -1,0 +1,8 @@
+/* Find: every match a soft yellow, the current one a deeper one (as in PDFs) */
+::highlight(umbrel-find) {
+	background-color: rgb(255 214 10 / 0.35);
+}
+
+::highlight(umbrel-find-current) {
+	background-color: rgb(255 149 0 / 0.55);
+}

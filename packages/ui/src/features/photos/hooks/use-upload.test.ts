@@ -101,6 +101,19 @@ describe('photosUploads', () => {
 		expect(revoked).toContain('blob:a.png')
 	})
 
+	it("sends the file's last-modified time, unless the browser doesn't know it", () => {
+		const lastModified = Date.UTC(2015, 5, 1)
+		photosUploads.enqueue([
+			new File([new Uint8Array(100)], 'dated.png', {lastModified}),
+			new File([new Uint8Array(200)], 'unknown.png', {lastModified: 0}),
+		])
+		expect(new URLSearchParams(last().url.split('?')[1]).get('lastModified')).toBe(String(lastModified))
+		last().respond(200)
+		expect(last().url).toContain('name=unknown.png')
+		expect(last().url).not.toContain('lastModified')
+		last().respond(200)
+	})
+
 	it('pause freezes the bar and re-sends the file on resume', () => {
 		photosUploads.enqueue([makeFile('a.png', 100)])
 		tick()

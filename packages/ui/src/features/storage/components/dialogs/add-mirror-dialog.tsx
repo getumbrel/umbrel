@@ -1,5 +1,5 @@
 import {Trans, useTranslation} from 'react-i18next'
-import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
+import {TbAlertTriangle, TbCircleCheckFilled, TbHelpCircle} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
 import {
@@ -32,7 +32,7 @@ type AddMirrorDialogProps = {
 // Unlike raidz expansion this is instant: the new pair becomes usable storage immediately.
 export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: AddMirrorDialogProps) {
 	const {t} = useTranslation()
-	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
+	const {setPendingOperation, clearPendingOperation, setOperationError} = usePendingRaidOperation()
 
 	const activeOperation = useActiveRaidOperation()
 	const isOperationInProgress = !!activeOperation
@@ -58,10 +58,8 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 			})
 			.catch((error) => {
 				clearPendingOperation()
-				toast.error(t('storage-manager.add-mirror.failed'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
+				toast.error(t('storage-manager.add-mirror.failed'), {area: 'settings'})
 			})
 	}
 
@@ -84,7 +82,13 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 										{hasWarning ? (
 											<TbAlertTriangle className='size-5 text-[#F5A623]' />
 										) : (
-											<TbCircleCheckFilled className='size-5 text-brand' />
+											<>
+												{device.smartStatus === 'healthy' ? (
+													<TbCircleCheckFilled className='size-5 text-brand' />
+												) : (
+													<TbHelpCircle className='size-5 text-white/40' aria-label={t('storage-status.unknown')} />
+												)}
+											</>
 										)}
 										<span className='text-[13px] font-medium text-white/60'>
 											<Highlight>{formatStorageSize(device.size)}</Highlight> · {device.model}
@@ -122,10 +126,10 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 
 					<DialogFooter>
-						<Button variant='primary' onClick={handleAdd} disabled={isOperationInProgress}>
+						<Button variant='primary' size='dialog' onClick={handleAdd} disabled={isOperationInProgress}>
 							{t('storage-manager.add-mirror.add-drives')}
 						</Button>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('cancel')}
 						</Button>
 					</DialogFooter>

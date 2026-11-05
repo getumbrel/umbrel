@@ -17,6 +17,7 @@
 // whole list whether it is mounted or not.
 
 import type {Item} from '@/features/photos/hooks/use-items'
+import {capitalizeDate} from '@/utils/date-time'
 
 export type Zoom = 'years' | 'months' | 'days'
 
@@ -31,13 +32,20 @@ export type Zoom = 'years' | 'months' | 'days'
 // still tracks the gap, as it always has, so every tile the app already
 // offered keeps the corner it has today — and a mosaic tile, whose gap has
 // gone, is square.
-export const tileGap = (tile: number) => Math.min(GAP_MAX, Math.max(0, tile / 30 - 0.4))
+//
+// Phones run the same ramp but cap it at a hairline. A phone's grid is the
+// iOS Photos grid: edge to edge, the pictures all but touching, every pixel
+// of a 393px screen spent on photographs rather than on gutters — a 10px
+// gap there is a quarter of a column at six across. The ramp below the cap
+// is shared, so the mosaic is the same mosaic on either.
+const GAP_MAX = {desktop: 10, mobile: 2} as const
+const gapMax = (isMobile: boolean) => (isMobile ? GAP_MAX.mobile : GAP_MAX.desktop)
+export const tileGap = (tile: number, isMobile: boolean) => Math.min(gapMax(isMobile), Math.max(0, tile / 30 - 0.4))
 export const tileRadius = tileGap
-// The tile sizes where `tileGap` changes régime: it is 0 at or below the
-// first and pinned at GAP_MAX from the second on
-const GAP_MAX = 10
+// The tile sizes where `tileGap` changes régime: it is 0 at or below
+// GAP_ZERO and pinned at its cap from where the ramp reaches it on
 const GAP_ZERO = 12
-const GAP_FULL = 312
+const gapFull = (isMobile: boolean) => (gapMax(isMobile) + 0.4) * 30
 
 // The tile widths the zoom control spans. `min` is where elements stop being
 // a sensible way to draw a photo — ten thousand of them is not a tuning
@@ -46,28 +54,37 @@ const GAP_FULL = 312
 // itself is a tile size in px (device independent); the grid turns it into a
 // whole number of columns for its width, and a row always fills the container
 // exactly.
+//
+// `initial` is the tile a device opens at until its user picks one, and it is
+// a default read at the time, never stored (see PhotosViewProvider): 180 is
+// the desktop grid that has always shipped; 132 is three columns on every
+// phone in portrait — 360px to 430px wide, edge to edge, round to three —
+// where 180 was two, the most zoomed-in the grid goes, a column of posters.
 export const TILE_SIZE = {
-	desktop: {min: 48, max: 400, floor: 14},
-	mobile: {min: 40, max: 220, floor: 12},
+	desktop: {min: 48, max: 400, floor: 14, initial: 180},
+	mobile: {min: 40, max: 220, floor: 12, initial: 132},
 } as const
-export const DEFAULT_TILE_SIZE = 180
 const MIN_COLUMNS = 2
 
 export function tileBounds(isMobile: boolean) {
 	return isMobile ? TILE_SIZE.mobile : TILE_SIZE.desktop
 }
 
+export function defaultTileSize(isMobile: boolean) {
+	return tileBounds(isMobile).initial
+}
+
 export function clampTileSize(size: number) {
 	return Number.isFinite(size)
 		? Math.min(TILE_SIZE.desktop.max, Math.max(TILE_SIZE.mobile.floor, size))
-		: DEFAULT_TILE_SIZE
+		: TILE_SIZE.desktop.initial
 }
 
 // Every column count a container of this width can show: the zoom stops.
 // Exact, because `columns · tile + (columns − 1) · gap = width` rearranges to
 // this whatever the gap is.
-function columnsFor(width: number, size: number) {
-	const gap = tileGap(size)
+function columnsFor(width: number, size: number, isMobile: boolean) {
+	const gap = tileGap(size, isMobile)
 	return (width + gap) / (size + gap)
 }
 
@@ -76,8 +93,8 @@ function columnsFor(width: number, size: number) {
 // range can never outrun the renderer, because the renderer sets it.
 export function columnRange(width: number, isMobile: boolean, minTile?: number) {
 	const bounds = tileBounds(isMobile)
-	const min = Math.max(MIN_COLUMNS, Math.ceil(columnsFor(width, bounds.max)))
-	const max = Math.max(min, Math.floor(columnsFor(width, minTile ?? bounds.min)))
+	const min = Math.max(MIN_COLUMNS, Math.ceil(columnsFor(width, bounds.max, isMobile)))
+	const max = Math.max(min, Math.floor(columnsFor(width, minTile ?? bounds.min, isMobile)))
 	return {min, max}
 }
 
@@ -85,7 +102,7 @@ export function columnRange(width: number, isMobile: boolean, minTile?: number) 
 // the stops this width offers. `Math.round` of it is the column count.
 export function columnValue(width: number, size: number, isMobile: boolean, minTile?: number) {
 	const {min, max} = columnRange(width, isMobile, minTile)
-	return Math.min(max, Math.max(min, columnsFor(width, size)))
+	return Math.min(max, Math.max(min, columnsFor(width, size, isMobile)))
 }
 
 // The tile width that fills `width` with this many columns, to the pixel:
@@ -93,19 +110,19 @@ export function columnValue(width: number, size: number, isMobile: boolean, minT
 // function's three régimes and keep the answer that lands in its own. They
 // agree at the boundaries because the gap is continuous, and `columns` may be
 // fractional — which is what a row of a blended layout needs.
-export function tileSizeFor(width: number, columns: number) {
+export function tileSizeFor(width: number, columns: number, isMobile: boolean) {
 	const c = Math.max(1, columns)
 	const sloped = (width + 0.4 * (c - 1)) / (c + (c - 1) / 30)
-	if (sloped > GAP_ZERO && sloped < GAP_FULL) return Math.max(1, sloped)
+	if (sloped > GAP_ZERO && sloped < gapFull(isMobile)) return Math.max(1, sloped)
 	const tight = width / c
 	if (tight <= GAP_ZERO) return Math.max(1, tight)
-	return Math.max(1, (width - GAP_MAX * (c - 1)) / c)
+	return Math.max(1, (width - gapMax(isMobile) * (c - 1)) / c)
 }
 
 export function gridLayout(width: number, size: number, isMobile: boolean, minTile?: number) {
 	const columns = Math.round(columnValue(width, size, isMobile, minTile))
-	const tile = tileSizeFor(width, columns)
-	return {columns, tile, gap: tileGap(tile)}
+	const tile = tileSizeFor(width, columns, isMobile)
+	return {columns, tile, gap: tileGap(tile, isMobile)}
 }
 
 // ── The zoom track ────────────────────────────────────────────────────────
@@ -184,14 +201,17 @@ function groupKey(takenAt: number, zoom: Zoom): number {
 function groupTitle(takenAt: number, zoom: Zoom, language: string): string {
 	const date = new Date(takenAt)
 	if (zoom === 'years') return String(date.getUTCFullYear())
-	if (zoom === 'months') return date.toLocaleDateString(language, {month: 'long', year: 'numeric', timeZone: 'UTC'})
-	return date.toLocaleDateString(language, {
-		weekday: 'short',
-		month: 'long',
-		day: 'numeric',
-		year: 'numeric',
-		timeZone: 'UTC',
-	})
+	const title =
+		zoom === 'months'
+			? date.toLocaleDateString(language, {month: 'long', year: 'numeric', timeZone: 'UTC'})
+			: date.toLocaleDateString(language, {
+					weekday: 'short',
+					month: 'long',
+					day: 'numeric',
+					year: 'numeric',
+					timeZone: 'UTC',
+				})
+	return capitalizeDate(title, language)
 }
 
 // One date group: a run of the (newest-first) list, and the title its header
@@ -439,14 +459,27 @@ export type Header = {key: string; title: string; top: number}
 export function sectionAt(layout: Layout, y: number): Header | undefined {
 	const {sections, tops} = layout
 	if (sections.length === 0) return undefined
-	let lo = 0
-	let hi = sections.length - 1
-	while (lo < hi) {
-		const mid = (lo + hi + 1) >> 1
-		if (tops[mid]! <= y) lo = mid
-		else hi = mid - 1
-	}
-	return {key: sections[lo]!.key, title: sections[lo]!.title, top: tops[lo]!}
+	const index = sectionIndexAt(layout, y)
+	return {key: sections[index]!.key, title: sections[index]!.title, top: tops[index]!}
+}
+
+// The section a y falls in: the last whose header is at or above it (the
+// first, above them all)
+export function sectionIndexAt(layout: Layout, y: number) {
+	return Math.max(0, firstWhere(layout.sections.length, (i) => layout.tops[i]! > y) - 1)
+}
+
+// The section an item is in: the last that starts at or before it
+export function sectionIndexOf(layout: Layout, index: number) {
+	return Math.max(0, firstWhere(layout.sections.length, (i) => layout.sections[i]!.start > index) - 1)
+}
+
+// The first item whose tile reaches below y (the item count, when none does)
+export function firstItemBelow(layout: Layout, y: number) {
+	return firstWhere(layout.items.length, (i) => {
+		const rect = rectOf(layout, i)
+		return rect.y + rect.size > y
+	})
 }
 
 // Every header between `from` and `to`, plus the one above `from` whose

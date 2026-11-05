@@ -26,6 +26,7 @@ import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-use
 import {Dock, DockBottomPositioner} from './modules/desktop/dock'
 import {NavigationShortcuts} from './modules/desktop/navigation-shortcuts'
 import {FloatingIslandContainer} from './modules/floating-island/container'
+import {GlobalDialogs} from './modules/global-dialogs'
 import {AppsProvider, AppStatePolling} from './providers/apps'
 import {AvailableAppsProvider} from './providers/available-apps'
 import {CloudActivityProvider} from './providers/cloud'
@@ -80,6 +81,7 @@ export const router = createBrowserRouter([
 									<Suspense>
 										<Outlet />
 									</Suspense>
+									<GlobalDialogs />
 									<FloatingIslandContainer />
 									<DockBottomPositioner>
 										<Dock />

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App Installer feed. There are no UpdateSettings, so Windows never updates Umbrel on its
+  own: the app checks this file every 6 hours and when asked, and asks before installing,
+  as the macOS app does (see Services/UpdateChecker.cs). For packaged desktop apps
+  OnLaunch's ShowPrompt shows nothing, so OnLaunch and AutomaticBackgroundTask would
+  both install silently. Upload the .msix and its release notes (Umbrel-<version>.md,
+  see README.md) first and this file last, so no client ever sees a feed pointing at a
+  missing package. Version here must equal the MSIX identity version. The 2017/2 schema
+  covers everything this file uses on every Windows 10 version Umbrel supports; 2021 only
+  adds Windows 11 features.
+-->
+<AppInstaller
+  xmlns="http://schemas.microsoft.com/appx/appinstaller/2017/2"
+  Version="0.1.3.4"
+  Uri="https://download.umbrel.com/windows/Umbrel.appinstaller">
+  <MainPackage
+    Name="Umbrel.Umbrel"
+    Publisher="CN=&quot;Umbrel, Inc.&quot;, O=&quot;Umbrel, Inc.&quot;, L=Claymont, S=Delaware, C=US"
+    Version="0.1.3.4"
+    ProcessorArchitecture="x64"
+    Uri="https://download.umbrel.com/windows/Umbrel-0.1.3.4-x64.msix" />
+</AppInstaller>

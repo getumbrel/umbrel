@@ -1,27 +1,22 @@
-import {useState} from 'react'
-import {useNavigate, useParams} from 'react-router-dom'
+import {useNavigate} from 'react-router-dom'
 
-import {DropdownMenu} from '@/components/ui/dropdown-menu'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {AppDropdown, ImmersivePickerDialogContent} from '@/modules/immersive-picker'
+import {usePickerTarget} from '@/modules/immersive-picker/target'
 import {TerminalTitleBackLink, XTermTerminal} from '@/routes/settings/terminal/_shared'
 
-export function App() {
+export function App({appId}: {appId: string}) {
 	const navigate = useNavigate()
-	const {appId} = useParams<{appId: string}>()
-	if (!appId) throw new Error('No app provided')
-	const setAppId = (id: string) => navigate(`/settings/terminal/app/${id}`)
+	const {linkToTarget} = usePickerTarget('terminal')
+	const setAppId = (id: string) => navigate(linkToTarget({type: 'app', appId: id}))
 
-	const [open, setOpen] = useState(false)
 	const isTouchDevice = useIsTouchDevice()
 
 	return (
 		<ImmersivePickerDialogContent>
-			<div className='flex w-full items-center justify-between'>
+			<div className='flex w-full flex-wrap items-center justify-between gap-2 pe-6'>
 				<TerminalTitleBackLink />
-				<DropdownMenu open={open} onOpenChange={setOpen}>
-					<AppDropdown appId={appId} setAppId={setAppId} open={open} onOpenChange={setOpen} />
-				</DropdownMenu>
+				<AppDropdown appId={appId} setAppId={setAppId} />
 			</div>
 			{/* On touch devices, add padding to leave room for on-screen keyboard.
 			40vh is a rough approximation. Dynamically detecting keyboard height

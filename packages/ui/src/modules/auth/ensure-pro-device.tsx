@@ -1,18 +1,28 @@
 import {Navigate} from 'react-router-dom'
 
-import {useDeviceInfo} from '@/hooks/use-device-info'
+import {StoragePage, StorageReadError} from '@/features/storage/components/storage-page'
+import {deviceInfoToHostEnvironment} from '@/hooks/use-device-info'
+import {trpcReact} from '@/trpc/trpc'
 
-// Ensures device is Umbrel Pro before showing children.
-// Non-Pro devices are redirected to root, which routes them appropriately
-// (onboarding if no user, login if not logged in, dashboard if logged in).
 export function EnsureProDevice({children}: {children?: React.ReactNode}) {
-	const {data: deviceInfo, isLoading} = useDeviceInfo()
-
-	if (isLoading) return null
-
-	const isPro = deviceInfo?.umbrelHostEnvironment === 'umbrel-pro'
-
-	if (!isPro) return <Navigate to='/' replace />
-
+	const identityQ = trpcReact.systemNg.device.getIdentity.useQuery()
+	if (identityQ.isLoading) return null
+	if (!identityQ.data && identityQ.error?.data?.code === 'UNAUTHORIZED') {
+		return <Navigate to='/' replace />
+	}
+	// Keep setup mounted if a background read fails during its expected reboot.
+	if (identityQ.error && !identityQ.data)
+		return (
+			<StoragePage>
+				<StorageReadError
+					onRetry={() => {
+						void identityQ.refetch()
+					}}
+					retrying={identityQ.isFetching}
+					detail={identityQ.error.message}
+				/>
+			</StoragePage>
+		)
+	if (deviceInfoToHostEnvironment(identityQ.data) !== 'umbrel-pro') return <Navigate to='/' replace />
 	return <>{children}</>
 }

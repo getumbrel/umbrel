@@ -1,6 +1,6 @@
 import {expect, test, vi} from 'vitest'
 
-import {pullAll} from './docker-pull.js'
+import {pullAll} from './docker-pull.ts'
 
 const {pull} = vi.hoisted(() => ({pull: vi.fn()}))
 vi.mock('dockerode', () => ({

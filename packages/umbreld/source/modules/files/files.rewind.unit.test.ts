@@ -1,6 +1,6 @@
 import {expect, test, vi} from 'vitest'
 
-import Files from './files.js'
+import Files from './files.ts'
 
 test('runs Rewind copies inside coordinated Cloud restore handling', async () => {
 	const files = Object.create(Files.prototype) as Files

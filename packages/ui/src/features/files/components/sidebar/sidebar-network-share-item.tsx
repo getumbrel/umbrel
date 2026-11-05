@@ -45,7 +45,6 @@ export function SidebarNetworkShareItem({host, rootPath, onEject, disabled, isMo
 			/>
 			<span className={cn('min-w-0 flex-1', !isMounted && 'opacity-50')}>
 				<span className='block truncate'>{host}</span>
-				{!isMounted && <span className='text-10 block'>{t('files-network-storage.disconnected')}</span>}
 			</span>
 
 			{/* Eject button */}

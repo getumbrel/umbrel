@@ -6,7 +6,13 @@ import {floatingContentAnimationClass, materialSurfaceClasses} from './material'
 // Removed `data-[state=closed]:animate-out` here so the context menu moves with
 // the cursor on subsequent right clicks. Appears to be a shadcn/ui bug, as it's
 // also behaving this way at https://ui.shadcn.com/docs/components/context-menu
-const menuContentClass = cn(tw`z-50 min-w-[8rem] p-1 text-white outline-hidden`, floatingContentAnimationClass)
+// Never wider than the screen less the 8px the menus keep from each edge, so
+// a long item (a description, a longer translation) wraps instead of running
+// the menu off a phone's edge.
+const menuContentClass = cn(
+	tw`z-50 min-w-[8rem] max-w-[calc(100vw-16px)] p-1 text-white outline-hidden`,
+	floatingContentAnimationClass,
+)
 
 const menuItemClass = tw`relative flex cursor-default items-center px-3 py-2 text-13 font-medium -tracking-3 leading-tight outline-hidden data-[disabled]:pointer-events-none data-[disabled]:opacity-50 focus:bg-white/10 focus:text-white data-[highlighted]:bg-white/10 data-[highlighted]:text-white`
 const menuItemDestructiveClass = cn(menuItemClass, tw`text-destructive2-lightest focus:text-destructive2-lightest`)

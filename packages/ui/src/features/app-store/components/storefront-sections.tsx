@@ -65,7 +65,8 @@ export function StorefrontSectionView({
  * filling the active dot. The clock holds while dragging or hovering and
  * restarts when the slide changes. The slide narrows again past 1440px, where
  * the sheet stops growing, so the banner doesn't run away with the whole row on
- * a wide display. A banner whose artwork fails to load simply leaves the row —
+ * a wide display, and follows the window's height so a 2:1 banner always fits a
+ * short screen. A banner whose artwork fails to load simply leaves the row —
  * the artwork is the whole banner, there is nothing else to show in its place.
  */
 export function SpotlightCarousel({banners}: {banners: SpotlightBannerData[]}) {
@@ -102,14 +103,14 @@ export function SpotlightCarousel({banners}: {banners: SpotlightBannerData[]}) {
 					{shown.map((banner) => (
 						<CarouselItem
 							key={banner.app.id}
-							className='basis-[86%] pl-3 md:basis-[78%] md:pl-4 min-[1440px]:basis-[70%]'
+							className='basis-[min(86%,120dvh)] pl-3 md:basis-[min(78%,120dvh)] md:pl-4 min-[1440px]:basis-[min(70%,120dvh)]'
 						>
 							<SpotlightBanner banner={banner} onArtworkError={onArtworkError} />
 						</CarouselItem>
 					))}
 				</CarouselContent>
 			</Carousel>
-			<div className='mt-3 flex items-center justify-between'>
+			<div className='mt-3 flex items-center justify-between pointer-coarse:justify-center'>
 				<CarouselDots
 					count={snapCount}
 					activeIndex={activeIndex}
@@ -214,8 +215,8 @@ function CategoryFeatureSection({
 
 	return (
 		<section className={cn(storeCardClass, 'relative overflow-hidden')}>
-			{/* Desktop: the artwork fills the card and the copy sits on its clear
-			    side. Mobile: the artwork is the backdrop of the card's top —
+			{/* From 640px: the artwork fills the card and the copy sits on its clear
+			    side. Below it: the artwork is the backdrop of the card's top —
 			    cropped to its busy side (the icon cluster opposite the clear
 			    side) and scaled to the area's height so the icons stay large —
 			    melting into the surface through an eased mask; the copy then
@@ -224,8 +225,8 @@ function CategoryFeatureSection({
 			<div
 				className={cn(
 					'absolute inset-x-0 top-0 h-[280px]',
-					'max-md:[mask-image:linear-gradient(to_bottom,black_50%,rgba(0,0,0,0.6)_74%,rgba(0,0,0,0.2)_88%,transparent_96%)]',
-					'md:inset-0 md:h-auto',
+					'max-sm:[mask-image:linear-gradient(to_bottom,black_50%,rgba(0,0,0,0.6)_74%,rgba(0,0,0,0.2)_88%,transparent_96%)]',
+					'sm:inset-0 sm:h-auto',
 				)}
 			>
 				{!artworkFailed && (
@@ -235,24 +236,24 @@ function CategoryFeatureSection({
 						loading='lazy'
 						className={cn(
 							'absolute inset-0 h-full w-full object-cover',
-							textSide === 'left' ? 'max-md:object-[72%_50%]' : 'max-md:object-[28%_50%]',
+							textSide === 'left' ? 'max-sm:object-[72%_50%]' : 'max-sm:object-[28%_50%]',
 						)}
 						onError={() => setArtworkFailed(true)}
 					/>
 				)}
 				{artworkFailed && <div className='absolute inset-0 bg-linear-to-br from-white/10 to-white/2' />}
 			</div>
-			{/* On mobile the copy mirrors the artwork: icons cropped to the left
+			{/* Below 640px the copy mirrors the artwork: icons cropped to the left
 			    mean the text, chips and link anchor to the right, and vice
-			    versa. On desktop it's a side column, read left-aligned either way. */}
+			    versa. From there it's a side column, read left-aligned either way. */}
 			<div
 				className={cn(
-					'relative flex flex-col gap-3 p-4 max-md:pt-[216px] md:min-h-[280px] md:w-1/2 md:justify-center md:gap-4 md:p-8 lg:min-h-[320px]',
-					textSide === 'right' && 'max-md:items-end max-md:text-right md:ml-auto',
+					'relative flex flex-col gap-3 p-4 max-sm:pt-[216px] sm:min-h-[260px] sm:w-1/2 sm:justify-center sm:gap-4 sm:p-6 md:min-h-[280px] md:p-8 lg:min-h-[320px]',
+					textSide === 'right' && 'max-sm:items-end max-sm:text-right sm:ml-auto',
 				)}
 			>
 				<div className='flex flex-col gap-1.5'>
-					<h2 className='text-20 leading-tight font-semibold -tracking-3 md:text-24'>{title}</h2>
+					<h2 className='text-20 leading-tight font-semibold -tracking-3 sm:text-24'>{title}</h2>
 					<p className='max-w-md text-13 leading-snug opacity-60'>{description}</p>
 				</div>
 				{/* A right-anchored rail still has to scroll from its start when the
@@ -264,8 +265,8 @@ function CategoryFeatureSection({
 					className={cn(
 						// Pulled left by the chips' own inner padding (pl-1.5) so the first
 						// icon lines up with the headline instead of sitting 6px in
-						'umbrel-hide-scrollbar -mx-4 flex gap-1.5 overflow-x-auto pr-4 pl-2.5 md:mr-0 md:-ml-1.5 md:flex-wrap md:overflow-visible md:px-0',
-						textSide === 'right' && 'max-md:self-stretch max-md:[&>*:first-child]:ml-auto',
+						'umbrel-hide-scrollbar -mx-4 flex gap-1.5 overflow-x-auto pr-4 pl-2.5 sm:mr-0 sm:-ml-1.5 sm:flex-wrap sm:overflow-visible sm:px-0',
+						textSide === 'right' && 'max-sm:self-stretch max-sm:[&>*:first-child]:ml-auto',
 					)}
 				>
 					{apps.slice(0, 6).map((app) => (
@@ -276,7 +277,7 @@ function CategoryFeatureSection({
 					to={categoryPath(categoryId)}
 					className={cn(
 						'flex items-center gap-0.5 self-start text-13 font-medium text-white/70 outline-hidden transition-colors duration-200 hover:text-white focus-visible:text-white',
-						textSide === 'right' && 'max-md:self-end',
+						textSide === 'right' && 'max-sm:self-end',
 					)}
 				>
 					{t('app-store.browse-category-apps', {category: getCategoryLabel(categoryId)})}

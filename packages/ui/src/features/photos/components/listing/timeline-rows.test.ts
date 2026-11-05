@@ -9,8 +9,8 @@ import {
 	clickColumns,
 	columnRange,
 	columnValue,
-	DEFAULT_TILE_SIZE,
 	defaultFocalY,
+	defaultTileSize,
 	findAnchor,
 	FOOTER_HEIGHT,
 	gridLayout,
@@ -54,7 +54,7 @@ describe('gridLayout', () => {
 	it('fills the row exactly and never drops below two columns', () => {
 		const {columns, tile, gap} = gridLayout(1000, 180, false)
 		expect(columns).toBe(5)
-		expect(gap).toBe(tileGap(tile))
+		expect(gap).toBe(tileGap(tile, false))
 		expect(columns * tile + gap * (columns - 1)).toBeCloseTo(1000)
 		expect(gridLayout(50, 400, false).columns).toBe(2)
 		expect(gridLayout(0, 96, true).tile).toBeGreaterThan(0)
@@ -63,8 +63,8 @@ describe('gridLayout', () => {
 	it('offers every column count between the largest and the smallest tile', () => {
 		expect(columnRange(1200, false)).toEqual({min: 3, max: 24})
 		expect(columnRange(360, true)).toEqual({min: 2, max: 8})
-		expect(tileSizeFor(1200, 3)).toBeLessThanOrEqual(TILE_SIZE.desktop.max)
-		expect(tileSizeFor(1200, 24)).toBeGreaterThanOrEqual(TILE_SIZE.desktop.min)
+		expect(tileSizeFor(1200, 3, false)).toBeLessThanOrEqual(TILE_SIZE.desktop.max)
+		expect(tileSizeFor(1200, 24, false)).toBeGreaterThanOrEqual(TILE_SIZE.desktop.min)
 	})
 
 	it('gives the mosaic a fifth of the zoom track and the DOM range the rest', () => {
@@ -77,7 +77,7 @@ describe('gridLayout', () => {
 		// Halfway along is a tile people would actually browse at, which is the
 		// whole point — before the split it was 44 columns and a 27px tile
 		expect(Math.round(trackColumns(track, 0.5))).toBe(16)
-		expect(tileSizeFor(1200, trackColumns(track, 0.5))).toBeGreaterThan(70)
+		expect(tileSizeFor(1200, trackColumns(track, 0.5), false)).toBeGreaterThan(70)
 	})
 
 	it('is a round trip, and spans the DOM range alone when there is no canvas', () => {
@@ -100,7 +100,7 @@ describe('gridLayout', () => {
 		const {min, max} = columnRange(1200, false, TILE_SIZE.desktop.floor)
 		expect(min).toBe(3)
 		expect(max).toBeGreaterThan(columnRange(1200, false).max)
-		expect(tileSizeFor(1200, max)).toBeGreaterThanOrEqual(TILE_SIZE.desktop.floor)
+		expect(tileSizeFor(1200, max, false)).toBeGreaterThanOrEqual(TILE_SIZE.desktop.floor)
 	})
 
 	it('steps a click as a slice of the track, never less than a column', () => {
@@ -143,13 +143,13 @@ describe('gridLayout', () => {
 		expect(columnValue(1200, 1000, false)).toBe(3)
 		expect(columnValue(1200, 10, false)).toBe(24)
 		for (const columns of [3, 6, 24]) {
-			expect(columnValue(1200, tileSizeFor(1200, columns), false)).toBeCloseTo(columns, 1)
+			expect(columnValue(1200, tileSizeFor(1200, columns, false), false)).toBeCloseTo(columns, 1)
 		}
 		// A tile size persisted from a session that had the canvas is clamped
 		// back up to the stops a session without it offers
 		expect(columnValue(1200, 14, false)).toBe(columnRange(1200, false).max)
 		expect(columnValue(1200, 14, false, TILE_SIZE.desktop.floor)).toBeCloseTo(85, 0)
-		expect(clampTileSize(Number.NaN)).toBe(DEFAULT_TILE_SIZE)
+		expect(clampTileSize(Number.NaN)).toBe(TILE_SIZE.desktop.initial)
 		expect(clampTileSize(5)).toBe(TILE_SIZE.mobile.floor)
 		expect(clampTileSize(14)).toBe(14)
 		expect(clampTileSize(9999)).toBe(TILE_SIZE.desktop.max)
@@ -158,24 +158,24 @@ describe('gridLayout', () => {
 
 describe('tileGap / tileRadius', () => {
 	it('scales with the tile, reaching nothing at the small end', () => {
-		expect(tileGap(180)).toBeCloseTo(5.6)
-		expect(tileGap(48)).toBeCloseTo(1.2)
-		expect(tileGap(400)).toBe(10)
-		expect(tileGap(12)).toBe(0)
-		expect(tileGap(6)).toBe(0)
+		expect(tileGap(180, false)).toBeCloseTo(5.6)
+		expect(tileGap(48, false)).toBeCloseTo(1.2)
+		expect(tileGap(400, false)).toBe(10)
+		expect(tileGap(12, false)).toBe(0)
+		expect(tileGap(6, false)).toBe(0)
 	})
 
 	it('stays within a pixel of the stepped gap it replaces at every size the DOM offers', () => {
 		for (const tile of [48, 180, 400]) {
-			expect(Math.abs(tileGap(tile) - Math.min(10, Math.max(2, Math.round(tile / 30))))).toBeLessThanOrEqual(1)
+			expect(Math.abs(tileGap(tile, false) - Math.min(10, Math.max(2, Math.round(tile / 30))))).toBeLessThanOrEqual(1)
 		}
 	})
 
 	it('keeps the radius on the gap, so today’s tiles keep their corners and a mosaic tile is square', () => {
-		expect(tileRadius(48)).toBeCloseTo(1.2)
-		expect(tileRadius(180)).toBeCloseTo(5.6)
-		expect(tileRadius(400)).toBe(10)
-		expect(tileRadius(12)).toBe(0)
+		expect(tileRadius(48, false)).toBeCloseTo(1.2)
+		expect(tileRadius(180, false)).toBeCloseTo(5.6)
+		expect(tileRadius(400, false)).toBe(10)
+		expect(tileRadius(12, false)).toBe(0)
 	})
 })
 
@@ -196,15 +196,65 @@ describe('tileSizeFor', () => {
 
 	it('fills the width exactly, at whole and fractional column counts', () => {
 		for (const [width, columns] of cases) {
-			const tile = tileSizeFor(width, columns)
-			expect(columns * tile + (columns - 1) * tileGap(tile)).toBeCloseTo(width, 6)
+			const tile = tileSizeFor(width, columns, false)
+			expect(columns * tile + (columns - 1) * tileGap(tile, false)).toBeCloseTo(width, 6)
 		}
 	})
 
 	it('covers all three gap régimes', () => {
-		expect(tileGap(tileSizeFor(1200, 3))).toBe(10)
-		expect(tileGap(tileSizeFor(1200, 24))).toBeGreaterThan(0)
-		expect(tileGap(tileSizeFor(1200, 120))).toBe(0)
+		expect(tileGap(tileSizeFor(1200, 3, false), false)).toBe(10)
+		expect(tileGap(tileSizeFor(1200, 24, false), false)).toBeGreaterThan(0)
+		expect(tileGap(tileSizeFor(1200, 120, false), false)).toBe(0)
+	})
+})
+
+describe('phone spacing', () => {
+	it('caps the gap at a hairline and keeps the shared ramp below it', () => {
+		expect(tileGap(130, true)).toBe(2)
+		expect(tileGap(72, true)).toBeCloseTo(2)
+		expect(tileGap(48, true)).toBeCloseTo(tileGap(48, false))
+		expect(tileGap(12, true)).toBe(0)
+		expect(tileRadius(130, true)).toBe(2)
+	})
+
+	it('fills a phone edge to edge, at whole and fractional column counts, in every régime', () => {
+		for (const [width, columns] of [
+			[393, 2],
+			[393, 3],
+			[393, 3.4],
+			[393, 6],
+			[393, 9.5],
+			[393, 40],
+			[852, 6],
+		] as const) {
+			const tile = tileSizeFor(width, columns, true)
+			expect(columns * tile + (columns - 1) * tileGap(tile, true)).toBeCloseTo(width, 6)
+		}
+		expect(tileGap(tileSizeFor(393, 3, true), true)).toBe(2)
+		expect(tileGap(tileSizeFor(393, 6, true), true)).toBeLessThan(2)
+		expect(tileGap(tileSizeFor(393, 40, true), true)).toBe(0)
+		// Round trip: a phone's tile size gives back its column count
+		for (const columns of [2, 3, 6, 9]) {
+			expect(columnValue(393, tileSizeFor(393, columns, true), true)).toBeCloseTo(columns, 6)
+		}
+	})
+})
+
+describe('defaultTileSize', () => {
+	it('opens every phone in portrait at three columns', () => {
+		for (let width = 360; width <= 430; width++) {
+			expect(gridLayout(width, defaultTileSize(true), true).columns).toBe(3)
+		}
+	})
+
+	it('keeps the desktop grid that has always shipped', () => {
+		expect(defaultTileSize(false)).toBe(180)
+		expect(gridLayout(1000, defaultTileSize(false), false).columns).toBe(5)
+	})
+
+	it('pages like the desktop does: a screenful of either is under one page', () => {
+		// pageSizeFor (view-context) turns 96px and up into 200-item pages
+		expect(defaultTileSize(true)).toBeGreaterThanOrEqual(96)
 	})
 })
 

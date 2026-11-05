@@ -6,16 +6,16 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import App from './app.js'
-import ImageCleanup from './image-cleanup.js'
-import appScript from './legacy-compat/app-script.js'
+import type Umbreld from '../../index.ts'
+import App from './app.ts'
+import ImageCleanup from './image-cleanup.ts'
+import appScript from './legacy-compat/app-script.ts'
 
-vi.mock('./legacy-compat/app-script.js', () => ({
+vi.mock('./legacy-compat/app-script.ts', () => ({
 	default: vi.fn(async () => ({stdout: ''})),
 }))
 
-vi.mock('../utilities/docker-pull.js', () => ({pullAll: vi.fn(async () => true)}))
+vi.mock('../utilities/docker-pull.ts', () => ({pullAll: vi.fn(async () => true)}))
 
 vi.mock('execa', () => ({
 	$: (optionsOrTemplate: unknown) => {

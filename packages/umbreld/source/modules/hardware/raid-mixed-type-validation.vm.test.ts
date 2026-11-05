@@ -1,9 +1,9 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
 
-describe('RAID device type validation - SATA SSD array rejects HDD', () => {
+describe.each(driveBuses)('RAID device type validation - %s SSD array rejects HDD', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let ssdDeviceId1: string
 	let ssdDeviceId2: string
@@ -26,26 +26,26 @@ describe('RAID device type validation - SATA SSD array rejects HDD', () => {
 		if (failed) skip()
 	})
 
-	test('adds SATA SSD and HDD devices and boots VM', async () => {
-		await umbreld.vm.addSataSsd({slot: 1})
-		await umbreld.vm.addSataSsd({slot: 2})
-		await umbreld.vm.addHdd({slot: 3})
+	test('adds SSD and HDD devices and boots VM', async () => {
+		await umbreld.vm.addSsd({slot: 1, bus})
+		await umbreld.vm.addSsd({slot: 2, bus})
+		await umbreld.vm.addHdd({slot: 3, bus})
 		await umbreld.vm.powerOn()
 	})
 
-	test('detects SATA SSDs and HDD with correct types', async () => {
+	test('detects SSDs and HDD with correct types', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(3)
 
-		const sataSsds = devices.filter((d) => d.transport === 'sata' && d.type === 'ssd')
+		const ssds = devices.filter((d) => d.transport === bus && d.type === 'ssd')
 		const hdds = devices.filter((d) => d.type === 'hdd')
 
-		expect(sataSsds).toHaveLength(2)
+		expect(ssds).toHaveLength(2)
 		expect(hdds).toHaveLength(1)
-		expect(sataSsds.every((d) => d.type === 'ssd')).toBe(true)
+		expect(ssds.every((d) => d.type === 'ssd')).toBe(true)
 
-		ssdDeviceId1 = sataSsds[0].id!
-		ssdDeviceId2 = sataSsds[1].id!
+		ssdDeviceId1 = ssds[0].id!
+		ssdDeviceId2 = ssds[1].id!
 		hddDeviceId = hdds[0].id!
 		expect(ssdDeviceId1).toBeDefined()
 		expect(ssdDeviceId2).toBeDefined()
@@ -71,7 +71,7 @@ describe('RAID device type validation - SATA SSD array rejects HDD', () => {
 		await umbreld.login()
 	})
 
-	test('reports correct RAID status with SATA SSD device', async () => {
+	test('reports correct RAID status with SSD device', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.exists).toBe(true)
 		expect(status.raidType).toBe('storage')
@@ -80,23 +80,23 @@ describe('RAID device type validation - SATA SSD array rejects HDD', () => {
 		expect(status.devices![0].id).toBe(ssdDeviceId1)
 	})
 
-	test('rejects adding HDD to SATA SSD RAID array', async () => {
+	test('rejects adding HDD to SSD RAID array', async () => {
 		await expect(umbreld.client.hardware.raid.addDevice.mutate({deviceId: hddDeviceId})).rejects.toThrow(
 			'Cannot mix SSDs and HDDs',
 		)
 	})
 
-	test('rejects replacing SATA SSD with HDD', async () => {
+	test('rejects replacing SSD with HDD', async () => {
 		await expect(
 			umbreld.client.hardware.raid.replaceDevice.mutate({oldDevice: ssdDeviceId1, newDevice: hddDeviceId}),
 		).rejects.toThrow('Cannot mix SSDs and HDDs')
 	})
 
-	test('allows adding second SATA SSD to RAID array', async () => {
+	test('allows adding second SSD to RAID array', async () => {
 		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: ssdDeviceId2})
 	})
 
-	test('reports correct RAID status with both SATA SSDs', async () => {
+	test('reports correct RAID status with both SSDs', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.exists).toBe(true)
 		expect(status.raidType).toBe('storage')
@@ -107,7 +107,7 @@ describe('RAID device type validation - SATA SSD array rejects HDD', () => {
 	})
 })
 
-describe('RAID device type validation - NVMe SSD array rejects HDD', () => {
+describe.each(driveBuses)('RAID device type validation - NVMe SSD array rejects HDD (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let ssdDeviceId1: string
 	let ssdDeviceId2: string
@@ -133,7 +133,7 @@ describe('RAID device type validation - NVMe SSD array rejects HDD', () => {
 	test('adds NVMe SSD and HDD devices and boots VM', async () => {
 		await umbreld.vm.addNvme({slot: 1})
 		await umbreld.vm.addNvme({slot: 2})
-		await umbreld.vm.addHdd({slot: 3})
+		await umbreld.vm.addHdd({slot: 3, bus})
 		await umbreld.vm.powerOn()
 	})
 

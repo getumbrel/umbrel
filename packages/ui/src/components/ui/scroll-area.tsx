@@ -7,6 +7,7 @@ import {cn} from '@/lib/utils'
 
 type Props = React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
 	dialogInset?: boolean
+	fade?: boolean
 	scrollbarClass?: string
 	orientation?: 'horizontal' | 'vertical'
 	viewportRef?: React.RefObject<HTMLDivElement | null>
@@ -18,6 +19,7 @@ function ScrollArea({
 	children,
 	viewportRef,
 	dialogInset,
+	fade = true,
 	scrollbarClass,
 	orientation = 'vertical',
 	ref,
@@ -38,7 +40,7 @@ function ScrollArea({
 					// https://github.com/radix-ui/primitives/issues/926#issuecomment-1015279283
 					'flex h-full w-full rounded-[inherit] outline-hidden *:!block *:flex-grow',
 					orientation === 'vertical' && 'flex-col',
-					scrollerClass,
+					fade && scrollerClass,
 				)}
 			>
 				{children}

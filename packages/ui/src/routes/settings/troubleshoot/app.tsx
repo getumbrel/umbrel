@@ -1,39 +1,39 @@
-import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {useNavigate, useParams} from 'react-router-dom'
+import {useNavigate} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
-import {DropdownMenu} from '@/components/ui/dropdown-menu'
 import {ImmersiveDialogFooter} from '@/components/ui/immersive-dialog'
 import {LOADING_DASH} from '@/constants'
 import {AppDropdown, ImmersivePickerDialogContent} from '@/modules/immersive-picker'
+import {usePickerTarget} from '@/modules/immersive-picker/target'
 import {useUserApp} from '@/providers/apps'
 import {downloadUtf8Logs, LogResults, TroubleshootTitleBackLink} from '@/routes/settings/troubleshoot/_shared'
 import {trpcReact} from '@/trpc/trpc'
 
-export function TroubleshootApp() {
+export function TroubleshootApp({appId}: {appId: string}) {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
-	const {appId} = useParams<{appId: string}>()
-	if (!appId) throw new Error('No app provided')
-	const setAppId = (id: string) => navigate(`/settings/troubleshoot/app/${id}`)
+	const {linkToTarget} = usePickerTarget('troubleshoot')
+	const setAppId = (id: string) => navigate(linkToTarget({type: 'app', appId: id}))
 
 	const {app} = useUserApp(appId)
-	const [open, setOpen] = useState(false)
 
-	const appLogs = useAppLogs(appId)
+	const {logs, text: logsText} = useAppLogs(appId)
 
 	return (
 		<ImmersivePickerDialogContent>
-			<div className='flex w-full items-center justify-between'>
+			<div className='flex w-full flex-wrap items-center justify-between gap-2 pe-6'>
 				<TroubleshootTitleBackLink />
-				<DropdownMenu open={open} onOpenChange={setOpen}>
-					<AppDropdown appId={appId} setAppId={setAppId} open={open} onOpenChange={setOpen} />
-				</DropdownMenu>
+				<AppDropdown appId={appId} setAppId={setAppId} />
 			</div>
-			{appLogs && <LogResults>{appLogs}</LogResults>}
+			{logsText && <LogResults>{logsText}</LogResults>}
 			<ImmersiveDialogFooter className='justify-center'>
-				<Button variant='primary' size='dialog' disabled={!appId} onClick={() => downloadUtf8Logs(appLogs, appId)}>
+				<Button
+					variant='primary'
+					size='dialog'
+					disabled={!appId || !logs}
+					onClick={() => logs && downloadUtf8Logs(logs, appId)}
+				>
 					{t('troubleshoot.app-download', {app: app?.name || LOADING_DASH})}
 				</Button>
 				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
@@ -42,12 +42,18 @@ export function TroubleshootApp() {
 	)
 }
 
+// The logs to download, apart from the text shown in their place while there are none,
+// so a download can never save "Loading..." or an error as the app's logs
 function useAppLogs(appId: string) {
 	const {t} = useTranslation()
 	const troubleshootQ = trpcReact.apps.logs.useQuery({appId})
+	const logs = troubleshootQ.data || undefined
 
-	if (troubleshootQ.isLoading) return t('loading') + '...'
-	if (troubleshootQ.isError) return troubleshootQ.error.message
+	const text = troubleshootQ.isLoading
+		? t('loading') + '…'
+		: troubleshootQ.isError
+			? troubleshootQ.error.message
+			: logs || t('troubleshoot-no-logs-yet')
 
-	return troubleshootQ.data || t('troubleshoot-no-logs-yet')
+	return {logs, text}
 }

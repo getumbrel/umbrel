@@ -196,10 +196,7 @@ export function DestinationStep({
 				</p>
 			)}
 
-			<DialogFooter className='flex-col-reverse gap-2 pt-2'>
-				<Button size='dialog' onClick={onBack} disabled={isStarting}>
-					{t('back')}
-				</Button>
+			<DialogFooter className='gap-2 pt-2'>
 				<Button
 					variant='primary'
 					size='dialog'
@@ -208,6 +205,9 @@ export function DestinationStep({
 					title={destinationPath ?? undefined}
 				>
 					{isStarting ? <Loader2 className='size-4 animate-spin' /> : t('files-cloud.start')}
+				</Button>
+				<Button size='dialog' onClick={onBack} disabled={isStarting}>
+					{t('back')}
 				</Button>
 			</DialogFooter>
 		</div>

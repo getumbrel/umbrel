@@ -1,13 +1,13 @@
 import type {CallToolResult, McpServer} from '@modelcontextprotocol/server'
 import {beforeEach, expect, test, vi} from 'vitest'
 
-import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../apps/app.js'
-import registerAppTools from './apps.js'
-import registerFileTools from './files.js'
-import registerMachineTools from './machines.js'
-import type {McpToolContext} from './shared.js'
-import registerSystemInfoTools from './system-info.js'
-import registerSystemManagementTools from './system-management.js'
+import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../apps/app.ts'
+import registerAppTools from './apps.ts'
+import registerFileTools from './files.ts'
+import registerMachineTools from './machines.ts'
+import type {McpToolContext} from './shared.ts'
+import registerSystemInfoTools from './system-info.ts'
+import registerSystemManagementTools from './system-management.ts'
 
 type ToolHandler = (input: Record<string, unknown>) => Promise<CallToolResult>
 
@@ -47,7 +47,6 @@ function baseContext() {
 			system: {
 				version: vi.fn(async () => ({version: '1.2.3', name: 'umbrelOS 1.2.3', previousVersion: undefined})),
 				status: vi.fn(async () => 'running'),
-				getReleaseChannel: vi.fn(async () => 'stable'),
 				getHostname: vi.fn(async () => 'umbrel'),
 				getIpAddresses: vi.fn(async () => ['192.168.1.10']),
 				uptime: vi.fn(async () => 123),
@@ -55,15 +54,18 @@ function baseContext() {
 				memoryUsage: vi.fn(),
 				systemDiskUsage: vi.fn(),
 				cpuTemperature: vi.fn(),
-				checkUpdate: vi.fn(),
-				updateStatus: vi.fn(async () => ({running: false})),
-				update: vi.fn(async () => true),
 				restart: vi.fn(async () => true),
 				setHostname: vi.fn(async ({hostname}: {hostname: string}) => hostname),
-				setReleaseChannel: vi.fn(async () => undefined),
 				getNetworkInterfaces: vi.fn(async () => []),
 				isExternalDns: vi.fn(async () => true),
 				logs: vi.fn(async () => ''),
+			},
+			update: {
+				check: vi.fn(),
+				status: vi.fn(async () => ({running: false})),
+				install: vi.fn(async () => true),
+				getReleaseChannel: vi.fn(async () => 'stable'),
+				setReleaseChannel: vi.fn(async () => undefined),
 			},
 			hardware: {raid: {getStatus: vi.fn(async () => ({exists: false}))}},
 			wifi: {connected: vi.fn(async () => ({status: 'disconnected'}))},
@@ -204,6 +206,7 @@ const machineFixture = {
 	memoryGb: 4,
 	diskSizeGb: 40,
 	storageUsedGb: 3.5,
+	networkMode: 'nat',
 	ipAddress: '10.21.0.2',
 	username: 'umbrel',
 	arch: 'amd64',
@@ -1076,6 +1079,15 @@ test('machine lifecycle and detail tools check the grant, use the routes, and an
 		portForwards: [{hostPort: 40_022, guestPort: 22}],
 		usage: {cpu: 20, memory: 4},
 	})
+
+	// A bridged machine's address comes from the router, so there's no private
+	// address to hand an agent
+	vi.mocked(context.rpc.machines.list).mockResolvedValueOnce([
+		{...machineFixture, networkMode: 'bridged', portForwards: []},
+	] as any)
+	const bridged = parseToolResult(await registry.get('get_machine_details').handler({machineId: 'debian'}))
+	expect(bridged).toMatchObject({id: 'debian', networkMode: 'bridged', portForwards: []})
+	expect(bridged).not.toHaveProperty('ipAddress')
 
 	vi.mocked(context.mcp.assertMachineAccess).mockRejectedValueOnce(new Error('[permission-denied] nope'))
 	const denied = await registry.get('delete_machine').handler({machineId: 'debian'})

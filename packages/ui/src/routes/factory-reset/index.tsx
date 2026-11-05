@@ -4,6 +4,7 @@ import {Route, Routes, useNavigate} from 'react-router-dom'
 
 import {ImmersiveDialog, ImmersiveDialogSplitContent} from '@/components/ui/immersive-dialog'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
+import {EnsureOwner} from '@/modules/auth/ensure-owner'
 import {useGlobalSystemState} from '@/providers/global-system-state'
 
 import {ConfirmWithPassword} from './_components/confirm-with-password'
@@ -27,9 +28,11 @@ export default function FactoryReset() {
 					path='/'
 					element={
 						<EnsureLoggedIn>
-							<SplitDialog>
-								<ReviewData />
-							</SplitDialog>
+							<EnsureOwner>
+								<SplitDialog>
+									<ReviewData />
+								</SplitDialog>
+							</EnsureOwner>
 						</EnsureLoggedIn>
 					}
 				/>
@@ -37,10 +40,12 @@ export default function FactoryReset() {
 					path='/confirm'
 					element={
 						<EnsureLoggedIn>
-							<SplitDialog>
-								{/* Only password errors come through getError() - system errors show as toasts */}
-								<ConfirmWithPassword onSubmit={reset} error={getError()?.message ?? ''} clearError={clearError} />
-							</SplitDialog>
+							<EnsureOwner>
+								<SplitDialog>
+									{/* Only password errors come through getError() - system errors show as toasts */}
+									<ConfirmWithPassword onSubmit={reset} error={getError()?.message ?? ''} clearError={clearError} />
+								</SplitDialog>
+							</EnsureOwner>
 						</EnsureLoggedIn>
 					}
 				/>

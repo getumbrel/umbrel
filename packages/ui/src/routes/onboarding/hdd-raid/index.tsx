@@ -39,6 +39,7 @@ import {RecommendedBadge} from '@/routes/onboarding/recommended-badge'
 import {trpcReact} from '@/trpc/trpc'
 import {sleep} from '@/utils/misc'
 
+import {RaidError} from '../raid/raid-error'
 import {formatSize, StorageDevice, useDetectStorageDevices} from '../raid/use-raid-setup'
 import {FoundDeviceCard, ModalShell, StepHeader} from './components'
 import {HddRecoverExistingInstall} from './recover-existing-install'
@@ -49,7 +50,7 @@ type Step = 'results' | 'failsafe' | 'accelerate'
 // Format bytes, but if 0, use the same unit as the reference value (e.g., "0TB" instead of "0B")
 const formatSizeWithUnit = (bytes: number, referenceBytes: number) => {
 	if (bytes === 0 && referenceBytes > 0) {
-		const unit = formatSize(referenceBytes).replace(/[\d.]/g, '')
+		const unit = formatSize(referenceBytes).replace(/[^A-Za-z]/g, '') // "1,5TB" → "TB"
 		return `0${unit}`
 	}
 	return formatSize(bytes)
@@ -303,7 +304,7 @@ export default function HddRaidOnboarding() {
 	// RAID flow: survives refresh, lost on direct URL navigation - then we redirect back)
 	const credentials = location.state?.credentials as AccountCredentials | undefined
 
-	const {devices, isDetecting, refetch} = useDetectStorageDevices()
+	const {devices, isDetecting, isFetching, error, refetch} = useDetectStorageDevices()
 	// A pre-existing umbrelOS RAID install on the attached drives gets a restore-or-erase
 	// choice before we offer a fresh setup (same flow as Pro onboarding)
 	const recoverableInstallQ = trpcReact.hardware.raid.hasRecoverableInstall.useQuery(undefined, {
@@ -358,6 +359,12 @@ export default function HddRaidOnboarding() {
 
 	if (!credentials) return null
 
+	// Keep recovery mounted through inventory failures during its expected reboot.
+	// "Set up as new" requires an explicit erase confirmation inside the recovery screen.
+	if (recoverableInstallQ.data === true && !setUpAsNew) {
+		return <HddRecoverExistingInstall devices={[...hdds, ...ssds]} onSetUpAsNew={() => setSetUpAsNew(true)} />
+	}
+
 	if (isDetecting || recoverableInstallQ.isLoading) {
 		return (
 			<div className='flex flex-1 flex-col items-center justify-center gap-4'>
@@ -368,10 +375,19 @@ export default function HddRaidOnboarding() {
 		)
 	}
 
-	// Offer restoring a detected previous install before any fresh-setup screens; "set up
-	// as new" requires an explicit erase confirmation inside the recovery screen
-	if (recoverableInstallQ.data && !setUpAsNew) {
-		return <HddRecoverExistingInstall devices={[...hdds, ...ssds]} onSetUpAsNew={() => setSetUpAsNew(true)} />
+	if (error || recoverableInstallQ.isError) {
+		return (
+			<RaidError
+				title={t('onboarding.raid.error.detection-failed')}
+				instructions={t('storage-status.check-failed')}
+				detail={error ?? recoverableInstallQ.error?.message}
+				onRetry={() => {
+					void refetch()
+					void recoverableInstallQ.refetch()
+				}}
+				retrying={isFetching || recoverableInstallQ.isFetching}
+			/>
+		)
 	}
 
 	// --- Actions ---
@@ -410,7 +426,6 @@ export default function HddRaidOnboarding() {
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					<AlertDialogAction
 						onClick={() => {
 							if (!pendingConfig) return
@@ -419,6 +434,7 @@ export default function HddRaidOnboarding() {
 					>
 						{t('onboarding.raid.recovery.set-up-new-dialog.confirm')}
 					</AlertDialogAction>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -450,6 +466,7 @@ export default function HddRaidOnboarding() {
 		const hasDetectedDrives = hdds.length > 0 || ssds.length > 0
 		return (
 			<ModalShell
+				key={step}
 				footer={
 					<>
 						{/* Empty span keeps the justify-between footer's actions on the right */}
@@ -501,6 +518,7 @@ export default function HddRaidOnboarding() {
 		const ratio = failSafeEnabled ? 'even' : 'storage-heavy'
 		return (
 			<ModalShell
+				key={step}
 				footer={
 					<>
 						{storageStats}
@@ -645,6 +663,7 @@ export default function HddRaidOnboarding() {
 
 	return (
 		<ModalShell
+			key={step}
 			footer={
 				<>
 					{storageStats}

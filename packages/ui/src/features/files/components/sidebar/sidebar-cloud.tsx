@@ -378,7 +378,8 @@ function CloudRootItem({hasAccounts}: {hasAccounts: boolean}) {
 					isActive && 'border-white/6 bg-linear-to-b text-white shadow-button-highlight-soft-hpx',
 				)}
 			>
-				<CloudIcon className='-mr-[1px] h-4.5 w-auto flex-shrink-0' />
+				{/* The cloud art fills its square, so it sits at 18px inside the rows' 20px icon box */}
+				<CloudIcon className='size-5 flex-shrink-0 p-px' />
 				<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'>{t('files-sidebar.cloud')}</span>
 			</button>
 			<button

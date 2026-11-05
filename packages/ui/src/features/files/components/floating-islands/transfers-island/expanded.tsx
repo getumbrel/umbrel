@@ -144,14 +144,14 @@ function useCancelConfirmation(onDialogPending: (pending: boolean) => void) {
 		onDialogPending(true)
 		try {
 			// The dialog treats an action valued "cancel" as a dismissal, so the
-			// destructive choice carries its own value. Keeping going is the safe,
-			// secondary option; stopping is the destructive one.
+			// destructive choice carries its own value. Stopping is the action asked
+			// for, so it comes first; keeping going is the safe, secondary option.
 			const result = await confirm({
 				title,
 				message,
 				actions: [
-					{label: keep, value: 'keep', variant: 'default'},
 					{label: cancel, value: 'stop', variant: 'destructive'},
+					{label: keep, value: 'keep', variant: 'default'},
 				],
 			})
 			if (result.actionValue === 'stop') run()
@@ -307,7 +307,8 @@ function Row({item}: {item: TransferItem}) {
 		case 'failed': {
 			const message = errorText(item, t)
 			status = (
-				<span className='text-white/70' title={message}>
+				// Truncates itself, so its ellipsis takes its colour
+				<span className='block truncate text-white/70' title={message}>
 					{message}
 				</span>
 			)
@@ -373,14 +374,17 @@ function LandedCheck() {
 }
 
 // Text that changes phase crosses over in place: the old reading lifts away,
-// the new one rises in. Changes within a phase are instant.
+// the new one rises in. Changes within a phase are instant. Each reading
+// truncates on its own, since an ellipsis is drawn only for text overflowing
+// its own box: when the Swap is given less room than its text (a long upload
+// error), the reading ends in one instead of being cut mid-letter.
 function Swap({id, className, children}: {id: string; className?: string; children: ReactNode}) {
 	return (
 		<span className={cn('inline-block', className)}>
 			<AnimatePresence initial={false} mode='wait'>
 				<motion.span
 					key={id}
-					className='inline-block'
+					className='block truncate'
 					initial={{opacity: 0, y: 3}}
 					animate={{opacity: 1, y: 0, transition: {duration: 0.15, ease: EASE_IN_OUT}}}
 					exit={{opacity: 0, y: -3, transition: {duration: 0.1, ease: EASE_IN_OUT}}}

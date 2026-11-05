@@ -4,8 +4,8 @@ import yaml from 'js-yaml'
 import fse from 'fs-extra'
 import pWaitFor from 'p-wait-for'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
-import type {AppRouter} from '../server/trpc/index.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
+import type {AppRouter} from '../server/trpc/index.ts'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))

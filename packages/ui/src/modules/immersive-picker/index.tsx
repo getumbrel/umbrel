@@ -1,16 +1,12 @@
-import {matchSorter} from 'match-sorter'
-import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbChevronLeft} from 'react-icons/tb'
-import {Link} from 'react-router-dom'
+import {Link, type To} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {ChevronDown} from '@/components/chevron-down'
 import {Button} from '@/components/ui/button'
-import {DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
-import {Input} from '@/components/ui/input'
-import {ScrollArea} from '@/components/ui/scroll-area'
+import {SearchablePicker} from '@/components/ui/searchable-picker'
 import {LOADING_DASH} from '@/constants'
 import {cn} from '@/lib/utils'
 import {useApps} from '@/providers/apps'
@@ -40,7 +36,7 @@ export function ImmersivePickerItem({
 }: {
 	title: string
 	description: string
-	to?: string
+	to?: To
 	children?: React.ReactNode
 	onClick?: () => void
 }) {
@@ -66,7 +62,7 @@ export function ImmersivePickerItem({
 	)
 }
 
-export function BackLink({to, children}: {to: string; children: React.ReactNode}) {
+export function BackLink({to, children}: {to: To; children: React.ReactNode}) {
 	return (
 		<Link
 			to={to}
@@ -94,98 +90,37 @@ export function AppDropdown({
 }: {
 	appId?: string
 	setAppId: (id: string) => void
-	open: boolean
-	onOpenChange: (o: boolean) => void
+	open?: boolean
+	onOpenChange?: (open: boolean) => void
 }) {
 	const {t} = useTranslation()
-	const [query, setQuery] = useState('')
 	const apps = useApps()
-	// const [open, setOpen] = useState(false)
-	const inputRef = useRef<HTMLInputElement>(null)
-
-	useEffect(() => {
-		if (!open) return
-		setTimeout(() => {
-			inputRef.current?.focus()
-			inputRef.current?.select()
-		}, 0)
-	}, [open])
-
-	if (apps.isLoading || !apps.userApps || !apps.userAppsKeyed) {
-		return (
-			<Button className='h-[36px] min-w-36 px-3'>
-				<AppIcon size={20} className='rounded-4' />
-				{LOADING_DASH}
+	const selectedApp = appId ? apps.userAppsKeyed?.[appId] : undefined
+	return (
+		<SearchablePicker
+			open={open}
+			onOpenChange={onOpenChange}
+			align='start'
+			placeholder={t('app-picker.search')}
+			emptyLabel={t('app-settings-list.no-apps')}
+			loading={apps.isLoading}
+			value={appId}
+			onSelect={setAppId}
+			items={(apps.userApps ?? []).map((app) => ({
+				value: app.id,
+				label: app.name,
+				icon: <AppIcon size={24} src={app.icon} className='shrink-0 rounded-6' />,
+			}))}
+		>
+			<Button className='h-9 max-w-64 min-w-36 px-3'>
+				<span className='flex min-w-0 flex-1 items-center gap-2'>
+					{selectedApp?.icon && <AppIcon size={20} src={selectedApp.icon} className='shrink-0 rounded-4' />}
+					<span className='min-w-0 truncate'>
+						{apps.isLoading ? LOADING_DASH : (selectedApp?.name ?? t('app-picker.select-app'))}
+					</span>
+				</span>
 				<ChevronDown />
 			</Button>
-		)
-	}
-
-	const selectedApp = appId
-		? apps.userAppsKeyed[appId]
-		: {
-				icon: undefined,
-				name: t('app-picker.select-app'),
-			}
-
-	const appResults = matchSorter(apps.userApps, query, {
-		keys: ['name'],
-		threshold: matchSorter.rankings.WORD_STARTS_WITH,
-	})
-
-	return (
-		// TODO: convert to combobox: https://ui.shadcn.com/docs/components/combobox
-		<>
-			<DropdownMenuTrigger asChild>
-				<Button className='h-[36px] min-w-36 px-3'>
-					<span className='flex flex-1 flex-row items-center gap-2'>
-						{selectedApp.icon && <AppIcon size={20} src={selectedApp.icon} className='rounded-4' />}
-						{selectedApp.name}
-					</span>
-					<ChevronDown />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent className='flex max-h-72 min-w-64 flex-col gap-3' align='start'>
-				<Input
-					value={query}
-					className='shrink-0'
-					onChange={(e) => setQuery(e.target.value)}
-					onKeyDown={(e) => {
-						// Prevent key presses from triggering stuff in the dropdown menu
-						e.stopPropagation()
-						if (e.key === 'Enter') {
-							e.preventDefault()
-							setAppId(appResults[0].id)
-							setQuery('')
-							onOpenChange(false)
-						}
-						if (e.key === 'Escape') {
-							setQuery('')
-							onOpenChange(false)
-						}
-					}}
-					sizeVariant={'short-square'}
-					placeholder={t('app-picker.search')}
-					ref={inputRef}
-				/>
-				{appResults.length === 0 && <div className='text-14 text-white/50'>{t('no-results-found')}</div>}
-				{appResults.length > 0 && (
-					<ScrollArea className='relative -mx-1 flex h-full flex-col px-1'>
-						{appResults.map((app, i) => (
-							<DropdownMenuCheckboxItem
-								key={app.id}
-								checked={app.id === appId}
-								onSelect={() => setAppId(app.id)}
-								className='flex gap-2'
-								data-highlighted={i === 0 && query ? true : undefined}
-							>
-								<AppIcon size={20} src={app.icon} className='rounded-4' />
-								{app.name}
-							</DropdownMenuCheckboxItem>
-						))}
-					</ScrollArea>
-				)}
-			</DropdownMenuContent>
-		</>
+		</SearchablePicker>
 	)
 }

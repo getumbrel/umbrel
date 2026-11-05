@@ -1,0 +1,159 @@
+/* While the console is open it owns the glass: the page can't scroll, zoom or
+   rubber-band under a finger */
+html.machine-console-open {
+	/* The system keyboard follows this, so it matches the console */
+	color-scheme: dark;
+	/* Safari tints its bars from the page's fixed layers and the body, and both
+	   read this */
+	--wallpaper-theme-color: 0 0% 0% !important;
+}
+
+html.machine-console-open,
+html.machine-console-open body {
+	position: fixed;
+	margin: 0;
+	inset: 0;
+	overflow: hidden;
+	overscroll-behavior: none;
+	touch-action: manipulation;
+	-webkit-text-size-adjust: 100%;
+	-webkit-tap-highlight-color: transparent;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+/* The ring a touch leaves on the screen: what the guest was told, and where */
+@keyframes console-ripple {
+	from {
+		transform: translate(-50%, -50%) scale(0.45);
+		opacity: 0.5;
+	}
+	to {
+		transform: translate(-50%, -50%) scale(1);
+		opacity: 0;
+	}
+}
+
+.console-ripple {
+	position: absolute;
+	animation: console-ripple 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.35);
+	border: 1.5px solid rgb(255 255 255 / 0.85);
+	border-radius: 999px;
+	width: 44px;
+	height: 44px;
+	pointer-events: none;
+}
+
+/* Fills while a long press arms, so the wait reads as progress, not lag */
+@keyframes console-arming {
+	from {
+		transform: translate(-50%, -50%) scale(1.5);
+		opacity: 0;
+	}
+	to {
+		transform: translate(-50%, -50%) scale(0.9);
+		opacity: 0.85;
+	}
+}
+
+.console-arming {
+	position: absolute;
+	animation: console-arming 340ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+	border: 1.5px solid rgb(255 255 255 / 0.9);
+	border-radius: 999px;
+	width: 56px;
+	height: 56px;
+	pointer-events: none;
+}
+
+.console-glass {
+	-webkit-backdrop-filter: blur(24px) saturate(1.6);
+	backdrop-filter: blur(24px) saturate(1.6);
+	box-shadow:
+		0 8px 28px rgb(0 0 0 / 0.42),
+		0 1px 0 rgb(255 255 255 / 0.1) inset,
+		0 0 0 0.5px rgb(255 255 255 / 0.08);
+	background: rgb(30 30 33 / 0.72);
+}
+
+/* Keycaps. In a layer, or Tailwind's utilities can't touch them. */
+@layer components {
+	.console-key {
+		--cap: rgb(255 255 255 / 0.13);
+		--cap-pressed: rgb(255 255 255 / 0.3);
+		--cap-on: #fff;
+		--cap-on-text: #000;
+		box-shadow:
+			0 1px 0 rgb(0 0 0 / 0.5),
+			0 0.5px 0 rgb(255 255 255 / 0.1) inset;
+		background: var(--cap);
+		color: rgb(255 255 255 / 0.9);
+	}
+	.console-key[data-pressed] {
+		background: var(--cap-pressed);
+	}
+	.console-key[data-state] {
+		background: var(--cap-on);
+		color: var(--cap-on-text);
+	}
+
+	/* The row on the keyboard belongs to the keyboard, so it wears the same
+	   colours, and those follow the system whatever the console looks like */
+	.console-tray {
+		background: #1c1c1e;
+	}
+	.console-composer {
+		background: rgb(255 255 255 / 0.1);
+		color: #fff;
+	}
+	.console-composer::placeholder {
+		color: rgb(255 255 255 / 0.4);
+	}
+	.console-send {
+		background: #fff;
+		color: #000;
+	}
+	@media (prefers-color-scheme: light) {
+		.console-tray {
+			background: #d6d8de;
+		}
+		.console-composer {
+			background: #fff;
+			color: #000;
+		}
+		.console-composer::placeholder {
+			color: rgb(0 0 0 / 0.4);
+		}
+		.console-send {
+			background: #1c1c1e;
+			color: #fff;
+		}
+		.console-tray .console-key {
+			--cap: #fff;
+			--cap-pressed: #b9bcc4;
+			--cap-on: #1c1c1e;
+			--cap-on-text: #fff;
+			box-shadow: 0 1px 0 rgb(0 0 0 / 0.28);
+			color: #000;
+		}
+	}
+}
+
+/* The loupe lifts out of the finger, then gets out of the way */
+.console-loupe-lens {
+	transform: translateY(20px) scale(0.72);
+	transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.console-loupe[data-visible] .console-loupe-lens {
+	transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.console-ripple,
+	.console-arming {
+		animation-duration: 1ms;
+	}
+}

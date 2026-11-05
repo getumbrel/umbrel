@@ -5,8 +5,8 @@ import {link, lstat, rename} from 'node:fs/promises'
 import {expect, beforeAll, afterAll, test, vi} from 'vitest'
 import fse from 'fs-extra'
 import {$} from 'execa'
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 

@@ -7,36 +7,43 @@ import type DatabaseTypes from 'better-sqlite3'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import {migratePhotos} from '../photos/migrations.js'
-import PhotosRepository from '../photos/repository.js'
-import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index/reader-pool.js'
-import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.js'
-import {readDatabase, type ReadSql} from './file-index/read-database.js'
-import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.js'
-import {supportsPhotos, type PhotoFilter, type PhotoIndexingProgress, type PhotoScopeMode} from '../photos/types.js'
+import {migratePhotos} from '../photos/migrations.ts'
+import PhotosRepository from '../photos/repository.ts'
+import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index/reader-pool.ts'
+import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.ts'
+import {readDatabase, type ReadSql} from './file-index/read-database.ts'
+import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
+import {
+	supportsPhotos,
+	type PhotoBackupCloudIdentity,
+	type PhotoFilter,
+	type PhotoIndexingProgress,
+	type PhotoScopeMode,
+} from '../photos/types.ts'
 import FileIndexEnrichment, {
 	BACKGROUND_QUIET_PERIOD_MS,
 	assertPublishedRevision,
+	retryGivenUpEnrichmentAfterUpdate,
 	type FileIndexEnrichmentRuntime,
 	type PublishedFileRevision,
 	type ThumbnailReference,
-} from './file-index-enrichment.js'
+} from './file-index-enrichment.ts'
 import {
 	hasReservedMemberTrashPath,
 	isReservedMemberTrashPath,
 	relativePathWithin,
 	relativeVirtualPath,
 	joinVirtualPath,
-} from './file-index/paths.js'
-import {FILE_INDEX_SCHEMA_VERSION, foldSearchName, migrateFileIndex} from './file-index/migrations.js'
-import DirectorySizes from './file-index/directory-sizes.js'
+} from './file-index/paths.ts'
+import {FILE_INDEX_SCHEMA_VERSION, foldSearchName, migrateFileIndex} from './file-index/migrations.ts'
+import DirectorySizes from './file-index/directory-sizes.ts'
 import {
 	FILES_THUMBNAIL_VARIANT,
 	PHOTOS_THUMBNAIL_VARIANTS,
 	supportsThumbnail,
 	type ThumbnailIdentityKind,
 	type ThumbnailVariant,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 
 type Database = DatabaseTypes.Database
 
@@ -48,6 +55,10 @@ const TRANSIENT_OBSERVATION_REFRESH_MS = 24 * 60 * 60 * 1000
 export const DEFAULT_WATCHER_BULK_THRESHOLD = 250
 const DEFAULT_BATCH_SIZE = 256
 const MAX_LIVE_WORK_PER_SCAN_BATCH = 100
+// A directory move rewrites its rows in one transaction that blocks other
+// index work, about 6 seconds per 100,000 entries on an N100. Larger trees
+// take the generic move instead.
+const MAX_IN_PLACE_MOVE_ENTRIES = 100_000
 const PHOTOS_ONLY_THUMBNAIL_VARIANT_SET = new Set<ThumbnailVariant>(
 	PHOTOS_THUMBNAIL_VARIANTS.filter((variant) => variant !== FILES_THUMBNAIL_VARIANT),
 )
@@ -170,6 +181,7 @@ export type FileIndexEngineOptions = {
 	recoveryRetryMs?: number
 	watcherBulkThreshold?: number
 	batchSize?: number
+	release?: string
 	walkTree?: WalkTree
 	enrichmentRuntime?: FileIndexEnrichmentRuntime
 	readerPoolOptions?: FileIndexReaderPoolOptions
@@ -329,6 +341,7 @@ export default class FileIndexEngine {
 	#recoveryRetryMs: number
 	#watcherBulkThreshold: number
 	#batchSize: number
+	#release?: string
 	#walkTree: WalkTree
 	#enrichment: FileIndexEnrichment
 
@@ -343,6 +356,7 @@ export default class FileIndexEngine {
 		recoveryRetryMs = DEFAULT_RECOVERY_RETRY_MS,
 		watcherBulkThreshold = DEFAULT_WATCHER_BULK_THRESHOLD,
 		batchSize = DEFAULT_BATCH_SIZE,
+		release,
 		walkTree = walkFileTree,
 		enrichmentRuntime,
 		readerPoolOptions,
@@ -358,6 +372,7 @@ export default class FileIndexEngine {
 		this.#recoveryRetryMs = recoveryRetryMs
 		this.#watcherBulkThreshold = watcherBulkThreshold
 		this.#batchSize = batchSize
+		this.#release = release
 		this.#walkTree = walkTree
 		this.#readerPoolOptions = readerPoolOptions
 		this.#enrichment = new FileIndexEnrichment(
@@ -497,6 +512,19 @@ export default class FileIndexEngine {
 			throw new UnsupportedFileIndexSchemaError(
 				`Unsupported file index schema v${this.#schemaVersion}; expected v${FILE_INDEX_SCHEMA_VERSION}`,
 			)
+		}
+		if (this.#release) {
+			let retried: ReturnType<typeof retryGivenUpEnrichmentAfterUpdate> | undefined
+			try {
+				retried = retryGivenUpEnrichmentAfterUpdate(this.#database, this.#release)
+			} catch (error) {
+				this.logger.error('Failed to schedule retries of failed thumbnails and metadata after updating', error)
+			}
+			if (retried?.rows) {
+				this.logger.log(
+					`Retrying ${retried.rows} failed thumbnails and metadata over the next day after updating${retried.previous ? ` from v${retried.previous}` : ''}`,
+				)
+			}
 		}
 		this.#directorySizes = new DirectorySizes(this.#database)
 		this.#directorySizes.sync()
@@ -1134,8 +1162,8 @@ export default class FileIndexEngine {
 		const root = this.#roots.get(nodePath.posix.normalize(virtualPath))
 		if (!root) return
 
-		// Parcel has already debounced and coalesced this callback to at most one
-		// event per path. Large native batches are cheaper to cover with one root
+		// The watcher has already batched and coalesced this callback to at most one
+		// event per path. Large batches are cheaper to cover with one root
 		// snapshot; small batches can be processed directly without rebuilding a
 		// second JavaScript debounce/deduplication layer.
 		if (events.length >= this.#watcherBulkThreshold) {
@@ -1159,7 +1187,7 @@ export default class FileIndexEngine {
 						// A newly visible directory may already contain files (for example,
 						// an atomic move into the watched root). Use the existing coalesced
 						// root snapshot rather than maintaining a second subtree crawler.
-						// Directory updates only describe the directory inode; Parcel reports
+						// Directory updates only describe the directory inode; Watchman reports
 						// child changes separately. Re-scanning the whole root for each one
 						// turns modest directory churn into repeated million-entry walks.
 						const directoryReconciliation = type === 'create' ? 'root' : 'entry'
@@ -1258,6 +1286,7 @@ export default class FileIndexEngine {
 	}
 
 	async movePath(sourceSystemPath: string, destinationSystemPath: string) {
+		if (await this.#moveDirectoryRows(sourceSystemPath, destinationSystemPath)) return
 		// Reconcile the live destination before dropping the stale source path.
 		try {
 			await this.reconcilePath(destinationSystemPath)
@@ -1314,6 +1343,110 @@ export default class FileIndexEngine {
 		} finally {
 			await this.removePath(sourceSystemPath)
 		}
+	}
+
+	// A directory renamed within one root keeps every inode below it, so its
+	// rows can follow it in place, keeping their sizes, hashes and thumbnails,
+	// instead of waiting for a root snapshot to rediscover the tree. Anything
+	// else, or a destination that isn't the directory the index recorded at the
+	// source, is left to the generic move above. Like the generic move, it still
+	// requests a root snapshot (without waiting for it) to pick up anything the
+	// index hadn't recorded yet, such as children of a tree still being walked.
+	async #moveDirectoryRows(sourceSystemPath: string, destinationSystemPath: string) {
+		const root = this.#rootForSystemPath(sourceSystemPath)
+		if (!root?.id || root.scanEnabled === false || !this.#available) return false
+		if (this.#rootForSystemPath(destinationSystemPath) !== root) return false
+		const source = relativePathWithin(root.systemPath, sourceSystemPath)
+		const destination = relativePathWithin(root.systemPath, destinationSystemPath)
+		if (
+			source === '' ||
+			destination === '' ||
+			destination.startsWith(`${source}/`) ||
+			source.startsWith(`${destination}/`) ||
+			isReservedMemberTrashPath(root, source) ||
+			isReservedMemberTrashPath(root, destination)
+		) {
+			return false
+		}
+		// Files and other non-directories take the generic move without queueing
+		if (!(await lstat(destinationSystemPath).catch(() => undefined))?.isDirectory()) return false
+
+		let moved = false
+		await this.#scheduleLiveWork(async () => {
+			const stats = await lstat(destinationSystemPath, {bigint: true}).catch(() => undefined)
+			const write = stats?.isDirectory() ? this.#entryWrite(root, destinationSystemPath, stats) : undefined
+			if (!write || this.#roots.get(root.virtualPath) !== root) return
+			// The directory's own row picks up its new name and change time, and
+			// both parents their new modification times
+			const writes = [write]
+			for (const parent of new Set([nodePath.dirname(sourceSystemPath), nodePath.dirname(destinationSystemPath)])) {
+				const parentStats = await lstat(parent, {bigint: true}).catch(() => undefined)
+				const parentWrite = parentStats && this.#entryWrite(root, parent, parentStats)
+				if (parentWrite) writes.push(parentWrite)
+			}
+			try {
+				moved = await this.#mutate((database) => {
+					const recorded = database
+						.prepare("SELECT device, inode FROM entries WHERE root_id = ? AND relative_path = ? AND type = 'directory'")
+						.get(root.id, source) as {device: string; inode: string} | undefined
+					if (recorded?.device !== write.device || recorded.inode !== write.inode) return false
+					const {entries} = database
+						.prepare(
+							`SELECT COUNT(*) AS entries FROM (
+								SELECT 1 FROM entries WHERE root_id = ? AND relative_path >= ? AND relative_path < ? LIMIT ?
+							)`,
+						)
+						.get(root.id, `${source}/`, `${source}0`, MAX_IN_PLACE_MOVE_ENTRIES + 1) as {entries: number}
+					if (entries > MAX_IN_PLACE_MOVE_ENTRIES) return false
+
+					const detached = this.#photosAvailable ? this.#photos.detachPath(database, root.id!, source) : []
+					this.#applyPathMutation(database, {type: 'delete', rootId: root.id!, relativePath: destination})
+					run(
+						database,
+						`UPDATE entries SET relative_path = ? || substr(relative_path, length(?) + 1)
+						WHERE root_id = ? AND relative_path >= ? AND relative_path < ?`,
+						`${destination}/`,
+						`${source}/`,
+						root.id,
+						`${source}/`,
+						`${source}0`,
+					)
+					run(
+						database,
+						'UPDATE entries SET relative_path = ? WHERE root_id = ? AND relative_path = ?',
+						destination,
+						root.id,
+						source,
+					)
+					// A running root snapshot may already have walked past the destination
+					const markSeen = this.#activeRootSnapshot?.root.id === root.id
+					if (markSeen) {
+						run(
+							database,
+							`INSERT INTO reconciliation_seen(root_id, relative_path)
+							SELECT root_id, relative_path FROM entries
+							WHERE root_id = ? AND relative_path >= ? AND relative_path < ?
+							ON CONFLICT(root_id, relative_path) DO NOTHING`,
+							root.id,
+							`${destination}/`,
+							`${destination}0`,
+						)
+					}
+					this.#applyPathMutation(database, {type: 'write', entries: writes, markSeen})
+					if (detached.length > 0) this.#photos.refreshEffectiveTakenAt(database, detached)
+					return true
+				}, 10)
+			} catch (error) {
+				// The transaction rolled back, so the generic move can still apply it
+				this.logger.error(`Failed to move index rows from '${sourceSystemPath}' in place`, error)
+			}
+		}, 10)
+		if (!moved) return false
+		if (isPhotosRootKind(root.kind)) this.#notifyPhotosChanged([root.ownerId])
+		void this.reconcileRoot(root.virtualPath, 'directory-changed').catch((error) =>
+			this.logger.error(`Failed to reconcile '${root.virtualPath}' after a directory move`, error),
+		)
+		return true
 	}
 
 	async #reconcileSystemPath(
@@ -1483,7 +1616,10 @@ export default class FileIndexEngine {
 						modified_ns = excluded.modified_ns,
 						ctime_ns = excluded.ctime_ns,
 						thumbnail_identity_kind = CASE
-							WHEN entries.thumbnail_identity_kind = 'content' AND entries.content_id IS NOT NULL
+							-- Photos backups promote files without thumbnails to a content identity
+							-- before attaching their hash. A rescan of the same revision in between
+							-- must not undo that, so only a changed file drops the promotion.
+							WHEN entries.thumbnail_identity_kind = 'content'
 								AND excluded.type = 'file' AND entries.inode IS excluded.inode
 								AND entries.size IS excluded.size AND entries.modified_ns IS excluded.modified_ns
 							THEN 'content' ELSE excluded.thumbnail_identity_kind END,
@@ -1692,11 +1828,17 @@ export default class FileIndexEngine {
 		})
 	}
 
-	async photosUpsertBackupSource(accountId: string, sourceId: string, name: string, createdAt: number) {
+	async photosUpsertBackupSource(
+		accountId: string,
+		sourceId: string,
+		name: string,
+		createdAt: number,
+		platform?: string,
+	) {
 		this.#requirePhotos()
 		return this.#mutate((database) => {
 			const upsert = database.transaction(() =>
-				this.#photos.upsertBackupSource(this.#photosDatabase(database), accountId, sourceId, name, createdAt),
+				this.#photos.upsertBackupSource(this.#photosDatabase(database), accountId, sourceId, name, createdAt, platform),
 			)
 			return upsert.immediate()
 		})
@@ -1711,6 +1853,7 @@ export default class FileIndexEngine {
 		expectedRevision: PublishedFileRevision,
 		originalFilename?: string,
 		sourceCreationDate?: number,
+		cloud?: PhotoBackupCloudIdentity,
 	) {
 		this.#requirePhotos()
 		await this.reconcilePath(systemPath)
@@ -1740,10 +1883,56 @@ export default class FileIndexEngine {
 					hash,
 					originalFilename,
 					sourceCreationDate,
+					cloud,
 				),
 			)
 			return register.immediate()
 		})
+	}
+
+	async photosRecordMatchedBackupResources(
+		accountId: string,
+		sourceId: string,
+		matches: Array<{
+			resourceKey: string
+			hash: Buffer
+			originalFilename?: string
+			sourceCreationDate?: number
+			cloud?: PhotoBackupCloudIdentity
+		}>,
+	) {
+		this.#requirePhotos()
+		return this.#mutate((database) => {
+			const record = database.transaction(() =>
+				this.#photos.recordMatchedBackupResources(this.#photosDatabase(database), accountId, sourceId, matches),
+			)
+			return record.immediate()
+		})
+	}
+
+	async photosBackupSourceContentLocations(accountId: string, sourceId: string, hash: Buffer) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.backupSourceContentLocations(this.#photosDatabase(database), accountId, sourceId, hash),
+		)
+	}
+
+	async photosBackupCloudIdentityMatches(accountId: string, sourceId: string, identities: PhotoBackupCloudIdentity[]) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.backupCloudIdentityMatches(this.#photosDatabase(database), accountId, sourceId, identities),
+		)
+	}
+
+	async photosAttachBackupCloudIdentities(
+		accountId: string,
+		sourceId: string,
+		resources: Array<PhotoBackupCloudIdentity & {resourceKey: string}>,
+	) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.attachBackupCloudIdentities(this.#photosDatabase(database), accountId, sourceId, resources),
+		)
 	}
 
 	async photosConfirmedBackupResources(accountId: string, sourceId: string, resourceKeys: string[]) {
@@ -1907,6 +2096,10 @@ export default class FileIndexEngine {
 		return this.#readPhotos('listItems', [accountId, filter, cursor, limit])
 	}
 
+	async photosMapPoints(accountId: string, filter: PhotoFilter) {
+		return this.#readPhotos('mapPoints', [accountId, filter])
+	}
+
 	async photosGetItem(accountId: string, id: string, deleted = false) {
 		return this.#readPhotos('getItem', [accountId, id, deleted])
 	}
@@ -1994,6 +2187,15 @@ export default class FileIndexEngine {
 		)
 		await this.#recoverBackupResourceIdentities(accountId, resourceHashes)
 		return this.#mutate((database) => this.#photos.sourceRemovalFiles(this.#photosDatabase(database), accountId, id))
+	}
+
+	// For the removal dialog, from the index as it stands. Removal itself rescans
+	// Home first, so a copy made moments before can still change the answer.
+	async photosSourceRemovalItemCount(accountId: string, id: string) {
+		this.#requirePhotos()
+		return this.#mutate((database) =>
+			this.#photos.sourceRemovalItemCount(this.#photosDatabase(database), accountId, id),
+		)
 	}
 
 	async photosRemoveSource(accountId: string, id: string, keepItems: boolean) {

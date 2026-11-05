@@ -9,7 +9,7 @@ import {
 	MACHINE_INSTALL_CLEANUP_TIMEOUT_MS,
 	MACHINE_INSTALL_COMMAND_TIMEOUT_MS,
 	MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS,
-} from './install-command.js'
+} from './install-command.ts'
 
 const execaMock = vi.hoisted(() =>
 	vi.fn(async (command: string, arguments_: string[]) => {
@@ -25,7 +25,7 @@ const execaMock = vi.hoisted(() =>
 
 vi.mock('execa', () => ({execa: execaMock}))
 
-import {prepareWindowsInstallMedia} from './windows-image.js'
+import {prepareWindowsInstallMedia} from './windows-image.ts'
 
 const temporaryDirectories: string[] = []
 

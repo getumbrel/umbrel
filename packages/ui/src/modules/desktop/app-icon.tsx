@@ -56,7 +56,7 @@ export function AppIcon({
 		<motion.button
 			onClick={onClick}
 			className={cn(
-				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-hidden',
+				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-[var(--app-pad)] focus:outline-hidden',
 			)}
 			layout
 			initial={{
@@ -77,9 +77,11 @@ export function AppIcon({
 				damping: 30,
 			}}
 		>
+			{/* The backdrop blur only shows until the opaque icon loads. Firefox redraws
+			    it on every frame of the hover scale, so it goes without there. */}
 			<div
 				className={cn(
-					'relative aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
+					'relative aspect-square w-[var(--app-icon)] shrink-0 overflow-hidden rounded-[var(--app-icon-radius)] bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-[scale,box-shadow] duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 firefox:backdrop-blur-none',
 				)}
 			>
 				{appIconSrc && (
@@ -123,7 +125,7 @@ export function AppIcon({
 					</div>
 				)}
 			</div>
-			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
+			<div className='max-w-full text-[length:var(--app-label)] leading-normal drop-shadow-desktop-label'>
 				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
 					<AppLabel state={state} label={label} />
 				</div>
@@ -146,15 +148,15 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 		case 'running':
 			return label
 		case 'starting':
-			return t('app.starting') + '...'
+			return t('app.starting') + '…'
 		case 'restarting':
-			return t('app.restarting') + '...'
+			return t('app.restarting') + '…'
 		case 'stopping':
-			return t('app.stopping') + '...'
+			return t('app.stopping') + '…'
 		case 'uninstalling':
-			return t('app.uninstalling') + '...'
+			return t('app.uninstalling') + '…'
 		case 'updating':
-			return t('app.updating') + '...'
+			return t('app.updating') + '…'
 		case 'loading':
 			return label
 		case 'stopped':
@@ -282,11 +284,9 @@ export function AppIconConnected({appId}: {appId: string}) {
 					</ContextMenuItem>
 
 					{/* Troubleshoot */}
-					{/* TODO: Navigating to /settings/troubleshoot forces the Settings sheet to render first,
-					   causing a slow two-step load. Consider making troubleshoot a standalone route/dialog. */}
 					<ContextMenuItem
 						disabled={troubleshootDisabled}
-						onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}
+						onSelect={() => navigate(linkToDialog('troubleshoot', {for: appId}))}
 					>
 						{t('troubleshoot')}
 					</ContextMenuItem>

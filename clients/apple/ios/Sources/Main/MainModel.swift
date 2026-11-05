@@ -12,8 +12,6 @@ import UmbrelKit
 @MainActor
 @Observable
 final class MainModel {
-	typealias BrowserConnection = BrowserConnectionPreference
-
 	private struct BrowserEndpoint {
 		enum Kind {
 			case tailscaleDNS
@@ -48,37 +46,48 @@ final class MainModel {
 	enum PhotoBackupStatus: Equatable {
 		case off
 		case settingUp
-		case backgroundRefreshUnavailable
+		// A restored iPhone carrying on the backup of the iPhone it was set up from
+		case continuing(String)
+		case connecting
 		case waitingForUmbrel
+		case waitingForTailscale
+		case waitingForWiFi
 		case checkingStorage
 		case paused
 		case error
 		case backingUp(Int?)
 		case upToDate
+		// Only failed items remain. The extension retries them, and until the app can list
+		// them there's nothing for the user to do.
+		case upToDateExceptFailures
 
 		var text: String {
 			switch self {
 			case .off: "Backup off"
 			case .settingUp: "Starting backup…"
-			case .backgroundRefreshUnavailable: "Backup paused"
-			case .waitingForUmbrel: "Waiting for Tailscale"
+			case .continuing(let name): "Continuing \u{201c}\(name)\u{201d} backup…"
+			case .connecting: "Connecting to your Umbrel…"
+			case .waitingForUmbrel: "Waiting for your Umbrel"
+			case .waitingForTailscale: "Waiting for Tailscale"
+			case .waitingForWiFi: "Waiting for Wi-Fi"
 			case .checkingStorage: "Checking storage…"
 			case .paused: "Backup paused"
 			case .error: "Backup needs attention"
 			case .backingUp(let remaining):
-				remaining.map {
-					"\($0.formatted()) \($0 == 1 ? "item" : "items") queued"
-				} ?? "Checking backup…"
+				remaining.map { "Backing up \u{00B7} \($0.formatted()) left" } ?? "Checking backup…"
 			case .upToDate: "All backed up"
+			case .upToDateExceptFailures: "Up to date"
 			}
 		}
 
 		var color: Color {
 			switch self {
 			case .off: Theme.gray
-			case .backgroundRefreshUnavailable, .error, .paused: Theme.red
-			case .upToDate: Theme.online
-			case .settingUp, .waitingForUmbrel, .checkingStorage, .backingUp: Theme.syncing
+			case .error, .paused: Theme.red
+			case .upToDate, .upToDateExceptFailures: Theme.online
+			case .settingUp, .continuing, .connecting, .waitingForUmbrel, .waitingForTailscale, .waitingForWiFi,
+				.checkingStorage, .backingUp:
+				Theme.syncing
 			}
 		}
 	}
@@ -86,6 +95,10 @@ final class MainModel {
 	enum PhotoBackupNotice: Equatable {
 		case backgroundRefreshUnavailable
 		case waitingForTailscale
+		case awayFromUmbrel
+		case tailscaleAddressChanged
+		// Without Tailscale, once backup has caught up
+		case backUpAnywhere
 		case checkingStorage
 		case insufficientStorage
 		case reconnect
@@ -101,7 +114,11 @@ final class MainModel {
 			switch self {
 			case .backgroundRefreshUnavailable:
 				"arrow.clockwise.circle"
-			case .waitingForTailscale:
+			case .waitingForTailscale, .tailscaleAddressChanged:
+				"network"
+			case .awayFromUmbrel:
+				"wifi.exclamationmark"
+			case .backUpAnywhere:
 				"network"
 			case .checkingStorage:
 				"externaldrive.badge.questionmark"
@@ -116,12 +133,14 @@ final class MainModel {
 
 		var title: String {
 			switch self {
-			case .backgroundRefreshUnavailable:
-				"Background App Refresh is off"
+			case .backgroundRefreshUnavailable: "Background backup is off"
 			case .waitingForTailscale: "Connect to Tailscale"
+			case .awayFromUmbrel: "Away from your Umbrel"
+			case .backUpAnywhere: "Back up from anywhere"
+			case .tailscaleAddressChanged: "Reconnect background backup"
 			case .checkingStorage: "Checking storage…"
 			case .insufficientStorage: "Photo backup paused"
-			case .reconnect: "Reconnect photo backup"
+			case .reconnect: "Photo backup stopped"
 			case .needsAttention: "Photo backup needs attention"
 			}
 		}
@@ -129,15 +148,21 @@ final class MainModel {
 		var message: String {
 			switch self {
 			case .backgroundRefreshUnavailable:
-				"Check Settings → General → Background App Refresh so iOS can back up in the background."
+				"Check Settings → General → Background App Refresh so iOS can also back up while this app is closed."
 			case .waitingForTailscale:
-				"Backup will start automatically once connected."
+				"Backup continues once this iPhone can reach your Umbrel, at home or through Tailscale."
+			case .awayFromUmbrel:
+				"With Tailscale, your photos back up even when you\u{2019}re away from home."
+			case .backUpAnywhere:
+				"With Tailscale, your photos back up even when you\u{2019}re away from home, and your Umbrel works from anywhere."
+			case .tailscaleAddressChanged:
+				"Tailscale was reset on your Umbrel. Backup still runs while this app is open."
 			case .checkingStorage:
 				"Backup will resume automatically if enough space is available."
 			case .insufficientStorage:
 				"Free up storage on your Umbrel, then try again."
 			case .reconnect:
-				"Umbrel needs to reconnect photo backup. Your existing backups are safe."
+				"Reconnect to keep backing up, or turn it off in Profile."
 			case .needsAttention:
 				"Backup couldn’t continue. Try again. If this keeps happening, contact Umbrel Support."
 			}
@@ -145,7 +170,7 @@ final class MainModel {
 
 		var action: Action? {
 			switch self {
-			case .waitingForTailscale: .setUpTailscale
+			case .waitingForTailscale, .awayFromUmbrel, .tailscaleAddressChanged, .backUpAnywhere: .setUpTailscale
 			case .insufficientStorage: .retryStorage
 			case .reconnect, .needsAttention: .retryBackup
 			case .backgroundRefreshUnavailable, .checkingStorage: nil
@@ -154,7 +179,8 @@ final class MainModel {
 
 		var actionLabel: String? {
 			switch self {
-			case .reconnect: "Reconnect"
+			case .reconnect, .tailscaleAddressChanged: "Reconnect"
+			case .awayFromUmbrel, .backUpAnywhere: "Set Up"
 			case .insufficientStorage, .needsAttention: "Try Again"
 			case .backgroundRefreshUnavailable, .waitingForTailscale, .checkingStorage: nil
 			}
@@ -194,12 +220,21 @@ final class MainModel {
 	// without adding an unrelated UIBackgroundModes capability.
 	private(set) var backgroundRefreshStatus: UIBackgroundRefreshStatus = .available
 	// PhotoKit provides one app-wide background uploader. When it is configured for
-	// another saved Umbrel account, this screen becomes read-only instead of offering
-	// controls that would silently move the entire iPhone library.
+	// another saved Umbrel account, this screen says where backup goes and offers only a
+	// confirmed switch, never controls that would silently move the entire iPhone library.
 	private(set) var otherPhotoBackupDestinationName: String?
 	private(set) var tailscaleSetupPresented = false
 	private(set) var configStorageIssue: Config.StorageIssue?
 	private(set) var photoBackupSetupInProgress = false
+	// The backup a restored iPhone is carrying on while setup runs, for its status
+	private var photoBackupContinuingName: String?
+	// The identity step for files sent before uploads carried them, once per source
+	@ObservationIgnored private var photoBackupIdentityTask: Task<Void, Never>?
+	// This launch's Umbrel can't take identities yet, so it isn't asked again until next launch
+	@ObservationIgnored private var photoBackupIdentitiesDeclinedSourceId: String?
+	// The account's iPhone source names from the last check, so a new source isn't given
+	// the name of an existing one
+	@ObservationIgnored private var knownIPhoneSourceNames: [String] = []
 	private var photoBackupSetupFailure: PhotoBackupSetupFailure?
 	private(set) var photoBackupStorageRetrying = false
 	private(set) var photoBackupRecoveryRetrying = false
@@ -213,6 +248,9 @@ final class MainModel {
 	// True once the first load finishes, so empty states don't flash while loading.
 	private(set) var didLoad = false
 	private(set) var photoBackup = PhotoBackupStore.snapshot
+	// photoBackup starts as whatever the extension last published, possibly another
+	// Umbrel's, until this Umbrel's own source has been read from the Keychain
+	private(set) var photoBackupSourceResolved = false
 	// Receipt-cache invalidation is separate from the extension's snapshot time.
 	// The host can record a live PhotoKit change in the shared ledger before the
 	// extension publishes its next phase snapshot.
@@ -224,6 +262,10 @@ final class MainModel {
 	// establishes the initial state; later refreshes keep the last confirmed result so
 	// normal polling never flashes a transient status.
 	private(set) var connectionState: ConnectionState = .unverified
+	// The Umbrel answered with a different identity than the one this iPhone paired
+	// with, as it does after the Umbrel or its certificate is reset. Only set while
+	// connectionState is .unavailable: the user has to remove it and add it again.
+	private(set) var identityChanged = false
 	private(set) var connectionRoute: ConnectionRoute?
 	private(set) var tailscaleAvailableOnThisPhone: Bool?
 	private(set) var tailscaleAvailabilityCheckInProgress = false
@@ -250,6 +292,7 @@ final class MainModel {
 	private var configuredPhotoBackupTailscaleHost: String?
 	@ObservationIgnored private var otherPhotoBackupTarget: PhotoBackupPreferenceTarget?
 	@ObservationIgnored private var remoteRefreshInProgress = false
+	@ObservationIgnored private var confirmedConnection = false
 	@ObservationIgnored private var completedActivationRefresh = false
 	@ObservationIgnored private var lastIdentityRefresh: Date?
 	@ObservationIgnored private var lastAppsRefresh: Date?
@@ -265,6 +308,9 @@ final class MainModel {
 	var onBack: () -> Void = {}
 	// Sign-out clears this device's session, then returns to the all-devices list.
 	var onLogOut: () -> Void = {}
+	// Removes this Umbrel and goes straight to adding it again (set by MainView), for
+	// when the app no longer recognizes it.
+	var onReconnect: () async -> Void = {}
 	// Switch the tab bar to another tab (set by MainView); used by the Home section
 	// headers and the library preview card.
 	var openLibrary: () -> Void = {}
@@ -300,6 +346,14 @@ final class MainModel {
 			if PhotoBackupPreferenceStore.isActive(deviceId: device.id, accountId: session.accountId) {
 				backupPhotosEnabled = preference.includesPhotos
 				backupVideosEnabled = preference.includesVideos
+				// Builds up to 38 kept an unanswered "new iPhone" question here, and builds
+				// 38 and 39 a claim step to finish
+				UserDefaults.standard.removeObject(
+					forKey: "photo-backup-new-source-question:\(device.id):\(session.accountId)"
+				)
+				UserDefaults.standard.removeObject(
+					forKey: "photo-backup-claim-pending:\(device.id):\(session.accountId)"
+				)
 			}
 			// This remains a useful preference while backup is off, so restore it even
 			// when this account does not currently own PhotoKit's single uploader.
@@ -312,6 +366,7 @@ final class MainModel {
 			configuration.deviceId == device.id,
 			configuration.source.accountId != session?.accountId
 		{
+			PhotoBackupAppRunner.shared.forget()
 			if PHPhotoLibrary.shared().uploadJobExtensionEnabled {
 				try? PHPhotoLibrary.shared().setUploadJobExtensionEnabled(false)
 			}
@@ -365,8 +420,17 @@ final class MainModel {
 	}
 
 	private func confirmConnectionState(_ state: ConnectionState) {
+		// Signing in starts this model as connected, so its first answer counts too
+		let reconnected = state == .connected
+			&& (connectionState != .connected || !confirmedConnection)
+		if state == .connected { confirmedConnection = true }
 		if connectionState != state {
 			connectionState = state
+		}
+		// Setup that waited for the Umbrel goes on as soon as it answers
+		if reconnected { resumeWaitingPhotoBackup() }
+		if state == .connected, identityChanged {
+			identityChanged = false
 		}
 		if state != .connected, connectionRoute != nil {
 			connectionRoute = nil
@@ -411,6 +475,7 @@ final class MainModel {
 		}
 		await refreshVisibleData(for: .connection, force: true)
 		_ = await tailscaleRefresh
+		resumeWaitingPhotoBackup()
 	}
 
 	private func confirmConnectionRoute(_ host: String) {
@@ -427,10 +492,6 @@ final class MainModel {
 
 	var host: String? { device?.host }
 	var nativeTarget: Umbreld.Target? { device?.nativeTarget }
-	var dashboardUsesHTTPS: Bool { device?.dashboardUsesHTTPS == true }
-	var suppressHTTPSRequiredAppWarning: Bool { device?.suppressHTTPSRequiredAppWarning == true }
-	var browserConnectionSelection: BrowserConnection { device?.browserConnection ?? .automatic }
-	var hasLocalBrowserAddress: Bool { !localBrowserNames.isEmpty || !localBrowserIPs.isEmpty }
 	var hasTailscaleBrowserAddress: Bool { !tailscaleBrowserIPs.isEmpty }
 
 	private var browserAddressOptions: [String] {
@@ -448,12 +509,7 @@ final class MainModel {
 			return nil
 		}
 		var components = URLComponents()
-		// Named routes use their normal browser scheme. A literal IP is the last-resort
-		// route and always uses Umbrel's IP-valid local certificate: Safari can let the
-		// user continue past an untrusted-CA warning, while its HTTP-only mode may block
-		// an app-opened IP with no recovery action at all.
-		components.scheme = endpoint.isLiteralIP
-			|| (dashboardUsesHTTPS && !endpoint.isTailscale) ? "https" : "http"
+		components.scheme = await safariUsesHTTPS(endpoint) ? "https" : "http"
 		components.host = endpoint.host
 		components.path = path
 		components.queryItems = queryItems.isEmpty ? nil : queryItems
@@ -468,13 +524,63 @@ final class MainModel {
 			// certificate-covered endpoint.
 			allowsTailscaleDNS: !requiresHTTPS
 		) else { return nil }
-		// requiresHttps is about the browser's secure-context rules, so it must win
-		// even on Tailscale. The dashboard preference, by contrast, only changes local
-		// browser links because Tailscale already encrypts their transport.
-		let useHTTPS = requiresHTTPS
-			|| endpoint.isLiteralIP
-			|| (dashboardUsesHTTPS && !endpoint.isTailscale)
+		// requiresHttps is about the browser's secure-context rules, so it wins
+		// everywhere, Tailscale included.
+		let useHTTPS = if requiresHTTPS { true } else { await safariUsesHTTPS(endpoint) }
 		return app.webURL(host: endpoint.host, scheme: useHTTPS ? "https" : "http")
+	}
+
+	// A local name uses HTTPS when this iPhone trusts the Umbrel's certificate, as it
+	// does once it's installed and trusted in Settings, so Safari opens it without a
+	// warning. A Tailscale name stays on HTTP: Tailscale already encrypts it, and the
+	// certificate doesn't cover it. A literal IP is the last-resort route and always
+	// uses Umbrel's IP-valid local certificate: Safari can let the user continue past
+	// an untrusted-CA warning, while its HTTP-only mode may block an app-opened IP with
+	// no recovery action at all.
+	private func safariUsesHTTPS(_ endpoint: BrowserEndpoint) async -> Bool {
+		switch endpoint.kind {
+		case .localIP, .tailscaleIP:
+			return true
+		case .tailscaleDNS:
+			return false
+		case .localDNS:
+			guard let deviceId = device?.id else { return false }
+			return await Umbreld.isBrowserEndpoint(
+				host: endpoint.host,
+				expectedDeviceId: deviceId,
+				secure: true,
+				timeout: Self.tailscalePreferenceTimeout)
+		}
+	}
+
+	// ── In-app browser ──
+	//
+	// Inside the app nobody sees or types an address, so the browser goes wherever the
+	// native connection already is: an endpoint that has just proved the Umbrel's
+	// pinned HTTPS identity. Every page is therefore a secure context with no
+	// certificate warning, and apps that need HTTPS simply work.
+
+	var browserHosts: [String] { browserAddressOptions }
+
+	func browserURL(path: String = "", queryItems: [URLQueryItem] = []) async -> URL? {
+		guard let host = await browserHostForOpening() else { return nil }
+		var components = URLComponents()
+		components.scheme = "https"
+		components.host = host
+		components.path = path
+		components.queryItems = queryItems.isEmpty ? nil : queryItems
+		return components.url
+	}
+
+	func browserURL(for app: Umbreld.AppSummary) async -> URL? {
+		guard let host = await browserHostForOpening() else { return nil }
+		return app.webURL(host: host, scheme: "https")
+	}
+
+	// umbrelOS and its apps use the same connection as the rest of the app.
+	private func browserHostForOpening() async -> String? {
+		guard let target = nativeTarget else { return nil }
+		return try? await Umbreld.resolvedHost(for: target)
 	}
 
 	// Cached app tiles deliberately omit default credentials. Resolve the live app on
@@ -504,28 +610,6 @@ final class MainModel {
 		} catch {
 			return nil
 		}
-	}
-
-	func setDashboardUsesHTTPS(_ enabled: Bool) {
-		guard let id = device?.id, dashboardUsesHTTPS != enabled else { return }
-		guard persistConfig({ try $0.update(id: id) { $0.dashboardUsesHTTPS = enabled } })
-		else { return }
-		device?.dashboardUsesHTTPS = enabled
-	}
-
-	func setSuppressHTTPSRequiredAppWarning(_ suppress: Bool) {
-		guard let id = device?.id, suppressHTTPSRequiredAppWarning != suppress else { return }
-		guard persistConfig({
-			try $0.update(id: id) { $0.suppressHTTPSRequiredAppWarning = suppress }
-		}) else { return }
-		device?.suppressHTTPSRequiredAppWarning = suppress
-	}
-
-	func setBrowserConnection(_ connection: BrowserConnection) {
-		guard let id = device?.id, device?.browserConnection != connection else { return }
-		guard persistConfig({ try $0.update(id: id) { $0.browserConnection = connection } })
-		else { return }
-		device?.browserConnection = connection
 	}
 
 	func dismissConfigStorageIssue() {
@@ -588,7 +672,7 @@ final class MainModel {
 		else { return }
 		if available {
 			tailscaleAvailableOnThisPhone = true
-			resumePhotoBackupWaitingForTailscale()
+			resumeWaitingPhotoBackup()
 		} else {
 			tailscaleAvailableOnThisPhone = false
 		}
@@ -596,6 +680,17 @@ final class MainModel {
 
 	var canManageApps: Bool { accountRole == "owner" || session?.accountId == "0" }
 	var photoBackupIsConfiguredElsewhere: Bool { otherPhotoBackupDestinationName != nil }
+	// Backup goes to another Umbrel and this one has nothing from this iPhone. Unknown
+	// totals count as something, so the Library never hides backups that are there.
+	var photoBackupIsOnlyElsewhere: Bool {
+		guard photoBackupIsConfiguredElsewhere, photoBackupSourceResolved else { return false }
+		guard photoBackup.sourceId != nil else { return true }
+		return photoBackup.statistics?.uploadedCount == 0
+	}
+	// The Library shows this iPhone's photos marked with this Umbrel's backups. Without
+	// Full Access, or with nothing from this iPhone here while it backs up elsewhere, the
+	// setup card takes its place.
+	var showsPhotoLibrary: Bool { photoLibrary.canReadLibrary && !photoBackupIsOnlyElsewhere }
 	// Remote-access status follows the address Umbrel currently reports. Fall back to a
 	// pinned PhotoKit address only while no current address is available. A mismatch is
 	// surfaced separately so general Tailscale access can remain connected while Photo
@@ -618,15 +713,6 @@ final class MainModel {
 			&& (backupPhotosEnabled || backupVideosEnabled)
 		guard intentEnabled else { return .off }
 		if photoBackupRecoveryRetrying { return .settingUp }
-		if !photoBackupSetupInProgress,
-			photoBackupSetupFailure == nil,
-			photoBackupBackgroundRefreshUnavailable
-		{
-			// Setup failures and active setup still describe work performed by Umbrel.
-			// Once setup is otherwise idle, the system-wide gate is the most immediate
-			// reason PhotoKit cannot launch the uploader.
-			return .backgroundRefreshUnavailable
-		}
 		let configuration = photoBackupPresentationConfiguration
 		if photoBackupPresentationTargetActive,
 			photoBackupPresentationConfiguration == nil,
@@ -634,15 +720,16 @@ final class MainModel {
 			photoBackupSetupFailure == nil
 		{
 			// Enabled intent without an installed upload configuration is a durable waiting
-			// state, not perpetual setup. On launch, the lightweight Tailscale probe decides
-			// whether there is real setup work to start.
+			// state, not perpetual setup: setup couldn't reach the Umbrel, and opening the
+			// app or a network change tries again.
 			return .waitingForUmbrel
 		}
 		let mode = PhotoBackupPresentationMode.resolve(
 			intentEnabled: intentEnabled,
 			targetActive: photoBackupPresentationTargetActive,
 			configurationMatchesTarget: configuration != nil,
-			extensionEnabled: photoBackupPresentationExtensionEnabled,
+			// The app route sends from the app, so PhotoKit's extension stays off
+			extensionEnabled: configuration?.route == .app || photoBackupPresentationExtensionEnabled,
 			snapshotMatchesSource: configuration?.source.id == photoBackup.sourceId,
 			snapshotPhase: photoBackup.phase,
 			setupInProgress: photoBackupSetupInProgress,
@@ -652,22 +739,47 @@ final class MainModel {
 		case .off:
 			return .off
 		case .settingUp:
-			return .settingUp
+			return photoBackupContinuingName.map { .continuing($0) } ?? .settingUp
 		case .failed:
 			return .error
 		case .active:
 			if photoBackupCheckingStorage { return .checkingStorage }
 			if photoBackup.issue == .insufficientStorage { return .paused }
 			if photoBackup.issue == .authenticationRequired { return .error }
-			if photoBackupTailscaleAddressChanged { return .waitingForUmbrel }
-			if tailscaleAvailableOnThisPhone == false { return .waitingForUmbrel }
-			if photoBackup.phase == .waitingForUmbrel { return .waitingForUmbrel }
 			if photoBackupHasRuntimeError { return .error }
-			if let remaining = photoBackupRemainingCount(configuration: configuration) {
-				return remaining > 0 ? .backingUp(remaining) : .upToDate
+			guard let remaining = photoBackupRemainingCount(configuration: configuration) else {
+				return photoBackup.phase == .upToDate ? .upToDate : .backingUp(nil)
 			}
-			return photoBackup.phase == .upToDate ? .upToDate : .backingUp(nil)
+			if let statistics = photoBackup.statistics,
+				statistics.onlyFailuresRemain(remainingCount: remaining)
+			{
+				return .upToDateExceptFailures
+			}
+			guard remaining > 0 else { return .upToDate }
+			// These screens show only while the app is open, and then it backs up itself:
+			// what holds backup up is what the app sees now, not iOS's background uploads.
+			switch PhotoBackupAppRunner.shared.activity {
+			case .connecting:
+				return .connecting
+			case .waitingForUmbrel:
+				return configuration?.route == .tailscale && tailscaleAvailableOnThisPhone == false
+					? .waitingForTailscale
+					: .waitingForUmbrel
+			case .waitingForWiFi:
+				return .waitingForWiFi
+			case .none:
+				return .backingUp(remaining)
+			}
 		}
+	}
+
+	// The name this device has in Photos on the Umbrel. A source registered earlier
+	// keeps its saved name, which the app only knows while backup is set up.
+	var photoBackupSourceName: String? {
+		if let configuration = photoBackupPresentationConfiguration {
+			return sourceNamesOnUmbrel[configuration.source.id] ?? configuration.source.name
+		}
+		return presentationLedgerSourceId == nil ? PhotoBackupSourceName.current : nil
 	}
 
 	var photoBackupNotice: PhotoBackupNotice? {
@@ -675,10 +787,11 @@ final class MainModel {
 			return nil
 		}
 		switch photoBackupStatus {
-		case .backgroundRefreshUnavailable:
-			return .backgroundRefreshUnavailable
-		case .waitingForUmbrel:
+		case .waitingForTailscale:
 			return .waitingForTailscale
+		case .waitingForUmbrel:
+			// With Tailscale the Umbrel itself is unreachable, which the status says
+			return photoBackupRoute == .tailscale ? nil : .awayFromUmbrel
 		case .checkingStorage:
 			return .checkingStorage
 		case .paused where photoBackupNeedsStorage:
@@ -687,12 +800,65 @@ final class MainModel {
 			return .reconnect
 		case .error:
 			return .needsAttention
-		case .off, .settingUp, .paused, .backingUp, .upToDate:
+		case .off, .settingUp, .continuing, .paused:
 			return nil
+		case .connecting, .waitingForWiFi, .backingUp, .upToDate, .upToDateExceptFailures:
+			break
 		}
+		// Problems with backing up while the app is closed. The app still backs up while
+		// it's open.
+		if photoBackupRoute == .tailscale, photoBackupTailscaleAddressChanged { return .tailscaleAddressChanged }
+		if photoBackupRoute != nil, photoBackupBackgroundRefreshUnavailable { return .backgroundRefreshUnavailable }
+		// Caught up without Tailscale: the moment to offer what it adds
+		if photoBackupRoute == .app, !backUpAnywhereOfferDismissed,
+			photoBackupStatus == .upToDate || photoBackupStatus == .upToDateExceptFailures
+		{
+			return .backUpAnywhere
+		}
+		return nil
 	}
 
-	private var photoBackupBackgroundRefreshUnavailable: Bool {
+	private static let backUpAnywhereOfferDismissedKey = "photo-backup-anywhere-offer-dismissed"
+	private(set) var backUpAnywhereOfferDismissed = UserDefaults.standard.bool(forKey: backUpAnywhereOfferDismissedKey)
+
+	func dismissBackUpAnywhereOffer() {
+		backUpAnywhereOfferDismissed = true
+		UserDefaults.standard.set(true, forKey: Self.backUpAnywhereOfferDismissedKey)
+	}
+
+	// What Photos on the Umbrel calls each of this iPhone's sources, as last read there.
+	// It can be renamed there, and the backup configuration keeps the name it was set
+	// up with, since changing that would set backup up again.
+	private static let sourceNamesOnUmbrelKey = "photo-backup-source-names-on-umbrel"
+	private var sourceNamesOnUmbrel = UserDefaults.standard.dictionary(forKey: sourceNamesOnUmbrelKey)
+		as? [String: String] ?? [:]
+
+	// When How it works opens. Listing sources totals the whole library on the Umbrel, so
+	// it's only asked when someone looks.
+	func refreshPhotoBackupSourceName() async {
+		guard let device, let session,
+			let configuration = photoBackupPresentationConfiguration,
+			let name = try? await Umbreld.photoBackupSourceName(
+				target: device.nativeTarget,
+				session: session,
+				source: configuration.source
+			),
+			sourceNamesOnUmbrel[configuration.source.id] != name
+		else { return }
+		rememberSourceNameOnUmbrel(name, sourceId: configuration.source.id)
+	}
+
+	private func rememberSourceNameOnUmbrel(_ name: String, sourceId: String) {
+		guard sourceNamesOnUmbrel[sourceId] != name else { return }
+		sourceNamesOnUmbrel[sourceId] = name
+		UserDefaults.standard.set(sourceNamesOnUmbrel, forKey: Self.sourceNamesOnUmbrelKey)
+	}
+
+	// Nil until backup is set up. The app backs up while it's open on either route; on
+	// .tailscale, PhotoKit also does while it's closed.
+	var photoBackupRoute: PhotoBackupConfiguration.Route? { photoBackupPresentationConfiguration?.route }
+
+	var photoBackupBackgroundRefreshUnavailable: Bool {
 		switch backgroundRefreshStatus {
 		case .denied:
 			true
@@ -708,7 +874,6 @@ final class MainModel {
 	private var photoBackupHasRuntimeError: Bool {
 		guard !photoBackupCheckingStorage else { return false }
 		return photoBackup.issue != nil
-			|| (photoBackup.statistics?.failedCount ?? 0) > 0
 			|| (photoBackup.phase == .needsAttention && photoBackup.lastError != nil)
 	}
 
@@ -772,7 +937,7 @@ final class MainModel {
 		if let configuration {
 			sourceId = configuration.source.id
 		} else {
-			switch Keychain.readPhotoBackupSourceId(deviceId: deviceId, accountId: accountId) {
+			switch Self.readPhotoBackupSourceId(deviceId: deviceId, accountId: accountId) {
 			case .found(let storedSourceId):
 				sourceId = storedSourceId
 			case .missing:
@@ -783,6 +948,7 @@ final class MainModel {
 				return
 			}
 		}
+		if !photoBackupSourceResolved { photoBackupSourceResolved = true }
 		photoBackupPresentationConfiguration = configuration
 		photoBackupPresentationTargetActive = PhotoBackupPreferenceStore.isActive(
 			deviceId: deviceId,
@@ -877,12 +1043,12 @@ final class MainModel {
 				)
 			}
 			guard backupChanged else { return }
-			// No network action happens here. A pending revision stays durable while
-			// offline and the PhotoKit extension uploads it whenever its normal
-			// scheduling and transport requirements are satisfied.
+			// A pending revision stays durable while offline. PhotoKit's extension uploads
+			// it on its own schedule; the app route sends it now if the app can.
 			presentationSnapshotDate = nil
 			photoBackupReceiptRevision = Date()
 			refreshPhotoBackupPresentation()
+			PhotoBackupAppRunner.shared.run()
 		} catch {
 			Self.logger.error("Could not record live PhotoKit changes: \(error.localizedDescription, privacy: .public)")
 		}
@@ -921,14 +1087,28 @@ final class MainModel {
 			otherPhotoBackupDestinationName = "another Umbrel"
 			return
 		}
-		let deviceName = savedDevice.model ?? savedDevice.name
-		if let accountName = savedDevice.accountProfile(for: target.accountId)?.name,
-			!accountName.isEmpty
-		{
-			otherPhotoBackupDestinationName = "\(accountName)\u{2019}s \(deviceName)"
+		let label = Self.photoBackupDestinationLabel(savedDevice, accountId: target.accountId)
+		if let device, label == Self.photoBackupDestinationLabel(device, accountId: currentAccountId) {
+			// Two Umbrels of the same model and owner read alike: name the other one by its
+			// host when that differs, or say it's another account on this one
+			if target.deviceId == device.id {
+				otherPhotoBackupDestinationName = "another account on this Umbrel"
+			} else if savedDevice.host.lowercased() != device.host.lowercased() {
+				otherPhotoBackupDestinationName = savedDevice.host
+			} else {
+				otherPhotoBackupDestinationName = "your other \(savedDevice.model ?? savedDevice.name)"
+			}
 		} else {
-			otherPhotoBackupDestinationName = savedDevice.displayName
+			otherPhotoBackupDestinationName = label
 		}
+	}
+
+	private static func photoBackupDestinationLabel(_ savedDevice: SavedDevice, accountId: String) -> String {
+		let deviceName = savedDevice.model ?? savedDevice.name
+		if let accountName = savedDevice.accountProfile(for: accountId)?.name, !accountName.isEmpty {
+			return "\(accountName)\u{2019}s \(deviceName)"
+		}
+		return savedDevice.displayName
 	}
 
 	private func applyPhotoBackupPresentation(_ snapshot: PhotoBackupSnapshot) {
@@ -1016,8 +1196,6 @@ final class MainModel {
 		lastFavoritesRefresh = refreshedAt
 		lastUpdatesRefresh = refreshedAt
 
-		// Nothing answered at all: distinguish "your Umbrel is off" from "Local Network
-		// access was revoked in Settings", which otherwise look identical.
 		if info != nil || list != nil || newUsage != nil || newFavorites != nil
 			|| newAddresses != nil || newUpdates != nil
 		{
@@ -1027,9 +1205,7 @@ final class MainModel {
 				rememberReachableBrowserAddress(resolvedHost, at: refreshedAt)
 			}
 		} else {
-			confirmConnectionState(
-				await LocalNetworkProbe.isDenied() ? .localNetworkDenied : .unavailable
-			)
+			await confirmNoResponse(target: target)
 		}
 
 		// Persist the snapshot (only when the main fetch succeeded, so a flaky refresh
@@ -1123,9 +1299,7 @@ final class MainModel {
 				rememberReachableBrowserAddress(resolvedHost)
 			}
 		} else if refreshIdentity {
-			confirmConnectionState(
-				await LocalNetworkProbe.isDenied() ? .localNetworkDenied : .unavailable
-			)
+			await confirmNoResponse(target: target)
 		}
 		if refreshPhotoReceipts {
 			await reconcilePhotoBackupServerReceipts(target: target, session: session)
@@ -1142,6 +1316,28 @@ final class MainModel {
 		case .unavailable:
 			break
 		}
+	}
+
+	// Nothing answered at all. "Your Umbrel is off", "its identity changed" and "Local
+	// Network access was revoked in Settings" otherwise look identical, and each needs
+	// something different from the user.
+	private func confirmNoResponse(target: Umbreld.Target) async {
+		async let changed = Umbreld.identityChanged(for: target)
+		async let denied = LocalNetworkProbe.isDenied()
+		let (identityChanged, isDenied) = await (changed, denied)
+		if self.identityChanged != identityChanged { self.identityChanged = identityChanged }
+		confirmConnectionState(!identityChanged && isDenied ? .localNetworkDenied : .unavailable)
+	}
+
+	// What to say when the Umbrel can't be opened.
+	var unreachableTitle: String {
+		identityChanged ? IdentityChange.alertTitle : "Can’t Reach Umbrel"
+	}
+
+	var unreachableMessage: String {
+		identityChanged
+			? IdentityChange.blockedMessage
+			: "Check your connection and try again."
 	}
 
 	// PhotoKit can finish transferring a resource but defer its terminal callback until
@@ -1163,6 +1359,7 @@ final class MainModel {
 			presentationSnapshotDate = nil
 		}
 		guard let presentationLedger else { return }
+		startSendingPhotoBackupIdentities(configuration: configuration, target: target, session: session)
 
 		do {
 			let pending = try presentationLedger.unconfirmedResourceReceipts(
@@ -1216,6 +1413,80 @@ final class MainModel {
 		}
 	}
 
+	// Files this iPhone sent before uploads carried their iCloud identity get it once, so
+	// an iPhone that later continues this backup can claim them instead of sending them
+	private func startSendingPhotoBackupIdentities(
+		configuration: PhotoBackupConfiguration,
+		target: Umbreld.Target,
+		session: Umbreld.Session
+	) {
+		let sourceId = configuration.source.id
+		let sentKey = "photo-backup-identities-sent:\(sourceId)"
+		guard photoBackupIdentityTask == nil,
+			photoBackupIdentitiesDeclinedSourceId != sourceId,
+			!UserDefaults.standard.bool(forKey: sentKey),
+			photoLibrary.canReadLibrary,
+			case .found(let grant) = Keychain.readPhotoBackupGrant(
+				deviceId: configuration.deviceId,
+				accountId: configuration.source.accountId
+			),
+			let ledgerURL = PhotoBackupStore.ledgerURL,
+			let ledger = PhotoBackupLedger(url: ledgerURL)
+		else { return }
+		let pass = Self.photoBackupIdentityPass(configuration: configuration, ledger: ledger, target: target, grant: grant)
+		photoBackupIdentityTask = Task { [weak self] in
+			// Lets go of the shared ledger before iOS suspends the app, which it would
+			// otherwise end (0xdead10cc)
+			let backgroundTime = BackgroundTaskAssertion(name: "Send photo backup identities") {
+				pass.stop()
+				ledger.stop()
+			}
+			let outcome = (try? await pass.run()) ?? .interrupted
+			backgroundTime.end()
+			guard let self else { return }
+			self.photoBackupIdentityTask = nil
+			switch outcome {
+			case .completed: UserDefaults.standard.set(true, forKey: sentKey)
+			// Asked again once the Umbrel is updated, the next time the app starts
+			case .declined: self.photoBackupIdentitiesDeclinedSourceId = sourceId
+			case .interrupted: break
+			}
+		}
+	}
+
+	private static func photoBackupIdentityPass(
+		configuration: PhotoBackupConfiguration,
+		ledger: PhotoBackupLedger,
+		target: Umbreld.Target,
+		grant: String
+	) -> PhotoBackupIdentityPass {
+		let sourceId = configuration.source.id
+		return PhotoBackupIdentityPass(
+			sourceId: sourceId,
+			includePhotos: configuration.includePhotos,
+			includeVideos: configuration.includeVideos,
+			ledger: ledger,
+			environment: .init(
+				ingest: {
+					switch try PhotoBackupLibraryIngest.ingest(
+						ledger: ledger,
+						sourceId: sourceId,
+						logger: logger,
+						isCancelled: { Task.isCancelled }
+					) {
+					case .complete: .complete
+					case .moreWork: .moreWork
+					case .tokenReset: .restart
+					}
+				},
+				identify: { PhotoBackupIdentityPass.identifiedResources($0, sourceId: sourceId) },
+				claim: { claims in
+					try await Umbreld.claimPhotoBackupResources(target: target, grant: grant, resources: claims)
+				}
+			)
+		)
+	}
+
 	private func isDue(_ lastRefresh: Date?, every interval: TimeInterval, at now: Date) -> Bool {
 		guard let lastRefresh else { return true }
 		return now.timeIntervalSince(lastRefresh) >= interval
@@ -1226,9 +1497,7 @@ final class MainModel {
 	}
 
 	private func browserEndpointForOpening(allowsTailscaleDNS: Bool) async -> BrowserEndpoint? {
-		let tailscaleHostname = browserConnectionSelection != .localNetwork && allowsTailscaleDNS
-			? await tailscaleBrowserHostnameForOpening()
-			: nil
+		let tailscaleHostname = allowsTailscaleDNS ? await tailscaleBrowserHostnameForOpening() : nil
 		let tailscaleHostnameEndpoint = tailscaleHostname.map {
 			BrowserEndpoint(host: $0, kind: .tailscaleDNS)
 		}
@@ -1236,19 +1505,10 @@ final class MainModel {
 		let tailscaleIPs = tailscaleBrowserIPs.map { BrowserEndpoint(host: $0, kind: .tailscaleIP) }
 		let localIPs = localBrowserIPs.map { BrowserEndpoint(host: $0, kind: .localIP) }
 
-		let candidates: [BrowserEndpoint]
-		switch browserConnectionSelection {
-		case .automatic:
-			// Prefer stable names across network changes. Literal addresses remain useful
-			// on networks without mDNS or tailnets with MagicDNS disabled, but are the
-			// browser fallback rather than racing and randomly winning.
-			candidates = [tailscaleHostnameEndpoint].compactMap { $0 }
-				+ localNames + tailscaleIPs + localIPs
-		case .localNetwork:
-			candidates = localNames + localIPs
-		case .tailscale:
-			candidates = [tailscaleHostnameEndpoint].compactMap { $0 } + tailscaleIPs
-		}
+		// Prefer stable names across network changes. Literal addresses remain useful on
+		// networks without mDNS or tailnets with MagicDNS disabled, but are the browser
+		// fallback rather than racing and randomly winning.
+		let candidates = [tailscaleHostnameEndpoint].compactMap { $0 } + localNames + tailscaleIPs + localIPs
 
 		return await firstReachableBrowserEndpoint(in: candidates)
 	}
@@ -1421,6 +1681,180 @@ final class MainModel {
 		persistPhotoBackupPreferenceAndSync()
 	}
 
+	// Moves backup here from the Umbrel it's set up for, including one this app can no
+	// longer open or an account that has signed out, so there's always a way to switch.
+	// Only on the user's confirmed request: opening or signing in to another Umbrel never
+	// moves it. Backups already on the other Umbrel stay there. Setup then picks which
+	// backup on this Umbrel to use, as it does for any iPhone without one here.
+	func backUpToThisUmbrelInstead() {
+		guard let device, let accountId = session?.accountId, let other = otherPhotoBackupTarget,
+			canSwitchPhotoBackupHere
+		else { return }
+		// Turn backup off for every other target, the configured one and the stored active
+		// one, keeping their other choices such as cellular, so nothing else can claim the
+		// uploader, even after a relaunch
+		let current = PhotoBackupPreferenceTarget(deviceId: device.id, accountId: accountId)
+		var targets = [other]
+		if let active = PhotoBackupPreferenceStore.activeTarget(), active != other { targets.append(active) }
+		for target in targets where target != current {
+			var preference = PhotoBackupPreferenceStore.preference(deviceId: target.deviceId, accountId: target.accountId)
+			preference.includesPhotos = false
+			preference.includesVideos = false
+			PhotoBackupPreferenceStore.save(
+				preference,
+				deviceId: target.deviceId,
+				accountId: target.accountId,
+				activate: false
+			)
+		}
+		// Claim the uploader here before any network wait, so the screens show backup
+		// starting and an interrupted switch resumes here instead of leaving it off
+		backupPhotosEnabled = true
+		backupVideosEnabled = true
+		PhotoBackupPreferenceStore.save(
+			currentPhotoBackupPreference,
+			deviceId: device.id,
+			accountId: accountId,
+			activate: true
+		)
+		photoBackupPresentationTargetActive = true
+		backupSyncRevision += 1
+		let revision = backupSyncRevision
+		photoBackupSetupInProgress = true
+		photoBackupSetupFailure = nil
+		enqueuePhotoBackupOperation(revision: revision) { model in
+			// Stops the other Umbrel's uploader, if one is set up, and revokes its grant
+			// when that Umbrel can be reached
+			await model.disablePhotoBackup(revokeServerGrant: true)
+			guard revision == model.backupSyncRevision else { return }
+			model.enableBackup()
+			if revision == model.backupSyncRevision {
+				// Nothing started, as after signing out meanwhile, so nothing else would
+				// clear the progress shown since the tap
+				model.photoBackupSetupInProgress = false
+			} else if let setup = model.backupSyncTask {
+				// The setup holds this model weakly. Keep it alive until the setup finishes,
+				// in case the user leaves this Umbrel meanwhile.
+				Task { [model] in
+					_ = model
+					await setup.value
+				}
+			}
+		}
+	}
+
+	// Switching needs Full Photos access, or the chance to ask for it. With access
+	// limited or denied it would stop the other Umbrel and start nothing.
+	var canSwitchPhotoBackupHere: Bool {
+		switch photoLibrary.authorizationStatus {
+		case .authorized, .notDetermined: true
+		default: false
+		}
+	}
+
+	// This iPhone's backup is named in two places. The Keychain copy stays on this phone
+	// and survives reinstalling the app. The copy in the app's own preferences comes to a
+	// new iPhone set up from this one, by an iCloud restore or Quick Start, where setup
+	// carries on this backup (see carriedPhotoBackupSourceId).
+	private static func readPhotoBackupSourceId(deviceId: String, accountId: String) -> Keychain.PhotoBackupSourceIdReadResult {
+		let stored = Keychain.readPhotoBackupSourceId(deviceId: deviceId, accountId: accountId)
+		if case .found(let sourceId) = stored {
+			let key = photoBackupSourceKey(deviceId: deviceId, accountId: accountId)
+			if UserDefaults.standard.string(forKey: key) != sourceId {
+				UserDefaults.standard.set(sourceId, forKey: key)
+			}
+		}
+		return stored
+	}
+
+	// The backup of the iPhone this one was set up from, when this phone has none of its own
+	private static func carriedPhotoBackupSourceId(deviceId: String, accountId: String) -> String? {
+		UserDefaults.standard.string(forKey: photoBackupSourceKey(deviceId: deviceId, accountId: accountId))
+			.flatMap { UUID(uuidString: $0) != nil ? $0 : nil }
+	}
+
+	private static func setPhotoBackupSourceId(_ sourceId: String, deviceId: String, accountId: String) -> Bool {
+		guard Keychain.setPhotoBackupSourceId(sourceId, deviceId: deviceId, accountId: accountId) else { return false }
+		UserDefaults.standard.set(sourceId, forKey: photoBackupSourceKey(deviceId: deviceId, accountId: accountId))
+		return true
+	}
+
+	private static func photoBackupSourceKey(deviceId: String, accountId: String) -> String {
+		"photo-backup-source:\(deviceId):\(accountId)"
+	}
+
+	// The backup this iPhone took over from another, which its first upload grant renames
+	// after this iPhone so it isn't mistaken for the old one's and removed. Not set when
+	// the app is installed again, so a name the user chose stays.
+	private static func photoBackupRenamePendingSourceId(deviceId: String, accountId: String) -> String? {
+		UserDefaults.standard.string(forKey: photoBackupRenamePendingKey(deviceId: deviceId, accountId: accountId))
+	}
+
+	private static func setPhotoBackupRenamePending(_ sourceId: String?, deviceId: String, accountId: String) {
+		let key = photoBackupRenamePendingKey(deviceId: deviceId, accountId: accountId)
+		if let sourceId {
+			UserDefaults.standard.set(sourceId, forKey: key)
+		} else {
+			UserDefaults.standard.removeObject(forKey: key)
+		}
+	}
+
+	private static func photoBackupRenamePendingKey(deviceId: String, accountId: String) -> String {
+		"photo-backup-rename-pending:\(deviceId):\(accountId)"
+	}
+
+	// Which backup this iPhone uses on this Umbrel, chosen without asking before setup asks
+	// for access. It keeps its own while the Umbrel still has it. Otherwise it carries on
+	// the backup of the iPhone it was restored from by iCloud or Quick Start, or starts its
+	// own, as it always does on umbrelOS that can't continue a backup. Answers with the
+	// account's backups when it read them.
+	private func choosePhotoBackupSource(
+		device: SavedDevice,
+		session: Umbreld.Session,
+		previousConfiguration: PhotoBackupConfiguration?,
+		isCurrent: () -> Bool
+	) async throws -> Umbreld.PhotoBackupSources? {
+		photoBackupContinuingName = nil
+		let stored: String?
+		switch Self.readPhotoBackupSourceId(deviceId: device.id, accountId: session.accountId) {
+		case .found(let sourceId): stored = sourceId
+		case .missing: stored = nil
+		case .unavailable: throw PhotoBackupSetupError.sourceStorageUnavailable
+		}
+		// Setup keeps the access it already has, so there's nothing to decide
+		if let stored, let previousConfiguration,
+			previousConfiguration.deviceId == device.id,
+			previousConfiguration.source.accountId == session.accountId,
+			previousConfiguration.source.id == stored,
+			case .found = Keychain.readPhotoBackupGrant(deviceId: device.id, accountId: session.accountId)
+		{
+			return nil
+		}
+		let listed: Umbreld.PhotoBackupSources?
+		if stored == nil {
+			listed = try await Umbreld.photoBackupSources(target: device.nativeTarget, session: session)
+		} else {
+			// Only an answer shows this iPhone's backup was removed. Without one it carries on
+			// with its own, as it always has.
+			listed = try? await Umbreld.photoBackupSources(target: device.nativeTarget, session: session)
+		}
+		guard isCurrent() else { throw CancellationError() }
+		guard let sources = listed, sources.canContinueSource else { return nil }
+		knownIPhoneSourceNames = sources.sources.map(\.name)
+
+		if let stored, sources.sources.contains(where: { $0.id == stored }) { return sources }
+
+		let carried = Self.carriedPhotoBackupSourceId(deviceId: device.id, accountId: session.accountId)
+		let continued = carried.flatMap { sources.canContinue(sourceId: $0) ? $0 : nil }
+		let sourceId = continued ?? UUID().uuidString.lowercased()
+		guard Self.setPhotoBackupSourceId(sourceId, deviceId: device.id, accountId: session.accountId) else {
+			throw PhotoBackupSetupError.sourceStorageFailed
+		}
+		Self.setPhotoBackupRenamePending(continued, deviceId: device.id, accountId: session.accountId)
+		photoBackupContinuingName = continued.flatMap { id in sources.sources.first { $0.id == id }?.name }
+		return sources
+	}
+
 	func dismissTailscaleSetup() {
 		tailscaleSetupPresented = false
 	}
@@ -1429,7 +1863,9 @@ final class MainModel {
 		tailscaleSetupPresented = true
 	}
 
-	private func resumePhotoBackupWaitingForTailscale() {
+	// Setup that waited for the Umbrel tries again, and backup without Tailscale adds
+	// PhotoKit's background uploads once Tailscale reaches the Umbrel.
+	private func resumeWaitingPhotoBackup() {
 		guard let device, let accountId = session?.accountId,
 			photoLibrary.canReadLibrary,
 			backupPhotosEnabled || backupVideosEnabled,
@@ -1440,7 +1876,11 @@ final class MainModel {
 		let configuration = PhotoBackupStore.configuration()
 		let configurationMatchesTarget = configuration?.deviceId == device.id
 			&& configuration?.source.accountId == accountId
-		guard !configurationMatchesTarget else { return }
+		guard !configurationMatchesTarget || configuration?.route == .app else {
+			// The Umbrel answering again cuts the app's retry wait short
+			PhotoBackupAppRunner.shared.run()
+			return
+		}
 		tailscaleSetupPresented = false
 		syncBackup()
 	}
@@ -1495,6 +1935,17 @@ final class MainModel {
 			)
 		else { return }
 
+		if configuration.route == .app {
+			// The app's next pass sends one failed file as the capacity probe
+			guard PhotoBackupStore.requestStorageRetry(sourceId: configuration.source.id) else {
+				Self.logger.error("Could not save the photo backup storage retry request")
+				return
+			}
+			photoBackupStorageRetrying = true
+			refreshPhotoBackupPresentation()
+			PhotoBackupAppRunner.shared.run()
+			return
+		}
 		let library = PHPhotoLibrary.shared()
 		let wasEnabled = library.uploadJobExtensionEnabled
 		do {
@@ -1513,6 +1964,8 @@ final class MainModel {
 			photoBackupStorageRetrying = true
 			try library.setUploadJobExtensionEnabled(true)
 			refreshPhotoBackupPresentation()
+			// Whichever uploader runs first sends the probe, and the app runs now
+			PhotoBackupAppRunner.shared.run()
 		} catch {
 			// The extension clears the one-shot request only after requeue succeeds. If
 			// enabling fails, leave the pause intact and safely retry on the next tap.
@@ -1559,6 +2012,25 @@ final class MainModel {
 		for configuration: PhotoBackupConfiguration,
 		renewGrant: Bool
 	) {
+		if configuration.route == .app {
+			guard PhotoBackupStore.requestRecoveryRetry(sourceId: configuration.source.id) else {
+				Self.logger.error("Could not save the photo backup retry request")
+				return
+			}
+			photoBackupRecoveryRetrying = true
+			if renewGrant {
+				// Setup issues a fresh scoped grant, then starts the app's next pass
+				Keychain.deletePhotoBackupGrant(
+					deviceId: configuration.deviceId,
+					accountId: configuration.source.accountId
+				)
+				syncBackup()
+			} else {
+				refreshPhotoBackupPresentation()
+				PhotoBackupAppRunner.shared.run()
+			}
+			return
+		}
 		let library = PHPhotoLibrary.shared()
 		let wasEnabled = library.uploadJobExtensionEnabled
 		do {
@@ -1580,6 +2052,7 @@ final class MainModel {
 			} else {
 				try library.setUploadJobExtensionEnabled(true)
 				refreshPhotoBackupPresentation()
+				PhotoBackupAppRunner.shared.run()
 			}
 		} catch {
 			PhotoBackupStore.clearRecoveryRetryRequest(for: configuration.source.id)
@@ -1656,9 +2129,8 @@ final class MainModel {
 		}
 		photoLibrary.refresh()
 		guard !photoLibrary.canReadLibrary else {
-			// When enabled intent has no configuration yet, don't manufacture a new
-			// "Starting" state on every foreground. Home/Profile's Tailscale probe calls
-			// syncBackup as soon as the fixed endpoint is actually reachable.
+			// Setup that waited for the Umbrel goes on when the Umbrel answers or the
+			// network changes, not as a "Starting backup" flash on every foreground
 			if let device, let accountId = session?.accountId,
 				backupPhotosEnabled || backupVideosEnabled,
 				PhotoBackupPreferenceStore.isActive(deviceId: device.id, accountId: accountId),
@@ -1700,8 +2172,8 @@ final class MainModel {
 		let configurationBelongsToAccount = currentConfiguration?.deviceId == device.id
 			&& currentConfiguration?.source.accountId == accountId
 		// Connecting or signing in to another Umbrel is never permission to move the
-		// iPhone's backup destination. The user must first turn backup off on the
-		// configured Umbrel; only then can another account claim the single uploader.
+		// iPhone's backup destination. Only the user's confirmed switch moves it
+		// (backUpToThisUmbrelInstead), by turning the configured target off first.
 		guard currentConfiguration == nil || configurationBelongsToAccount else {
 			photoBackupSetupInProgress = false
 			photoBackupSetupFailure = nil
@@ -1713,6 +2185,8 @@ final class MainModel {
 			photoBackupSetupFailure = nil
 			tailscaleSetupPresented = false
 			if configurationBelongsToAccount {
+				// Not after whatever setup is queued ahead of turning it off
+				PhotoBackupAppRunner.shared.stop()
 				backupSyncRevision += 1
 				let revision = backupSyncRevision
 				enqueuePhotoBackupOperation(revision: revision) { model in
@@ -1723,7 +2197,7 @@ final class MainModel {
 			}
 			return
 		}
-		let storedSourceId = Keychain.readPhotoBackupSourceId(
+		let storedSourceId = Self.readPhotoBackupSourceId(
 			deviceId: device.id,
 			accountId: accountId
 		).id
@@ -1731,10 +2205,11 @@ final class MainModel {
 			guard configuration.deviceId == device.id,
 				configuration.source.accountId == accountId,
 				configuration.source.id == storedSourceId,
-				configuration.isTailscaleDestination
+				configuration.hasValidRoute
 			else { return nil }
 			return PhotoBackupConfiguration(
 				deviceId: device.id,
+				route: configuration.route,
 				uploadBaseURL: configuration.uploadBaseURL,
 				source: configuration.source,
 				includePhotos: photos,
@@ -1746,13 +2221,16 @@ final class MainModel {
 			currentConfiguration == desired,
 			PhotoBackupStore.snapshot.phase != .disabled,
 			PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized,
-			PHPhotoLibrary.shared().uploadJobExtensionEnabled,
+			// PhotoKit's extension uploads only on the Tailscale route
+			PHPhotoLibrary.shared().uploadJobExtensionEnabled == (desired.route == .tailscale),
+			!photoBackupCanMoveToTailscale(desired, device: device),
 			case .found = Keychain.readPhotoBackupGrant(deviceId: device.id, accountId: accountId)
 		{
 			photoBackupSetupInProgress = false
 			photoBackupSetupFailure = nil
 			tailscaleSetupPresented = false
 			refreshPhotoBackupPresentation()
+			PhotoBackupAppRunner.shared.run()
 			return
 		}
 
@@ -1865,53 +2343,73 @@ final class MainModel {
 			) else { return }
 			previousConfiguration = nil
 		}
+		let route: PhotoBackupConfiguration.Route
 		let uploadBaseURL: String
 		if let previousConfiguration,
 			previousConfiguration.deviceId == device.id,
 			previousConfiguration.source.accountId == session.accountId,
-			previousConfiguration.isTailscaleDestination {
-			// Preference changes reuse the exact endpoint verified during setup.
+			previousConfiguration.hasValidRoute,
+			!photoBackupCanMoveToTailscale(previousConfiguration, device: device)
+		{
+			// Preference changes reuse the exact route verified during setup.
+			route = previousConfiguration.route
 			uploadBaseURL = previousConfiguration.uploadBaseURL
-		} else {
-			guard let photoBackupHost = device.photoBackupHost else {
-				photoBackupWaitsForTailscale(revision: revision)
-				return
-			}
+		} else if let photoBackupHost = device.photoBackupHost,
+			await Umbreld.isKnownEndpointAvailable(host: photoBackupHost, deviceId: device.id)
+		{
 			// `resolvedHost` deliberately caches a previous winner for normal API traffic,
-			// so it cannot prove that Tailscale is reachable now. Probe this exact endpoint
-			// without the resolver cache before pinning it for PhotoKit.
-			let available = await Umbreld.isKnownEndpointAvailable(
-				host: photoBackupHost,
-				deviceId: device.id
-			)
+			// so it cannot prove that Tailscale is reachable now. The probe above checks
+			// this exact endpoint without the resolver cache before pinning it for PhotoKit.
 			guard backupSetupIsCurrent(
 				revision: revision,
 				deviceId: device.id,
 				accountId: session.accountId
 			) else { return }
-			guard available else {
-				photoBackupWaitsForTailscale(revision: revision)
-				return
-			}
 			// PhotoKit owns the upload request and exposes no server-trust callback for
 			// Umbrel's app-pinned local CA. Restrict the HTTP destination to this verified
 			// Tailscale address; the scoped grant authorizes the account and source.
+			route = .tailscale
 			uploadBaseURL = "http://\(photoBackupHost)"
+		} else {
+			guard backupSetupIsCurrent(
+				revision: revision,
+				deviceId: device.id,
+				accountId: session.accountId
+			) else { return }
+			// Setup's own uncached check is newer evidence than a foreground probe
+			if device.photoBackupHost != nil { tailscaleAvailableOnThisPhone = false }
+			// Without Tailscale on this iPhone, only the app backs up, while it's open
+			route = .app
+			uploadBaseURL = ""
 		}
 		var issuedGrant = false
 		var shouldRevokeIssuedGrant = false
 		var canRestorePreviousConfiguration = true
 		var configurationCommitted = false
 		do {
+			let accountBackups = try await choosePhotoBackupSource(
+				device: device,
+				session: session,
+				previousConfiguration: previousConfiguration,
+				isCurrent: {
+					self.backupSetupIsCurrent(revision: revision, deviceId: device.id, accountId: session.accountId)
+				}
+			)
+			guard backupSetupIsCurrent(
+				revision: revision,
+				deviceId: device.id,
+				accountId: session.accountId
+			) else { return }
 			let wasExtensionEnabled = PHPhotoLibrary.shared().uploadJobExtensionEnabled
 
 			let sourceId: String
-			switch Keychain.readPhotoBackupSourceId(deviceId: device.id, accountId: session.accountId) {
+			switch Self.readPhotoBackupSourceId(deviceId: device.id, accountId: session.accountId) {
 			case .found(let storedSourceId):
 				sourceId = storedSourceId
 			case .missing:
+				// umbrelOS that can't continue a backup: a new one
 				sourceId = UUID().uuidString.lowercased()
-				guard Keychain.setPhotoBackupSourceId(
+				guard Self.setPhotoBackupSourceId(
 					sourceId,
 					deviceId: device.id,
 					accountId: session.accountId
@@ -1943,15 +2441,55 @@ final class MainModel {
 				source = previousConfiguration.source
 				grantToken = storedGrant
 			} else {
+				let continuing = Self.photoBackupRenamePendingSourceId(
+					deviceId: device.id,
+					accountId: session.accountId
+				) == sourceId
+				var takenNames = knownIPhoneSourceNames
+				if continuing {
+					// Unique among the account's other backups, so an iPhone named like the
+					// one it replaced keeps that name
+					var sources = accountBackups
+					if sources == nil {
+						sources = try await Umbreld.photoBackupSources(target: device.nativeTarget, session: session)
+						guard backupSetupIsCurrent(
+							revision: revision,
+							deviceId: device.id,
+							accountId: session.accountId
+						) else { return }
+					}
+					if let sources {
+						takenNames = sources.sources.filter { $0.id != sourceId }.map(\.name)
+					}
+				} else if knownIPhoneSourceNames.isEmpty,
+					let sources = try? await Umbreld.photoSources(target: device.nativeTarget, session: session)
+				{
+					// Nothing has read the account's backups yet, as on umbrelOS that can't
+					// continue one. umbrelOS keeps the name of a source it already has.
+					knownIPhoneSourceNames = sources.filter { $0.type == "iphone" }.map(\.name)
+					takenNames = knownIPhoneSourceNames
+					guard backupSetupIsCurrent(
+						revision: revision,
+						deviceId: device.id,
+						accountId: session.accountId
+					) else { return }
+				}
 				let grant = try await Umbreld.createPhotoBackupGrant(
 					target: device.nativeTarget,
 					session: session,
 					sourceId: sourceId,
-					suggestedName: UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+					suggestedName: PhotoBackupSourceName.unique(PhotoBackupSourceName.current, among: takenNames),
+					continuing: continuing
 				)
+				// umbrelOS has renamed it, even if setup stops after this
+				if continuing {
+					Self.setPhotoBackupRenamePending(nil, deviceId: device.id, accountId: session.accountId)
+				}
 				issuedGrant = true
 				shouldRevokeIssuedGrant = storedGrant == nil
 				source = grant.source
+				// The Umbrel's name for it now, which may be newer than one read for How it works
+				rememberSourceNameOnUmbrel(grant.source.name, sourceId: grant.source.id)
 				grantToken = grant.token
 				if let storedGrant, storedGrant != grant.token {
 					// A replacement server capability invalidates the old one. If setup
@@ -2005,6 +2543,7 @@ final class MainModel {
 
 			let configuration = PhotoBackupConfiguration(
 				deviceId: device.id,
+				route: route,
 				uploadBaseURL: uploadBaseURL,
 				source: source,
 				includePhotos: includePhotos,
@@ -2036,23 +2575,28 @@ final class MainModel {
 			}
 			configurationCommitted = true
 			let systemPhotoLibrary = PHPhotoLibrary.shared()
-			let shouldRestartAfterRepair = wasExtensionEnabled
-				&& previousSnapshot.phase == .needsAttention
+			let repaired = previousSnapshot.phase == .needsAttention
 				&& previousSnapshot.issue != .insufficientStorage
-			if shouldRestartAfterRepair {
+			let shouldRestartAfterRepair = route == .tailscale && wasExtensionEnabled && repaired
+			if route == .app {
+				if systemPhotoLibrary.uploadJobExtensionEnabled {
+					try systemPhotoLibrary.setUploadJobExtensionEnabled(false)
+				}
+			} else if shouldRestartAfterRepair {
 				try restartPhotoBackupExtension()
 			} else if !systemPhotoLibrary.uploadJobExtensionEnabled {
 				try systemPhotoLibrary.setUploadJobExtensionEnabled(true)
 			}
-			guard systemPhotoLibrary.uploadJobExtensionEnabled else {
+			guard systemPhotoLibrary.uploadJobExtensionEnabled == (route == .tailscale) else {
 				throw PhotoBackupSetupError.extensionNotEnabled
 			}
-			// An idempotent foreground refresh must not overwrite the extension's
+			// An idempotent foreground refresh must not overwrite the uploader's
 			// transfer phase. Publish a new waiting snapshot only when setup changed.
 			if previousConfiguration != configuration
-				|| !wasExtensionEnabled
+				|| (route == .tailscale && !wasExtensionEnabled)
 				|| previousSnapshot.phase == .disabled
 				|| shouldRestartAfterRepair
+				|| (route == .app && repaired)
 			{
 				PhotoBackupStore.publish(PhotoBackupSnapshot(
 					phase: storagePaused ? .needsAttention : .waiting,
@@ -2067,6 +2611,14 @@ final class MainModel {
 			photoBackupSetupFailure = nil
 			tailscaleSetupPresented = false
 			refreshPhotoBackupPresentation()
+			// A pass already running read the previous configuration
+			if previousConfiguration != configuration {
+				PhotoBackupAppRunner.shared.restart()
+			} else {
+				PhotoBackupAppRunner.shared.run()
+			}
+			// So backup never stops without anyone knowing
+			Task { await PhotoBackupReminder.requestPermissionIfNeeded() }
 		} catch is CancellationError {
 			return
 		} catch let error as URLError where error.code == .cancelled {
@@ -2090,6 +2642,11 @@ final class MainModel {
 				deviceId: device.id,
 				accountId: session.accountId
 			) else { return }
+			// First setup waits for the Umbrel. A repair keeps its Try Again.
+			if previousConfiguration == nil, (error as? Umbreld.Error)?.isConnectivityFailure == true {
+				photoBackupWaitsForUmbrel(revision: revision)
+				return
+			}
 			photoBackupFailed(
 				.unexpected(photoBackupFailureDescription(error)),
 				revision: revision
@@ -2110,6 +2667,7 @@ final class MainModel {
 	}
 
 	private func disablePhotoBackup(revokeServerGrant: Bool) async {
+		PhotoBackupAppRunner.shared.forget()
 		let configuration = PhotoBackupStore.configuration()
 		let boundDevice = configuration.flatMap { configuration in
 			loadConfig()?.savedDevices[configuration.deviceId]
@@ -2139,6 +2697,7 @@ final class MainModel {
 	private func disablePhotoBackupLocally(deviceId: String) {
 		let configuration = PhotoBackupStore.configuration()
 		guard configuration == nil || configuration?.deviceId == deviceId else { return }
+		PhotoBackupAppRunner.shared.forget()
 		let photoLibrary = PHPhotoLibrary.shared()
 		if photoLibrary.uploadJobExtensionEnabled {
 			try? photoLibrary.setUploadJobExtensionEnabled(false)
@@ -2164,14 +2723,19 @@ final class MainModel {
 		Self.logger.error("Photo backup setup failed: \(failure.message, privacy: .private)")
 	}
 
-	private func photoBackupWaitsForTailscale(revision: Int) {
+	private func photoBackupWaitsForUmbrel(revision: Int) {
 		guard revision == backupSyncRevision else { return }
 		photoBackupSetupInProgress = false
 		photoBackupSetupFailure = nil
-		// Setup just performed its own uncached endpoint check, so its failure is newer
-		// evidence than any foreground probe that may have completed concurrently.
-		tailscaleAvailableOnThisPhone = false
 		refreshPhotoBackupPresentation()
+	}
+
+	// The app backs up only while it's open. Once Tailscale reaches the Umbrel from
+	// this iPhone, PhotoKit can also back up while it's closed.
+	private func photoBackupCanMoveToTailscale(_ configuration: PhotoBackupConfiguration, device: SavedDevice) -> Bool {
+		configuration.route == .app
+			&& tailscaleAvailableOnThisPhone == true
+			&& device.photoBackupHost != nil
 	}
 
 	// Load the wallpaper (from the shared cache, or fetched once and cached), plus its
@@ -2203,6 +2767,10 @@ final class MainModel {
 		}
 		onLogOut()
 
+		if let targetToRevoke {
+			let accountId = sessionToRevoke?.accountId
+			Task { await BrowserContext.signOut(target: targetToRevoke, accountId: accountId) }
+		}
 		guard let targetToRevoke, let sessionToRevoke else { return }
 		// Local sign-out must not wait for a reachable Umbrel. Server revocation is
 		// attempted afterward without reading or writing Keychain state, so a quick
@@ -2228,6 +2796,7 @@ final class MainModel {
 
 		let configuration = PhotoBackupStore.configuration()
 		if configuration?.deviceId == device.id {
+			PhotoBackupAppRunner.shared.forget()
 			let photoLibrary = PHPhotoLibrary.shared()
 			if photoLibrary.uploadJobExtensionEnabled {
 				try? photoLibrary.setUploadJobExtensionEnabled(false)
@@ -2242,7 +2811,10 @@ final class MainModel {
 		}
 		PhotoBackupPreferenceStore.removeDevice(device.id)
 
-		if let session = Keychain.readSession(deviceId: device.id).session {
+		let session = Keychain.readSession(deviceId: device.id).session
+		// Before the pinned CA is forgotten below: ending the browser session needs it.
+		await BrowserContext.signOut(target: device.nativeTarget, accountId: session?.accountId)
+		if let session {
 			try? await Umbreld.logout(target: device.nativeTarget, session: session)
 		}
 		Keychain.deleteSession(deviceId: device.id)
@@ -2256,6 +2828,10 @@ final class MainModel {
 		photoBackupSetupFailure = nil
 		if PhotoBackupStore.configuration()?.deviceId == deviceId {
 			disablePhotoBackupLocally(deviceId: deviceId)
+		}
+		if let target = nativeTarget {
+			let accountId = session?.accountId
+			Task { await BrowserContext.signOut(target: target, accountId: accountId) }
 		}
 		Keychain.deleteSession(deviceId: deviceId)
 		session = nil

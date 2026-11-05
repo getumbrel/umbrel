@@ -9,7 +9,7 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {type ImportScopeMode, type SourceSettings} from '@/features/photos/hooks/use-photo-sources'
 
 // Settings for pull sources that can go stale (auto-import switch, per-drive
-// scope) return with the post-v1 source types (android, drives, shares)
+// scope) return with the post-v1 source types (drives, shares)
 
 // A chosen folder, shown relative to the source root the way Backups lists
 // excluded paths: icon, path, and a minus to drop it. A row of the list card.

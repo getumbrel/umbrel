@@ -19,6 +19,7 @@ import {TbSparkles} from 'react-icons/tb'
 
 import {normalizeSearchText} from '@/components/cmdk-search'
 import {links} from '@/constants/links'
+import {type GlobalDialogKey} from '@/utils/dialog'
 
 import {SETTINGS_CATEGORY_IDS, SettingsCategoryId, SettingsFilterId, suppliedSettingsIcons} from './settings-taxonomy'
 
@@ -95,11 +96,12 @@ export type SettingsCommandTarget =
 	| {type: 'navigate'; to: string}
 	| {type: 'external'; to: string}
 	| {type: 'backups'}
-	| {type: 'current-location-dialog'; dialog: 'logout'}
+	| {type: 'current-location-dialog'; dialog: GlobalDialogKey}
 
 type SettingsPageCommand = {
 	default?: boolean
-	target?: {type: 'backups'}
+	/** Where the command leads, when that isn't the page's own `to` */
+	target?: Exclude<SettingsCommandTarget, {type: 'navigate' | 'external'}>
 }
 
 export type SettingsPageItem = SettingsCatalogItemBase & {
@@ -325,7 +327,7 @@ export function createSettingsCatalog(
 			to: '/settings/mcp',
 			keywords: [
 				'mcp',
-				t('mcp-connected-agents'),
+				t('mcp-agents'),
 				t('mcp-permissions'),
 				t('mcp-apps'),
 				t('mcp-folders'),
@@ -463,11 +465,11 @@ export function createSettingsCatalog(
 			kind: 'page',
 			id: 'troubleshoot',
 			category: 'troubleshoot',
-			command: {},
+			command: {target: {type: 'current-location-dialog', dialog: 'troubleshoot'}},
 			icon: PiWrenchFill,
 			title: t('troubleshoot'),
 			description: t('troubleshoot-description'),
-			to: '/settings/troubleshoot',
+			to: '/settings?dialog=troubleshoot',
 			keywords: [
 				t('troubleshoot-pick-title'),
 				t('umbrelos'),
@@ -655,7 +657,7 @@ export function createSettingsCatalog(
 		{
 			kind: 'command',
 			id: 'terminal',
-			target: {type: 'navigate', to: '/settings/terminal'},
+			target: {type: 'current-location-dialog', dialog: 'terminal'},
 			title: t('terminal'),
 			description: t('terminal-description'),
 		},

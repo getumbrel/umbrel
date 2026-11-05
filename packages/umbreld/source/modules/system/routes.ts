@@ -7,10 +7,9 @@ import {$} from 'execa'
 import fse from 'fs-extra'
 import stripAnsi from 'strip-ansi'
 
-import {performReset} from './factory-reset.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import type Umbreld from '../../index.js'
-import {getUpdateStatus, performUpdate, getLatestRelease} from './update.js'
+import {performReset} from './factory-reset.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import type Umbreld from '../../index.ts'
 import {
 	getCpuTemperature,
 	getSystemDiskUsage,
@@ -30,8 +29,8 @@ import {
 	confirmStaticIp,
 	clearStaticIp,
 	syncDns,
-} from './system.js'
-import {getTailscaleBrowserHostname} from './tailscale.js'
+} from './system.ts'
+import {getTailscaleBrowserHostname} from './tailscale.ts'
 
 import {
 	privateProcedure,
@@ -39,8 +38,8 @@ import {
 	publicProcedureWhenNoUserExists,
 	router,
 	privateProcedureWithMembers,
-} from '../server/trpc/trpc.js'
-import {runAfterResponse} from '../server/run-after-response.js'
+} from '../server/trpc/trpc.ts'
+import {runAfterResponse} from '../server/run-after-response.ts'
 
 type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting' | 'restoring'
 let systemStatus: SystemStatus = 'running'
@@ -146,6 +145,9 @@ export default router({
 	}),
 	// Public for first-use trust: native clients validate HTTPS with this CA before
 	// persisting it or sending credentials. The CA private key stays in LAN ingress.
+	// Native clients also call it as their identity and liveness check for every saved
+	// route (over HTTPS) and for the in-app browser's route (over HTTP or HTTPS), with
+	// short timeouts, so it must stay public and cheap.
 	localHttpsIdentity: publicProcedure.query(async ({ctx}) => {
 		if (!ctx.response) {
 			throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})
@@ -157,26 +159,7 @@ export default router({
 		])
 		return {id, caCertificate}
 	}),
-	updateStatus: privateProcedure.query(() => getUpdateStatus()),
 	uptime: privateProcedureWithMembers.query(() => os.uptime()),
-	checkUpdate: privateProcedure.query(async ({ctx}) => {
-		let {version, name, releaseNotes} = await getLatestRelease(ctx.umbreld)
-		// v prefix is needed in the tag name for legacy reasons, remove it before comparing to local version
-		const available = version.replace('v', '') !== ctx.umbreld.version
-		return {available, version, name, releaseNotes}
-	}),
-	getReleaseChannel: privateProcedure.query(async ({ctx}) => {
-		return (await ctx.umbreld.store.get('settings.releaseChannel')) || 'stable'
-	}),
-	setReleaseChannel: privateProcedure
-		.input(
-			z.object({
-				channel: z.enum(['stable', 'beta']),
-			}),
-		)
-		.mutation(async ({ctx, input}) => {
-			return ctx.umbreld.store.set('settings.releaseChannel', input.channel)
-		}),
 	isExternalDns: privateProcedure.query(async ({ctx}) => {
 		return await ctx.umbreld.store.get('settings.externalDns', true)
 	}),
@@ -192,21 +175,6 @@ export default router({
 			await ctx.umbreld.store.set('settings.externalDns', previousExternalDns)
 			throw error
 		}
-	}),
-	update: privateProcedure.mutation(async ({ctx}) => {
-		systemStatus = 'updating'
-		let success = false
-		try {
-			success = await performUpdate(ctx.umbreld)
-			if (success) {
-				await setTimeout(1000)
-				await ctx.umbreld.stop()
-				await reboot()
-			}
-		} finally {
-			if (!success) systemStatus = 'running'
-		}
-		return success
 	}),
 	hiddenService: privateProcedure.query(async ({ctx}) => {
 		try {

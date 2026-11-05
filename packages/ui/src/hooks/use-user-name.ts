@@ -34,12 +34,14 @@ export function useUserName({onSuccess}: {onSuccess: () => void}) {
 		// So setLocalError('') is not batched
 		await setLocalError('')
 
-		if (!name) {
+		// A name of only spaces would leave the account blank everywhere it's shown
+		const trimmedName = name?.trim()
+		if (!trimmedName) {
 			setLocalError(t('change-name.failed.name-required'))
 			return
 		}
 
-		setMut.mutate({name})
+		setMut.mutate({name: trimmedName})
 	}
 
 	const remoteFormError = !setMut.error?.data?.zodError && setMut.error?.message

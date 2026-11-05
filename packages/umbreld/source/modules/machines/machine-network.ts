@@ -2,7 +2,7 @@ import {isIPv4} from 'node:net'
 
 import {z} from 'zod'
 
-import {MACHINE_NETWORK_NAME, type MachineDefinition} from './domain.js'
+import {MACHINE_NETWORK_NAME, type MachineDefinition} from './domain.ts'
 
 export const MACHINE_NETWORK_BRIDGE = 'umbrel-vm'
 // Keep this outside Tailscale's 100.64.0.0/10 CGNAT range, Umbrel's

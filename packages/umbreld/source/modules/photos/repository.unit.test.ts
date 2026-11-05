@@ -3,10 +3,10 @@ import nodePath from 'node:path'
 import BetterSqlite3 from 'better-sqlite3'
 import {expect, test} from 'vitest'
 
-import {migrateFileIndex} from '../files/file-index/migrations.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {migratePhotos} from './migrations.js'
-import PhotosRepository from './repository.js'
+import {migrateFileIndex} from '../files/file-index/migrations.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {migratePhotos} from './migrations.ts'
+import PhotosRepository from './repository.ts'
 
 test('single-photo reads use stored items without projecting the library as it grows', async () => {
 	const temporary = temporaryDirectory()

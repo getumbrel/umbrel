@@ -7,6 +7,9 @@ import Foundation
 public enum UmbrelDeviceKind: Sendable, Equatable {
 	case home
 	case pro
+	case asusNuc14Essential
+	case asusNuc16Pro
+	case asusRogNuc16
 	case raspberryPi
 	case generic
 
@@ -16,6 +19,12 @@ public enum UmbrelDeviceKind: Sendable, Equatable {
 			self = .home
 		} else if model.contains("umbrel pro") {
 			self = .pro
+		} else if model.contains("asus nuc 14 essential") {
+			self = .asusNuc14Essential
+		} else if model.contains("asus nuc 16 pro") {
+			self = .asusNuc16Pro
+		} else if model.contains("asus rog nuc 16") {
+			self = .asusRogNuc16
 		} else if model.contains("raspberry pi") {
 			self = .raspberryPi
 		} else {

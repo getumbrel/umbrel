@@ -9,11 +9,11 @@ import {execa} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import {photoKind, type PhotoKind, type PhotoSubKind} from '../photos/types.js'
-import {readDatabase, type ReadDatabase, type ReadLane, type ReadSql} from './file-index/read-database.js'
-import {BACKGROUND_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.js'
-import {Blake3Hasher} from './blake3.js'
-import {foldSearchName} from './file-index/migrations.js'
+import {photoKind, type PhotoKind, type PhotoSubKind} from '../photos/types.ts'
+import {readDatabase, type ReadDatabase, type ReadLane, type ReadSql} from './file-index/read-database.ts'
+import {BACKGROUND_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
+import {Blake3Hasher} from './blake3.ts'
+import {foldSearchName} from './file-index/migrations.ts'
 import {
 	FILES_THUMBNAIL_VARIANT,
 	PHOTOS_THUMBNAIL_VARIANTS,
@@ -24,13 +24,19 @@ import {
 	type ThumbnailIdentity,
 	type ThumbnailIdentityKind,
 	type ThumbnailVariant,
-} from './thumbnail-support.js'
+} from './thumbnail-support.ts'
 
 type Database = DatabaseTypes.Database
 
 const HASH_RETRY_BASE_MS = 30_000
 const THUMBNAIL_RETRY_BASE_MS = 60_000
 const MAX_RETRY_MS = 24 * 60 * 60 * 1000
+// Content that fails to decode is retried after a minute, an hour and a day,
+// then left alone until its bytes change or umbreld is updated. Unreadable
+// sources keep the open-ended backoff because they cost no decoding.
+const CONTENT_RETRY_DELAYS_MS = [60_000, 60 * 60 * 1000, 24 * 60 * 60 * 1000]
+const MAX_CONTENT_FAILURES = CONTENT_RETRY_DELAYS_MS.length + 1
+const RELEASE_RETRY_SPREAD_MS = 24 * 60 * 60 * 1000
 const IDLE_RECHECK_MS = 60_000
 const INFRASTRUCTURE_RETRY_MS = 60_000
 const REFERENCE_FAILURE_PREFIX = '[source-reference] '
@@ -698,6 +704,13 @@ export default class FileIndexEnrichment {
 			return
 		}
 
+		const refresh = await this.#nextContentNeedingMetadataRefresh()
+		if (refresh) {
+			const retryDelay = await this.#backgroundMediaStep(refresh, true)
+			this.#schedule(retryDelay)
+			return
+		}
+
 		// Maintenance is independent of a source file's retry schedule. In
 		// particular, one unreadable file must not prevent repair or garbage
 		// collection for every other content record.
@@ -869,23 +882,67 @@ export default class FileIndexEnrichment {
 		}, BACKGROUND_DATABASE_PRIORITY)
 	}
 
+	async #nextContentNeedingMetadataRefresh() {
+		return this.#selectDatabase(async (database) => {
+			const excluded = [...this.#activeMediaContents]
+			const exclusion =
+				excluded.length > 0
+					? `AND media_metadata_refresh.content_id NOT IN (${excluded.map(() => '?').join(', ')})`
+					: ''
+			const row = (await database
+				.prepare(
+					`SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
+						entries.device, entries.inode, entries.size, entries.modified_ns,
+						entries.ctime_ns, entries.thumbnail_identity_kind,
+						index_roots.system_path AS root_system_path, entries.relative_path
+					FROM media_metadata_refresh
+					JOIN contents ON contents.id = media_metadata_refresh.content_id
+					JOIN entries INDEXED BY entries_by_content ON entries.content_id = media_metadata_refresh.content_id
+					JOIN index_roots ON index_roots.id = entries.root_id
+					WHERE ${BACKGROUND_ENRICHMENT_ROOT_SQL}
+						${exclusion}
+					ORDER BY media_metadata_refresh.content_id, entries.id
+					LIMIT 1`,
+				)
+				.get(...excluded)) as ContentCandidateRow | undefined
+			if (!row) return
+			const candidate = contentCandidate(row)
+			if (this.#activeMediaContents.has(candidate.id)) return
+			this.#activeMediaContents.add(candidate.id)
+			return candidate
+		}, BACKGROUND_DATABASE_PRIORITY)
+	}
+
 	async #ensureMediaMetadata(content: ContentCandidate, onDemand: boolean, freshReference = false) {
 		const priority = onDemand ? ON_DEMAND_DATABASE_PRIORITY : BACKGROUND_DATABASE_PRIORITY
 		const current = await this.#readDatabase(
 			async (database) =>
 				(await database
-					.prepare('SELECT state, retry_at, last_error FROM media_metadata WHERE content_id = ?')
+					.prepare(
+						`SELECT state, retry_at, last_error, width, height,
+							EXISTS (SELECT 1 FROM media_metadata_refresh WHERE content_id = media_metadata.content_id) AS refresh
+						FROM media_metadata WHERE content_id = ?`,
+					)
 					.get(content.id)) as
-					| {state: 'pending' | 'ready' | 'failed'; retry_at: number | null; last_error: string | null}
+					| {
+							state: 'pending' | 'ready' | 'failed'
+							retry_at: number | null
+							last_error: string | null
+							width: number | null
+							height: number | null
+							refresh: number
+					  }
 					| undefined,
 			priority,
 		)
-		if (!current || current.state === 'ready') return
+		if (!current) return
+		// A background refresh re-extracts ready metadata in place, so the item
+		// stays visible meanwhile and keeps its last good values if it fails.
+		const refreshing = current.state === 'ready' && !onDemand && Boolean(current.refresh)
+		if (current.state === 'ready' && !refreshing) return
 		if (
-			!onDemand &&
 			current.state === 'failed' &&
-			current.retry_at !== null &&
-			current.retry_at > Date.now() &&
+			(current.retry_at === null || (!onDemand && current.retry_at > Date.now())) &&
 			!(freshReference && referenceFailureMessage(current.last_error))
 		)
 			return
@@ -961,11 +1018,23 @@ export default class FileIndexEnrichment {
 								Date.now(),
 								content.id,
 							)
+						database.prepare('DELETE FROM media_metadata_refresh WHERE content_id = ?').run(content.id)
 						return this.#onMediaMetadataReady?.(database, content.id)
 					})
 					return persist.immediate()
 				}, priority)
 				afterCommit?.()
+				// Renditions take the display shape recorded here. When re-extraction
+				// corrects that shape, rebuild them instead of keeping old proportions.
+				if (
+					current.width !== null &&
+					current.height !== null &&
+					(Number(current.width) !== metadata.width || Number(current.height) !== metadata.height)
+				) {
+					await this.#discardContentThumbnails(content, priority).catch((error) =>
+						this.logger.error(`Failed to discard outdated renditions of '${content.systemPath}'`, error),
+					)
+				}
 				return
 			} catch (error) {
 				const referenceFailure = referenceFailureKind(error) ?? (await contentReferenceFailure(error, content))
@@ -978,6 +1047,12 @@ export default class FileIndexEnrichment {
 					}
 					if (referenceFailure === 'stale')
 						throw new StaleFileRevisionError('No current metadata source remains', {cause: error})
+				}
+				if (refreshing) {
+					await this.#withDatabase((database) => {
+						database.prepare('DELETE FROM media_metadata_refresh WHERE content_id = ?').run(content.id)
+					}, priority)
+					throw new PersistedEnrichmentFailure(error)
 				}
 				await this.#recordMediaMetadataFailure(content.id, error, priority, referenceFailure === 'unreadable')
 				await this.#onContentFailure?.(content.id)
@@ -1003,22 +1078,16 @@ export default class FileIndexEnrichment {
 	async #recordMediaMetadataFailure(contentId: number, error: unknown, priority: number, referenceFailure = false) {
 		await this.#withDatabase((database) => {
 			const current = database
-				.prepare('SELECT failure_count FROM media_metadata WHERE content_id = ?')
-				.get(contentId) as {failure_count: number} | undefined
+				.prepare('SELECT state, failure_count, retry_at FROM media_metadata WHERE content_id = ?')
+				.get(contentId) as FailureState | undefined
 			if (!current) return
-			const failureCount = Number(current.failure_count) + 1
+			const {failureCount, retryAt} = nextFailureState(current, error, referenceFailure)
 			database
 				.prepare(
 					`UPDATE media_metadata SET state = 'failed', failure_count = ?, retry_at = ?, last_error = ?, updated_at = ?
 					WHERE content_id = ?`,
 				)
-				.run(
-					failureCount,
-					Date.now() + retryDelay(THUMBNAIL_RETRY_BASE_MS, failureCount),
-					persistedFailureMessage(error, referenceFailure),
-					Date.now(),
-					contentId,
-				)
+				.run(failureCount, retryAt, persistedFailureMessage(error, referenceFailure), Date.now(), contentId)
 		}, priority)
 	}
 
@@ -1071,7 +1140,7 @@ export default class FileIndexEnrichment {
 						SELECT attempt_at FROM (
 							SELECT retry_at AS attempt_at
 							FROM thumbnail_variants AS failed INDEXED BY thumbnail_variants_failed_work
-							WHERE variant IN (${variants.map(() => '?').join(', ')}) AND state = 'failed'
+							WHERE variant IN (${variants.map(() => '?').join(', ')}) AND state = 'failed' AND retry_at IS NOT NULL
 								AND EXISTS (SELECT 1 FROM entries
 									JOIN index_roots ON index_roots.id = entries.root_id
 									WHERE entries.content_id = failed.content_id AND ${BACKGROUND_ENRICHMENT_ROOT_SQL})
@@ -1082,7 +1151,7 @@ export default class FileIndexEnrichment {
 						SELECT attempt_at FROM (
 							SELECT retry_at AS attempt_at
 							FROM media_metadata AS failed_media INDEXED BY media_metadata_failed_work
-							WHERE state = 'failed'
+							WHERE state = 'failed' AND retry_at IS NOT NULL
 								AND EXISTS (SELECT 1 FROM entries
 									JOIN index_roots ON index_roots.id = entries.root_id
 									WHERE entries.content_id = failed_media.content_id AND ${BACKGROUND_ENRICHMENT_ROOT_SQL})
@@ -1176,18 +1245,22 @@ export default class FileIndexEnrichment {
 						ON CONFLICT(content_id) DO NOTHING`,
 						)
 						.run(content.id, kind, Date.now())
+				// Another hash of this revision (for example, an upload's move being
+				// indexed) may have attached the same content concurrently. Only
+				// different content means the file changed.
 				const result = database
 					.prepare(
 						`UPDATE entries SET
 							content_id = ?,
 							hash_failure_count = 0, hash_retry_at = NULL, hash_error = NULL
-						WHERE id = ? AND thumbnail_identity_kind = 'content' AND content_id IS NULL
+						WHERE id = ? AND thumbnail_identity_kind = 'content' AND (content_id IS NULL OR content_id = ?)
 							AND inode = ? AND size = ? AND modified_ns = ?
 							${expectedRevision ? 'AND ctime_ns = ?' : ''}`,
 					)
 					.run(
 						content.id,
 						candidate.id,
+						content.id,
 						candidate.inode,
 						candidate.size,
 						candidate.modifiedNs,
@@ -1313,7 +1386,8 @@ export default class FileIndexEnrichment {
 			return (
 				row?.state === 'pending' ||
 				(row?.state === 'failed' &&
-					((row.retry_at ?? 0) <= now || (freshReference && referenceFailureMessage(row.last_error))))
+					((row.retry_at !== null && row.retry_at <= now) ||
+						(freshReference && referenceFailureMessage(row.last_error))))
 			)
 		})
 	}
@@ -1351,12 +1425,14 @@ export default class FileIndexEnrichment {
 					const existing = states.get(candidate)
 					if (existing?.state === 'ready' && (await this.#thumbnailIsUsable(destination))) continue
 					if (
-						!onDemand &&
 						existing?.state === 'failed' &&
-						existing.retry_at !== null &&
-						existing.retry_at > Date.now() &&
+						(existing.retry_at === null || (!onDemand && existing.retry_at > Date.now())) &&
 						!(freshReference && referenceFailureMessage(existing.last_error))
 					) {
+						// Opening a folder must not restart decoding that has given up.
+						if (onDemand && candidate === variant) {
+							throw new PersistedEnrichmentFailure(new Error(existing.last_error ?? 'Thumbnail generation failed'))
+						}
 						continue
 					}
 					work.push({variant: candidate, destination})
@@ -1496,10 +1572,17 @@ export default class FileIndexEnrichment {
 				async (database) =>
 					(await database
 						.prepare(
-							`SELECT artifact_key, state FROM transient_thumbnail_variants
+							`SELECT artifact_key, state, retry_at, last_error FROM transient_thumbnail_variants
 							WHERE entry_id = ? AND variant = ?`,
 						)
-						.get(candidate.id, variant)) as {artifact_key: string; state: 'pending' | 'ready' | 'failed'} | undefined,
+						.get(candidate.id, variant)) as
+						| {
+								artifact_key: string
+								state: 'pending' | 'ready' | 'failed'
+								retry_at: number | null
+								last_error: string | null
+						  }
+						| undefined,
 				ON_DEMAND_DATABASE_PRIORITY,
 			)
 			if (
@@ -1508,6 +1591,11 @@ export default class FileIndexEnrichment {
 				(await this.#thumbnailIsUsable(destination))
 			) {
 				return
+			}
+			// Transient thumbnails are only made on demand, so this is what stops
+			// every folder view decoding the same broken file again.
+			if (existing?.artifact_key === identity.key && existing.state === 'failed' && existing.retry_at === null) {
+				throw new PersistedEnrichmentFailure(new Error(existing.last_error ?? 'Thumbnail generation failed'))
 			}
 
 			const temporary = `${destination}.tmp-${randomUUID()}.${THUMBNAIL_FORMAT}`
@@ -1618,28 +1706,22 @@ export default class FileIndexEnrichment {
 				if (!current) throw new StaleFileRevisionError('File changed while generating thumbnail')
 				const existing = database
 					.prepare(
-						`SELECT failure_count FROM transient_thumbnail_variants
+						`SELECT state, failure_count, retry_at FROM transient_thumbnail_variants
 						WHERE entry_id = ? AND variant = ? AND artifact_key = ?`,
 					)
-					.get(candidate.id, variant, artifactKey) as {failure_count: number} | undefined
+					.get(candidate.id, variant, artifactKey) as FailureState | undefined
+				const {failureCount, retryAt} = nextFailureState(existing, error, false)
 				database
 					.prepare(
 						`INSERT INTO transient_thumbnail_variants(
-							entry_id, variant, artifact_key, state, failure_count, last_error, updated_at
-						) VALUES (?, ?, ?, 'failed', ?, ?, ?)
+							entry_id, variant, artifact_key, state, failure_count, retry_at, last_error, updated_at
+						) VALUES (?, ?, ?, 'failed', ?, ?, ?, ?)
 						ON CONFLICT(entry_id, variant) DO UPDATE SET
 							artifact_key = excluded.artifact_key, state = 'failed',
-							failure_count = excluded.failure_count, last_error = excluded.last_error,
-							updated_at = excluded.updated_at`,
+							failure_count = excluded.failure_count, retry_at = excluded.retry_at,
+							last_error = excluded.last_error, updated_at = excluded.updated_at`,
 					)
-					.run(
-						candidate.id,
-						variant,
-						artifactKey,
-						Number(existing?.failure_count ?? 0) + 1,
-						errorMessage(error),
-						Date.now(),
-					)
+					.run(candidate.id, variant, artifactKey, failureCount, retryAt, errorMessage(error), Date.now())
 			})
 			record.immediate()
 		}, ON_DEMAND_DATABASE_PRIORITY)
@@ -1744,9 +1826,9 @@ export default class FileIndexEnrichment {
 	) {
 		await this.#withDatabase((database) => {
 			const existing = database
-				.prepare('SELECT failure_count FROM thumbnail_variants WHERE content_id = ? AND variant = ?')
-				.get(contentId, variant) as {failure_count: number} | undefined
-			const failureCount = Number(existing?.failure_count ?? 0) + 1
+				.prepare('SELECT state, failure_count, retry_at FROM thumbnail_variants WHERE content_id = ? AND variant = ?')
+				.get(contentId, variant) as FailureState | undefined
+			const {failureCount, retryAt} = nextFailureState(existing, error, referenceFailure)
 			database
 				.prepare(
 					`INSERT INTO thumbnail_variants(
@@ -1757,14 +1839,7 @@ export default class FileIndexEnrichment {
 						retry_at = excluded.retry_at, last_error = excluded.last_error,
 						updated_at = excluded.updated_at`,
 				)
-				.run(
-					contentId,
-					variant,
-					failureCount,
-					Date.now() + retryDelay(THUMBNAIL_RETRY_BASE_MS, failureCount),
-					persistedFailureMessage(error, referenceFailure),
-					Date.now(),
-				)
+				.run(contentId, variant, failureCount, retryAt, persistedFailureMessage(error, referenceFailure), Date.now())
 		}, priority)
 	}
 
@@ -2092,6 +2167,16 @@ export default class FileIndexEnrichment {
 		}, BACKGROUND_DATABASE_PRIORITY)
 	}
 
+	async #discardContentThumbnails(content: ContentCandidate, priority: number) {
+		for (const variant of ALL_THUMBNAIL_VARIANTS) {
+			await this.#remove(thumbnailSystemPath(this.thumbnailDirectory, contentIdentity(content.hash, variant)))
+		}
+		await this.#markThumbnailPending(
+			ALL_THUMBNAIL_VARIANTS.map((variant) => ({contentId: content.id, variant})),
+			priority,
+		)
+	}
+
 	async #markThumbnailPending(references: Array<{contentId: number; variant: ThumbnailVariant}>, priority: number) {
 		if (references.length === 0) return
 		await this.#withDatabase((database) => {
@@ -2365,30 +2450,43 @@ async function extractVideoMetadata(
 	// FFprobe is authoritative only for the playable video stream. ExifTool owns
 	// semantic metadata for every media type, but remains optional for videos: an
 	// unusual vendor trailer must never make otherwise playable media disappear.
-	const [{stdout}, exifMetadata] = await Promise.all([
-		runBoundedMediaProcess(
-			'ffprobe',
-			[
-				'-v',
-				'error',
-				'-show_entries',
-				'stream=codec_type,width,height,duration:stream_tags=rotate:stream_side_data=rotation,crop_top,crop_bottom,crop_left,crop_right:format=duration',
-				'-of',
-				'json',
-				mediaProcessInput(systemPath, sourceFileDescriptor),
-			],
-			sourceFileDescriptor,
-		),
+	const [video, exifMetadata] = await Promise.all([
+		probeVideoStream(systemPath, sourceFileDescriptor),
 		extractExifMetadata(systemPath, sourceFileDescriptor).catch((error) => {
 			onOptionalMetadataFailure?.(error)
 			return {metadata: {}, spherical: false}
 		}),
 	])
+	return {
+		kind: 'video',
+		...(exifMetadata.spherical ? {subKind: 'spherical' as const} : {}),
+		width: video.width,
+		height: video.height,
+		...(video.durationMs === undefined ? {} : {durationMs: video.durationMs}),
+		...exifMetadata.metadata,
+	}
+}
+
+async function probeVideoStream(systemPath: string, sourceFileDescriptor?: number) {
+	const {stdout} = await runBoundedMediaProcess(
+		'ffprobe',
+		[
+			'-v',
+			'error',
+			'-show_entries',
+			'stream=codec_type,width,height,sample_aspect_ratio,duration:stream_tags=rotate:stream_side_data=rotation,crop_top,crop_bottom,crop_left,crop_right:format=duration',
+			'-of',
+			'json',
+			mediaProcessInput(systemPath, sourceFileDescriptor),
+		],
+		sourceFileDescriptor,
+	)
 	const probe = JSON.parse(stdout) as {
 		streams?: Array<{
 			codec_type?: string
 			width?: number
 			height?: number
+			sample_aspect_ratio?: string
 			duration?: string
 			tags?: Record<string, string>
 			side_data_list?: Array<{
@@ -2411,19 +2509,21 @@ async function extractVideoMetadata(
 	const cropBottom = sideDataValue(stream.side_data_list, 'crop_bottom') ?? 0
 	const croppedWidth = stream.width - cropLeft - cropRight
 	const croppedHeight = stream.height - cropTop - cropBottom
-	const displayWidth = croppedWidth > 0 ? croppedWidth : stream.width
+	// Anamorphic video stores non-square pixels: players stretch each stored
+	// row by the sample aspect ratio, so 352x576 at 24:11 displays as 768x576.
+	// The stretch is horizontal in stored pixels and so turns with rotation.
+	const sampleAspectRatio = parseRational(stream.sample_aspect_ratio?.replace(':', '/'))
+	const pixelAspectRatio = sampleAspectRatio && sampleAspectRatio > 0 ? sampleAspectRatio : 1
+	const displayWidth = Math.round((croppedWidth > 0 ? croppedWidth : stream.width) * pixelAspectRatio)
 	const displayHeight = croppedHeight > 0 ? croppedHeight : stream.height
 	const rotated = Math.abs(rotation) % 180 === 90
-	const width = rotated ? displayHeight : displayWidth
-	const height = rotated ? displayWidth : displayHeight
 	const durationSeconds = [stream.duration, probe.format?.duration].map(Number).find(Number.isFinite)
 	return {
-		kind: 'video',
-		...(exifMetadata.spherical ? {subKind: 'spherical' as const} : {}),
-		width,
-		height,
+		width: rotated ? displayHeight : displayWidth,
+		height: rotated ? displayWidth : displayHeight,
+		rotated,
+		pixelAspectRatio,
 		...(durationSeconds === undefined ? {} : {durationMs: Math.max(0, Math.round(durationSeconds * 1000))}),
-		...exifMetadata.metadata,
 	}
 }
 
@@ -2793,6 +2893,19 @@ export async function generateThumbnailFiles(
 		`${escapeImageMagickInputPath(imageMagickMediaProcessInput(systemPath, sourceFileDescriptor))}[0]`,
 		'-auto-orient',
 	]
+	// FFmpeg hands ImageMagick an anamorphic frame in its stored, non-square
+	// pixels (already rotated). Stretch it to the shape players display. The
+	// probe only refines the frame, so a failed one leaves it as decoded.
+	if (photoKind(systemPath) === 'video') {
+		const {rotated, pixelAspectRatio} = await probeVideoStream(systemPath, sourceFileDescriptor).catch(() => ({
+			rotated: false,
+			pixelAspectRatio: 1,
+		}))
+		if (pixelAspectRatio !== 1) {
+			const stretch = `${pixelAspectRatio * 100}%`
+			arguments_.push('-resize', rotated ? `100%x${stretch}` : `${stretch}x100%`)
+		}
+	}
 	for (const {destination, variant} of outputs) {
 		const definition = THUMBNAIL_VARIANTS[variant]
 		arguments_.push(
@@ -2929,6 +3042,75 @@ async function syncDirectory(systemPath: string) {
 
 function retryDelay(base: number, failureCount: number) {
 	return Math.min(base * 2 ** Math.max(0, failureCount - 1), MAX_RETRY_MS)
+}
+
+type FailureState = {state: 'pending' | 'ready' | 'failed'; failure_count: number; retry_at: number | null}
+
+// The failure count and next attempt after a failed thumbnail or metadata
+// extraction, with a null retry once it has given up. A failure while a retry
+// is still pending (an on-demand request) doesn't advance the schedule, so
+// giving up always takes a minute, an hour and a day.
+function nextFailureState(existing: FailureState | undefined, error: unknown, referenceFailure: boolean) {
+	const now = Date.now()
+	if (existing?.state === 'failed' && existing.retry_at !== null && existing.retry_at > now) {
+		return {failureCount: Number(existing.failure_count), retryAt: existing.retry_at}
+	}
+	const failureCount = Number(existing?.failure_count ?? 0) + 1
+	if (referenceFailure || !isDecodeFailure(error)) {
+		return {failureCount, retryAt: now + retryDelay(THUMBNAIL_RETRY_BASE_MS, failureCount)}
+	}
+	const delay = CONTENT_RETRY_DELAYS_MS[failureCount - 1]
+	return {failureCount, retryAt: delay === undefined ? null : now + delay}
+}
+
+// Whether a decoder ran and rejected the file. System errors (a full disk, an
+// unreadable file), SQLite errors, timeouts and killed processes say nothing
+// about the content, so they never give up.
+function isDecodeFailure(error: unknown) {
+	if (!(error instanceof Error)) return true
+	const {code, timedOut, signal} = error as {code?: unknown; timedOut?: boolean; signal?: unknown}
+	if (typeof code === 'string' || timedOut || signal) return false
+	return !/time limit exceeded/i.test(error.message)
+}
+
+// A release may fix what made content undecodable (a newer ImageMagick,
+// ExifTool or FFmpeg, or a pipeline fix), so each umbreld version gives
+// content that gave up one more attempt. Attempts are spread over a day so an
+// update doesn't start with a burst of decoding. Each content's slot comes from
+// its id, so its thumbnail sizes and metadata are retried together and the
+// sizes share one decode.
+export function retryGivenUpEnrichmentAfterUpdate(database: Database, release: string) {
+	const stored = database.prepare(`SELECT value FROM index_state WHERE key = 'enrichment_release'`).get() as
+		| {value: string}
+		| undefined
+	if (stored?.value === release) return
+	const retry = database.transaction(() => {
+		const now = Date.now()
+		let rows = 0
+		for (const table of ['thumbnail_variants', 'media_metadata']) {
+			rows += database
+				.prepare(
+					`UPDATE ${table} SET failure_count = ?, retry_at = ? + (content_id * 2654435761) % ?
+					WHERE state = 'failed' AND retry_at IS NULL`,
+				)
+				.run(MAX_CONTENT_FAILURES - 1, now, RELEASE_RETRY_SPREAD_MS).changes
+		}
+		// Transient thumbnails are only made on demand, so the next view retries.
+		rows += database
+			.prepare(
+				`UPDATE transient_thumbnail_variants SET failure_count = ?, retry_at = ?
+				WHERE state = 'failed' AND retry_at IS NULL`,
+			)
+			.run(MAX_CONTENT_FAILURES - 1, now).changes
+		database
+			.prepare(
+				`INSERT INTO index_state(key, value) VALUES ('enrichment_release', ?)
+				ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+			)
+			.run(release)
+		return rows
+	})
+	return {previous: stored?.value, rows: retry.immediate()}
 }
 
 function errorMessage(error: unknown) {

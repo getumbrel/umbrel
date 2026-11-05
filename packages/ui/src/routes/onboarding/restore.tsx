@@ -13,6 +13,7 @@ import {
 	useRestoreBackup,
 	type Backup,
 } from '@/features/backups/hooks/use-backups'
+import {getUserFriendlyErrorMessage} from '@/features/backups/utils/error-messages'
 import {BACKUP_FILE_NAME, getRepositoryPathFromBackupFile} from '@/features/backups/utils/filepath-helpers'
 import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
@@ -122,11 +123,12 @@ function RegularRestoreFlow() {
 	// Repository connection state
 	const [repositoryPath, setRepositoryPath] = useState('')
 	const [encryptionPassword, setEncryptionPassword] = useState('')
+	const [passwordError, setPasswordError] = useState('')
 	const [connectedRepositoryId, setConnectedRepositoryId] = useState('')
 	const [selectedBackupId, setSelectedBackupId] = useState('')
 
 	// Backups hooks
-	const {connectToRepository, isPending: isConnecting} = useConnectToRepository()
+	const {connectToRepository, isPending: isConnecting} = useConnectToRepository({toastErrors: false})
 	const {restoreBackup, isPending: isRestoring} = useRestoreBackup()
 	const {isExternalStorageSupported} = useExternalStorage()
 
@@ -180,8 +182,8 @@ function RegularRestoreFlow() {
 				const id = await connectToRepository({path: parentPath, password: encryptionPassword})
 				setConnectedRepositoryId(id)
 				setStep(Step.Backups)
-			} catch {
-				// Error toasts are handled in the hook
+			} catch (error) {
+				setPasswordError(getUserFriendlyErrorMessage(error))
 			}
 			return
 		}
@@ -231,18 +233,29 @@ function RegularRestoreFlow() {
 				)}
 
 				{step === Step.Password && (
-					<div className='space-y-4'>
+					// A form so that Enter continues, as the Continue button does
+					<form
+						className='space-y-4'
+						onSubmit={(e) => {
+							e.preventDefault()
+							if (canNext && !isConnecting) handleNext()
+						}}
+					>
 						<div className={formGroupClass + ' mx-auto w-full max-w-[560px] text-center'}>
 							<div className='mx-auto w-full max-w-[560px]'>
 								<PasswordInput
 									value={encryptionPassword}
-									onValueChange={setEncryptionPassword}
+									onValueChange={(password) => {
+										setEncryptionPassword(password)
+										setPasswordError('')
+									}}
 									autoFocus
 									label={t('backups-restore.encryption-password')}
+									error={passwordError}
 								/>
 							</div>
 						</div>
-					</div>
+					</form>
 				)}
 
 				{step === Step.Backups && (
@@ -305,7 +318,10 @@ function RegularRestoreFlow() {
 						<button
 							type='button'
 							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-hidden'
-							onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))}
+							onClick={() => {
+								setPasswordError('')
+								setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))
+							}}
 						>
 							<ChevronLeft className='size-5' />
 						</button>
@@ -423,7 +439,6 @@ function BackupSnapshot({
 					'',
 				].join(' ')}
 				onClick={onClick}
-				title={backup.id}
 			>
 				<div className='min-w-0 flex-1'>
 					<div className='truncate text-sm'>{label}</div>

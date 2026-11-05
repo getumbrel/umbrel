@@ -1,7 +1,7 @@
 import {z} from 'zod'
 
-import {privateProcedureWithMembers, router} from '../server/trpc/trpc.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import {privateProcedureWithMembers, router} from '../server/trpc/trpc.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 export default router({
 	// Gets all notifications

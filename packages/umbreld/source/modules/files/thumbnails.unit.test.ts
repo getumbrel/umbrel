@@ -5,9 +5,9 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {THUMBNAIL_FORMAT, THUMBNAIL_VARIANT, thumbnailSystemPath} from './thumbnail-support.js'
-import Thumbnails from './thumbnails.js'
+import type Umbreld from '../../index.ts'
+import {THUMBNAIL_FORMAT, THUMBNAIL_VARIANT, thumbnailSystemPath} from './thumbnail-support.ts'
+import Thumbnails from './thumbnails.ts'
 
 const cleanups: Array<() => Promise<void>> = []
 

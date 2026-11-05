@@ -2,6 +2,7 @@ import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {cn} from '@/lib/utils'
 import {useWallpaper, WallpaperAvifSource} from '@/providers/wallpaper'
 
@@ -46,7 +47,7 @@ function SheetContent({
 	className,
 	children,
 	backdrop,
-	closeButton = true,
+	closeButton = <DialogCloseButton surface='sheet' />,
 	ref,
 	...props
 }: SheetContentProps) {
@@ -70,7 +71,11 @@ function SheetContent({
 			>
 				{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
 				{closeButton}
-				<div className='absolute inset-0 bg-black contrast-more:hidden'>
+				{/* Clips the wallpaper (a composited, scaled layer) to the rounded corners
+				    itself: Safari does not reliably clip a composited child by an ancestor's
+				    radius while that ancestor animates, and the transform keeps this layer
+				    composited so the clip applies to the child */}
+				<div className='umbrel-window-surface-top absolute inset-0 transform-gpu overflow-hidden bg-black contrast-more:hidden'>
 					{/* Fade in the wallpaper to avoid a flash when the sheet opens. The
 					    tint layer above stays constant so the fade happens under it. */}
 					{/* An empty src resolves to the current document, so fall back to the
@@ -117,7 +122,7 @@ function SheetTitle({
 	return (
 		<SheetPrimitive.Title
 			ref={ref}
-			className={cn('text-24 font-bold -tracking-3 text-white/75 md:text-48', className)}
+			className={cn('text-24 font-bold -tracking-3 text-white/75 md:text-48 low:text-24', className)}
 			{...props}
 		/>
 	)

@@ -17,7 +17,7 @@ import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {PushSourceSettings, UmbrelScopeSettings} from '@/features/photos/components/sources/source-settings'
 import {sourceTypeLabel, timeAgo} from '@/features/photos/components/sources/source-status'
 import {usePhotoSource, usePhotoSourceActions, type PhotoSource} from '@/features/photos/hooks/use-photo-sources'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {formatNumberI18n} from '@/utils/number'
@@ -31,7 +31,7 @@ export function SourceDetailsDialog() {
 	const {params} = useQueryParams()
 	const sourceId = params.get('photos-source-id') ?? undefined
 	const {source} = usePhotoSource(sourceId)
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const {t} = useTranslation()
 
 	if (!source) return null
@@ -40,7 +40,7 @@ export function SourceDetailsDialog() {
 
 	// The identity block carries the visible title; the structural title and
 	// description stay for screen readers only
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer open={dialogProps.open} onOpenChange={dialogProps.onOpenChange}>
 				<DrawerContent fullHeight>
@@ -59,11 +59,7 @@ export function SourceDetailsDialog() {
 			{/* Same scrolling shell and close button as the Settings dialogs. Focus
 			    isn't handed back to the opener on close — the browser would paint
 			    its focus ring on a button that was only ever clicked */}
-			<DialogScrollableContent
-				showClose
-				onOpenAutoFocus={(e) => e.preventDefault()}
-				onCloseAutoFocus={(e) => e.preventDefault()}
-			>
+			<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
 				<DialogHeader className='sr-only'>
 					<DialogTitle>{source.name}</DialogTitle>
 					<DialogDescription>{sourceTypeLabel(source.type, t)}</DialogDescription>
@@ -107,8 +103,14 @@ function SourceDetailsBody({source}: {source: PhotoSource}) {
 						<PhoneSourceName source={source} />
 						<p className='mt-1 text-12 text-white/50'>
 							{t('photos-source.fact-items-value', {
-								photos: number(source.stats.photos),
-								videos: number(source.stats.videos),
+								photos: t('photos-source.photo-count', {
+									count: source.stats.photos,
+									formattedCount: number(source.stats.photos),
+								}),
+								videos: t('photos-source.video-count', {
+									count: source.stats.videos,
+									formattedCount: number(source.stats.videos),
+								}),
 							})}
 						</p>
 						{source.lastImportAt && (

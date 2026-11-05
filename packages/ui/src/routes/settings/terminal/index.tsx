@@ -1,30 +1,27 @@
-import {DialogPortal} from '@radix-ui/react-dialog'
-import {DropdownMenu} from '@radix-ui/react-dropdown-menu'
-import {Suspense, useState} from 'react'
+import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {Route, Routes, useNavigate, useParams} from 'react-router-dom'
+import {useNavigate} from 'react-router-dom'
 
+import {DialogPortal} from '@/components/ui/dialog'
 import {ImmersiveDialog, ImmersiveDialogOverlay} from '@/components/ui/immersive-dialog'
 import {AppDropdown, ImmersivePickerDialogContentInit, ImmersivePickerItem} from '@/modules/immersive-picker'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {usePickerTarget} from '@/modules/immersive-picker/target'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 import {App} from './app'
 import UmbrelOs from './umbrelos'
 
 export default function TerminalDialog() {
-	const dialogProps = useSettingsDialogProps()
+	const dialogProps = useDialogOpenProps('terminal')
+	const {target} = usePickerTarget('terminal')
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
-				<Suspense>
-					<Routes>
-						<Route index path='/' Component={PickerDialogContent} />
-						<Route path='/umbrelos' Component={UmbrelOs} />
-						<Route path='/app/:appId' Component={App} />
-					</Routes>
-				</Suspense>
+				{target.type === 'picker' && <PickerDialogContent />}
+				{target.type === 'umbrelos' && <UmbrelOs />}
+				{target.type === 'app' && <App appId={target.appId} />}
 			</DialogPortal>
 		</ImmersiveDialog>
 	)
@@ -33,29 +30,26 @@ export default function TerminalDialog() {
 function PickerDialogContent() {
 	const {t} = useTranslation()
 	const navigate = useNavigate()
+	const {linkToTarget} = usePickerTarget('terminal')
 	const [appDialogOpen, setAppDialogOpen] = useState(false)
-	const params = useParams<{appId: string}>()
 
 	return (
 		<ImmersivePickerDialogContentInit title={t('terminal')}>
 			<ImmersivePickerItem
 				title={t('umbrelos')}
 				description={t('terminal.umbrelos-description')}
-				to='/settings/terminal/umbrelos'
+				to={linkToTarget({type: 'umbrelos'})}
 			/>
 			<ImmersivePickerItem
 				title={t('terminal.app')}
 				description={t('terminal.app-description')}
 				onClick={() => setAppDialogOpen(true)}
 			>
-				<DropdownMenu open={appDialogOpen} onOpenChange={setAppDialogOpen}>
-					<AppDropdown
-						open={appDialogOpen}
-						onOpenChange={setAppDialogOpen}
-						appId={params.appId}
-						setAppId={(appId) => navigate(`/settings/terminal/app/${appId}`)}
-					/>
-				</DropdownMenu>
+				<AppDropdown
+					open={appDialogOpen}
+					onOpenChange={setAppDialogOpen}
+					setAppId={(appId) => navigate(linkToTarget({type: 'app', appId}))}
+				/>
 			</ImmersivePickerItem>
 		</ImmersivePickerDialogContentInit>
 	)

@@ -537,7 +537,7 @@ function useTransferSideEffects() {
 
 	useEffect(
 		() =>
-			transfers.onTransition((item, previous) => {
+			transfers.onTransition(async (item, previous) => {
 				if (item.kind === 'upload') {
 					if (item.state !== 'completed') return
 					// A folder upload lands files deep inside a tree the server
@@ -559,8 +559,18 @@ function useTransferSideEffects() {
 					// A running move shows its source as busy; a finished one hides
 					// the source until the listing confirms it is gone
 					if (item.state === 'running') store.addPendingPaths([item.sourcePath], 'processing')
-					else if (item.state === 'completed') store.addPendingPaths([item.sourcePath], 'removing')
-					else if (previous === 'running' || previous === 'finishing' || previous === 'cancelling') {
+					else if (item.state === 'completed') {
+						if (item.resultPath === item.sourcePath) store.removePendingPaths([item.sourcePath])
+						else {
+							store.addPendingPaths([item.sourcePath], 'removing')
+							if (store.incomingItems.some((incoming) => incoming.path === item.sourcePath)) {
+								store.removeIncomingItems([item.sourcePath])
+							}
+							// A page requested before the move must not restore the source
+							// in the cache after the refresh below has invalidated it.
+							await utils.files.list.cancel({path: dirname(item.sourcePath)})
+						}
+					} else if (previous === 'running' || previous === 'finishing' || previous === 'cancelling') {
 						store.removePendingPaths([item.sourcePath])
 					}
 				}

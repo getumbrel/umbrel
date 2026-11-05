@@ -5,6 +5,9 @@ export const MACHINES_PATH = '/machines'
 export const MACHINES_ADD_PATH = '/machines/new'
 export const MACHINES_CONFIGURE_PATH = '/machines/new/configure'
 
+// The `rail-side` variant in index.css, for the sums that CSS can't do
+export const MACHINES_RAIL_SIDE_QUERY = '(width >= 1280px), (min-aspect-ratio: 13/10)'
+
 export const machinePath = (machineId: string) => `${MACHINES_PATH}/${machineId}`
 export const machineFullscreenPath = (machineId: string) => `${MACHINES_PATH}/${machineId}/fullscreen`
 
@@ -33,14 +36,16 @@ export const coreOptions = (threads: number | undefined) =>
 // of what was being installed. That is wrong in both directions: 100 GB is ~100x
 // what Alpine needs (and the backend's free-space check counts the *full*
 // requested size, so it fails creation on hosts that could run the VM easily),
-// while 4 GB is below Ubuntu 26.04 Desktop's official 6 GB minimum.
+// while desktop guests benefit from more generous defaults.
 //
 // `defaults` below are what we prefill; `min` is the floor we won't let the form
 // go under. We use requirements for the exact catalog media where vendors
 // publish them. Broad recommendations inform defaults rather than being
 // mislabeled as hard installation floors.
 // Sources, per family:
-//   Ubuntu 26.04    desktop 6 GB / 25 GB, server floor 1.5 GB / 4 GB
+//   Ubuntu 26.04    desktop guidance is 6 GB / 25 GB for comfortable use, but
+//                   lower-spec installs are possible. Allow 4 GB RAM with an
+//                   8 GB default; server guidance starts at 1.5 GB / 4 GB.
 //                   documentation.ubuntu.com/release-notes/26.04
 //   Fedora 44       Fedora recommends 4 GB / 40 GB for "most variants" and says
 //                   doubling that may improve the experience. The Desktop
@@ -103,7 +108,7 @@ export const fallbackSpecProfile = specProfile(DEFAULT_CORES, DEFAULT_MEMORY_GB,
 // both architectures of an image share one profile.
 //                                                    cores  mem  disk   min: cores  mem  disk
 const machineSpecProfiles: Record<string, MachineSpecProfile> = {
-	'ubuntu:Desktop': specProfile(4, 8, 40, 2, 6, 25),
+	'ubuntu:Desktop': specProfile(4, 8, 40, 2, 4, 25),
 	'ubuntu:Server': specProfile(2, 2, 20, 1, 1, 5),
 	'fedora:Desktop': specProfile(4, 8, 40, 2, 4, 25),
 	'fedora:Server': specProfile(2, 2, 20, 1, 1, 5),
@@ -180,12 +185,21 @@ export const machineRowButtonClass = cn(
 	tw`size-10 bg-white/6 hover:bg-white/12 disabled:opacity-50`,
 )
 
-// Machine view rail: fixed 48px, same minimal surface as the row buttons plus
-// the settings-card edge material, whose inset top shine separates the
-// floating buttons from the dark canvas behind them
+// One choice among a few (architecture, firmware, disk bus), the same on
+// Create and in a machine's settings
+export const machineSegmentButtonClass = (active: boolean) =>
+	cn(
+		tw`h-9 rounded-full border px-4 text-13 font-medium transition-colors disabled:opacity-35`,
+		active ? tw`border-brand bg-brand/20 text-white` : tw`border-white/10 bg-white/5 text-white/60 hover:bg-white/10`,
+	)
+
+// Machine view rail: 48px, or 40px where seven won't fit a row or a short
+// column. Same minimal surface as the row buttons plus the settings-card edge
+// material, whose inset top shine separates the floating buttons from the dark
+// canvas behind them
 export const machineRailButtonClass = cn(
 	machineControlButtonClass,
-	tw`settings-edge-material size-12 bg-white/6 hover:bg-white/12 disabled:opacity-40`,
+	tw`settings-edge-material size-10 bg-white/6 hover:bg-white/12 disabled:opacity-40 sm:size-12 [@media(height<660px)]:size-10`,
 )
 
 // Repeated feature color: stop/error red (#f63636). Arbitrary-value Tailwind

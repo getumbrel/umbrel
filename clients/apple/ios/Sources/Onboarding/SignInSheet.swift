@@ -22,8 +22,8 @@ struct SignInSheet: View {
 		)
 		UmbrelSignInForm(
 			title: device?.model ?? "Umbrel",
+			model: device?.model,
 			target: target,
-			browserHost: device?.host ?? "",
 			preferredUserId: nil,
 			onPrepare: {
 				guard let device = model.selectedDevice else {
@@ -49,7 +49,21 @@ struct SignInSheet: View {
 				password: password,
 				totpToken: totpToken
 			)
-			try Task.checkCancellation()
+			// A sign-in cancelled from here on (the sheet was closed) ends what it created.
+			// The cleanup runs in its own task: this one is cancelled, so its requests would
+			// never be sent.
+			if Task.isCancelled {
+				Task { try? await Umbreld.logout(target: target, session: session) }
+				throw CancellationError()
+			}
+			await BrowserContext.signIn(target: target, userId: userId, password: password, totpToken: totpToken)
+			if Task.isCancelled {
+				Task {
+					await BrowserContext.signOut(target: target, accountId: userId)
+					try? await Umbreld.logout(target: target, session: session)
+				}
+				throw CancellationError()
+			}
 			try await model.completeSignIn(session: session, account: account)
 		}
 	}
@@ -61,21 +75,31 @@ struct UmbrelSignInForm: View {
 	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
 	let title: String
+	let model: String?
 	let target: Umbreld.Target
-	let browserHost: String
 	let preferredUserId: String?
 	let onPrepare: @MainActor () async throws -> Void
 	let onCancel: @MainActor () -> Void
 	let onRemove: (@MainActor () async -> Void)?
+	// Removes a saved Umbrel the app no longer recognizes and starts adding it again.
+	// Without one, Reconnect goes back to the list, where it can be found again.
+	var onReconnect: (@MainActor () async -> Void)? = nil
 	let onConnect: @MainActor (Umbreld.Account?, String, String, String?) async throws -> Void
 
 	private enum Step {
 		case loadingAccounts
 		case setup
+		case browserSetup
+		case notRecognized
 		case localNetworkDenied
 		case loadFailed
 		case password
 		case twoFactor
+	}
+
+	private enum SetupHandoff {
+		case restore
+		case setup
 	}
 
 	private enum Field: Hashable {
@@ -91,7 +115,13 @@ struct UmbrelSignInForm: View {
 	@State private var loading = false
 	@State private var error: String?
 	@State private var isConfirmingRemoval = false
+	@State private var isConfirmingReconnect = false
+	@State private var isReconnecting = false
 	@State private var connectTask: Task<Void, Never>?
+	@State private var isSettingUp = false
+	@State private var setupPassword: String?
+	// Set when in-app setup reaches a step that has to happen in a browser.
+	@State private var handoff: SetupHandoff?
 	@FocusState private var focusedField: Field?
 
 	private let fieldGroup = Color(hex: 0x2C2C2E)
@@ -112,6 +142,10 @@ struct UmbrelSignInForm: View {
 						.frame(maxWidth: .infinity, maxHeight: .infinity)
 				case .setup:
 					setup
+				case .browserSetup:
+					browserSetup
+				case .notRecognized:
+					notRecognized
 				case .localNetworkDenied:
 					localNetworkDenied
 				case .loadFailed:
@@ -135,10 +169,26 @@ struct UmbrelSignInForm: View {
 		.task { await loadAccounts() }
 		.onChange(of: scenePhase) { _, phase in
 			guard phase == .active else { return }
-			// Returning from Settings or browser-based Umbrel setup is the signal to
-			// re-read the authoritative account list and advance the existing sheet.
-			guard step == .localNetworkDenied || step == .setup else { return }
+			// Returning from Settings or a browser is the signal to re-read the
+			// authoritative account list and advance the existing sheet.
+			guard step == .localNetworkDenied || step == .browserSetup || (step == .setup && !isSettingUp)
+			else { return }
 			Task { await loadAccounts() }
+		}
+		.fullScreenCover(isPresented: $isSettingUp, onDismiss: finishSetup) {
+			SetupBrowser(
+				target: target,
+				onFinish: { password in
+					setupPassword = password
+					isSettingUp = false
+				},
+				onNeedsBrowser: { restoring in
+					handoff = restoring ? .restore : .setup
+					step = .browserSetup
+					isSettingUp = false
+				},
+				onCancel: { isSettingUp = false }
+			)
 		}
 		.onDisappear {
 			connectTask?.cancel()
@@ -151,6 +201,18 @@ struct UmbrelSignInForm: View {
 			Button("Cancel", role: .cancel) {}
 		} message: {
 			Text("This removes the saved Umbrel from this iPhone. Any photo and video backups will remain on your Umbrel. You can add it again at any time.")
+		}
+		.alert(IdentityChange.confirmTitle, isPresented: $isConfirmingReconnect) {
+			Button("Reconnect") {
+				isReconnecting = true
+				Task {
+					await onReconnect?()
+					isReconnecting = false
+				}
+			}
+			Button("Cancel", role: .cancel) {}
+		} message: {
+			Text(IdentityChange.confirmMessage)
 		}
 	}
 
@@ -199,12 +261,88 @@ struct UmbrelSignInForm: View {
 	private var setup: some View {
 		message(
 			title: "Set up your Umbrel",
-			description: "This Umbrel hasn\u{2019}t been set up yet. Open it to create an account, then return here to sign in.",
-			actionTitle: "Open Umbrel",
+			description: "This Umbrel is brand new. Create your account to start using it.",
+			actionTitle: "Set Up",
 			showsUmbrelMark: true
+		) {
+			setupPassword = nil
+			isSettingUp = true
+		}
+	}
+
+	// Restoring a backup or setting up RAID moves the Umbrel onto other drives and
+	// restarts it with a new identity (certificate and device ID). The app trusts the
+	// identity it paired with, so it can't follow the Umbrel through that restart, and
+	// those setups happen in a browser instead. This can go once umbrelOS keeps its
+	// identity through the move.
+	private var browserSetup: some View {
+		message(
+			title: handoff == .restore ? "Restore in a browser" : "Set up your Umbrel",
+			description: handoff == .restore
+				? "Restoring from a backup happens in a web browser, ideally on a computer. Go to \(browserHost) and choose Restore, then come back here to sign in."
+				: "Set up your Umbrel in a web browser, ideally on a computer. Go to \(browserHost), then come back here to sign in.",
+			actionTitle: "Open in Safari",
+			showsUmbrelMark: true,
+			secondaryTitle: handoff == nil ? nil : "Back",
+			secondaryAction: {
+				handoff = nil
+				setupPassword = nil
+				step = .setup
+				isSettingUp = true
+			}
 		) {
 			guard let url = URL(string: "http://\(browserHost)") else { return }
 			openURL(url)
+		}
+	}
+
+	private var browserHost: String { target.hosts.first ?? "umbrel.local" }
+
+	// Decided before setup starts, so nobody begins in the app and gets sent to a
+	// browser halfway. umbrelOS sets up RAID on an Umbrel Pro, and on a PC with a drive
+	// it could use. If the drives can't be checked, the browser is the safe choice.
+	private func setupStep() async -> Step {
+		switch UmbrelDeviceKind(model: model) {
+		case .home, .raspberryPi:
+			return .setup
+		case .pro:
+			return .browserSetup
+		case .asusNuc14Essential, .asusNuc16Pro, .asusRogNuc16, .generic:
+			guard let devices = try? await Umbreld.internalStorageDevices(target: target) else { return .browserSetup }
+			return devices.contains(where: \.isRAIDCandidate) ? .browserSetup : .setup
+		}
+	}
+
+	// Setup ended, finished or not. If an account now exists, sign in with the
+	// password that was just chosen; otherwise the sheet is back where it started.
+	private func finishSetup() {
+		let chosenPassword = setupPassword
+		setupPassword = nil
+		if handoff != nil {
+			step = .browserSetup
+			return
+		}
+		Task {
+			await loadAccounts()
+			guard step == .password, let chosenPassword, !chosenPassword.isEmpty else { return }
+			password = chosenPassword
+			connect()
+		}
+	}
+
+	// Without a saved Umbrel to reconnect (first-time onboarding), going back to the list
+	// finds it again as it is now.
+	private var notRecognized: some View {
+		message(
+			title: IdentityChange.title,
+			description: onReconnect == nil ? "Go back and choose your Umbrel again." : IdentityChange.message,
+			actionTitle: onReconnect == nil ? "Go Back" : isReconnecting ? "Reconnecting…" : "Reconnect"
+		) {
+			if onReconnect == nil {
+				onCancel()
+			} else if !isReconnecting {
+				isConfirmingReconnect = true
+			}
 		}
 	}
 
@@ -234,6 +372,8 @@ struct UmbrelSignInForm: View {
 		description: String,
 		actionTitle: String,
 		showsUmbrelMark: Bool = false,
+		secondaryTitle: String? = nil,
+		secondaryAction: @escaping () -> Void = {},
 		action: @escaping () -> Void
 	) -> some View {
 		VStack(spacing: 12) {
@@ -270,6 +410,14 @@ struct UmbrelSignInForm: View {
 					.foregroundStyle(.white)
 					.frame(maxWidth: .infinity, minHeight: 48)
 					.background(connectIndigo, in: .capsule)
+
+				if let secondaryTitle {
+					Button(secondaryTitle, action: secondaryAction)
+						.buttonStyle(.plain)
+						.font(.footnote.weight(.semibold))
+						.foregroundStyle(label)
+						.frame(minHeight: 40)
+				}
 
 				removeButton
 			}
@@ -421,18 +569,30 @@ struct UmbrelSignInForm: View {
 	}
 
 	private func loadAccounts() async {
+		let returningFromBrowser = step == .browserSetup
 		step = .loadingAccounts
 		do {
 			try await onPrepare()
 			accounts = try await Umbreld.listAccounts(target: target)
 		} catch {
+			// Setting up drives or restoring a backup in a browser gives the Umbrel a new
+			// identity, which this sheet can't reach. Going back finds it again as it is now.
+			if returningFromBrowser {
+				onCancel()
+				return
+			}
+			if Umbreld.isIdentityChange(error) {
+				step = .notRecognized
+				return
+			}
 			step = await LocalNetworkProbe.isDenied() ? .localNetworkDenied : .loadFailed
 			return
 		}
 		guard !accounts.isEmpty else {
-			step = .setup
+			step = handoff != nil ? .browserSetup : await setupStep()
 			return
 		}
+		handoff = nil
 
 		selectedAccount = accounts.first(where: { $0.userId == preferredUserId })
 			?? accounts.first(where: { $0.userId == "0" })

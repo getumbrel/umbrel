@@ -113,78 +113,109 @@ export default class DirectorySizes {
 						root,
 					]),
 				)
-				// Rebuild large journals; normal 256-entry scan batches stay incremental.
-				// The fixed cutoff is deliberately simple: deleting 5,000 files can
-				// rebuild a much larger root even when incremental work would be cheaper.
-				// This synchronous rebuild also delays dispatching reads to the readers;
-				// its 1,024-row batches bound memory but do not yield execution. If large
-				// roots with bulk changes become common, benchmark a root-size-aware cutoff.
-				const rebuilds = this.#prepare(
-					`SELECT root_id FROM directory_sizes_dirty_roots
-				UNION SELECT root_id FROM directory_sizes_dirty_entries GROUP BY root_id HAVING COUNT(*) > 4096`,
-				).all() as Array<{root_id: number}>
-				for (const {root_id: rootId} of rebuilds) {
+				// A root whose identity or Trash exclusion changed is rebuilt outright. So
+				// is one with a large journal: a rebuild costs every file in the root
+				// (about 18 seconds for a million on an N100, blocking index reads), while
+				// incremental work costs roughly twice that per journal row (a move records
+				// two, for the old and new path), so a rebuild only wins once the journal
+				// passes half the root's file count. A fixed cutoff would rebuild a
+				// million-entry root to account for one moved 5,000-file folder.
+				const rebuilds = new Set(
+					(this.#prepare('SELECT root_id FROM directory_sizes_dirty_roots').all() as Array<{root_id: number}>).map(
+						({root_id: rootId}) => rootId,
+					),
+				)
+				const journals = this.#prepare(
+					'SELECT root_id, COUNT(*) AS rows FROM directory_sizes_dirty_entries GROUP BY root_id HAVING COUNT(*) > 4096',
+				).all() as Array<{root_id: number; rows: number}>
+				for (const {root_id: rootId, rows} of journals) {
+					// Count no further than the journal needs, so a large root stays cheap
+					const {files} = this.#prepare(
+						"SELECT COUNT(*) AS files FROM (SELECT 1 FROM entries WHERE root_id = ? AND type = 'file' LIMIT ?)",
+					).get(rootId, rows * 2) as {files: number}
+					if (files < rows * 2) rebuilds.add(rootId)
+				}
+				for (const rootId of rebuilds) {
 					const root = roots.get(rootId)
 					if (root) this.#rebuild(root)
 					this.#prepare('DELETE FROM directory_sizes_dirty_entries WHERE root_id = ?').run(rootId)
 				}
 
-				const pending = this.#prepare('SELECT * FROM directory_sizes_dirty_entries').all() as DirtyEntry[]
+				// Everything else stays incremental. Pages bound memory. Each page
+				// recalculates its (directory, identity) pairs from the current entries,
+				// so an identity that spans pages still ends up exact.
 				const directories = new Map<string, number>()
-				const groups = new Map<string, {entry: DirtyEntry; paths: Set<string>}>()
-				for (const entry of pending) {
-					const root = roots.get(entry.root_id)
-					if (!root || !included(root, entry.relative_path)) continue
-					const key = `${entry.root_id}:${entry.identity}`
-					let group = groups.get(key)
-					if (!group) {
-						group = {entry, paths: new Set()}
-						groups.set(key, group)
-					}
-					for (const path of ancestorPaths(entry.relative_path)) group.paths.add(path)
+				let after: Pick<DirtyEntry, 'root_id' | 'relative_path' | 'identity'> = {
+					root_id: -1,
+					relative_path: '',
+					identity: '',
 				}
-				const deltas = new Map<number, number>()
-				for (const {entry, paths} of groups.values()) {
-					const root = roots.get(entry.root_id)!
-					const aliases = (
-						entry.device === '' || entry.inode === ''
-							? this.#prepare(
-									`SELECT id AS entry_id, root_id, relative_path, device, inode, size FROM entries
+				while (true) {
+					const pending = this.#prepare(
+						`SELECT * FROM directory_sizes_dirty_entries
+						WHERE (root_id, relative_path, identity) > (?, ?, ?)
+						ORDER BY root_id, relative_path, identity LIMIT 4096`,
+					).all(after.root_id, after.relative_path, after.identity) as DirtyEntry[]
+					if (pending.length === 0) break
+					after = pending.at(-1)!
+					const groups = new Map<string, {entry: DirtyEntry; paths: Set<string>}>()
+					for (const entry of pending) {
+						const root = roots.get(entry.root_id)
+						if (!root || !included(root, entry.relative_path)) continue
+						const key = `${entry.root_id}:${entry.identity}`
+						let group = groups.get(key)
+						if (!group) {
+							group = {entry, paths: new Set()}
+							groups.set(key, group)
+						}
+						for (const path of ancestorPaths(entry.relative_path)) group.paths.add(path)
+					}
+					const deltas = new Map<number, number>()
+					for (const {entry, paths} of groups.values()) {
+						const root = roots.get(entry.root_id)!
+						const aliases = (
+							entry.device === '' || entry.inode === ''
+								? this.#prepare(
+										`SELECT id AS entry_id, root_id, relative_path, device, inode, size FROM entries
 							WHERE id = ? AND root_id = ? AND type = 'file' AND (device = '' OR inode = '')`,
-								).all(entry.entry_id, entry.root_id)
-							: this.#prepare(
-									`SELECT id AS entry_id, root_id, relative_path, device, inode, size FROM entries
+									).all(entry.entry_id, entry.root_id)
+								: this.#prepare(
+										`SELECT id AS entry_id, root_id, relative_path, device, inode, size FROM entries
 							WHERE root_id = ? AND device = ? AND inode = ? AND type = 'file'`,
-								).all(entry.root_id, entry.device, entry.inode)
-					) as Entry[]
-					for (const path of paths) {
-						const directoryId = this.#directory(root.id, path, directories)
-						const previous = this.#prepare(
-							'SELECT size FROM directory_size_identities WHERE directory_id = ? AND identity = ?',
-						).get(directoryId, entry.identity) as {size: number} | undefined
-						let size: number | undefined
-						for (const alias of aliases) {
-							if (included(root, alias.relative_path) && (path === '' || alias.relative_path.startsWith(`${path}/`))) {
-								size = Math.max(size ?? 0, alias.size)
+									).all(entry.root_id, entry.device, entry.inode)
+						) as Entry[]
+						for (const path of paths) {
+							const directoryId = this.#directory(root.id, path, directories)
+							const previous = this.#prepare(
+								'SELECT size FROM directory_size_identities WHERE directory_id = ? AND identity = ?',
+							).get(directoryId, entry.identity) as {size: number} | undefined
+							let size: number | undefined
+							for (const alias of aliases) {
+								if (
+									included(root, alias.relative_path) &&
+									(path === '' || alias.relative_path.startsWith(`${path}/`))
+								) {
+									size = Math.max(size ?? 0, alias.size)
+								}
 							}
-						}
-						if (size === previous?.size) continue
-						if (size === undefined) {
-							this.#prepare('DELETE FROM directory_size_identities WHERE directory_id = ? AND identity = ?').run(
-								directoryId,
-								entry.identity,
-							)
-						} else {
-							this.#prepare(
-								`INSERT INTO directory_size_identities VALUES(?, ?, ?)
+							if (size === previous?.size) continue
+							if (size === undefined) {
+								this.#prepare('DELETE FROM directory_size_identities WHERE directory_id = ? AND identity = ?').run(
+									directoryId,
+									entry.identity,
+								)
+							} else {
+								this.#prepare(
+									`INSERT INTO directory_size_identities VALUES(?, ?, ?)
 							ON CONFLICT(directory_id, identity) DO UPDATE SET size = excluded.size`,
-							).run(directoryId, entry.identity, size)
+								).run(directoryId, entry.identity, size)
+							}
+							deltas.set(directoryId, (deltas.get(directoryId) ?? 0) + (size ?? 0) - (previous?.size ?? 0))
 						}
-						deltas.set(directoryId, (deltas.get(directoryId) ?? 0) + (size ?? 0) - (previous?.size ?? 0))
 					}
-				}
-				for (const [id, delta] of deltas) {
-					if (delta) this.#prepare('UPDATE directory_sizes SET size = size + ? WHERE id = ?').run(delta, id)
+					for (const [id, delta] of deltas) {
+						if (delta) this.#prepare('UPDATE directory_sizes SET size = size + ? WHERE id = ?').run(delta, id)
+					}
 				}
 				// Drop bookkeeping as soon as its last file identity is removed. Waiting
 				// for directory deletion would leak rows: directory changes aren't journaled.

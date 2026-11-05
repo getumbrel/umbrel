@@ -64,6 +64,11 @@
           mv "$tree/boot/efi.img" "$workdir/efi.img"
           rm -f "$tree/.boot.cat" "$tree/boot.cat"
 
+          # Extracting gives the files the current time, which xorriso would
+          # record, so date them by SOURCE_DATE_EPOCH instead. xorriso takes
+          # the ISO's own dates and IDs from SOURCE_DATE_EPOCH too.
+          find "$tree" "$workdir/efi.img" -exec touch -h -d "@''${SOURCE_DATE_EPOCH}" {} +
+
           # Mirror NixOS's make-iso9660-image options, but expose the EFI image
           # as an appended GPT EFI System Partition instead of an overlapping
           # basic-data partition.

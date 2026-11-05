@@ -1,7 +1,6 @@
 import {Loader2, PlusCircle} from 'lucide-react'
-import {matchSorter} from 'match-sorter'
 import {AnimatePresence, motion} from 'motion/react'
-import {lazy, Suspense, useEffect, useRef, useState} from 'react'
+import {lazy, Suspense, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbCheck, TbCopy, TbInfoCircle, TbTrash} from 'react-icons/tb'
 import {useSearchParams} from 'react-router-dom'
@@ -29,18 +28,17 @@ import {
 	DrawerScroller,
 	DrawerTitle,
 } from '@/components/ui/drawer'
-import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {IconButton} from '@/components/ui/icon-button'
 import {Input, PasswordInput} from '@/components/ui/input'
 import {listClass} from '@/components/ui/list'
-import {ScrollArea} from '@/components/ui/scroll-area'
+import {SearchablePicker} from '@/components/ui/searchable-picker'
 import {Separator} from '@/components/ui/separator'
 import {toast} from '@/components/ui/toast'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {useMemberShares} from '@/features/files/hooks/use-member-shares'
 import {useAppMemberShares} from '@/hooks/use-app-member-shares'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {AccountAvatar} from '@/modules/auth/account-avatar'
 import {AccountAvatarEditor} from '@/modules/auth/account-avatar-editor'
@@ -88,6 +86,7 @@ type LocalView =
 type View = LocalView | {view: 'owner'; panel: OwnerPanel}
 
 const ownerPanels = new Set<OwnerPanel>(['overview', 'name', 'password', 'sessions'])
+const MIN_PASSWORD_LENGTH = 6
 
 function isOwnerPanel(value: string | null): value is OwnerPanel {
 	return value !== null && ownerPanels.has(value as OwnerPanel)
@@ -174,7 +173,7 @@ export default function UsersDialog() {
 	const dialogProps = useSettingsDialogProps()
 	const utils = trpcReact.useUtils()
 	const homeDirectoryName = useHomeDirectoryName()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const [searchParams, setSearchParams] = useSearchParams()
 	const [localView, setLocalView] = useState<LocalView>({view: 'list'})
 	const ownerPanel = searchParams.get('ownerPanel')
@@ -182,6 +181,7 @@ export default function UsersDialog() {
 	const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false)
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')
+	const [passwordError, setPasswordError] = useState('')
 	const [avatarFile, setAvatarFile] = useState<File>()
 	const [pickedAppIds, setPickedAppIds] = useState<string[]>([])
 	const [pickedFolders, setPickedFolders] = useState<string[]>([])
@@ -196,12 +196,21 @@ export default function UsersDialog() {
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [resetPassword, setResetPassword] = useState('')
+	const [resetPasswordError, setResetPasswordError] = useState('')
 	const deleteInFlightRef = useRef(false)
 
-	// App picker dropdown with search, same pattern as the backups exclusions picker
-	const [appPickerOpen, setAppPickerOpen] = useState(false)
-	const [appQuery, setAppQuery] = useState('')
-	const appQueryInputRef = useRef<HTMLInputElement>(null)
+	// Every view takes its turn in the same scroller. Open each one at its top, as a
+	// new page would, instead of wherever the previous view was left scrolled to.
+	const scrollerRef = useRef<HTMLDivElement>(null)
+	const viewKey =
+		view.view === 'edit'
+			? `edit:${view.userId}:${isManagingSessions}`
+			: view.view === 'owner'
+				? `owner:${view.panel}`
+				: view.view
+	useLayoutEffect(() => {
+		scrollerRef.current?.scrollTo({top: 0})
+	}, [viewKey])
 
 	const setOwnerPanel = (panel: OwnerPanel | null) => {
 		const nextSearchParams = new URLSearchParams(searchParams)
@@ -209,15 +218,6 @@ export default function UsersDialog() {
 		else nextSearchParams.delete('ownerPanel')
 		setSearchParams(nextSearchParams, {replace: true})
 	}
-
-	useEffect(() => {
-		if (!appPickerOpen) return
-		const timer = window.setTimeout(() => {
-			appQueryInputRef.current?.focus()
-			appQueryInputRef.current?.select()
-		}, 0)
-		return () => window.clearTimeout(timer)
-	}, [appPickerOpen])
 
 	const accountsQ = trpcReact.user.listAccounts.useQuery()
 	const accounts = accountsQ.data ?? []
@@ -270,6 +270,7 @@ export default function UsersDialog() {
 		setIsDeleteConfirmOpen(false)
 		setName('')
 		setPassword('')
+		setPasswordError('')
 		setAvatarFile(undefined)
 		setPickedAppIds(defaults.pickedAppIds)
 		setPickedFolders(defaults.pickedFolderPaths)
@@ -290,6 +291,7 @@ export default function UsersDialog() {
 	const openEditView = (userId: string) => {
 		setIsDeleteConfirmOpen(false)
 		setResetPassword('')
+		setResetPasswordError('')
 		setIsResettingPassword(false)
 		setIsManagingSessions(false)
 		setLocalView({view: 'edit', userId})
@@ -304,16 +306,25 @@ export default function UsersDialog() {
 		setIsDeleteConfirmOpen(false)
 		setAvatarFile(undefined)
 		setResetPassword('')
+		setResetPasswordError('')
 		setIsResettingPassword(false)
 		setIsManagingSessions(false)
 		setLocalView({view: 'list'})
 		setOwnerPanel(null)
 	}
 
+	// The message for a password under the minimum, or '' when it is long enough
+	const passwordLengthError = (value: string) =>
+		value.length < MIN_PASSWORD_LENGTH ? t('change-password.failed.min-length', {characters: MIN_PASSWORD_LENGTH}) : ''
+
 	const handleCreate = async (event: React.FormEvent) => {
 		event.preventDefault()
 		// Creation writes the picked shares, so it also waits for sharesReady
-		if (view.view !== 'add' || !name.trim() || password.length < 6 || isCreating || !sharesReady) return
+		if (view.view !== 'add' || !name.trim() || isCreating || !sharesReady) return
+
+		const lengthError = passwordLengthError(password)
+		setPasswordError(lengthError)
+		if (lengthError) return
 
 		setIsCreating(true)
 		const selectedAvatarFile = avatarFile
@@ -421,7 +432,11 @@ export default function UsersDialog() {
 
 	const handleResetPassword = async (event: React.FormEvent) => {
 		event.preventDefault()
-		if (!editingMember || resetPassword.length < 6 || resetUserPassword.isPending) return
+		if (!editingMember || resetUserPassword.isPending) return
+
+		const lengthError = passwordLengthError(resetPassword)
+		setResetPasswordError(lengthError)
+		if (lengthError) return
 
 		try {
 			await resetUserPassword.mutateAsync({userId: editingMember.userId, password: resetPassword})
@@ -568,64 +583,24 @@ export default function UsersDialog() {
 	}))
 
 	const addAppMenu = (
-		<DropdownMenu
-			open={appPickerOpen}
-			onOpenChange={(open) => {
-				setAppPickerOpen(open)
-				if (!open) setAppQuery('')
-			}}
+		<SearchablePicker
+			placeholder={t('app-picker.search')}
+			items={pickerApps.map((app) => ({
+				value: app.id,
+				label: app.name || app.id,
+				icon: <AppIcon size={24} src={app.icon} className='shrink-0 rounded-6' />,
+			}))}
+			onSelect={handleAddApp}
 		>
-			<DropdownMenuTrigger asChild>
-				<Button
-					size='sm'
-					aria-label={t('users.add-app')}
-					disabled={availableApps.length === 0 || (view.view === 'edit' && shareControlsDisabled)}
-				>
-					{t('users.add')}
-					<PlusCircle className='h-3 w-3' />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align='end' className='flex max-h-72 min-w-64 flex-col gap-3'>
-				<Input
-					value={appQuery}
-					className='shrink-0'
-					onChange={(e) => setAppQuery(e.target.value)}
-					onKeyDown={(e) => {
-						e.stopPropagation()
-						if (e.key === 'Escape') setAppPickerOpen(false)
-					}}
-					sizeVariant={'short-square'}
-					placeholder={t('app-picker.search')}
-					ref={appQueryInputRef}
-				/>
-				{(() => {
-					const results = matchSorter(pickerApps, appQuery, {
-						keys: ['name', 'id'],
-						threshold: matchSorter.rankings.WORD_STARTS_WITH,
-					})
-					if (results.length === 0) {
-						return <div className='px-2 text-14 text-white/50'>{t('no-results-found')}</div>
-					}
-					return (
-						<ScrollArea className='relative -mx-1 flex h-full flex-col px-1'>
-							{results.map((app) => (
-								<DropdownMenuItem
-									key={app.id}
-									onSelect={() => {
-										handleAddApp(app.id)
-										setAppPickerOpen(false)
-									}}
-									className='flex items-center gap-2'
-								>
-									<AppIcon size={20} src={app.icon} className='rounded-4' />
-									<span className='truncate'>{app.name}</span>
-								</DropdownMenuItem>
-							))}
-						</ScrollArea>
-					)
-				})()}
-			</DropdownMenuContent>
-		</DropdownMenu>
+			<Button
+				size='sm'
+				aria-label={t('users.add-app')}
+				disabled={availableApps.length === 0 || (view.view === 'edit' && shareControlsDisabled)}
+			>
+				{t('users.add')}
+				<PlusCircle className='h-3 w-3' />
+			</Button>
+		</SearchablePicker>
 	)
 
 	const addFolderButton = (
@@ -714,7 +689,7 @@ export default function UsersDialog() {
 		<>
 			<ShareSection
 				kind='apps'
-				compactShareAllLabel={isMobile}
+				compactShareAllLabel={isPhone}
 				shareAll={shareAllAppsOn}
 				disabled={isAddingUser ? undefined : shareControlsDisabled}
 				onShareAllChange={handleToggleAllApps}
@@ -726,7 +701,7 @@ export default function UsersDialog() {
 
 			<ShareSection
 				kind='folders'
-				compactShareAllLabel={isMobile}
+				compactShareAllLabel={isPhone}
 				shareAll={shareAllFoldersOn}
 				showAdditionalSharesWhenSharingAll
 				disabled={isAddingUser ? undefined : shareControlsDisabled}
@@ -761,7 +736,7 @@ export default function UsersDialog() {
 	// still manage their own account if app or folder sharing is unavailable.
 	const content = loadFailed ? (
 		<div className='flex flex-col gap-5'>
-			{!isMobile && (
+			{!isPhone && (
 				<DialogHeader>
 					<h2 className='text-17 leading-snug font-semibold -tracking-2'>{t('users')}</h2>
 					<p className='text-13 leading-tight text-white/40'>{t('users.description')}</p>
@@ -773,7 +748,7 @@ export default function UsersDialog() {
 		<>
 			{showListView && (
 				<div className='flex flex-col gap-5'>
-					{isMobile ? (
+					{isPhone ? (
 						<p className='text-13 leading-tight -tracking-2 text-white/40 opacity-100'>{t('users.description')}</p>
 					) : (
 						<DialogHeader>
@@ -897,7 +872,12 @@ export default function UsersDialog() {
 					</div>
 
 					<div className='-mt-2 flex flex-col gap-1.5'>
-						<PasswordInput label={t('users.password-placeholder')} value={password} onValueChange={setPassword} />
+						<PasswordInput
+							label={t('users.password-placeholder')}
+							value={password}
+							onValueChange={setPassword}
+							error={passwordError}
+						/>
 						<InfoNote>{t('users.password-helper')}</InfoNote>
 					</div>
 
@@ -912,7 +892,7 @@ export default function UsersDialog() {
 							type='submit'
 							variant='primary'
 							className='relative'
-							disabled={!name.trim() || password.length < 6 || isCreating || !sharesReady}
+							disabled={!name.trim() || isCreating || !sharesReady}
 						>
 							<span className={cn(isCreating && 'opacity-0')}>{t('users.create-user')}</span>
 							{isCreating && <Loader2 className='absolute size-4 animate-spin' />}
@@ -967,15 +947,20 @@ export default function UsersDialog() {
 					<div className='flex flex-col gap-5'>
 						<div className='flex flex-col gap-3'>
 							<BackButton onClick={returnToList}>{t('users')}</BackButton>
-							<div className={cn('flex gap-4 pt-2', isMobile ? 'flex-wrap' : 'items-center')}>
-								<AccountAvatarEditor account={editingMember} size={72} />
-								<div className='min-w-0 flex-1'>
-									<h2 className='text-20 truncate leading-snug font-semibold -tracking-2'>{editingMember.name}</h2>
-									<p className='text-13 leading-normal tracking-normal text-white/40 opacity-100'>
-										{t('users.member')}
-									</p>
+							{/* The buttons sit beside the name while the whole name fits next to
+							    them; otherwise (a long name, a phone, a longer language) they move
+							    to a row of their own, at its end */}
+							<div className='flex flex-wrap items-center gap-x-4 gap-y-3 pt-2'>
+								<div className='flex min-w-0 flex-auto items-center gap-4'>
+									<AccountAvatarEditor account={editingMember} size={72} />
+									<div className='min-w-0'>
+										<h2 className='text-20 truncate leading-snug font-semibold -tracking-2'>{editingMember.name}</h2>
+										<p className='text-13 leading-normal tracking-normal text-white/40 opacity-100'>
+											{t('users.member')}
+										</p>
+									</div>
 								</div>
-								<div className={cn('flex shrink-0 items-center gap-2', isMobile && 'w-full justify-end')}>
+								<div className='ml-auto flex shrink-0 items-center gap-2'>
 									<Button size='default' className='shrink-0' onClick={() => setIsManagingSessions(true)}>
 										{t('active-logins.title')}
 									</Button>
@@ -1015,13 +1000,14 @@ export default function UsersDialog() {
 											label={t('users.new-password-placeholder')}
 											value={resetPassword}
 											onValueChange={setResetPassword}
+											error={resetPasswordError}
 										/>
 										<InfoNote>{t('users.reset-password-helper')}</InfoNote>
 										<Button
 											type='submit'
 											variant='primary'
 											className='relative self-center'
-											disabled={resetPassword.length < 6 || resetUserPassword.isPending}
+											disabled={resetUserPassword.isPending}
 										>
 											<span className={cn(resetUserPassword.isPending && 'opacity-0')}>
 												{t('users.reset-password-confirm')}
@@ -1130,7 +1116,7 @@ export default function UsersDialog() {
 								: t('account')
 						: t('users.description')
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<>
 				<Drawer {...dialogProps}>
@@ -1139,7 +1125,7 @@ export default function UsersDialog() {
 							<DrawerTitle>{dialogTitle}</DrawerTitle>
 							<DrawerDescription className='sr-only'>{dialogDescription}</DrawerDescription>
 						</DrawerHeader>
-						<DrawerScroller>{content}</DrawerScroller>
+						<DrawerScroller ref={scrollerRef}>{content}</DrawerScroller>
 					</DrawerContent>
 				</Drawer>
 				{folderPicker}
@@ -1151,7 +1137,7 @@ export default function UsersDialog() {
 	return (
 		<>
 			<Dialog {...dialogProps}>
-				<DialogScrollableContent showClose>
+				<DialogScrollableContent viewportRef={scrollerRef}>
 					<DialogHeader className='sr-only'>
 						<DialogTitle>{dialogTitle}</DialogTitle>
 						<DialogDescription>{dialogDescription}</DialogDescription>

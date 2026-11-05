@@ -1,13 +1,10 @@
 import Photos
 import SwiftUI
 import UmbrelKit
+import UserNotifications
 
 // The Profile sheet: a settings sheet presented over the tabs — device
-// card, photo-backup settings, notification alerts, iOS permissions, sign out and version.
-//
-// What's real: the device card (name, render, model, storage, host/IP), photo-library
-// permission, the photo/video backup toggles (they configure PhotoKit's background
-// upload extension), Sign out and the version footer.
+// card, photo-backup settings, iOS permissions, sign out and version.
 enum ProfileDestination: Hashable {
 	case remoteAccess
 	case connection
@@ -30,7 +27,6 @@ struct ProfileSheet: View {
 						.padding(.bottom, 10)
 					ConnectionSection()
 					PhotosSection()
-					NotificationSection()
 					PermissionsSection()
 					signOutButton
 						.padding(.vertical, 10)
@@ -70,8 +66,7 @@ struct ProfileSheet: View {
 				.truncationMode(.tail)
 				.multilineTextAlignment(.center)
 			VStack(spacing: 10) {
-				UmbrelDeviceRender(model: model.device?.model)
-					.frame(height: 97)
+				UmbrelDeviceRender(model: model.device?.model, placement: .profile)
 					.shadow(color: .black.opacity(0.16), radius: 8, y: 16)
 				VStack(spacing: 4) {
 					Text(deviceLine)
@@ -126,10 +121,14 @@ struct ProfileSheet: View {
 		}
 	}
 
+	// App Review requires a privacy policy link in the app. The same policy umbrelOS links to.
+	// At large text sizes the link wraps to the next line whole.
 	private var footer: some View {
-		Text("Umbrel, Inc. \u{B7} Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+		let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+		return Text("Umbrel, Inc. \u{B7} Version \(version) \u{B7} [Privacy\u{00A0}Policy](https://umbrel.com/legal/privacy)")
 			.font(.footnote)
 			.foregroundStyle(Theme.gray)
+			.tint(.white.opacity(0.65))
 	}
 }
 
@@ -165,7 +164,7 @@ private struct ConnectionSection: View {
 			case .tailscale: "Tailscale"
 			case nil: "Connected"
 			}
-		case .unavailable, .localNetworkDenied: "Offline"
+		case .unavailable, .localNetworkDenied: model.identityChanged ? "Can’t verify" : "Offline"
 		}
 	}
 }
@@ -361,7 +360,7 @@ private struct ConnectionDetailsPage: View {
 			case .tailscale: "network"
 			case nil: "network"
 			}
-		case .unavailable: "wifi.exclamationmark"
+		case .unavailable: model.identityChanged ? "lock.trianglebadge.exclamationmark" : "wifi.exclamationmark"
 		case .localNetworkDenied: "wifi.slash"
 		case .unverified: "ellipsis"
 		}
@@ -375,7 +374,7 @@ private struct ConnectionDetailsPage: View {
 			case .tailscale: "Connected through Tailscale"
 			case nil: "Connected"
 			}
-		case .unavailable: "Not connected"
+		case .unavailable: model.identityChanged ? "Can’t verify" : "Not connected"
 		case .localNetworkDenied: "Local Network Access Off"
 		case .unverified: "Checking connection"
 		}
@@ -389,6 +388,8 @@ private struct ConnectionDetailsPage: View {
 			case .tailscale: "This iPhone is connected through your private Tailscale network."
 			case nil: "This iPhone is securely connected to your Umbrel."
 			}
+		case .unavailable where model.identityChanged:
+			IdentityChange.message
 		case .unavailable:
 			if model.hasKnownTailscaleAddress {
 				"Make sure your Umbrel is turned on. Connect this iPhone to the same local network, or turn on Tailscale."
@@ -412,9 +413,11 @@ private struct ConnectionDetailsPage: View {
 private struct PhotosSection: View {
 	@Environment(MainModel.self) private var model
 	@Environment(\.openURL) private var openURL
+	@State private var showsInfo = false
 
 	var body: some View {
-		SettingsSection("Photos") {
+		// The same How it works as Library
+		SettingsSection("Photos", learnMore: { showsInfo = true }) {
 			if let destination = model.otherPhotoBackupDestinationName {
 				PhotoBackupDestinationRow(destination: destination)
 			} else {
@@ -433,7 +436,56 @@ private struct PhotosSection: View {
 				}
 				SettingsDivider()
 				cellularUploadRow
+				if model.backupPhotosEnabled || model.backupVideosEnabled, let route = model.photoBackupRoute {
+					SettingsDivider()
+					backgroundBackupRow(route)
+				}
+				if let lastUploadedAt = model.photoBackup.statistics?.lastUploadedAt {
+					SettingsDivider()
+					SettingsRow(icon: "clock.arrow.circlepath", title: "Last backed up") {
+						SettingsValue(text: Self.lastBackupText(lastUploadedAt))
+					}
+				}
 			}
+		}
+		.sheet(isPresented: $showsInfo) {
+			PhotoBackupInfoSheet(sourceName: model.photoBackupSourceName)
+				.task { await model.refreshPhotoBackupSourceName() }
+		}
+	}
+
+	// Like iCloud Backup's "Last successful backup": a date, which reads as a fact
+	// rather than an age that can look like a stall after a quiet few days.
+	static func lastBackupText(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+		let time = date.formatted(date: .omitted, time: .shortened)
+		if calendar.isDateInToday(date) { return "Today at \(time)" }
+		if calendar.isDateInYesterday(date) { return "Yesterday at \(time)" }
+		let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day ?? 0
+		if days < 7 { return "\(date.formatted(.dateTime.weekday(.wide))) at \(time)" }
+		return calendar.isDate(date, equalTo: now, toGranularity: .year)
+			? date.formatted(.dateTime.month(.abbreviated).day())
+			: date.formatted(.dateTime.month(.abbreviated).day().year())
+	}
+
+	// The app backs up while it's open and overnight. With Tailscale, iOS also does while
+	// it's closed, wherever the iPhone is.
+	@ViewBuilder
+	private func backgroundBackupRow(_ route: PhotoBackupConfiguration.Route) -> some View {
+		if route == .tailscale, model.photoBackupBackgroundRefreshUnavailable {
+			Button(action: openSettings) {
+				SettingsRow(icon: "network", title: "Back up from anywhere") {
+					SettingsValue(text: "Off", chevron: true)
+				}
+			}
+			.buttonStyle(.plain)
+			.accessibilityHint("Background App Refresh is off. Opens iPhone Settings")
+		} else {
+			NavigationLink(value: ProfileDestination.remoteAccess) {
+				SettingsRow(icon: "network", title: "Back up from anywhere") {
+					SettingsValue(text: route == .tailscale ? "On" : "Set Up", chevron: true)
+				}
+			}
+			.buttonStyle(.plain)
 		}
 	}
 
@@ -479,6 +531,8 @@ private struct PhotosSection: View {
 }
 
 private struct PhotoBackupDestinationRow: View {
+	@Environment(MainModel.self) private var model
+	@State private var isConfirmingSwitch = false
 	let destination: String
 
 	var body: some View {
@@ -488,49 +542,33 @@ private struct PhotoBackupDestinationRow: View {
 				.foregroundStyle(.white.opacity(0.9))
 				.frame(width: 30)
 			VStack(alignment: .leading, spacing: 4) {
-				Text("Photo Backup is enabled for \(destination)")
+				Text("Photo Backup is on for \(destination)")
 					.font(.subheadline.weight(.medium))
 					.foregroundStyle(.white.opacity(0.9))
-				Text("Turn off Photo Backup there to use this Umbrel instead.")
+				Text("This iPhone can back up to one Umbrel at a time.")
 					.font(.footnote.weight(.medium))
 					.foregroundStyle(Theme.gray)
 					.fixedSize(horizontal: false, vertical: true)
+				if !model.canSwitchPhotoBackupHere {
+					Text("Allow Full Photos access to back up to this Umbrel instead.")
+						.font(.footnote.weight(.medium))
+						.foregroundStyle(Theme.gray)
+						.fixedSize(horizontal: false, vertical: true)
+				} else {
+					PillButton(
+						title: model.photoBackupSetupInProgress ? "Switching backup\u{2026}" : "Back Up to This Umbrel",
+						isLoading: model.photoBackupSetupInProgress
+					) { isConfirmingSwitch = true }
+				}
 			}
 			.frame(maxWidth: .infinity, alignment: .leading)
 		}
 		.padding(.leading, 8)
 		.padding(.trailing, 12)
-		.padding(.vertical, 12)
-	}
-}
-
-// MARK: - Notifications
-
-// Static preview for the notification settings shown under the "Coming Soon" badge.
-
-private struct NotificationSection: View {
-	var body: some View {
-		SettingsSection("Notifications", badge: "Coming Soon") {
-			Group {
-				SettingsRow(icon: "power", title: "Device offline alert") {
-					SettingsToggle("Device offline alert", isOn: .constant(false))
-				}
-				SettingsDivider()
-				SettingsRow(icon: "externaldrive.trianglebadge.exclamationmark", title: "Storage alert") {
-					SettingsToggle("Storage alert", isOn: .constant(false))
-				}
-				SettingsDivider()
-				SettingsRow(icon: "arrow.up.circle.fill", title: "umbrelOS updates") {
-					SettingsToggle("umbrelOS updates", isOn: .constant(false))
-				}
-				SettingsDivider()
-				SettingsRow(icon: "app.badge", title: "umbrelOS app updates") {
-					SettingsToggle("umbrelOS app updates", isOn: .constant(false))
-				}
-			}
-			.disabled(true)
-			.opacity(0.45)
-		}
+		.padding(.top, 12)
+		// PillButton keeps a 7pt margin under its capsule for its 44pt tap target
+		.padding(.bottom, model.canSwitchPhotoBackupHere ? 5 : 12)
+		.photoBackupSwitchConfirmation(isPresented: $isConfirmingSwitch, destination: destination)
 	}
 }
 
@@ -542,6 +580,8 @@ private struct PermissionsSection: View {
 	@Environment(\.scenePhase) private var scenePhase
 
 	@State private var photosStatus: PHAuthorizationStatus = .notDetermined
+	// Read asynchronously, so nothing shows until it's known
+	@State private var notificationStatus: UNAuthorizationStatus?
 
 	var body: some View {
 		SettingsSection("Permissions") {
@@ -553,9 +593,7 @@ private struct PermissionsSection: View {
 				localNetworkAccessory
 			}
 			SettingsDivider()
-			SettingsRow(icon: "bell", title: "Notifications") {
-				SettingsValue(text: "Coming Soon")
-			}
+			SettingsRow(icon: "bell", title: "Notifications") { notificationsAccessory }
 		}
 		.onAppear(perform: refreshStatus)
 		.onChange(of: scenePhase) { _, phase in
@@ -566,38 +604,50 @@ private struct PermissionsSection: View {
 
 	private func refreshStatus() {
 		photosStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+		Task { notificationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus }
 	}
 
 	// Before the first request, show Apple's permission prompt because Settings doesn't
-	// list Photos yet. After limited or denied access, Settings is the upgrade path.
-	// Limited access can't run automatic background backup, so offer the direct
-	// upgrade path instead of presenting it as an enabled state.
+	// list Photos yet. After that, Settings is where access changes. Limited access
+	// can't run automatic background backup, so it isn't presented as an enabled state.
 	@ViewBuilder
 	private var photosAccessory: some View {
 		switch photosStatus {
 		case .authorized:
-			fullAccessStatus
+			accessButton("Full Access") { openSettings() }
 		case .limited:
-			photoAccessButton("Limited") { openSettings() }
+			accessButton("Limited") { openSettings() }
 		case .notDetermined:
-			photoAccessButton("Set Up") {
+			accessButton("Set Up") {
 				Task { photosStatus = await PHPhotoLibrary.requestAuthorization(for: .readWrite) }
 			}
 		default:
-			photoAccessButton("Off") { openSettings() }
+			accessButton("Off") { openSettings() }
 		}
 	}
 
-	private var fullAccessStatus: some View {
-		HStack(spacing: 4) {
-			Image(systemName: "checkmark")
-			Text("Full Access")
+	// The photo backup reminder uses these. As with Photos, Settings doesn't list
+	// notifications before the first request, so that's asked here.
+	@ViewBuilder
+	private var notificationsAccessory: some View {
+		switch notificationStatus {
+		case nil:
+			EmptyView()
+		case .authorized, .provisional, .ephemeral:
+			accessButton("On") { openSettings() }
+		case .notDetermined:
+			accessButton("Set Up") {
+				Task {
+					_ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+					refreshStatus()
+				}
+			}
+		default:
+			accessButton("Off") { openSettings() }
 		}
-		.font(.subheadline.weight(.medium))
-		.foregroundStyle(Theme.gray)
 	}
 
-	private func photoAccessButton(_ title: String, action: @escaping () -> Void) -> some View {
+	private func accessButton(_ title: String, action: @escaping () -> Void) -> some View {
 		Button(action: action) {
 			SettingsValue(text: title, chevron: true)
 		}

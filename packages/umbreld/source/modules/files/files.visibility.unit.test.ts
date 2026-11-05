@@ -1,8 +1,8 @@
 import {describe, expect, test, vi} from 'vitest'
 
-import Files from './files.js'
+import Files from './files.ts'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 const createFiles = () =>
 	new Files({

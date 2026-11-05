@@ -5,7 +5,7 @@ import path from 'node:path'
 import fse from 'fs-extra'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from './create-test-umbreld.js'
+import {createTestVm} from './create-test-umbreld.ts'
 
 describe.sequential('VM QMP isolation', () => {
 	let first: Awaited<ReturnType<typeof createTestVm>>

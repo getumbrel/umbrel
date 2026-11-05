@@ -58,6 +58,17 @@ bash scripts/generate-appcast.sh /path/to/umbrel-macos-updates
 The signing key remains in Keychain under `umbrel-macos-updates`. Upload immutable
 artifacts first and publish `appcast.xml` last.
 
+Release notes go in a Markdown file next to the DMG with the same name, for example
+`Umbrel-0.1.3-27.md`. The script embeds them in the appcast, and the update window
+shows them under a collapsed **What's New in 0.1.3**, scrolling after about eight
+lines: before updating, and from Check for Updates once that version is installed.
+Keep them short and for users: three or four lines, each about something people will
+notice, in their words and without internals, with anything else under "Other fixes
+and improvements". One note per line, each starting with `•` or `-` so it shows as a
+bullet. Inline Markdown such as bold and links works; headings show as plain text.
+Make each version's notes stand on their own, because someone updating from an older
+version sees only the newest version's notes.
+
 ## Runtime model
 
 - mDNS provides candidates; UmbrelKit verifies identity before trusting them.

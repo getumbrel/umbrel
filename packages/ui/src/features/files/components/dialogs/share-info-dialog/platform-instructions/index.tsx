@@ -5,7 +5,7 @@ import {WindowsInstructions} from '@/features/files/components/dialogs/share-inf
 import {Platform} from '@/features/files/components/dialogs/share-info-dialog/platform-selector'
 
 interface PlatformInstructionsProps {
-	platform: Platform
+	platform: Platform | undefined
 	smbUrl: string
 	username: string
 	password: string
@@ -21,19 +21,19 @@ export function PlatformInstructions({
 	name,
 	sharename,
 }: PlatformInstructionsProps) {
-	if (platform.id === 'macos') {
+	if (platform?.id === 'macos') {
 		return <MacOSInstructions smbUrl={smbUrl} username={username} password={password} name={name} />
 	}
 
-	if (platform.id === 'windows') {
+	if (platform?.id === 'windows') {
 		return <WindowsInstructions smbUrl={smbUrl} username={username} password={password} />
 	}
 
-	if (platform.id === 'ios') {
+	if (platform?.id === 'ios') {
 		return <IOSInstructions smbUrl={smbUrl} username={username} password={password} />
 	}
 
-	if (platform.id === 'umbrelos') {
+	if (platform?.id === 'umbrelos') {
 		return <UmbrelOSInstructions username={username} password={password} sharename={sharename} />
 	}
 

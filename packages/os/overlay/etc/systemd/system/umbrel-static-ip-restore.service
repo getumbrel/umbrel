@@ -1,0 +1,10 @@
+[Unit]
+Description=Restore static IP settings before starting NetworkManager
+Before=NetworkManager.service
+
+[Service]
+ExecStart=bash /opt/umbrel-static-ip-restore/umbrel-static-ip-restore
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

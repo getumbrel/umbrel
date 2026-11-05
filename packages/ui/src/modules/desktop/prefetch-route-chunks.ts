@@ -1,3 +1,5 @@
+import {prefetchGlobalDialog} from '@/modules/global-dialogs'
+
 // Warm the lazy route chunks behind the dock icons so the first click mounts
 // without a network wait. These are static JS files — no auth required to
 // fetch them. Called on desktop idle and again when the pointer reaches the
@@ -15,4 +17,5 @@ export function prefetchRouteChunks() {
 	import('@/features/machines')
 	import('@/features/machines/components/machines-index')
 	import('@/routes/edit-widgets')
+	prefetchGlobalDialog('live-usage')
 }

@@ -107,7 +107,7 @@ export function StorageModeDisplay({
 							type='button'
 							onClick={() => setInfoDialogOption(option)}
 							className={cn(
-								'flex flex-1 items-center justify-center gap-2 rounded-17 border px-3 py-2.5 transition-colors',
+								'flex flex-1 items-center justify-center gap-2 rounded-17 border px-3 py-2.5 outline-hidden transition-colors',
 								isSelected ? 'border-brand bg-brand/15' : 'border-transparent',
 							)}
 						>
@@ -126,30 +126,44 @@ export function StorageModeDisplay({
 				<div className='grid grid-cols-2 gap-2'>
 					{modeOptions.map((option) => {
 						const isSelected = value === option.id
+						// Only the inactive card is an action. Its info icon shares the same
+						// button so there are no nested buttons or duplicate tab stops.
+						const Card = isSelected ? 'div' : 'button'
 						return (
-							<div
+							<Card
 								key={option.id}
+								type={isSelected ? undefined : 'button'}
+								aria-label={isSelected ? undefined : t(option.titleKey)}
+								aria-haspopup={isSelected ? undefined : 'dialog'}
+								onClick={isSelected ? undefined : () => setInfoDialogOption(option)}
 								className={cn(
-									'flex flex-col gap-2 rounded-17 border px-4 py-3 text-left',
+									'flex flex-col gap-2 rounded-17 border px-4 py-3 text-left outline-hidden',
 									isSelected ? 'border-brand bg-brand/15' : 'border-transparent',
+									!isSelected && 'cursor-pointer',
 								)}
 							>
-								<div className='flex items-center gap-2'>
+								<span className='flex w-full items-center gap-2'>
 									<span className={cn(isSelected ? 'text-white' : 'text-white/80')}>{option.icon}</span>
 									<span className={cn('text-15 font-semibold', isSelected ? 'text-white' : 'text-white/80')}>
 										{t(option.titleKey)}
 									</span>
-									<button
-										type='button'
-										onClick={() => setInfoDialogOption(option)}
-										className='-ml-1 text-white/40 transition-colors hover:text-white/60'
-									>
-										<TbInfoCircle className='size-4' />
-									</button>
+									{isSelected ? (
+										<button
+											type='button'
+											aria-label={t(option.infoTitleKey)}
+											aria-haspopup='dialog'
+											onClick={() => setInfoDialogOption(option)}
+											className='-ml-1 text-white/40 outline-hidden transition-colors hover:text-white/60'
+										>
+											<TbInfoCircle className='size-4' />
+										</button>
+									) : (
+										<TbInfoCircle className='-ml-1 size-4 text-white/40' />
+									)}
 									{isSelected && <TbCircleCheckFilled className='ml-auto size-[18px] text-brand' />}
-								</div>
-								<p className='text-13 leading-snug font-medium text-white/60'>{t(option.descriptionKey)}</p>
-							</div>
+								</span>
+								<span className='text-13 leading-snug font-medium text-white/60'>{t(option.descriptionKey)}</span>
+							</Card>
 						)
 					})}
 				</div>
@@ -182,7 +196,7 @@ export function StorageModeDisplay({
 					</div>
 
 					<DialogFooter>
-						<Button variant='default' onClick={() => setInfoDialogOption(null)}>
+						<Button variant='default' size='dialog' onClick={() => setInfoDialogOption(null)}>
 							{t('done')}
 						</Button>
 					</DialogFooter>

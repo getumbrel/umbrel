@@ -23,10 +23,8 @@ export function useHasMembers() {
 	return (accountsQ.data ?? []).some((account) => account.userId !== OWNER_USER_ID)
 }
 
-// Share lists cap at ~3.5 rows and scroll so dialogs don't grow unbounded;
-// the gutter stays reserved so crossing the threshold doesn't reflow the rows
-export const shareListClass = () =>
-	cn('umbrel-stable-gutter max-h-[196px] divide-y divide-white/6 overflow-y-auto rounded-12 bg-white/6')
+// Share lists cap at ~3.5 rows and scroll so dialogs don't grow unbounded.
+export const shareListClass = () => cn('max-h-[196px] divide-y divide-white/6 overflow-y-auto rounded-12 bg-white/6')
 
 // Compact share-all control that sits in a section header next to the Add
 // button: small switch, label, and the helper copy tucked into an info tooltip

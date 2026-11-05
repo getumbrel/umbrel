@@ -6,13 +6,15 @@ import {useTranslation} from 'react-i18next'
 
 import {cn} from '@/lib/utils'
 import {BackLink} from '@/modules/immersive-picker'
+import {usePickerTarget} from '@/modules/immersive-picker/target'
 import {RouterInput} from '@/trpc/trpc'
 
 export type SystemLogType = RouterInput['system']['logs']['type']
 
 export function TroubleshootTitleBackLink() {
 	const {t} = useTranslation()
-	return <BackLink to='/settings/troubleshoot'>{t('troubleshoot')}</BackLink>
+	const {linkToTarget} = usePickerTarget('troubleshoot')
+	return <BackLink to={linkToTarget({type: 'picker'})}>{t('troubleshoot')}</BackLink>
 }
 
 export const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
@@ -29,10 +31,14 @@ export const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
 
 export function useScrollToBottom(ref: React.RefObject<HTMLDivElement | null>, deps: any[]) {
 	useEffect(() => {
-		setTimeout(() => {
+		const timeout = setTimeout(() => {
 			if (!ref.current) return
+			// Don't move the logs while the user is selecting text to copy.
+			const selection = window.getSelection()
+			if (selection && !selection.isCollapsed && selection.containsNode(ref.current, true)) return
 			ref.current.scrollTop = ref.current.scrollHeight + 100
 		}, 300)
+		return () => clearTimeout(timeout)
 	}, [ref, ...deps])
 }
 
@@ -41,10 +47,13 @@ export function LogResults({children}: {children: string}) {
 	useScrollToBottom(ref, [children])
 
 	return (
-		<div ref={ref} className='umbrel-stable-gutter w-full flex-1 overflow-auto rounded-10 bg-black px-5 py-4'>
+		<div
+			ref={ref}
+			data-native-context-menu
+			className='umbrel-stable-gutter w-full flex-1 overflow-auto rounded-10 bg-black px-5 py-4'
+		>
 			{/* Allow text selection for copying logs/errors */}
 			<div
-				key={children}
 				className={cn(
 					'font-mono text-xs whitespace-pre text-white/50 select-text',
 					children && 'animate-in delay-500 fill-mode-both fade-in',

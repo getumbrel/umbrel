@@ -127,12 +127,28 @@ export function LivePhoto({id, autoPlay}: {id: string; autoPlay: boolean}) {
 	)
 
 	const startHold = (event: React.PointerEvent) => {
-		if (!event.isPrimary || event.button !== 0 || holdRef.current) return
+		// A second finger makes it a pinch (the stage's zoom): no hold
+		if (!event.isPrimary) {
+			const hold = holdRef.current
+			holdRef.current = null
+			if (hold) clearTimeout(hold.timer)
+			if (hold?.fired) end()
+			return
+		}
+		if (event.button !== 0 || holdRef.current) return
 		// A press on a chip is the chip's (its click, its hover)
 		if ((event.target as Element).closest('button')) return
 		const surface = event.currentTarget as HTMLElement
+		// Zoomed, a press is a pan (and the clip is drawn at the still's size):
+		// no hold — checked again when it would fire, a zoom may begin under it
+		const zoomed = () => !!surface.closest('[data-zoomed]')
+		if (zoomed()) return
 		const hold = {pointerId: event.pointerId, x0: event.clientX, y0: event.clientY, timer: 0, fired: false}
 		hold.timer = window.setTimeout(() => {
+			if (zoomed()) {
+				holdRef.current = null
+				return
+			}
 			hold.fired = true
 			surface.setPointerCapture(hold.pointerId)
 			begin('hold')

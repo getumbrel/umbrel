@@ -12,9 +12,9 @@ import {promisify} from 'node:util'
 import {afterAll, afterEach, beforeAll, expect, test, vi} from 'vitest'
 import {WebSocket, WebSocketServer} from 'ws'
 
-import LanIngress from './lan-ingress.js'
-import {forwardTcp} from './forward-tcp.js'
-import {readNativeTlsPrelude, MAX_PENDING_NATIVE_TLS_CONNECTIONS} from './native-tls-preread.js'
+import LanIngress from './lan-ingress.ts'
+import {forwardTcp} from './forward-tcp.ts'
+import {readNativeTlsPrelude, MAX_PENDING_NATIVE_TLS_CONNECTIONS} from './native-tls-preread.ts'
 
 const hostname = '192-168-1-100.server-id.plex.direct'
 const logger = {createChildLogger: () => logger, verbose: () => {}, log: () => {}, error: () => {}}
@@ -116,10 +116,18 @@ async function setup(enableNativeTls = true) {
 	)
 }
 
-function request(servername: string, ca: Buffer, body = '') {
+function request(servername: string, ca: Buffer, body = '', identity = servername) {
 	return new Promise<string>((resolve, reject) => {
 		const req = https.request(
-			{hostname: '127.0.0.1', port: muxPort, servername, ca, method: 'POST', agent: false},
+			{
+				hostname: '127.0.0.1',
+				port: muxPort,
+				servername,
+				ca,
+				method: 'POST',
+				agent: false,
+				checkServerIdentity: (_name, cert) => tls.checkServerIdentity(identity, cert),
+			},
 			(response) => {
 				const chunks: Buffer[] = []
 				response.on('data', (chunk) => chunks.push(chunk))
@@ -140,9 +148,18 @@ test('verifies the native certificate for declared SNI and Umbrel certificate fo
 	expect(await (await fetch(`http://127.0.0.1:${muxPort}`, {method: 'POST', body})).text()).toBe(`http:${body}`)
 }, 10_000)
 
+test('passes TLS without SNI through to the native certificate', async () => {
+	await setup()
+	const servernames: unknown[] = []
+	httpsBackend.on('secureConnection', (socket: tls.TLSSocket) => servernames.push(socket.servername))
+	// An empty servername makes Node omit SNI, like Apple's stack for an IP literal.
+	expect(await request('', nativeCert, 'payload', hostname)).toBe('native:payload')
+	expect(servernames).toEqual([false])
+}, 10_000)
+
 test.each([
 	{servername: 'unknown.example', enableNativeTls: true},
-	{servername: '', enableNativeTls: true},
+	{servername: '', enableNativeTls: false},
 	{servername: hostname, enableNativeTls: false},
 ])(
 	'keeps Umbrel TLS for SNI "$servername" with native TLS enabled: $enableNativeTls',

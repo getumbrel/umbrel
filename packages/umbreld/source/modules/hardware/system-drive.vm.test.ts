@@ -1,7 +1,7 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
 
 // System drive detection and protection on custom hardware: a NAS that boots from a
 // visible NVMe disk (unlike Umbrel Pro's eMMC, which never appears in internal storage).
@@ -9,7 +9,7 @@ import {createTestVm} from '../test-utilities/create-test-umbreld.js'
 // directory lives on the boot disk) and after (the data directory resolves to the ZFS
 // pool and / is an overlay, so detection relies on the rugix config partition), and every
 // RAID mutation must refuse to touch it.
-describe('System drive detection and protection (HDD pool)', () => {
+describe.each(driveBuses)('System drive detection and protection (%s HDD pool)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let bootDriveId: string
 	let firstHddId: string
@@ -33,8 +33,8 @@ describe('System drive detection and protection (HDD pool)', () => {
 	})
 
 	test('boots a NAS VM with an NVMe boot disk and two HDD bays', async () => {
-		await umbreld.vm.addHdd({slot: 1})
-		await umbreld.vm.addHdd({slot: 2})
+		await umbreld.vm.addHdd({slot: 1, bus})
+		await umbreld.vm.addHdd({slot: 2, bus})
 		await umbreld.vm.powerOn()
 	})
 

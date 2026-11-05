@@ -12,6 +12,7 @@ import {canPerformFileOperation} from '@/features/files/utils/file-capabilities'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import type {Machine} from '@/features/machines/types'
 import {cn} from '@/lib/utils'
+import {isBeneathModal} from '@/utils/is-beneath-modal'
 
 interface FileItemProps {
 	item: FileSystemItem
@@ -57,6 +58,8 @@ const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machi
 
 	// Disconnected entries stay selectable for removal, but cannot transfer files.
 	const isItemInteractive = !item.isDisconnected
+
+	const itemRef = useRef<HTMLDivElement>(null)
 
 	// Long press detection to select the item on mobile
 	// since onContextMenu isn't triggered on mobile
@@ -190,6 +193,9 @@ const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machi
 			// don't trigger the rename if the user Entered in the input
 			if (isInInput(event)) return
 
+			// nor if the Enter was for a dialog or menu open over the listing
+			if (isBeneathModal(itemRef.current, event)) return
+
 			event.preventDefault()
 
 			setIsEditingName(true)
@@ -206,6 +212,7 @@ const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machi
 
 	return (
 		<div
+			ref={itemRef}
 			data-selected={isItemSelected(item) ? 'true' : 'false'}
 			data-selection-position={selectionPosition}
 			className={cn(
@@ -236,6 +243,8 @@ const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machi
 					<div
 						onClick={(e) => handleClick(e, item, items)}
 						onDoubleClick={() => handleDoubleClick(item)}
+						// The listing's context menu reads this to tell a right-click on an item from one on empty space
+						data-files-item
 						onContextMenu={() => {
 							handleOpenContextMenu()
 						}}

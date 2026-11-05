@@ -1,6 +1,6 @@
 import http from 'node:http'
 import process from 'node:process'
-import {promisify} from 'node:util'
+import {format, promisify} from 'node:util'
 import {fileURLToPath} from 'node:url'
 import {dirname, join} from 'node:path'
 import {createGzip} from 'node:zlib'
@@ -15,22 +15,22 @@ import helmet from 'helmet'
 import {WebSocketServer} from 'ws'
 import {createProxyMiddleware} from 'http-proxy-middleware'
 
-import type Umbreld from '../../index.js'
-import type {Principal, WebSocketTarget} from '../auth/auth.js'
-import {trpcExpressHandler, trpcWssHandler} from './trpc/index.js'
-import createTerminalWebSocketHandler from './terminal-socket.js'
-import createMachineConsoleWebSocketHandler from './machine-console-socket.js'
-import MachineConsoleSessions from './machine-console-sessions.js'
-import createMachineAudioWebSocketHandler from './machine-audio-socket.js'
-import createAppAuthRouter from './app-auth.js'
-import {authorizeHttpRequest} from '../auth/http-request.js'
-import {getSystemDiskUsage} from '../system/system.js'
-import UploadDiskPreflight from './upload-disk-preflight.js'
-import createErrorHandler from './error-handler.js'
+import type Umbreld from '../../index.ts'
+import type {Principal, WebSocketTarget} from '../auth/auth.ts'
+import {trpcExpressHandler, trpcWssHandler} from './trpc/index.ts'
+import createTerminalWebSocketHandler from './terminal-socket.ts'
+import createMachineConsoleWebSocketHandler from './machine-console-socket.ts'
+import MachineConsoleSessions from './machine-console-sessions.ts'
+import createMachineAudioWebSocketHandler from './machine-audio-socket.ts'
+import createAppAuthRouter from './app-auth.ts'
+import {authorizeHttpRequest} from '../auth/http-request.ts'
+import {getSystemDiskUsage} from '../system/system.ts'
+import UploadDiskPreflight from './upload-disk-preflight.ts'
+import createErrorHandler from './error-handler.ts'
 
-import fileApi from '../files/api.js'
-import photosApi from '../photos/api.js'
-import accountAvatarApi from '../user/avatar-api.js'
+import fileApi from '../files/api.ts'
+import photosApi from '../photos/api.ts'
+import accountAvatarApi from '../user/avatar-api.ts'
 
 // Keep known-size internal uploads from collectively consuming the platform's
 // last gigabyte. This matches the web UI's low-storage warning threshold.
@@ -306,13 +306,12 @@ class Server {
 				createProxyMiddleware({
 					target: process.env.UMBREL_UI_PROXY,
 					ws: true,
-					logProvider: () => ({
-						log: this.logger.verbose,
-						debug: this.logger.verbose,
-						info: this.logger.verbose,
-						warn: this.logger.verbose,
-						error: this.logger.error,
-					}),
+					// http-proxy-middleware logs printf-style messages.
+					logger: {
+						info: (...args) => this.logger.verbose(format(...args)),
+						warn: (...args) => this.logger.verbose(format(...args)),
+						error: (...args) => this.logger.error(format(...args)),
+					},
 				}),
 			)
 		} else {

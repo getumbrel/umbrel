@@ -23,6 +23,7 @@ export function MachinesListing() {
 
 	return (
 		<Listing
+			hiddenRenamedPaths={listing?.hiddenRenamedPaths}
 			items={listing?.items ?? []}
 			selectableItems={listing?.items ?? []}
 			isLoading={isLoading}

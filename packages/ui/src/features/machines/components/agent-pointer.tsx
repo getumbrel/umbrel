@@ -20,6 +20,7 @@ const accents: Record<string, string> = {
 	cursor: '#e5e7eb',
 	openclaw: '#ef5b5b',
 	hermes: '#dfb365',
+	murmur: '#9c74f0',
 }
 
 export const agentAccentFor = (control: MachineAgentControl) => accents[agentVisualFor(control).id] ?? '#a7c8ff'

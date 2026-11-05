@@ -1,7 +1,7 @@
 import {z} from 'zod'
 
-import {router, privateProcedure, publicProcedureWhenNoUserExists, publicProcedure} from '../server/trpc/trpc.js'
-import {getGpuInfo} from './gpu.js'
+import {router, privateProcedure, publicProcedureWhenNoUserExists, publicProcedure} from '../server/trpc/trpc.ts'
+import {getGpuInfo} from './gpu.ts'
 
 const internalStorage = router({
 	// Get internal storage devices (NVMe, HDD, eMMC, etc.)

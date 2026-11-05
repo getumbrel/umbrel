@@ -11,7 +11,7 @@ import {
 	TbLock,
 	TbPlugConnected,
 } from 'react-icons/tb'
-import {useLocation, useNavigate} from 'react-router-dom'
+import {useLocation, useNavigate, type To} from 'react-router-dom'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
@@ -91,10 +91,13 @@ export function AppSettingsDialog({
 	// Settings → App settings opens this same dialog at its app-list step (the
 	// route only claims the pathname). Everywhere else — e.g. an app's context
 	// menu — the ?dialog params open an app's settings directly, with no list
-	// step and no back button.
+	// step and no back button. The list steps aside while another dialog holds
+	// the URL's dialog slot (an app's terminal or logs, opened from its settings
+	// here), and is back once that one closes.
 	const openedFromAppsList = useLocation().pathname === '/settings/apps'
 	const userQ = trpcReact.user.get.useQuery()
-	const listMode = openedFromAppsList && userQ.data?.role === 'owner'
+	const slotIsFree = [null, 'app-settings'].includes(params.get('dialog'))
+	const listMode = openedFromAppsList && userQ.data?.role === 'owner' && slotIsFree
 
 	const {isLoading, app} = useUserApp(appId)
 	const {userApps, userAppsKeyed} = useApps()
@@ -384,7 +387,7 @@ function AppSettingsDialogForApp({
 		}
 	}
 	const requestClose = () => confirmDiscardThen(onRequestClose)
-	const navigateAway = (to: string) => confirmDiscardThen(() => navigate(to))
+	const navigateAway = (to: To) => confirmDiscardThen(() => navigate(to))
 
 	// The shell's close affordances (esc, outside click, X) call this instead of
 	// closing directly, so they hit the same discard guard
@@ -600,7 +603,7 @@ function AppSettingsDialogForApp({
 								{t('app-settings.discard')}
 							</Button>
 							<Button variant='primary' size='dialog' className='w-auto' disabled={saveDisabled} onClick={onSubmit}>
-								{inProgress ? appStateToString(app.state, t) + '...' : saveLabel}
+								{inProgress ? appStateToString(app.state, t) + '…' : saveLabel}
 							</Button>
 						</div>
 					</div>

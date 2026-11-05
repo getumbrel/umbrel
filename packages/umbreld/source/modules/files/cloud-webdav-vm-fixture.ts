@@ -2,7 +2,7 @@ import {Buffer} from 'node:buffer'
 import {appendFileSync, existsSync} from 'node:fs'
 import process from 'node:process'
 
-import CloudWebDavFixture from './cloud-webdav-fixture.js'
+import CloudWebDavFixture from './cloud-webdav-fixture.ts'
 import {
 	VM_CLOUD_FIXTURE_ROOT,
 	VM_CLOUD_WEBDAV_MUTATION_LOG,
@@ -10,7 +10,7 @@ import {
 	VM_CLOUD_WEBDAV_PORT,
 	VM_CLOUD_WEBDAV_RELEASE_PATH,
 	VM_CLOUD_WEBDAV_USERNAME,
-} from './cloud.vm-test-helpers.js'
+} from './cloud.vm-test-helpers.ts'
 
 type Stall = {path: string; afterBytes: number}
 

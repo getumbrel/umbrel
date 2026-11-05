@@ -1,4 +1,4 @@
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 export const filesWidgets = {
 	'files-recents': async function (umbreld: Umbreld, accountId: string) {

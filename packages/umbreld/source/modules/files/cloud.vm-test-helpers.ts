@@ -3,8 +3,8 @@ import nodePath from 'node:path'
 
 import pRetry from 'p-retry'
 
-import type {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {CloudSyncWithStatus} from './cloud.js'
+import type {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import type {CloudSyncWithStatus} from './cloud.ts'
 
 type CloudClient = {
 	files: {
@@ -62,7 +62,7 @@ if [ -f /tmp/cloud-webdav.pid ]; then
 	done
 	kill -KILL "$pid" 2>/dev/null || true
 fi
-runuser -u umbrel -- sh -c 'nohup /opt/umbreld/node_modules/.bin/tsx /opt/umbreld/source/modules/files/cloud-webdav-vm-fixture.ts ${encodedStall} ${tlsMode} >/tmp/cloud-webdav.log 2>&1 </dev/null & echo $!' > /tmp/cloud-webdav.pid
+runuser -u umbrel -- sh -c 'nohup /usr/local/bin/node /opt/umbreld/source/modules/files/cloud-webdav-vm-fixture.ts ${encodedStall} ${tlsMode} >/tmp/cloud-webdav.log 2>&1 </dev/null & echo $!' > /tmp/cloud-webdav.pid
 `)
 	await pRetry(
 		async () => {

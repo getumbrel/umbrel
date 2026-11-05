@@ -7,7 +7,7 @@ import {
 	MAX_PENDING_NATIVE_TLS_CONNECTIONS,
 	NATIVE_TLS_PREREAD_TIMEOUT,
 	readNativeTlsPrelude,
-} from './native-tls-preread.js'
+} from './native-tls-preread.ts'
 
 const peers = new Set<PassThrough>()
 const hostname = '192-168-1-100.server-id.plex.direct'

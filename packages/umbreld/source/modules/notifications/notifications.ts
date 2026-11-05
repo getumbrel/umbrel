@@ -1,5 +1,5 @@
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 const accountPrefix = (userId: string) => `@account:${encodeURIComponent(userId)}:`
 const accountNotification = (userId: string, notification: string) => `${accountPrefix(userId)}${notification}`

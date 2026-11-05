@@ -3,6 +3,13 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import Backend from 'i18next-http-backend'
 import {initReactI18next} from 'react-i18next'
 
+// The page is marked with the UI language, so the browser picks that
+// language's glyphs, casing and line breaking, and screen readers its voice.
+// (Unit tests load this module without a document.)
+i18next.on('languageChanged', (language) => {
+	if (typeof document !== 'undefined') document.documentElement.lang = language
+})
+
 i18next
 	.use(initReactI18next) // passes i18n down to react-i18next
 	.use(Backend)

@@ -1,9 +1,9 @@
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import type {FileChangeEvent} from './watcher.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import AsyncBurstCache from '../utilities/async-burst-cache.js'
-import AppDirectoryMonitor from './app-directory-monitor.js'
+import type {FileChangeEvent} from './watcher.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import AsyncBurstCache from '../utilities/async-burst-cache.ts'
+import AppDirectoryMonitor from './app-directory-monitor.ts'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 
@@ -35,10 +35,7 @@ export default class Favorites {
 		this.logger.log('Starting favorites')
 
 		// Attach listener
-		this.#removeFileChangeListener = this.#umbreld.eventBus.on(
-			'files:watcher:change',
-			this.#handleFileChange.bind(this),
-		)
+		this.#removeFileChangeListener = this.#umbreld.eventBus.onFileChanges(this.#handleFileChanges.bind(this))
 		await this.#appDirectories.start()
 	}
 
@@ -52,9 +49,41 @@ export default class Favorites {
 	// TODO: It would be nice if we could handle updating favorites when the favorited directory is
 	// moved/renamed. It's not trivial because this can happen via something external like an app or SMB
 	// and there's no way to tell the difference between a move/rename and a deletion/recreation.
-	async #handleFileChange(event: FileChangeEvent) {
-		if (event.type !== 'delete') return
-		await this.removeWithin(this.#umbreld.files.systemToVirtualPath(event.path))
+	async #handleFileChanges(events: readonly FileChangeEvent[]) {
+		const deletions = events.filter((event) => event.type === 'delete')
+		if (deletions.length === 0) return
+		const favorites = await this.#allFavorites()
+		if (favorites.length === 0) return
+		const removals: string[] = []
+		for (const {path} of deletions) {
+			try {
+				const virtualDeletedPath = this.#umbreld.files.systemToVirtualPath(path)
+				if (
+					favorites.some((favorite) => favorite === virtualDeletedPath || favorite.startsWith(`${virtualDeletedPath}/`))
+				) {
+					removals.push(virtualDeletedPath)
+				}
+			} catch (error) {
+				this.logger.error(`Failed to handle the deletion of '${path}'`, error)
+			}
+		}
+		// Remove them independently, so one that stalls (in its listeners, say)
+		// can't hold up the others
+		await Promise.all(
+			removals.map((path) =>
+				this.removeWithin(path).catch((error) =>
+					this.logger.error(`Failed to remove favorites within '${path}'`, error),
+				),
+			),
+		)
+	}
+
+	// Every account's favorites
+	async #allFavorites() {
+		const accounts = await this.#watcherFavorites.get()
+		return accounts.flatMap(({userId, favorites}) =>
+			this.#normalizeFavorites(favorites ?? this.#defaultFavorites(userId)),
+		)
 	}
 
 	async removeWithin(virtualDeletedPath: string) {

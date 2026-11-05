@@ -121,7 +121,7 @@ export function ListRowMobile({
 			<SettingsListIcon icon={icon} />
 			<span className='flex min-w-0 flex-1 flex-col gap-1'>
 				<span className='text-14 leading-none font-medium -tracking-2 text-white/90'>{title}</span>
-				<span className='truncate text-12 leading-tight -tracking-2 text-white/40'>{description}</span>
+				<span className='text-12 leading-tight -tracking-2 text-white/40'>{description}</span>
 			</span>
 			{children && <span className='ml-auto flex shrink-0 items-center'>{children}</span>}
 		</El>

@@ -6,9 +6,10 @@ import UmbrelKit
 // wallpaper with no card behind them.
 struct AppsView: View {
 	@Environment(MainModel.self) private var model
-	@Environment(\.openURL) private var openURL
+	@Environment(Browser.self) private var browser
 	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
+	@State private var isShowingUnavailable = false
 
 	private var columns: [GridItem] {
 		Array(repeating: GridItem(.flexible(), spacing: 4), count: dynamicTypeSize.isAccessibilitySize ? 2 : 4)
@@ -29,8 +30,12 @@ struct AppsView: View {
 		.refreshable {
 			await model.refreshVisibleData(for: .apps, force: true)
 		}
-		.background { WallpaperBackground(image: model.wallpaperImage) }
-		.overlay(alignment: .top) { WallpaperTopGradient() }
+		.background { SeeThroughTab() }
+		.alert(model.unreachableTitle, isPresented: $isShowingUnavailable) {
+			Button("OK", role: .cancel) {}
+		} message: {
+			Text(model.unreachableMessage)
+		}
 	}
 
 	// "Apps" + "N apps · M updates", with a handoff to umbrelOS when there
@@ -72,14 +77,7 @@ struct AppsView: View {
 	private var updateButton: some View {
 		if model.canManageApps, model.updateCount > 0 {
 			PillButton(title: "View Updates") {
-				Task {
-					if let url = await model.dashboardURLForOpening(
-						path: "/app-store",
-						queryItems: [URLQueryItem(name: "dialog", value: "updates")]
-					) {
-						openURL(url)
-					}
-				}
+				openAppStore(queryItems: [URLQueryItem(name: "dialog", value: "updates")])
 			}
 			.transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9)))
 		}
@@ -106,9 +104,7 @@ struct AppsView: View {
 
 	private var storeButton: some View {
 		Button {
-			Task {
-				if let url = await model.dashboardURLForOpening(path: "/app-store") { openURL(url) }
-			}
+			openAppStore()
 		} label: {
 			HStack(spacing: 4) {
 				Image(systemName: "circle.grid.2x2")
@@ -127,5 +123,13 @@ struct AppsView: View {
 		}
 		.buttonStyle(.plain)
 		.frame(maxWidth: .infinity)
+	}
+
+	private func openAppStore(queryItems: [URLQueryItem] = []) {
+		Task {
+			if await !browser.openUmbrel(path: "/app-store", queryItems: queryItems) {
+				isShowingUnavailable = true
+			}
+		}
 	}
 }

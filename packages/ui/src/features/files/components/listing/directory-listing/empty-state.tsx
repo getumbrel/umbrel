@@ -35,11 +35,7 @@ export function EmptyStateDirectory() {
 	return (
 		<div className='flex h-full flex-col items-center justify-center gap-3 p-4 pt-0 text-center'>
 			<div className='flex flex-col items-center gap-3'>
-				{isOfflineNetworkHost ? (
-					<img src={nasIconInactive} alt='Network offline' className='h-12 w-12' />
-				) : (
-					<EmptyFolderIcon />
-				)}
+				{isOfflineNetworkHost ? <img src={nasIconInactive} alt='' className='h-12 w-12' /> : <EmptyFolderIcon />}
 				<div className='text-12 text-white/40'>
 					{isOfflineNetworkHost ? t('files-empty.network-host-offline') : t('files-empty.directory')}
 				</div>

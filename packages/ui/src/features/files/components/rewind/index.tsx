@@ -2,7 +2,6 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {MotionConfig} from 'motion/react'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {RiCloseLine} from 'react-icons/ri'
 import {useSearchParams} from 'react-router-dom'
 
 import {ChevronDown} from '@/components/chevron-down'
@@ -84,6 +83,7 @@ export function RewindOverlay() {
 	const {
 		view,
 		repositories,
+		repositoriesLoaded,
 		backupsRaw,
 		backupsLoading,
 		backupsForTimeline,
@@ -196,10 +196,6 @@ export function RewindOverlay() {
 			}, successPauseMs)
 		} catch {
 			setRestorePhase('error')
-			setTimeout(() => {
-				setRestoreModalOpen(false)
-				setRestorePhase('idle')
-			}, 1400)
 		}
 	}
 
@@ -238,7 +234,7 @@ export function RewindOverlay() {
 			<PreRewindDialog
 				open={repoOpen}
 				onOpenChange={setRepoOpen}
-				repos={repositories as any[]}
+				repos={repositoriesLoaded ? repositories : undefined}
 				pendingRepoId={pendingRepoId}
 				setPendingRepoId={(id) => setPendingRepoId(id)}
 				onStart={(repo) => {
@@ -252,14 +248,8 @@ export function RewindOverlay() {
 			<Dialog open={overlayOpen} onOpenChange={handleOpenChange}>
 				<DialogPrimitive.Portal>
 					<DialogPrimitive.Overlay className='fixed inset-0 z-50 bg-black' />
-					{/* Simple but hacky: We add a Rewind-specific marker (data-rewind) so the Files keyboard shortcuts hook can cheaply detect that Rewind is open and ignore shortcut commands without us having to do any global focus plumbing */}
-					<DialogPrimitive.Content
-						data-rewind='open'
-						className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 outline-hidden'
-					>
+					<DialogPrimitive.Content className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 outline-hidden'>
 						<div className='flex size-full flex-col'>
-							{/* Mobile close button (standard dialog style) */}
-							<DialogCloseButton className='absolute top-3 right-3 z-[60] md:hidden' />
 							{/* Upper area with centered card */}
 							<div className='flex flex-[2] items-center justify-center px-2 py-4 md:px-4 md:py-10'>
 								<div className='flex w-full max-w-[980px] flex-col items-center gap-4'>
@@ -383,15 +373,6 @@ export function RewindOverlay() {
 													>
 														<ChevronRightIcon className='size-4' />
 													</button>
-													<DialogPrimitive.Close asChild>
-														{/* We always allow closing the dialog*/}
-														<button
-															aria-label={t('close')}
-															className='inline-flex h-8 items-center justify-center rounded-full bg-white/10 px-3 text-white shadow-[inset_0.5px_0.5px_1px_0px_#FFFFFF3D,inset_-0.5px_-0.5px_1px_0px_#FFFFFF1F] hover:bg-white/20 disabled:opacity-40'
-														>
-															<RiCloseLine className='size-4' />
-														</button>
-													</DialogPrimitive.Close>
 												</>
 											)
 										})()}
@@ -399,11 +380,16 @@ export function RewindOverlay() {
 								</div>
 							</div>
 						</div>
+						<DialogCloseButton surface='immersive' />
 					</DialogPrimitive.Content>
 				</DialogPrimitive.Portal>
 			</Dialog>
 
-			<RestoreProgressDialog open={restoreModalOpen} phase={restorePhase} />
+			<RestoreProgressDialog
+				open={restoreModalOpen}
+				phase={restorePhase}
+				onDismiss={() => setRestoreModalOpen(false)}
+			/>
 		</TooltipProvider>
 	)
 }

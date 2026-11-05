@@ -1,4 +1,4 @@
-import {privateProcedure, publicProcedureWhenNoUserExists, router} from '../server/trpc/trpc.js'
+import {privateProcedure, publicProcedureWhenNoUserExists, router} from '../server/trpc/trpc.ts'
 
 const device = router({
 	// Public during onboarding to show device-specific UI (Pro/Home images, video background)

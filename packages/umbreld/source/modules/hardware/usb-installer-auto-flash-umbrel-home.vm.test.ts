@@ -5,7 +5,7 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 import {$} from 'execa'
 import fse from 'fs-extra'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 const osDirectory = path.resolve(currentDirectory, '../../../../os')

@@ -1,15 +1,13 @@
 import {Globe} from 'lucide-react'
-import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbHistory, TbMessageCircle, TbUser} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
 
 import {ChevronDown} from '@/components/chevron-down'
-import {DropdownMenu, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {IconButton} from '@/components/ui/icon-button'
 import {links} from '@/constants/links'
 import {useLanguage} from '@/hooks/use-language'
-import {LanguageDropdownContent} from '@/routes/settings/_components/language-dropdown'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {languages} from '@/utils/language'
 
 export enum OnboardingAction {
@@ -26,7 +24,6 @@ const footerButtonClass = 'bg-white/[0.06] border-0'
 
 export function OnboardingFooter({action}: OnboardingFooterProps) {
 	const {t} = useTranslation()
-	const [languageOpen, setLanguageOpen] = useState(false)
 	const isCreateAccount = action === OnboardingAction.CREATE_ACCOUNT
 	const route = isCreateAccount ? '/onboarding/create-account' : '/onboarding/restore'
 	const Icon = isCreateAccount ? TbUser : TbHistory
@@ -46,10 +43,7 @@ export function OnboardingFooter({action}: OnboardingFooterProps) {
 				</IconButton>
 			</Link>
 			{/* TODO: consider adding drawer on mobile */}
-			<DropdownMenu open={languageOpen} onOpenChange={setLanguageOpen}>
-				<OnboardingLanguageDropdownTrigger />
-				<LanguageDropdownContent open={languageOpen} onOpenChange={setLanguageOpen} />
-			</DropdownMenu>
+			<OnboardingLanguageDropdown />
 			<Link to={links.support} target='_blank'>
 				<IconButton icon={TbMessageCircle} size='default' className={footerButtonClass}>
 					{t('onboarding.contact-support')}
@@ -60,15 +54,15 @@ export function OnboardingFooter({action}: OnboardingFooterProps) {
 }
 
 // Custom language dropdown trigger just for onboarding footer with custom styling
-function OnboardingLanguageDropdownTrigger() {
+function OnboardingLanguageDropdown() {
 	const [activeCode] = useLanguage()
 
 	return (
-		<DropdownMenuTrigger asChild>
+		<LanguageDropdown>
 			<IconButton icon={Globe} className={footerButtonClass}>
 				{languages.find(({code}) => code === activeCode)?.name}
 				<ChevronDown />
 			</IconButton>
-		</DropdownMenuTrigger>
+		</LanguageDropdown>
 	)
 }

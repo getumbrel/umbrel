@@ -8,6 +8,7 @@ import {Button} from '@/components/ui/button'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {BackLink} from '@/modules/immersive-picker'
+import {usePickerTarget} from '@/modules/immersive-picker/target'
 import {trpcClient} from '@/trpc/trpc'
 
 import {createAuthenticatedTerminalSocket} from './terminal-connection'
@@ -18,7 +19,8 @@ import {useTranslation} from 'react-i18next'
 
 export function TerminalTitleBackLink() {
 	const {t} = useTranslation()
-	return <BackLink to='/settings/terminal'>{t('terminal')}</BackLink>
+	const {linkToTarget} = usePickerTarget('terminal')
+	return <BackLink to={linkToTarget({type: 'picker'})}>{t('terminal')}</BackLink>
 }
 
 // Minimum columns for MOTD display (warning box is 79 chars wide)
@@ -46,11 +48,11 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 	// Paste UI state for touch devices
 	const [showPasteInput, setShowPasteInput] = useState(false)
 
-	// Submit pasted command to terminal
+	// Use xterm for paste handling, including bracketed paste and line endings.
 	const submitPasteInput = () => {
 		const text = pasteInputRef.current?.value || ''
 		if (text && ws.current?.readyState === WebSocket.OPEN) {
-			ws.current.send(text + '\r')
+			terminalRef.current?.paste(text)
 		}
 		setShowPasteInput(false)
 		terminalRef.current?.focus()
@@ -136,14 +138,13 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 	return (
 		<div
 			ref={parentContainerRef as React.LegacyRef<HTMLDivElement>}
+			data-native-context-menu
 			className='relative h-full w-full overflow-hidden rounded-12 bg-black/50'
 		>
 			{connectionFailed && (
 				<div className='absolute inset-0 z-20 flex items-center justify-center bg-black/80'>
 					<div className='flex flex-col items-center gap-3 text-center'>
-						<p className='text-13 text-white/60'>
-							{t('terminal.connection-failed', 'The terminal connection was interrupted.')}
-						</p>
+						<p className='text-13 text-white/60'>{t('terminal.connection-failed')}</p>
 						<Button
 							onClick={() => {
 								setConnectionFailed(false)
@@ -179,8 +180,8 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 								ref={pasteInputRef}
 								type='text'
 								autoFocus
-								placeholder={t('terminal.paste-placeholder', 'Paste command here')}
-								className='min-w-0 flex-1 rounded-4 bg-white/10 px-2 py-2 text-13 text-white placeholder:text-white/40 focus:outline-hidden'
+								placeholder={t('terminal.paste-placeholder')}
+								className='min-w-0 flex-1 rounded-4 bg-white/10 px-2 py-2 text-13 text-white select-text placeholder:text-white/40 focus:outline-hidden'
 							/>
 							<button
 								type='submit'

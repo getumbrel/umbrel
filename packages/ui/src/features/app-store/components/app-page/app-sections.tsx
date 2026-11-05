@@ -114,14 +114,16 @@ export function CredentialsSection({userApp}: {userApp: UserApp}) {
 	return (
 		<section className='flex flex-col gap-3'>
 			<h2 className={appPageSectionLabelClass}>{t('app-page.section.credentials.title')}</h2>
+			{/* Wide enough for most usernames and passwords, an email address included,
+			    and only narrower when the column is */}
 			{defaultUsername && (
 				<CredentialsRow label={t('default-credentials.username')}>
-					<CopyableField className='w-[120px]' narrow value={defaultUsername} />
+					<CopyableField className='w-60 min-w-0' narrow value={defaultUsername} />
 				</CredentialsRow>
 			)}
 			{defaultPassword && (
 				<CredentialsRow label={t('default-credentials.password')}>
-					<CopyableField narrow className='w-[120px]' value={defaultPassword} isPassword />
+					<CopyableField narrow className='w-60 min-w-0' value={defaultPassword} isPassword />
 				</CredentialsRow>
 			)}
 		</section>

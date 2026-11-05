@@ -53,7 +53,7 @@ export function TimelineBar({
 										'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full p-2 md:p-0',
 										isSel ? 'z-10 hover:z-10 focus-visible:z-10' : 'hover:z-10 focus-visible:z-10',
 									)}
-									aria-label={new Date(b.time).toLocaleString()}
+									aria-label={b.id === 'current' ? t('rewind.now') : formatFilesystemDate(b.time, lang)}
 								>
 									<span
 										className={cn(

@@ -1,6 +1,6 @@
 import Dockerode from 'dockerode'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 type Logger = Pick<Umbreld['logger'], 'log' | 'error'>
 
@@ -13,10 +13,13 @@ export default class ImageCleanup {
 	#sweep?: Promise<void>
 	#timer?: ReturnType<typeof setTimeout>
 
-	constructor(
-		private readonly cleanup: () => Promise<void>,
-		private readonly logger: Logger,
-	) {}
+	readonly #cleanup: () => Promise<void>
+	readonly #logger: Logger
+
+	constructor(cleanup: () => Promise<void>, logger: Logger) {
+		this.#cleanup = cleanup
+		this.#logger = logger
+	}
 
 	get enabled() {
 		return this.#enabled
@@ -63,8 +66,8 @@ export default class ImageCleanup {
 		if (!this.enabled || !this.#pending || this.#timer || this.#activeOperations > 0 || this.#sweep) return
 		this.#pending = false
 		this.#sweep = Promise.resolve()
-			.then(() => this.cleanup())
-			.catch((error) => this.logger.error('Failed to clean up unused Docker images', error))
+			.then(() => this.#cleanup())
+			.catch((error) => this.#logger.error('Failed to clean up unused Docker images', error))
 			.finally(() => {
 				this.#sweep = undefined
 			})

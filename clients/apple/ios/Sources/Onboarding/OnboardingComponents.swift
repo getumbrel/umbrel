@@ -77,15 +77,51 @@ func umbrelRenderName(for model: String?) -> String {
 	switch UmbrelDeviceKind(model: model) {
 	case .home: "UmbrelHome"
 	case .pro: "UmbrelPro"
+	case .asusNuc14Essential: "AsusNuc14Essential"
+	case .asusNuc16Pro: "AsusNuc16Pro"
+	case .asusRogNuc16: "AsusRogNuc16"
 	case .raspberryPi: "RaspberryPi"
 	case .generic: "GenericDevice"
 	}
 }
 
+// Where a hardware render is drawn. The renders have very different proportions, so
+// each gets its own frame per place, giving it about the area of the Umbrel Home
+// render there. The upright ROG stops at about 1.4x the Home's height, and the device
+// row keeps its 71pt column so names line up. A nil side follows the aspect ratio.
+enum UmbrelRenderPlacement {
+	case deviceRow
+	case hero
+	case profile
+
+	func frame(for kind: UmbrelDeviceKind) -> (width: CGFloat?, height: CGFloat?) {
+		switch (self, kind) {
+		case (.deviceRow, .home), (.deviceRow, .pro), (.deviceRow, .asusNuc14Essential),
+			(.deviceRow, .asusNuc16Pro), (.deviceRow, .generic): (71, 52)
+		case (.deviceRow, .raspberryPi): (71, 60)
+		case (.deviceRow, .asusRogNuc16): (71, 73)
+		case (.hero, .home), (.hero, .pro), (.hero, .raspberryPi), (.hero, .generic): (161, nil)
+		case (.hero, .asusNuc14Essential): (226, nil)
+		case (.hero, .asusNuc16Pro): (207, nil)
+		case (.hero, .asusRogNuc16): (nil, 164)
+		case (.profile, .home), (.profile, .pro), (.profile, .raspberryPi), (.profile, .generic): (nil, 97)
+		case (.profile, .asusNuc14Essential): (187, nil)
+		case (.profile, .asusNuc16Pro): (171, nil)
+		case (.profile, .asusRogNuc16): (nil, 136)
+		}
+	}
+}
+
 struct UmbrelDeviceRender: View {
 	let model: String?
+	let placement: UmbrelRenderPlacement
 
 	var body: some View {
+		let frame = placement.frame(for: UmbrelDeviceKind(model: model))
+		render.frame(width: frame.width, height: frame.height)
+	}
+
+	@ViewBuilder private var render: some View {
 		let assetName = umbrelRenderName(for: model)
 		// Match umbrelOS: the bare Pi mark sits in a device-shaped tile so it has
 		// comparable visual weight to the hardware renders.

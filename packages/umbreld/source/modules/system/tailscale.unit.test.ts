@@ -2,8 +2,8 @@ import {afterEach, describe, expect, test, vi} from 'vitest'
 
 import {execa} from 'execa'
 
-import type Umbreld from '../../index.js'
-import {getTailscaleBrowserHostname, parseTailscaleBrowserHostname} from './tailscale.js'
+import type Umbreld from '../../index.ts'
+import {getTailscaleBrowserHostname, parseTailscaleBrowserHostname} from './tailscale.ts'
 
 vi.mock('execa')
 

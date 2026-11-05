@@ -1,6 +1,6 @@
 import {Loader2, Power} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
-import {useEffect, useRef, useState} from 'react'
+import {lazy, Suspense, useEffect, useRef, useState} from 'react'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {Progress} from '@/components/ui/progress'
@@ -15,9 +15,22 @@ import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
+const TouchMachineConsole = lazy(() => import('@/features/machines/touch/touch-machine-console'))
+
+// Fingers get a console of their own, with a keyboard, a trackpad and a view that
+// can zoom and pan. A mouse and keyboard get the desktop console, which shows the
+// guest as it is.
+const prefersTouchConsole = () => window.matchMedia?.('(pointer: coarse)').matches ?? false
+
 // Shared "start" affordance on the stopped/error screens
 const screenActionButtonClass =
 	'flex h-[30px] items-center rounded-full border-hpx border-white/20 bg-white/10 px-4 text-13 font-medium text-white transition-[background-color,transform] duration-200 hover:bg-white/15 active:scale-95'
+
+// What a machine shows when it has no console. On a phone on its side the
+// screen is short, and floating islands sit over the bottom of it, so its
+// content starts at the top and tightens up.
+const statusScreenClass =
+	'absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black low:justify-start low:gap-2 low:pt-3'
 
 // The VM "screen": renders whatever the machine would be showing for its
 // current state, crossfading between states. Fills its (relatively
@@ -57,6 +70,7 @@ function Screen({machine}: {machine: Machine}) {
 		case 'error':
 			return <ErrorScreen machine={machine} />
 		case 'stopped':
+		case 'suspended':
 			return <StoppedScreen machine={machine} />
 	}
 }
@@ -71,10 +85,11 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 	const isTextConsole = machine.osVariant === 'Server' || machine.osId === 'alpine'
 	const followsBrowserSize = !isTextConsole && machine.osId !== 'android'
 	const setupDelayed = machine.installationState === 'setup-delayed'
+	// Settled when the console opens: swapping consoles would drop the connection
+	const [touch] = useState(prefersTouchConsole)
 
-	return (
+	const overlays = (
 		<>
-			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} />
 			{machine.state === 'running' && machine.firstBootSetup && !showSetupConsole && (
 				<FirstBootSetupOverlay
 					osName={machine.osName}
@@ -88,6 +103,23 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 					<span className='text-13 text-white/70'>{t('machines.shutting-down')}</span>
 				</div>
 			)}
+		</>
+	)
+
+	if (touch) {
+		return (
+			<Suspense>
+				<TouchMachineConsole machine={machine} resizeSession={followsBrowserSize} textConsole={isTextConsole}>
+					{overlays}
+				</TouchMachineConsole>
+			</Suspense>
+		)
+	}
+
+	return (
+		<>
+			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} omarchy={machine.osId === 'omarchy'} />
+			{overlays}
 		</>
 	)
 }
@@ -212,7 +244,7 @@ function InstallingScreen({machine}: {machine: Machine}) {
 	}
 
 	return (
-		<div className='absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black md:gap-5'>
+		<div className={cn(statusScreenClass, 'md:gap-5')}>
 			<OsIcon osId={machine.osId} state={machine.state} className='size-12 md:size-16' />
 			<div className='flex flex-col items-center gap-3'>
 				<div className='w-32'>
@@ -228,9 +260,11 @@ function StoppedScreen({machine}: {machine: Machine}) {
 	const {start} = useMachineActions()
 
 	return (
-		<div className='absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black'>
+		<div className={statusScreenClass}>
 			<Power className='size-8 text-white/25' />
-			<span className='text-13 -tracking-2 text-white/40'>{t('machines.machine-off')}</span>
+			<span className='text-13 -tracking-2 text-white/40'>
+				{machine.state === 'suspended' ? t('machines.machine-sleeping') : t('machines.machine-off')}
+			</span>
 			<button onClick={() => start({id: machine.id})} className={screenActionButtonClass}>
 				{t('machines.turn-on')}
 			</button>
@@ -246,7 +280,7 @@ function ErrorScreen({machine}: {machine: Machine}) {
 	const retryingInstall = machine.installPending
 
 	return (
-		<div className='absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black px-6 text-center'>
+		<div className={cn(statusScreenClass, 'px-6 text-center')}>
 			<TbAlertTriangleFilled className={cn('size-8', machineStopTextClass)} />
 			<div className='flex flex-col gap-1.5'>
 				<span className='text-15 font-medium -tracking-2 text-white'>{t('machines.error-title')}</span>

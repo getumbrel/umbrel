@@ -7,11 +7,20 @@ NIX_IMAGE="nixos/nix@sha256:bf1d938835ab96312f098fa6c2e9cab367728e0aad0646ee3e02
 # Allow running from anywhere
 cd "$(dirname $(readlink -f "${BASH_SOURCE[0]}"))"
 
+# Date the final ISO's files by the commit time, so building the same commit
+# produces the same ISO. Like ../build.sh, SOURCE_DATE_EPOCH overrides it for
+# building without a Git checkout.
+source_date_epoch="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || date +%s)}"
+
 # Run a command inside the pinned Nix container. The repo's packages/os
 # directory is mounted at /data and the Nix store is kept in a named volume
 # so consecutive runs (e.g. base build then image injection) are fast.
+#
+# --privileged lets Nix sandbox its builds (see below).
 nix_container() {
     docker run --rm --platform linux/amd64 \
+        --privileged \
+        --env SOURCE_DATE_EPOCH="${source_date_epoch}" \
         --volume umbrelos-usb-installer-nix:/nix \
         --volume "$(readlink -f ..)":/data \
         --workdir /data/usb-installer \
@@ -21,7 +30,12 @@ nix_container() {
 
 # filter-syscalls is disabled so builds also work under QEMU/Rosetta emulation
 # (e.g. building the amd64 ISO on an Apple Silicon machine).
-nix="nix --extra-experimental-features 'nix-command flakes' --option filter-syscalls false --print-build-logs"
+#
+# The sandbox is enabled (the Nix image disables it) because unsandboxed builds
+# run in randomly named directories, and some record that path in their output:
+# systemd-hwdb writes its source files' paths into hwdb.bin, so the ISO would
+# differ on every build.
+nix="nix --extra-experimental-features 'nix-command flakes' --option filter-syscalls false --option sandbox true --print-build-logs"
 
 # Build the installer ISO without an umbrelOS image. This is the slow part of
 # the build and doesn't depend on the umbrelOS image, so CI can run it

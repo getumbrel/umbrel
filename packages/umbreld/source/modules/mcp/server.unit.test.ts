@@ -8,12 +8,12 @@ import {Client, StreamableHTTPClientTransport} from '@modelcontextprotocol/clien
 import express from 'express'
 import {afterAll, beforeAll, beforeEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {normalizePath} from '../files/files.js'
-import UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import type {McpPermissions} from './mcp.js'
-import createMcpEndpoint from './server.js'
+import type Umbreld from '../../index.ts'
+import {normalizePath} from '../files/files.ts'
+import UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import type {McpPermissions} from './mcp.ts'
+import createMcpEndpoint from './server.ts'
 
 const tokenId = 'a'.repeat(32)
 const token = `umbrelmcp_${tokenId}_${'b'.repeat(64)}`
@@ -264,7 +264,10 @@ test('uploads are contained to the directory they write into', async () => {
 		const allowed = await upload('path=/Home/photos/holiday.jpg&collision=keep-both')
 		expect(allowed.status).toBe(200)
 		expect(assertFileWriteAccess).toHaveBeenCalledWith('/Home/photos/holiday.jpg')
-		await expect(allowed.json()).resolves.toStrictEqual({path: '/Home/photos/holiday.jpg'})
+		await expect(allowed.json()).resolves.toStrictEqual({
+			path: '/Home/photos/holiday.jpg',
+			revision: expect.stringMatching(/^\d+-8-\d+-\d+$/),
+		})
 		await expect(readFile(nodePath.join(uploadRoot, 'Home/photos/holiday.jpg'), 'utf8')).resolves.toBe('contents')
 
 		// MCP never exposes permanent replacement, even though the shared Files API
@@ -338,6 +341,23 @@ test('instructions are regenerated from the current grants', async () => {
 		expect(instructions).toContain(`Download URL: ${filesUrl}/download?path=/Home/file.bin`)
 		expect(instructions).toContain(`Upload URL: ${filesUrl}/upload?path=/Home/file.bin`)
 		expect(instructions).not.toContain(token)
+	} finally {
+		await client.close()
+	}
+})
+
+test('without grants the instructions say where access is turned on', async () => {
+	const client = new Client({name: 'umbreld-no-grants-test', version: '1.0.0'})
+	try {
+		await client.connect(transport())
+		const instructions = client.getInstructions()
+		// The tools are absent, so their permission errors can never point the
+		// agent to Settings; the instructions have to
+		expect((await client.listTools()).tools.map(({name}) => name)).not.toContain('restart_device')
+		expect(instructions).toContain('System management: not granted')
+		expect(instructions).toContain('tell them it can be turned on rather than that it is impossible')
+		expect(instructions).toContain('Settings → AI agents (MCP)')
+		expect(instructions).toContain('Newly granted tools appear once the client reconnects')
 	} finally {
 		await client.close()
 	}

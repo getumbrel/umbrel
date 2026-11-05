@@ -3,20 +3,25 @@ import nodePath from 'node:path'
 
 import type DatabaseTypes from 'better-sqlite3'
 
-import {foldSearchName} from '../files/file-index/migrations.js'
-import PhotosIndexingStatus from './indexing-status.js'
-import {photoLibraryCte as rawPhotoLibraryCte, sourceScopeSql} from './library-sql.js'
-import PhotosReadModel, {photoLibraryCte} from './read-model.js'
+import {foldSearchName} from '../files/file-index/migrations.ts'
+import {floorToTenthPercent} from '../utilities/progress.ts'
+import PhotosIndexingStatus from './indexing-status.ts'
+import {photoLibraryCte as rawPhotoLibraryCte, photoSourceTypeSql, sourceScopeSql} from './library-sql.ts'
+import PhotosReadModel, {photoLibraryCte} from './read-model.ts'
 import type {
 	PhotoAlbum,
+	PhotoBackupCloudIdentity,
+	PhotoBackupLocation,
+	PhotoBounds,
 	PhotoFilter,
 	PhotoIndexingState,
 	PhotoItem,
 	PhotoItemDetail,
 	PhotoScopeMode,
 	PhotoSource,
-} from './types.js'
-import {supportsPhotos} from './types.js'
+	PhotoSourceType,
+} from './types.ts'
+import {MAP_POINT_BYTES, MAP_POINT_FLAGS, MAP_POINTS_HEADER_BYTES, supportsPhotos} from './types.ts'
 
 type Database = DatabaseTypes.Database
 
@@ -46,7 +51,7 @@ type ItemDetailRow = ItemRow & {
 	size_bytes: number
 	source_id: string
 	source_name: string
-	source_type: 'umbrel' | 'iphone'
+	source_type: PhotoSourceType
 	root_virtual_path: string
 	relative_path: string
 	created_at: number
@@ -64,6 +69,17 @@ type ItemDetailRow = ItemRow & {
 	user_comment: string | null
 }
 
+type MapPointRow = [
+	hash: Buffer,
+	latitude: number | null,
+	longitude: number | null,
+	takenAt: number,
+	favorite: number,
+	kind: 'photo' | 'video',
+	subKind: NonNullable<ItemRow['sub_kind']> | null,
+	tint: number | null,
+]
+
 type Query = {sql: string; parameters: unknown[]}
 type PhotoRootKind = 'home' | 'trash'
 type PhotoContentReference = {accountId: string; hash: Buffer}
@@ -74,6 +90,33 @@ const UNKNOWN_EFFECTIVE_TAKEN_AT = -8_640_000_000_000_000
 const TARGETED_HASH_BATCH_SIZE = 128
 const ACCOUNT_WIDE_REFRESH_THRESHOLD = 32_768
 const PHOTO_LIBRARY_CTE = photoLibraryCte()
+// The library read in the table's own order, for a stretch of map: no index
+// knows where anything was taken, so every row is looked at, and unprompted
+// the planner fetches them one by one in the timeline's order, ~10× slower.
+const PHOTO_LIBRARY_SCAN_CTE = photoLibraryCte(0, false, 'NOT INDEXED')
+// The bytes removing a source with its items moves to Trash: ones no other
+// source has a receipt for, with no other copy in Home. Takes the account and
+// the source.
+const SOURCE_EXCLUSIVE_RESOURCES_CTE = `exclusive_resources AS (
+	SELECT DISTINCT resource.content_hash
+	FROM umbrel.photos_source_resources AS resource
+	WHERE resource.account_id = ? AND resource.source_id = ?
+		AND NOT EXISTS (
+			SELECT 1 FROM umbrel.photos_source_resources AS other
+			WHERE other.account_id = resource.account_id
+				AND other.content_hash = resource.content_hash
+				AND other.source_id <> resource.source_id
+		)
+		AND 1 = (
+			SELECT COUNT(*) FROM contents
+			JOIN entries ON entries.content_id = contents.id
+			JOIN index_roots ON index_roots.id = entries.root_id
+			WHERE contents.blake3 = resource.content_hash
+				AND index_roots.owner_id = resource.account_id
+				AND index_roots.kind = 'home'
+				AND entries.type = 'file' AND entries.hidden = 0
+		)
+)`
 
 const ITEM_SELECT = `
 	SELECT id, kind, logical_sub_kind AS sub_kind, logical_taken_at AS taken_at,
@@ -358,20 +401,28 @@ export default class PhotosRepository {
 			.immediate()
 	}
 
-	upsertBackupSource(database: Database, accountId: string, sourceId: string, name: string, createdAt: number) {
+	upsertBackupSource(
+		database: Database,
+		accountId: string,
+		sourceId: string,
+		name: string,
+		createdAt: number,
+		platform?: string,
+	) {
 		const existing = database
 			.prepare('SELECT account_id, type FROM umbrel.photos_sources WHERE id = ?')
 			.get(sourceId) as {account_id: string; type: string} | undefined
 		if (existing && (existing.account_id !== accountId || existing.type !== 'iphone')) {
 			throw new Error('Photo backup source identity collision')
 		}
+		// Every phone is stored as 'iphone'; its platform says which (see migration v10)
 		database
 			.prepare(
-				`INSERT INTO umbrel.photos_sources(id, account_id, type, name, created_at)
-				VALUES (?, ?, 'iphone', ?, ?)
-				ON CONFLICT(id) DO UPDATE SET name = excluded.name`,
+				`INSERT INTO umbrel.photos_sources(id, account_id, type, name, platform, created_at)
+				VALUES (?, ?, 'iphone', ?, ?, ?)
+				ON CONFLICT(id) DO UPDATE SET name = excluded.name, platform = excluded.platform`,
 			)
-			.run(sourceId, accountId, name, createdAt)
+			.run(sourceId, accountId, name, platform ?? null, createdAt)
 		return true
 	}
 
@@ -384,11 +435,9 @@ export default class PhotosRepository {
 		hash: Buffer,
 		originalFilename?: string,
 		sourceCreationDate?: number,
+		cloud?: PhotoBackupCloudIdentity,
 	) {
-		const source = database
-			.prepare("SELECT 1 FROM umbrel.photos_sources WHERE id = ? AND account_id = ? AND type = 'iphone'")
-			.get(sourceId, accountId)
-		if (!source) throw new Error('Photo backup source was not registered')
+		this.#requireBackupSource(database, accountId, sourceId)
 		const uploaded = database
 			.prepare(
 				`SELECT contents.blake3, entries.content_id, entries.size, entries.relative_path, index_roots.virtual_path
@@ -404,34 +453,16 @@ export default class PhotosRepository {
 		if (!uploaded) throw new Error('Uploaded Photos backup resource was not indexed')
 		if (uploaded.blake3 && !uploaded.blake3.equals(hash)) throw new Error('Uploaded Photos backup hash mismatch')
 		const now = Date.now()
-		database
-			.prepare(
-				`INSERT INTO umbrel.photos_source_resources(
-					account_id, source_id, resource_key, content_hash, original_filename
-				)
-				VALUES (?, ?, ?, ?, ?)
-				ON CONFLICT(account_id, source_id, resource_key)
-				DO UPDATE SET
-					content_hash = excluded.content_hash,
-					original_filename = COALESCE(photos_source_resources.original_filename, excluded.original_filename)`,
-			)
-			.run(accountId, sourceId, resourceKey, hash, originalFilename ?? null)
-		if (uploaded.content_id !== null) {
-			database
-				.prepare(
-					`INSERT INTO umbrel.photos_content_state(
-						account_id, content_hash, source_id, is_favorite, imported_at, source_created_at
-					)
-					VALUES (?, ?, ?, 0, ?, ?)
-					ON CONFLICT(account_id, content_hash) DO UPDATE SET
-						source_id = CASE
-							WHEN (SELECT type FROM umbrel.photos_sources WHERE id = photos_content_state.source_id) = 'umbrel'
-							THEN excluded.source_id ELSE photos_content_state.source_id END,
-						source_created_at = COALESCE(photos_content_state.source_created_at, excluded.source_created_at)`,
-				)
-				.run(accountId, hash, sourceId, now, sourceCreationDate ?? null)
-			this.#refreshEffectiveTakenAt(database, accountId, [hash])
-		}
+		this.#recordBackupResource(database, accountId, sourceId, {
+			resourceKey,
+			hash,
+			originalFilename,
+			sourceCreationDate,
+			cloud,
+			indexed: uploaded.content_id !== null,
+			now,
+		})
+		if (uploaded.content_id !== null) this.#refreshEffectiveTakenAt(database, accountId, [hash])
 		database.prepare('UPDATE umbrel.photos_sources SET last_import_at = ? WHERE id = ?').run(now, sourceId)
 		return {
 			resourceKey,
@@ -440,6 +471,112 @@ export default class PhotosRepository {
 		}
 	}
 
+	// Record receipts for bytes this source already has under another resource key
+	// (a content match on upload, or a claim by PhotoKit cloud identifier). The
+	// caller has checked a location on disk; a match whose bytes have since left
+	// Home is skipped.
+	recordMatchedBackupResources(
+		database: Database,
+		accountId: string,
+		sourceId: string,
+		matches: Array<{
+			resourceKey: string
+			hash: Buffer
+			originalFilename?: string
+			sourceCreationDate?: number
+			cloud?: PhotoBackupCloudIdentity
+		}>,
+	) {
+		this.#requireBackupSource(database, accountId, sourceId)
+		const inHome = database.prepare(
+			`SELECT 1 FROM contents
+			JOIN entries ON entries.content_id = contents.id
+			JOIN index_roots ON index_roots.id = entries.root_id
+			WHERE contents.blake3 = ? AND index_roots.owner_id = ? AND index_roots.kind = 'home'
+				AND entries.type = 'file' AND entries.hidden = 0
+			LIMIT 1`,
+		)
+		const now = Date.now()
+		const recorded: string[] = []
+		const hashes: Buffer[] = []
+		for (const match of matches) {
+			if (!inHome.get(match.hash, accountId)) continue
+			this.#recordBackupResource(database, accountId, sourceId, {...match, indexed: true, now})
+			recorded.push(match.resourceKey)
+			hashes.push(match.hash)
+		}
+		if (recorded.length === 0) return recorded
+		this.#refreshEffectiveTakenAt(database, accountId, uniqueBuffers(hashes))
+		database.prepare('UPDATE umbrel.photos_sources SET last_import_at = ? WHERE id = ?').run(now, sourceId)
+		return recorded
+	}
+
+	#requireBackupSource(database: Database, accountId: string, sourceId: string) {
+		const source = database
+			.prepare("SELECT 1 FROM umbrel.photos_sources WHERE id = ? AND account_id = ? AND type = 'iphone'")
+			.get(sourceId, accountId)
+		if (!source) throw new Error('Photo backup source was not registered')
+	}
+
+	#recordBackupResource(
+		database: Database,
+		accountId: string,
+		sourceId: string,
+		resource: {
+			resourceKey: string
+			hash: Buffer
+			originalFilename?: string
+			sourceCreationDate?: number
+			cloud?: PhotoBackupCloudIdentity
+			indexed: boolean
+			now: number
+		},
+	) {
+		// The client is the authority on which asset its own resource key came
+		// from, so a newly reported identity replaces an older one.
+		database
+			.prepare(
+				`INSERT INTO umbrel.photos_source_resources(
+					account_id, source_id, resource_key, content_hash, original_filename,
+					cloud_identifier, resource_role
+				)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
+				ON CONFLICT(account_id, source_id, resource_key)
+				DO UPDATE SET
+					content_hash = excluded.content_hash,
+					original_filename = COALESCE(photos_source_resources.original_filename, excluded.original_filename),
+					cloud_identifier = COALESCE(excluded.cloud_identifier, photos_source_resources.cloud_identifier),
+					resource_role = CASE WHEN excluded.cloud_identifier IS NULL
+						THEN photos_source_resources.resource_role ELSE excluded.resource_role END`,
+			)
+			.run(
+				accountId,
+				sourceId,
+				resource.resourceKey,
+				resource.hash,
+				resource.originalFilename ?? null,
+				resource.cloud?.cloudIdentifier ?? null,
+				resource.cloud?.role ?? null,
+			)
+		if (!resource.indexed) return
+		database
+			.prepare(
+				`INSERT INTO umbrel.photos_content_state(
+					account_id, content_hash, source_id, is_favorite, imported_at, source_created_at
+				)
+				VALUES (?, ?, ?, 0, ?, ?)
+				ON CONFLICT(account_id, content_hash) DO UPDATE SET
+					source_id = CASE
+						WHEN (SELECT type FROM umbrel.photos_sources WHERE id = photos_content_state.source_id) = 'umbrel'
+						THEN excluded.source_id ELSE photos_content_state.source_id END,
+					source_created_at = COALESCE(photos_content_state.source_created_at, excluded.source_created_at)`,
+			)
+			.run(accountId, resource.hash, sourceId, resource.now, resource.sourceCreationDate ?? null)
+	}
+
+	// One row per currently indexed Home location of each receipt's bytes, in
+	// location order, or a single row without a location. Any one of them that
+	// is still the indexed revision on disk satisfies the receipt, wherever it is.
 	confirmedBackupResources(database: Database, accountId: string, sourceId: string, resourceKeys: string[]) {
 		if (resourceKeys.length === 0) return []
 		const placeholders = resourceKeys.map(() => '?').join(', ')
@@ -467,10 +604,9 @@ export default class PhotosRepository {
 						candidates.relative_path, candidates.virtual_path
 					FROM umbrel.photos_source_resources AS resource
 					LEFT JOIN candidates ON candidates.resource_key = resource.resource_key
-						AND candidates.location_rank = 1
 					WHERE resource.account_id = ? AND resource.source_id = ?
 						AND resource.resource_key IN (${placeholders})
-					ORDER BY resource.resource_key`,
+					ORDER BY resource.resource_key, candidates.location_rank`,
 				)
 				.all(accountId, sourceId, ...resourceKeys, accountId, sourceId, ...resourceKeys) as Array<{
 				resource_key: string
@@ -508,6 +644,123 @@ export default class PhotosRepository {
 		}))
 	}
 
+	// Home locations of bytes this source already has under another resource
+	// key, which an upload of the same bytes is recorded against instead of
+	// storing a second copy. Only bytes this source received count, never ones
+	// only another source has. As for any receipt, any Home copy of them does.
+	backupSourceContentLocations(database: Database, accountId: string, sourceId: string, hash: Buffer) {
+		const received = database
+			.prepare(
+				`SELECT 1 FROM umbrel.photos_source_resources
+				WHERE account_id = ? AND content_hash = ? AND source_id = ?
+				LIMIT 1`,
+			)
+			.get(accountId, hash, sourceId)
+		return received ? this.#backupLocations(database, '', accountId, hash) : []
+	}
+
+	// The bytes this source's receipts recorded for each cloud identifier and
+	// role, with their Home locations. A cloud identifier names an asset, not
+	// a version of it: an asset recorded with more than one hash (edited after a
+	// backup, for example) is left out, so its resource is uploaded and compared
+	// by content instead of guessed.
+	backupCloudIdentityMatches(
+		database: Database,
+		accountId: string,
+		sourceId: string,
+		identities: PhotoBackupCloudIdentity[],
+	) {
+		// Without table statistics SQLite would scan the source's whole
+		// primary-key range for every identity instead of using the index
+		const recorded = database.prepare(
+			`SELECT DISTINCT resource.content_hash, resource.original_filename
+			FROM umbrel.photos_source_resources AS resource
+				INDEXED BY photos_source_resources_by_cloud_identifier
+			WHERE resource.account_id = ? AND resource.cloud_identifier = ? AND resource.resource_role = ?
+				AND resource.source_id = ?
+			ORDER BY resource.original_filename IS NULL`,
+		)
+		const matches: Array<
+			PhotoBackupCloudIdentity & {contentHash: Buffer; originalFilename?: string; locations: PhotoBackupLocation[]}
+		> = []
+		for (const identity of identities) {
+			const rows = recorded.all(accountId, identity.cloudIdentifier, identity.role, sourceId) as Array<{
+				content_hash: Buffer
+				original_filename: string | null
+			}>
+			if (uniqueBuffers(rows.map(({content_hash}) => content_hash)).length !== 1) continue
+			const [{content_hash: contentHash, original_filename: originalFilename}] = rows as [(typeof rows)[number]]
+			matches.push({
+				...identity,
+				contentHash,
+				...(originalFilename === null ? {} : {originalFilename}),
+				locations: this.#backupLocations(database, '', accountId, contentHash),
+			})
+		}
+		return matches
+	}
+
+	// Name the PhotoKit asset behind receipts a source already holds, so a phone
+	// restored from this one, continuing its source, can claim them.
+	attachBackupCloudIdentities(
+		database: Database,
+		accountId: string,
+		sourceId: string,
+		resources: Array<PhotoBackupCloudIdentity & {resourceKey: string}>,
+	) {
+		const attach = database.prepare(
+			`UPDATE umbrel.photos_source_resources SET cloud_identifier = ?, resource_role = ?
+			WHERE account_id = ? AND source_id = ? AND resource_key = ?
+				AND (cloud_identifier IS NOT ? OR resource_role IS NOT ?)`,
+		)
+		const update = database.transaction(() => {
+			let changes = 0
+			for (const {resourceKey, cloudIdentifier, role} of resources) {
+				changes += attach.run(cloudIdentifier, role, accountId, sourceId, resourceKey, cloudIdentifier, role).changes
+			}
+			return changes
+		})
+		return update.immediate()
+	}
+
+	#backupLocations(database: Database, condition: string, accountId: string, hash: Buffer): PhotoBackupLocation[] {
+		return (
+			database
+				.prepare(
+					`SELECT index_roots.virtual_path, entries.relative_path, entries.device, entries.inode, entries.size,
+						entries.modified_ns, entries.ctime_ns
+					FROM contents
+					JOIN entries ON entries.content_id = contents.id
+					JOIN index_roots ON index_roots.id = entries.root_id
+					WHERE contents.blake3 = ? AND index_roots.owner_id = ? AND index_roots.kind = 'home'
+						AND entries.type = 'file' AND entries.hidden = 0
+						AND entries.device IS NOT NULL AND entries.inode IS NOT NULL
+						AND entries.modified_ns IS NOT NULL AND entries.ctime_ns IS NOT NULL
+						${condition}
+					ORDER BY index_roots.virtual_path, entries.relative_path`,
+				)
+				.all(hash, accountId) as Array<{
+				virtual_path: string
+				relative_path: string
+				device: string
+				inode: string
+				size: number
+				modified_ns: string
+				ctime_ns: string
+			}>
+		).map((row) => ({
+			path: nodePath.posix.join(row.virtual_path, row.relative_path),
+			bytes: Number(row.size),
+			revision: {
+				device: row.device,
+				inode: row.inode,
+				size: Number(row.size),
+				modifiedNs: row.modified_ns,
+				ctimeNs: row.ctime_ns,
+			},
+		}))
+	}
+
 	unresolvedBackupResourceHashes(database: Database, accountId: string, sourceId: string) {
 		return (
 			database
@@ -532,26 +785,7 @@ export default class PhotosRepository {
 		return (
 			database
 				.prepare(
-					`WITH exclusive_resources AS (
-						SELECT DISTINCT resource.content_hash
-						FROM umbrel.photos_source_resources AS resource
-						WHERE resource.account_id = ? AND resource.source_id = ?
-							AND NOT EXISTS (
-								SELECT 1 FROM umbrel.photos_source_resources AS other
-								WHERE other.account_id = resource.account_id
-									AND other.content_hash = resource.content_hash
-									AND other.source_id <> resource.source_id
-							)
-							AND 1 = (
-								SELECT COUNT(*) FROM contents
-								JOIN entries ON entries.content_id = contents.id
-								JOIN index_roots ON index_roots.id = entries.root_id
-								WHERE contents.blake3 = resource.content_hash
-									AND index_roots.owner_id = resource.account_id
-									AND index_roots.kind = 'home'
-									AND entries.type = 'file' AND entries.hidden = 0
-							)
-					)
+					`WITH ${SOURCE_EXCLUSIVE_RESOURCES_CTE}
 					SELECT lower(hex(contents.blake3)) AS id, index_roots.virtual_path,
 						entries.relative_path, entries.inode, entries.size,
 						entries.modified_ns, entries.ctime_ns
@@ -582,6 +816,21 @@ export default class PhotosRepository {
 				ctimeNs: row.ctime_ns,
 			},
 		}))
+	}
+
+	// How many Photos items removing a source with its items moves to Trash,
+	// counted as the library counts a source's items
+	sourceRemovalItemCount(database: Database, accountId: string, sourceId: string) {
+		this.syncPendingChanges(database)
+		const {count} = database
+			.prepare(
+				`${PHOTO_LIBRARY_CTE}, ${SOURCE_EXCLUSIVE_RESOURCES_CTE}
+				SELECT COUNT(*) AS count FROM logical_items AS item
+				WHERE item.root_kind = 'home' AND item.kind IN ('photo', 'video')
+					AND item.content_hash IN (SELECT content_hash FROM exclusive_resources)`,
+			)
+			.get(accountId, accountId, sourceId) as {count: number}
+		return Number(count)
 	}
 
 	attachContentHash(database: Database, entryId: number, hash: Buffer) {
@@ -731,6 +980,16 @@ export default class PhotosRepository {
 				AND (${filter.dates.map(() => '(logical_taken_at >= ? AND logical_taken_at < ?)').join(' OR ')})`,
 				parameters: [accountId, filter.deleted ? 'trash' : 'home', ...filter.dates.flatMap(({from, to}) => [from, to])],
 			})
+		if (filter.bounds) {
+			const bounds = boundsQuery(filter.bounds)
+			// In the table's own order, as PHOTO_LIBRARY_SCAN_CTE is
+			queries.push({
+				sql: `SELECT item.content_hash FROM photos_library_items AS item NOT INDEXED
+				JOIN media_metadata AS place ON place.content_id = item.content_id
+				WHERE item.account_id = ? AND item.root_kind = ? AND ${bounds.sql}`,
+				parameters: [accountId, filter.deleted ? 'trash' : 'home', ...bounds.parameters],
+			})
+		}
 
 		for (const term of filter.query?.replaceAll('\0', '').normalize('NFC').trim().split(/\s+/).filter(Boolean) ?? []) {
 			if (Array.from(term).length < 3) continue
@@ -786,13 +1045,22 @@ export default class PhotosRepository {
 		if (target) where.sql += ' AND content_hash IN (SELECT content_hash FROM requested_hashes)'
 		const parameters = [...(target?.parameters ?? []), accountId, ...where.parameters]
 		const from = simple ? 'photos_library_items WHERE account_id = ? AND' : 'logical_items WHERE'
-		const cte = simple ? '' : photoLibraryCte(target?.capacity ?? 0, false, sourceCandidates !== undefined)
+		// A bounded set of candidates is looked up by hash and sorted. Unprompted,
+		// the planner walks the whole timeline in search of them.
+		const cte = simple
+			? ''
+			: photoLibraryCte(target?.capacity ?? 0, false, target ? 'INDEXED BY photos_library_items_key' : '')
+		// A stretch of map with no candidates is scanned (see
+		// PHOTO_LIBRARY_SCAN_CTE) for its count and first page. Walking the
+		// timeline from the newest item, an area of old photos is found last;
+		// a later page starts from its cursor, so its walk stays short.
+		const scanCte = filter.bounds && !target ? PHOTO_LIBRARY_SCAN_CTE : cte
 		// Count with the covering index, then hydrate only the requested page.
 		// A window count would fetch every matching wide row before LIMIT.
 		const total = cursor
 			? undefined
 			: (
-					database.prepare(`${cte} SELECT COUNT(*) AS total FROM ${from} ${where.sql}`).get(...parameters) as {
+					database.prepare(`${scanCte} SELECT COUNT(*) AS total FROM ${from} ${where.sql}`).get(...parameters) as {
 						total: number
 					}
 				).total
@@ -803,7 +1071,7 @@ export default class PhotosRepository {
 		}
 		const rows = database
 			.prepare(
-				`${cte} ${ITEM_SELECT} FROM ${from} ${where.sql}
+				`${decoded ? cte : scanCte} ${ITEM_SELECT} FROM ${from} ${where.sql}
 			ORDER BY logical_taken_at DESC, id LIMIT ?`,
 			)
 			.all(...parameters, limit + 1) as ItemRow[]
@@ -815,6 +1083,72 @@ export default class PhotosRepository {
 			...(total === undefined ? {} : {total}),
 			...(rows.length > limit && last ? {nextCursor: encodeCursor(Number(last.taken_at), last.id)} : {}),
 		}
+	}
+
+	// Every item a filter selects that knows where it was taken, newest first,
+	// packed for the map (see MAP_POINT_BYTES) — the map clusters all of them
+	// itself, so a whole library has to fit on the wire — after a count of the
+	// ones that don't, so the map can say what it isn't showing.
+	mapPoints(database: Database, accountId: string, filter: PhotoFilter) {
+		this.#ensureSource(database, accountId)
+		this.syncPendingChanges(database)
+		const where = filterQuery(filter)
+		const candidates = this.#filterCandidates(database, accountId, filter)
+		if (candidates?.length === 0) return new Uint8Array(MAP_POINTS_HEADER_BYTES)
+		const target = candidates ? targetedHashes(candidates) : undefined
+		if (target) where.sql += ' AND content_hash IN (SELECT content_hash FROM requested_hashes)'
+		// A few candidates are looked up by hash; anything more is most of the
+		// library, read in the table's own order (see PHOTO_LIBRARY_SCAN_CTE)
+		const access = target ? 'INDEXED BY photos_library_items_key' : 'NOT INDEXED'
+		// Packed a row at a time: a whole library of rows held at once is ~10× the
+		// size of what is sent
+		const rows = database
+			.prepare(
+				`${photoLibraryCte(target?.capacity ?? 0, false, access)}
+				SELECT item.content_hash, place.latitude, place.longitude, item.logical_taken_at,
+					item.is_favorite, item.kind, item.logical_sub_kind, item.tint
+				FROM (SELECT content_hash, content_id, id, logical_taken_at, is_favorite, kind, logical_sub_kind, tint
+					FROM logical_items WHERE ${where.sql}) AS item
+				LEFT JOIN media_metadata AS place ON place.content_id = item.content_id
+				ORDER BY item.logical_taken_at DESC, item.id`,
+			)
+			.raw()
+			.iterate(...(target?.parameters ?? []), accountId, ...where.parameters) as Iterable<MapPointRow>
+		let points = new Uint8Array(MAP_POINTS_HEADER_BYTES + 1024 * MAP_POINT_BYTES)
+		let view = new DataView(points.buffer)
+		let offset = MAP_POINTS_HEADER_BYTES
+		let unlocated = 0
+		for (const [hash, latitude, longitude, takenAt, favorite, kind, subKind, tint] of rows) {
+			if (latitude === null || longitude === null) {
+				unlocated++
+				continue
+			}
+			if (offset + MAP_POINT_BYTES > points.length) {
+				const grown = new Uint8Array(points.length * 2)
+				grown.set(points)
+				points = grown
+				view = new DataView(points.buffer)
+			}
+			points.set(hash, offset)
+			view.setFloat32(offset + 32, latitude, true)
+			view.setFloat32(offset + 36, longitude, true)
+			view.setFloat64(offset + 40, Number(takenAt), true)
+			view.setUint8(
+				offset + 48,
+				(favorite ? MAP_POINT_FLAGS.favorite : 0) |
+					(kind === 'video' ? MAP_POINT_FLAGS.video : 0) |
+					(subKind ? MAP_POINT_FLAGS[subKind] : 0) |
+					(tint === null ? 0 : MAP_POINT_FLAGS.tint),
+			)
+			if (tint !== null) {
+				view.setUint8(offset + 49, (Number(tint) >> 16) & 0xff)
+				view.setUint8(offset + 50, (Number(tint) >> 8) & 0xff)
+				view.setUint8(offset + 51, Number(tint) & 0xff)
+			}
+			offset += MAP_POINT_BYTES
+		}
+		view.setUint32(0, unlocated, true)
+		return points.slice(0, offset)
 	}
 
 	getItem(database: Database, accountId: string, id: string, deleted = false): PhotoItemDetail | undefined {
@@ -888,7 +1222,7 @@ export default class PhotosRepository {
 		const where = filterQuery(filter)
 		const result = database
 			.prepare(
-				`${PHOTO_LIBRARY_CTE}, filtered_items AS MATERIALIZED (
+				`${filter.bounds ? PHOTO_LIBRARY_SCAN_CTE : PHOTO_LIBRARY_CTE}, filtered_items AS MATERIALIZED (
 					SELECT id, logical_taken_at FROM logical_items WHERE ${where.sql}
 				)
 				SELECT (SELECT id FROM filtered_items
@@ -1001,20 +1335,29 @@ export default class PhotosRepository {
 		if (hashes.length === 0) return []
 		this.#ensureSource(database, accountId)
 		this.syncPendingChanges(database)
-		const resolved = new Map<string, {id: string; path: string}>()
+		const resolved = new Map<string, {id: string; path: string; modifiedMs: number}>()
 		for (const batch of hashBatches(hashes)) {
 			const target = targetedHashes(batch)!
 			const rows = this.#prepare(
 				database,
 				`resolve-items:${target.capacity}`,
 				`${photoLibraryCte(target.capacity)}
-					SELECT id, root_virtual_path, relative_path FROM logical_items
+					SELECT id, root_virtual_path, relative_path, modified_ms FROM logical_items
 					WHERE content_hash IN (SELECT content_hash FROM requested_hashes)
 					ORDER BY id, root_kind = 'home' DESC`,
-			).all(...target.parameters, accountId) as Array<{id: string; root_virtual_path: string; relative_path: string}>
+			).all(...target.parameters, accountId) as Array<{
+				id: string
+				root_virtual_path: string
+				relative_path: string
+				modified_ms: number
+			}>
 			for (const row of rows) {
 				if (!resolved.has(row.id)) {
-					resolved.set(row.id, {id: row.id, path: joinVirtualPath(row.root_virtual_path, row.relative_path)})
+					resolved.set(row.id, {
+						id: row.id,
+						path: joinVirtualPath(row.root_virtual_path, row.relative_path),
+						modifiedMs: Number(row.modified_ms),
+					})
 				}
 			}
 		}
@@ -1210,7 +1553,7 @@ export default class PhotosRepository {
 							ON membership.content_hash = item.content_hash
 						WHERE item.root_kind = 'home' GROUP BY membership.source_id
 					)
-					SELECT source.*, COALESCE(counts.photos, 0) AS photos,
+					SELECT source.*, ${photoSourceTypeSql('source')} AS shown_type, COALESCE(counts.photos, 0) AS photos,
 						COALESCE(counts.videos, 0) AS videos, COALESCE(counts.size_bytes, 0) AS size_bytes
 					FROM umbrel.photos_sources AS source LEFT JOIN source_counts AS counts ON counts.source_id = source.id
 					WHERE source.account_id = ? ORDER BY source.created_at`,
@@ -1218,6 +1561,7 @@ export default class PhotosRepository {
 				.all(accountId, accountId) as Array<{
 				id: string
 				type: 'umbrel' | 'iphone'
+				shown_type: PhotoSourceType
 				name: string
 				last_import_at: number | null
 				created_at: number
@@ -1229,7 +1573,7 @@ export default class PhotosRepository {
 			}>
 		).map((row) => ({
 			id: row.id,
-			type: row.type,
+			type: row.shown_type,
 			name: row.name,
 			...(row.last_import_at === null ? {} : {lastImportAt: Number(row.last_import_at)}),
 			createdAt: Number(row.created_at),
@@ -1312,14 +1656,18 @@ export default class PhotosRepository {
 		const counts = this.#indexingStatus.counts(database, accountId, !this.#readonly)
 		const total = Number(counts.total)
 		const completed = Number(counts.completed)
-		const percentage = total === 0 ? 100 : Math.floor((completed / total) * 100)
+		const failures = Number(counts.failures)
+		const percentage = total === 0 ? 100 : floorToTenthPercent((completed / total) * 100)
 		if (root.state === 'degraded') {
 			return {phase: 'degraded', completed, total, percentage, ...(root.last_error ? {error: root.last_error} : {})}
 		}
-		if (Number(counts.failures) > 0) {
+		// Failed items keep retrying with backoff and never count as completed.
+		// Keep enriching until every item is either completed or failed, so an
+		// early failure doesn't report the partial library as degraded.
+		if (completed + failures < total) return {phase: 'enriching', completed, total, percentage}
+		if (failures > 0) {
 			return {phase: 'degraded', completed, total, percentage, error: 'Some media could not be prepared'}
 		}
-		if (completed < total) return {phase: 'enriching', completed, total, percentage}
 		return {phase: 'ready', completed, total, percentage: 100}
 	}
 
@@ -1572,6 +1920,14 @@ function filterQuery(filter: PhotoFilter): Query {
 		clauses.push(`(${filter.dates.map(() => '(logical_taken_at >= ? AND logical_taken_at < ?)').join(' OR ')})`)
 		for (const range of filter.dates) parameters.push(range.from, range.to)
 	}
+	if (filter.bounds) {
+		const bounds = boundsQuery(filter.bounds)
+		clauses.push(
+			`EXISTS (SELECT 1 FROM media_metadata AS place
+			WHERE place.content_id = logical_items.content_id AND ${bounds.sql})`,
+		)
+		parameters.push(...bounds.parameters)
+	}
 	const terms = filter.query?.replaceAll('\0', '').normalize('NFC').trim().split(/\s+/).filter(Boolean) ?? []
 	for (const term of terms) {
 		if (Array.from(term).length >= 3) {
@@ -1604,7 +1960,18 @@ function filterQuery(filter: PhotoFilter): Query {
 }
 
 function isSimpleFilter(filter: PhotoFilter) {
-	return !filter.sourceIds?.length && !filter.albumIds?.length && !filter.query?.trim()
+	return !filter.sourceIds?.length && !filter.albumIds?.length && !filter.query?.trim() && !filter.bounds
+}
+
+// The media_metadata rows, as `place`, inside a map stretch. One that crosses
+// the antimeridian is the two stretches either side of it.
+function boundsQuery({west, south, east, north}: PhotoBounds): Query {
+	return {
+		sql: `place.latitude BETWEEN ? AND ? AND ${
+			west <= east ? 'place.longitude BETWEEN ? AND ?' : '(place.longitude >= ? OR place.longitude <= ?)'
+		}`,
+		parameters: [south, north, west, east],
+	}
 }
 
 function item(row: ItemRow): PhotoItem {

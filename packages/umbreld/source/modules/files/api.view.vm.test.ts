@@ -1,6 +1,6 @@
 import {expect, beforeAll, afterAll, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestVm>>
 let dashboardToken = ''
@@ -309,4 +309,42 @@ test('GET /api/files/view handles binary files correctly', async () => {
 	// Assert the response is correct
 	expect(response.statusCode).toBe(200)
 	expect(Buffer.from(response.body)).toEqual(binaryData)
+})
+
+test('GET /api/files/view sends the file revision as a strong ETag', async () => {
+	// Create a file
+	await uploadFile('/Home/view-revision.txt', 'first')
+	const view = (headers: Record<string, string> = {}) =>
+		umbreld.api.get('files/view?path=/Home/view-revision.txt', {responseType: 'text', headers})
+
+	// The ETag is the strong revision: inode, size, and modification and change times
+	const first = await view()
+	expect(first.headers.etag).toMatch(/^"\d+-5-\d+-\d+"$/)
+
+	// Revalidating with it answers 304 without a body
+	const revalidated = await view({'If-None-Match': first.headers.etag!})
+	expect(revalidated.statusCode).toBe(304)
+	expect(revalidated.body).toBe('')
+
+	// Range requests validated against it still get partial content
+	const range = await view({Range: 'bytes=1-3', 'If-Range': first.headers.etag!})
+	expect(range.statusCode).toBe(206)
+	expect(range.body).toBe('irs')
+
+	// Replacing the file moves it to the revision the upload answered
+	const replaced = await umbreld.api.post('files/upload?path=/Home/view-revision.txt&collision=replace', {
+		body: 'second',
+	})
+	const second = await view({'If-None-Match': first.headers.etag!})
+	expect(second.statusCode).toBe(200)
+	expect(second.body).toBe('second')
+	expect(second.headers.etag).toBe(`"${(replaced.body as unknown as {revision: string}).revision}"`)
+
+	// Writing in place, as an SMB client or app would, moves it too (seeded over
+	// SSH: no product surface writes in place)
+	await umbreld.vm.ssh(`printf ' edit' >> '/home/umbrel/umbrel/home/view-revision.txt'`)
+	const third = await view({'If-None-Match': second.headers.etag!})
+	expect(third.statusCode).toBe(200)
+	expect(third.body).toBe('second edit')
+	expect(third.headers.etag).toMatch(/^"\d+-11-\d+-\d+"$/)
 })

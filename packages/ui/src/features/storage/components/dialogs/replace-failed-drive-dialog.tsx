@@ -1,5 +1,5 @@
 import {Trans, useTranslation} from 'react-i18next'
-import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
+import {TbAlertTriangle, TbCircleCheckFilled, TbHelpCircle} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
 import {
@@ -55,7 +55,7 @@ export function ReplaceFailedDriveDialog({
 	replaceDeviceAsync,
 }: ReplaceFailedDriveDialogProps) {
 	const {t} = useTranslation()
-	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
+	const {setPendingOperation, clearPendingOperation, setOperationError} = usePendingRaidOperation()
 
 	// Failed-drive repair takes priority over a scrub. Umbreld cancels the scrub,
 	// starts the replacement, then retries the scrub once the pool is idle.
@@ -92,10 +92,8 @@ export function ReplaceFailedDriveDialog({
 			newDevice: newDevice.id,
 		}).catch((error) => {
 			clearPendingOperation()
-			toast.error(t('storage-manager.replace-failed.error'), {
-				area: 'settings',
-				description: error instanceof Error ? error.message : t('unknown-error'),
-			})
+			setOperationError(error instanceof Error ? error.message : t('unknown-error'))
+			toast.error(t('storage-manager.replace-failed.error'), {area: 'settings'})
 		})
 	}
 
@@ -104,10 +102,9 @@ export function ReplaceFailedDriveDialog({
 			<DialogScrollableContent>
 				<div className='flex flex-col gap-5 p-5'>
 					<DialogHeader>
-						{/* "SSD" slot labels are not translated - they match the physical device markings */}
 						<DialogTitle>
 							{failedSlot
-								? `${t('storage-manager.replace')} SSD ${failedSlot}`
+								? t('storage-manager.replace-failed.title-slot', {slot: failedSlot})
 								: isHdd
 									? t('storage-manager.replace-failed.title-drive')
 									: t('storage-manager.replace-failed.title')}
@@ -158,7 +155,13 @@ export function ReplaceFailedDriveDialog({
 								{hasWarning ? (
 									<TbAlertTriangle className='size-5 text-[#F5A623]' />
 								) : (
-									<TbCircleCheckFilled className='size-5 text-brand' />
+									<>
+										{newDevice.smartStatus === 'healthy' ? (
+											<TbCircleCheckFilled className='size-5 text-brand' />
+										) : (
+											<TbHelpCircle className='size-5 text-white/40' aria-label={t('storage-status.unknown')} />
+										)}
+									</>
 								)}
 								<span className='text-[13px] font-medium text-white/60'>
 									{newDevice.slot ? (
@@ -178,6 +181,15 @@ export function ReplaceFailedDriveDialog({
 						</div>
 					</div>
 
+					{/* The drive is already chosen and its size is checked below, so only the erase applies -
+					    and not to an in-place repair, which rebuilds the same drive */}
+					{!isSelfReplacement && !isDeviceTooSmall && (
+						<p className='text-13 leading-relaxed text-white/50'>
+							{isHdd
+								? t('storage-manager.replace-failed.erase-note-drive')
+								: t('storage-manager.replace-failed.erase-note')}
+						</p>
+					)}
 					{/* Size validation warning */}
 					{isDeviceTooSmall ? (
 						<div className='flex items-start gap-3 rounded-12 bg-[#F5A623]/10 p-3'>
@@ -244,10 +256,15 @@ export function ReplaceFailedDriveDialog({
 					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 
 					<DialogFooter>
-						<Button variant='primary' onClick={handleReplace} disabled={isDeviceTooSmall || isOperationInProgress}>
+						<Button
+							variant='primary'
+							size='dialog'
+							onClick={handleReplace}
+							disabled={isDeviceTooSmall || isOperationInProgress}
+						>
 							{t('storage-manager.replace-failed.replace-now')}
 						</Button>
-						<Button variant='default' onClick={() => onOpenChange(false)}>
+						<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 							{t('cancel')}
 						</Button>
 					</DialogFooter>

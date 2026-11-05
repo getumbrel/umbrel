@@ -10,13 +10,13 @@ import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 import {Client as SshClient} from 'ssh2'
 
-import Umbreld from '../../index.js'
-import type {AppRouter} from '../server/trpc/index.js'
-import type {events} from '../event-bus/event-bus.js'
+import Umbreld from '../../index.ts'
+import type {AppRouter} from '../server/trpc/index.ts'
+import type {events} from '../event-bus/event-bus.ts'
 
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import runGitServer from './run-git-server.js'
-import {retryVmPortCollisions} from './vm-port-retry.js'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import runGitServer from './run-git-server.ts'
+import {retryVmPortCollisions} from './vm-port-retry.ts'
 
 // Use the data/ directory in the umbreld package root for test temp files
 // This avoids filling up RAM-based tmpfs when running many tests in parallel
@@ -49,13 +49,18 @@ function createTestHelpers(port: number | (() => number)) {
 	// Node's fetch doesn't retry when a kept-alive connection is closed by the
 	// server between requests (e.g. umbreld's HTTP keep-alive timeout racing
 	// the query after a startup poll), which intermittently fails tests with
-	// 'SocketError: other side closed'. Retry once — the dead socket is
-	// discarded and the retry opens a fresh connection.
+	// 'SocketError: other side closed' (or ECONNRESET, depending on whether the
+	// close or the reset arrives first). Retry once — the dead socket is
+	// discarded and the retry opens a fresh connection. Don't retry timeouts:
+	// umbreld may still be processing that request, and replaying a mutation
+	// would hide the hang behind a misleading error like 'already exists'.
 	const fetchWithRetry = (async (input: string | URL, init?: RequestInit) => {
 		const url = withCurrentPort(input)
 		try {
 			return await fetch(url, init)
-		} catch {
+		} catch (error) {
+			const code = (error as {cause?: {code?: string}}).cause?.code
+			if (code === 'UND_ERR_HEADERS_TIMEOUT' || code === 'UND_ERR_BODY_TIMEOUT') throw error
 			return fetch(url, init)
 		}
 	}) as typeof fetch
@@ -94,6 +99,12 @@ function createTestHelpers(port: number | (() => number)) {
 			return `ws://127.0.0.1:${currentPort()}/trpc?ticket=${ticket}`
 		},
 		retryDelayMs: () => 100,
+		// Like the UI, don't open the socket until the first subscription. Minting a
+		// ticket fails until the test logs in, so an eager client sits in tRPC's
+		// reconnect loop, and a subscription made while that loop is backing off
+		// has its fresh socket closed by the next reconnect attempt, failing with
+		// "Active connection is not open".
+		lazy: {enabled: true, closeMs: 30_000},
 	})
 
 	const client = createTRPCProxyClient<AppRouter>({
@@ -356,6 +367,11 @@ export default async function createTestUmbreld({
 	}
 }
 
+// The controller a VM drive bay is attached to: the motherboard's SATA (AHCI) controller,
+// or a SAS HBA. HDD tests run against both via describe.each(driveBuses).
+export type DriveBus = 'sata' | 'sas'
+export const driveBuses: DriveBus[] = ['sata', 'sas']
+
 export async function createTestVm({
 	device,
 	bootDisk,
@@ -376,6 +392,12 @@ export async function createTestVm({
 	stateDirectoryName?: string
 } = {}) {
 	const vmScript = path.resolve(currentDirectory, '../../../../os/vm.sh')
+	// A shutdown that lands while umbreld is still starting (e.g. right after a
+	// restart) can take over 30s. The emulated Pi measured 42-125s across 20 clean
+	// shutdowns in CI, and some shutdowns with legacy USB installs attached took
+	// longer than 3 minutes. Running out of time force-kills the VM, leaving its
+	// filesystems dirty.
+	const cleanShutdownTimeout = device === 'pi' ? 300_000 : 60_000
 
 	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
 	await directory.createRoot()
@@ -577,8 +599,8 @@ export async function createTestVm({
 				await unauthenticatedClient.system.shutdown.mutate().catch(() => {})
 			}
 
-			// Wait up to 30 seconds for graceful shutdown
-			await pWaitFor(() => !isRunning(), {interval: 100, timeout: 30_000})
+			// Wait for graceful shutdown
+			await pWaitFor(() => !isRunning(), {interval: 100, timeout: cleanShutdownTimeout})
 			vmProcessPid = undefined
 			return
 		} catch {
@@ -635,24 +657,37 @@ export async function createTestVm({
 		await $({env})`${vmScript} nvme destroy ${slot}`
 	}
 
-	async function addSata({slot, type, size}: {slot: number; type: 'hdd' | 'ssd'; size?: string}) {
+	async function addBayDrive({
+		bus,
+		slot,
+		type,
+		size,
+	}: {
+		bus: DriveBus
+		slot: number
+		type: 'hdd' | 'ssd'
+		size?: string
+	}) {
 		if (size) {
-			await $({env})`${vmScript} sata add ${slot} --size ${size} --type ${type}`
+			await $({env})`${vmScript} ${bus} add ${slot} --size ${size} --type ${type}`
 		} else {
-			await $({env})`${vmScript} sata add ${slot} --type ${type}`
+			await $({env})`${vmScript} ${bus} add ${slot} --type ${type}`
 		}
 	}
 
-	async function addHdd({slot, size}: {slot: number; size?: string}) {
-		await addSata({slot, type: 'hdd', size})
+	// HDDs go in SATA bays on the motherboard's AHCI controller by default, or in SAS bays
+	// behind an LSI SAS HBA
+	async function addHdd({slot, size, bus = 'sata'}: {slot: number; size?: string; bus?: DriveBus}) {
+		await addBayDrive({bus, slot, type: 'hdd', size})
 	}
 
-	async function addSataSsd({slot, size}: {slot: number; size?: string}) {
-		await addSata({slot, type: 'ssd', size})
+	// SATA or SAS SSD in a drive bay (NVMe SSDs use addNvme)
+	async function addSsd({slot, size, bus}: {slot: number; size?: string; bus: DriveBus}) {
+		await addBayDrive({bus, slot, type: 'ssd', size})
 	}
 
-	async function removeHdd({slot}: {slot: number}) {
-		await $({env})`${vmScript} sata destroy ${slot}`
+	async function removeHdd({slot, bus = 'sata'}: {slot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} destroy ${slot}`
 	}
 
 	async function addUsbStorage({slot, size}: {slot: number; size?: string}) {
@@ -675,16 +710,61 @@ export async function createTestVm({
 		await $({env})`${vmScript} usb connect ${slot}`
 	}
 
+	// An FTDI USB serial adapter (0403:6001) on its own xHCI controller,
+	// plugged into the port matching its slot. Without a serial number each
+	// adapter reports a distinct one; give several the same to model identical
+	// devices that can only be told apart by port.
+	async function addUsbSerial({slot, serial}: {slot: number; serial?: string}) {
+		if (serial) {
+			await $({env})`${vmScript} usb-serial add ${slot} --serial ${serial}`
+		} else {
+			await $({env})`${vmScript} usb-serial add ${slot}`
+		}
+	}
+
+	async function removeUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial remove ${slot}`
+	}
+
+	async function disconnectUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial disconnect ${slot}`
+	}
+
+	async function connectUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial connect ${slot}`
+	}
+
+	// Replace the adapter in a slot with a QEMU USB keyboard (0627:0001) in the
+	// same port, or the keyboard with the adapter, as a device that reconnects as
+	// a different model once its firmware loads would
+	async function swapUsbSerial({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-serial swap ${slot}`
+	}
+
+	// A USB Ethernet adapter (0525:a4a2) on its own xHCI controller, plugged into
+	// the port matching its slot, on a network of its own with a DHCP server
+	async function addUsbNet({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-net add ${slot}`
+	}
+
+	async function disconnectUsbNet({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-net disconnect ${slot}`
+	}
+
+	async function connectUsbNet({slot}: {slot: number}) {
+		await $({env})`${vmScript} usb-net connect ${slot}`
+	}
+
 	async function disconnectNvme({slot}: {slot: number}) {
 		await $({env})`${vmScript} nvme disconnect ${slot}`
 	}
 
-	async function disconnectSata({slot}: {slot: number}) {
-		await $({env})`${vmScript} sata disconnect ${slot}`
+	async function disconnectHdd({slot, bus = 'sata'}: {slot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} disconnect ${slot}`
 	}
 
-	async function connectSata({slot}: {slot: number}) {
-		await $({env})`${vmScript} sata connect ${slot}`
+	async function connectHdd({slot, bus = 'sata'}: {slot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} connect ${slot}`
 	}
 
 	async function connectNvme({slot}: {slot: number}) {
@@ -695,8 +775,17 @@ export async function createTestVm({
 		await $({env})`${vmScript} nvme move ${fromSlot} ${toSlot}`
 	}
 
+	async function moveHdd({fromSlot, toSlot, bus = 'sata'}: {fromSlot: number; toSlot: number; bus?: DriveBus}) {
+		await $({env})`${vmScript} ${bus} move ${fromSlot} ${toSlot}`
+	}
+
 	async function reflash() {
 		await $({env})`${vmScript} reflash`
+	}
+
+	// Sends an ACPI power button event, like pressing the physical button
+	async function pressPowerButton() {
+		await $({env})`${vmScript} power-button`
 	}
 
 	async function cleanup() {
@@ -705,7 +794,7 @@ export async function createTestVm({
 	}
 
 	async function waitForShutdown() {
-		await pWaitFor(() => !isRunning(), {interval: 100, timeout: 30_000})
+		await pWaitFor(() => !isRunning(), {interval: 100, timeout: cleanShutdownTimeout})
 		vmProcessPid = undefined
 	}
 
@@ -846,17 +935,27 @@ printf '\\n${authFailureMarker}\\n'
 		removeNvme,
 		disconnectNvme,
 		connectNvme,
-		disconnectSata,
-		connectSata,
+		disconnectHdd,
+		connectHdd,
 		moveNvme,
+		moveHdd,
 		addHdd,
-		addSataSsd,
+		addSsd,
 		removeHdd,
 		addUsbStorage,
 		removeUsbStorage,
 		disconnectUsbStorage,
 		connectUsbStorage,
+		addUsbSerial,
+		removeUsbSerial,
+		disconnectUsbSerial,
+		connectUsbSerial,
+		swapUsbSerial,
+		addUsbNet,
+		disconnectUsbNet,
+		connectUsbNet,
 		reflash,
+		pressPowerButton,
 		ssh,
 		sshAsRoot,
 	}

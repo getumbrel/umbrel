@@ -6,9 +6,10 @@ import {useMachines} from '@/features/machines/hooks/use-machines'
 import type {Machine} from '@/features/machines/types'
 import {useShortcuts, type Shortcut} from '@/hooks/use-shortcuts'
 import {useWidgets} from '@/hooks/use-widgets'
+import {SEARCH_DOCK_GAP} from '@/modules/floating-island/lane'
 import {Widget} from '@/modules/widgets'
 import {WidgetContainer} from '@/modules/widgets/shared/shared'
-import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
+import {WidgetSlot} from '@/modules/widgets/shared/widget-row'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -17,6 +18,7 @@ import {AppIconConnected, AppLabel} from './app-icon'
 import {Search} from './desktop-misc'
 import {DockSpacer} from './dock'
 import {Header} from './header'
+import {useHomeFit} from './home-fit'
 import {MachineIcon} from './machine-icon'
 import {ShortcutIcon} from './shortcut-icon'
 
@@ -61,24 +63,26 @@ export function desktopWidgetNode(widget: ReturnType<typeof useWidgets>['selecte
 				opacity: 0,
 			}}
 		>
-			<WidgetWrapper
+			<WidgetSlot
+				id={widget.id}
 				// Get the app name from the endpoint
 				label={widget.app.name}
 			>
 				{widget.app.state === 'ready' ? (
 					<Widget appId={widget.app.id} config={widget} />
 				) : (
-					<WidgetContainer className='grid place-items-center text-13 text-white/50'>
+					<WidgetContainer className='grid place-items-center rounded-17 text-13 text-white/50 sm:rounded-20'>
 						<AppLabel state={widget.app.state} />
 					</WidgetContainer>
 				)}
-			</WidgetWrapper>
+			</WidgetSlot>
 		</motion.div>
 	)
 }
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const variant = useDesktopVariant()
+	const fit = useHomeFit()
 
 	const getQuery = trpcReact.user.get.useQuery()
 	const name = getQuery.data?.name
@@ -121,7 +125,8 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 			if (item.type === 'shortcut') return item.shortcut.title
 			return item.machine.name
 		}
-		items.sort((a, b) => itemName(a).localeCompare(itemName(b)))
+		// Numeric so that "App 2" comes before "App 10"
+		items.sort((a, b) => itemName(a).localeCompare(itemName(b), undefined, {numeric: true}))
 
 		return items
 	}, [userApps, shortcuts, pinnedMachines])
@@ -139,9 +144,9 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 				initial={{opacity: 1}}
 				transition={{duration: 0.15, ease: 'easeOut'}}
 			>
-				<div className='pt-6 md:pt-8' />
-				<Header userName={name} />
-				<div className='pt-6 md:pt-8' />
+				<div style={{paddingTop: 'var(--home-gap)'}} />
+				<Header userName={name} inline={fit.inlineHeader} />
+				<div style={{paddingTop: 'var(--home-gap)'}} />
 				<div className='flex w-full grow overflow-hidden'>
 					<AppGrid
 						widgets={widgets.selected.map(desktopWidgetNode)}
@@ -178,8 +183,9 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 						))}
 					/>
 				</div>
-				<Search onClick={onSearchClick} />
-				<div className='pt-6' />
+				<Search onClick={onSearchClick} visible={variant === 'default'} />
+				{/* The floating islands' row shares this gap */}
+				<div style={{paddingTop: SEARCH_DOCK_GAP}} />
 				<DockSpacer />
 			</motion.div>
 		</>

@@ -1,6 +1,6 @@
 import {describe, expect, test, vi} from 'vitest'
 
-import {qemuHostForwardCollisionPort, retryVmPortCollisions} from './vm-port-retry.js'
+import {qemuHostForwardCollisionPort, retryVmPortCollisions} from './vm-port-retry.ts'
 
 const collision = (hostPort: number, guestPort = 80) =>
 	new Error(

@@ -2,7 +2,7 @@ import http from 'node:http'
 
 import {describe, expect, test, vi} from 'vitest'
 
-import MachineGuestApi from './guest-api.js'
+import MachineGuestApi from './guest-api.ts'
 
 async function chunkedPost(url: string, chunks: string[]) {
 	return new Promise<number | undefined>((resolve, reject) => {

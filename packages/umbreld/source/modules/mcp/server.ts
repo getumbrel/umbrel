@@ -5,18 +5,18 @@ import express from 'express'
 import {createMcpHandler, McpServer} from '@modelcontextprotocol/server'
 import {toNodeHandler} from '@modelcontextprotocol/node'
 
-import type Umbreld from '../../index.js'
-import {OWNER_ACCOUNT_ID, type Principal} from '../auth/auth.js'
-import {downloadFiles, uploadFile} from '../files/api.js'
-import type UploadDiskPreflight from '../server/upload-disk-preflight.js'
-import {createInternalTrpcCaller} from '../server/trpc/index.js'
-import type {McpPermissions} from './mcp.js'
-import registerAppTools from './tools/apps.js'
-import registerFileTools from './tools/files.js'
-import registerMachineTools from './tools/machines.js'
-import {MCP_PERMISSION_REMEDIATION, type McpToolContext} from './tools/shared.js'
-import registerSystemInfoTools from './tools/system-info.js'
-import registerSystemManagementTools from './tools/system-management.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_ACCOUNT_ID, type Principal} from '../auth/auth.ts'
+import {downloadFiles, uploadFile} from '../files/api.ts'
+import type UploadDiskPreflight from '../server/upload-disk-preflight.ts'
+import {createInternalTrpcCaller} from '../server/trpc/index.ts'
+import type {McpPermissions} from './mcp.ts'
+import registerAppTools from './tools/apps.ts'
+import registerFileTools from './tools/files.ts'
+import registerMachineTools from './tools/machines.ts'
+import {MCP_PERMISSION_REMEDIATION, type McpToolContext} from './tools/shared.ts'
+import registerSystemInfoTools from './tools/system-info.ts'
+import registerSystemManagementTools from './tools/system-management.ts'
 
 // Cap on JSON-RPC request bodies, applied whatever their content type
 const BODY_LIMIT = '4mb'
@@ -86,6 +86,10 @@ function instructionsFor(permissions: McpPermissions, baseUrl: string) {
 		`System management: ${permissions.manageSystem ? 'granted' : 'not granted'}.`,
 		`Machine control access: ${machineAccess}.`,
 		`Machine creation: ${permissions.createMachines ? 'granted' : 'not granted'}.`,
+		// Ungranted tools are never registered, so the permission errors that
+		// point to Settings never reach the agent. Without this it only knows it
+		// lacks a tool, and tells the user the request is impossible.
+		`When the user asks for something that needs access you have not been granted, tell them it can be turned on rather than that it is impossible. ${MCP_PERMISSION_REMEDIATION} Newly granted tools appear once the client reconnects.`,
 		hasMachineGrants
 			? 'Granted machines can be started, stopped, reconfigured, deleted, watched through get_machine_screenshot, and driven with keyboard and mouse through control_machine, which returns a fresh screenshot after every action. Deleting a machine permanently deletes its virtual disk.'
 			: '',

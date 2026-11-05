@@ -10,11 +10,11 @@ import fse from 'fs-extra'
 import got from 'got'
 import {afterAll, beforeAll, describe, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import {OWNER_ACCOUNT_ID, type Principal} from '../auth/auth.js'
-import {BROWSER_SESSION_HTTP_COOKIE_NAME} from '../auth/browser-session-cookie.js'
-import accountAvatarApi, {accountAvatarUrl, authorizeAccountAvatarWrite, serializeAccountAvatar} from './avatar-api.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {OWNER_ACCOUNT_ID, type Principal} from '../auth/auth.ts'
+import {BROWSER_SESSION_HTTP_COOKIE_NAME} from '../auth/browser-session-cookie.ts'
+import accountAvatarApi, {accountAvatarUrl, authorizeAccountAvatarWrite, serializeAccountAvatar} from './avatar-api.ts'
 
 vi.mock('execa', async (importOriginal) => ({
 	...(await importOriginal<typeof import('execa')>()),

@@ -36,21 +36,6 @@ export function ReadyToReplacePill() {
 	)
 }
 
-// Pill shown on drives that are attached but not part of the pool
-export function InactivePill({variant = 'neutral'}: {variant?: 'neutral' | 'destructive'}) {
-	const {t} = useTranslation()
-	return (
-		<span
-			className={cn(
-				'rounded-full px-2.5 py-0.5 text-[12px] font-medium',
-				variant === 'destructive' ? 'bg-[#FF3434]/15 text-[#FF3434]' : 'bg-white/10 text-white/60',
-			)}
-		>
-			{t('storage-manager.inactive')}
-		</span>
-	)
-}
-
 // Small pill-shaped action button used on drive cards (Add / Replace)
 export function DriveActionButton({
 	icon: Icon,
@@ -58,12 +43,14 @@ export function DriveActionButton({
 	onClick,
 	variant = 'default',
 	disabled,
+	className,
 }: {
 	icon: typeof TbPlus
 	children: React.ReactNode
 	onClick: () => void
 	variant?: 'default' | 'primary' | 'destructive'
 	disabled?: boolean
+	className?: string
 }) {
 	return (
 		<button
@@ -79,9 +66,10 @@ export function DriveActionButton({
 				variant === 'primary' && 'animate-pulse bg-[#1CBFAB] text-white hover:bg-[#1CBFAB]/90',
 				variant === 'destructive' && 'bg-[#FF3434] text-white hover:bg-[#FF3434]/90',
 				variant === 'default' && 'border border-white/[0.08] bg-white/[0.06] text-white/80 hover:bg-white/10',
+				className,
 			)}
 		>
-			<Icon className='size-3.5' strokeWidth={2.5} />
+			<Icon className='size-3.5 shrink-0' strokeWidth={2.5} />
 			{children}
 		</button>
 	)
@@ -99,6 +87,7 @@ export function DriveCard({
 	onClick,
 	action,
 	pill,
+	description,
 }: {
 	device: StorageDevice
 	raidDevice?: RaidDevice
@@ -106,6 +95,7 @@ export function DriveCard({
 	onClick?: () => void
 	action?: React.ReactNode
 	pill?: React.ReactNode
+	description?: string
 }) {
 	const {hasWarning} = getDeviceHealth(device)
 	const led = getDriveLed({
@@ -134,6 +124,7 @@ export function DriveCard({
 				<div className='truncate text-13 text-white/50'>
 					{formatStorageSize(device.size)} · {device.serial}
 				</div>
+				{description && <p className='mt-1 text-13 leading-snug text-white/50'>{description}</p>}
 			</div>
 			{pill}
 			{action}

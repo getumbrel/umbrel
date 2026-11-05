@@ -7,9 +7,9 @@ import pRetry from 'p-retry'
 import type {Browser} from 'playwright'
 import {WebSocket} from 'ws'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import createVmBrowser from '../test-utilities/create-vm-browser.js'
-import * as totp from '../utilities/totp.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import createVmBrowser from '../test-utilities/create-vm-browser.ts'
+import * as totp from '../utilities/totp.ts'
 
 type TestVm = Awaited<ReturnType<typeof createTestVm>>
 type TrpcResponse<T> = {result: {data: T}}
@@ -676,13 +676,13 @@ YAML
 			cat > "$app_dir/docker-compose.yml" <<'YAML'
 services:
   app_proxy:
-    image: ghcr.io/getumbrel/tor:0.4.9.11
+    image: ghcr.io/getumbrel/tor:0.4.9.14
     environment:
       APP_HOST: lan-ingress-recreated_web_1
       APP_PORT: 18080
       PROXY_AUTH_ADD: "false"
   web:
-    image: ghcr.io/getumbrel/tor:0.4.9.11
+    image: ghcr.io/getumbrel/tor:0.4.9.14
     container_name: lan-ingress-recreated_web_1
     entrypoint: ["perl", "-MIO::Socket::INET", "-e"]
     command:
@@ -711,7 +711,7 @@ services:
       PROXY_AUTH_WHITELIST: /public/*
       PROXY_AUTH_BLACKLIST: /public/private/*
   keepalive:
-    image: ghcr.io/getumbrel/tor:0.4.9.11
+    image: ghcr.io/getumbrel/tor:0.4.9.14
     command: ["sleep", "infinity"]
 YAML
 			;;
@@ -806,7 +806,7 @@ app_dir=/home/umbrel/umbrel/app-data/lan-ingress-recreated
 old_address="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' lan-ingress-recreated_web_1)"
 docker rm -f lan-ingress-recreated_web_1 >/dev/null
 docker rm -f lan-ingress-ip-blocker >/dev/null 2>&1 || true
-docker run --detach --name lan-ingress-ip-blocker --network umbrel_main_network --ip "$old_address" --entrypoint sleep ghcr.io/getumbrel/tor:0.4.9.11 infinity >/dev/null
+docker run --detach --name lan-ingress-ip-blocker --network umbrel_main_network --ip "$old_address" --entrypoint sleep ghcr.io/getumbrel/tor:0.4.9.14 infinity >/dev/null
 docker compose --project-name lan-ingress-recreated --file "$app_dir/docker-compose.yml" up --detach web >/dev/null
 new_address="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' lan-ingress-recreated_web_1)"
 printf '%s %s' "$old_address" "$new_address"

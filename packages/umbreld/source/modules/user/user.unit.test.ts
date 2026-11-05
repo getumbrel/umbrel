@@ -3,9 +3,9 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import * as totp from '../utilities/totp.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import * as totp from '../utilities/totp.ts'
 
 const accountAvatarDirectory = (umbreld: Umbreld, userId: string) =>
 	nodePath.join(umbreld.dataDirectory, 'avatars', userId)

@@ -94,7 +94,6 @@ export function CloudDisconnectDialog({
 				<AlertDialogFooter>
 					<AlertDialogAction
 						variant='destructive'
-						className='px-6'
 						onClick={() => {
 							removeAccount(
 								account.id,

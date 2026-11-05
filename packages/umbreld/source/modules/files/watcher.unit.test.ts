@@ -5,8 +5,8 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {FileChangeEvent} from './watcher.js'
+import type Umbreld from '../../index.ts'
+import type {FileChangeEvent} from './watcher.ts'
 
 const mocks = vi.hoisted(() => {
 	const command = vi.fn(() => Promise.resolve({stdout: ''}))
@@ -18,13 +18,21 @@ const mocks = vi.hoisted(() => {
 		shutdown,
 		execaDollar: vi.fn((first: unknown) => (Array.isArray(first) ? command() : shutdown)),
 		subscribe: vi.fn(),
+		close: vi.fn(),
 	}
 })
 
 vi.mock('execa', () => ({$: mocks.execaDollar}))
-vi.mock('@parcel/watcher', () => ({default: {subscribe: mocks.subscribe}}))
+vi.mock('./watchman.ts', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./watchman.ts')>()),
+	default: class {
+		subscribe = mocks.subscribe
+		close = mocks.close
+	},
+}))
 
-import Watcher from './watcher.js'
+import Watcher from './watcher.ts'
+import {WatchmanFreshInstanceError, WatchmanSubscriptionLostError} from './watchman.ts'
 
 const cleanups: Array<() => Promise<void>> = []
 
@@ -158,8 +166,10 @@ describe('Watchman recovery', () => {
 		expect(f.subscriptions[0].unsubscribe).toHaveBeenCalledOnce()
 		expect(mocks.shutdown).toHaveBeenCalledOnce()
 		expect(f.subscriptions[0].unsubscribe.mock.invocationCallOrder[0]).toBeLessThan(
-			mocks.shutdown.mock.invocationCallOrder[0],
+			mocks.close.mock.invocationCallOrder[0],
 		)
+		// The connection is retired before the restart, not left for the retry pass
+		expect(mocks.close.mock.invocationCallOrder[0]).toBeLessThan(mocks.shutdown.mock.invocationCallOrder[0])
 		expect(mocks.shutdown.mock.invocationCallOrder[0]).toBeLessThan(mocks.subscribe.mock.invocationCallOrder[1])
 		expect(mocks.execaDollar).toHaveBeenCalledWith({timeout: 5000, preferLocal: false, reject: false})
 		expect(f.onRestart).not.toHaveBeenCalled()
@@ -238,6 +248,29 @@ describe('Watchman recovery', () => {
 		await vi.waitFor(() => expect(f.watcher.subscriptions.size).toBe(2))
 		await f.waitForProbe()
 		expect(f.onRestart).not.toHaveBeenCalled()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.onRestart).toHaveBeenCalledOnce())
+		expect(mocks.shutdown).toHaveBeenCalledOnce()
+	})
+
+	test('retries roots whose first subscription after a restart used the retired daemon connection', async () => {
+		const f = await fixture(['/Home', '/Trash'])
+		await f.watcher.start()
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledOnce())
+		const poison = new Error('A non-recoverable condition has triggered. All requests will continue to fail')
+		for (const subscription of f.subscriptions) subscription.unsubscribe.mockRejectedValue(poison)
+		// The first request after the restart can still fail, for example on a
+		// connection to the old daemon that hasn't been noticed as closed yet.
+		mocks.shutdown.mockImplementationOnce(async () => {
+			mocks.subscribe.mockRejectedValueOnce(new Error('Socket ended unexpectedly'))
+			return mocks.shutdownResult
+		})
+		f.subscriptions[1].callback(poison, [])
+		await vi.advanceTimersToNextTimerAsync()
+		await vi.waitFor(() => expect(f.watcher.subscriptions.size).toBe(2))
+		await f.waitForProbe()
 		f.deliverSentinel()
 		await vi.waitFor(() => expect(f.onRestart).toHaveBeenCalledOnce())
 		expect(mocks.shutdown).toHaveBeenCalledOnce()
@@ -399,5 +432,110 @@ describe('Watchman recovery', () => {
 		expect(f.subscriptions).toHaveLength(1)
 		expect(f.onRestart).not.toHaveBeenCalled()
 		expect(f.watcher.subscriptions.size).toBe(0)
+	})
+
+	test('resubscribes a lost root after a short delay and rescans once events are verified', async () => {
+		const f = await fixture(['/Home', '/Trash'])
+		await f.watcher.start()
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledOnce())
+
+		f.subscriptions[1].callback(new WatchmanSubscriptionLostError('Lost Watchman subscription'), [])
+		expect(f.watcher.subscriptions.has('/Trash')).toBe(false)
+		// Not straight away, so a daemon that keeps failing can't cause a tight loop
+		await vi.advanceTimersByTimeAsync(4000)
+		expect(f.subscriptions).toHaveLength(2)
+
+		await vi.advanceTimersByTimeAsync(1000)
+		await vi.waitFor(() => expect(f.subscriptions).toHaveLength(3))
+		expect(f.subscriptions[2].path).toBe(f.systemPath('/Trash'))
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.onRestart).toHaveBeenCalledOnce())
+		// Recovering one root doesn't restart the daemon or disturb the others
+		expect(mocks.shutdown).not.toHaveBeenCalled()
+		expect(f.subscriptions[0].unsubscribe).not.toHaveBeenCalled()
+	})
+
+	test('resubscribes quickly only once per health check interval', async () => {
+		const f = await fixture(['/Home', '/Trash'])
+		await f.watcher.start()
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledOnce())
+		const lose = () => f.subscriptions.at(-1)!.callback(new WatchmanSubscriptionLostError('Lost'), [])
+
+		lose()
+		await vi.advanceTimersByTimeAsync(5000)
+		await vi.waitFor(() => expect(f.subscriptions).toHaveLength(3))
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledTimes(2))
+
+		// A root that keeps failing waits for the regular health check
+		lose()
+		await vi.advanceTimersByTimeAsync(10_000)
+		expect(f.subscriptions).toHaveLength(3)
+		await vi.advanceTimersByTimeAsync(interval - 15_000)
+		await vi.waitFor(() => expect(f.subscriptions).toHaveLength(4))
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledTimes(3))
+
+		// The next interval allows a quick resubscribe again
+		lose()
+		await vi.advanceTimersByTimeAsync(5000)
+		await vi.waitFor(() => expect(f.subscriptions).toHaveLength(5))
+		expect(mocks.shutdown).not.toHaveBeenCalled()
+	})
+
+	test('does not rescan for a lost root that cannot be resubscribed', async () => {
+		const f = await fixture(['/Home', '/Trash'])
+		await f.watcher.start()
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledOnce())
+
+		// For example, Watchman cancels the subscription because its root was deleted
+		mocks.subscribe.mockRejectedValueOnce(new Error('No such file or directory'))
+		f.subscriptions[1].callback(new WatchmanSubscriptionLostError('Lost Watchman subscription'), [])
+		await vi.advanceTimersByTimeAsync(5000)
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledTimes(2))
+		expect(f.watcher.subscriptions.has('/Trash')).toBe(false)
+		expect(f.onRestart).not.toHaveBeenCalled()
+		expect(mocks.shutdown).not.toHaveBeenCalled()
+	})
+
+	test('rescans on a fresh instance without dropping the subscription', async () => {
+		const f = await fixture()
+		await f.watcher.start()
+		await f.waitForProbe()
+		f.deliverSentinel()
+		await vi.waitFor(() => expect(f.logger.verbose).toHaveBeenCalledOnce())
+
+		const dispatchedBefore = f.emitFileChanges.mock.calls.length
+		f.subscriptions[0].callback(new WatchmanFreshInstanceError('Watchman reported a fresh instance'), [])
+
+		expect(f.onRestart).toHaveBeenCalledOnce()
+		expect(f.watcher.subscriptions.has('/Home')).toBe(true)
+		expect(f.emitFileChanges).toHaveBeenCalledTimes(dispatchedBefore)
+		await vi.advanceTimersByTimeAsync(10_000)
+		expect(f.subscriptions).toHaveLength(1)
+	})
+
+	test('ignores lost subscriptions reported after stopping', async () => {
+		const f = await fixture()
+		await f.watcher.start()
+		await f.waitForProbe()
+		await f.watcher.stop()
+
+		f.subscriptions[0].callback(new WatchmanSubscriptionLostError('Lost Watchman subscription'), [])
+		await vi.advanceTimersByTimeAsync(interval)
+
+		expect(f.subscriptions).toHaveLength(1)
+		expect(f.onRestart).not.toHaveBeenCalled()
 	})
 })

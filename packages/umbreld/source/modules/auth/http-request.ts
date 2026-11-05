@@ -1,8 +1,8 @@
 import type express from 'express'
 
-import type Umbreld from '../../index.js'
-import type {HttpApiScope} from './auth.js'
-import {browserSessionTokenFromRequest} from './browser-session-cookie.js'
+import type Umbreld from '../../index.ts'
+import type {HttpApiScope} from './auth.ts'
+import {browserSessionTokenFromRequest} from './browser-session-cookie.ts'
 
 function bearerToken(request: express.Request) {
 	const [scheme, token] = request.get('Authorization')?.split(' ') ?? []

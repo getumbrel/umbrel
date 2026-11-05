@@ -72,12 +72,12 @@ export function CreateAlbumDialog() {
 						maxLength={100}
 					/>
 					<DialogFooter>
-						<Button type='button' size='dialog' onClick={() => onOpenChange(false)}>
-							{t('cancel')}
-						</Button>
 						<Button type='submit' variant='primary' size='dialog' disabled={!trimmed || busy}>
 							{busy && <TbLoader className='size-4 animate-spin' />}
 							{withSelection ? t('photos-album.create') : t('photos-album.select-items')}
+						</Button>
+						<Button type='button' size='dialog' onClick={() => onOpenChange(false)}>
+							{t('cancel')}
 						</Button>
 					</DialogFooter>
 				</form>

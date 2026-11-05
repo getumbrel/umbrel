@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import prettyBytes from 'pretty-bytes'
 import {createContext, useContext, useImperativeHandle, useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -16,6 +17,7 @@ import {canPresentUpdateAction, isAppUpdateAvailable} from '@/modules/app-store/
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {RegistryApp, trpcReact} from '@/trpc/trpc'
+import {roundForPrettyBytes} from '@/utils/round-for-pretty-bytes'
 
 import {InstallButton} from './install-button'
 
@@ -38,6 +40,8 @@ type ReadyController = {
 	installState: ReturnType<typeof useAppInstall>['state']
 	install: () => void
 	open: () => void
+	/** Undefined for members, who can't start apps */
+	start: (() => void) | undefined
 	update: () => void
 	updatePending: boolean
 	canOfferUpdate: boolean
@@ -135,7 +139,9 @@ export function InstallButtonConnectedController({
 		updateApp.update()
 	}
 
-	const installSize = app.installSize ? prettyBytes(app.installSize) : undefined
+	const installSize = app.installSize
+		? prettyBytes(roundForPrettyBytes(app.installSize), {locale: i18next.language})
+		: undefined
 	const controller: InstallController = ready
 		? {
 				status: 'ready',
@@ -145,6 +151,9 @@ export function InstallButtonConnectedController({
 				installState: appInstall.state,
 				install,
 				open: () => openApp(app.id),
+				// Same as tapping the app's home screen icon: start a stopped app,
+				// restart one whose state is unknown
+				start: isMember ? undefined : appInstall.state === 'unknown' ? appInstall.restart : appInstall.start,
 				update,
 				updatePending: updateApp.isPending,
 				canOfferUpdate,
@@ -199,7 +208,7 @@ export function InstallButtonConnectedView() {
 
 	return (
 		<div className='flex flex-col gap-1.5'>
-			<div className='flex items-center gap-3 max-sm:flex-col max-sm:items-stretch md:gap-4'>
+			<div className='flex items-center gap-3 max-sm:gap-2 max-sm:*:min-w-0 max-sm:*:flex-1 md:gap-4'>
 				<InstallButton
 					key={controller.app.id}
 					installSize={controller.installSize}
@@ -207,6 +216,7 @@ export function InstallButtonConnectedView() {
 					state={controller.installState}
 					onInstallClick={controller.install}
 					onOpenClick={controller.open}
+					onStartClick={controller.start}
 					disabled={controller.isAppIdAmbiguous && controller.installState === 'not-installed'}
 				/>
 				{controller.canOfferUpdate && (

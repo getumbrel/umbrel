@@ -6,9 +6,9 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import ky from 'ky'
 
-import {getHostname} from '../system/system.js'
+import {getHostname} from '../system/system.ts'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 type NetworkShare = {
 	host: string

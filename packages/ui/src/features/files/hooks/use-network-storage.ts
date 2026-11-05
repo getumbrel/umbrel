@@ -149,17 +149,35 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean; po
 		onSettled: invalidateShares,
 	})
 
-	// Remove host or share by path
+	// Remove host or share by path. This forgets the share and its sign-in rather than
+	// unmounting it until next time, so it is confirmed first.
 	const removeHostOrShare = async (path: string) => {
 		if (!shares) return
+		const isHost = isDirectoryANetworkDevice(path)
+		if (!isHost && !isDirectoryANetworkShare(path)) return
 
-		if (isDirectoryANetworkDevice(path)) {
+		try {
+			await confirm({
+				title: t('files-network-storage.eject-confirm-title', {name: path.split('/').pop()}),
+				message: isHost
+					? t('files-network-storage.eject-confirm-host-message')
+					: t('files-network-storage.eject-confirm-share-message'),
+				actions: [
+					{label: t('files-action.eject-disk'), value: 'eject', variant: 'destructive'},
+					{label: t('cancel'), value: 'cancel', variant: 'default'},
+				],
+			})
+		} catch {
+			return
+		}
+
+		if (isHost) {
 			// Host path: /Network/hostname - remove all shares for this host
 			const hostShares = shares.filter((s) => s.mountPath.startsWith(path + '/'))
 			for (const share of hostShares) {
 				await removeShare({mountPath: share.mountPath})
 			}
-		} else if (isDirectoryANetworkShare(path)) {
+		} else {
 			// Share path: /Network/hostname/share - remove just this share
 			await removeShare({mountPath: path})
 		}
@@ -193,9 +211,13 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean; po
 				password,
 			})
 		} catch (error: any) {
+			// Without a known error code, the server's message is the failed command itself,
+			// which includes the password, so it is never shown
+			const serverMessage = (error as RouterError).message
+			const knownMessage = getFilesErrorMessage(serverMessage)
 			toast.error(
 				t('files-network-storage-error.discover-shares', {
-					message: getFilesErrorMessage((error as RouterError).message),
+					message: knownMessage === serverMessage ? t('files-network-storage-error.check-sign-in') : knownMessage,
 				}),
 				{area: 'files'},
 			)

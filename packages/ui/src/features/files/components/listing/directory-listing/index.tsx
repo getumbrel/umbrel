@@ -68,7 +68,8 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 
 	// For "Paste" command
 	const {pasteItemsFromClipboard} = useFilesOperations()
-	const hasItemsInClipboard = useFilesStore((state: FilesStore) => state.hasItemsInClipboard)
+	// A value, not the store's getter, so the menus re-render when something is copied
+	const hasItemsInClipboard = useFilesStore((state: FilesStore) => state.clipboardItems.length > 0)
 
 	// For "New Folder"
 	const {startNewFolder} = useNewFolder()
@@ -164,7 +165,7 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 				</ContextMenuItem>
 				<ContextMenuItem
 					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-					disabled={!hasItemsInClipboard() || !isWritable}
+					disabled={!hasItemsInClipboard || !isWritable}
 				>
 					{t('files-action.paste')}
 					<ContextMenuShortcut>⌘V</ContextMenuShortcut>
@@ -245,7 +246,7 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-					disabled={disableActions || !hasItemsInClipboard() || !isWritable}
+					disabled={disableActions || !hasItemsInClipboard || !isWritable}
 				>
 					<RiClipboardLine className='mr-2 h-4 w-4 opacity-50' />
 					{t('files-action.paste')}
@@ -254,6 +255,9 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 		)
 	}
 
+	// The actions are elements built from this render's state (the folder to paste
+	// into, whether there's anything to paste), so anything they read is a
+	// dependency, or they keep acting on the folder they were built for
 	useEffect(() => {
 		setActionsBarConfig({
 			desktopActions: DesktopActions,
@@ -262,6 +266,8 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 			hideSearch: isBrowsingApps || isBrowsingMachines || isBrowsingExternalStorage || isBrowsingNetworkStorage,
 		})
 	}, [
+		currentPath,
+		hasItemsInClipboard,
 		disableActions,
 		isReadOnly,
 		isWritable,
@@ -280,6 +286,7 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 			<UploadInput ref={uploadInputRef} disabled={isReadOnly || !isWritable} />
 			<Listing
 				items={items}
+				hiddenRenamedPaths={listing?.hiddenRenamedPaths}
 				totalItems={listing?.totalFiles}
 				truncatedAt={listing?.truncatedAt}
 				selectableItems={selectableItems}

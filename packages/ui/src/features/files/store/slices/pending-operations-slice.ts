@@ -13,14 +13,18 @@ import type {FileSystemItem} from '@/features/files/types'
 // 'processing' = item is being worked on (extract, compress)
 export type PendingType = 'removing' | 'processing'
 
+export interface IncomingItem extends FileSystemItem {
+	renamedFrom?: string
+}
+
 export interface PendingOperationsSlice {
 	pendingPaths: Map<string, PendingType>
 	addPendingPaths: (paths: string[], type: PendingType) => void
 	removePendingPaths: (paths: string[]) => void
 
 	// Optimistic items expected to arrive at a destination (e.g. drag-and-drop move)
-	incomingItems: FileSystemItem[]
-	addIncomingItems: (items: FileSystemItem[]) => void
+	incomingItems: IncomingItem[]
+	addIncomingItems: (items: IncomingItem[]) => void
 	removeIncomingItems: (paths: string[]) => void
 }
 

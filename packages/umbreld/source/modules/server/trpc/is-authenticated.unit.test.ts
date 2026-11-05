@@ -2,13 +2,13 @@ import {readFile} from 'node:fs/promises'
 
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../../index.js'
-import Auth, {OWNER_ACCOUNT_ID, type Principal} from '../../auth/auth.js'
-import {BROWSER_SESSION_HTTP_COOKIE_NAME} from '../../auth/browser-session-cookie.js'
-import temporaryDirectory from '../../utilities/temporary-directory.js'
+import type Umbreld from '../../../index.ts'
+import Auth, {OWNER_ACCOUNT_ID, type Principal} from '../../auth/auth.ts'
+import {BROWSER_SESSION_HTTP_COOKIE_NAME} from '../../auth/browser-session-cookie.ts'
+import temporaryDirectory from '../../utilities/temporary-directory.ts'
 
-import type {Context} from './context.js'
-import {isAuthenticated, isOwner} from './is-authenticated.js'
+import type {Context} from './context.ts'
+import {isAuthenticated, isOwner} from './is-authenticated.ts'
 
 const nativeClient = {
 	id: 'umbrel',

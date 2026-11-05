@@ -4,10 +4,10 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import routes from './routes.js'
-import type {Context} from '../server/trpc/context.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import routes from './routes.ts'
+import type {Context} from '../server/trpc/context.ts'
 
 const SOURCE_ID = '11111111-1111-4111-8111-111111111111'
 const libraryId = (accountId: string) =>
@@ -49,6 +49,7 @@ test('renames only the display name and retains it across reconnects and restart
 		libraryId('0'),
 		'Holiday phone',
 		original.createdAt,
+		undefined,
 	)
 	expect(emit).toHaveBeenCalledWith('photos:change', {accountIds: ['0']})
 	await expect(register()).resolves.toEqual(renamed)
@@ -67,10 +68,24 @@ test('renames only the display name and retains it across reconnects and restart
 		libraryId('0'),
 		'Holiday phone',
 		original.createdAt,
+		undefined,
 	)
 	await expect(restarted.photos.prepareBackupResourcePath(renamed, key, 'heic')).resolves.toBe(path)
 	await expect(fse.readFile(systemPath, 'utf8')).resolves.toBe('photo')
 	await expect(fse.pathExists(nodePath.join(dataDirectory, 'home', 'Photos', 'Holiday phone'))).resolves.toBe(false)
+})
+
+// The iOS app derives this id itself (UmbrelKit's NativeAPIContractTests pins the same
+// value), so it can't change without stranding released apps
+test('keeps the source id the iOS app derives', async () => {
+	await register()
+	await expect(
+		umbreld.photos.renameSource(
+			'0',
+			'iphone:90c71c0f96dda691311fcada2a00ec595e7b14c2e58206f70e1f743bb998a749',
+			'Holiday phone',
+		),
+	).resolves.toBe(true)
 })
 
 test('cannot rename another account’s source or the built-in Umbrel source', async () => {
@@ -143,7 +158,7 @@ test('can retry a rename if updating the Photos database fails', async () => {
 	vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mockClear()
 	await expect(umbreld.photos.renameSource('0', libraryId('0'), 'New name')).resolves.toBe(true)
 	expect(vi.mocked(umbreld.files.fileIndex.photosUpsertBackupSource).mock.calls).toEqual([
-		['0', libraryId('0'), 'New name', original.createdAt],
+		['0', libraryId('0'), 'New name', original.createdAt, undefined],
 	])
 })
 

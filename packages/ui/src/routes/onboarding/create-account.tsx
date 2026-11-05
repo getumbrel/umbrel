@@ -5,7 +5,7 @@ import {FaLock} from 'react-icons/fa6'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {AnimatedInputError, Input, PasswordInput} from '@/components/ui/input'
-import {useDeviceInfo} from '@/hooks/use-device-info'
+import {deviceInfoToHostEnvironment, useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
@@ -32,7 +32,10 @@ export default function CreateAccount() {
 	const navigate = useNavigate()
 	const auth = useAuth()
 	const [language] = useLanguage()
-	const {data: deviceInfo, isLoading: isDeviceInfoLoading} = useDeviceInfo()
+	const utils = trpcReact.useUtils()
+	const deviceInfoQ = useDeviceInfo()
+	const {data: deviceInfo, isLoading: isDeviceInfoLoading} = deviceInfoQ
+	const [isCheckingStorage, setIsCheckingStorage] = useState(false)
 
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')
@@ -40,7 +43,6 @@ export default function CreateAccount() {
 	const [localError, setLocalError] = useState('')
 	const [isNavigating, setIsNavigating] = useState(false)
 
-	const isPro = deviceInfo?.umbrelHostEnvironment === 'umbrel-pro'
 	const isRaspberryPi = deviceInfo?.umbrelHostEnvironment === 'raspberry-pi'
 	const isGeneric = deviceInfo?.umbrelHostEnvironment === 'unknown'
 
@@ -71,41 +73,56 @@ export default function CreateAccount() {
 	})
 
 	const completeAccountSetup = async () => {
-		if (isPro) {
-			// For Umbrel Pro we navigate to RAID setup
-			setIsNavigating(true)
-			const credentials: AccountCredentials = {name, password, language}
-
-			// Pass credentials to RAID setup page
-			navigate('/onboarding/raid', {state: {credentials}})
-			return
-		}
-
-		if (isGeneric) {
-			// Generic devices prefer HDD RAID when HDDs are present, otherwise SSD RAID
-			// when SSDs are present. If detection fails we fall back to standard setup.
-			const internalDevices = internalStorageQ.data ?? (await internalStorageQ.refetch()).data
-			const raidOnboardingPath = getGenericRaidOnboardingPath(internalDevices ?? [])
-			if (raidOnboardingPath) {
+		setIsCheckingStorage(true)
+		try {
+			const identity = await utils.client.systemNg.device.getIdentity.query()
+			const host = deviceInfoToHostEnvironment(identity)
+			if (!host) throw new Error('Storage identity unavailable')
+			let path: string | undefined
+			if (host === 'umbrel-pro') path = '/onboarding/raid'
+			if (host === 'unknown') {
+				const inventory = await internalStorageQ.refetch()
+				if (inventory.isError || !inventory.data) throw new Error('Storage inventory unavailable')
+				path = getGenericRaidOnboardingPath(inventory.data) ?? undefined
+			}
+			if (host === 'raspberry-pi' && !externalDriveAcknowledged) {
+				const external = await externalDevicesQ.refetch()
+				if (external.isError || !external.data) throw new Error('External storage unavailable')
+				if (external.data.length) {
+					navigate('/onboarding/external-drive', {replace: true})
+					return
+				}
+			}
+			if (path) {
 				setIsNavigating(true)
-				const credentials: AccountCredentials = {name, password, language}
-				navigate(raidOnboardingPath, {state: {credentials}})
+				const credentials: AccountCredentials = {name: name.trim(), password, language}
+				navigate(path, {state: {credentials}})
 				return
 			}
+			registerMut.mutate({name: name.trim(), password, language})
+		} catch {
+			setLocalError(t('storage-status.check-failed'))
+		} finally {
+			setIsCheckingStorage(false)
 		}
+	}
 
-		// Otherwise we do standard registration flow
-		registerMut.mutate({name, password, language})
+	// An error is about what was submitted, so it goes as soon as a field changes
+	const clearErrors = () => {
+		setLocalError('')
+		registerMut.reset()
+	}
+	const onFieldChange = (setValue: (value: string) => void) => (value: string) => {
+		setValue(value)
+		clearErrors()
 	}
 
 	const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
+		clearErrors()
 
-		// Reset errors
-		registerMut.reset()
-		setLocalError('')
-
-		if (!name) {
+		// A name of only spaces would leave the account blank everywhere it's shown
+		if (!name.trim()) {
 			setLocalError(t('onboarding.create-account.failed.name-required'))
 			return
 		}
@@ -127,7 +144,8 @@ export default function CreateAccount() {
 	const formError = localError || remoteFormError
 	// Only worth warning about a password once there's a valid, confirmed one
 	const isPasswordConfirmed = password.length >= MIN_PASSWORD_LENGTH && confirmPassword === password
-	const isLoading = isDeviceInfoLoading || registerMut.isPending || loginMut.isPending || isNavigating
+	const isLoading =
+		isDeviceInfoLoading || isCheckingStorage || registerMut.isPending || loginMut.isPending || isNavigating
 
 	return (
 		<Layout
@@ -143,18 +161,18 @@ export default function CreateAccount() {
 							placeholder={t('onboarding.create-account.name.input-placeholder')}
 							autoFocus
 							value={name}
-							onValueChange={setName}
+							onValueChange={onFieldChange(setName)}
 						/>
 						<PasswordInput
 							label={t('onboarding.create-account.password.input-label')}
 							value={password}
-							onValueChange={setPassword}
+							onValueChange={onFieldChange(setPassword)}
 							error={registerMut.error?.data?.zodError?.fieldErrors['password']?.join('. ')}
 						/>
 						<PasswordInput
 							label={t('onboarding.create-account.confirm-password.input-label')}
 							value={confirmPassword}
-							onValueChange={setConfirmPassword}
+							onValueChange={onFieldChange(setConfirmPassword)}
 						/>
 					</div>
 

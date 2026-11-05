@@ -1,9 +1,18 @@
 import nodePath from 'node:path'
 
+import {buildUsbHostdevXml, type UsbAddress, type UsbDeviceAssignment} from './usb-devices.ts'
+
 export type MachineArchitecture = 'amd64' | 'arm64'
 export type PlatformProfile = 'modern-x86' | 'windows-7-x86' | 'legacy-x86' | 'windows-98-x86' | 'modern-arm64'
 export type PortForwardProtocol = 'tcp' | 'udp'
 export const MACHINE_NETWORK_NAME = 'umbrel-machines'
+// The host bridge bridged machines join the LAN through. It carries Umbrel's
+// own address, so the host and these machines can still reach each other.
+export const MACHINE_LAN_BRIDGE = 'umbrel-lan'
+
+// nat: behind Umbrel on the private machine network, reached through port
+// forwards. bridged: directly on the LAN with an address from the router.
+export type MachineNetworkMode = 'nat' | 'bridged'
 
 export type PortForward = {
 	id: string
@@ -43,6 +52,10 @@ export type MachineDefinition = {
 	diskPath?: string
 	uuid: string
 	macAddress: string
+	// Absent on machines created before bridged networking, which are NAT
+	networkMode?: MachineNetworkMode
+	// The machine's address on the private machine network. Bridged machines
+	// keep one too because they use NAT until their first-boot setup is done.
 	ipAddress?: string
 	diskSizeGb: number
 	cores: number
@@ -62,6 +75,49 @@ export type MachineDefinition = {
 	seedMedia?: string
 	bootMedia?: string
 	portForwards: PortForward[]
+	// Host USB devices passed through to the guest
+	usbDevices?: UsbDeviceAssignment[]
+}
+
+// First-boot setup calls home to Umbrel over the private machine network, so a
+// bridged machine stays on NAT until its setup is done, or has been given up on.
+export function machineJoinsLan(
+	definition: Pick<MachineDefinition, 'networkMode' | 'firstBootSetup'>,
+	{setupExpired = false} = {},
+) {
+	return definition.networkMode === 'bridged' && (!definition.firstBootSetup || setupExpired)
+}
+
+export function machineNetworkModel(definition: Pick<MachineDefinition, 'platformProfile'>) {
+	switch (definition.platformProfile) {
+		case 'windows-98-x86':
+			return 'ne2k_isa'
+		case 'windows-7-x86':
+			return 'e1000'
+		case 'legacy-x86':
+			return 'rtl8139'
+		default:
+			return 'virtio'
+	}
+}
+
+// NAT machines are isolated from each other and can't spoof addresses on the
+// private network. A bridged machine is an ordinary LAN device, which lets it
+// run things like a router or DHCP server, so it gets no filtering.
+export function buildInterfaceXml(definition: MachineDefinition, joinLan = machineJoinsLan(definition)) {
+	const networkModel = machineNetworkModel(definition)
+	const source = joinLan
+		? `<source bridge='${MACHINE_LAN_BRIDGE}'/>`
+		: `<source network='${MACHINE_NETWORK_NAME}'/>
+			<port isolated='yes'/>
+			<filterref filter='clean-traffic'><parameter name='IP' value='${escapeXml(definition.ipAddress!)}'/></filterref>`
+	return `<interface type='${joinLan ? 'bridge' : 'network'}'>
+			<mac address='${escapeXml(definition.macAddress)}'/>
+			${source}
+			<model type='${networkModel}'/>
+			${networkModel === 'virtio' ? "<driver name='vhost'/>" : ''}
+			${networkModel === 'ne2k_isa' ? "<address type='isa' iobase='0x200' irq='3'/>" : ''}
+		</interface>`
 }
 
 export function machineDiskBus(definition: MachineDefinition) {
@@ -134,6 +190,8 @@ export function buildDomainXml({
 	diskPath,
 	graphicsRenderNode,
 	audioPlaybackDevice,
+	usbDevices = [],
+	joinLan = machineJoinsLan(definition),
 }: {
 	definition: MachineDefinition
 	machineDirectory: string
@@ -143,6 +201,10 @@ export function buildDomainXml({
 	diskPath?: string
 	graphicsRenderNode?: string
 	audioPlaybackDevice?: string
+	// Where the machine's assigned USB devices are connected right now
+	usbDevices?: UsbAddress[]
+	// Whether its network card goes on the LAN bridge rather than the NAT network
+	joinLan?: boolean
 }) {
 	if (!definition.ipAddress) throw new Error('[machine-ip-address-invalid]')
 	const windows7 = definition.platformProfile === 'windows-7-x86'
@@ -157,19 +219,24 @@ export function buildDomainXml({
 	const qemuLog = nodePath.join(runtimeDirectory, 'qemu.log')
 	const diskBus = machineDiskBus(definition)
 	const diskTarget = machineDiskTarget(definition)
-	const networkModel = windows98
-		? 'ne2k_isa'
-		: windows7
-			? 'e1000'
-			: definition.platformProfile === 'legacy-x86'
-				? 'rtl8139'
-				: 'virtio'
-	const networkAddress = windows98 ? "<address type='isa' iobase='0x200' irq='3'/>" : ''
 	const emulator = definition.arch === 'arm64' ? '/usr/bin/qemu-system-aarch64' : '/usr/bin/qemu-system-x86_64'
 	const loader =
 		definition.firmware === 'uefi'
 			? `<loader readonly='yes'${definition.secureBoot && !arm ? " secure='yes'" : ''} type='pflash'>${escapeXml(firmwareCode!)}</loader><nvram>${escapeXml(nvramPath)}</nvram>`
 			: ''
+	// Hyper-V enlightenments and the Hyper-V clock give Windows paravirtual
+	// timers, interrupts and TLB flushes. Without them an idle Windows guest
+	// keeps trapping into emulated hardware and burns host CPU. They're limited
+	// to KVM x86 Windows guests: Linux moves off kvm-clock when it sees Hyper-V,
+	// and the XP/98 legacy profiles are left exactly as they are.
+	const hyperv =
+		acceleration === 'kvm' && !arm && ['windows-11', 'windows-server', 'windows-7'].includes(definition.osId)
+	const hypervFeatures = hyperv
+		? "<hyperv mode='custom'><relaxed state='on'/><vapic state='on'/><spinlocks state='on' retries='8191'/><vpindex state='on'/><runtime state='on'/><synic state='on'/><stimer state='on'><direct state='on'/></stimer><frequencies state='on'/><tlbflush state='on'/><ipi state='on'/></hyperv>"
+		: ''
+	const clock = hyperv
+		? "<clock offset='utc'><timer name='rtc' tickpolicy='catchup'/><timer name='pit' tickpolicy='delay'/><timer name='hpet' present='no'/><timer name='hypervclock' present='yes'/></clock>"
+		: "<clock offset='utc'/>"
 	// Native ARM guests must use the interrupt controller exposed by the host:
 	// Raspberry Pi 5 KVM provides GICv2, while server-class ARM hosts commonly
 	// provide GICv3. TCG can consistently emulate GICv3.
@@ -177,7 +244,7 @@ export function buildDomainXml({
 		? `<acpi/><gic version="${acceleration === 'kvm' ? 'host' : '3'}"/>`
 		: windows98
 			? "<apic/><vmport state='on'/>"
-			: `<acpi/><apic/>${definition.secureBoot ? "<smm state='on'/>" : ''}`
+			: `<acpi/><apic/>${hypervFeatures}${definition.secureBoot ? "<smm state='on'/>" : ''}`
 	const cdrom = definition.installMedia
 		? arm
 			? windowsArm
@@ -188,7 +255,6 @@ export function buildDomainXml({
 	const bootFloppy = definition.bootMedia
 		? `<controller type='fdc'/><disk type='file' device='floppy'><driver name='qemu' type='raw'/><source file='${escapeXml(nodePath.join(machineDirectory, definition.bootMedia))}' startupPolicy='optional'/><target dev='fda' bus='fdc'/><boot order='1'/></disk>`
 		: ''
-	const networkDriver = networkModel === 'virtio' ? "<driver name='vhost'/>" : ''
 	const tpm = definition.tpm
 		? `<tpm model='${arm ? 'tpm-tis' : 'tpm-crb'}'><backend type='emulator' version='2.0' persistent_state='yes'/></tpm>`
 		: ''
@@ -231,6 +297,23 @@ export function buildDomainXml({
 	const modernInputs = arm
 		? "<controller type='usb' model='qemu-xhci'/><input type='tablet' bus='usb'/><input type='keyboard' bus='usb'/>"
 		: "<controller type='usb' model='qemu-xhci'/><input type='tablet' bus='usb'/><input type='keyboard' bus='ps2'/>"
+	// Passthrough devices share the xHCI controller, which legacy profiles lack
+	const usbHostdevs = modern ? usbDevices.map(buildUsbHostdevXml).join('') : ''
+	// QEMU's built-in vdagent carries the clipboard between the console and a
+	// guest running spice-vdagent, which the Fedora and Ubuntu desktops ship.
+	// Its virtio-serial controller is pinned to a root-bus slot because letting
+	// libvirt place it renumbers the disk and balloon of machines that already
+	// booted without it. The pointer stays on the USB tablet. Windows 7 has no
+	// virtio drivers and Windows on Arm no agent build, so they'd only gain an
+	// unknown device.
+	const clipboardChannel =
+		definition.platformProfile === 'modern-x86' || (definition.platformProfile === 'modern-arm64' && !windowsArm)
+			? "<controller type='virtio-serial' index='0'><address type='pci' domain='0x0000' bus='0x00' slot='0x0a' function='0x0'/></controller><channel type='qemu-vdagent'><source><clipboard copypaste='yes'/><mouse mode='server'/></source><target type='virtio' name='com.redhat.spice.0'/></channel>"
+			: ''
+
+	// Present every vCPU as a core on one socket. Without a topology libvirt
+	// gives each vCPU its own socket, and Windows client editions use at most two.
+	const topology = `<topology sockets='1' cores='${definition.cores}' threads='1'/>`
 
 	return `<?xml version='1.0' encoding='UTF-8'?>
 <domain type='${acceleration === 'kvm' ? 'kvm' : 'qemu'}' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
@@ -244,8 +327,8 @@ export function buildDomainXml({
     ${loader}
   </os>
   <features>${features}</features>
-  <cpu mode='${acceleration === 'kvm' ? 'host-passthrough' : 'maximum'}' check='none'/>
-  <clock offset='utc'/>
+  <cpu mode='${acceleration === 'kvm' ? 'host-passthrough' : 'maximum'}' check='none'>${topology}</cpu>
+  ${clock}
   <on_poweroff>destroy</on_poweroff>
   <on_reboot>restart</on_reboot>
   <on_crash>restart</on_crash>
@@ -261,19 +344,13 @@ export function buildDomainXml({
     ${cdrom}
     ${definition.seedMedia ? `<disk type='file' device='cdrom'><driver name='qemu' type='raw'/><source file='${escapeXml(nodePath.join(machineDirectory, definition.seedMedia))}' startupPolicy='optional'/><target dev='sdb' bus='sata'/><readonly/></disk>` : ''}
     ${bootFloppy}
-		<interface type='network'>
-			<mac address='${escapeXml(definition.macAddress)}'/>
-			<source network='${MACHINE_NETWORK_NAME}'/>
-			<port isolated='yes'/>
-			<filterref filter='clean-traffic'><parameter name='IP' value='${escapeXml(definition.ipAddress)}'/></filterref>
-			<model type='${networkModel}'/>
-			${networkDriver}
-			${networkAddress}
-		</interface>
+		${buildInterfaceXml(definition, joinLan)}
     <graphics type='vnc' socket='${escapeXml(displaySocket)}' sharePolicy='allow-exclusive'/>
     ${acceleratedGraphics}
     ${video}
     ${modern && !windows98 ? modernInputs : "<input type='mouse' bus='ps2'/><input type='keyboard' bus='ps2'/>"}
+    ${usbHostdevs}
+    ${clipboardChannel}
     <serial type='file'><source path='${escapeXml(qemuLog)}'/><target port='0'/></serial>
     <console type='file'><source path='${escapeXml(qemuLog)}'/><target type='serial' port='0'/></console>
     <memballoon model='virtio' freePageReporting='on'/>

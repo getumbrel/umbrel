@@ -4,7 +4,7 @@ import fse from 'fs-extra'
 import pRetry from 'p-retry'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const suiteRoot = '/Home/thumbnail-index-vm'
 const guestHome = '/home/umbrel/umbrel/home'
@@ -180,8 +180,11 @@ describe('content-addressed thumbnail index', () => {
 	})
 
 	test('ships the HEVC decoder with initialized HDR image planes', async () => {
-		const version = await umbreld.vm.ssh("dpkg-query -W -f='${Version}' libde265-0")
-		expect(version).toBe('1.1.1-1')
+		// The plane initialization fix landed in 1.1.1, trixie ships 1.0.15
+		const hasFix = await umbreld.vm.ssh(
+			`dpkg --compare-versions "$(dpkg-query -W -f='\${Version}' libde265-0)" ge 1.1.1-1 && printf yes`,
+		)
+		expect(hasFix).toBe('yes')
 	})
 
 	test('generates a genuine Apple HEIC thumbnail', async () => {
@@ -199,6 +202,24 @@ describe('content-addressed thumbnail index', () => {
 		const url = await umbreld.client.files.getThumbnail.mutate({path})
 		const dimensions = await umbreld.vm.sshAsRoot(`identify -quiet -format '%wx%h' '${thumbnailSystemPath(url)}[0]'`)
 		expect(dimensions).toBe('288x192')
+	})
+
+	test('makes and serves the larger rendition a viewer asks for', async () => {
+		const path = `${suiteRoot}/formats/viewer.tiff`
+		const encoded = await umbreld.vm.sshAsRoot('convert -size 2400x1600 xc:red -compress lzw tiff:- | base64 -w 0')
+		await upload(path, Buffer.from(encoded, 'base64'))
+
+		const url = await umbreld.client.files.getThumbnail.mutate({path, variant: 'preview-1280-webp-v2'})
+		const [, key] = /^content-preview-1280-webp-v2-([a-f0-9]{64})\.webp$/.exec(
+			nodePath.basename(new URL(url, 'http://localhost').pathname),
+		)!
+		const dimensions = await umbreld.vm.sshAsRoot(
+			`identify -quiet -format '%wx%h' '${guestThumbnailRoot}/content/preview-1280-webp-v2/${key.slice(0, 2)}/${key}.webp[0]'`,
+		)
+		expect(dimensions).toBe('1920x1280')
+		const response = await umbreld.api.get(url.replace(/^\/api\//, ''), {responseType: 'buffer'})
+		expect(response.statusCode).toBe(200)
+		expect(response.headers['content-type']).toBe('image/webp')
 	})
 
 	test('treats ImageMagick wildcard syntax in filenames literally', async () => {
@@ -368,6 +389,39 @@ describe('content-addressed thumbnail index', () => {
 		)
 		const listing = await umbreld.client.files.list.query({path: directory})
 		expect(listing.files[0].thumbnail).toBeUndefined()
+	})
+
+	test('never decodes the macOS AppleDouble sidecar copied next to a photo', async () => {
+		// macOS writes `._<name>` beside every file it copies to FAT/exFAT drives or
+		// network shares. The fixture is a real one, from copying the HEIC fixture
+		// to a FAT32 volume. It keeps the photo's extension but holds no image.
+		const directory = `${suiteRoot}/appledouble`
+		const photo = `${directory}/IMG_0001.HEIC`
+		const sidecar = `${directory}/._IMG_0001.HEIC`
+		const since = await umbreld.vm.sshAsRoot('date +%s')
+		await uploadFixture(photo, 'apple-encoded-image.heic')
+		await uploadFixture(sidecar, 'appledouble-sidecar.bin')
+
+		await expect(umbreld.client.files.getThumbnail.mutate({path: sidecar})).rejects.toThrow(
+			'Unsupported or missing thumbnail source',
+		)
+
+		// Background enrichment reaches the photo but leaves the sidecar alone,
+		// which stays listed like any other file
+		await pRetry(
+			async () => {
+				const {files} = await umbreld.client.files.list.query({path: directory})
+				expect(Object.fromEntries(files.map(({name, thumbnail}) => [name, typeof thumbnail]))).toStrictEqual({
+					'._IMG_0001.HEIC': 'undefined',
+					'IMG_0001.HEIC': 'string',
+				})
+			},
+			{retries: 240, factor: 1, minTimeout: 250, maxTimeout: 250},
+		)
+		const sidecarLogs = await umbreld.vm.sshAsRoot(
+			`journalctl -u umbrel --since @${since} --no-pager | grep -F '._IMG_0001.HEIC' || true`,
+		)
+		expect(sidecarLogs).toBe('')
 	})
 
 	test('converges a large out-of-band event burst while background generation remains responsive', async () => {

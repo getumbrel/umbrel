@@ -5,22 +5,22 @@ import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
-import {execa, ExecaError, ExecaChildProcess} from 'execa'
+import {execa, type ExecaError, type ExecaChildProcess} from 'execa'
 import fse from 'fs-extra'
 import pQueue from 'p-queue'
 import prettyBytes from 'pretty-bytes'
 
-import randomToken from '../../modules/utilities/random-token.js'
-import {copyWithProgress} from '../utilities/copy-with-progress.js'
+import randomToken from '../../modules/utilities/random-token.ts'
+import {copyWithProgress} from '../utilities/copy-with-progress.ts'
 
 // TODO: These should be refactored into proper umbreld modules
-import {getSystemDiskUsage} from '../system/system.js'
-import {setSystemStatus} from '../system/routes.js'
-import {reboot} from '../system/system.js'
-import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
-import type Umbreld from '../../index.js'
-import type {ProgressStatus} from '../apps/schema.js'
-import {OWNER_USER_ID} from '../user/constants.js'
+import {getSystemDiskUsage} from '../system/system.ts'
+import {setSystemStatus} from '../system/routes.ts'
+import {reboot} from '../system/system.ts'
+import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.ts'
+import type Umbreld from '../../index.ts'
+import type {ProgressStatus} from '../apps/schema.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 
 type Backup = {
 	// Our internal id in the format: <repositoryId>:<snapshotId>
@@ -217,8 +217,12 @@ export default class Backups {
 		flags: string[] = [],
 		{onOutput, bypassQueue = true}: {onOutput?: (output: string) => void; bypassQueue?: boolean} = {},
 	) {
-		// Refuse to spawn new kopia processes if we're shutting down
-		if (!this.running) throw new Error('[shutting-down] Refusing to spawn new kopia processes')
+		// Refuse to spawn new kopia processes until backups has started (it starts last
+		// during boot, after the API is already up) and once we're shutting down
+		if (!this.running) {
+			if (this.startedAt === undefined) throw new Error('[backups-starting] Backups are still starting')
+			throw new Error('[shutting-down] Refusing to spawn new kopia processes')
+		}
 
 		const spawnKopiaProcess = async () => {
 			// Spawn process
@@ -405,9 +409,11 @@ export default class Backups {
 				this.restoreStatus.bytesPerSecond = progress.bytesPerSecond
 				this.restoreStatus.secondsRemaining = progress.secondsRemaining
 				this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreStatus)
-				if (previousProgress !== this.restoreStatus.progress) {
-					previousProgress = this.restoreStatus.progress
-					this.logger.log(`Restored ${this.restoreStatus.progress}% of backup`)
+				// Only log whole percents to avoid spamming the logs
+				const wholeProgress = Math.floor(this.restoreStatus.progress)
+				if (previousProgress !== wholeProgress) {
+					previousProgress = wholeProgress
+					this.logger.log(`Restored ${wholeProgress}% of backup`)
 				}
 			})
 			// rsync can exit successfully after its last parseable progress sample is 99%.
@@ -597,6 +603,17 @@ export default class Backups {
 		const repository = await this.getRepository(repositoryId)
 		this.logger.log(`Backing up to ${repository.path}`)
 
+		// Kopia runs automatic maintenance after a write command succeeds, and since
+		// Kopia 0.22 a maintenance failure (e.g. clock skew with a NAS) fails the
+		// command too. The command itself already succeeded, so log the failure and
+		// carry on instead of skipping or failing the backup. Kopia reports it on its
+		// own line, so a failed snapshot that only mentions it (e.g. in a file name)
+		// still fails.
+		const ignoreMaintenanceFailure = (error: unknown) => {
+			if (!/^running auto-maintenance: /m.test((error as ExecaError)?.stderr ?? '')) throw error
+			this.logger.error(`Automatic maintenance failed for ${repository.path}`, error)
+		}
+
 		// Ensure policy is enforced
 		this.logger.log(`Ensuring policy is enforced`)
 		await this.repository(repository.id, [
@@ -616,7 +633,7 @@ export default class Backups {
 			'--one-file-system=true',
 			// Throttle CPU usage
 			'--max-parallel-file-reads=1',
-		])
+		]).catch(ignoreMaintenanceFailure)
 		this.logger.log(`Retention policy enforced`)
 
 		// Ensure we own repository maintenance
@@ -659,7 +676,8 @@ export default class Backups {
 				// Create the snapshot
 				// TODO: Attempt recovering from device out of space errors by deleting old snapshots
 				this.logger.log(`Creating snapshot`)
-				await this.repository(repository.id, ['snapshot', 'create', this.#umbreld.dataDirectory], {
+				// Kopia only prints progress to a terminal unless --progress is passed
+				await this.repository(repository.id, ['snapshot', 'create', '--progress', this.#umbreld.dataDirectory], {
 					onOutput: (output) => {
 						// Pluck progress in brackets from output like:
 						// '/ 1 hashing, 216 hashed (1.6 GB), 21121 cached (5.4 GB), uploaded 1.4 GB, estimated 7.6 GB (91.6%) 0s left'
@@ -670,7 +688,7 @@ export default class Backups {
 						backupProgress.percent = Number(match[1])
 						this.#umbreld.eventBus.emit('backups:backup-progress', this.backupsInProgress)
 					},
-				})
+				}).catch(ignoreMaintenanceFailure)
 			} catch (error) {
 				failure = error
 			}

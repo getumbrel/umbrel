@@ -15,10 +15,8 @@ import {useAuth} from '@/modules/auth/use-auth'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 
-export function LogoutDialog() {
+export default function LogoutDialog() {
 	const {t} = useTranslation()
-	// TODO: Enable hook below after this component is only injected as needed rather than all the time
-	// useUmbrelTitle('Log out')
 	const dialogProps = useDialogOpenProps('logout')
 	const {logout} = useAuth()
 	const userQ = trpcReact.user.get.useQuery()
@@ -39,7 +37,7 @@ export function LogoutDialog() {
 					<AlertDialogTitle>{t('logout.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogAction variant='destructive' className='px-6' onClick={logout}>
+					<AlertDialogAction variant='destructive' onClick={logout}>
 						{t('logout.confirm.submit')}
 					</AlertDialogAction>
 					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>

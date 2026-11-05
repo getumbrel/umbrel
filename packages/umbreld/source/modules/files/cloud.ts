@@ -6,9 +6,9 @@ import fse from 'fs-extra'
 import PQueue, {AbortError as QueueAbortError} from 'p-queue'
 import stripAnsi from 'strip-ansi'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import runEvery from '../utilities/run-every.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import runEvery from '../utilities/run-every.ts'
 
 import CloudAuth, {
 	CloudProviderHttpError,
@@ -17,15 +17,15 @@ import CloudAuth, {
 	type ConnectedAccount,
 	type ICloudChallenge,
 	type OAuthSession,
-} from './cloud-auth.js'
+} from './cloud-auth.ts'
 import CloudRclone, {
 	RcloneAbortedError,
 	RcloneProcessError,
 	buildRcloneRemoteSource,
 	type RcloneBrowseResult,
 	type RcloneConfigTransaction,
-} from './cloud-rclone.js'
-import {normalizePath, pathsOverlap} from './files.js'
+} from './cloud-rclone.ts'
+import {normalizePath, pathsOverlap} from './files.ts'
 import {
 	CLOUD_ACCOUNT_NOT_FOUND_ERROR,
 	CLOUD_DESTINATION_MISSING_ERROR,
@@ -47,7 +47,7 @@ import {
 	type Provider,
 	type RemoteRef,
 	type WebDavFlavor,
-} from './cloud-types.js'
+} from './cloud-types.ts'
 
 export const CLOUD_SCHEDULER_INTERVAL = 30 * 1000
 export const CLOUD_AUTO_INTERVAL = 30 * 60 * 1000

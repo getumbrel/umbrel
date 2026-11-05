@@ -18,7 +18,7 @@ export function MinimizedContent({progress}: {count: number; progress: number}) 
 			</div>
 			{/* Reserve right-side space to match other islands' layout (invisible) */}
 			<div className='flex shrink-0 items-center gap-2'>
-				<span className='text-xs text-white/60'>{progress}%</span>
+				<span className='text-xs text-white/60'>{Math.round(progress)}%</span>
 			</div>
 		</div>
 	)

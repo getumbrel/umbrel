@@ -1,0 +1,17 @@
+<UserControl x:Class="Umbrel.Views.StatusBadge"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root" IsHitTestVisible="False">
+  <!-- macOS StatusBadge. The 150 px ripple, (19 + 4 × 14) × 2, hangs 36 px past the top and
+       right edges so the icon sits 20 px in from the corner and only the inner arcs show;
+       the window edge crops the rest. Rings are added behind the icon in code. -->
+  <Grid x:Name="Badge" Width="150" Height="150" Margin="0,-36,-36,0"
+        HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
+    <Image x:Name="IconImage" Width="38" Height="38" Stretch="Uniform" RenderTransformOrigin="0.5,0.5"
+           Source="{Binding Icon, ElementName=Root}">
+      <Image.RenderTransform>
+        <ScaleTransform x:Name="IconScale" />
+      </Image.RenderTransform>
+    </Image>
+  </Grid>
+</UserControl>

@@ -5,10 +5,10 @@ import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 import type {WebSocket} from 'ws'
 import yaml from 'js-yaml'
 
-import type Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import type Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
-import Auth, {NATIVE_ACCESS_DURATION, OWNER_ACCOUNT_ID, SESSION_DURATION} from './auth.js'
+import Auth, {NATIVE_ACCESS_DURATION, NativeSessionRequiredError, OWNER_ACCOUNT_ID, SESSION_DURATION} from './auth.ts'
 
 const nativeClient = {
 	id: 'umbrel',
@@ -142,6 +142,17 @@ describe('Auth', () => {
 		await expect(auth.refreshNativeAccess(session.deviceToken, nativeClient)).resolves.toMatchObject({
 			principal: session.principal,
 		})
+	})
+
+	test('describes a native session by the client it last reported, and only a native session', async () => {
+		const native = await auth.createNativeSession({nativeClient})
+		await expect(auth.nativeClient(native.principal)).resolves.toEqual(nativeClient)
+		const androidClient = {...nativeClient, platform: 'android', osVersion: '16'}
+		await auth.refreshNativeAccess(native.deviceToken, androidClient)
+		await expect(auth.nativeClient(native.principal)).resolves.toEqual(androidClient)
+
+		const browser = await auth.createSession()
+		await expect(auth.nativeClient(browser.principal)).rejects.toThrow(NativeSessionRequiredError)
 	})
 
 	test('keeps a photo backup grant bound to one native source until it is replaced or revoked', async () => {

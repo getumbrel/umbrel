@@ -64,7 +64,7 @@ export function AppGallery({gallery, galleryId}: {gallery: string[]; galleryId: 
 								data-pswp-height={1800}
 								// The after: hairline sits over the image edge, so it reads on bright
 								// artwork too and doesn't change the image box
-								className='group relative block aspect-1.6 h-[220px] animate-in overflow-hidden rounded-24 bg-white/6 ring-white/80 outline-hidden fill-mode-both slide-in-from-right-10 fade-in ring-inset after:pointer-events-none after:absolute after:inset-0 after:rounded-24 after:ring-1 after:ring-white/8 after:ring-inset focus-visible:ring-4 md:h-[360px]'
+								className='group relative block aspect-1.6 h-[clamp(160px,45dvh,220px)] animate-in overflow-hidden rounded-24 bg-white/6 ring-white/80 outline-hidden fill-mode-both slide-in-from-right-10 fade-in ring-inset after:pointer-events-none after:absolute after:inset-0 after:rounded-24 after:ring-1 after:ring-white/8 after:ring-inset focus-visible:ring-4 md:h-[clamp(200px,45dvh,360px)]'
 								style={{
 									animationDelay: `${i * 0.1}s`,
 								}}
@@ -72,10 +72,13 @@ export function AppGallery({gallery, galleryId}: {gallery: string[]; galleryId: 
 								rel='noreferrer'
 								draggable={false}
 							>
+								{/* Out of flow so the slide's width comes from its height and aspect ratio
+								    alone: Safari sizes a basis-auto slide to an in-flow screenshot's
+								    natural width (2000px+), spreading the slides a screen apart */}
 								<FadeInImg
 									src={src}
 									loading={i > 2 ? 'lazy' : undefined}
-									className='h-full w-full object-cover group-focus-visible:opacity-80'
+									className='absolute inset-0 h-full w-full object-cover group-focus-visible:opacity-80'
 									alt=''
 									draggable={false}
 								/>
@@ -85,7 +88,7 @@ export function AppGallery({gallery, galleryId}: {gallery: string[]; galleryId: 
 				</CarouselContent>
 			</Carousel>
 			{snapCount > 1 && (
-				<div className='mt-3 flex items-center justify-between'>
+				<div className='mt-3 flex items-center justify-between pointer-coarse:justify-center'>
 					<CarouselDots count={snapCount} activeIndex={activeIndex} onSelect={(index) => api?.scrollTo(index)} />
 					<CarouselArrows
 						onPrev={() => api?.scrollPrev()}

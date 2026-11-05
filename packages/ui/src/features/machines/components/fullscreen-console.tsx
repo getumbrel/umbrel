@@ -58,7 +58,10 @@ export default function FullscreenConsole() {
 
 	return (
 		<div className='flex h-dvh flex-col bg-black'>
-			<header className='relative flex h-11 shrink-0 items-center justify-between border-b border-white/6 bg-[#161616] px-4'>
+			{/* Three columns, with equal sides so the middle label stays centred: a
+			    long machine name truncates in its own column instead of running
+			    under the label. Phones have no label, so the name gets the room. */}
+			<header className='grid h-11 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/6 bg-[#161616] px-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]'>
 				<div className='flex min-w-0 items-center gap-2'>
 					<OsIcon osId={machine.osId} state={machine.state} className='size-5' />
 					<span className='truncate text-13 font-medium -tracking-2 text-white'>{machine.name}</span>
@@ -68,12 +71,12 @@ export default function FullscreenConsole() {
 						</span>
 					)}
 				</div>
-				<div className='absolute left-1/2 hidden -translate-x-1/2 items-center gap-1.5 sm:flex'>
+				<div className='hidden items-center gap-1.5 sm:flex'>
 					<span className='text-13 -tracking-2 text-white/40'>{t('machines.running-on')}</span>
 					<img src='/assets/dock/dock-machines.webp' alt='' className='size-4 rounded-4' draggable={false} />
 					<span className='text-13 -tracking-2 text-white/70'>{t('machines.umbrel-machines')}</span>
 				</div>
-				<div className='flex items-center gap-1'>
+				<div className='flex items-center gap-1 justify-self-end'>
 					<DarkTooltip label={t('machines.fullscreen')} side='bottom'>
 						<button
 							className={consoleButtonClass}

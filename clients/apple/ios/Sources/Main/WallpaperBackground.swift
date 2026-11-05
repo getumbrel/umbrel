@@ -37,3 +37,31 @@ struct WallpaperBackground: View {
 		.ignoresSafeArea()
 	}
 }
+
+// Each tab is hosted by UIKit in a view with an opaque background, which would hide
+// the one wallpaper drawn behind all of them. Placed in a tab's background, this
+// clears those backgrounds so the tab is only its content.
+struct SeeThroughTab: UIViewRepresentable {
+	func makeUIView(context: Context) -> UIView { Probe() }
+	func updateUIView(_ view: UIView, context: Context) {}
+
+	private final class Probe: UIView {
+		override init(frame: CGRect) {
+			super.init(frame: frame)
+			isUserInteractionEnabled = false
+			backgroundColor = .clear
+		}
+
+		@available(*, unavailable)
+		required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+		override func didMoveToWindow() {
+			super.didMoveToWindow()
+			var ancestor = superview
+			while let view = ancestor, !(view is UIWindow) {
+				view.backgroundColor = .clear
+				ancestor = view.superview
+			}
+		}
+	}
+}

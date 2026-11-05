@@ -19,17 +19,11 @@ export function useQueryParams<T extends QueryObject>() {
 		setSearchParams(newParams, navigateOpts)
 	}
 
-	// Adding `& string` because otherwise `key` can be a number if `T` is not specified when calling `useQueryParams`
-	const filter = (fn: (item: [key: keyof T & string, value: string]) => boolean, navigateOpts?: NavigateOptions) => {
-		setSearchParams(Object.entries(object).filter(fn), navigateOpts)
-	}
-
 	return {
 		params: searchParams,
 		object,
 		remove,
 		add,
-		filter,
 		/**
 		 * For use in React Router `Link`:
 		 * ```jsx

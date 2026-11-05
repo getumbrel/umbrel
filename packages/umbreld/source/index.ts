@@ -2,42 +2,43 @@ import path from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 import fse from 'fs-extra'
 
-// TODO: import packageJson from '../package.json' assert {type: 'json'}
-const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
+import packageJson from '../package.json' with {type: 'json'}
 
-import {UMBREL_APP_STORE_REPO, BACKUP_RESTORE_FIRST_START_FLAG} from './constants.js'
-import createLogger, {type LogLevel} from './modules/utilities/logger.js'
-import FileStore from './modules/utilities/file-store.js'
-import Migration from './modules/startup-migrations/index.js'
-import Server from './modules/server/index.js'
-import User, {type MemberRecord} from './modules/user/user.js'
-import AppStore from './modules/apps/app-store.js'
-import Apps from './modules/apps/apps.js'
-import Files from './modules/files/files.js'
-import Hardware from './modules/hardware/hardware.js'
-import Notifications from './modules/notifications/notifications.js'
-import EventBus from './modules/event-bus/event-bus.js'
-import Dbus from './modules/dbus/dbus.js'
-import Backups from './modules/backups/backups.js'
-import SystemNg from './modules/system-ng/system-ng.js'
-import Machines from './modules/machines/machines.js'
-import LanIngress from './modules/lan-ingress/lan-ingress.js'
-import Auth from './modules/auth/auth.js'
-import Mcp, {type McpStoreSettings} from './modules/mcp/mcp.js'
-import Photos, {type PhotoBackupSource, type PhotoBackupSourceRemoval} from './modules/photos/photos.js'
+import {UMBREL_APP_STORE_REPO, BACKUP_RESTORE_FIRST_START_FLAG} from './constants.ts'
+import createLogger, {type LogLevel} from './modules/utilities/logger.ts'
+import FileStore from './modules/utilities/file-store.ts'
+import Migration from './modules/startup-migrations/index.ts'
+import Server from './modules/server/index.ts'
+import User, {type MemberRecord} from './modules/user/user.ts'
+import AppStore from './modules/apps/app-store.ts'
+import Apps from './modules/apps/apps.ts'
+import Files from './modules/files/files.ts'
+import Hardware from './modules/hardware/hardware.ts'
+import Notifications from './modules/notifications/notifications.ts'
+import EventBus from './modules/event-bus/event-bus.ts'
+import Dbus from './modules/dbus/dbus.ts'
+import Backups from './modules/backups/backups.ts'
+import SystemNg from './modules/system-ng/system-ng.ts'
+import Update from './modules/update/update.ts'
+import Machines from './modules/machines/machines.ts'
+import LanIngress from './modules/lan-ingress/lan-ingress.ts'
+import Auth from './modules/auth/auth.ts'
+import Mcp, {type McpStoreSettings} from './modules/mcp/mcp.ts'
+import Photos, {type PhotoBackupSource, type PhotoBackupSourceRemoval} from './modules/photos/photos.ts'
 
-import type {CloudStore} from './modules/files/cloud-types.js'
+import type {CloudStore} from './modules/files/cloud-types.ts'
 
 import {
 	commitOsPartition,
 	setupPiCpuGovernor,
+	enlargeRunInRecoveryMode,
 	restoreHostname,
 	restoreWiFi,
 	restoreStaticIp,
 	waitForSystemTime,
 	reboot,
-} from './modules/system/system.js'
-import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
+} from './modules/system/system.ts'
+import {cleanupFactoryResetBackups} from './modules/system/factory-reset.ts'
 
 type StoreSchema = {
 	version: string
@@ -89,6 +90,12 @@ type StoreSchema = {
 				dns: string[]
 			}
 		>
+		// Set while Umbrel's wired interface sits behind the bridge that lets
+		// machines join the LAN, so umbrel-static-ip-restore can put it back
+		// before NetworkManager starts on the next boot
+		lanBridge?: {
+			mac: string
+		}
 	}
 	recentlyOpenedApps: string[]
 	files: {
@@ -178,12 +185,14 @@ export default class Umbreld {
 	dbus: Dbus
 	backups: Backups
 	systemNg: SystemNg
+	update: Update
 	machines: Machines
 	lanIngress: LanIngress
 	auth: Auth
 	mcp: Mcp
 	photos: Photos
 	isBackupRestoreFirstStart = false
+	private stopped = false
 
 	constructor({
 		dataDirectory,
@@ -212,6 +221,7 @@ export default class Umbreld {
 		this.dbus = new Dbus(this)
 		this.backups = new Backups(this)
 		this.systemNg = new SystemNg(this)
+		this.update = new Update(this)
 		this.machines = new Machines(this)
 		this.lanIngress = new LanIngress(this)
 		this.auth = new Auth(this)
@@ -229,6 +239,9 @@ export default class Umbreld {
 
 		// If we've successfully booted then commit to the current OS partition
 		await commitOsPartition(this)
+
+		// Give Rugix's RAM-backed state more room if the data mount failed at boot (non-blocking)
+		enlargeRunInRecoveryMode(this)
 
 		// Set ondemand cpu governor for Raspberry Pi (non-blocking)
 		setupPiCpuGovernor(this)
@@ -325,6 +338,7 @@ export default class Umbreld {
 			this.dbus.start(),
 			this.server.start(),
 			this.systemNg.start(),
+			this.update.start(),
 		])
 
 		// Account deletion spans several modules. Retry any cleanup that was
@@ -368,6 +382,10 @@ export default class Umbreld {
 	}
 
 	async stop() {
+		// Power actions stop umbreld before handing over to the OS, which then
+		// stops it again with SIGTERM. Don't repeat a stop that already completed:
+		// by then the OS may be stopping the services it relies on, like libvirt.
+		if (this.stopped) return true
 		try {
 			await Promise.all([
 				// Stop file consumers and public listeners before module teardown.
@@ -387,9 +405,11 @@ export default class Umbreld {
 				this.appStore.stop(),
 				this.dbus.stop(),
 				this.systemNg.stop(),
+				this.update.stop(),
 				this.auth.stop(),
 				this.photos.stop(),
 			])
+			this.stopped = true
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false

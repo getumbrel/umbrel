@@ -1,0 +1,15 @@
+c25e13e84be8dbf58b6b3381b4a10ad7e9dbeae101579376f457e0f17e60d902  pool/main/f/firmware-nonfree/firmware-brcm80211_20260519-1~bpo13+1+rpt1_all.deb
+2d317d1028d87a04bb9bf359a300e631a1222b31cd05cc6f337a5df644817cbd  pool/main/i/initramfs-tools/initramfs-tools-bin_0.148.4+rpt2_arm64.deb
+56c5dad97d96fcd08dcef0a10f33da7901ae84dbfb4194c271c108419c674bfe  pool/main/i/initramfs-tools/initramfs-tools-core_0.148.4+rpt2_all.deb
+9ce080ea9ae3eee48725d7bdb7d099ed1582c2d778e11c7d54fc652b6e5d680b  pool/main/i/initramfs-tools/initramfs-tools_0.148.4+rpt2_all.deb
+5c46e42abccc850c209b67fb89faf0483da6db36337578e3b9c60823acce7e10  pool/main/l/linux/linux-base-6.18.50+rpt-rpi-2712_6.18.50-1+rpt1_arm64.deb
+f6b0870fde0785a392ca131f758280b07670837b31acf475e49f27c896583f85  pool/main/l/linux/linux-base-6.18.50+rpt-rpi-v8_6.18.50-1+rpt1_arm64.deb
+5c7567f4308827ffdeac8b930b8efae0eed808d508030d25a4c34e5de69e44dd  pool/main/l/linux/linux-base-rpi-2712_6.18.50-1+rpt1_arm64.deb
+bca7b21fdee0425cb4f71882e42cb7c754a406e47b40141750e3ef9f2a3ffae6  pool/main/l/linux/linux-base-rpi-v8_6.18.50-1+rpt1_arm64.deb
+41a73543781af93f591adddcbf1e2fcc478450784ba2a27be2f07af84ce2bbb6  pool/main/l/linux/linux-image-6.18.50+rpt-rpi-2712_6.18.50-1+rpt1_arm64.deb
+8d44827fea22875e0f801252bdbc0f541c03144e970caafa3115bf485ff3c4bd  pool/main/l/linux/linux-image-6.18.50+rpt-rpi-v8_6.18.50-1+rpt1_arm64.deb
+540ea8075f46596c186f8063e9f2ec571a1c2927f22fa48448f27cc34f9cb342  pool/main/l/linux/linux-image-rpi-2712_6.18.50-1+rpt1_arm64.deb
+593409b57ea633fc2f40036e34818e389cc2b8d13b930845237f224aba8678e3  pool/main/l/linux/linux-image-rpi-v8_6.18.50-1+rpt1_arm64.deb
+85c6187d8eb14f7289dbb3e6d6ceee321d621d9394dfd623c40e21cf4b9f3e80  pool/main/l/linux/linux-libc-dev_6.18.50-1+rpt1_all.deb
+56b6f8792fb27bcc22f101a5a0d27af637e0d13e85dfc0fde5ff140abc929b0f  pool/main/r/raspi-firmware/raspi-firmware_1.20260915-1_all.deb
+bc6eab874f737b31608ed4f8869974d9883d8b6aab91b64c894249df25a7488e  pool/main/w/wpa/wpasupplicant_2.10-24+rpt3_arm64.deb

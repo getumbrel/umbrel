@@ -2,14 +2,14 @@ import nodePath from 'node:path'
 
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 import {
 	bootWithExternalStorage,
 	externalPath,
 	latestBackup,
 	repositoryPassword,
 	vmDataDirectory,
-} from './backups.vm-test-helpers.js'
+} from './backups.vm-test-helpers.ts'
 
 const gib = 1024 ** 3
 const restoreBufferBytes = 5 * gib

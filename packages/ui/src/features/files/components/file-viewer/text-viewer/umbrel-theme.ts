@@ -1,6 +1,6 @@
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language'
 import {Extension} from '@codemirror/state'
-import {EditorView} from '@codemirror/view'
+import {EditorView, ViewPlugin, type ViewUpdate} from '@codemirror/view'
 import {tags} from '@lezer/highlight'
 
 // Umbrel glassmorphic dark theme for CodeMirror 6
@@ -29,6 +29,13 @@ const umbrelEditorTheme = EditorView.theme(
 		'.cm-content': {
 			caretColor: 'rgba(255, 255, 255, 0.9)',
 			padding: '12px 0',
+			// See clipUnderGutters
+			clipPath: 'inset(0 0 0 var(--cm-umbrel-scrolled, 0px))',
+		},
+		// The selection and caret are drawn on layers of no size at the scrolled text's corner, so their clip reaches as
+		// far right and down as layout goes
+		'.cm-layer': {
+			clipPath: 'inset(0 -1e8px -1e8px calc(var(--cm-umbrel-scrolled, 0px) + var(--cm-umbrel-gutters, 0px)))',
 		},
 		'.cm-cursor, .cm-dropCursor': {
 			borderLeftColor: 'rgba(255, 255, 255, 0.9)',
@@ -54,10 +61,9 @@ const umbrelEditorTheme = EditorView.theme(
 			padding: '0 12px 0 4px',
 			minWidth: '40px',
 		},
-		// Selection highlight for custom search
+		// Other occurrences of the selected text: a quiet echo, never mistaken for find's marks
 		'.cm-selectionMatch': {
-			backgroundColor: '#facc15',
-			color: '#000',
+			backgroundColor: 'rgba(255, 255, 255, 0.12)',
 			borderRadius: '2px',
 		},
 		// Tooltip — glass card style
@@ -153,4 +159,35 @@ const umbrelHighlightStyle = HighlightStyle.define([
 	{tag: tags.labelName, color: '#9ccfd8'},
 ])
 
-export const umbrelTheme: Extension = [umbrelEditorTheme, syntaxHighlighting(umbrelHighlightStyle)]
+// The gutters have no background, so the card's glass shows through them, and a long line scrolled sideways would show
+// through them too: the text, and the selection and caret over it, are cut off where the gutters end instead
+const clipUnderGutters = ViewPlugin.fromClass(
+	class {
+		clip = {scrolled: 0, gutters: 0}
+		measure = {
+			read: (view: EditorView) => ({scrolled: view.scrollDOM.scrollLeft, gutters: view.contentDOM.offsetLeft}),
+			write: (clip: {scrolled: number; gutters: number}, view: EditorView) => {
+				if (clip.scrolled === this.clip.scrolled && clip.gutters === this.clip.gutters) return
+				this.clip = clip
+				view.scrollDOM.style.setProperty('--cm-umbrel-scrolled', `${clip.scrolled}px`)
+				view.scrollDOM.style.setProperty('--cm-umbrel-gutters', `${clip.gutters}px`)
+			},
+		}
+		constructor(view: EditorView) {
+			view.requestMeasure(this.measure)
+		}
+		// The gutters widen as the line numbers gain a digit
+		update(update: ViewUpdate) {
+			if (update.geometryChanged) update.view.requestMeasure(this.measure)
+		}
+	},
+	{
+		eventHandlers: {
+			scroll(_event, view) {
+				view.requestMeasure(this.measure)
+			},
+		},
+	},
+)
+
+export const umbrelTheme: Extension = [umbrelEditorTheme, syntaxHighlighting(umbrelHighlightStyle), clipUnderGutters]

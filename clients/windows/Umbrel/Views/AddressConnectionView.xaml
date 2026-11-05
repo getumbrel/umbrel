@@ -1,0 +1,142 @@
+<UserControl x:Class="Umbrel.Views.AddressConnectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Umbrel.ViewModels"
+             xmlns:v="clr-namespace:Umbrel.Views"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:AddressConnectionViewModel}">
+  <StackPanel Margin="30,28">
+    <Image Source="{Binding Source={x:Static vm:Presentation.LogoPath}}" Width="48" Height="48" HorizontalAlignment="Left" />
+    <TextBlock Text="Connect by address" FontSize="17" FontWeight="Bold" Foreground="{StaticResource TitleBrush}" Margin="0,16,0,0" />
+    <TextBlock Style="{StaticResource MutedText}" FontSize="11" Margin="0,4,0,0"
+               Text="Enter your Umbrel’s IP address or hostname. If you’re away from home, use its Tailscale IP address or MagicDNS name. Tailscale must already be set up on this PC and your Umbrel." />
+
+    <TextBox x:Name="AddressBox" Margin="0,18,0,0" AutomationProperties.Name="Umbrel address"
+             Text="{Binding Input, UpdateSourceTrigger=PropertyChanged}"
+             KeyDown="AddressBox_KeyDown" IsEnabledChanged="AddressBox_IsEnabledChanged">
+      <TextBox.Style>
+        <Style TargetType="TextBox">
+          <Setter Property="Height" Value="38" />
+          <!-- 1 border + 9 + the text box's own 2 inset puts the text 12 in, as on macOS. -->
+          <Setter Property="Padding" Value="9,0" />
+          <Setter Property="FontSize" Value="12" />
+          <Setter Property="Foreground" Value="#D9FFFFFF" />
+          <Setter Property="CaretBrush" Value="White" />
+          <Setter Property="Background" Value="#38000000" />
+          <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+          <Setter Property="BorderThickness" Value="1" />
+          <Setter Property="Template">
+            <Setter.Value>
+              <!-- WPF has no TextBox placeholder, so the template draws one under the text while the field is empty. -->
+              <ControlTemplate TargetType="TextBox">
+                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
+                  <Grid VerticalAlignment="Center">
+                    <!-- TextBox applies its Padding to PART_ContentHost itself, so only the placeholder
+                         takes it here, plus the 2 the text box insets its text for the caret.
+                         White at 55% is the macOS placeholder color. -->
+                    <Border Padding="{TemplateBinding Padding}" IsHitTestVisible="False">
+                      <TextBlock x:Name="Placeholder" Text="e.g. umbrel.local, umbrel, or 100.64.0.1" Foreground="#8CFFFFFF"
+                                 Margin="2,0" Visibility="Hidden" />
+                    </Border>
+                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False" />
+                  </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                  <Trigger Property="Text" Value="">
+                    <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
+                  </Trigger>
+                </ControlTemplate.Triggers>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding HasError}" Value="True">
+              <Setter Property="BorderBrush" Value="{StaticResource RedBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Busy}" Value="True">
+              <Setter Property="IsEnabled" Value="False" />
+            </DataTrigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Foreground" Value="#80FFFFFF" />
+            </Trigger>
+          </Style.Triggers>
+        </Style>
+      </TextBox.Style>
+    </TextBox>
+
+    <TextBlock Text="{Binding Error}" Foreground="{StaticResource RedBrush}" FontSize="10" Margin="0,7,0,0"
+               Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+    <!-- Replaces Connect: this Umbrel has to be updated in the browser first. -->
+    <StackPanel Margin="0,14,0,0" Visibility="{Binding ShowUpdateRequired, Converter={StaticResource BoolToVisibility}}">
+      <TextBlock Text="Update to connect" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
+      <TextBlock Text="This Umbrel needs to be updated before it can connect to the app." Style="{StaticResource MutedText}" FontSize="10" Margin="0,8,0,0" />
+      <Button Style="{StaticResource PillButton}" Content="Update umbrelOS" Margin="0,8,0,0" Command="{Binding OpenUpdateRequiredCommand}" />
+    </StackPanel>
+
+    <!-- Replaces Connect: a current Umbrel answered here but couldn't prove its identity. -->
+    <StackPanel Margin="0,14,0,0" Visibility="{Binding ShowUnverified, Converter={StaticResource BoolToVisibility}}">
+      <TextBlock Text="Couldn&#x2019;t connect" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
+      <TextBlock Text="{Binding Unverified.Explanation}" Style="{StaticResource MutedText}" FontSize="10" Margin="0,8,0,0" />
+      <!-- Try again fills the row like the Connect button it replaces. -->
+      <Grid Margin="0,8,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Button Style="{StaticResource IndigoPillButton}" Command="{Binding ConnectCommand}" AutomationProperties.Name="Try again">
+          <!-- Hidden rather than collapsed so the button keeps its size while the spinner shows. -->
+          <Grid>
+            <TextBlock Text="Try again">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Busy}" Value="True">
+                      <Setter Property="Visibility" Value="Hidden" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+            <v:Spinner Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}" />
+          </Grid>
+        </Button>
+        <Button Grid.Column="1" Style="{StaticResource LinkButton}" Margin="14,0,0,0" VerticalAlignment="Center"
+                Command="{Binding OpenUnverifiedCommand}" AutomationProperties.Name="Open in browser">
+          <TextBlock Text="Open in browser" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
+        </Button>
+      </Grid>
+    </StackPanel>
+
+    <Button Style="{StaticResource IndigoPillButton}" Margin="0,12,0,0" Command="{Binding ConnectCommand}" AutomationProperties.Name="Connect"
+            Visibility="{Binding ShowConnect, Converter={StaticResource BoolToVisibility}}">
+      <!-- Hidden rather than collapsed so the button keeps its height while the spinner shows. -->
+      <Grid>
+        <TextBlock Text="Connect">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Busy}" Value="True">
+                  <Setter Property="Visibility" Value="Hidden" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+        <v:Spinner Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}" />
+      </Grid>
+    </Button>
+
+    <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="0,22,0,0" Command="{Binding BackCommand}"
+            AutomationProperties.Name="All devices">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock Text="&#xE76B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="9" FontWeight="SemiBold"
+                   Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+        <TextBlock Text="All devices" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" Margin="2,0,0,0" />
+      </StackPanel>
+    </Button>
+  </StackPanel>
+</UserControl>

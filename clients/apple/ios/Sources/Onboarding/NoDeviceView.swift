@@ -49,6 +49,13 @@ struct NoDeviceView: View {
 			.padding(.bottom, 8)
 			.entrance()
 		}
+		// Discovery keeps running here: an Umbrel that finishes verifying late, or that
+		// starts answering, moves on to the results the same way leaving the address
+		// screen does
+		.onChange(of: model.discoveryResults.isEmpty) { _, empty in
+			guard !empty, model.step == .noDevice else { return }
+			model.advance(to: OnboardingModel.manualAddressReturnDestination(from: .noDevice, hasDiscoveryResults: true))
+		}
 		.onAppear {
 			if reduceMotion {
 				breathing = true

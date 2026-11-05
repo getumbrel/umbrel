@@ -1,11 +1,11 @@
 import type http from 'node:http'
 
 import {$} from 'execa'
-import pty, {IPty} from 'node-pty'
+import pty, {type IPty} from 'node-pty'
 import {WebSocket} from 'ws'
 
-import type Umbreld from '../../index.js'
-import type createLogger from '../utilities/logger.js'
+import type Umbreld from '../../index.ts'
+import type createLogger from '../utilities/logger.ts'
 
 const DEFAULT_SHELL_CONTAINERS: Record<string, string> = {
 	bitcoin: 'bitcoind',

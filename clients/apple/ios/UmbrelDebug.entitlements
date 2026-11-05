@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Umbrel.entitlements without the user-assigned device name, which Apple
+	     granted for com.umbrel.app only. Debug builds (com.umbrel.app.dev) use the
+	     generic "iPhone" name instead -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>$(APP_GROUP_IDENTIFIER)</string>
+	</array>
+</dict>
+</plist>

@@ -2,15 +2,12 @@
 // It renders and allows the selection/deselection of files, folders, and apps to be excluded from backups
 
 import {ChevronDown, MinusCircle, PlusCircle} from 'lucide-react'
-import {matchSorter} from 'match-sorter'
-import {useEffect, useMemo, useRef, useState} from 'react'
+import {useMemo, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {AppIcon} from '@/components/app-icon'
 import {Button} from '@/components/ui/button'
-import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
-import {Input} from '@/components/ui/input'
-import {ScrollArea} from '@/components/ui/scroll-area'
+import {SearchablePicker} from '@/components/ui/searchable-picker'
 import {useAppsAutoExcludedPaths} from '@/features/backups/hooks/use-apps-auto-excluded-paths'
 import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-backup-ignore'
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
@@ -56,19 +53,6 @@ export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
 		}
 		return byAppId
 	}, [userApps])
-
-	const [appPickerOpen, setAppPickerOpen] = useState(false)
-	const [appQuery, setAppQuery] = useState('')
-
-	const appQueryInputRef = useRef<HTMLInputElement>(null)
-
-	useEffect(() => {
-		if (!appPickerOpen) return
-		setTimeout(() => {
-			appQueryInputRef.current?.focus()
-			appQueryInputRef.current?.select()
-		}, 0)
-	}, [appPickerOpen])
 
 	return (
 		<div className='space-y-3'>
@@ -120,66 +104,22 @@ export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
 			<div className='space-y-2'>
 				<div className='flex items-center justify-between'>
 					<div className='text-13 text-white/60'>{t('backups-exclusions.excluded-apps')}</div>
-					<DropdownMenu
-						open={appPickerOpen}
-						onOpenChange={(o) => {
-							setAppPickerOpen(o)
-							if (!o) setAppQuery('')
-						}}
+					<SearchablePicker
+						placeholder={t('app-picker.search')}
+						loading={isLoadingApps}
+						emptyLabel={t('app-settings-list.no-apps')}
+						items={(userApps ?? []).map((app) => ({
+							value: app.id,
+							label: app.name || app.id,
+							icon: <AppIcon size={24} src={app.icon} className='shrink-0 rounded-6' />,
+						}))}
+						onSelect={ignore}
 					>
-						<DropdownMenuTrigger asChild>
-							<Button size='sm' className='inline-flex items-center gap-1'>
-								{t('backups-exclusions.add')}
-								<PlusCircle className='h-3 w-3' />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align='end' className='flex max-h-72 min-w-64 flex-col gap-3'>
-							{isLoadingApps && <div className='p-2 text-sm text-white/50'>{t('loading')}</div>}
-							{!isLoadingApps && (
-								<>
-									<Input
-										value={appQuery}
-										className='shrink-0'
-										onChange={(e) => setAppQuery(e.target.value)}
-										onKeyDown={(e) => {
-											e.stopPropagation()
-											if (e.key === 'Escape') setAppPickerOpen(false)
-										}}
-										sizeVariant={'short-square'}
-										placeholder={t('app-picker.search')}
-										ref={appQueryInputRef}
-									/>
-									{(() => {
-										const rawApps = userApps || []
-										const results = matchSorter(rawApps, appQuery, {
-											keys: ['name', 'id'],
-											threshold: matchSorter.rankings.WORD_STARTS_WITH,
-										})
-										if (results.length === 0) {
-											return <div className='px-2 text-14 text-white/50'>{t('no-results-found')}</div>
-										}
-										return (
-											<ScrollArea className='relative -mx-1 flex h-full flex-col px-1'>
-												{results.map((app) => (
-													<DropdownMenuItem
-														key={app.id}
-														onSelect={() => {
-															ignore(app.id)
-															setAppPickerOpen(false)
-														}}
-														className='flex items-center gap-2'
-													>
-														<AppIcon size={20} src={app.icon} className='rounded-4' />
-														<span className='truncate'>{app.name || app.id}</span>
-													</DropdownMenuItem>
-												))}
-											</ScrollArea>
-										)
-									})()}
-								</>
-							)}
-						</DropdownMenuContent>
-					</DropdownMenu>
+						<Button size='sm' className='inline-flex items-center gap-1'>
+							{t('backups-exclusions.add')}
+							<PlusCircle className='h-3 w-3' />
+						</Button>
+					</SearchablePicker>
 				</div>
 				{/* Existing app exclusions list */}
 				<div className='divide-y divide-white/6 rounded-12 bg-white/5'>

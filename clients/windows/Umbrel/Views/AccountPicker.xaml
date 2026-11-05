@@ -1,0 +1,64 @@
+<UserControl x:Class="Umbrel.Views.AccountPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- macOS UmbrelAccountPicker: a strip of 72 DIP avatars centred on the selected account,
+       a 100 DIP glass lens over the hovered or selected one, and that account's first name. -->
+  <UserControl.Resources>
+    <!-- Plain, like the macOS .plain button style. The transparent fill makes the whole
+         72 DIP square hoverable and clickable, like the macOS button frame. The right
+         margin is the 12 DIP spacing between avatars. -->
+    <Style x:Key="AvatarButton" TargetType="Button">
+      <Setter Property="Margin" Value="0,0,12,0" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Background="Transparent">
+              <ContentPresenter />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+
+  <StackPanel>
+    <Grid x:Name="Viewport" Height="110" ClipToBounds="True"
+          SizeChanged="Viewport_SizeChanged" MouseMove="Viewport_MouseMove" MouseLeave="Viewport_MouseLeave">
+      <!-- A Canvas lays the strip out at its full width; inside a Grid, the avatars beyond
+           the edges would be clipped by layout before they slide into view. -->
+      <Canvas>
+        <StackPanel x:Name="Strip" Orientation="Horizontal" Canvas.Top="19">
+          <StackPanel.RenderTransform>
+            <TranslateTransform x:Name="StripOffset" />
+          </StackPanel.RenderTransform>
+        </StackPanel>
+      </Canvas>
+
+      <!-- macOS refracts the avatars under the lens rim with a Metal shader. Without it, this
+           uses the macOS no-refraction look (the Reduce Transparency fill). WPF has no angular
+           gradient, so the rim's glint is a diagonal gradient with the macOS angular gradient's
+           values where it crosses the rim: brightest top-left and bottom-right. -->
+      <Ellipse Width="100" Height="100" HorizontalAlignment="Center" VerticalAlignment="Center"
+               Fill="#14FFFFFF" StrokeThickness="1" IsHitTestVisible="False">
+        <Ellipse.Stroke>
+          <LinearGradientBrush StartPoint="0.146,0.146" EndPoint="0.854,0.854">
+            <GradientStop Color="#8CFFFFFF" Offset="0" />
+            <GradientStop Color="#4EFFFFFF" Offset="0.146" />
+            <GradientStop Color="#0FFFFFFF" Offset="0.5" />
+            <GradientStop Color="#2EFFFFFF" Offset="0.854" />
+            <GradientStop Color="#8CFFFFFF" Offset="1" />
+          </LinearGradientBrush>
+        </Ellipse.Stroke>
+        <Ellipse.Effect>
+          <DropShadowEffect Color="Black" Opacity="0.22" BlurRadius="10" ShadowDepth="6" Direction="270" />
+        </Ellipse.Effect>
+        <Ellipse.RenderTransform>
+          <TranslateTransform x:Name="LensOffset" />
+        </Ellipse.RenderTransform>
+      </Ellipse>
+    </Grid>
+
+    <TextBlock x:Name="NameLabel" FontSize="13" FontWeight="SemiBold" Foreground="#E6FFFFFF"
+               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" />
+  </StackPanel>
+</UserControl>

@@ -9,7 +9,8 @@ export function WifiListRowConnectedDescription({network}: {network: Partial<Wif
 		// `h-3` prevents height from being different between the `disconnected` and `connected` states
 		<span className='flex h-3 items-center gap-1'>
 			<WifiIcon2 bars={signalToBars(network.signal ?? 0)} className='size-4' />
-			{network.ssid ?? UNKNOWN()}
+			{/* A long network name ends in an ellipsis and keeps the lock in view */}
+			<span className='truncate'>{network.ssid ?? UNKNOWN()}</span>
 			{network.authenticated && <LockIcon />}
 		</span>
 	)

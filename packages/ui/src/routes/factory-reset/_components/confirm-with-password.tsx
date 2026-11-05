@@ -1,7 +1,9 @@
 import {useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
+import {TbAlertTriangle} from 'react-icons/tb'
 import {useMount} from 'react-use'
 
+import {WarningAlert} from '@/components/ui/alert'
 import {Button} from '@/components/ui/button'
 import {ImmersiveDialogBody} from '@/components/ui/immersive-dialog'
 import {PasswordInput} from '@/components/ui/input'
@@ -58,9 +60,11 @@ export function ConfirmWithPassword({
 						error={error}
 					/>
 				</label>
-				<div className='mt-5 rounded-8 bg-yellow-700/50 p-3 text-13 text-yellow-300/80'>
-					⚠️ {t('factory-reset.confirm.ethernet-required-warning')}
-				</div>
+				<WarningAlert
+					icon={TbAlertTriangle}
+					description={t('factory-reset.confirm.ethernet-required-warning')}
+					className='mt-5'
+				/>
 			</ImmersiveDialogBody>
 		</form>
 	)

@@ -1,6 +1,6 @@
 import type DatabaseTypes from 'better-sqlite3'
 
-import {photoLibraryCte as rawPhotoLibraryCte} from './library-sql.js'
+import {photoLibraryCte as rawPhotoLibraryCte} from './library-sql.ts'
 
 type Database = DatabaseTypes.Database
 const BATCH_SIZE = 128
@@ -13,7 +13,13 @@ const sets = [
 
 // These CTEs provide account-scoped names for existing query expressions. They
 // are ordinary indexed tables: no authorization, ranking or pairing runs here.
-export function photoLibraryCte(count = 0, details = false, lookupByHash = false) {
+// `access` pins how logical_items reads its table where the planner, which has
+// no statistics to go on, would otherwise choose badly.
+export function photoLibraryCte(
+	count = 0,
+	details = false,
+	access: '' | 'INDEXED BY photos_library_items_key' | 'NOT INDEXED' = '',
+) {
 	return `WITH ${
 		count
 			? `requested_values(content_hash) AS (VALUES ${Array.from({length: count}, () => '(?)').join(',')}),
@@ -31,7 +37,7 @@ export function photoLibraryCte(count = 0, details = false, lookupByHash = false
 		metadata.latitude, metadata.longitude, metadata.altitude, metadata.user_comment`
 			: ''
 	}
-		FROM photos_library_items AS item ${lookupByHash ? 'INDEXED BY photos_library_items_key' : ''}
+		FROM photos_library_items AS item ${access}
 		${details ? 'LEFT JOIN media_metadata AS metadata ON metadata.content_id = item.content_id' : ''}
 		WHERE item.account_id = (SELECT account_id FROM requested_account))`
 }

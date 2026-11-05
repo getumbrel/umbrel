@@ -3,7 +3,7 @@ import fsp from 'node:fs/promises'
 import http from 'node:http'
 import https from 'node:https'
 import {isIP} from 'node:net'
-import type {LookupFunction} from 'node:net'
+import type {LookupFunction, TcpNetConnectOpts} from 'node:net'
 import {lookup} from 'node:dns/promises'
 import nodePath from 'node:path'
 import {pipeline} from 'node:stream/promises'
@@ -108,7 +108,10 @@ export async function safeDownload({
 				{
 					headers: {'user-agent': 'umbreld-machines/1'},
 					lookup: createPinnedLookup(pinned),
-				},
+					// Node closes each non-final attempt at this timeout. Its 250 ms
+					// default can abandon working IPv4 before trying unreachable IPv6.
+					autoSelectFamilyAttemptTimeout: 1_000,
+				} as http.RequestOptions & Pick<TcpNetConnectOpts, 'autoSelectFamilyAttemptTimeout'>,
 				async (response) => {
 					try {
 						if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400) {
@@ -158,7 +161,15 @@ export async function safeDownload({
 					}
 				},
 			)
-			request.on('error', reject)
+			request.on('error', (error) => {
+				// Node's aggregate connection errors have an empty message, which
+				// otherwise leaves the installation UI with no failure details.
+				reject(
+					error instanceof AggregateError && !error.message
+						? new Error('[machine-image-download-connection-failed]', {cause: error})
+						: error,
+				)
+			})
 			signal?.addEventListener('abort', () => request.destroy(signal.reason as Error), {once: true})
 		})
 	}

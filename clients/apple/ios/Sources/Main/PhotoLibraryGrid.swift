@@ -53,7 +53,8 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 		coordinator.parent = self
 		coordinator.updatePresentation()
 		collectionView.contentInset.bottom = bottomContentInset
-		coordinator.handleScrollToLatestRequest()
+		// After the data update, so the latest item is one UIKit already has
+		defer { coordinator.handleScrollToLatestRequest() }
 
 		guard previousRevision != assets.revision else {
 			coordinator.refreshLayoutIfNeeded()
@@ -66,19 +67,14 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 		if coordinator.didSetInitialPosition,
 			let change = assets.change,
 			change.previousRevision == previousRevision,
-			change.hasIncrementalChanges {
+			change.hasIncrementalChanges,
+			change.applies(from: coordinator.loaded, to: assets.count) {
 			collectionView.performBatchUpdates {
 				if !change.removedIndexes.isEmpty {
 					collectionView.deleteItems(at: change.removedIndexes.map { IndexPath(item: $0, section: 0) })
 				}
 				if !change.insertedIndexes.isEmpty {
 					collectionView.insertItems(at: change.insertedIndexes.map { IndexPath(item: $0, section: 0) })
-				}
-				for move in change.moves {
-					collectionView.moveItem(
-						at: IndexPath(item: move.from, section: 0),
-						to: IndexPath(item: move.to, section: 0)
-					)
 				}
 			} completion: { _ in
 				// PhotoKit reports changed indexes in the post-insertion/deletion
@@ -94,6 +90,8 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 				coordinator.finishDataUpdate(stickToBottom: wasAtBottom)
 			}
 		} else {
+			// UIKit reads the new count lazily, at its next layout.
+			coordinator.loaded = nil
 			collectionView.reloadData()
 			coordinator.finishDataUpdate(stickToBottom: wasAtBottom)
 		}
@@ -109,6 +107,8 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 		private let presentation: PhotoLibraryGridPresentation
 		weak var collectionView: UICollectionView?
 		var revision: Int
+		// The revision and count UIKit last read from the data source.
+		var loaded: (revision: Int, count: Int)?
 		var didSetInitialPosition = false
 
 		private var initialPositionScheduled = false
@@ -143,7 +143,9 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 		func numberOfSections(in collectionView: UICollectionView) -> Int { 1 }
 
 		func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-			parent.assets.count
+			let count = parent.assets.count
+			loaded = (parent.assets.revision, count)
+			return count
 		}
 
 		func collectionView(
@@ -433,6 +435,20 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 			}
 			return (added, removed)
 		}
+	}
+}
+
+extension PhotoLibraryModel.Assets.Change {
+	// UIKit checks a batch update against the count it last read, not against the
+	// previous revision. After reloadData it hasn't read one yet, and would take
+	// the new count as the state before the update, then abort on the deletes.
+	// PhotoKit reports a move's source after removals and insertions, while UIKit
+	// reads it as the state before the update, so a change with moves reloads.
+	func applies(from loaded: (revision: Int, count: Int)?, to count: Int) -> Bool {
+		guard let loaded, loaded.revision == previousRevision, moves.isEmpty else { return false }
+		return loaded.count - removedIndexes.count + insertedIndexes.count == count
+			&& (removedIndexes.last ?? -1) < loaded.count
+			&& (insertedIndexes.last ?? -1) < count
 	}
 }
 

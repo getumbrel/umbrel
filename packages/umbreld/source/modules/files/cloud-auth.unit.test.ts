@@ -3,7 +3,7 @@ import {inspect} from 'node:util'
 import type {Input, Options} from 'ky'
 import {describe, expect, test} from 'vitest'
 
-import CloudAuth, {CLOUD_OAUTH_SCOPES, OAUTH_SESSION_LIFETIME, type OAuthSession} from './cloud-auth.js'
+import CloudAuth, {CLOUD_OAUTH_SCOPES, OAUTH_SESSION_LIFETIME, type OAuthSession} from './cloud-auth.ts'
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111'
 const NOW = 1_720_000_000_000
@@ -129,7 +129,7 @@ describe('CloudAuth', () => {
 			expect(url.searchParams.get('redirect_uri')).toBe('https://proxy.example/callback')
 			expect(url.searchParams.get('code_challenge')).toBe(challenge)
 			expect(url.searchParams.get('code_challenge_method')).toBe('S256')
-			expect(url.searchParams.has('state')).toBe(false)
+			expect(url.searchParams.get('state')).toBe(provider)
 			expect(authorizationUrl).not.toContain(ACCOUNT_ID)
 			expect(authorizationUrl).not.toContain('secret')
 			expect(session.sessionId).toMatch(/^[0-9a-f-]{36}$/)

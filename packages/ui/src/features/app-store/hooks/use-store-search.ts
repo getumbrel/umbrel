@@ -1,5 +1,5 @@
 import {useCallback, useDeferredValue, useEffect, useRef, useState} from 'react'
-import {useSearchParams} from 'react-router-dom'
+import {useNavigationType, useSearchParams} from 'react-router-dom'
 
 /**
  * Store search state: the input value, a deferred value driving the results,
@@ -16,21 +16,31 @@ export function useStoreSearch() {
 		activeInputRef.current = input
 	}, [])
 
-	const writtenQuery = useRef(searchParams.get('q') ?? '')
+	// A fresh object each time: the one from useSearchParams is memoised on the
+	// location, so mutating it would change urlQuery below before the
+	// navigation has actually happened
 	useEffect(() => {
-		if (deferredQuery) searchParams.set('q', deferredQuery)
-		else searchParams.delete('q')
-		writtenQuery.current = deferredQuery
-		setSearchParams(searchParams, {replace: true})
+		setSearchParams(
+			(previous) => {
+				const next = new URLSearchParams(previous)
+				if (deferredQuery) next.set('q', deferredQuery)
+				else next.delete('q')
+				return next
+			},
+			{replace: true},
+		)
 	}, [deferredQuery])
 
 	// A search handed in from outside (Cmd+K's "More in App Store" while the
-	// store is already open) replaces the field. Our own writes above come back
-	// through the URL too; those are recognised and left alone.
+	// store is already open) arrives as a push and replaces the field. The
+	// writes above are the only replace navigations here, so those are left
+	// alone: with two in flight the earlier can land after the later, and
+	// adopting it would put a stale value back in the field and start a
+	// ping-pong between the field and the URL.
 	const urlQuery = searchParams.get('q') ?? ''
+	const navigationType = useNavigationType()
 	useEffect(() => {
-		if (urlQuery === writtenQuery.current) return
-		writtenQuery.current = urlQuery
+		if (navigationType === 'REPLACE') return
 		setQuery(urlQuery)
 	}, [urlQuery])
 

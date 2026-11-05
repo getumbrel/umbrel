@@ -28,7 +28,6 @@ export default function RestartDialog() {
 				<AlertDialogFooter>
 					<AlertDialogAction
 						variant='destructive'
-						className='px-6'
 						onClick={(e) => {
 							// Prevent closing by default
 							e.preventDefault()

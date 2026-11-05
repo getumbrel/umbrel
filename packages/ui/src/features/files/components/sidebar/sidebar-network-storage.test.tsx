@@ -58,7 +58,7 @@ afterEach(() => {
 test('offline hosts stay visible, allow inspecting saved shares, and keep removal enabled', async () => {
 	await act(() => root.render(<SidebarNetworkStorage />))
 	expect(container.textContent).toContain('nas.local')
-	expect(container.textContent).toContain('files-network-storage.disconnected')
+	expect(container.textContent).not.toContain('files-network-storage.disconnected')
 	const host = container.querySelector<HTMLElement>('[data-path="/Network/nas.local"]')!
 	expect(host.dataset.dropDisabled).toBe('true')
 	await act(() => host.click())

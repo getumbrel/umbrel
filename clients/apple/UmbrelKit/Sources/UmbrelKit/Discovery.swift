@@ -57,6 +57,12 @@ public struct IdentifiedDevice: Equatable, Sendable {
 		Umbreld.DiscoveryInfo(id: id, device: model, onboarded: onboarded)
 	}
 
+	// Whether two records are the same Umbrel: the same anchor proved the same id. An id
+	// alone is unauthenticated, as another LAN device can claim it under its own CA.
+	public func isSameUmbrel(as other: IdentifiedDevice) -> Bool {
+		id == other.id && candidateCACertificate == other.candidateCACertificate
+	}
+
 	init(
 		host: String,
 		discoveryHost: String,
@@ -222,25 +228,32 @@ public final class Discovery: @unchecked Sendable {
 	}
 
 	// Deallocating a DNSServiceRef from inside its own callback is dicey, so refs are
-	// handed here and released on the next queue tick.
-	fileprivate func deallocateLater(_ ref: DNSServiceRef) {
+	// handed here and released on the next queue tick. `then` runs once the ref is gone.
+	fileprivate func deallocateLater(_ ref: DNSServiceRef, then: @escaping () -> Void) {
 		// DNSServiceRef is an opaque C handle with no Swift Sendable annotation. Ownership
 		// is transferred here on `queue`, and the originating property is cleared before
 		// this queued block can execute, so this wrapper has exclusive use of the handle.
-		let transferred = TransferredDNSServiceRef(value: ref)
+		let transferred = TransferredDNSServiceRef(value: ref, then: then)
 		queue.async {
 			DNSServiceRefDeallocate(transferred.value)
+			transferred.then()
 		}
 	}
 }
 
 private struct TransferredDNSServiceRef: @unchecked Sendable {
 	let value: DNSServiceRef
+	let then: () -> Void
 }
 
 // One per browse result: resolves the service, then queries IPv4 addresses.
+//
+// A query can still answer after it's been retired, and after discovery has stopped,
+// until its ref is deallocated. So each live ref keeps its resolver alive through the
+// callback context, answers on a retired ref are ignored, and the owner is weak: a late
+// answer finds a live resolver that does nothing.
 private final class ServiceResolver {
-	unowned let owner: Discovery
+	weak var owner: Discovery?
 	let key: String
 	let name: String
 	let interfaceIndex: UInt32
@@ -263,10 +276,12 @@ private final class ServiceResolver {
 	}
 
 	func startResolve(regtype: String, domain: String) {
+		guard let owner else { return }
 		var ref: DNSServiceRef?
-		let context = Unmanaged.passUnretained(self).toOpaque()
-		let error = DNSServiceResolve(&ref, 0, interfaceIndex, name, regtype, domain, resolveReply, context)
+		let context = Unmanaged.passRetained(self)
+		let error = DNSServiceResolve(&ref, 0, interfaceIndex, name, regtype, domain, resolveReply, context.toOpaque())
 		guard error == DNSServiceErrorType(kDNSServiceErr_NoError), let ref else {
+			context.release()
 			discoveryLogger.error(
 				"DNSServiceResolve failed: name=\(self.name, privacy: .private(mask: .hash)) code=\(error, privacy: .public)"
 			)
@@ -277,7 +292,8 @@ private final class ServiceResolver {
 	}
 
 	// Called on the owner's queue from the resolve callback
-	func resolved(hostTarget: String, txtLen: UInt16, txtRecord: UnsafeRawPointer?) {
+	func resolved(ref: DNSServiceRef?, hostTarget: String, txtLen: UInt16, txtRecord: UnsafeRawPointer?) {
+		guard let ref, ref == resolveRef, let owner else { return }
 		self.hostTarget = hostTarget
 		self.host = hostTarget.hasSuffix(".") ? String(hostTarget.dropLast()) : hostTarget
 		self.txtId = txtValue(key: "id", txtLen: txtLen, txtRecord: txtRecord)
@@ -285,10 +301,8 @@ private final class ServiceResolver {
 		self.txtOnboarded = txtValue(key: "onboarded", txtLen: txtLen, txtRecord: txtRecord).map { $0 == "1" }
 
 		// One resolve is enough; release the ref and move on to addresses
-		if let resolveRef {
-			owner.deallocateLater(resolveRef)
-			self.resolveRef = nil
-		}
+		retire(ref, owner: owner)
+		resolveRef = nil
 		startAddressQuery()
 
 		// Publish now so the candidate appears immediately; addresses follow
@@ -304,9 +318,9 @@ private final class ServiceResolver {
 	}
 
 	private func startAddressQuery() {
-		guard addrRef == nil, let hostTarget else { return }
+		guard addrRef == nil, let hostTarget, let owner else { return }
 		var ref: DNSServiceRef?
-		let context = Unmanaged.passUnretained(self).toOpaque()
+		let context = Unmanaged.passRetained(self)
 		let error = DNSServiceGetAddrInfo(
 			&ref,
 			0,
@@ -314,9 +328,10 @@ private final class ServiceResolver {
 			DNSServiceProtocol(kDNSServiceProtocol_IPv4),
 			hostTarget,
 			addressReply,
-			context
+			context.toOpaque()
 		)
 		guard error == DNSServiceErrorType(kDNSServiceErr_NoError), let ref else {
+			context.release()
 			discoveryLogger.error(
 				"DNSServiceGetAddrInfo failed: host=\(hostTarget, privacy: .private(mask: .hash)) code=\(error, privacy: .public)"
 			)
@@ -328,17 +343,16 @@ private final class ServiceResolver {
 
 	// Called on the owner's queue from the address callback. An empty address
 	// finalizes the batch without adding anything (error/finalize-only replies).
-	func addressFound(_ address: String, moreComing: Bool) {
+	func addressFound(ref: DNSServiceRef?, _ address: String, moreComing: Bool) {
+		guard let ref, ref == addrRef, let owner else { return }
 		if !address.isEmpty, !addresses.contains(address) {
 			addresses.append(address)
 			addresses.sort()
 		}
 		if !moreComing {
 			// Take the current batch as final; the browse add/remove cycle handles changes
-			if let addrRef {
-				owner.deallocateLater(addrRef)
-				self.addrRef = nil
-			}
+			retire(ref, owner: owner)
+			addrRef = nil
 			owner.publish()
 		}
 	}
@@ -346,20 +360,29 @@ private final class ServiceResolver {
 	func cancel() {
 		if let resolveRef {
 			DNSServiceRefDeallocate(resolveRef)
+			Unmanaged.passUnretained(self).release()
 			self.resolveRef = nil
 		}
 		if let addrRef {
 			DNSServiceRefDeallocate(addrRef)
+			Unmanaged.passUnretained(self).release()
 			self.addrRef = nil
 		}
+	}
+
+	// From inside the ref's own callback, so it's deallocated on the next tick. The
+	// resolver stays alive until then for any answer still on its way.
+	private func retire(_ ref: DNSServiceRef, owner: Discovery) {
+		let context = Unmanaged.passUnretained(self)
+		owner.deallocateLater(ref) { context.release() }
 	}
 }
 
 // ── C callbacks ──
 // Plain functions (no captures) so they convert to C function pointers. The context
-// pointer carries the Discovery/ServiceResolver instance, which is kept alive by the
-// owner's `resolvers` map. C strings are copied immediately; they're only valid for
-// the duration of the callback.
+// pointer carries the Discovery/ServiceResolver instance: Discovery deallocates its
+// browse ref before it goes, and each resolver ref holds its resolver. C strings are
+// copied immediately; they're only valid for the duration of the callback.
 
 private func browseReply(
 	_ sdRef: DNSServiceRef?,
@@ -409,6 +432,7 @@ private func resolveReply(
 	guard errorCode == DNSServiceErrorType(kDNSServiceErr_NoError), let context, let hosttarget else { return }
 	let resolver = Unmanaged<ServiceResolver>.fromOpaque(context).takeUnretainedValue()
 	resolver.resolved(
+		ref: sdRef,
 		hostTarget: String(cString: hosttarget),
 		txtLen: txtLen,
 		txtRecord: txtRecord.map { UnsafeRawPointer($0) }
@@ -434,7 +458,7 @@ private func addressReply(
 		let address, address.pointee.sa_family == sa_family_t(AF_INET)
 	else {
 		if !moreComing {
-			resolver.addressFound("", moreComing: false)
+			resolver.addressFound(ref: sdRef, "", moreComing: false)
 		}
 		return
 	}
@@ -442,5 +466,5 @@ private func addressReply(
 	var sin = UnsafeRawPointer(address).assumingMemoryBound(to: sockaddr_in.self).pointee
 	var buffer = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
 	guard inet_ntop(AF_INET, &sin.sin_addr, &buffer, socklen_t(INET_ADDRSTRLEN)) != nil else { return }
-	resolver.addressFound(String(cString: buffer), moreComing: moreComing)
+	resolver.addressFound(ref: sdRef, String(cString: buffer), moreComing: moreComing)
 }

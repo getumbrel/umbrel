@@ -56,24 +56,28 @@ export function useLaunchApp() {
 			window.open(url, '_blank')?.focus()
 		}
 
-		// If we're already in the credentials dialog, don't show the dialog again.
-		if (app.credentials?.showBeforeOpen && !options?.direct) {
-			navigate(linkToDialog('default-credentials', {for: appId, direct: 'true'}))
-		} else if (app.torOnly && !isOnionPage()) {
+		if (app.torOnly && !isOnionPage()) {
 			toast.warning(t('app-only-over-tor', {app: app.name}), {area: 'app-store'})
-		} else if (
-			app.requiresHttps &&
-			!isOnionPage() &&
-			window.location.protocol !== 'https:' &&
-			options?.protocol !== 'https:'
-		) {
-			if (getAlwaysOpenHttpsRequiredApps()) {
-				open(options?.path, 'https:')
-			} else {
-				navigate(linkToDialog('app-requires-https', {for: appId, ...(options?.path ? {path: options.path} : {})}))
-			}
+			return
+		}
+
+		const needsHttps = app.requiresHttps && !isOnionPage() && window.location.protocol !== 'https:'
+		const protocol = needsHttps ? 'https:' : options?.protocol
+		const showCredentials = app.credentials?.showBeforeOpen && !options?.direct
+		const showHttps = needsHttps && options?.protocol !== 'https:' && !getAlwaysOpenHttpsRequiredApps()
+
+		if (showCredentials || showHttps) {
+			navigate(
+				linkToDialog('app-launch', {
+					for: appId,
+					...(showCredentials ? {credentials: 'true'} : {}),
+					...(showHttps ? {https: 'true'} : {}),
+					...(options?.path ? {path: options.path} : {}),
+					...(protocol ? {protocol} : {}),
+				}),
+			)
 		} else {
-			open(options?.path, options?.protocol)
+			open(options?.path, protocol)
 		}
 	}
 

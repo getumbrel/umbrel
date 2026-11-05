@@ -1,12 +1,12 @@
 import {afterEach, beforeEach, describe, expect, test} from 'vitest'
 import type express from 'express'
 
-import type Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import type Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
-import Auth from './auth.js'
-import {BROWSER_SESSION_HTTP_COOKIE_NAME, BROWSER_SESSION_HTTPS_COOKIE_NAME} from './browser-session-cookie.js'
-import {authorizeDashboardRequest, authorizeHttpRequest} from './http-request.js'
+import Auth from './auth.ts'
+import {BROWSER_SESSION_HTTP_COOKIE_NAME, BROWSER_SESSION_HTTPS_COOKIE_NAME} from './browser-session-cookie.ts'
+import {authorizeDashboardRequest, authorizeHttpRequest} from './http-request.ts'
 
 describe('HTTP request authentication', () => {
 	let directory: ReturnType<typeof temporaryDirectory>

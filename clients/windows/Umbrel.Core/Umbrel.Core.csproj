@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Shared connection and security model for the Windows app: discovery, pinned
+    local HTTPS, native sessions, saved devices, and protected secret storage.
+    Mirrors the Swift package clients/apple/UmbrelKit so the server contract stays identical.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <RootNamespace>Umbrel.Core</RootNamespace>
+    <AssemblyName>Umbrel.Core</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- DPAPI: System.Security.Cryptography.ProtectedData ships out of band. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Umbrel.Core.Tests" />
+  </ItemGroup>
+</Project>

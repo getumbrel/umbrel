@@ -23,7 +23,7 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 	const location = useLocation()
 	const isGeneric = variant === 'generic'
 	const basePath = isGeneric ? '/onboarding/ssd-raid' : '/onboarding/raid'
-	const {devices, isDetecting, error} = useDetectStorageDevices({genericSsd: isGeneric})
+	const {devices, isDetecting, isFetching, error, refetch} = useDetectStorageDevices({genericSsd: isGeneric})
 
 	// Get credentials passed from create-account page via React Router's location.state
 	const credentials = location.state?.credentials as AccountCredentials | undefined
@@ -68,10 +68,19 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 	// to avoid stale data issues after hardware changes (e.g., user shuts down to change an SSD, boots up, refreshes current page)
 	useEffect(() => {
 		if (!credentials || error || recoverableInstallQ.isError) return
-		if (detectionComplete && devices.length > 0) {
+		if (detectionComplete && devices.length > 0 && recoverableInstallQ.data !== undefined) {
 			navigate(`${basePath}/setup`, {state: {credentials}})
 		}
-	}, [basePath, detectionComplete, devices.length, credentials, navigate, error, recoverableInstallQ.isError])
+	}, [
+		basePath,
+		detectionComplete,
+		devices.length,
+		credentials,
+		navigate,
+		error,
+		recoverableInstallQ.isError,
+		recoverableInstallQ.data,
+	])
 
 	// Don't render while redirecting due to missing credentials
 	if (!credentials) return null
@@ -80,7 +89,13 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 	if (error || recoverableInstallQ.error) {
 		return (
 			<RaidError
-				title={error ?? t('onboarding.raid.error.detection-failed')}
+				onRetry={() => {
+					void refetch()
+					void recoverableInstallQ.refetch()
+				}}
+				retrying={isFetching || recoverableInstallQ.isFetching}
+				title={t('onboarding.raid.error.detection-failed')}
+				detail={error ?? recoverableInstallQ.error?.message}
 				instructions={
 					isGeneric
 						? t('onboarding.ssd-raid.error.detection-instructions')
@@ -94,6 +109,11 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 	if (detectionComplete && devices.length === 0) {
 		return (
 			<RaidError
+				onRetry={() => {
+					void refetch()
+					void recoverableInstallQ.refetch()
+				}}
+				retrying={isFetching || recoverableInstallQ.isFetching}
 				title={t('onboarding.raid.error.no-ssds-detected')}
 				instructions={
 					isGeneric

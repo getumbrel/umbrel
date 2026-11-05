@@ -1,10 +1,10 @@
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import type {FileChangeEvent} from './watcher.js'
-import AsyncBurstCache from '../utilities/async-burst-cache.js'
-import AppDirectoryMonitor from './app-directory-monitor.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import type {FileChangeEvent} from './watcher.ts'
+import AsyncBurstCache from '../utilities/async-burst-cache.ts'
+import AppDirectoryMonitor from './app-directory-monitor.ts'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 
@@ -44,22 +44,36 @@ export default class MemberShares {
 	// Apps use targeted directory identity checks. External and network
 	// paths aren't watched, so UI-initiated deletes handle their share removal in
 	// files.ts (mirrors the samba module).
-	async #handleFileChange(event: FileChangeEvent) {
-		if (event.type !== 'delete') return
-		const virtualDeletedPath = this.#umbreld.files.systemToVirtualPath(event.path)
+	async #handleFileChanges(events: readonly FileChangeEvent[]) {
+		const deletions = events.filter((event) => event.type === 'delete')
+		if (deletions.length === 0) return
 		const shares = await this.#watcherShares.get()
-		if (!shares.some((share) => share.path === virtualDeletedPath || share.path.startsWith(`${virtualDeletedPath}/`))) {
-			return
+		if (shares.length === 0) return
+		const removals: string[] = []
+		for (const {path} of deletions) {
+			try {
+				const virtualDeletedPath = this.#umbreld.files.systemToVirtualPath(path)
+				if (
+					shares.some((share) => share.path === virtualDeletedPath || share.path.startsWith(`${virtualDeletedPath}/`))
+				) {
+					removals.push(virtualDeletedPath)
+				}
+			} catch (error) {
+				this.logger.error(`Failed to handle the deletion of '${path}'`, error)
+			}
 		}
-		await this.removeWithin(virtualDeletedPath)
+		// Remove them independently, so one that stalls (in its listeners, say)
+		// can't hold up the others
+		await Promise.all(
+			removals.map((path) =>
+				this.removeWithin(path).catch((error) => this.logger.error(`Failed to stop sharing '${path}'`, error)),
+			),
+		)
 	}
 
 	// Attach listener and remove stale shares
 	async start() {
-		this.#removeFileChangeListener = this.#umbreld.eventBus.on(
-			'files:watcher:change',
-			this.#handleFileChange.bind(this),
-		)
+		this.#removeFileChangeListener = this.#umbreld.eventBus.onFileChanges(this.#handleFileChanges.bind(this))
 
 		// The watcher can miss deletions (while umbreld is stopped, or during a
 		// watcher outage), leaving stale records that would silently re-grant

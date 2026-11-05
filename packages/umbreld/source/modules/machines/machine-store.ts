@@ -5,14 +5,34 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {z} from 'zod'
 
-import type {MachineDefinition} from './domain.js'
-import {machineIdSchema} from './machine-id.js'
+import type {MachineDefinition} from './domain.ts'
+import {machineIdSchema} from './machine-id.ts'
+
+export const MAX_MACHINE_USB_DEVICES = 16
+// Models one device has reconnected as. Devices that do it switch between two.
+export const MAX_MACHINE_USB_DEVICE_ALIASES = 8
 
 const portForwardSchema = z.object({
 	id: z.string().min(1),
 	protocol: z.enum(['tcp', 'udp']),
 	hostPort: z.number().int().min(1).max(65_535),
 	guestPort: z.number().int().min(1).max(65_535),
+})
+
+export const usbDeviceIdentitySchema = z.object({
+	vendorId: z.string().regex(/^[0-9a-f]{4}$/),
+	productId: z.string().regex(/^[0-9a-f]{4}$/),
+	serial: z.string().min(1).max(256).optional(),
+	port: z.string().min(1).max(512),
+})
+
+const usbDeviceAssignmentSchema = usbDeviceIdentitySchema.extend({
+	name: z.string().max(256).optional(),
+	aliases: z
+		.array(usbDeviceIdentitySchema.omit({port: true}))
+		.max(MAX_MACHINE_USB_DEVICE_ALIASES)
+		.optional(),
+	diskSerials: z.array(z.string().min(1).max(256)).max(32).optional(),
 })
 
 const machineDefinitionSchema = z
@@ -42,6 +62,7 @@ const machineDefinitionSchema = z
 			.optional(),
 		uuid: z.string().uuid(),
 		macAddress: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/),
+		networkMode: z.enum(['nat', 'bridged']).optional(),
 		// Address ranges are runtime policy and may change across an OTA. Accept a
 		// stale persisted value here so Machines can migrate it before exposing or
 		// passing the definition to libvirt.
@@ -76,6 +97,7 @@ const machineDefinitionSchema = z
 		seedMedia: z.literal('media/seed.iso').optional(),
 		bootMedia: z.literal('media/boot.img').optional(),
 		portForwards: z.array(portForwardSchema),
+		usbDevices: z.array(usbDeviceAssignmentSchema).max(MAX_MACHINE_USB_DEVICES).optional(),
 	})
 	.refine((definition) => definition.memoryMb !== undefined || definition.memoryGb !== undefined, {
 		message: 'Machine memory is required',

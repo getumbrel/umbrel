@@ -11,7 +11,7 @@ export function greetingMessage(name: string, t: TFunction) {
 		evening: t('desktop.greeting.evening', {name: firstName}),
 	}
 
-	return greetingMap[getPartofDay()] + '.'
+	return greetingMap[getPartofDay()]
 }
 
 function getPartofDay() {

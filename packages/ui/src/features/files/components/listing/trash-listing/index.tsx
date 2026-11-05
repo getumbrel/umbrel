@@ -85,6 +85,7 @@ export function TrashListing() {
 
 	return (
 		<Listing
+			hiddenRenamedPaths={listing?.hiddenRenamedPaths}
 			items={items}
 			totalItems={listing?.totalFiles}
 			truncatedAt={listing?.truncatedAt}

@@ -5,7 +5,7 @@ import getPort from 'get-port'
 import got from 'got'
 import pRetry from 'p-retry'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 const serviceFilePath = '/etc/avahi/services/umbrel.service'
 type TrpcResponse<T> = {result: {data: T}}

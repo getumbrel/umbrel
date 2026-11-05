@@ -4,12 +4,12 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 import Thunderbolt, {
 	LEGACY_EXTERNAL_GPU_NOTIFICATION_PREFIX,
 	discoverThunderboltDevices,
 	thunderboltNotification,
-} from './thunderbolt.js'
+} from './thunderbolt.ts'
 
 const DEVICE_ID = 'ba010000-0062-6c1e-0332-0ee0c2424909'
 const SECOND_DEVICE_ID = 'ba010000-0062-6c1e-0332-0ee0c2424910'

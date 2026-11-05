@@ -1,7 +1,7 @@
 import {beforeEach, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import NetworkStorage from './network-storage.js'
+import type Umbreld from '../../index.ts'
+import NetworkStorage from './network-storage.ts'
 
 const runCommand = vi.hoisted(() => vi.fn())
 

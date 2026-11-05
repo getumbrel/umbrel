@@ -6,8 +6,8 @@ import {
 	externalPath,
 	vmDataDirectory,
 	waitForExternalStorage,
-} from '../backups/backups.vm-test-helpers.js'
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+} from '../backups/backups.vm-test-helpers.ts'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 import {
 	createLargeVmCloudFixture,
 	releaseVmCloudWebDav,
@@ -18,7 +18,7 @@ import {
 	VM_CLOUD_WEBDAV_URL,
 	VM_CLOUD_WEBDAV_USERNAME,
 	writeVmCloudFixture,
-} from './cloud.vm-test-helpers.js'
+} from './cloud.vm-test-helpers.ts'
 
 const destinationPath = `${externalPath}/Cloud`
 const externalSystemPath = `${vmDataDirectory}/external/SanDisk`

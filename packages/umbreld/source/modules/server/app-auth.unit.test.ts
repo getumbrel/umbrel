@@ -7,9 +7,9 @@ import fse from 'fs-extra'
 import got from 'got'
 import {afterAll, beforeAll, describe, expect, test} from 'vitest'
 
-import Umbreld from '../../index.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import createAppAuthRouter, {rewriteAppAuthDevProxyPath} from './app-auth.js'
+import Umbreld from '../../index.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import createAppAuthRouter, {rewriteAppAuthDevProxyPath} from './app-auth.ts'
 
 const accountAvatarPath = (umbreld: Umbreld, userId: string, hash: string) =>
 	nodePath.join(umbreld.dataDirectory, 'avatars', userId, `${hash}.webp`)

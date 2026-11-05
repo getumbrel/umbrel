@@ -1,6 +1,6 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 // Tests that SSDs previously used in another Umbrel installation don't interfere
 // with the current installation. The system should mount the correct pool based

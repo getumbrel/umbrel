@@ -1,6 +1,6 @@
 import {expect, test} from 'vitest'
 
-import {lookupMimeType} from './mime.js'
+import {lookupMimeType} from './mime.ts'
 
 test.each([
 	['photo.jfif', 'image/jpeg'],

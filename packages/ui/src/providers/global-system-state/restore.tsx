@@ -17,7 +17,9 @@ export function RestoreCover() {
 	const indeterminate = hasSample && !running && p === 0
 
 	// Use our own copy for messages; ignore backend-provided description
-	let message = isCompleting ? t('backups.restoring-completing') : t('backups.restoring-progress', {percent: p})
+	let message = isCompleting
+		? t('backups.restoring-completing')
+		: t('backups.restoring-progress', {percent: Math.floor(p)})
 
 	if (running && secondsRemaining) {
 		message += ` • ${t('backups.restoring-time-remaining', {time: secondsToEta(secondsRemaining)})}`

@@ -1,4 +1,5 @@
 import SwiftUI
+import UmbrelKit
 
 // Visual tokens shared across the main-app tabs.
 // Cards and tiles are translucent fills that sit over the user's wallpaper.
@@ -90,14 +91,31 @@ struct NoticeCard: View {
 	let message: String
 	var actionLabel: String? = nil
 	var action: (() -> Void)? = nil
+	// A close button for an offer the person may not want
+	var dismiss: (() -> Void)? = nil
 	@Environment(\.frostWallpaper) private var wallpaper
 
 	var body: some View {
-		if let action {
-			Button(action: action) { card }
+		Group {
+			if let action {
+				Button(action: action) { card }
+					.buttonStyle(.plain)
+			} else {
+				card
+			}
+		}
+		.overlay(alignment: .topTrailing) {
+			if let dismiss {
+				Button(action: dismiss) {
+					Image(systemName: "xmark")
+						.font(.system(size: 11, weight: .bold))
+						.foregroundStyle(.white.opacity(0.45))
+						.frame(width: 32, height: 32)
+						.contentShape(Rectangle())
+				}
 				.buttonStyle(.plain)
-		} else {
-			card
+				.accessibilityLabel("Dismiss")
+			}
 		}
 	}
 
@@ -113,10 +131,13 @@ struct NoticeCard: View {
 				Text(title)
 					.font(.footnote.weight(.semibold))
 					.foregroundStyle(.white)
-				Text(message)
-					.font(.footnote.weight(.medium))
-					.foregroundStyle(.white.opacity(0.55))
 					.fixedSize(horizontal: false, vertical: true)
+				if !message.isEmpty {
+					Text(message)
+						.font(.footnote.weight(.medium))
+						.foregroundStyle(.white.opacity(0.55))
+						.fixedSize(horizontal: false, vertical: true)
+				}
 			}
 			.frame(maxWidth: .infinity, alignment: .leading)
 
@@ -146,6 +167,7 @@ struct NoticeCard: View {
 struct PhotoBackupNoticeCard: View {
 	let notice: MainModel.PhotoBackupNotice
 	let setUpTailscale: () -> Void
+	var dismissOffer: (() -> Void)? = nil
 	let retryStorage: () -> Void
 	let retryBackup: () -> Void
 
@@ -155,7 +177,8 @@ struct PhotoBackupNoticeCard: View {
 			title: notice.title,
 			message: notice.message,
 			actionLabel: notice.actionLabel,
-			action: action
+			action: action,
+			dismiss: notice == .backUpAnywhere ? dismissOffer : nil
 		)
 	}
 
@@ -207,15 +230,16 @@ struct InfoPageDivider: View {
 
 // MARK: - Settings lists
 
-// A gray section header above a rounded #2c2c2e card of rows.
+// A gray section header above a rounded #2c2c2e card of rows, optionally with a
+// How it works link at the header's trailing edge.
 struct SettingsSection<Content: View>: View {
 	let title: String
-	let badge: String?
+	let learnMore: (() -> Void)?
 	@ViewBuilder var content: Content
 
-	init(_ title: String, badge: String? = nil, @ViewBuilder content: () -> Content) {
+	init(_ title: String, learnMore: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
 		self.title = title
-		self.badge = badge
+		self.learnMore = learnMore
 		self.content = content()
 	}
 
@@ -225,13 +249,19 @@ struct SettingsSection<Content: View>: View {
 				Text(title)
 					.font(.subheadline.weight(.medium))
 					.foregroundStyle(Theme.gray)
-				if let badge {
-					Text(badge)
-						.font(.caption2.weight(.semibold))
-						.foregroundStyle(.white.opacity(0.55))
-						.padding(.horizontal, 8)
-						.padding(.vertical, 4)
-						.background(.white.opacity(0.08), in: Capsule())
+				if let learnMore {
+					Spacer(minLength: 0)
+					Button(action: learnMore) {
+						HStack(spacing: 4) {
+							Text("How it works")
+							Image(systemName: "chevron.right")
+								.font(.system(size: 10, weight: .semibold))
+						}
+						.font(.subheadline.weight(.medium))
+						.foregroundStyle(.white.opacity(0.65))
+						.contentShape(Rectangle())
+					}
+					.buttonStyle(.plain)
 				}
 			}
 			VStack(spacing: 0) { content }
@@ -591,6 +621,22 @@ struct StatusDot: View {
 			Circle().fill(color).frame(width: 6, height: 6)
 		}
 	}
+}
+
+// What the app says when a saved Umbrel answers with a new identity. That's expected
+// after its certificate is reset or it's restored from a backup (backups leave out the
+// certificates), and anyone with access to the Umbrel may have done it. It's also what
+// someone pretending to be the Umbrel looks like, so the words ask people to check
+// before they reconnect. A factory reset or new storage gives a new id, so Home never
+// shows this for them, but the sign-in sheet still can: it only sees the refused
+// certificate.
+enum IdentityChange {
+	static let title = "Can’t confirm this is your Umbrel"
+	static let alertTitle = "Can’t Confirm This Is Your Umbrel"
+	static let message = "Its security identity changed. That’s expected if it was restored from a backup or its certificate was reset since this iPhone last connected. If neither happened, don’t reconnect. Someone on this network could be pretending to be your Umbrel."
+	static let blockedMessage = "Its security identity changed, so this didn’t open. Check Home before reconnecting."
+	static let confirmTitle = "Was your Umbrel restored or its certificate reset?"
+	static let confirmMessage = "Only reconnect if one of these happened, and do it at home, on your own Wi-Fi. Not sure? Ask whoever manages your Umbrel.\n\nYou’ll sign in again. If photo backup is on, you’ll need to turn it back on."
 }
 
 // MARK: - Loading states

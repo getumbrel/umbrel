@@ -3,9 +3,9 @@ import net from 'node:net'
 
 import type {WebSocket} from 'ws'
 
-import type Umbreld from '../../index.js'
-import type createLogger from '../utilities/logger.js'
-import type MachineConsoleSessions from './machine-console-sessions.js'
+import type Umbreld from '../../index.ts'
+import type createLogger from '../utilities/logger.ts'
+import type MachineConsoleSessions from './machine-console-sessions.ts'
 
 export const CONSOLE_BACKPRESSURE_HIGH_WATER_BYTES = 1024 * 1024
 export const CONSOLE_BACKPRESSURE_LOW_WATER_BYTES = 512 * 1024
@@ -93,7 +93,13 @@ export default function createMachineConsoleWebSocketHandler({
 			display.on('close', () => ws.close())
 			ws.on('message', (data) => display?.write(data as Buffer))
 		} catch (error) {
-			logger.error(`Machine console socket`, error)
+			// Opening a console while the machine starts or stops is routine, and the
+			// browser retries with backoff, so only unexpected failures are errors
+			if (error instanceof Error && /\[machine-(not-running|console-unavailable)\]/.test(error.message)) {
+				logger.verbose(`Machine console ${machineId}: ${error.message}`)
+			} else {
+				logger.error(`Machine console ${machineId}`, error)
+			}
 			cleanup()
 			ws.close()
 		}

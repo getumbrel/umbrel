@@ -5,10 +5,10 @@ import {lstat, rename} from 'node:fs/promises'
 import fse from 'fs-extra'
 import {afterAll, beforeAll, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import Files from './files.js'
+import type Umbreld from '../../index.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
+import Files from './files.ts'
 
 const temporary = temporaryDirectory()
 

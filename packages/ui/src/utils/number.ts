@@ -1,11 +1,12 @@
+// The locale is required, so a caller can't fall back to English by omission
 export function formatNumberI18n({
 	n,
 	showDecimals = true,
-	locale = 'en-US',
+	locale,
 }: {
 	n: number
 	showDecimals?: boolean
-	locale?: string
+	locale: string
 }) {
 	return new Intl.NumberFormat(locale, {
 		minimumFractionDigits: showDecimals ? 2 : 0,

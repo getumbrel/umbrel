@@ -1,6 +1,5 @@
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {
 	AlertDialog,
@@ -12,8 +11,11 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {StorageDeviceCard} from '@/features/storage/components/storage-device-card'
 import {Layout, primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {Progress} from '@/modules/bare/progress'
+import {RaidError} from '@/routes/onboarding/raid/raid-error'
+import {ReturnToStart} from '@/routes/onboarding/raid/return-to-start'
 
 import type {RaidOnboardingVariant} from './index'
 import {SsdHealthDialog, useSsdHealthDialog} from './ssd-health-dialog'
@@ -33,7 +35,16 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 	const healthDialog = useSsdHealthDialog()
 	const [showSetUpAsNewDialog, setShowSetUpAsNewDialog] = useState(false)
 
-	const {handleRestore, restoreRequested, restoreFailed, errorMessage} = useRecoverExistingInstall()
+	const {
+		handleRestore,
+		restoreRequested,
+		restoreFailed,
+		errorMessage,
+		outcomeUnknown,
+		showWaitNotice,
+		checkStatus,
+		checking,
+	} = useRecoverExistingInstall()
 
 	const proSlots: (SsdSlot | null)[] = [null, null, null, null]
 	devices.forEach((device) => {
@@ -71,13 +82,19 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 	if (restoreRequested && !restoreFailed) {
 		return (
 			<Layout
-				title={t('onboarding.raid.recovery.restoring.title')}
-				subTitle={t('onboarding.raid.recovery.restoring.subtitle')}
+				title={t(
+					outcomeUnknown ? 'onboarding.raid.recovery.confirming.title' : 'onboarding.raid.recovery.restoring.title',
+				)}
+				subTitle={t(
+					outcomeUnknown ? 'onboarding.raid.recovery.outcome-unknown' : 'onboarding.raid.recovery.restoring.subtitle',
+				)}
 				subTitleMaxWidth={430}
 				showLogo={false}
 				footer={
 					<div className='w-full max-w-sm'>
-						<p className='text-center text-sm text-white/60'>{t('onboarding.raid.recovery.restoring.warning')}</p>
+						<p className='text-center text-sm text-white/60'>
+							{t(showWaitNotice ? 'onboarding.raid.wait-warning' : 'onboarding.raid.recovery.restoring.warning')}
+						</p>
 					</div>
 				}
 			>
@@ -94,37 +111,38 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 				)}
 				<div className='mt-4 w-full max-w-sm'>
 					<Progress />
+					{(outcomeUnknown || showWaitNotice) && (
+						<div className='mt-5 flex flex-col items-center gap-3'>
+							{showWaitNotice && (
+								<p className='text-center text-13 leading-relaxed text-white/50'>
+									{t('onboarding.raid.still-working')}
+								</p>
+							)}
+							<button className={secondaryButtonClasss} onClick={() => void checkStatus()} disabled={checking}>
+								{t('storage-status.check-again')}
+							</button>
+							{showWaitNotice && <ReturnToStart />}
+						</div>
+					)}
 				</div>
 			</Layout>
 		)
 	}
 
 	if (restoreFailed) {
-		const failedMessage = errorMessage ?? t('onboarding.raid.recovery.failed.description')
-
 		return (
 			<>
-				<div className='flex flex-1 flex-col items-center justify-center gap-4 px-4'>
-					<TbAlertTriangleFilled className='size-[22px] text-[#F5A623]' />
-					<h1
-						className='text-[20px] font-bold text-white/85'
-						style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
-					>
-						{t('onboarding.raid.recovery.failed.title')}
-					</h1>
-					<p className='max-w-[360px] text-center text-[15px] text-white/70'>{failedMessage}</p>
-					<div className='flex flex-col gap-3 sm:flex-row'>
-						<button onClick={handleRestore} {...primaryButtonProps}>
-							{t('onboarding.raid.try-again')}
-						</button>
-						<button
-							onClick={() => setShowSetUpAsNewDialog(true)}
-							className={`${secondaryButtonClasss} w-full sm:w-fit`}
-						>
-							{t('onboarding.raid.recovery.set-up-new')}
-						</button>
-					</div>
-				</div>
+				<RaidError
+					title={t('onboarding.raid.recovery.failed.title')}
+					instructions={t('onboarding.raid.recovery.failed-help')}
+					detail={errorMessage}
+					onRetry={handleRestore}
+					retryLabel={t('onboarding.raid.try-again')}
+					secondaryAction={{
+						label: t('onboarding.raid.recovery.set-up-new'),
+						onClick: () => setShowSetUpAsNewDialog(true),
+					}}
+				/>
 				{setUpAsNewDialog}
 			</>
 		)
@@ -132,7 +150,7 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 
 	return (
 		<div className='flex flex-1 flex-col md:flex-row'>
-			<div className='flex flex-1 flex-col justify-center gap-5 px-4 py-6 md:pr-0 md:pl-6'>
+			<div className='flex min-w-0 flex-1 flex-col justify-center gap-5 px-4 py-6 md:pr-0 md:pl-6'>
 				<div className='flex flex-col gap-1 md:gap-2'>
 					<h1
 						className='text-[20px] font-bold text-white/85 md:text-[24px]'
@@ -144,6 +162,29 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 						{t('onboarding.raid.recovery.found.subtitle')}
 					</p>
 				</div>
+
+				<div className='flex min-w-0 flex-col gap-3 md:hidden'>
+					<p className='text-13 text-white/50'>{t('storage-status.connected-drives')}</p>
+					{devices.map((device) => (
+						<StorageDeviceCard
+							key={device.id ?? device.device}
+							device={device}
+							onDetails={() => healthDialog.openDialog(device, isGeneric ? undefined : device.slot)}
+						/>
+					))}
+				</div>
+				{!isGeneric &&
+					devices
+						.filter((device) => !device.slot || device.slot < 1 || device.slot > 4)
+						.map((device) => (
+							<div className='hidden md:block' key={device.id ?? device.device}>
+								<StorageDeviceCard
+									device={device}
+									status={t('storage-status.slot-unknown')}
+									onDetails={() => healthDialog.openDialog(device)}
+								/>
+							</div>
+						))}
 
 				<div className='flex flex-col gap-3 sm:flex-row'>
 					<button

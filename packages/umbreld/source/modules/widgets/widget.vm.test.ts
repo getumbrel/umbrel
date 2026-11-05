@@ -1,6 +1,6 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestVm>>
 let failed = false

@@ -1,10 +1,9 @@
-import {DialogPortal} from '@radix-ui/react-dialog'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
-import {TbAlertTriangle} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
+import {DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -12,9 +11,16 @@ import {
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
 import {Spinner} from '@/components/ui/loading'
+import {StorageOperationError} from '@/features/storage/components/storage-operation-error'
 
-import {RaidDeviceStatus, StorageDevice, useStorage} from '../../hooks/use-storage'
-import {formatStorageSize, planFailsafeTransition, planMirrorAdditions} from '../../utils'
+import {pickReplacementDrive, RaidDeviceStatus, StorageDevice, useStorage} from '../../hooks/use-storage'
+import {
+	canRepairInPlace,
+	formatStorageSize,
+	getRememberedMemberSize,
+	planFailsafeTransition,
+	planMirrorAdditions,
+} from '../../utils'
 import {AddAcceleratorDialog} from '../dialogs/add-accelerator-dialog'
 import {AddMirrorDialog} from '../dialogs/add-mirror-dialog'
 import {AddToRaidDialog} from '../dialogs/add-to-raid-dialog'
@@ -26,13 +32,14 @@ import {SwapDialog} from '../dialogs/swap-dialog'
 import {PoolDataErrorBanner} from '../pool-data-error-banner'
 import {StorageDonutChart} from '../storage-donut-chart'
 import {StorageModeDisplay} from '../storage-mode-display'
+import {StorageNotice} from '../storage-page'
 import {StorageStats} from '../storage-stats'
+import {UsbDrives} from '../usb-drives'
 import {AcceleratorSection} from './accelerator-section'
 import {
 	AddIcon,
 	DriveActionButton,
 	DriveCard,
-	InactivePill,
 	MissingDriveCard,
 	ReadyToReplacePill,
 	ReplaceIcon,
@@ -97,7 +104,7 @@ export function ListStorageManager() {
 
 	// Health dialog - device looked up from live data so polling keeps it fresh
 	const healthDialog = useSsdHealthDialog()
-	const healthDialogDevice = allDevices?.find((d) => d.id === healthDialog.selectedDevice?.deviceId)
+	const healthDialogDevice = allDevices?.find((d) => !!d.id && d.id === healthDialog.selectedDevice?.deviceId)
 
 	// Dialog state
 	const [deviceToAdd, setDeviceToAdd] = useState<StorageDevice | null>(null)
@@ -120,39 +127,39 @@ export function ListStorageManager() {
 		minSize: number
 	} | null>(null)
 
-	// Replacement candidates: largest unpooled drive of the right type
-	const replacementHdd = [...availableHdds].sort((a, b) => b.roundedSize - a.roundedSize)[0]
-	const replacementSsd = [...availableSsds].sort((a, b) => b.roundedSize - a.roundedSize)[0]
+	// Replacement candidates: unpooled drives of the right type, largest first
+	const spareHdds = [...availableHdds].sort((a, b) => b.roundedSize - a.roundedSize)
+	const spareSsds = [...availableSsds].sort((a, b) => b.roundedSize - a.roundedSize)
 
 	// Missing physical devices can't be cross-checked against the pool device type, so data
 	// drives use the pool's type for their replacement candidate
-	const dataReplacementCandidate = isHddPool ? replacementHdd : replacementSsd
+	const dataSpares = isHddPool ? spareHdds : spareSsds
 
 	// A failed member whose physical drive is still attached but no longer recognised by
 	// the pool (wiped or corrupted labels) can be replaced with its own disk in place -
 	// availableDevices excludes it because its id matches a pool member, so look it up
-	// directly. A fresh unpooled drive is preferred when one is attached.
-	const selfReplacementFor = (member: {id: string; status?: RaidDeviceStatus}, type: 'hdd' | 'ssd') => {
-		const isFailed = member.status !== undefined && member.status !== 'ONLINE'
-		if (!isFailed) return undefined
-		return allDevices.find((device) => device.id === member.id && device.type === type && !device.isSystemDrive)
-	}
+	// directly. It erases the disk, so canRepairInPlace decides whether that's safe.
+	const selfReplacementFor = (member: {id: string; status?: RaidDeviceStatus}, type: 'hdd' | 'ssd') =>
+		canRepairInPlace(raidStatus, member, allDevices)
+			? allDevices.find((device) => device.id === member.id && device.type === type && !device.isSystemDrive)
+			: undefined
 	// Candidates must be large enough for the member they'd replace - a fresh drive is
 	// preferred, but a too-small fresh drive doesn't shadow a viable self-replacement.
 	// Members with no usable candidate fall back to the physical-swap instructions.
 	const dataCandidateFor = (member: {id: string; status?: RaidDeviceStatus}) =>
-		[dataReplacementCandidate, selfReplacementFor(member, isHddPool ? 'hdd' : 'ssd')].find(
-			(candidate): candidate is StorageDevice => !!candidate && candidate.roundedSize >= minReplacementSize(member.id),
+		pickReplacementDrive(
+			dataSpares,
+			minReplacementSize(member.id),
+			selfReplacementFor(member, isHddPool ? 'hdd' : 'ssd'),
 		)
 	const acceleratorCandidateFor = (member: {id: string; status?: RaidDeviceStatus}) =>
-		[replacementSsd, selfReplacementFor(member, 'ssd')].find(
-			(candidate): candidate is StorageDevice => !!candidate && candidate.roundedSize >= minReplacementSize(member.id),
-		)
+		pickReplacementDrive(spareSsds, minReplacementSize(member.id), selfReplacementFor(member, 'ssd'))
 
 	// Minimum size the replacement drive must have: the failed member's own size when we still
-	// know it, otherwise the smallest pool drive. A missing accelerator member is sized from
-	// its surviving partner instead - the backend partitions the replacement to mirror the
-	// partner, so the data-pool (HDD) sizes are irrelevant for it.
+	// know it, from the disk or what the pool remembers of it, otherwise the smallest pool drive.
+	// A missing accelerator member is sized from its surviving partner instead - the backend
+	// partitions the replacement to mirror the partner, so the data-pool (HDD) sizes are
+	// irrelevant for it.
 	const minReplacementSize = (failedId: string) => {
 		const failedDevice = allDevices.find((d) => d.id === failedId)
 		if (failedDevice) return failedDevice.roundedSize
@@ -161,6 +168,8 @@ export function ListStorageManager() {
 			// No surviving partner to size against - let the backend's own validation decide
 			return partner?.device?.roundedSize ?? 0
 		}
+		const rememberedSize = getRememberedMemberSize(raidStatus, failedId)
+		if (rememberedSize) return rememberedSize
 		const poolSizes = raidDevices.map((d) => d.roundedSize)
 		return poolSizes.length > 0 ? Math.min(...poolSizes) : 0
 	}
@@ -305,6 +314,7 @@ export function ListStorageManager() {
 						inPool={false}
 						onClick={() => healthDialog.openDialog(mirrorReplacementCandidate)}
 						pill={<ReadyToReplacePill />}
+						description={t('storage-manager.ready-to-replace-description')}
 					/>
 				)}
 
@@ -340,11 +350,11 @@ export function ListStorageManager() {
 			</div>
 		)
 	} else {
-		// Flat grid: Full Storage HDD pools and all SSD pools. Unpooled drives get their own
-		// labeled group below the pool members.
+		// Full Storage HDDs stay one drive per row at every screen size. Unpooled
+		// drives get their own labeled group below the pool members.
 		drivesContent = (
 			<div className='flex flex-col gap-2.5'>
-				<div className='grid grid-cols-1 gap-3 lg:grid-cols-2'>
+				<div className='grid grid-cols-1 gap-3'>
 					{(raidStatus?.devices ?? []).map((poolDevice) => {
 						const device = allDevices.find((d) => d.id === poolDevice.id)
 						const raidDevice = raidDevices.find((d) => d.id === poolDevice.id)
@@ -376,7 +386,7 @@ export function ListStorageManager() {
 					<span className='mt-1 text-13 font-semibold text-white/50'>{t('storage-manager.new-drives-detected')}</span>
 				)}
 				{unpooledDrives.length > 0 && (
-					<div className='grid grid-cols-1 gap-3 lg:grid-cols-2'>
+					<div className='grid grid-cols-1 gap-3'>
 						{unpooledDrives.map((device) => {
 							// Drives matching the pool type can be added; mismatched types can't be mixed.
 							// The replacement candidate for a failed member gets a status pill instead of a
@@ -394,7 +404,8 @@ export function ListStorageManager() {
 									device={device}
 									inPool={false}
 									onClick={() => healthDialog.openDialog(device)}
-									pill={isReplacementCandidate ? <ReadyToReplacePill /> : <InactivePill />}
+									pill={isReplacementCandidate ? <ReadyToReplacePill /> : undefined}
+									description={isReplacementCandidate ? t('storage-manager.ready-to-replace-description') : undefined}
 									action={
 										!isReplacementCandidate && matchesPool ? (
 											<DriveActionButton icon={AddIcon} variant='primary' onClick={() => setDeviceToAdd(device)}>
@@ -423,6 +434,7 @@ export function ListStorageManager() {
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
 				<ImmersiveDialogContent
+					aria-describedby={undefined}
 					size='md'
 					showScroll
 					style={{
@@ -432,8 +444,12 @@ export function ListStorageManager() {
 					}}
 				>
 					<div className='flex h-full flex-col gap-6'>
-						<h1 className={immersiveDialogTitleClass}>{t('storage-manager')}</h1>
+						<DialogTitle asChild className={immersiveDialogTitleClass}>
+							<h1>{t('storage-manager')}</h1>
+						</DialogTitle>
+						<StorageOperationError />
 						<PoolDataErrorBanner errorCount={raidStatus?.dataErrors} />
+						{raidStatus?.status === 'DEGRADED' && <StorageNotice>{t('storage-status.degraded-help')}</StorageNotice>}
 
 						{/* Mode display - full width above the drive/stats columns */}
 						<div className='flex flex-col gap-2.5'>
@@ -450,12 +466,9 @@ export function ListStorageManager() {
 						    seconds (a yanked drive blocks smartctl until the kernel drops the device),
 						    and an empty device list would otherwise flag every pool member as missing. */}
 						{!isStorageLoading && (hasMissingDrive || hasMissingAccelerator) && (
-							<div className='flex items-center gap-2 rounded-8 bg-[#3C1C1C] p-2.5 text-13 leading-tight -tracking-2 text-[#FF3434]'>
-								<TbAlertTriangle className='h-5 w-5 shrink-0' />
-								<span className='opacity-90'>
-									{isHddPool ? t('storage-manager.missing-drive-warning') : t('storage-manager.missing-ssd-warning')}
-								</span>
-							</div>
+							<StorageNotice tone='danger'>
+								{isHddPool ? t('storage-manager.missing-drive-warning') : t('storage-manager.missing-ssd-warning')}
+							</StorageNotice>
 						)}
 
 						<div className='flex flex-col gap-6 md:flex-row md:items-stretch'>
@@ -476,9 +489,11 @@ export function ListStorageManager() {
 													{t('storage-manager.add-to-raid.enable-failsafe')}
 												</button>
 											)}
-											<DriveActionButton icon={AddIcon} onClick={() => setIsInstallDrivesOpen(true)}>
-												{t('storage-manager.install-drives')}
-											</DriveActionButton>
+											<div className='hidden md:block'>
+												<DriveActionButton icon={AddIcon} onClick={() => setIsInstallDrivesOpen(true)}>
+													{t('storage-manager.install-drives')}
+												</DriveActionButton>
+											</div>
 										</div>
 									</div>
 									{isStorageLoading ? (
@@ -488,6 +503,11 @@ export function ListStorageManager() {
 									) : (
 										drivesContent
 									)}
+									<div className='flex justify-center md:hidden'>
+										<DriveActionButton icon={AddIcon} onClick={() => setIsInstallDrivesOpen(true)}>
+											{t('storage-manager.add')}
+										</DriveActionButton>
+									</div>
 								</div>
 
 								{/* SSD acceleration - HDD pools only, hidden while loading for the same
@@ -535,10 +555,11 @@ export function ListStorageManager() {
 										))}
 									</div>
 								)}
+								<UsbDrives />
 							</div>
 
-							{/* Right: donut chart and stats, vertically centered against the left column */}
-							<div className='flex flex-col items-center gap-4 md:w-[240px] md:shrink-0 md:justify-center'>
+							{/* Right: donut chart and stats, aligned to the top of the drive column */}
+							<div className='flex flex-col items-center gap-4 md:w-[240px] md:shrink-0 md:pt-6'>
 								<StorageDonutChart
 									used={chartData.used}
 									available={chartData.available}
@@ -583,6 +604,7 @@ export function ListStorageManager() {
 				device={deviceToAdd}
 				canChooseMode={!isHddPool && (canChooseMode ?? false)}
 				raidType={raidType}
+				poolStatus={raidStatus?.status}
 				raidDevices={raidDevices}
 				addDeviceAsync={addDeviceAsync}
 				transitionToFailsafeAsync={transitionToFailsafeAsync}
@@ -643,7 +665,7 @@ export function ListStorageManager() {
 					acceleratorDevices.some((member) => member.id === swapDeviceId && member.status !== 'ONLINE')
 				}
 				isUmbrelPro={false}
-				raidDriveCount={raidStatus?.devices?.length ?? 0}
+				raidStatus={raidStatus}
 				availableDevices={swapCandidates}
 				missingDeviceType={swapMemberIsAccelerator || !isHddPool ? 'ssd' : 'hdd'}
 				allDevices={allDevices}

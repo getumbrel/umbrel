@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'vitest'
 
-import {supportsThumbnail} from '../files/thumbnail-support.js'
-import {photoKind, supportsPhotos} from './types.js'
+import {supportsThumbnail} from '../files/thumbnail-support.ts'
+import {photoKind, supportsPhotos} from './types.ts'
 
 const photoExtensions = [
 	'jpg',
@@ -64,6 +64,19 @@ describe('media extension support', () => {
 			expect(photoKind(name)).toBeUndefined()
 			expect(supportsPhotos(name)).toBe(false)
 			expect(supportsThumbnail(name)).toBe(false)
+		}
+	})
+
+	test('rejects macOS AppleDouble sidecars that borrow a media extension', () => {
+		for (const name of ['._IMG_1234.HEIC', '._clip.mov', '/home/umbrel/Photos/._IMG_1234.jpg']) {
+			expect(photoKind(name)).toBeUndefined()
+			expect(supportsPhotos(name)).toBe(false)
+			expect(supportsThumbnail(name)).toBe(false)
+		}
+		// Only the `._` prefix marks a sidecar, not any dotfile or underscore
+		for (const name of ['.hidden.jpg', '_IMG_1234.HEIC', 'IMG_._1234.HEIC', '/home/umbrel/._Album/IMG_1234.HEIC']) {
+			expect(photoKind(name)).toBe('photo')
+			expect(supportsThumbnail(name)).toBe(true)
 		}
 	})
 })

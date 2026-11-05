@@ -27,8 +27,8 @@ export function ConnectExistingModal({
 }) {
 	const {t} = useTranslation()
 	return (
-		<Dialog open={open} onOpenChange={(v) => (!v ? onClose() : null)}>
-			<DialogContent className='flex flex-col items-center text-center'>
+		<Dialog open={open} onOpenChange={(v) => (!v && !isConnecting ? onClose() : null)}>
+			<DialogContent closeButton={!isConnecting} className='flex flex-col items-center text-center'>
 				<DialogHeader className='items-center text-center'>
 					<img
 						src={backupsIcon}
@@ -36,7 +36,7 @@ export function ConnectExistingModal({
 						className='mb-2 size-10 opacity-80'
 						draggable={false}
 					/>
-					<DialogTitle>{t('backups.modals.connect-existing.title')}</DialogTitle>
+					<DialogTitle className='px-6 text-center'>{t('backups.modals.connect-existing.title')}</DialogTitle>
 					<DialogDescription>{t('backups.modals.connect-existing.description')}</DialogDescription>
 				</DialogHeader>
 				<div className='w-full space-y-2 text-left'>

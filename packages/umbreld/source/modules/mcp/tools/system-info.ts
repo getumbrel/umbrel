@@ -1,7 +1,7 @@
 import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
-import {runTool, type McpToolContext} from './shared.js'
+import {runTool, type McpToolContext} from './shared.ts'
 
 export default function registerSystemInfoTools(server: McpServer, context: McpToolContext) {
 	server.registerTool(
@@ -24,7 +24,7 @@ export default function registerSystemInfoTools(server: McpServer, context: McpT
 					context.rpc.systemNg.device.getSpecs(),
 					context.rpc.system.version(),
 					context.rpc.system.status(),
-					context.rpc.system.getReleaseChannel(),
+					context.rpc.update.getReleaseChannel(),
 					context.rpc.system.getHostname(),
 					context.rpc.system.getIpAddresses(),
 					context.rpc.system.uptime(),
@@ -112,7 +112,7 @@ export default function registerSystemInfoTools(server: McpServer, context: McpT
 				openWorldHint: true,
 			},
 		},
-		(input) => runTool(context, 'check_os_update', input, () => context.rpc.system.checkUpdate()),
+		(input) => runTool(context, 'check_os_update', input, () => context.rpc.update.check()),
 	)
 
 	server.registerTool(

@@ -46,7 +46,7 @@ class FakeXHR {
 }
 
 const last = () => FakeXHR.instances.at(-1)!
-const file = new File([new Uint8Array(100)], 'a.txt', {type: 'text/plain'})
+const file = new File([new Uint8Array(100)], 'a.txt', {type: 'text/plain', lastModified: 1433160000000})
 const item: TransferItem = {
 	id: 'transfer-1',
 	batchId: 'batch-1',
@@ -111,7 +111,9 @@ describe('uploadExecutor', () => {
 	test('posts the file to the upload endpoint with the path and strategy', async () => {
 		run('keep-both')
 		await opened()
-		expect(last().url).toBe('/api/files/upload?path=%2FHome%2FDocs%2Fa.txt&collision=keep-both')
+		expect(last().url).toBe(
+			'/api/files/upload?path=%2FHome%2FDocs%2Fa.txt&collision=keep-both&lastModified=1433160000000',
+		)
 		expect(last().headers.Authorization).toBe('Bearer token')
 		expect(last().sent).toBe(file)
 	})

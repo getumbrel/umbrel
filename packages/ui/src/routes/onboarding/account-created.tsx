@@ -33,6 +33,7 @@ export default function AccountCreated() {
 				<Trans
 					t={t}
 					i18nKey='onboarding.account-created.by-clicking-button-you-agree'
+					values={{button: t('onboarding.launch-umbrelos')}}
 					components={{
 						linked: <Link to={links.legal.tos} className={linkClass} target='_blank' />,
 					}}
@@ -51,7 +52,7 @@ export default function AccountCreated() {
 		>
 			{device.showDevice && device.image && (
 				<>
-					<img src={device.image} alt='Umbrel device' className={device.imageClassName} />
+					<img src={device.image} alt='' className={device.imageClassName} />
 					<p className='-mt-4 text-[13px] font-medium text-white/30'>{device.name}</p>
 				</>
 			)}

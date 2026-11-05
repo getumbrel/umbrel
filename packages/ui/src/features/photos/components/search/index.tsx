@@ -364,14 +364,17 @@ function SuggestionChip({
 		<div
 			{...optionProps({id, highlighted, onHighlight, onPick})}
 			className={cn(
-				'flex h-8 cursor-default items-center gap-1.5 rounded-full bg-white/8 px-3 text-12 font-medium text-white/90 transition-colors',
+				'flex h-8 max-w-full min-w-0 cursor-default items-center gap-1.5 rounded-full bg-white/8 px-3 text-12 font-medium text-white/90 transition-colors',
 				highlighted && 'bg-white/17 text-white',
 			)}
 		>
 			<TokenIcon token={suggestion.token} />
-			<TokenLabel token={suggestion.token} />
+			{/* A long label (an album name) truncates inside the chip instead of stretching it past the row */}
+			<span className='min-w-0 truncate'>
+				<TokenLabel token={suggestion.token} />
+			</span>
 			{suggestion.count !== undefined && (
-				<span className='text-11 text-white/40 tabular-nums'>
+				<span className='shrink-0 text-11 text-white/40 tabular-nums'>
 					{formatNumberI18n({n: suggestion.count, showDecimals: false, locale: i18n.language})}
 				</span>
 			)}
@@ -455,7 +458,8 @@ function TokenChip({token, onRemove}: {token: SearchToken; onRemove: () => void}
 			className='group flex h-7 max-w-36 min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-white/10 pr-1.5 pl-2 text-12 whitespace-nowrap text-white/90 transition-colors hover:bg-white/15'
 		>
 			<TokenIcon token={token} />
-			<span className='truncate'>
+			{/* min-w-0 lets the label shrink inside the capped pill; without it the text runs past the pill's edge */}
+			<span className='min-w-0 truncate'>
 				<TokenLabel token={token} />
 			</span>
 			<X className='size-3 shrink-0 text-white/40 transition-colors group-hover:text-white/80' />

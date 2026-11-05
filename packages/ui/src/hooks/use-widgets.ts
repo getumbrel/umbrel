@@ -1,5 +1,6 @@
 // TODO: move to widgets module
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {filesWidgets} from '@/features/files/widgets'
 import {liveUsageWidgets, MAX_WIDGETS} from '@/modules/widgets/shared/constants'
@@ -7,6 +8,7 @@ import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {AppState, trpcReact} from '@/trpc/trpc'
 
 export function useWidgets() {
+	const {t} = useTranslation()
 	// Consider having `selectedTooMany` outside this hook
 	const [selectedTooMany, setSelectedTooMany] = useState(false)
 	const apps = useApps()
@@ -36,7 +38,7 @@ export function useWidgets() {
 		{
 			appId: 'live-usage',
 			icon: systemAppsKeyed['UMBREL_live-usage'].icon,
-			name: systemAppsKeyed['UMBREL_live-usage'].name,
+			name: t('live-usage'),
 			state: 'ready' as const satisfies AppState,
 			widgets: liveUsageWidgets,
 		},
@@ -45,7 +47,7 @@ export function useWidgets() {
 		{
 			appId: 'files',
 			icon: systemAppsKeyed['UMBREL_files'].icon,
-			name: systemAppsKeyed['UMBREL_files'].name,
+			name: t('files'),
 			state: 'ready' as const satisfies AppState,
 			widgets: filesWidgets,
 		},

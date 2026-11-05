@@ -1,0 +1,195 @@
+<UserControl x:Class="Umbrel.Views.DeviceListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Umbrel.ViewModels"
+             xmlns:v="clr-namespace:Umbrel.Views"
+             d:DataContext="{d:DesignInstance Type=vm:DeviceListViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+  <!-- Layout and spacing mirror the macOS DeviceListView: logo with the refresh
+       control on one row, then the title and subtitle stacked below it. -->
+  <StackPanel Margin="24,28,24,24">
+    <StackPanel Margin="6,0,6,2">
+      <Grid>
+        <Image Source="{Binding Source={x:Static vm:Presentation.LogoPath}}" Width="48" Height="48" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        <!-- While a scan runs the icon becomes a spinner so the click visibly lands. -->
+        <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="-8"
+                Command="{Binding RefreshCommand}" AutomationProperties.Name="Scan again"
+                Visibility="{Binding ShowRefresh, Converter={StaticResource BoolToVisibility}}">
+          <Grid Background="Transparent">
+            <TextBlock Text="&#xE72C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14"
+                       Foreground="{StaticResource MutedBrush}" Padding="8"
+                       Visibility="{Binding Scanning, Converter={StaticResource InverseBoolToVisibility}}" />
+            <v:Spinner Margin="8" Visibility="{Binding Scanning, Converter={StaticResource BoolToVisibility}}" />
+          </Grid>
+        </Button>
+      </Grid>
+      <TextBlock Text="Welcome to umbrelOS" FontSize="17" FontWeight="Bold" Foreground="{StaticResource TitleBrush}" Margin="0,16,0,2" />
+      <TextBlock Text="{Binding Subtitle}" FontSize="11" Style="{StaticResource MutedText}" />
+    </StackPanel>
+
+    <!-- Divider once there are results; otherwise the spinner or Scan button sits under the subtitle. -->
+    <Rectangle Height="1" Fill="{StaticResource HairlineBrush}" Margin="0,18,0,18"
+               Visibility="{Binding IsEmpty, Converter={StaticResource InverseBoolToVisibility}}" />
+
+    <!-- Empty state -->
+    <StackPanel Margin="6,16,6,4" HorizontalAlignment="Left"
+                Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+      <Grid Height="28" Visibility="{Binding Searching, Converter={StaticResource BoolToVisibility}}">
+        <v:Spinner HorizontalAlignment="Left" VerticalAlignment="Center" />
+      </Grid>
+      <Button Style="{StaticResource IndigoPillButton}" Content="{Binding ScanButtonText}" Command="{Binding RefreshCommand}"
+              Visibility="{Binding Searching, Converter={StaticResource InverseBoolToVisibility}}" />
+    </StackPanel>
+
+    <!-- Single unsaved device: welcome card -->
+    <!-- DataContext goes on the content, not the Border, or Visibility binds to the null device. -->
+    <Border Background="{StaticResource CardBrush}" CornerRadius="20" Padding="20"
+            Visibility="{Binding SingleUnsaved, Converter={StaticResource NullToVisibility}}">
+      <StackPanel HorizontalAlignment="Center" DataContext="{Binding SingleUnsaved}">
+        <v:DeviceIcon Kind="{Binding Kind}" Placement="WelcomeCard" HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding DisplayName}" FontSize="17" FontWeight="Bold" Foreground="{StaticResource TitleBrush}"
+                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" Margin="0,16,0,8" />
+        <!-- No secondary label: an unsaved device has no connected route yet. -->
+        <v:StatusLine Status="{Binding Status}" HorizontalAlignment="Center" />
+        <Button Style="{StaticResource PillButton}" Margin="0,16,0,0" HorizontalAlignment="Center"
+                Content="{Binding DataContext.WelcomeButtonText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                Command="{Binding DataContext.SelectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                CommandParameter="{Binding}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Device cards -->
+    <ScrollViewer MaxHeight="480" VerticalScrollBarVisibility="Auto">
+      <ScrollViewer.Style>
+        <Style TargetType="ScrollViewer">
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding SingleUnsaved}" Value="{x:Null}">
+              <Setter Property="Visibility" Value="Visible" />
+            </DataTrigger>
+          </Style.Triggers>
+          <Setter Property="Visibility" Value="Collapsed" />
+        </Style>
+      </ScrollViewer.Style>
+      <!-- 4 apart like the macOS VStack; the negative margin drops the last gap. -->
+      <StackPanel Margin="0,0,0,-4">
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <!-- WPF names a button only from text content, so composed buttons name
+                   themselves. Name is the on-screen label; status goes in ItemStatus. -->
+              <Button Style="{StaticResource CardButton}" Margin="0,0,0,4"
+                      Command="{Binding DataContext.SelectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding DisplayName}" AutomationProperties.ItemStatus="{Binding Status.Text}">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="45" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <v:DeviceIcon Kind="{Binding Kind}" Placement="ListRow" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TitleBrush}"
+                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <!-- In a multi-device list the stable host tells similar Umbrels apart. -->
+                    <v:StatusLine Status="{Binding Status}" Secondary="{Binding Host}" ToolTip="{Binding Host}" Margin="0,2,0,0" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12"
+                             Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- Current Umbrels at a common hostname that couldn't prove their identity: try
+             again, or open umbrelOS in a browser, where it may still load. -->
+        <ItemsControl ItemsSource="{Binding UnverifiedRows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="{StaticResource CardBrush}" CornerRadius="16" Padding="16" Margin="0,0,0,4">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="45" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <v:DeviceIcon Placement="ListRow" HorizontalAlignment="Center" VerticalAlignment="Top" />
+                  <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                    <TextBlock Text="Couldn&#x2019;t connect" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TitleBrush}" />
+                    <TextBlock Text="{Binding Host}" FontSize="11" Margin="0,2,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Explanation}" Style="{StaticResource MutedText}" FontSize="10" Margin="0,6,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                      <Button Style="{StaticResource PillButton}" AutomationProperties.Name="Try again"
+                              Command="{Binding DataContext.RetryUnverifiedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}">
+                        <!-- Hidden rather than collapsed so the button keeps its size while the spinner shows. -->
+                        <Grid>
+                          <TextBlock Text="Try again">
+                            <TextBlock.Style>
+                              <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding IsRetrying}" Value="True">
+                                    <Setter Property="Visibility" Value="Hidden" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </TextBlock.Style>
+                          </TextBlock>
+                          <v:Spinner Visibility="{Binding IsRetrying, Converter={StaticResource BoolToVisibility}}" />
+                        </Grid>
+                      </Button>
+                      <Button Style="{StaticResource LinkButton}" Margin="14,0,0,0" VerticalAlignment="Center"
+                              Command="{Binding DataContext.OpenUnverifiedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}" AutomationProperties.Name="Open in browser">
+                        <TextBlock Text="Open in browser" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
+                      </Button>
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- Version-only fallback results: open the Umbrel in a browser to update it. -->
+        <ItemsControl ItemsSource="{Binding UpdateRows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Style="{StaticResource CardButton}" Margin="0,0,0,4"
+                      Command="{Binding DataContext.OpenUpdateRequiredCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      CommandParameter="{Binding}" AutomationProperties.Name="Update to connect">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="45" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <v:DeviceIcon Placement="ListRow" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
+                    <TextBlock Text="Update to connect" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TitleBrush}" />
+                    <TextBlock Text="{Binding Host}" FontSize="11" Margin="0,2,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <!-- OpenInNewWindow (macOS arrow.up.right). -->
+                  <TextBlock Grid.Column="2" Text="&#xE8A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="11"
+                             Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Button Style="{StaticResource LinkButton}" Margin="6,14,6,0" HorizontalAlignment="Left" Command="{Binding ConnectByAddressCommand}"
+            AutomationProperties.Name="Can&#x2019;t find your Umbrel? Connect by address"
+            Visibility="{Binding ShowFooter, Converter={StaticResource BoolToVisibility}}">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}">
+          <Run Text="Can&#x2019;t find your Umbrel? " /><Run Text="Connect by address" FontWeight="SemiBold" />
+        </TextBlock>
+        <TextBlock Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="9" FontWeight="SemiBold"
+                   Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="4,1,0,0" />
+      </StackPanel>
+    </Button>
+  </StackPanel>
+</UserControl>

@@ -1,9 +1,9 @@
 import {expect, beforeAll, afterAll, describe, test} from 'vitest'
 import pRetry from 'p-retry'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import {bootMarkerPath, hookPath, installPreStartHook} from './custom-hooks.vm-test-helpers.js'
-import {createLegacyUsbInstall} from './pi-storage-test-helpers.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {bootMarkerPath, hookPath, installPreStartHook} from './custom-hooks.vm-test-helpers.ts'
+import {createLegacyUsbInstall} from './pi-storage-test-helpers.ts'
 
 type LsblkDevice = {
 	name: string

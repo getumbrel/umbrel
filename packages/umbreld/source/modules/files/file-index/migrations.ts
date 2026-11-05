@@ -1,15 +1,15 @@
 import type BetterSqlite3 from 'better-sqlite3'
-import {createDirectorySizes} from './directory-sizes.js'
+import {createDirectorySizes} from './directory-sizes.ts'
 
-import {photosIndexingSchema} from '../../photos/indexing-schema.js'
+import {photosIndexingSchema} from '../../photos/indexing-schema.ts'
 
 import {
 	photosReadModelSchema,
 	photosReadModelDirtySchema,
 	photosReadModelIndexTriggers,
-} from '../../photos/read-model-schema.js'
+} from '../../photos/read-model-schema.ts'
 
-import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../../photos/types.js'
+import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../../photos/types.ts'
 
 export type FileIndexMigration = {
 	version: number
@@ -500,6 +500,72 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 		},
 	},
 	{version: 21, up: createDirectorySizes},
+	{
+		version: 22,
+		up: (database) => {
+			// Media without an embedded date now falls back to the earlier of its
+			// modification and birth dates instead of preferring the birth time.
+			// Journal those items so the next Photos sync recomputes their dates.
+			database.exec(`
+				INSERT INTO photos_read_model_dirty_contents
+				SELECT DISTINCT index_roots.owner_id, contents.blake3
+				FROM media_metadata
+				JOIN entries ON entries.content_id = media_metadata.content_id
+				JOIN index_roots ON index_roots.id = entries.root_id
+				JOIN contents ON contents.id = entries.content_id
+				WHERE (media_metadata.taken_at IS NULL OR media_metadata.created_at IS NULL)
+					AND index_roots.kind IN ('home', 'trash')
+				ON CONFLICT DO NOTHING;
+			`)
+		},
+	},
+	{
+		version: 23,
+		up: (database) => {
+			// Video display dimensions now honour the sample aspect ratio. Re-probe
+			// every indexed video in the background while it stays visible; only
+			// anamorphic ones change shape and have their renditions rebuilt.
+			database.exec(`
+				CREATE TABLE media_metadata_refresh (
+					content_id INTEGER PRIMARY KEY REFERENCES media_metadata(content_id) ON DELETE CASCADE
+				);
+				INSERT INTO media_metadata_refresh
+				SELECT content_id FROM media_metadata WHERE state = 'ready' AND kind = 'video';
+			`)
+		},
+	},
+	{
+		version: 24,
+		up: (database) => {
+			// macOS AppleDouble `._<name>` sidecars are no longer treated as media.
+			// Rescans keep an unchanged file's content identity, so drop the ones
+			// already indexed here. Their failed thumbnails and metadata stop being
+			// retried, Photos drops them, and asset maintenance reclaims the content.
+			database.exec(`
+				UPDATE entries SET
+					thumbnail_identity_kind = NULL, content_id = NULL,
+					hash_failure_count = 0, hash_retry_at = NULL, hash_error = NULL
+				WHERE name GLOB '._*' AND thumbnail_identity_kind IS NOT NULL;
+			`)
+		},
+	},
+	{
+		version: 25,
+		up: (database) => {
+			// Small facts about the index itself, such as the umbreld release that
+			// last retried enrichment that gave up. Transient thumbnails get the same
+			// retry schedule as content ones; existing failures are due now.
+			database.exec(`
+				CREATE TABLE index_state (
+					key TEXT PRIMARY KEY,
+					value TEXT NOT NULL
+				) WITHOUT ROWID;
+
+				ALTER TABLE transient_thumbnail_variants ADD COLUMN retry_at INTEGER;
+				UPDATE transient_thumbnail_variants SET retry_at = 0 WHERE state = 'failed';
+			`)
+		},
+	},
 ]
 
 export const FILE_INDEX_SCHEMA_VERSION = fileIndexMigrations.at(-1)?.version ?? 0

@@ -1,11 +1,10 @@
 import {ChevronRight, Loader2} from 'lucide-react'
 import {motion, useReducedMotion} from 'motion/react'
 import {Fragment, ReactNode, useEffect, useMemo, useRef, useState} from 'react'
-import {useTranslation} from 'react-i18next'
+import {Trans, useTranslation} from 'react-i18next'
 import {Link, useNavigate, useParams} from 'react-router-dom'
 
 import {ChevronDown} from '@/components/chevron-down'
-import {FadeScroller} from '@/components/fade-scroller'
 import {BetaPill} from '@/components/ui/beta-pill'
 import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
@@ -13,6 +12,7 @@ import {Card} from '@/components/ui/card'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {SearchField} from '@/components/ui/edge-controls'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {Separator} from '@/components/ui/separator'
 import {Switch} from '@/components/ui/switch'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
@@ -20,12 +20,13 @@ import {useBackups} from '@/features/backups/hooks/use-backups'
 import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {DesktopPreviewConnected, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {useWallpaper, WallpaperAvifSource} from '@/providers/wallpaper'
-import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -38,7 +39,7 @@ import {MemoryCardContent} from './memory-card-content'
 import {createSettingsCatalog, getSettingsPage, SettingsPageItem} from './settings-catalog'
 import {SettingsFilterPills, SettingsItemsGroup} from './settings-page-controls'
 import {SettingsFilterId, useSettingsFilterLabels} from './settings-taxonomy'
-import {SettingsAccountAvatar} from './shared'
+import {SettingsAccountAvatar, settingsPanesGridClass, settingsSidePaneClass} from './shared'
 import {SoftwareUpdateListRow} from './software-update-list-row'
 import {StorageCardContent} from './storage-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
@@ -118,7 +119,6 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 		: t('storage-manager.health.title-drive')
 	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 	const ownerFirstName = userQ.data?.name ? firstNameFromFullName(userQ.data.name) : ''
-	const ownerHeading = ownerFirstName ? `${ownerFirstName}’s ${t('umbrel')}` : t('umbrel')
 
 	const settingsCatalog = useMemo(
 		() =>
@@ -206,12 +206,9 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 						description={item.description}
 						isActive={settingsDialog === 'language'}
 					>
-						<DropdownMenu open={languageOpen} onOpenChange={setLanguageOpen}>
-							<div className="[&>button]:after:absolute [&>button]:after:inset-0 [&>button]:after:cursor-pointer [&>button]:after:content-['']">
-								<LanguageDropdownTrigger />
-							</div>
-							<LanguageDropdownContent open={languageOpen} onOpenChange={setLanguageOpen} />
-						</DropdownMenu>
+						<div className="[&>button]:after:absolute [&>button]:after:inset-0 [&>button]:after:cursor-pointer [&>button]:after:content-['']">
+							<LanguageDropdown open={languageOpen} onOpenChange={setLanguageOpen} />
+						</div>
 					</ListRow>
 				)
 			case 'wifi': {
@@ -369,13 +366,21 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 
 	return (
 		<div className='relative h-full min-h-0 animate-in fade-in lg:flex-1'>
-			<div className='grid h-full min-h-0 w-full items-start gap-[34px] lg:grid-cols-[286px_minmax(0,1fr)]'>
-				<aside className='min-h-0 lg:-ml-4 lg:h-full lg:w-[calc(100%+50px)]'>
-					<FadeScroller
+			<div
+				className={cn(
+					'grid h-full min-h-0 w-full items-start gap-[34px] lg:grid-cols-[286px_minmax(0,1fr)]',
+					settingsPanesGridClass,
+				)}
+			>
+				<aside className={cn('min-h-0 min-w-0 lg:-ml-4 lg:h-full lg:w-[calc(100%+50px)]', settingsSidePaneClass)}>
+					<PaneScroller
 						ref={sidebarScrollRef}
-						direction='y'
 						data-testid='settings-sidebar-scroller'
-						className='umbrel-hide-scrollbar min-h-0 overscroll-contain lg:h-full lg:overflow-y-auto lg:pr-[34px] lg:pb-24 lg:pl-4'
+						className='h-full'
+						// The pane reaches across the gap to the rows, so the cards' shadows aren't
+						// clipped. Its bar sits just past the column instead, as the rows' bar does.
+						scrollbarClass='mr-[22px]'
+						contentClassName='lg:pr-[34px] lg:pb-24 lg:pl-4 panes:-mx-3 panes:px-3'
 					>
 						<div className='flex flex-col gap-3'>
 							<div className='flex shrink-0 flex-col items-center gap-5'>
@@ -401,43 +406,49 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 										/>
 									)}
 								</div>
-								<h2
-									title={ownerHeading}
-									aria-label={ownerHeading}
-									className='flex w-full min-w-0 items-center justify-center gap-1 overflow-hidden py-2 text-24 leading-none font-semibold -tracking-4'
-								>
-									{ownerFirstName && <span className='min-w-0 truncate'>{ownerFirstName}’s</span>}
-									<span className='shrink-0 text-white/45'>{t('umbrel')}</span>
+								{/* Wraps instead of truncating, so a language that puts a long phrase
+								    around the name ("Umbrel пользователя …") still shows the name */}
+								<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-[30px] font-semibold -tracking-4 text-balance break-words text-white/45'>
+									{ownerFirstName ? (
+										<Trans
+											t={t}
+											i18nKey='settings.owner-heading'
+											values={{name: ownerFirstName}}
+											components={{name: <span className='text-white' />}}
+											// The name is the user's own text: escaped, so a "<" in it isn't read as a tag
+											tOptions={{interpolation: {escapeValue: true}}}
+											shouldUnescape
+										/>
+									) : (
+										t('umbrel')
+									)}
 								</h2>
 							</div>
 
 							<SettingsSummary />
 
 							<div className='mt-1.5 mb-3 flex shrink-0 gap-2'>
-								<ButtonLink to={linkToDialog('logout')} className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'>
+								<ButtonLink to={linkToDialog('logout')} className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 									{t('logout')}
 								</ButtonLink>
 								{isMember ? (
 									<>
-										<Button disabled className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'>
+										<Button disabled className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 											{t('restart')}
 										</Button>
-										<Button disabled text='destructive' className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'>
+										<Button disabled text='destructive' className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 											{t('shut-down')}
 										</Button>
 									</>
 								) : (
 									<>
-										<ButtonLink
-											to={linkToDialog('restart')}
-											className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'
-										>
+										<ButtonLink to={linkToDialog('restart')} className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 											{t('restart')}
 										</ButtonLink>
 										<ButtonLink
 											to={linkToDialog('shutdown')}
 											text='destructive'
-											className='min-w-0 flex-1 px-1.5 text-11 whitespace-nowrap'
+											className='flex-1 px-1.5 text-11 whitespace-nowrap'
 										>
 											{t('shut-down')}
 										</ButtonLink>
@@ -470,14 +481,14 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								</>
 							)}
 						</div>
-					</FadeScroller>
+					</PaneScroller>
 				</aside>
 
-				<main className='min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden'>
+				<main className='min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-col'>
 					<div
 						data-testid='settings-controls-rail'
 						className={cn(
-							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2',
+							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2 panes:flex-wrap panes:pt-0',
 							isMember && 'justify-end',
 						)}
 					>
@@ -487,16 +498,24 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								labels={filterLabels}
 								ariaLabel={t('settings.filters-label')}
 								onSelect={handleFilterSelect}
+								className='lg:shrink-0 low:hidden'
 							/>
 						)}
-						<SearchField value={searchQuery} onChange={handleSearchChange} label={t('search')} />
+						{/* The pills are the row's fixed part from lg, the search takes what's left */}
+						<SearchField
+							value={searchQuery}
+							onChange={handleSearchChange}
+							label={t('search')}
+							className='lg:min-w-0 lg:shrink panes:w-full'
+						/>
 					</div>
 
-					<FadeScroller
+					<PaneScroller
 						ref={rowsScrollRef}
-						direction='y'
 						data-testid='settings-rows-scroller'
-						className='umbrel-hide-scrollbar min-w-0 overscroll-contain pt-2.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-24'
+						// Reaches into the sheet's padding so the bar runs beside the cards, not over them
+						className='-mr-3 min-h-0 flex-1'
+						contentClassName='min-w-0 pt-2.5 lg:pr-3 lg:pb-24'
 					>
 						<div className='flex flex-col gap-5 pb-8'>
 							{settingsPage.categoryIds.map((categoryId) => (
@@ -512,9 +531,50 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								</div>
 							)}
 						</div>
-					</FadeScroller>
+					</PaneScroller>
 				</main>
 			</div>
 		</div>
+	)
+}
+
+// On the desktop each pane scrolls on its own, with the slim scroll bar Files' sidebar
+// and dialogs use, shown while the pane is hovered. Narrower, the panes are part of the
+// sheet's scroll, so they're plain columns there.
+function PaneScroller({
+	ref,
+	className,
+	contentClassName,
+	scrollbarClass,
+	children,
+	'data-testid': testId,
+}: {
+	ref: React.RefObject<HTMLDivElement | null>
+	/** The pane's box on the desktop */
+	className: string
+	contentClassName: string
+	scrollbarClass?: string
+	children: ReactNode
+	'data-testid'?: string
+}) {
+	const isMobile = useIsMobile()
+
+	if (isMobile) {
+		return (
+			<div ref={ref} data-testid={testId} className={contentClassName}>
+				{children}
+			</div>
+		)
+	}
+
+	return (
+		<ScrollArea
+			viewportRef={ref}
+			data-testid={testId}
+			className={cn(className, '[&>[data-radix-scroll-area-viewport]]:overscroll-contain')}
+			scrollbarClass={scrollbarClass}
+		>
+			<div className={contentClassName}>{children}</div>
+		</ScrollArea>
 	)
 }

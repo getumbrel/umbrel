@@ -1,7 +1,8 @@
 import {mkdir, readFile, writeFile} from 'node:fs/promises'
 import path from 'node:path'
 
-// Builds the small, runtime-offline atlas used by the Photos info panel.
+// Builds the small, runtime-offline atlas Photos names places from, and draws
+// its map from when the device has no basemap.
 // Source data comes from Natural Earth, which is public domain:
 // https://www.naturalearthdata.com/about/terms-of-use/
 //
@@ -14,10 +15,8 @@ if (!sourceRoot) throw new Error('Pass the path to a natural-earth-vector checko
 const source = (name) => path.join(sourceRoot, 'geojson', name)
 const output = path.resolve('public/assets/photos/offline-map-v1.json')
 
-const [countriesSource, regionsSource, roadsSource, placesSource] = await Promise.all([
+const [countriesSource, placesSource] = await Promise.all([
 	readGeoJson(source('ne_110m_admin_0_countries.geojson')),
-	readGeoJson(source('ne_10m_admin_1_states_provinces_lines.geojson')),
-	readGeoJson(source('ne_10m_roads.geojson')),
 	readGeoJson(source('ne_10m_populated_places_simple.geojson')),
 ])
 
@@ -27,17 +26,6 @@ const countries = countriesSource.features.flatMap((feature) =>
 		validIso2(feature.properties.ISO_A2),
 	]),
 )
-
-const regions = regionsSource.features
-	.filter((feature) => Number(feature.properties.SCALERANK) <= 3)
-	.flatMap((feature) => lineRecords(feature.geometry, 0.06))
-
-// Natural Earth's most prominent road tier is enough for a 144px locator
-// card. Keeping higher tiers would make the bundle several times larger while
-// still not turning a regional-scale Natural Earth map into a street map.
-const roads = roadsSource.features
-	.filter((feature) => Number(feature.properties.expressway) === 1 && Number(feature.properties.scalerank) <= 3)
-	.flatMap((feature) => lineRecords(feature.geometry, 0.025))
 
 const places = placesSource.features.map((feature) => {
 	const [lng, lat] = feature.geometry.coordinates
@@ -56,10 +44,8 @@ const atlas = {
 	version: 1,
 	source: 'Natural Earth 5.1 (public domain)',
 	// Compact field names keep the shipped JSON small. See OfflineMapData in
-	// offline-location-map.tsx for the tuple shapes.
+	// map/atlas.ts for the tuple shapes.
 	c: countries,
-	s: regions,
-	r: roads,
 	p: places,
 }
 
@@ -78,22 +64,13 @@ function validIso2(value) {
 }
 
 // [name, ISO-2, bbox, rings]. A MultiPolygon becomes multiple records so the
-// browser can reject distant islands before it builds SVG paths.
+// browser can reject distant islands before it tests a point against them.
 function areaRecords(geometry, prefix, tolerance = 0.06) {
 	const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates
 	return polygons
 		.map((polygon) => polygon.map((ring) => simplifyRing(ring, tolerance)).filter((ring) => ring.length >= 4))
 		.filter((polygon) => polygon.length > 0)
 		.map((polygon) => [...prefix, bbox(polygon.flat()), polygon])
-}
-
-function lineRecords(geometry, tolerance) {
-	if (!geometry) return []
-	const lines = geometry.type === 'LineString' ? [geometry.coordinates] : geometry.coordinates
-	return lines
-		.map((line) => simplifyLine(line, tolerance))
-		.filter((line) => line.length >= 2)
-		.map((line) => [bbox(line), line])
 }
 
 function simplifyRing(points, tolerance) {

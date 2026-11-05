@@ -1,23 +1,28 @@
 import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
+import {RiCloseCircleFill} from 'react-icons/ri'
 import {useLocation, useNavigate as useRouterNavigate, useSearchParams} from 'react-router-dom'
 
 import {Input} from '@/components/ui/input'
 import {SearchIcon} from '@/features/files/assets/search-icon'
 import {BASE_ROUTE_PATH, SEARCH_PATH} from '@/features/files/constants'
+import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
+import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {cn} from '@/lib/utils'
+import {isBeneathModal} from '@/utils/is-beneath-modal'
 
 // Search input with keyboard shortcuts:
 // - "/" focuses the search input (keydown + preventDefault to avoid typing "/")
-// - Escape exits search entirely: clears the query, blurs the input, and
-//   navigates back to the previous directory. This works because query changes
-//   on the search page use replace:true, so only the initial entry into search
-//   pushes a history entry — a single navigate(-1) always returns to the
-//   pre-search directory.
+// - Escape and the X button (shown once something is typed) leave search:
+//   they clear the query, blur the input and return to the directory the
+//   search started from. That directory is remembered when the search begins;
+//   when the search page was reached directly (a reload, a deep link) there is
+//   nothing to remember and the home directory is used instead.
+// - Query changes on the search page use replace:true, so typing doesn't push
+//   a history entry per character.
 // - Manually deleting all text does NOT auto-navigate away. This is intentional
 //   so users can backspace and retype without being yanked out of search.
-//   They can use Escape or the nav arrows to leave.
 export function SearchInput() {
 	const {t} = useTranslation()
 	const navigate = useRouterNavigate()
@@ -29,6 +34,10 @@ export function SearchInput() {
 	const [query, setQuery] = useState('')
 
 	const isTouchDevice = useIsTouchDevice()
+	const {currentPath, navigateToDirectory} = useFilesNavigate()
+	const homePath = useHomePath()
+	const inSearch = location.pathname.endsWith(SEARCH_PATH)
+	const returnPathRef = useRef<string | null>(null)
 
 	// "/" shortcut to focus the search input
 	useEffect(() => {
@@ -37,6 +46,7 @@ export function SearchInput() {
 			const target = e.target as HTMLElement
 			if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)
 				return
+			if (isBeneathModal(inputRef.current, e)) return
 			e.preventDefault()
 			inputRef.current?.focus()
 		}
@@ -76,38 +86,48 @@ export function SearchInput() {
 		// avoid navigating for empty queries – we'll stay on the current
 		// directory (or the existing search page showing previous results).
 		if (trimmed === '') return
-		const currentlyOnSearchPage = location.pathname.endsWith(SEARCH_PATH)
-		gotoSearch(trimmed, {replace: currentlyOnSearchPage})
+		if (!inSearch) returnPathRef.current = currentPath
+		gotoSearch(trimmed, {replace: inSearch})
+	}
+
+	const exitSearch = () => {
+		setQuery('')
+		inputRef.current?.blur()
+		if (inSearch) navigateToDirectory(returnPathRef.current ?? homePath)
 	}
 
 	return (
-		<div className='relative rounded-full focus-within:border-1 focus-within:border-neutral-600 focus-within:border-white/20 md:border-[0.5px] md:border-neutral-800 md:border-white/6 md:bg-white/5 md:shadow-button-highlight-soft-hpx md:ring-white/6 md:focus-within:bg-white/10'>
+		<div className='relative rounded-full focus-within:border-1 focus-within:border-neutral-600 focus-within:border-white/20 lg:border-[0.5px] lg:border-neutral-800 lg:border-white/6 lg:bg-white/5 lg:shadow-button-highlight-soft-hpx lg:ring-white/6 lg:focus-within:bg-white/10'>
 			<Input
 				className={cn(
-					'h-7 w-0 !border-none !bg-transparent px-4 text-xs !ring-0 !outline-hidden transition-all duration-300 focus:w-[calc(100vw-11rem)] focus:pl-8 md:w-28 md:pr-0 md:pl-8 md:focus:w-36',
+					'h-7 w-0 !border-none !bg-transparent px-4 text-xs !ring-0 !outline-hidden transition-all duration-300 focus:w-[calc(100vw-11rem)] focus:pl-8 lg:w-28 lg:pr-0 lg:pl-8 lg:focus:w-36 panes:focus:w-52 phone-side:focus:w-52',
 					{
-						'w-[calc(100vw-11rem)] pl-8 md:w-36': query.length > 0,
+						'w-[calc(100vw-11rem)] pr-7 pl-8 lg:w-36 lg:pr-7 panes:w-52 phone-side:w-52': query.length > 0,
 					},
 				)}
 				ref={inputRef}
 				placeholder={t('files-search.placeholder')}
 				value={query}
 				onChange={onQueryChange}
-				// Escape exits search: clear query, blur input, navigate back to previous directory
 				onKeyDown={(e) => {
-					if (e.key === 'Escape') {
-						setQuery('')
-						inputRef.current?.blur()
-						if (location.pathname.endsWith(SEARCH_PATH)) {
-							navigate(-1)
-						}
-					}
+					if (e.key === 'Escape') exitSearch()
 				}}
 			/>
 			<SearchIcon
 				className='absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 transform cursor-text text-neutral-500'
 				onClick={() => inputRef.current?.focus()}
 			/>
+			{query.length > 0 && (
+				<button
+					type='button'
+					aria-label={t('files-search.exit')}
+					onPointerDown={(e) => e.preventDefault()}
+					onClick={exitSearch}
+					className='absolute top-1/2 right-2 -translate-y-1/2 text-neutral-500 outline-hidden transition-colors hover:text-white focus-visible:text-white'
+				>
+					<RiCloseCircleFill className='h-4 w-4' />
+				</button>
+			)}
 		</div>
 	)
 }

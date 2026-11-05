@@ -1,8 +1,8 @@
 import {describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import type {Context} from '../server/trpc/context.js'
-import routes from './routes.js'
+import type Umbreld from '../../index.ts'
+import type {Context} from '../server/trpc/context.ts'
+import routes from './routes.ts'
 
 function createCaller(accountId: string) {
 	const samba = {

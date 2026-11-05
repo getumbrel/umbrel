@@ -1,5 +1,5 @@
-import type {FileIndexRoot} from './file-index-engine.js'
-import type {PhotoIndexingProgress} from '../photos/types.js'
+import type {FileIndexRoot} from './file-index-engine.ts'
+import type {PhotoIndexingProgress} from '../photos/types.ts'
 
 export type FileIndexWorkerData = {
 	dataDirectory: string
@@ -9,6 +9,7 @@ export type FileIndexWorkerData = {
 	recoveryRetryMs?: number
 	watcherBulkThreshold?: number
 	batchSize?: number
+	release?: string
 }
 
 export type FileIndexRequestMethod =
@@ -31,6 +32,10 @@ export type FileIndexRequestMethod =
 	| 'photosUpsertBackupSource'
 	| 'photosRegisterBackupResource'
 	| 'photosConfirmedBackupResources'
+	| 'photosRecordMatchedBackupResources'
+	| 'photosBackupSourceContentLocations'
+	| 'photosBackupCloudIdentityMatches'
+	| 'photosAttachBackupCloudIdentities'
 	| 'getExistingThumbnail'
 	| 'enableThumbnailVariants'
 	| 'matchesThumbnail'
@@ -38,6 +43,7 @@ export type FileIndexRequestMethod =
 	| 'photosSummary'
 	| 'photosIndexingState'
 	| 'photosListItems'
+	| 'photosMapPoints'
 	| 'photosGetItem'
 	| 'photosNeighbors'
 	| 'photosSetFavorite'
@@ -54,6 +60,7 @@ export type FileIndexRequestMethod =
 	| 'photosListSources'
 	| 'photosUpdateSource'
 	| 'photosSourceRemovalFiles'
+	| 'photosSourceRemovalItemCount'
 	| 'photosRemoveSource'
 	| 'recentCandidates'
 	| 'directorySizes'

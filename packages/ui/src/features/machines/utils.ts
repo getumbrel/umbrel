@@ -1,13 +1,22 @@
+import i18next from 'i18next'
 import prettyBytes from 'pretty-bytes'
 
 import {EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
-import type {MachineState} from '@/features/machines/types'
+import type {MachineState, OsImage} from '@/features/machines/types'
+import {t} from '@/utils/i18n'
+import {roundForPrettyBytes} from '@/utils/round-for-pretty-bytes'
 
 export const isMachineStartable = (state: MachineState) =>
 	state === 'stopped' || state === 'suspended' || state === 'error'
 
 // OS image sizes are modelled in MB (SI)
-export const prettyMb = (mb: number) => prettyBytes(mb * 1e6)
+export const prettyMb = (mb: number) => prettyBytes(roundForPrettyBytes(mb * 1e6), {locale: i18next.language})
+
+// The edition line under an OS name. Media that only accepts product keys from
+// one licensing channel names it up front, before anyone types a key Setup
+// will reject.
+export const osImageVersionLabel = ({version, licenseChannel}: Pick<OsImage, 'version' | 'licenseChannel'>) =>
+	licenseChannel ? `${version} · ${t(`machines.license-channel.${licenseChannel}`)}` : version
 
 // Strip a supported installer/disk-image extension from a filename to get a
 // friendly display name

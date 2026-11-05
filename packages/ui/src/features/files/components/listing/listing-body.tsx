@@ -12,12 +12,20 @@ interface ListingBodyProps {
 	children?: React.ReactNode
 	scrollAreaRef: React.RefObject<HTMLDivElement | null> // used by marquee selection for scrolling
 	items: FileSystemItem[]
+	hiddenRenamedPaths?: string[]
 	hasMore: boolean
 	isLoading: boolean
 	onLoadMore: (startIndex: number) => Promise<boolean>
 }
 
-export const ListingBody = ({scrollAreaRef, items, hasMore, isLoading, onLoadMore}: ListingBodyProps) => {
+export const ListingBody = ({
+	scrollAreaRef,
+	items,
+	hiddenRenamedPaths,
+	hasMore,
+	isLoading,
+	onLoadMore,
+}: ListingBodyProps) => {
 	const {t} = useTranslation()
 	const {preferences, setSortBy} = usePreferences()
 
@@ -27,6 +35,7 @@ export const ListingBody = ({scrollAreaRef, items, hasMore, isLoading, onLoadMor
 			<VirtualizedList
 				scrollAreaRef={scrollAreaRef}
 				items={items}
+				hiddenRenamedPaths={hiddenRenamedPaths}
 				hasMore={hasMore}
 				isLoading={isLoading}
 				onLoadMore={onLoadMore}
@@ -80,6 +89,7 @@ export const ListingBody = ({scrollAreaRef, items, hasMore, isLoading, onLoadMor
 					<VirtualizedList
 						scrollAreaRef={scrollAreaRef}
 						items={items}
+						hiddenRenamedPaths={hiddenRenamedPaths}
 						hasMore={hasMore}
 						isLoading={isLoading}
 						onLoadMore={onLoadMore}

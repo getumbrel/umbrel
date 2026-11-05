@@ -1,0 +1,221 @@
+<UserControl x:Class="Umbrel.Views.DeviceDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Umbrel.ViewModels"
+             xmlns:v="clr-namespace:Umbrel.Views"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:DeviceDetailViewModel}">
+  <UserControl.Resources>
+    <DataTemplate DataType="{x:Type vm:AccessRow}">
+      <v:AccessRowView />
+    </DataTemplate>
+
+    <!-- macOS ShareRow: the whole row opens the drive or reconnects; busy rows don't respond. -->
+    <DataTemplate DataType="{x:Type vm:ShareRow}">
+      <Grid>
+        <Button Style="{StaticResource RowButton}" IsEnabled="{Binding IsActionable}"
+                Command="{Binding DataContext.ShareCommand, RelativeSource={RelativeSource AncestorType=v:DeviceDetailView}}"
+                CommandParameter="{Binding}" AutomationProperties.Name="{Binding ActionLabel}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Source="{Binding Source={x:Static vm:Presentation.FolderPath}}" Width="13" Height="12"
+                   RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}"
+                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="6,0,6,0" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+              <Viewbox Width="10" Height="10" Margin="0,0,4,0" VerticalAlignment="Center"
+                       Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                <v:Spinner />
+              </Viewbox>
+              <TextBlock Text="{Binding StatusText}" FontSize="9" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
+                         TextWrapping="NoWrap" VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+        </Button>
+        <Rectangle Height="1" VerticalAlignment="Top" Fill="#0FFFFFFF" IsHitTestVisible="False"
+                   Visibility="{Binding HasDivider, Converter={StaticResource BoolToVisibility}}" />
+      </Grid>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <!-- Layout and spacing mirror the macOS DeviceDetailView. -->
+  <Grid>
+    <StackPanel Margin="0,20,0,0">
+      <StackPanel Margin="24,0">
+        <!-- Header -->
+        <v:DeviceIcon Kind="{Binding Kind}" Placement="DetailHeader" HorizontalAlignment="Left" />
+        <TextBlock FontSize="17" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,14,0,4">
+          <Run Text="{Binding UserNamePart, Mode=OneWay}" /><Run Text="{Binding ModelPart, Mode=OneWay}">
+            <Run.Style>
+              <Style TargetType="Run">
+                <Setter Property="Foreground" Value="#FF808080" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding UserNamePart}" Value="">
+                    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Run.Style>
+          </Run>
+        </TextBlock>
+        <v:StatusLine Status="{Binding Status}" Secondary="{Binding RouteText}" />
+        <Rectangle Height="1" Fill="{StaticResource HairlineBrush}" Margin="0,12,0,16" />
+
+        <!-- Verifying a saved device -->
+        <v:Spinner HorizontalAlignment="Left" Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=Loading}" />
+
+        <!-- Offline -->
+        <StackPanel Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=Offline}">
+          <TextBlock Text="Device is offline" FontSize="13" Foreground="#66FFFFFF"
+                     Visibility="{Binding ShowIdentityChanged, Converter={StaticResource InverseBoolToVisibility}}" />
+          <!-- A new identity, as after a certificate reset. Reconnect forgets the Umbrel. -->
+          <StackPanel Visibility="{Binding ShowIdentityChanged, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{x:Static vm:IdentityChange.Title}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" />
+            <TextBlock Text="{x:Static vm:IdentityChange.Message}" FontSize="12" Foreground="#80FFFFFF" Margin="0,6,0,0" />
+            <Button Style="{StaticResource PillButton}" Content="{Binding ReconnectText}" Margin="0,12,0,0" Click="Reconnect_Click" />
+          </StackPanel>
+          <Button Style="{StaticResource PillButton}" Content="Connect" Margin="0,12,0,0" Command="{Binding ConnectWhileOfflineCommand}"
+                  Visibility="{Binding ShowOfflineConnect, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+
+        <!-- Needs setup -->
+        <StackPanel Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=Setup}">
+          <TextBlock Text="To get started, set up your device in the browser. Once you&#x2019;re done, come back here to connect."
+                     FontSize="12" Foreground="#80FFFFFF" />
+          <v:SectionBox Margin="0,12,0,0">
+            <ItemsControl ItemsSource="{Binding AccessRows}" />
+          </v:SectionBox>
+        </StackPanel>
+
+        <!-- Saved but signed out -->
+        <Grid Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=Idle}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="8" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <Button Style="{StaticResource GhostButton}" Content="Forget device" Command="{Binding ForgetCommand}" />
+          <Button Grid.Column="2" Style="{StaticResource PillButton}" Content="Connect" Command="{Binding ShowPasswordFormCommand}" />
+        </Grid>
+
+        <!-- Sign in: accounts load first, then the picker and password form, 12 apart -->
+        <StackPanel Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=SignIn}">
+          <v:Spinner HorizontalAlignment="Left" Visibility="{Binding ShowAccountSpinner, Converter={StaticResource BoolToVisibility}}" />
+          <StackPanel Visibility="{Binding ShowAccountError, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{Binding AccountError}" FontSize="12" Foreground="{StaticResource RedBrush}" />
+            <Button Style="{StaticResource GhostButton}" Content="Try again" Margin="0,12,0,0" Command="{Binding RetryCommand}" />
+          </StackPanel>
+          <StackPanel Visibility="{Binding ShowSignInForm, Converter={StaticResource BoolToVisibility}}">
+            <v:AccountPicker Margin="0,0,0,12" Accounts="{Binding Accounts}" Target="{Binding AccountTarget}"
+                             SelectedUserId="{Binding SelectedUserId, Mode=OneWay}" SelectCommand="{Binding SelectAccountCommand}"
+                             IsEnabled="{Binding CanSelectAccount}"
+                             Visibility="{Binding ShowAccountPicker, Converter={StaticResource BoolToVisibility}}" />
+            <v:PasswordForm x:Name="Form" Label="{Binding PromptText}" RequiresTotp="{Binding RequiresTwoFactor}" Loading="{Binding Busy}"
+                            Error="{Binding Error}" SubmitCommand="{Binding SubmitCommand}" EditedCommand="{Binding ClearErrorCommand}" />
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Connected -->
+        <StackPanel Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=Connected}">
+          <Grid Margin="0,0,0,6">
+            <TextBlock Text="Access umbrelOS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" VerticalAlignment="Center" />
+            <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Right" Command="{Binding OpenBrowserSettingsCommand}"
+                    ToolTip="Browser settings" AutomationProperties.Name="Browser settings">
+              <Grid Width="20" Height="20" Background="Transparent">
+                <!-- Settings (macOS gearshape). -->
+                <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="11"
+                           Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+          </Grid>
+          <v:SectionBox>
+            <ItemsControl ItemsSource="{Binding AccessRows}" />
+          </v:SectionBox>
+
+          <StackPanel Visibility="{Binding CanUseFileSharing, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="File sharing" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" Margin="0,24,0,2" />
+            <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10">
+              <Run Text="Your shared folders appear in " /><Run Text="File Explorer" Foreground="{StaticResource BlueBrush}" /><Run Text=" as network drives" />
+            </TextBlock>
+            <StackPanel Orientation="Horizontal" Visibility="{Binding SharesLoading, Converter={StaticResource BoolToVisibility}}">
+              <Viewbox Width="10" Height="10" VerticalAlignment="Center">
+                <v:Spinner />
+              </Viewbox>
+              <TextBlock Text="Checking shared folders&#x2026;" FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="6,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Visibility="{Binding ShowShareHomePrompt, Converter={StaticResource BoolToVisibility}}">
+              <Button Style="{StaticResource PillButton}" Content="{Binding ShareHomeText}" Command="{Binding ShareHomeCommand}" />
+              <TextBlock Text="{Binding ShareHomeError}" FontSize="10" Foreground="{StaticResource RedBrush}" Margin="0,8,0,0"
+                         Visibility="{Binding HasShareHomeError, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <v:SectionBox Visibility="{Binding ShowShares, Converter={StaticResource BoolToVisibility}}">
+              <ItemsControl ItemsSource="{Binding Shares}" />
+            </v:SectionBox>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Browser settings -->
+        <StackPanel Visibility="{Binding Mode, Converter={StaticResource ModeToVisibility}, ConverterParameter=BrowserSettings}">
+          <TextBlock Text="Browser settings" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}" Margin="0,0,0,6" />
+          <v:SectionBox>
+            <Grid Margin="10">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="Always use HTTPS locally" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}"
+                         Margin="0,0,12,0" VerticalAlignment="Center" />
+              <CheckBox x:Name="HttpsToggle" Grid.Column="1" Style="{StaticResource Switch}" VerticalAlignment="Center"
+                        AutomationProperties.Name="Always use HTTPS locally"
+                        IsChecked="{Binding DashboardUsesHttps, Mode=OneWay}" Click="HttpsToggle_Click" />
+            </Grid>
+          </v:SectionBox>
+          <TextBlock Text="Some apps need HTTPS in the browser to work correctly. HTTPS is for browser compatibility, not private access. For private access, use Tailscale."
+                     FontSize="10" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Footer -->
+      <StackPanel Margin="24,14" TextElement.FontSize="10" TextElement.FontWeight="SemiBold">
+        <TextBlock Text="{Binding ActionError}" Foreground="{StaticResource RedBrush}" Margin="0,0,0,8"
+                   Visibility="{Binding HasActionError, Converter={StaticResource BoolToVisibility}}" />
+        <Grid>
+          <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Command="{Binding BackCommand}"
+                  AutomationProperties.Name="{Binding BackText}">
+            <StackPanel Orientation="Horizontal" Background="Transparent">
+              <!-- ChevronLeft (macOS chevron.left). -->
+              <TextBlock Text="&#xE76B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="9"
+                         Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding BackText}" Foreground="{StaticResource MutedBrush}" Margin="2,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                      Visibility="{Binding ShowFooterActions, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="Disconnecting&#x2026;" Foreground="#998E8E93"
+                       Visibility="{Binding ShowDisconnecting, Converter={StaticResource BoolToVisibility}}" />
+            <TextBlock Text="&#x00B7;" Foreground="{StaticResource MutedBrush}" Margin="6,0"
+                       Visibility="{Binding ShowDisconnecting, Converter={StaticResource BoolToVisibility}}" />
+            <Button Style="{StaticResource LinkButton}" Command="{Binding DisconnectCommand}"
+                    Visibility="{Binding ShowDisconnect, Converter={StaticResource BoolToVisibility}}">
+              <TextBlock Text="Disconnect" Foreground="{StaticResource MutedBrush}" />
+            </Button>
+            <TextBlock Text="&#x00B7;" Foreground="{StaticResource MutedBrush}" Margin="6,0"
+                       Visibility="{Binding ShowDisconnect, Converter={StaticResource BoolToVisibility}}" />
+            <Button Style="{StaticResource LinkButton}" Command="{Binding ForgetCommand}">
+              <TextBlock Text="Forget device" Foreground="{StaticResource MutedBrush}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Last, so it draws over the page; it pins itself to the top-right corner. -->
+    <v:StatusBadge Icon="{Binding BadgeSource}" RingColor="{Binding BadgeRingColor}" />
+  </Grid>
+</UserControl>

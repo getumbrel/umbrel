@@ -5,6 +5,7 @@ import dgram from 'node:dgram'
 import net from 'node:net'
 import os from 'node:os'
 import nodePath from 'node:path'
+import {setTimeout as delay} from 'node:timers/promises'
 
 import {execa} from 'execa'
 import fse from 'fs-extra'
@@ -12,40 +13,77 @@ import PQueue from 'p-queue'
 import yaml from 'js-yaml'
 import {z} from 'zod'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
-import {OWNER_USER_ID} from '../user/constants.js'
+import {getAppPids} from '../system/system.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
 import {
 	architectureForProfile,
 	defaultMachineType,
 	defaultPlatformProfile,
 	hostArchitecture,
 	isLegacyPlatformProfile,
+	MACHINE_LAN_BRIDGE,
 	machineDiskTarget,
+	machineJoinsLan,
 	resolveAcceleration,
 	type MachineArchitecture,
 	type MachineDefinition,
+	type MachineNetworkMode,
 	type PlatformProfile,
 	type PortForward,
-} from './domain.js'
-import Libvirt, {QEMU_GIBIBYTE_BYTES, qemuImageFormatForPath, type QemuImageFormat} from './libvirt.js'
-import {machineIdCandidate, slugifyMachineId} from './machine-id.js'
-import {MACHINE_GUEST_HOST_ADDRESS, machineIpAddressSchema, nextMachineIpAddress} from './machine-network.js'
-import MachineStore from './machine-store.js'
-import {safeDownload} from './safe-download.js'
-import {prepareWindowsInstallMedia, type WindowsInstaller} from './windows-image.js'
-import {prepareOmarchySeed, probeOmarchySetup, removeOmarchySetupCredentials} from './omarchy-install.js'
-import MachineGuestApi from './guest-api.js'
-import {encodeScreenshot, performInputAction, type MachineInputAction, type PointerTarget} from './machine-control.js'
-import type {InputFeedback, PointerMotion} from './input-motion.js'
-import RfbClient from './rfb-client.js'
-import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.js'
+} from './domain.ts'
+import LanBridge from './lan-bridge.ts'
+import Libvirt, {QEMU_GIBIBYTE_BYTES, qemuImageFormatForPath, type QemuImageFormat} from './libvirt.ts'
+import {machineIdCandidate, slugifyMachineId} from './machine-id.ts'
+import {MACHINE_GUEST_HOST_ADDRESS, machineIpAddressSchema, nextMachineIpAddress} from './machine-network.ts'
+import MachineStore, {MAX_MACHINE_USB_DEVICE_ALIASES} from './machine-store.ts'
+import {safeDownload} from './safe-download.ts'
+import {prepareWindowsInstallMedia, type WindowsInstaller} from './windows-image.ts'
+import {prepareOmarchySeed, probeOmarchySetup, removeOmarchySetupCredentials} from './omarchy-install.ts'
+import MachineGuestApi from './guest-api.ts'
+import {encodeScreenshot, performInputAction, type MachineInputAction, type PointerTarget} from './machine-control.ts'
+import type {InputFeedback, PointerMotion} from './input-motion.ts'
+import RfbClient from './rfb-client.ts'
+import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.ts'
+import {
+	listHostUsbDevices,
+	planUsbAssignments,
+	resolveUsbAssignments,
+	sameUsbAddress,
+	sameUsbDevice,
+	usbDeviceReplacing,
+	usbDriveDisks,
+	usbHostUse,
+	usbReservationRules,
+	usbTopologyFingerprint,
+	type HostUsbDevice,
+	type UsbAddress,
+	type UsbDeviceAssignment,
+	type UsbDeviceIdentity,
+	type UsbHostUse,
+} from './usb-devices.ts'
 
 export const FIRST_BOOT_SETUP_TIMEOUT_MS = 60 * 60 * 1_000
+const JOIN_LAN_AFTER_SETUP_DELAY_MS = 2_000
 export const WINDOWS_ARM_FIRST_BOOT_SETUP_TIMEOUT_MS = 4 * FIRST_BOOT_SETUP_TIMEOUT_MS
 // Guests need a moment to react before the screenshot that follows an input
 // action, otherwise the caller sees the screen from before it acted
 export const MACHINE_INPUT_SETTLE_MS = 1_000
+// How often to look again at assigned USB devices the host was using
+const USB_RETRY_INTERVAL_MS = 5_000
+// How soon after a machine's USB device disconnects a different one showing
+// up in the same port counts as the device reconnecting as another model.
+// Devices that do this come back within a second or two.
+const USB_REENUMERATION_WINDOW_MS = 10_000
+// How long the host can take to find a drive's disks again once a machine
+// lets go of it
+const USB_DRIVE_RELEASE_TIMEOUT_MS = 10_000
+// udev rules keeping the host's services away from devices assigned to
+// machines. udev reads rules from /run as well as /etc, and since nothing
+// written outside /home survives a reboot on umbrelOS, umbreld writes them
+// afresh every time it starts.
+const USB_RESERVATION_RULES_PATH = '/run/udev/rules.d/90-umbrel-machines-usb.rules'
 // A machine counts as driven by an agent for this long after its last input.
 // The console shows who is at the controls and asks before letting a person
 // interfere, then hands control back once the agent has gone quiet.
@@ -108,6 +146,7 @@ export type Machine = {
 	cores: number
 	memoryGb: number
 	storageUsedGb: number
+	networkMode: MachineNetworkMode
 	ipAddress: string
 	username?: string
 	arch: MachineArchitecture
@@ -118,6 +157,7 @@ export type Machine = {
 	acceleration: 'kvm' | 'tcg'
 	performanceWarning?: string
 	portForwards: PortForward[]
+	usbDevices: UsbDeviceAssignment[]
 	autostart: boolean
 	pinned: boolean
 	createdAt: number
@@ -125,6 +165,30 @@ export type Machine = {
 	installPending: boolean
 	installationMediaAttached: boolean
 }
+
+// Why Umbrel won't simply hand a USB device to a machine
+export type MachineUsbHostUse = {
+	reason: UsbHostUse['reason']
+	// The apps using it, when only apps are
+	apps?: Array<{id: string; name: string}>
+	// Whether a machine can still have it once the user agrees. A drive in Files
+	// is ejected first, and apps using a device through a driver see it
+	// unplugged. Nothing else is ever taken from the host.
+	takeable: boolean
+}
+
+// A USB device plugged into Umbrel, or one assigned to a machine but not
+// plugged in right now
+export type MachineUsbDevice = UsbDeviceAssignment & {
+	manufacturer?: string
+	connected: boolean
+	// The machine it is assigned to
+	machineId?: string
+	hostUse?: MachineUsbHostUse
+}
+
+// A device requested for a machine. Taking it from the host is the user
+// agreeing to eject it from Files or take it from the apps using it.
 
 export type OsImageState = 'available' | 'downloading' | 'downloaded' | 'failed'
 export type OsArchitecture = MachineArchitecture
@@ -155,6 +219,9 @@ export type OsImage = {
 	evaluation?: boolean
 	manualSetup?: boolean
 	requiresLicenseKey?: boolean
+	// Setup only accepts product keys from the licensing channel its media was
+	// built for, so a genuine retail key fails on OEM or Volume License media
+	licenseChannel?: 'oem' | 'volume'
 }
 
 type ImageResource = {id: string; url: string; sha256: string; fileName: string}
@@ -173,6 +240,10 @@ type InternalOsImage = OsImage & {
 
 type CloudInitProvisioning = {
 	shell?: string
+	// The distro's administrator group. Sudo access comes from the sudoers rule,
+	// but polkit only treats members of this group as administrators, so the
+	// desktop rejects the user's password for admin actions without it.
+	adminGroup?: 'sudo' | 'wheel'
 	packages?: string[]
 	commands?: string[][]
 	graphical?: boolean
@@ -225,6 +296,7 @@ const catalogSchema = z.object({
 			fixedMemoryMb: z.number().int().min(128).max(1_048_576).optional(),
 			evaluation: z.boolean().optional(),
 			manualSetup: z.boolean().optional(),
+			licenseChannel: z.enum(['oem', 'volume']).optional(),
 			windows: z
 				.object({installer: z.enum(['windows-11', 'windows-server-2025', 'windows-7', 'windows-xp', 'windows-98'])})
 				.optional(),
@@ -241,6 +313,7 @@ const catalogSchema = z.object({
 			cloudInit: z
 				.object({
 					shell: z.string().startsWith('/').optional(),
+					adminGroup: z.enum(['sudo', 'wheel']).optional(),
 					packages: z.array(z.string().min(1)).optional(),
 					commands: z.array(z.array(z.string().min(1)).min(1)).optional(),
 					graphical: z.boolean().optional(),
@@ -274,7 +347,7 @@ printf '#!/bin/sh\\nexit 101\\n' > "$policy"
 chmod 0755 "$policy"
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y task-gnome-desktop
+DEBIAN_FRONTEND=noninteractive apt-get install -y task-gnome-desktop spice-vdagent
 
 cat > /etc/netplan/99-umbrel-desktop.yaml <<EOF
 network:
@@ -443,7 +516,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
-			cloudInit: {packages: ['ubuntu-desktop'], graphical: true},
+			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop', 'spice-vdagent'], graphical: true},
 		},
 		{
 			id: 'ubuntu-26.04-server-amd64',
@@ -459,6 +532,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'ubuntu-26.04-desktop-arm64',
@@ -475,7 +549,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
-			cloudInit: {packages: ['ubuntu-desktop'], graphical: true},
+			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop', 'spice-vdagent'], graphical: true},
 		},
 		{
 			id: 'ubuntu-26.04-server-arm64',
@@ -491,6 +565,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'fedora-44-desktop-amd64',
@@ -499,16 +574,19 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			variantName: 'Desktop',
 			version: 'Fedora 44',
 			sizeMb: 584,
-			estimatedInstalledSizeMb: 5_400,
+			estimatedInstalledSizeMb: 6_200,
 			arch: 'amd64',
 			platform: 'linux',
 			requiresCredentials: true,
 			url: 'https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2',
 			sha256: '28680fe5b371a5a82ebf43a31926e086a168e59949d03969c5093e7071f90b7f',
 			platformProfile: 'modern-x86',
+			// Cloud Base only ships kernel-core, and the HDA sound drivers live in
+			// kernel-modules, which the Workstation group doesn't pull in.
 			cloudInit: {
+				adminGroup: 'wheel',
 				commands: [
-					['dnf', 'install', '-y', '@workstation-product-environment'],
+					['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 					['systemctl', 'enable', 'gdm.service'],
 				],
 				graphical: true,
@@ -527,6 +605,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2',
 			sha256: '28680fe5b371a5a82ebf43a31926e086a168e59949d03969c5093e7071f90b7f',
 			platformProfile: 'modern-x86',
+			cloudInit: {adminGroup: 'wheel'},
 		},
 		{
 			id: 'fedora-44-desktop-arm64',
@@ -535,7 +614,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			variantName: 'Desktop',
 			version: 'Fedora 44',
 			sizeMb: 528,
-			estimatedInstalledSizeMb: 6_200,
+			estimatedInstalledSizeMb: 7_200,
 			arch: 'arm64',
 			platform: 'linux',
 			requiresCredentials: true,
@@ -543,8 +622,9 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '55c60a3b80d3616a08705afd0459e75fe9f03c54aba7a46e4002a41a72fa0d5b',
 			platformProfile: 'modern-arm64',
 			cloudInit: {
+				adminGroup: 'wheel',
 				commands: [
-					['dnf', 'install', '-y', '@workstation-product-environment'],
+					['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 					['systemctl', 'enable', 'gdm.service'],
 				],
 				graphical: true,
@@ -563,6 +643,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-44-1.7.aarch64.qcow2',
 			sha256: '55c60a3b80d3616a08705afd0459e75fe9f03c54aba7a46e4002a41a72fa0d5b',
 			platformProfile: 'modern-arm64',
+			cloudInit: {adminGroup: 'wheel'},
 		},
 		{
 			id: 'debian-13-desktop-amd64',
@@ -578,7 +659,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-amd64-20260706-2531.qcow2',
 			sha256: '7568c141e73c83eca7882625fafb9464fa683d46a499964f555a7f6f8c7cd282',
 			platformProfile: 'modern-x86',
-			cloudInit: {commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
 		},
 		{
 			id: 'debian-13-server-amd64',
@@ -593,6 +674,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-amd64-20260706-2531.qcow2',
 			sha256: '7568c141e73c83eca7882625fafb9464fa683d46a499964f555a7f6f8c7cd282',
 			platformProfile: 'modern-x86',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'debian-13-desktop-arm64',
@@ -608,7 +690,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-arm64-20260706-2531.qcow2',
 			sha256: 'b8a05fc7c18deff0aa213ddbdc883ccfaeeee1478f12d608e9da97a7aaaac5f9',
 			platformProfile: 'modern-arm64',
-			cloudInit: {commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', DEBIAN_DESKTOP_INSTALL]], graphical: true},
 		},
 		{
 			id: 'debian-13-server-arm64',
@@ -623,6 +705,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://cloud.debian.org/images/cloud/trixie/20260706-2531/debian-13-generic-arm64-20260706-2531.qcow2',
 			sha256: 'b8a05fc7c18deff0aa213ddbdc883ccfaeeee1478f12d608e9da97a7aaaac5f9',
 			platformProfile: 'modern-arm64',
+			cloudInit: {adminGroup: 'sudo'},
 		},
 		{
 			id: 'alpine-3.24.1-amd64',
@@ -636,7 +719,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/generic_alpine-3.24.1-x86_64-uefi-cloudinit-r0.qcow2',
 			sha256: '20acb6673d31497bc292a8f6a075d98aa47d03cfe79ddf3c811840e60cf6f8c5',
 			platformProfile: 'modern-x86',
-			cloudInit: {shell: '/bin/ash', packages: ['sudo']},
+			cloudInit: {shell: '/bin/ash', adminGroup: 'wheel', packages: ['sudo']},
 		},
 		{
 			id: 'alpine-3.24.1-arm64',
@@ -650,7 +733,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/generic_alpine-3.24.1-aarch64-uefi-cloudinit-r0.qcow2',
 			sha256: '3059a6280977c2122982632e0317c5ddbd39069d46ca1e60480de283091f720f',
 			platformProfile: 'modern-arm64',
-			cloudInit: {shell: '/bin/ash', packages: ['sudo']},
+			cloudInit: {shell: '/bin/ash', adminGroup: 'wheel', packages: ['sudo']},
 		},
 		{
 			id: 'android-13-amd64',
@@ -665,7 +748,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
-			cloudInit: {commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
 		},
 		{
 			id: 'android-13-arm64',
@@ -680,7 +763,7 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
-			cloudInit: {commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
+			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
 		},
 		{
 			id: 'omarchy-4.0.4-amd64',
@@ -792,6 +875,8 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			url: 'https://archive.org/download/win_xp_pro_sp3_x86_205076/Windows%20XP%20Professional%20SP3%20x86.iso',
 			sha256: '0d224d350f58a80e3112934cf2ec6c4b9aa5a8c308179ef9d1dbb898a1e85b9a',
 			platformProfile: 'legacy-x86',
+			// SETUPP.INI Pid=76487270 on a GRTMPVOL_EN disc
+			licenseChannel: 'volume',
 			windows: {installer: 'windows-xp'},
 		},
 		{
@@ -808,6 +893,8 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			sha256: '2adfb46df8a9c7bbd2f67bff07461cc2f9d9ec8e01f0e112cb044c9e3e62f607',
 			platformProfile: 'windows-98-x86',
 			fixedMemoryMb: 512,
+			// OEM full install: setuppp.inf ProductType=9 and the OEM license.txt
+			licenseChannel: 'oem',
 			windows: {installer: 'windows-98'},
 			resources: [
 				{
@@ -861,6 +948,7 @@ const storedImageSchema = z.object({
 // parent locators, or other references into the host filesystem.
 const CUSTOM_IMAGE_EXTENSIONS = /\.(iso|img)$/i
 const CATALOG_IMAGE_EXTENSIONS = /\.(iso|qcow2|img|vmdk|vdi|vhdx|vhd)$/i
+// Reserved from ephemeral port assignment in packages/os/overlay/etc/sysctl.d/99-umbrel-machines-ports.conf
 const MACHINES_PORT_MIN = 40_000
 const MACHINES_PORT_MAX = 49_999
 
@@ -888,6 +976,7 @@ export function renderCloudInitUserData(
 				lock_passwd: false,
 				passwd: passwordHash,
 				sudo: 'ALL=(ALL) NOPASSWD:ALL',
+				...(provisioning.adminGroup && {groups: [provisioning.adminGroup]}),
 			},
 		],
 		ssh_pwauth: true,
@@ -937,6 +1026,14 @@ export function isFirstBootSetupActive(
 	return !!setup && !setup.manual && now - setup.startedAt < timeout
 }
 
+// A bridged machine whose setup never called home still joins the LAN once
+// Umbrel has stopped waiting for it, rather than staying on NAT for good
+export function machineJoinsLanNow(definition: MachineDefinition, now = Date.now()) {
+	const setupExpired =
+		!!definition.firstBootSetup && now - definition.firstBootSetup.startedAt >= firstBootSetupTimeoutMs(definition)
+	return machineJoinsLan(definition, {setupExpired})
+}
+
 export function firstBootTokenMatches(token: string, expectedHash: string) {
 	if (!/^[0-9a-f]{64}$/.test(token)) return false
 	const actual = Buffer.from(createHash('sha256').update(token).digest('hex'))
@@ -971,6 +1068,8 @@ export default class Machines {
 	#backupMachines = new Set<string>()
 	#backupActive = false
 	#guestApi: MachineGuestApi
+	#lanBridge: LanBridge
+	#lanBridgeRelease?: Promise<void>
 	#imagesDirectory: string
 	#runtimeUsageCache?: {expiresAt: number; value: {cpu: MachineResourceUsage[]; memory: MachineResourceUsage[]}}
 	#runtimeUsageInFlight?: Promise<{cpu: MachineResourceUsage[]; memory: MachineResourceUsage[]}>
@@ -987,12 +1086,27 @@ export default class Machines {
 	#inputQueues = new Map<string, PQueue>()
 	#activeInputs = new Set<string>()
 	#inputSequence = 0
+	#usbTopology?: string
+	#usbReconcileQueue = new PQueue({concurrency: 1})
+	// When to look again at assigned devices the host was using
+	#usbRetryAt?: number
+	// What was last logged about each machine's devices, so retries stay quiet
+	#usbNotices = new Map<string, Set<string>>()
+	// The devices each running machine was last given and where they were
+	// plugged in, so one that disconnects and comes back as a different model
+	// can be followed
+	#usbAttached = new Map<string, Array<{address: UsbAddress; port: string; assignment: UsbDeviceAssignment}>>()
+	// Devices running machines lost recently, and when
+	#usbDeparted = new Map<string, Array<{port: string; assignment: UsbDeviceAssignment; at: number}>>()
+	// The udev rules last written and the plugged in devices they covered
+	#usbReservation?: {rules: string; paths: string[]}
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		this.logger = umbreld.logger.createChildLogger('machines')
 		this.#store = new MachineStore(umbreld.dataDirectory)
 		this.#libvirt = new Libvirt(umbreld)
+		this.#lanBridge = new LanBridge(umbreld)
 		this.#guestApi = new MachineGuestApi({
 			host: MACHINE_GUEST_HOST_ADDRESS,
 			port: umbreld.port,
@@ -1056,6 +1170,8 @@ export default class Machines {
 	async stop() {
 		if (this.#pollTimer) clearInterval(this.#pollTimer)
 		this.#pollTimer = undefined
+		this.#usbReconcileQueue.clear()
+		await this.#usbReconcileQueue.onIdle()
 		await Promise.allSettled(this.#omarchySetupProbes.values())
 		for (const job of this.#installJobs.values()) job.controller.abort(new Error('[machine-install-cancelled]'))
 		await Promise.allSettled([...this.#installJobs.values()].map(({promise}) => promise))
@@ -1096,6 +1212,11 @@ export default class Machines {
 				: 'Hardware virtualization is unavailable. Machines will use software emulation and run significantly slower.',
 			portRange: {start: MACHINES_PORT_MIN, end: MACHINES_PORT_MAX},
 			guestHostAddress: MACHINE_GUEST_HOST_ADDRESS,
+			// Whether machines can join the LAN directly, and if not, why not
+			lanBridge: await this.#lanBridge.availability().catch((error) => {
+				this.logger.error('Failed to check whether machines can join the LAN', error)
+				return {available: false as const, reason: 'no-ethernet' as const}
+			}),
 		}
 	}
 
@@ -1106,6 +1227,19 @@ export default class Machines {
 			if (!this.#libvirtActivated && Date.now() >= this.#nextLibvirtProbeAt) await this.#activateLibvirt()
 			const definitions = await this.#store.list()
 			if (this.#libvirtActivated) await this.#libvirt.ensureFirewall(definitions)
+			await this.#releaseLanBridge(definitions)
+			// Pass replugged devices back to their machines and drop ones that went away
+			if (this.#libvirtActivated) {
+				const usbTopology = await usbTopologyFingerprint()
+				// The host may have let go of a device it was using, like an app that
+				// was stopped
+				const retry = this.#usbRetryAt !== undefined && Date.now() >= this.#usbRetryAt
+				if (usbTopology !== this.#usbTopology || retry) {
+					this.#usbTopology = usbTopology
+					this.#usbRetryAt = undefined
+					this.#requestUsbReconcile()
+				}
+			}
 			const states = await Promise.all(
 				definitions.map(async (definition) => {
 					const state = await this.#state(definition)
@@ -1143,6 +1277,10 @@ export default class Machines {
 					changed = true
 					// A guest that stopped on its own boots afresh next time
 					if (machine.state !== 'running') this.#forgetMachineInput(machine.id)
+					// Catch up on devices plugged in while it was starting or paused
+					else this.#requestUsbReconcile()
+					// Its next start reports what it can't have afresh
+					if (machine.state === 'stopped') this.#forgetUsbDevices(machine.id)
 				}
 				if (this.#lastFirstBootSetupStates.get(machine.id) !== machine.firstBootSetup) changed = true
 				this.#lastStates.set(machine.id, machine.state)
@@ -1287,9 +1425,16 @@ export default class Machines {
 		void this.#emitMachines().catch((error) => this.logger.error('Failed emitting machine install progress', error))
 	}
 
-	async #startImageDownload(image: InternalOsImage) {
+	async #startImageDownload(image: InternalOsImage): Promise<ImageDownloadJob> {
 		const existing = this.#imageDownloads.get(image.id)
-		if (existing) return existing
+		if (existing && !existing.controller.signal.aborted) return existing
+		if (existing) {
+			// A job whose last consumer just left is still cleaning up. Joining it
+			// would fail this consumer, so let it settle (which removes it) and look
+			// again, joining a fresh download another consumer may have started.
+			await existing.promise.catch(() => {})
+			return this.#startImageDownload(image)
+		}
 		if (!image.sourceUrl) throw new Error('[os-image-source-unavailable]')
 
 		const extension = nodePath.extname(new URL(image.sourceUrl).pathname).toLowerCase()
@@ -1529,8 +1674,10 @@ export default class Machines {
 				: undefined)
 		return {
 			...publicDefinition,
+			networkMode: definition.networkMode ?? 'nat',
 			ipAddress: machineIpAddressSchema.parse(definition.ipAddress),
 			memoryGb: definition.memoryMb / 1_024,
+			usbDevices: definition.usbDevices ?? [],
 			firstBootSetup: firstBootSetupPending,
 			installPending: !!installSource,
 			// Cloud-init seed media is an internal implementation detail. Installer
@@ -1786,6 +1933,12 @@ export default class Machines {
 		this.#agentPointers.delete(id)
 		this.#primedMachines.delete(id)
 		this.#clearAgentControl(id)
+	}
+
+	// Whether the guest is running a clipboard agent the console can share with
+	async clipboardSharing(id: string) {
+		await this.#definition(id)
+		return this.#libvirt.clipboardAgentConnected(id)
 	}
 
 	async audioCaptureSource(id: string) {
@@ -2098,6 +2251,7 @@ export default class Machines {
 		licenseKey,
 		arch = hostArchitecture(),
 		platformProfile,
+		networkMode = 'nat',
 	}: {
 		name: string
 		osId?: string
@@ -2113,9 +2267,11 @@ export default class Machines {
 		licenseKey?: string
 		arch?: MachineArchitecture
 		platformProfile?: PlatformProfile
+		networkMode?: MachineNetworkMode
 	}) {
 		this.#assertBackupIdle()
 		if (!this.#libvirt.available) throw new Error('[virtualization-unavailable]')
+		if (networkMode === 'bridged') await this.#assertLanBridgeAvailable()
 		await this.#assertUniqueName(name)
 		const profile = platformProfile ?? defaultPlatformProfile(arch)
 		if (architectureForProfile(profile) !== arch) throw new Error('[machine-platform-architecture-mismatch]')
@@ -2202,6 +2358,7 @@ export default class Machines {
 			diskBus: imagePath ? (diskBus ?? 'virtio') : undefined,
 			uuid: randomUUID(),
 			macAddress: randomMacAddress(),
+			networkMode,
 			diskSizeGb,
 			cores,
 			memoryMb: sourceImage?.fixedMemoryMb ?? memoryGb * 1_024,
@@ -2328,8 +2485,45 @@ export default class Machines {
 			await this.#store.write(definition)
 			if (definition.osId === 'omarchy') await removeOmarchySetupCredentials(this.#store.directory(id))
 			await this.#emitMachines()
+			if (machineJoinsLan(definition)) {
+				void this.#joinLanAfterSetup(id).catch((error) =>
+					this.logger.error(`Failed to move machine ${id} onto the LAN after setup`, error),
+				)
+			}
 			return true
 		})
+	}
+
+	// A bridged machine sets up on the private network so it can call home to
+	// Umbrel. Once it has, move it onto the LAN. Wait a moment first so the
+	// guest receives the reply to the call that brought it here.
+	async #joinLanAfterSetup(id: string) {
+		await delay(JOIN_LAN_AFTER_SETUP_DELAY_MS)
+		await this.#withMachineLock(id, async () => {
+			const definition = await this.#definition(id)
+			if (!machineJoinsLan(definition) || (await this.#libvirt.state(id)) !== 'running') return
+			await this.#lanBridge.ensure()
+			await this.#libvirt.joinLan(definition)
+		})
+	}
+
+	async #assertLanBridgeAvailable() {
+		const availability = await this.#lanBridge.availability()
+		if (!availability.available) throw new Error(`[machine-lan-bridge-unavailable-${availability.reason}]`)
+	}
+
+	// Give Umbrel's address back to its wired interface once no machine is
+	// configured to join the LAN. The bridge waits for bridged machines that are
+	// still running to stop.
+	async #releaseLanBridge(definitions: MachineDefinition[]) {
+		const bridged = (list: MachineDefinition[]) => list.some((definition) => definition.networkMode === 'bridged')
+		if (this.#lanBridgeRelease || bridged(definitions)) return
+		if (!(await fse.pathExists(`/sys/class/net/${MACHINE_LAN_BRIDGE}`))) return
+		// Handing the address back can take a while, so don't hold up the poll
+		this.#lanBridgeRelease = this.#lanBridge
+			.remove(async () => bridged(await this.#store.list()))
+			.catch((error) => this.logger.error('Failed to remove the machine LAN bridge', error))
+			.finally(() => (this.#lanBridgeRelease = undefined))
 	}
 
 	async startMachine(id: string) {
@@ -2351,7 +2545,15 @@ export default class Machines {
 				// daemons can forget it while the last VM is stopped, so reconstruct it
 				// before every manual start instead of assuming startup state survived.
 				await this.#libvirt.reconcileNetwork(await this.#store.list())
-				await this.#libvirt.start(definition, this.#store.directory(id), await this.#diskSystemPath(definition))
+				const joinLan = machineJoinsLanNow(definition)
+				if (joinLan) await this.#lanBridge.ensure()
+				await this.#libvirt.start(
+					definition,
+					this.#store.directory(id),
+					await this.#diskSystemPath(definition),
+					(await this.#usbDevicesToAttach(definition)).map(({device}) => ({bus: device.bus, device: device.device})),
+					{joinLan},
+				)
 				definition.autostart = true
 				await this.#store.write(definition)
 			} catch (error) {
@@ -2448,8 +2650,14 @@ export default class Machines {
 			this.#installCredentials.delete(id)
 			this.#installProgress.delete(id)
 			this.#installationStates.delete(id)
+			const hadDevices = definition.usbDevices?.length ? await this.#pluggedInUsbDevices(id) : []
 			await this.#store.remove(id)
 			this.#forgetMachineInput(id)
+			this.#forgetUsbDevices(id)
+			if (definition.usbDevices?.length) {
+				await this.#syncUsbReservations()
+				this.#returnReleasedDrives(hadDevices)
+			}
 			// MCP bookkeeping is best effort, a failure here must never abort the uninstall
 			await this.#umbreld.mcp
 				.removeMachineGrant(id)
@@ -2510,6 +2718,8 @@ export default class Machines {
 			diskSizeGb?: number
 			autostart?: boolean
 			portForwards?: PortForward[]
+			usbDevices?: UsbDeviceIdentity[]
+			networkMode?: MachineNetworkMode
 		},
 	) {
 		return this.#withMachineLock(id, async () => {
@@ -2527,6 +2737,15 @@ export default class Machines {
 				}
 			}
 			if (settings.portForwards !== undefined) await this.#validatePortForwards(id, settings.portForwards)
+			// A bridged machine has its own address on the LAN, so it has nothing
+			// to forward Umbrel's ports to
+			const networkMode = settings.networkMode ?? definition.networkMode ?? 'nat'
+			if (networkMode === 'bridged' && (settings.portForwards ?? definition.portForwards).length > 0) {
+				throw new Error('[machine-port-forwards-nat-only]')
+			}
+			if (networkMode === 'bridged' && definition.networkMode !== 'bridged') await this.#assertLanBridgeAvailable()
+			const usb =
+				settings.usbDevices !== undefined ? await this.#validateUsbDevices(definition, settings.usbDevices) : undefined
 
 			let diskResize: {path: string; sizeGb: number} | undefined
 			if (settings.diskSizeGb !== undefined) {
@@ -2541,6 +2760,16 @@ export default class Machines {
 					if (requestedSizeBytes > actualSizeBytes) diskResize = {path, sizeGb: settings.diskSizeGb}
 				}
 			}
+
+			// Eject drives only once everything else is valid, so a rejected request
+			// leaves them in Files
+			try {
+				await this.#ejectDrives(usb?.ejects ?? [])
+			} catch (error) {
+				this.#returnReleasedDrives()
+				throw error
+			}
+			const hadDevices = usb ? await this.#pluggedInUsbDevices(id) : []
 
 			if (settings.name !== undefined) definition.name = settings.name.trim()
 			if (settings.cores !== undefined) definition.cores = settings.cores
@@ -2561,11 +2790,403 @@ export default class Machines {
 			if (settings.diskSizeGb !== undefined) definition.diskSizeGb = settings.diskSizeGb
 			if (settings.autostart !== undefined) definition.autostart = settings.autostart
 			if (settings.portForwards !== undefined) definition.portForwards = settings.portForwards
+			// Takes effect the next time the machine starts
+			if (settings.networkMode !== undefined) definition.networkMode = settings.networkMode
+			if (usb) definition.usbDevices = usb.assignments.length > 0 ? usb.assignments : undefined
 			await this.#store.write(definition)
 			if (settings.portForwards !== undefined) await this.#libvirt.reconcileFirewall(await this.#store.list())
+			// USB devices are hotpluggable, so a running machine gets them straight
+			// away, and drives it no longer has go back to Files
+			if (usb) {
+				await this.#syncUsbReservations()
+				await this.#reconcileUsbDevices(id)
+				const hasDevices = await this.#pluggedInUsbDevices(id)
+				this.#returnReleasedDrives(
+					hadDevices.filter((device) => !hasDevices.some((other) => other.sysfsPath === device.sysfsPath)),
+				)
+			}
 			await this.#emitMachines()
 			return this.#view(definition)
 		})
+	}
+
+	#usbAssignments(definitions: MachineDefinition[]) {
+		return definitions.flatMap(({id, usbDevices = []}) => usbDevices.map((assignment) => ({machineId: id, assignment})))
+	}
+
+	// Switching a device on for a machine is asking for it to be taken from
+	// whatever on the host is using it, if it can be
+	async #validateUsbDevices(definition: MachineDefinition, requested: UsbDeviceIdentity[]) {
+		if (requested.length > 0 && isLegacyPlatformProfile(definition.platformProfile)) {
+			throw new Error('[machine-usb-unsupported]')
+		}
+		const others = this.#usbAssignments((await this.#store.list()).filter(({id}) => id !== definition.id))
+		const {assignments, added} = planUsbAssignments({
+			machineId: definition.id,
+			current: definition.usbDevices,
+			requested,
+			others,
+			devices: await listHostUsbDevices(),
+		})
+		const ejects: string[] = []
+		for (const hostUse of (await this.#usbHostUses(added)).values()) {
+			if (!hostUse.takeable) throw new Error(`[machine-usb-device-in-use] ${hostUse.reason}`)
+			ejects.push(...(hostUse.disks ?? []))
+		}
+		return {assignments, ejects}
+	}
+
+	// What the host is using each device for, and whether a machine can still
+	// have it: a drive Umbrel mounted in Files can be ejected, and apps using a
+	// device through a kernel driver, or the host using a network adapter it
+	// can manage without, lose it like an unplug. The host's only network
+	// connection, drives used any other way, devices an app drives directly
+	// through usbfs, and anything used outside an app stay with the host.
+	async #usbHostUses(devices: HostUsbDevice[]) {
+		const hostUses = new Map<HostUsbDevice, MachineUsbHostUse & {disks?: string[]}>()
+		const uses = await usbHostUse(devices)
+		if (uses.size === 0) return hostUses
+		const reasons = [...uses.values()].map(({reason}) => reason)
+		const appPids = reasons.includes('in-use') ? await getAppPids(this.#umbreld) : new Map<number, string>()
+		const ejectable = reasons.includes('storage') ? await this.#ejectableDrives() : new Set<string>()
+		for (const [device, use] of uses) {
+			if (use.reason === 'storage') {
+				const takeable = use.disks.every((disk) => ejectable.has(disk))
+				hostUses.set(device, {reason: use.reason, disks: use.disks, takeable})
+			} else if (use.reason === 'network') {
+				hostUses.set(device, {reason: use.reason, takeable: !use.essential})
+			} else {
+				const appIds = use.processes.map((pid) => appPids.get(pid))
+				const onlyApps = appIds.every((appId) => appId !== undefined)
+				hostUses.set(device, {
+					reason: use.reason,
+					apps: onlyApps ? await this.#appNames([...new Set(appIds as string[])]) : undefined,
+					takeable: onlyApps && !use.claimed,
+				})
+			}
+		}
+		return hostUses
+	}
+
+	// Drives Umbrel mounted in Files, except ones holding a machine's disk or
+	// storage a running app uses, which Files won't eject
+	async #ejectableDrives() {
+		const definitions = await this.#store.list()
+		const drives = await this.#umbreld.files.externalStorage.getMountedExternalDevices()
+		const ejectable = new Set<string>()
+		for (const drive of drives) {
+			const roots = drive.partitions.flatMap((partition) => partition.mountpoints)
+			if (definitions.some(({diskPath}) => diskPath && this.#storagePathIsWithin(diskPath, roots))) continue
+			const apps = await Promise.all(roots.map((root) => this.#umbreld.apps.getAppsUsingStorageSource(root)))
+			if (apps.flat().length === 0) ejectable.add(drive.id)
+		}
+		return ejectable
+	}
+
+	async #appNames(ids: string[]) {
+		return Promise.all(
+			ids.map(async (id) => {
+				const app = this.#umbreld.apps.instances.find((app) => app.id === id)
+				const name = await app
+					?.readManifest()
+					.then((manifest) => manifest.name)
+					.catch(() => undefined)
+				return {id, name: name ?? id}
+			}),
+		)
+	}
+
+	async #ejectDrives(disks: string[]) {
+		for (const disk of disks) await this.#umbreld.files.externalStorage.unmountExternalDevice(disk, {remove: false})
+	}
+
+	// Drives are left alone while they're assigned to a machine, so mount the
+	// ones that no longer are, after loading the media of these ones a machine
+	// just let go of
+	#returnReleasedDrives(devices: HostUsbDevice[] = []) {
+		void (async () => {
+			for (const device of devices) await this.#loadDriveMedia(device, {wait: true})
+			await this.#umbreld.files.externalStorage.mountExternalDevices()
+		})().catch((error) => this.logger.error('Failed mounting drives released by machines', error))
+	}
+
+	// A guest ejecting a drive, as desktop file managers do, tells the drive its
+	// medium is gone. Many USB sticks keep saying so until they're unplugged,
+	// even through the reset QEMU gives a device it lets go of, which leaves
+	// whoever gets the drive next with an empty one. So whenever a drive
+	// changes hands, load its medium again, as plugging it back in would. Once
+	// QEMU lets go of a drive the host takes a moment to find its disks again,
+	// so a drive a machine just released is waited for.
+	async #loadDriveMedia(device: HostUsbDevice, {wait = false} = {}) {
+		const deadline = Date.now() + (wait ? USB_DRIVE_RELEASE_TIMEOUT_MS : 0)
+		let drive = await usbDriveDisks(device)
+		while (drive && drive.disks.length === 0 && Date.now() < deadline) {
+			await delay(250)
+			drive = await usbDriveDisks(device)
+		}
+		for (const disk of drive?.withoutMedium ?? []) {
+			await execa('eject', ['--trayclose', `/dev/${disk}`]).catch((error) =>
+				this.logger.error(`Failed loading the medium of ${disk}`, error),
+			)
+		}
+	}
+
+	// The plugged in devices assigned to a machine
+	async #pluggedInUsbDevices(id: string) {
+		const bindings = resolveUsbAssignments(this.#usbAssignments(await this.#store.list()), await listHostUsbDevices())
+		return bindings.flatMap(({machineId, device}) => (machineId === id && device ? [device] : []))
+	}
+
+	// Plugged in devices assigned to a machine, by sysfs path. The host leaves
+	// them alone even while their machine is off, so a drive isn't mounted in
+	// Files every time its machine lets go of it.
+	async reservedUsbDevicePaths() {
+		const assignments = this.#usbAssignments(await this.#store.list())
+		if (assignments.length === 0) return []
+		// A drive whose disks the host is still reading counts as the machine's
+		// until it turns out to be a look-alike, so Files never mounts the real one
+		const devices = (await listHostUsbDevices()).map((device) => ({...device, disksPending: false}))
+		return resolveUsbAssignments(assignments, devices).flatMap(({device}) => (device ? [device.sysfsPath] : []))
+	}
+
+	// The plugged in devices this machine should have, with the assignment each
+	// one is. A device the machine was given wins over apps using it through a
+	// driver, a network connection the host can manage without, and Files, which
+	// can only have mounted the drive just as the machine was given it. Anything
+	// else the host is using is left alone and looked at again shortly.
+	// Devices already attached to it are kept as they are, since QEMU itself
+	// holds them open.
+	async #usbDevicesToAttach(definition: MachineDefinition, attached: UsbAddress[] = []) {
+		if (!definition.usbDevices?.length) return []
+		const devices = await listHostUsbDevices()
+		// A drive that could be one of this machine's, but whose disks the host is
+		// still setting up, is looked at again on the next poll
+		const pending = devices.some(
+			(device) =>
+				device.disksPending &&
+				definition.usbDevices!.some(({port, serial}) => device.port === port || (!!serial && device.serial === serial)),
+		)
+		if (pending) this.#usbRetryAt ??= Date.now()
+		const bindings = resolveUsbAssignments(this.#usbAssignments(await this.#store.list()), devices)
+			.filter((binding) => binding.machineId === definition.id)
+			.flatMap(({assignment, device}) => (device ? [{assignment, device}] : []))
+		const hostUses = await this.#usbHostUses(
+			bindings
+				.map(({device}) => device)
+				.filter((device) => !attached.some((address) => sameUsbAddress(address, device))),
+		)
+		const blocked = new Set<HostUsbDevice>()
+		const notices = new Set<string>()
+		for (const [device, hostUse] of hostUses) {
+			const description = `USB device ${device.vendorId}:${device.productId} on ${device.port}`
+			if (hostUse.takeable) {
+				const from = hostUse.apps ? hostUse.apps.map(({id}) => id).join(', ') : `Umbrel's ${hostUse.reason}`
+				notices.add(`Taking ${description} from ${from} for ${definition.id}`)
+				const ejected = await this.#ejectDrives(hostUse.disks ?? []).then(
+					() => true,
+					(error) => {
+						this.logger.error(`Failed ejecting ${description} for ${definition.id}`, error)
+						return false
+					},
+				)
+				if (ejected) continue
+			}
+			blocked.add(device)
+			notices.add(`Not passing ${description} to ${definition.id} while Umbrel is using it (${hostUse.reason})`)
+		}
+		const previous = this.#usbNotices.get(definition.id)
+		for (const notice of notices) if (!previous?.has(notice)) this.logger.log(notice)
+		this.#usbNotices.set(definition.id, notices)
+		if (blocked.size > 0) this.#usbRetryAt ??= Date.now() + USB_RETRY_INTERVAL_MS
+		const given = bindings.filter(({device}) => !blocked.has(device))
+		for (const {device} of given) {
+			if (!attached.some((address) => sameUsbAddress(address, device))) await this.#loadDriveMedia(device)
+		}
+		return given
+	}
+
+	// Bring a running machine's passed-through devices in line with its
+	// assignments and what is plugged in. Callers hold the machine lock.
+	async #reconcileUsbDevices(id: string) {
+		if ((await this.#libvirt.state(id)) !== 'running') return
+		await this.#followReenumeratedUsbDevices(id)
+		const attached = await this.#libvirt.attachedUsbDevices(id)
+		const wanted = (await this.#usbDevicesToAttach(await this.#definition(id), attached)).map(
+			({assignment, device}) => ({address: {bus: device.bus, device: device.device}, port: device.port, assignment}),
+		)
+		for (const address of attached) {
+			if (wanted.some((other) => sameUsbAddress(other.address, address))) continue
+			await this.#libvirt
+				.detachUsbDevice(id, address)
+				.catch((error) =>
+					this.logger.error(`Failed detaching USB device ${address.bus}:${address.device} from ${id}`, error),
+				)
+		}
+		for (const {address} of wanted) {
+			if (attached.some((other) => sameUsbAddress(other, address))) continue
+			await this.#libvirt
+				.attachUsbDevice(id, address)
+				.catch((error) =>
+					this.logger.error(`Failed attaching USB device ${address.bus}:${address.device} to ${id}`, error),
+				)
+		}
+		this.#usbAttached.set(id, wanted)
+	}
+
+	// Follow a device that disconnected from a running machine and came straight
+	// back in the same port as a different model. A USB NPU like the Coral does
+	// this once its driver loads firmware onto it, and would otherwise vanish
+	// from the guest at that point. The new model is remembered with the
+	// assignment, so the machine keeps the device in either form, across
+	// restarts too. Callers hold the machine lock.
+	async #followReenumeratedUsbDevices(id: string) {
+		const now = Date.now()
+		const devices = await listHostUsbDevices()
+		const departed = (this.#usbDeparted.get(id) ?? []).filter(({at}) => now - at < USB_REENUMERATION_WINDOW_MS)
+		for (const {address, port, assignment} of this.#usbAttached.get(id) ?? []) {
+			if (!devices.some((device) => sameUsbAddress(device, address))) departed.push({port, assignment, at: now})
+		}
+		// Only devices that disconnect from now on count as departing anew
+		this.#usbAttached.delete(id)
+		this.#usbDeparted.delete(id)
+		if (departed.length === 0) return
+
+		const definition = await this.#definition(id)
+		const bindings = resolveUsbAssignments(this.#usbAssignments(await this.#store.list()), devices)
+		const waiting: typeof departed = []
+		let followed = false
+		for (const entry of departed) {
+			const assignment = definition.usbDevices?.find((assignment) => sameUsbDevice(assignment, entry.assignment))
+			const back = bindings.some(
+				(binding) => binding.machineId === id && binding.device && sameUsbDevice(binding.assignment, entry.assignment),
+			)
+			// It's no longer assigned, or it came back as a model it's known by
+			if (!assignment || back) continue
+			const replacement = usbDeviceReplacing(entry.port, devices, bindings)
+			if (!replacement) {
+				waiting.push(entry)
+				continue
+			}
+			const {vendorId, productId, serial} = replacement
+			assignment.aliases = [...(assignment.aliases ?? []), {vendorId, productId, ...(serial ? {serial} : {})}].slice(
+				-MAX_MACHINE_USB_DEVICE_ALIASES,
+			)
+			followed = true
+			this.logger.log(
+				`Following USB device ${assignment.vendorId}:${assignment.productId} on ${entry.port}, which came back as ${vendorId}:${productId}, for ${id}`,
+			)
+		}
+		if (waiting.length > 0) this.#usbDeparted.set(id, waiting)
+		if (!followed) return
+		await this.#store.write(definition)
+		await this.#syncUsbReservations()
+	}
+
+	#forgetUsbDevices(id: string) {
+		this.#usbNotices.delete(id)
+		this.#usbAttached.delete(id)
+		this.#usbDeparted.delete(id)
+	}
+
+	// Have the host's own services leave the devices assigned to machines
+	// alone. See usbReservationRules for what that covers. udev applies rules as
+	// devices are plugged in, so devices already plugged in whose reservation
+	// changed are told to apply them again. That has udev probe them afresh,
+	// which holds a drive open for a moment, so wait for it to finish before a
+	// machine is given the device.
+	async #syncUsbReservations() {
+		const bindings = resolveUsbAssignments(this.#usbAssignments(await this.#store.list()), await listHostUsbDevices())
+		const rules = usbReservationRules(bindings)
+		if (rules === this.#usbReservation?.rules) return
+		const paths = bindings.flatMap(({device}) => (device ? [device.sysfsPath] : []))
+		// Nothing to undo either, as on most Umbrels
+		if (!rules && !(await fse.pathExists(USB_RESERVATION_RULES_PATH))) {
+			this.#usbReservation = {rules, paths}
+			return
+		}
+		const previous = this.#usbReservation?.paths
+		// When umbreld has only just started, it can't tell what changed
+		const changed = previous
+			? [...paths.filter((path) => !previous.includes(path)), ...previous.filter((path) => !paths.includes(path))]
+			: paths
+		try {
+			if (rules) await fse.outputFile(USB_RESERVATION_RULES_PATH, rules)
+			else await fse.remove(USB_RESERVATION_RULES_PATH)
+			await execa('udevadm', ['control', '--reload'])
+			if (changed.length > 0) {
+				await execa(
+					'udevadm',
+					['trigger', '--settle', '--action=change', ...changed.flatMap((path) => ['--parent-match', path])],
+					{timeout: 30_000},
+				)
+			}
+			this.#usbReservation = {rules, paths}
+		} catch (error) {
+			this.logger.error('Failed updating which USB devices the host leaves alone', error)
+		}
+	}
+
+	#requestUsbReconcile() {
+		// A pass that hasn't started yet already covers this change
+		if (this.#usbReconcileQueue.size > 0) return
+		void this.#usbReconcileQueue.add(async () => {
+			// A device followed to another port by its serial number moves its
+			// reservation with it
+			await this.#syncUsbReservations()
+			for (const {id, usbDevices} of await this.#store.list()) {
+				if (!usbDevices?.length) continue
+				await this.#withMachineLock(id, () => this.#reconcileUsbDevices(id)).catch((error) =>
+					this.logger.error(`Failed updating USB devices for ${id}`, error),
+				)
+			}
+		})
+	}
+
+	// Every USB device plugged into Umbrel, with what each machine is assigned
+	async usbDevices(): Promise<MachineUsbDevice[]> {
+		const definitions = await this.#store.list()
+		const devices = (await listHostUsbDevices()).filter((device) => !device.hub)
+		const bindings = resolveUsbAssignments(this.#usbAssignments(definitions), devices)
+		// QEMU holds the devices it has, so only check the rest for host use
+		const attached = (
+			await Promise.all(
+				definitions.map(async ({id}) => {
+					if (!this.#libvirt.available) return []
+					const state = await this.#libvirt.state(id).catch(() => 'stopped')
+					return state === 'running' ? this.#libvirt.attachedUsbDevices(id) : []
+				}),
+			)
+		).flat()
+		const hostUses = await this.#usbHostUses(
+			devices.filter((device) => !attached.some((address) => sameUsbAddress(address, device))),
+		)
+		const describeHostUse = (device: HostUsbDevice): MachineUsbHostUse | undefined => {
+			const hostUse = hostUses.get(device)
+			return hostUse && {reason: hostUse.reason, apps: hostUse.apps, takeable: hostUse.takeable}
+		}
+		return [
+			...devices.map((device) => {
+				const binding = bindings.find((binding) => binding.device === device)
+				// An assigned device keeps its assigned identity, even after moving port
+				const {vendorId, productId, serial, port} = binding?.assignment ?? device
+				return {
+					vendorId,
+					productId,
+					serial,
+					port,
+					// and the name it was assigned under. A drive's label can only be read
+					// while the host has the drive.
+					name: binding?.assignment.name ?? device.name,
+					manufacturer: device.manufacturer,
+					connected: true,
+					machineId: binding?.machineId,
+					hostUse: describeHostUse(device),
+				}
+			}),
+			...bindings
+				.filter((binding) => !binding.device)
+				.map(({machineId, assignment}) => ({...assignment, connected: false, machineId})),
+		]
 	}
 
 	async setPinned(id: string, pinned: boolean) {

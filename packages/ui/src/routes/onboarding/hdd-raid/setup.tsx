@@ -5,7 +5,6 @@
 
 import {useEffect, useRef, useState} from 'react'
 import {Trans, useTranslation} from 'react-i18next'
-import {TbAlertTriangleFilled} from 'react-icons/tb'
 import {Link, useLocation, useNavigate} from 'react-router-dom'
 
 import {links} from '@/constants/links'
@@ -14,10 +13,13 @@ import {useAuth} from '@/modules/auth/use-auth'
 import {Progress} from '@/modules/bare/progress'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {AccountCredentials} from '@/routes/onboarding/create-account'
+import {ReturnToStart} from '@/routes/onboarding/raid/return-to-start'
+import {useStorageWait} from '@/routes/onboarding/raid/use-storage-wait'
 import {isTransportError} from '@/trpc/is-transport-error'
 import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
 
+import {RaidError} from '../raid/raid-error'
 import {HddRaidSetupConfig} from './use-hdd-raid-onboarding'
 
 export default function HddRaidSetup() {
@@ -29,10 +31,13 @@ export default function HddRaidSetup() {
 	const config = location.state?.config as HddRaidSetupConfig | undefined
 
 	const [phase, setPhase] = useState<'setting-up' | 'restarting' | 'complete' | 'error'>('setting-up')
+	const [requestStartedAt, setRequestStartedAt] = useState<number | null>(null)
+	const showWaitNotice = useStorageWait(phase === 'setting-up' || phase === 'restarting' ? requestStartedAt : null)
+
 	const [isLaunching, setIsLaunching] = useState(false)
 
 	const auth = useAuth()
-	const {suppressErrors, shutdown} = useGlobalSystemState()
+	const {suppressErrors} = useGlobalSystemState()
 
 	// Poll for RAID setup completion after reboot: true (complete), false (in progress),
 	// or throws (failed). Transport errors are expected while the device reboots.
@@ -58,13 +63,14 @@ export default function HddRaidSetup() {
 
 	const registerMut = trpcReact.user.register.useMutation({
 		onSuccess: () => setPhase('restarting'),
-		onError: () => setPhase('error'),
+		onError: (error) => setPhase(isTransportError(error) ? 'restarting' : 'error'),
 	})
 
 	const register = () => {
 		if (!credentials || !config) return
 		// Suppress global system state errors before the expected reboot downtime
 		suppressErrors()
+		setRequestStartedAt(Date.now())
 		setPhase('setting-up')
 		registerMut.mutate({
 			name: credentials.name,
@@ -92,44 +98,26 @@ export default function HddRaidSetup() {
 
 	// --- Error state ---
 	if (phase === 'error') {
-		const canRetry = !!registerMut.error // Only pre-reboot errors can be retried
-		const errorMessage =
-			registerMut.error?.message ||
-			raidStatusQ.error?.message ||
-			'The HDD pool could not be mounted after the device restarted.'
+		const canRetry = !!registerMut.error && !isTransportError(registerMut.error)
 		return (
-			<div className='flex flex-1 flex-col items-center justify-center gap-4'>
-				<TbAlertTriangleFilled className='size-[22px] text-[#F5A623]' />
-				<h1
-					className='text-[20px] font-bold text-white/85'
-					style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
-				>
-					{t('onboarding.raid.setup-failed.title')}
-				</h1>
-				<p className='max-w-[300px] text-center text-[15px] text-white/70'>{errorMessage}</p>
-				<p className='max-w-[300px] text-center text-[13px] text-white/50'>
-					{canRetry
-						? t('onboarding.raid.setup-failed.description-retry')
-						: t('onboarding.raid.setup-failed.description-no-retry')}
-				</p>
-				<div className='flex gap-3'>
-					{canRetry && (
-						<button
-							onClick={() => {
+			<RaidError
+				title={t('onboarding.raid.setup-failed.title')}
+				instructions={t(
+					canRetry
+						? 'onboarding.raid.setup-failed.description-retry'
+						: 'onboarding.raid.setup-failed.description-no-retry',
+				)}
+				detail={registerMut.error?.message ?? raidStatusQ.error?.message}
+				onRetry={
+					canRetry
+						? () => {
 								registerMut.reset()
 								register()
-							}}
-							className={primaryButtonProps.className}
-							style={primaryButtonProps.style}
-						>
-							{t('onboarding.raid.try-again')}
-						</button>
-					)}
-					<button onClick={() => shutdown()} className={secondaryButtonClasss}>
-						{t('shut-down')}
-					</button>
-				</div>
-			</div>
+							}
+						: undefined
+				}
+				retryLabel={t('onboarding.raid.try-again')}
+			/>
 		)
 	}
 
@@ -145,6 +133,7 @@ export default function HddRaidSetup() {
 					<Trans
 						t={t}
 						i18nKey='onboarding.account-created.by-clicking-button-you-agree'
+						values={{button: t('onboarding.launch-umbrelos')}}
 						components={{
 							linked: <Link to={links.legal.tos} className={linkClass} target='_blank' />,
 						}}
@@ -186,12 +175,31 @@ export default function HddRaidSetup() {
 			showLogo={false}
 			footer={
 				<div className='w-full max-w-sm'>
-					<p className='text-center text-sm text-white/60'>{t('onboarding.raid.configuring.warning')}</p>
+					<p className='text-center text-sm text-white/60'>
+						{t(showWaitNotice ? 'onboarding.raid.wait-warning' : 'onboarding.raid.configuring.warning')}
+					</p>
 				</div>
 			}
 		>
 			<div className='mt-4 w-full max-w-sm'>
 				<Progress />
+				{showWaitNotice && (
+					<div className='mt-5 flex flex-col items-center gap-3'>
+						<p className='text-center text-13 leading-relaxed text-white/50'>{t('onboarding.raid.still-working')}</p>
+						{phase === 'restarting' && (
+							<button
+								className={secondaryButtonClasss}
+								disabled={raidStatusQ.isFetching}
+								onClick={() => {
+									void raidStatusQ.refetch()
+								}}
+							>
+								{t('storage-status.check-again')}
+							</button>
+						)}
+						<ReturnToStart />
+					</div>
+				)}
 			</div>
 		</Layout>
 	)

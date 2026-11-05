@@ -1,10 +1,11 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {Album, ChevronLeft, ChevronRight, Download, Heart, Info, RotateCcw, Trash2, X} from 'lucide-react'
+import {Album, Download, Heart, Info, Plus, RotateCcw, Trash2, X} from 'lucide-react'
 import {useReducedMotion} from 'motion/react'
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
-import {useParams} from 'react-router-dom'
+import {useNavigate, useParams} from 'react-router-dom'
+import {useMedia} from 'react-use'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
 import {
@@ -18,15 +19,20 @@ import {preventDialogDismissForToasts} from '@/components/ui/shared/dialog'
 import {toast} from '@/components/ui/toast'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useRouteFilter} from '@/features/photos/components/listing'
+import {createTileLift} from '@/features/photos/components/listing/tile-lift'
+import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {usePhotosView} from '@/features/photos/components/view-context'
-import {Filmstrip} from '@/features/photos/components/viewer/filmstrip'
+import {Filmstrip, FilmstripPlaceholder} from '@/features/photos/components/viewer/filmstrip'
 import {InfoPanel} from '@/features/photos/components/viewer/info-panel'
-import {LightboxButton, lightboxButtonClass} from '@/features/photos/components/viewer/lightbox-button'
+import {InfoSheet, useInfoSheet} from '@/features/photos/components/viewer/info-sheet'
+import {LightboxButton, lightboxButtonClass, StageArrow} from '@/features/photos/components/viewer/lightbox-button'
 import {LivePhoto} from '@/features/photos/components/viewer/live-photo'
 import {useNeighborPrefetch} from '@/features/photos/components/viewer/neighbor-prefetch'
-import {usePictureFlight} from '@/features/photos/components/viewer/picture-flight'
+import {usePictureFlight, type FlightStart} from '@/features/photos/components/viewer/picture-flight'
 import {useSeedRenditions} from '@/features/photos/components/viewer/seed-rendition'
 import {PANE_GAP, useStageGestures} from '@/features/photos/components/viewer/stage-gestures'
+import {createStripDrive} from '@/features/photos/components/viewer/viewer-channels'
+import {useViewerItemId} from '@/features/photos/components/viewer/viewer-location'
 import {
 	itemOriginalUrl,
 	itemThumbnailUrl,
@@ -40,12 +46,12 @@ import {
 import {useAlbumActions, useAlbums} from '@/features/photos/hooks/use-library'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {useSharedAuthorizedHttpUrl} from '@/modules/auth/http-url-authorizer'
 import {useConfirmation} from '@/providers/confirmation/use-confirmation'
-import {useDialogOpenProps} from '@/utils/dialog'
+import {capitalizeDate} from '@/utils/date-time'
+import {useDialogOpenProps, useLinkToDialog} from '@/utils/dialog'
 import {formatNumberI18n} from '@/utils/number'
 import {tw} from '@/utils/tw'
 
@@ -119,26 +125,35 @@ const INSPECTOR_WIDTH = 340
 // so the inspector slides in from the edge of the window, not the stage's
 const STAGE_MARGIN = 24
 
+// With no grid behind the lightbox — the map with its list put away — the
+// picture's place is emptied all the same, by the same rule (tile-lift.ts): a
+// map marker showing the item is lifted while the picture is away from it
+const ungriddedLift = createTileLift()
+
 // The lightbox. Shares the timeline's item query, so the filmstrip and ←/→
 // walk the same list the user was looking at and extend it page by page;
 // when the item isn't in that list (a deep link), neighbours come from the API.
 export function ItemViewer() {
 	const dialogProps = useDialogOpenProps('photos-item')
-	const {params, add} = useQueryParams()
-	const id = params.get('photos-item-id') ?? undefined
+	// The item on stage: the URL's on opening, the viewer's own as it steps
+	// (written back to the URL once it rests, see useViewerItemId)
+	const {currentId, goTo, commitUrl} = useViewerItemId(dialogProps.open)
 	const {t, i18n} = useTranslation()
 	const reduceMotion = useReducedMotion() ?? false
 	const filter = useRouteFilter()
 	const inDeleted = filter.deleted === true
 	const confirm = useConfirmation()
 	const {items, hasMore, loadMore} = useItems(filter, {enabled: dialogProps.open})
-	const {data: item} = useItem(id, inDeleted)
-	const index = items.findIndex((candidate) => candidate.id === id)
-	const {data: apiNeighbors} = useItemNeighbors(index === -1 ? id : undefined, filter)
+	const {data: item} = useItem(currentId, inDeleted)
+	const index = items.findIndex((candidate) => candidate.id === currentId)
+	const {data: apiNeighbors} = useItemNeighbors(index === -1 ? currentId : undefined, filter)
 	const prevId = index > 0 ? items[index - 1]!.id : apiNeighbors?.prevId
 	const nextId = index >= 0 && index < items.length - 1 ? items[index + 1]!.id : apiNeighbors?.nextId
 	const {setFavorite, deleteItems, restoreItems, deletePermanently} = useItemActions()
 	const {addToAlbum, removeFromAlbum} = useAlbumActions()
+	const selection = usePhotosSelection()
+	const navigate = useNavigate()
+	const linkToDialog = useLinkToDialog()
 	// The album page the lightbox was opened from, if any — from the route,
 	// not the filter (a search token also fills the filter's albumIds)
 	const routeAlbumId = useParams().albumId
@@ -193,9 +208,9 @@ export function ItemViewer() {
 	// Every URL is derived from the id (CONTRACT.md). The stage rests on the
 	// 1280 rendition — the true original is only ever downloaded, and videos
 	// stream it through the player (range requests).
-	const restingUrl = useAuthorizedHttpUrl(id ? itemThumbnailUrl(id, 1280) : undefined)
-	const videoUrl = useAuthorizedHttpUrl(id && isVideo ? itemOriginalUrl(id) : undefined)
-	const downloadUrl = useAuthorizedHttpUrl(id ? itemOriginalUrl(id, {download: true}) : undefined)
+	const restingUrl = useAuthorizedHttpUrl(currentId ? itemThumbnailUrl(currentId, 1280) : undefined)
+	const videoUrl = useAuthorizedHttpUrl(currentId && isVideo ? itemOriginalUrl(currentId) : undefined)
+	const downloadUrl = useAuthorizedHttpUrl(currentId ? itemOriginalUrl(currentId, {download: true}) : undefined)
 	// The seed — the rendition the item's tile has on screen, already decoded,
 	// else the 192 (see useSeedRenditions) — is what flies in, sits under the
 	// resting image until that has loaded and, blown up and blurred, is the
@@ -203,21 +218,18 @@ export function ItemViewer() {
 	// is the 1280's.
 	const seedFor = useSeedRenditions(dialogProps.open)
 	const thumbnailUrl = useSharedAuthorizedHttpUrl(
-		dialogProps.open && id ? itemThumbnailUrl(id, seedFor(id)) : undefined,
+		dialogProps.open && currentId ? itemThumbnailUrl(currentId, seedFor(currentId)) : undefined,
 	)
 	// The item whose resting image has arrived, so the thumbnail can give way to it
 	const [loadedId, setLoadedId] = useState<string>()
 
-	// Swapping the id in place keeps one history entry per lightbox session
-	const goTo = useCallback((target?: string) => target && add('photos-item-id', target, {replace: true}), [add])
-
 	// Opening and closing: the picture flies, everything else follows `closing`
 	const flight = usePictureFlight({
 		open: dialogProps.open,
-		id,
+		id: currentId,
 		reduceMotion,
 		tileRect: grid?.tileRect,
-		liftTile: grid?.liftTile,
+		liftTile: grid?.liftTile ?? ungriddedLift.set,
 	})
 
 	// The picture's shape is the thumbnail's bitmap — what is actually drawn,
@@ -231,7 +243,7 @@ export function ItemViewer() {
 	// A future optimization can seed the shape from the indexed
 	// `shown.width / shown.height`; the bitmap remains the final word.
 	const [measureFallback, setMeasureFallback] = useState(false)
-	useEffect(() => setMeasureFallback(false), [id])
+	useEffect(() => setMeasureFallback(false), [currentId])
 	const measureUrl = measureFallback ? restingUrl : thumbnailUrl
 	const [measured, setMeasured] = useState<{url: string; aspect: number}>()
 	useLayoutEffect(() => {
@@ -267,11 +279,20 @@ export function ItemViewer() {
 	// the flight saw it.
 	const asideRef = useRef<HTMLElement | null>(null)
 	const [closingAside, setClosingAside] = useState<{width: number; marginLeft: number} | null>(null)
-	// `from` is a drag-to-dismiss's final transform, for the flight to carry
-	// on from the finger (see useStageGestures)
-	const close = async (from?: string) => {
+	// `from` is where a drag-to-dismiss or a pinch-close let go of the
+	// picture, for the flight to carry on from the finger (see
+	// useStageGestures); a close begun while zoomed starts from the zoom.
+	// `next` runs once the picture is home, in place of clearing the URL's
+	// dialog slot: another dialog opening there is what closes this one.
+	const close = async (from?: FlightStart, next?: () => void) => {
 		if (closingRef.current) return
 		closingRef.current = true
+		// The URL names the item being closed on (for the close itself, a
+		// reload, the next open) and takes no more steps from this session
+		commitUrl()
+		// A picture lifted by the phone's info sheet flies home from where it is
+		// drawn: the lift is folded into the transform the flight starts from
+		const start = infoSheet.handOff(from ?? gestures.flatten())
 		const aside = asideRef.current
 		if (aside)
 			setClosingAside({
@@ -283,9 +304,10 @@ export function ItemViewer() {
 		// Stepping may have walked far from the tile the lightbox opened on:
 		// the timeline catches up behind the backdrop, so the user is left at
 		// the item they were looking at — and the picture has a tile to fly to
-		if (id) grid?.revealTile(id)
-		await Promise.all([flight.back(from), new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : LEAVE_MS))])
-		dialogProps.onOpenChange(false)
+		if (currentId) grid?.revealTile(currentId)
+		await Promise.all([flight.back(start), new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : LEAVE_MS))])
+		if (next) next()
+		else dialogProps.onOpenChange(false)
 		setClosing(false)
 		setClosingAside(null)
 		closingRef.current = false
@@ -303,24 +325,62 @@ export function ItemViewer() {
 		},
 		[flight.ref],
 	)
+	// Phones: the inspector is a sheet that rises from the bottom as the
+	// picture lifts into the top of the screen (see useInfoSheet) — or, in a
+	// short landscape window, a panel at the right the picture makes way for.
+	// The stage is what lifts; the bottom toolbar floats over the sheet's foot,
+	// and the filmstrip follows the picture aside for the panel.
+	const phoneLandscape = useMedia('(orientation: landscape) and (max-height: 500px)', false)
+	const stageRef = useRef<HTMLElement | null>(null)
+	const toolbarRef = useRef<HTMLDivElement | null>(null)
+	const stripRef = useRef<HTMLElement | null>(null)
+	const infoSheet = useInfoSheet({
+		enabled: isMobile,
+		session: dialogProps.open,
+		open: showInfo,
+		onOpenChange: setInfoByHand,
+		layout: phoneLandscape ? 'side' : 'bottom',
+		stageRef,
+		pictureRef,
+		toolbarRef,
+		stripRef,
+		refitKey: `${currentId}:${aspect}`,
+		reduceMotion,
+	})
 	// The neighbours' panes for a horizontal swipe: they ride one stage-width
 	// to each side of the picture, so the next item slides in with the finger
 	// (iOS-style) rather than appearing once the swipe has landed
 	const peekRefs = {prev: useRef<HTMLElement | null>(null), next: useRef<HTMLElement | null>(null)}
 	const peekPrev = usePeek(isTouch && dialogProps.open && index > 0 ? items[index - 1] : undefined, seedFor)
 	const peekNext = usePeek(isTouch && dialogProps.open && index >= 0 ? items[index + 1] : undefined, seedFor)
+	// The stage's horizontal travel, for the filmstrip to follow a swipe frame
+	// by frame without a render (see StripDrive)
+	const [drive] = useState(createStripDrive)
 	const gestures = useStageGestures({
 		open: dialogProps.open,
 		enabled: isTouch && dialogProps.open && !closing && flight.arrived,
+		// Stills zoom (a video keeps its own controls); the original's pixels
+		// and name say how far, and whether the browser can draw it sharper.
+		// Not under the phone's info sheet, which lifts the picture as a
+		// preview beside the info: opened over a zoom, it goes back to fit.
+		zoom: {
+			enabled: dialogProps.open && !closing && flight.arrived && !!shown && !isVideo && !(isMobile && showInfo),
+			width: shown?.width ?? 0,
+			height: shown?.height ?? 0,
+			fileName: item?.id === currentId ? item?.fileName : undefined,
+		},
 		pictureRef,
 		peekRefs,
-		shownId: id,
+		shownId: currentId,
 		canStep: (dir) => !!(dir === 1 ? nextId : prevId),
 		onStep: (dir) => goTo(dir === 1 ? nextId : prevId),
 		onDismissStart: () => {
-			if (id) grid?.revealTile(id)
+			if (currentId) grid?.revealTile(currentId)
 		},
 		onDismiss: (from) => void close(from),
+		drive,
+		// Phones: an upward swipe lifts the picture and raises the info sheet
+		onLift: isMobile ? infoSheet.lift : undefined,
 	})
 
 	// Keep the filmstrip fed when the item sits near the end of what's loaded
@@ -348,8 +408,8 @@ export function ItemViewer() {
 	// the step lands full-size (see useNeighborPrefetch)
 	const {warm} = useNeighborPrefetch({
 		open: dialogProps.open,
-		settled: flight.arrived && (isVideo || (!!id && loadedId === id)),
-		currentId: id,
+		settled: flight.arrived && (isVideo || (!!currentId && loadedId === currentId)),
+		currentId,
 		prevId,
 		nextId,
 		deleted: inDeleted,
@@ -362,9 +422,9 @@ export function ItemViewer() {
 	// bypasses the rest (`warm`): its bytes are already here, show them at once.
 	const [restedId, setRestedId] = useState<string>()
 	useEffect(() => {
-		const handle = setTimeout(() => setRestedId(id), REST_MS)
+		const handle = setTimeout(() => setRestedId(currentId), REST_MS)
 		return () => clearTimeout(handle)
-	}, [id])
+	}, [currentId])
 
 	useEffect(() => {
 		if (!dialogProps.open) return
@@ -411,6 +471,19 @@ export function ItemViewer() {
 	}
 	const handleRemoveFromAlbum = () =>
 		item && routeAlbumId && leaveList(removeFromAlbum({id: routeAlbumId, ids: [item.id]}))
+	// New album… as from the tile's menu: the picture flies home, its tile is
+	// selected, and the new-album dialog takes it from the selection
+	// … and the menu keeps the keyboard from its button on the way out, whose
+	// tooltip would otherwise hang over the close
+	const leavingForNewAlbum = useRef(false)
+	const handleNewAlbum = (id: string) => {
+		leavingForNewAlbum.current = true
+		void close(undefined, () => {
+			leavingForNewAlbum.current = false
+			selection.set([id])
+			navigate(linkToDialog('photos-create-album'))
+		})
+	}
 
 	// From the list's item rather than the fetched detail, so a step shows the
 	// new date in the same frame as the new picture — at the wall clock the
@@ -418,13 +491,14 @@ export function ItemViewer() {
 	const takenOn = shown
 		? (() => {
 				const clock = takenAtClock(shown.takenAt, shown.takenAtOffsetMinutes)
-				return clock.date.toLocaleDateString(i18n.language, {
+				const date = clock.date.toLocaleDateString(i18n.language, {
 					weekday: 'short',
 					month: 'long',
 					day: 'numeric',
 					year: 'numeric',
 					timeZone: clock.timeZone,
 				})
+				return capitalizeDate(date, i18n.language)
 			})()
 		: ''
 	// While a dismissal is being dragged the chrome steps aside, and comes
@@ -464,22 +538,30 @@ export function ItemViewer() {
 								<button
 									type='button'
 									aria-label={t('photos-item.add-to-album')}
-									disabled={!item || (!otherAlbums?.length && !routeAlbumId)}
+									disabled={!item}
 									className={lightboxButtonClass}
 								>
 									<Album className='size-5' />
 								</button>
 							</DropdownMenuTrigger>
 						</DarkTooltip>
-						<DropdownMenuContent align='end'>
+						<DropdownMenuContent
+							align='end'
+							onCloseAutoFocus={(event) => leavingForNewAlbum.current && event.preventDefault()}
+						>
 							{routeAlbumId && (
 								<>
 									<DropdownMenuItem onSelect={handleRemoveFromAlbum}>
 										{t('photos-item.remove-from-album')}
 									</DropdownMenuItem>
-									{otherAlbums && otherAlbums.length > 0 && <DropdownMenuSeparator />}
+									<DropdownMenuSeparator />
 								</>
 							)}
+							<DropdownMenuItem onSelect={() => item && handleNewAlbum(item.id)}>
+								<Plus className='mr-2 size-4' />
+								{t('photos-selection.new-album')}
+							</DropdownMenuItem>
+							{otherAlbums && otherAlbums.length > 0 && <DropdownMenuSeparator />}
 							{otherAlbums?.map((album) => (
 								<DropdownMenuItem
 									key={album.id}
@@ -560,7 +642,7 @@ export function ItemViewer() {
 
 					<div className='relative flex h-full flex-col'>
 						{/* Chrome */}
-						<header className='flex items-start justify-between gap-4 px-4 pt-4 md:px-6 md:pt-5'>
+						<header className='flex items-start justify-between gap-4 px-4 pt-4 md:px-6 md:pt-5 phone-side:pt-3'>
 							{/* The lines keep their boxes while a step's detail (the file name)
 							    is still on its way: the stage below is sized from what's left,
 							    so a collapsing header would resize the picture mid-swipe */}
@@ -568,14 +650,16 @@ export function ItemViewer() {
 								<p className='min-h-[1lh] truncate text-15 font-semibold -tracking-2 text-white/95'>{takenOn}</p>
 								<p className='min-h-[1lh] truncate text-12 text-white/50'>{item?.fileName}</p>
 							</div>
-							{/* Desktop: actions ride the header's right edge */}
-							<div className={cn('hidden md:block', chrome('top'))}>{actions}</div>
+							{/* Desktop: actions ride the header's right edge. So do a phone's
+							    on its side, where a toolbar under the strip would leave the
+							    picture a third of the height */}
+							<div className={cn('hidden md:block phone-side:block', chrome('top'))}>{actions}</div>
 						</header>
 
 						{/* Stage: the picture, fitted by CSS (a size container, so it can be
 						    sized from the stage's height), and the inspector docked beside
 						    it on desktop — the picture makes room as it slides in */}
-						<main className='relative mx-4 mt-3 flex min-h-0 flex-1 md:mx-6'>
+						<main ref={stageRef} className='relative mx-4 mt-3 flex min-h-0 flex-1 md:mx-6'>
 							<div
 								className={cn(
 									'group [container-type:size] relative flex min-w-0 flex-1 items-center justify-center',
@@ -584,67 +668,88 @@ export function ItemViewer() {
 								{...gestures.handlers}
 							>
 								{shown && aspect === undefined && <TbLoader className='size-6 animate-spin opacity-50 shadow-xs' />}
+								{/* This element is the flight's and the stage gestures' — its
+								    inline transform is theirs, about its top-left corner — so the
+								    zoom rides a layer inside it, wrapping everything it draws, with
+								    a transform of its own (see useStageGestures) */}
 								{shown && aspect !== undefined && (
 									<div
 										ref={setPictureEl}
 										className='relative max-h-full [transform-origin:0_0] overflow-hidden rounded-xl bg-black/40'
 										style={{width: `min(100%, calc(100cqh * ${aspect}))`, aspectRatio: aspect}}
 									>
-										{thumbnailUrl && (
-											<img
-												src={thumbnailUrl}
-												alt=''
-												aria-hidden='true'
-												draggable={false}
-												className='absolute inset-0 h-full w-full object-cover'
-											/>
-										)}
-										{/* The resting image only once the picture is in place — decoding a
-											    full-size image would stall the flight, and a player would
-											    paint black over the flying thumbnail and start playing —
-											    and only once the item is rested on or prefetched (REST_MS).
-											    The same goes for the flight home: the picture leaves as the
-											    resting image when that is what was being looked at, and as
-											    the seed it flew in on when that never arrived — one still
-											    loading is let go rather than left to land mid-flight. */}
-										{item &&
-											flight.arrived &&
-											(restedId === item.id || warm(item.id)) &&
-											(isVideo ? (
-												videoUrl && (
-													<video
-														key={item.id}
-														src={videoUrl}
-														poster={thumbnailUrl}
-														controls
-														autoPlay
-														playsInline
-														className='absolute inset-0 h-full w-full'
-													/>
-												)
-											) : restingUrl && (!closing || loadedId === item.id) ? (
+										{/* Zoomed, a live photo's chips would grow with it: they step aside */}
+										<div
+											ref={gestures.zoomRef}
+											className='absolute inset-0 [transform-origin:0_0] data-zoomed:[&_button]:invisible'
+										>
+											{thumbnailUrl && (
 												<img
-													key={item.id}
-													src={restingUrl}
-													alt={item.fileName}
+													src={thumbnailUrl}
+													alt=''
+													aria-hidden='true'
 													draggable={false}
-													fetchPriority='high'
-													decoding='async'
-													onLoad={() => setLoadedId(item.id)}
-													className={cn(
-														'absolute inset-0 h-full w-full object-cover transition-opacity duration-200',
-														loadedId === item.id ? 'opacity-100' : 'opacity-0',
-													)}
+													className='absolute inset-0 h-full w-full object-cover'
 												/>
-											) : null)}
-										{/* A live photo's motion clip and LIVE chip (see LivePhoto). Gated on
-										    the rest alone — never `warm`, which only means a neighbouring
-										    still was prefetched, while mounting this starts a video download.
-										    Gone the moment the close begins: the picture flies home as the
-										    still it will land as. */}
-										{item && item.subKind === 'live' && flight.arrived && restedId === item.id && !closing && (
-											<LivePhoto id={item.id} autoPlay={!reduceMotion} />
-										)}
+											)}
+											{/* The resting image only once the picture is in place — decoding a
+												    full-size image would stall the flight, and a player would
+												    paint black over the flying thumbnail and start playing —
+												    and only once the item is rested on or prefetched (REST_MS).
+												    The same goes for the flight home: the picture leaves as the
+												    resting image when that is what was being looked at, and as
+												    the seed it flew in on when that never arrived — one still
+												    loading is let go rather than left to land mid-flight. */}
+											{item &&
+												flight.arrived &&
+												(restedId === item.id || warm(item.id)) &&
+												(isVideo ? (
+													videoUrl && (
+														<video
+															key={item.id}
+															src={videoUrl}
+															poster={thumbnailUrl}
+															controls
+															autoPlay
+															playsInline
+															className='absolute inset-0 h-full w-full'
+														/>
+													)
+												) : restingUrl && (!closing || loadedId === item.id) ? (
+													<img
+														key={item.id}
+														src={restingUrl}
+														alt={item.fileName}
+														draggable={false}
+														fetchPriority='high'
+														decoding='async'
+														onLoad={() => setLoadedId(item.id)}
+														className={cn(
+															'absolute inset-0 h-full w-full object-cover transition-opacity duration-200',
+															loadedId === item.id ? 'opacity-100' : 'opacity-0',
+														)}
+													/>
+												) : null)}
+											{/* The original, once the zoom has gone past what the 1280 can
+											    show — downloaded and decoded first, then laid over it */}
+											{gestures.originalUrl && (
+												<img
+													src={gestures.originalUrl}
+													alt=''
+													aria-hidden='true'
+													draggable={false}
+													className='absolute inset-0 h-full w-full object-cover'
+												/>
+											)}
+											{/* A live photo's motion clip and LIVE chip (see LivePhoto). Gated on
+											    the rest alone — never `warm`, which only means a neighbouring
+											    still was prefetched, while mounting this starts a video download.
+											    Gone the moment the close begins: the picture flies home as the
+											    still it will land as. */}
+											{item && item.subKind === 'live' && flight.arrived && restedId === item.id && !closing && (
+												<LivePhoto id={item.id} autoPlay={!reduceMotion} />
+											)}
+										</div>
 									</div>
 								)}
 								{/* A horizontal swipe's neighbours, mounted only while the strip
@@ -702,7 +807,9 @@ export function ItemViewer() {
 										)}
 										style={{width: INSPECTOR_WIDTH + STAGE_MARGIN}}
 									>
-										{item && infoUsed && <InfoPanel item={item} onClose={() => setInfoByHand(false)} />}
+										{item && infoUsed && (
+											<InfoPanel item={item} showing={showInfo} onClose={() => setInfoByHand(false)} />
+										)}
 									</div>
 								</aside>
 							)}
@@ -712,42 +819,91 @@ export function ItemViewer() {
 						{FILMSTRIP_MODE === 'off' ? (
 							<footer className='h-4' />
 						) : (
-							<footer className={cn('pointer-events-none -mt-6 pt-2 pb-2', chrome('bottom'))}>
-								{/* The strip box keeps 32px of headroom for the hover growth (and its ring);
-								    pulling it up by 24px keeps the visible thumb-to-stage gap at 16px, same as the edge.
-								    That overlap sits over the stage — exactly where a height-constrained video draws
-								    its seek bar — so the footer must not catch hits; the strip re-enables them over
-								    its visible band (see Filmstrip) */}
-								{id && items.length > 0 ? (
+							<footer
+								ref={stripRef}
+								// A pointer's strip keeps 32px of headroom for the hover growth (and
+								// its ring), and pulling it up by 24px keeps the visible thumb-to-stage
+								// gap at 16px, same as the edge. That overlap sits over the stage —
+								// exactly where a height-constrained video draws its seek bar — so
+								// the footer must not catch hits; the strip re-enables them over its
+								// visible band (see Filmstrip). A touch screen's strip has no growth
+								// and is all hit target: it sits below the stage, the same 16px from
+								// it — on a tablet wide enough for the desktop layout too.
+								className={cn(
+									'pointer-events-none',
+									isMobile || isTouch ? 'pt-3 pb-2' : '-mt-6 pt-2 pb-2',
+									chrome('bottom'),
+								)}
+								// Desktop: the strip spans the stage and nothing more, so its centre is
+								// the picture's — the stage's margin on the left, and on the right the
+								// margin plus whatever the inspector's dock takes (its width and its
+								// ml-4, less the -mr-6 it borrows the margin back with). Same duration
+								// and easing as the dock, so the two slide as one; pinned with it for
+								// the close (see closingAside). The transition is inline because the
+								// chrome's own (opacity, for the dismiss drag) would otherwise win the
+								// class merge.
+								style={
+									isMobile
+										? undefined
+										: {
+												paddingLeft: STAGE_MARGIN,
+												paddingRight:
+													STAGE_MARGIN +
+													(closingAside
+														? closingAside.width + closingAside.marginLeft - STAGE_MARGIN
+														: showInfo
+															? INSPECTOR_WIDTH + 16
+															: 0),
+												...(!closingAside &&
+													!reduceMotion && {
+														transitionProperty: 'opacity, padding',
+														transitionDuration: '200ms, 300ms',
+														transitionTimingFunction: 'var(--default-transition-timing-function), var(--ease-out)',
+													}),
+											}
+								}
+							>
+								{currentId && items.length > 0 ? (
 									<Filmstrip
 										items={items}
-										currentId={id}
+										currentId={currentId}
 										hasMore={hasMore}
 										loadMore={loadMore}
 										onSelect={goTo}
 										grow={FILMSTRIP_MODE === 'grow'}
+										drive={drive}
 									/>
 								) : (
-									<div className='h-20' />
+									<FilmstripPlaceholder />
 								)}
 							</footer>
 						)}
 
-						{/* Phones: the actions are a toolbar under the strip (whose headroom
-						    would otherwise sit over them) */}
-						<div className={cn('flex justify-center pb-3 md:hidden', chrome('bottom'))}>{actions}</div>
-
-						{/* Phones: the inspector is a sheet over everything */}
-						{isMobile && (
+						{/* Phones: the actions are a toolbar under the strip. It floats over
+						    the info sheet's foot, so Info closes what it opened. */}
+						<div
+							ref={toolbarRef}
+							className={cn('relative z-30 flex justify-center pb-3 md:hidden phone-side:hidden', chrome('bottom'))}
+						>
+							{/* Its floor over the info sheet, faded in as the sheet passes
+							    under it (--sheet-under, see useInfoSheet) */}
 							<div
-								inert={!showInfo}
-								className={cn(
-									'absolute inset-x-0 bottom-0 z-20 h-[75%] transition-transform duration-300 ease-out motion-reduce:transition-none',
-									showInfo ? 'translate-y-0' : 'translate-y-full',
-								)}
-							>
-								{item && infoUsed && <InfoPanel item={item} onClose={() => setInfoByHand(false)} sheet />}
-							</div>
+								aria-hidden='true'
+								className='pointer-events-none absolute inset-x-0 -top-6 bottom-0 bg-linear-to-t from-[rgb(8_9_11/0.94)] from-55% to-transparent opacity-(--sheet-under,0)'
+							/>
+							<div className='relative'>{actions}</div>
+						</div>
+
+						{/* Phones: the inspector as a sheet the picture lifts above (see
+						    useInfoSheet), fed by the stage's upward swipe */}
+						{isMobile && (
+							<InfoSheet
+								sheet={infoSheet}
+								item={item}
+								built={infoUsed}
+								closing={closing}
+								onClose={() => setInfoByHand(false)}
+							/>
 						)}
 					</div>
 				</DialogPrimitive.Content>
@@ -804,34 +960,5 @@ function PeekPane({
 				<img src={picture.url} alt='' draggable={false} className='absolute inset-0 h-full w-full object-cover' />
 			</div>
 		</div>
-	)
-}
-
-// Edge arrows: present for the pointer, quiet until the stage is hovered
-function StageArrow({
-	side,
-	label,
-	disabled,
-	onClick,
-}: {
-	side: 'left' | 'right'
-	label: string
-	disabled: boolean
-	onClick: () => void
-}) {
-	const Icon = side === 'left' ? ChevronLeft : ChevronRight
-	return (
-		<button
-			type='button'
-			aria-label={label}
-			disabled={disabled}
-			onClick={onClick}
-			className={cn(
-				'absolute top-1/2 z-[5] flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white/80 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:text-white focus-visible:opacity-100 disabled:!opacity-0',
-				side === 'left' ? 'left-3' : 'right-3',
-			)}
-		>
-			<Icon className='size-5' />
-		</button>
 	)
 }

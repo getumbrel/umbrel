@@ -1,7 +1,7 @@
 import {parentPort, workerData} from 'node:worker_threads'
 
-import {serializeError, type SerializedError} from '../file-index-worker-protocol.js'
-import FileIndexReader, {isPhotosRead, type FileIndexReadMethod, type FileIndexReaderPaths} from './reader.js'
+import {serializeError, type SerializedError} from '../file-index-worker-protocol.ts'
+import FileIndexReader, {isPhotosRead, type FileIndexReadMethod, type FileIndexReaderPaths} from './reader.ts'
 
 export type FileIndexReaderRequest = {id: number; method: FileIndexReadMethod; args: unknown[]}
 export type FileIndexReaderResponse =

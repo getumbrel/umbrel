@@ -44,7 +44,7 @@ function DrawerContent({
 			<DrawerPrimitive.Content
 				ref={ref}
 				className={cn(
-					'umbrel-window-shadow umbrel-window-surface-top fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col gap-5 bg-[#0A0A0A] p-5 outline-hidden',
+					'umbrel-window-shadow umbrel-window-surface-top fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col gap-5 bg-[#0A0A0A] p-5 outline-hidden low:mt-3 low:max-h-[calc(100%-12px)]',
 					fullHeight && 'top-0',
 					className,
 				)}
@@ -102,9 +102,25 @@ function DrawerDescription({
 }
 
 // Put this in the content of a `Drawer` to make it scrollable. You might need to add `flex-1` to the parent.
-function DrawerScroller({children}: {children: React.ReactNode}) {
+function DrawerScroller({
+	children,
+	fade = true,
+	ref,
+}: {
+	children: React.ReactNode
+	fade?: boolean
+	ref?: React.Ref<HTMLDivElement>
+}) {
+	const className = 'umbrel-stable-gutter flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'
+	if (!fade)
+		return (
+			<div ref={ref} className={className}>
+				{children}
+			</div>
+		)
+
 	return (
-		<FadeScroller direction='y' className='umbrel-stable-gutter flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'>
+		<FadeScroller ref={ref} direction='y' className={className}>
 			{children}
 		</FadeScroller>
 	)

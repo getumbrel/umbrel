@@ -31,7 +31,7 @@ export function BackupsIsland() {
 		.filter((item): item is NonNullable<typeof item> => item !== null)
 
 	const count = withNames.length
-	const totalPercent = count > 0 ? Math.round(withNames.reduce((s, p) => s + (p.percent ?? 0), 0) / count) : 0
+	const totalPercent = count > 0 ? withNames.reduce((s, p) => s + (p.percent ?? 0), 0) / count : 0
 
 	return (
 		<Island id='backups-island' nonDismissable>

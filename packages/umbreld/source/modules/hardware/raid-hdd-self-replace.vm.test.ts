@@ -1,14 +1,14 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
 
 // A pool member whose labels are destroyed (wiped or corrupted drive) comes back after a
 // reboot as an unrecognised member while its physical disk is still attached under the
 // same umbrel id. ZFS's documented recovery is replacing the member with its own disk in
 // place, so replaceDevice must allow oldDevice === newDevice for unhealthy members while
 // still rejecting self-replacement of healthy ones.
-describe('Self-replacement of a wiped mirror member', () => {
+describe.each(driveBuses)('Self-replacement of a wiped mirror member (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstHddId: string
 	let secondHddId: string
@@ -31,8 +31,8 @@ describe('Self-replacement of a wiped mirror member', () => {
 	})
 
 	test('boots a NAS VM with two HDD bays', async () => {
-		await umbreld.vm.addHdd({slot: 1})
-		await umbreld.vm.addHdd({slot: 2})
+		await umbreld.vm.addHdd({slot: 1, bus})
+		await umbreld.vm.addHdd({slot: 2, bus})
 		await umbreld.vm.powerOn()
 	})
 

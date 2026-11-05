@@ -5,13 +5,18 @@ DerivedData/
 
 # Android
 android/.gradle/
-android/build/
-android/app/build/
+android/.kotlin/
+android/.idea/
+android/**/build/
+android/local.properties
+android/tools/symbols/.venv/
 *.apk
 
 # Windows
-windows/bin/
-windows/obj/
+windows/**/bin/
+windows/**/obj/
+windows/**/TestResults/
+windows/dist/
 
 # macOS / Xcode
 *.xcuserstate

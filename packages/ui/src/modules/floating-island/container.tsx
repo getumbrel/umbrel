@@ -1,5 +1,5 @@
 import {AnimatePresence, motion} from 'motion/react'
-import {useEffect} from 'react'
+import {useEffect, useLayoutEffect, useRef} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
@@ -24,16 +24,25 @@ import {usePhotosUploadsFeedback, usePhotosUploadsStatus} from '@/features/photo
 import {RaidIsland} from '@/features/storage/components/floating-island'
 import {useRaidProgress} from '@/features/storage/hooks/use-raid-progress'
 import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
+import {useIsSmallMobile} from '@/hooks/use-is-mobile'
+import {useDockClearance} from '@/modules/desktop/dock'
 import {cloudActivityHasWork, useCloudActivity} from '@/providers/cloud'
 import {useGlobalFiles} from '@/providers/global-files'
 import {useImmersiveDialogOpen} from '@/providers/immersive-dialog'
 import {trpcReact} from '@/trpc/trpc'
+
+import {islandSizes} from './bare-island'
+import {islandsLeft, islandsWidth, SEARCH_DOCK_GAP, SEARCH_HEIGHT, settleLane, useLaneStore} from './lane'
 
 const spring = {
 	type: 'spring' as const,
 	stiffness: 400,
 	damping: 30,
 }
+
+// Room above and below the phone row's islands, so the scroller doesn't clip
+// their drop shadows
+const ROW_SHADOW_ROOM = 24
 
 export function FloatingIslandContainer() {
 	const {t} = useTranslation()
@@ -118,70 +127,161 @@ export function FloatingIslandContainer() {
 		})
 	}, [navigate, raidOperationState, raidOperationType, raidScrubErrors, t])
 
-	// Common animation props
+	// Home's Search shrinks to its orb when the shared row gets crowded
+	const islandCount = [
+		showTransfers,
+		showPhotosUploads,
+		showOperations,
+		showFormatting,
+		showRaid,
+		showBackups,
+		showCloud,
+		showMachinesInstall,
+		showAudio,
+	].filter(Boolean).length
+	const setIslandCount = useLaneStore((state) => state.setIslandCount)
+	useEffect(() => setIslandCount(islandCount), [islandCount, setIslandCount])
+
+	// Phones get one edge-to-edge row that scrolls sideways (Search's orb joins
+	// it); larger screens a centred row beside Search
+	const isScrollingRow = useIsSmallMobile()
+	const setSearchSlot = useLaneStore((state) => state.setSearchSlot)
+
+	// The phone row keeps an open card fully in view as it grows, as the screen
+	// resizes, and as other islands come and go around it. Only on size
+	// changes, so the row still scrolls freely by hand while a card is open.
+	const rowRef = useRef<HTMLDivElement>(null)
+	useLayoutEffect(() => {
+		const row = rowRef.current
+		if (!row) return
+		const observer = new ResizeObserver(() => {
+			row.querySelector('[data-island-open]')?.scrollIntoView({block: 'nearest', inline: 'nearest'})
+		})
+		// The row hugs its items, so any of them resizing resizes it
+		observer.observe(row)
+		return () => observer.disconnect()
+	}, [isScrollingRow])
+
+	const islandsRef = useRef<HTMLDivElement>(null)
+	useLayoutEffect(() => {
+		const el = islandsRef.current
+		if (!el) return
+		// Layout width, so arriving islands count at full size while they
+		// scale in and leaving ones until they're gone
+		const measure = () => islandsWidth.set(el.offsetWidth)
+		measure()
+		// Whatever is on screen at first paint starts in place
+		settleLane()
+		const observer = new ResizeObserver(measure)
+		observer.observe(el)
+		return () => {
+			observer.disconnect()
+			islandsWidth.set(0)
+		}
+	}, [isScrollingRow])
+
+	// Islands rest on Search's row: centred on its line, above the dock
+	const bottom = useDockClearance() + SEARCH_DOCK_GAP - (islandSizes.minimized.height - SEARCH_HEIGHT) / 2
+
+	// Common animation props: islands grow out of their resting edge, never
+	// from nothing
 	const commonProps = {
 		className: 'pointer-events-auto',
-		initial: {opacity: 0, scale: 0, transformOrigin: 'bottom center'},
+		initial: {opacity: 0, scale: 0.9, transformOrigin: 'bottom center'},
 		animate: {opacity: 1, scale: 1, transformOrigin: 'bottom center'},
-		exit: {opacity: 0, scale: 0, transformOrigin: 'bottom center'},
+		exit: {opacity: 0, scale: 0.9, transformOrigin: 'bottom center'},
 		transition: {layout: spring, opacity: {duration: 0.2}, scale: {duration: 0.2}},
 	}
 
-	// Positioned above dock. The full-width layout container must not intercept
-	// dialog controls beneath it; only the visible island wrappers are interactive.
-	// Normally z-50 (same as dock, but behind immersive dialogs). When an
-	// ImmersiveDialog is open, z-60 keeps the islands visible and clickable above it.
+	const zIndex = isImmersiveDialogOpen ? 'z-[60]' : 'z-50'
+	const islands = (
+		<AnimatePresence>
+			{showTransfers && (
+				<motion.div key='transfers-island' layout='position' {...commonProps}>
+					<TransfersIsland view={transfersView} />
+				</motion.div>
+			)}
+			{showPhotosUploads && (
+				<motion.div key='photos-upload-island' layout='position' {...commonProps}>
+					<PhotosUploadIsland />
+				</motion.div>
+			)}
+			{showOperations && (
+				<motion.div key='operations-island' layout='position' {...commonProps}>
+					<OperationsIsland operations={managedOperations} />
+				</motion.div>
+			)}
+			{showFormatting && (
+				<motion.div key='formatting-island' layout='position' {...commonProps}>
+					<FormattingIsland />
+				</motion.div>
+			)}
+			{showRaid && (
+				<motion.div key='raid-island' layout='position' {...commonProps}>
+					<RaidIsland />
+				</motion.div>
+			)}
+			{showBackups && (
+				<motion.div key='backups-island' layout='position' {...commonProps}>
+					<BackupsIsland />
+				</motion.div>
+			)}
+			{showCloud && (
+				<motion.div key='cloud-island' layout='position' {...commonProps}>
+					<CloudIsland />
+				</motion.div>
+			)}
+			{showMachinesInstall && (
+				<motion.div key='machines-install-island' layout='position' {...commonProps}>
+					<MachinesInstallIsland machines={installingMachines} />
+				</motion.div>
+			)}
+			{showAudio && (
+				<motion.div key='audio-island' layout='position' {...commonProps}>
+					<AudioIsland />
+				</motion.div>
+			)}
+		</AnimatePresence>
+	)
+
+	// Phones: the strip runs edge to edge and scrolls sideways when the row
+	// outgrows it; while it fits, the row sits centred. Only the islands (and
+	// Search) take pointer events, so the strip never blocks what's beneath it,
+	// yet a swipe on any of them scrolls it. An open card is kept in view
+	// (rowRef above).
+	if (isScrollingRow) {
+		return (
+			<div
+				data-island-row
+				className={`umbrel-hide-scrollbar pointer-events-none fixed inset-x-0 scroll-px-4 overflow-x-auto overflow-y-hidden overscroll-x-contain ${zIndex}`}
+				style={{bottom: bottom - ROW_SHADOW_ROOM}}
+			>
+				<div
+					ref={rowRef}
+					className='relative mx-auto flex w-max items-end gap-2 px-4'
+					style={{paddingBlock: ROW_SHADOW_ROOM}}
+				>
+					{/* Search renders itself in here (desktop-misc.tsx) */}
+					<div ref={setSearchSlot} className='contents' />
+					{islands}
+				</div>
+			</div>
+		)
+	}
+
+	// From md up the container hugs the islands and its left edge follows the
+	// lane: just right of Search on Home, centred everywhere else. It must not
+	// intercept dialog controls beneath it; only the visible island wrappers
+	// are interactive. Normally z-50 (same as dock, but behind immersive
+	// dialogs). When an ImmersiveDialog is open, z-60 keeps the islands visible
+	// and clickable above it. A card grows upward from its pill.
 	return (
-		<div
-			className={`pointer-events-none fixed bottom-[76px] left-1/2 flex w-full -translate-x-1/2 transform-gpu flex-col items-center justify-center gap-1 will-change-transform md:bottom-[90px] md:flex-row md:items-baseline md:gap-2 ${isImmersiveDialogOpen ? 'z-[60]' : 'z-50'}`}
+		<motion.div
+			ref={islandsRef}
+			className={`pointer-events-none fixed left-1/2 flex items-end gap-2 will-change-transform ${zIndex}`}
+			style={{bottom, x: islandsLeft}}
 		>
-			<AnimatePresence>
-				{showTransfers && (
-					<motion.div key='transfers-island' layout {...commonProps}>
-						<TransfersIsland view={transfersView} />
-					</motion.div>
-				)}
-				{showPhotosUploads && (
-					<motion.div key='photos-upload-island' layout {...commonProps}>
-						<PhotosUploadIsland />
-					</motion.div>
-				)}
-				{showOperations && (
-					<motion.div key='operations-island' layout {...commonProps}>
-						<OperationsIsland operations={managedOperations} />
-					</motion.div>
-				)}
-				{showFormatting && (
-					<motion.div key='formatting-island' layout {...commonProps}>
-						<FormattingIsland />
-					</motion.div>
-				)}
-				{showRaid && (
-					<motion.div key='raid-island' layout {...commonProps}>
-						<RaidIsland />
-					</motion.div>
-				)}
-				{showBackups && (
-					<motion.div key='backups-island' layout {...commonProps}>
-						<BackupsIsland />
-					</motion.div>
-				)}
-				{showCloud && (
-					<motion.div key='cloud-island' layout {...commonProps}>
-						<CloudIsland />
-					</motion.div>
-				)}
-				{showMachinesInstall && (
-					<motion.div key='machines-install-island' layout {...commonProps}>
-						<MachinesInstallIsland machines={installingMachines} />
-					</motion.div>
-				)}
-				{showAudio && (
-					<motion.div key='audio-island' layout {...commonProps}>
-						<AudioIsland />
-					</motion.div>
-				)}
-			</AnimatePresence>
-		</div>
+			{islands}
+		</motion.div>
 	)
 }

@@ -1,6 +1,6 @@
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 const serviceFilePath = '/etc/avahi/services/umbrel.service'
 // LAN ingress owns the public HTTP port; umbreld.port is loopback-only.

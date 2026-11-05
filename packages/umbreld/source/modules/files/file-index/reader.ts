@@ -1,14 +1,15 @@
 import BetterSqlite3 from 'better-sqlite3'
 
-import PhotosRepository from '../../photos/repository.js'
-import type {PhotoFilter} from '../../photos/types.js'
-import {fileIndexQueries} from './queries.js'
-import type {ReadLane, SqlRead} from './read-database.js'
+import PhotosRepository from '../../photos/repository.ts'
+import type {PhotoFilter} from '../../photos/types.ts'
+import {fileIndexQueries} from './queries.ts'
+import type {ReadLane, SqlRead} from './read-database.ts'
 
 export type PhotosReadMethod =
 	| 'summary'
 	| 'indexingState'
 	| 'listItems'
+	| 'mapPoints'
 	| 'getItem'
 	| 'neighbors'
 	| 'resolveItems'
@@ -42,12 +43,15 @@ export function isPhotosRead(method: FileIndexReadMethod): method is PhotosReadM
 export function readLane(method: FileIndexReadMethod, args: unknown[]): ReadLane {
 	// Album listing aggregates memberships and selects covers across every album.
 	if (['searchCandidates', 'summary', 'listSources', 'listAlbums'].includes(method)) return 'bulk'
+	// The map reads every located item a filter selects.
+	if (method === 'mapPoints') return 'bulk'
 	// Sizes are stored lookups, independent of subtree size. Keep unusually
 	// large batches off the reserved reader, as with bulk Photos resolution.
 	if (method === 'directorySizes' && (args[0] as unknown[]).length > 200) return 'bulk'
 	if (method === 'listItems' || method === 'neighbors') {
 		const filter = args[method === 'listItems' ? 1 : 2] as PhotoFilter
-		if (filter.query) return 'bulk'
+		// No index knows where anything was taken: a stretch of map reads the library.
+		if (filter.query || filter.bounds) return 'bulk'
 		// Unlike paged lists, these neighbor queries materialize the filtered collection.
 		if (method === 'neighbors' && (filter.albumIds?.length || filter.sourceIds?.length)) return 'bulk'
 	}

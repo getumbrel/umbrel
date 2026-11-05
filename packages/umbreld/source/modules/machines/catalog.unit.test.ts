@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {builtinMachinesCatalog} from './machines.js'
+import {builtinMachinesCatalog} from './machines.ts'
 
 describe('built-in Machines catalog', () => {
 	test.each(['amd64', 'arm64'] as const)('ships native Server and Desktop templates for %s', (arch) => {
@@ -154,6 +154,14 @@ describe('built-in Machines catalog', () => {
 		expect(windows.filter(({familyId}) => familyId !== 'windows-11').every(({arch}) => arch === 'amd64')).toBe(true)
 		expect(windows.every((image) => !('preview' in image))).toBe(true)
 		expect(windows.find(({familyId}) => familyId === 'windows-server')?.evaluation).toBe(true)
+		// Every image that asks for a product key says which licensing channel its media accepts
+		expect(
+			Object.fromEntries(
+				windows
+					.filter(({licenseChannel}) => licenseChannel)
+					.map(({familyId, licenseChannel}) => [familyId, licenseChannel]),
+			),
+		).toEqual({'windows-xp': 'volume', 'windows-98': 'oem'})
 		const windows98 = windows.find(({familyId}) => familyId === 'windows-98')!
 		expect(windows98.resources?.map(({id}) => id)).toEqual(['windows-98-se-usb-boot', 'patcher9x-0.9.91'])
 		expect(windows98.resources?.every(({sha256}) => /^[0-9a-f]{64}$/.test(sha256))).toBe(true)
@@ -173,16 +181,26 @@ describe('built-in Machines catalog', () => {
 		const fedora = builtinMachinesCatalog.images.find(({id}) => id === 'fedora-44-desktop-amd64')!
 		const debian = builtinMachinesCatalog.images.find(({id}) => id === 'debian-13-desktop-amd64')!
 
-		expect(ubuntu.cloudInit).toEqual({packages: ['ubuntu-desktop'], graphical: true})
+		// spice-vdagent shares the clipboard with the console; Fedora Workstation already ships it
+		expect(ubuntu.cloudInit).toEqual({
+			adminGroup: 'sudo',
+			packages: ['ubuntu-desktop', 'spice-vdagent'],
+			graphical: true,
+		})
 		expect(fedora.cloudInit).toEqual({
+			adminGroup: 'wheel',
 			commands: [
-				['dnf', 'install', '-y', '@workstation-product-environment'],
+				['dnf', 'install', '-y', '@workstation-product-environment', 'kernel-modules'],
 				['systemctl', 'enable', 'gdm.service'],
 			],
 			graphical: true,
 		})
 		expect(debian.cloudInit?.graphical).toBe(true)
-		expect(debian.cloudInit?.commands?.[0]).toEqual(['bash', '-c', expect.stringContaining('task-gnome-desktop')])
+		expect(debian.cloudInit?.commands?.[0]).toEqual([
+			'bash',
+			'-c',
+			expect.stringContaining('apt-get install -y task-gnome-desktop spice-vdagent'),
+		])
 		expect(debian.cloudInit?.commands?.[0]?.[2]).toContain('policy-rc.d')
 		expect(debian.cloudInit?.commands?.[0]?.[2]).toContain('renderer: NetworkManager')
 	})
@@ -196,8 +214,8 @@ describe('built-in Machines catalog', () => {
 		expect(desktopEstimates).toEqual({
 			'ubuntu-26.04-desktop-amd64': 5_000,
 			'ubuntu-26.04-desktop-arm64': 7_900,
-			'fedora-44-desktop-amd64': 5_400,
-			'fedora-44-desktop-arm64': 6_200,
+			'fedora-44-desktop-amd64': 6_200,
+			'fedora-44-desktop-arm64': 7_200,
 			'debian-13-desktop-amd64': 3_400,
 			'debian-13-desktop-arm64': 6_100,
 		})

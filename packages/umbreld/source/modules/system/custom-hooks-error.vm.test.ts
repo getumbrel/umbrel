@@ -1,13 +1,13 @@
 import {afterEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 import {
 	errorMarkerPath,
 	installPreStartHook,
 	rebootAndAssertUmbreldStarts,
 	runSudoScript,
 	type TestUmbreldVm,
-} from './custom-hooks.vm-test-helpers.js'
+} from './custom-hooks.vm-test-helpers.ts'
 
 describe('Custom pre-start hook failure handling', () => {
 	let umbreld: TestUmbreldVm | undefined

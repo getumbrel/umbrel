@@ -5,8 +5,8 @@ import nodePath from 'node:path'
 import fse from 'fs-extra'
 import {expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import MemberShares, {type MemberShare} from './member-shares.js'
+import type Umbreld from '../../index.ts'
+import MemberShares, {type MemberShare} from './member-shares.ts'
 
 function createMemberShares(fileShares: MemberShare[] = []) {
 	const get = vi.fn(async (key: string) => {
@@ -49,6 +49,7 @@ async function createMemberSharesWithFilesystem() {
 	})
 	const logger = {log: vi.fn(), error: vi.fn()}
 	const emit = vi.fn(async () => {})
+	let writeQueue: Promise<unknown> = Promise.resolve()
 
 	const virtualToSystemPath = vi.fn(async (virtualPath: string) => {
 		const segments = normalizeVirtualPath(virtualPath).split('/').filter(Boolean)
@@ -59,17 +60,38 @@ async function createMemberSharesWithFilesystem() {
 		throw new Error(`[invalid-base] ${virtualPath}`)
 	})
 
+	let fileChangesListener:
+		| ((events: {type: 'create' | 'update' | 'delete'; path: string}[]) => Promise<void>)
+		| undefined
+	const systemToVirtualPath = (systemPath: string) => {
+		const home = nodePath.join(root, 'home')
+		if (systemPath === home) return '/Home'
+		if (systemPath.startsWith(`${home}/`)) return `/Home${systemPath.slice(home.length)}`
+		throw new Error(`[invalid-path] ${systemPath}`)
+	}
+
 	const memberShares = new MemberShares({
-		eventBus: {emit},
+		eventBus: {
+			emit,
+			onFileChanges: (listener: typeof fileChangesListener) => {
+				fileChangesListener = listener
+				return () => (fileChangesListener = undefined)
+			},
+		},
 		files: {
 			normalizeVirtualPath,
+			systemToVirtualPath,
 			virtualToSystemPath,
 		},
 		logger: {createChildLogger: () => logger},
 		store: {
 			get,
-			getWriteLock: async (callback: (methods: {get: typeof get; set: typeof set}) => Promise<void>) =>
-				callback({get, set}),
+			// Serialized like the real store's write queue
+			getWriteLock: (callback: (methods: {get: typeof get; set: typeof set}) => Promise<void>) => {
+				const job = writeQueue.then(() => callback({get, set}))
+				writeQueue = job.catch(() => {})
+				return job
+			},
 		},
 		user: {listMembers: vi.fn(async () => [{id: 'member-1'}])},
 	} as unknown as Umbreld)
@@ -77,6 +99,9 @@ async function createMemberSharesWithFilesystem() {
 	return {
 		cleanup: () => rm(root, {recursive: true, force: true}),
 		emit,
+		fileChanges: (events: {type: 'create' | 'update' | 'delete'; path: string}[]) => fileChangesListener!(events),
+		get,
+		logger,
 		fileShares: () => fileShares,
 		memberShares,
 		root,
@@ -222,6 +247,67 @@ test('share revocation waits for listeners to stop affected work', async () => {
 
 		releaseListener()
 		await expect(removal).resolves.toBe(true)
+	} finally {
+		await cleanup()
+	}
+})
+
+test('removes the shares of every directory deleted in a batch of file changes', async () => {
+	const {cleanup, fileChanges, fileShares, get, logger, memberShares, root} = await createMemberSharesWithFilesystem()
+	try {
+		await Promise.all([
+			fse.ensureDir(nodePath.join(root, 'home', 'shared', 'nested')),
+			fse.ensureDir(nodePath.join(root, 'home', 'keep')),
+		])
+		await memberShares.add('/Home/shared', 'all')
+		await memberShares.add('/Home/shared/nested', ['member-1'])
+		await memberShares.add('/Home/keep', 'all')
+		await memberShares.start()
+		get.mockClear()
+
+		const home = (path: string) => nodePath.join(root, 'home', path)
+		await fileChanges([
+			{type: 'create', path: home('new')},
+			// Outside every base directory, which mustn't stop the rest of the batch
+			{type: 'delete', path: '/elsewhere'},
+			{type: 'update', path: home('keep')},
+			...Array.from({length: 1000}, (_, index) => ({type: 'delete' as const, path: home(`unrelated/${index}`)})),
+			{type: 'delete', path: home('shared')},
+			{type: 'delete', path: home('shared/nested')},
+			{type: 'delete', path: home('shared/nested/file')},
+		])
+
+		expect(fileShares()).toStrictEqual([{path: '/Home/keep', sharedWith: 'all'}])
+		// The shares are read once for the batch and again after each removal,
+		// not once per event
+		expect(get.mock.calls.length).toBeLessThan(10)
+		expect(logger.error).toHaveBeenCalledOnce()
+	} finally {
+		await memberShares.stop?.()
+		await cleanup()
+	}
+})
+
+test("a removal that stalls doesn't hold up the other deletions in a batch", async () => {
+	const {cleanup, emit, fileChanges, fileShares, memberShares, root} = await createMemberSharesWithFilesystem()
+	try {
+		await Promise.all([
+			fse.ensureDir(nodePath.join(root, 'home', 'first')),
+			fse.ensureDir(nodePath.join(root, 'home', 'second')),
+		])
+		await memberShares.add('/Home/first', 'all')
+		await memberShares.add('/Home/second', 'all')
+		await memberShares.start()
+		// The first removal's listeners never settle
+		emit.mockImplementationOnce(() => new Promise(() => {}))
+
+		void fileChanges([
+			{type: 'delete', path: nodePath.join(root, 'home', 'first')},
+			{type: 'delete', path: nodePath.join(root, 'home', 'second')},
+		])
+
+		// Otherwise a directory recreated at the second path would inherit the share
+		await vi.waitFor(() => expect(fileShares()).toStrictEqual([]))
 	} finally {
 		await cleanup()
 	}

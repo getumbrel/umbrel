@@ -4,9 +4,7 @@ import {useTranslation} from 'react-i18next'
 import {TbAlertTriangle} from 'react-icons/tb'
 import {useSearchParams} from 'react-router-dom'
 
-import {FadeScroller} from '@/components/fade-scroller'
-import {Button} from '@/components/ui/button'
-import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {
 	Drawer,
 	DrawerContent,
@@ -18,8 +16,8 @@ import {
 import {ChangeSmbPassword} from '@/features/files/components/dialogs/share-info-dialog/change-smb-password'
 import {PlatformInstructions} from '@/features/files/components/dialogs/share-info-dialog/platform-instructions'
 import {
+	getDefaultPlatform,
 	Platform,
-	platforms,
 	PlatformSelector,
 } from '@/features/files/components/dialogs/share-info-dialog/platform-selector'
 import {ShareToggle} from '@/features/files/components/dialogs/share-info-dialog/share-toggle'
@@ -28,13 +26,13 @@ import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-na
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function ShareInfoDialog() {
 	const {t} = useTranslation()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const homeDirectoryName = useHomeDirectoryName()
 	const homePath = useHomePath()
 	const [searchParams] = useSearchParams()
@@ -55,7 +53,7 @@ export default function ShareInfoDialog() {
 	} = useShares()
 
 	const {disks} = useExternalStorage()
-	const [selectedPlatform, setSelectedPlatform] = useState<Platform>(platforms[0])
+	const [selectedPlatform, setSelectedPlatform] = useState<Platform | undefined>(getDefaultPlatform)
 
 	const share = shares?.find((s) => s.path === path)
 	const isShared = isPathShared(path) ?? false
@@ -80,9 +78,9 @@ export default function ShareInfoDialog() {
 		: t('files-share.regular-description')
 
 	const smbUrl =
-		selectedPlatform.id === 'windows' ? `\\\\${window.location.hostname}` : `smb://${window.location.hostname}/`
+		selectedPlatform?.id === 'windows' ? `\\\\${window.location.hostname}` : `smb://${window.location.hostname}/`
 	const username = user?.sambaUsername ?? ''
-	const password = isLoadingSharesPassword ? '...' : sharePassword || ''
+	const password = isLoadingSharesPassword ? '…' : sharePassword || ''
 
 	const content = (
 		<div className='space-y-6'>
@@ -143,7 +141,7 @@ export default function ShareInfoDialog() {
 		</div>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
@@ -151,7 +149,7 @@ export default function ShareInfoDialog() {
 						<DrawerTitle>{title}</DrawerTitle>
 						<DrawerDescription>{description}</DrawerDescription>
 					</DrawerHeader>
-					<DrawerScroller>{content}</DrawerScroller>
+					<DrawerScroller fade={false}>{content}</DrawerScroller>
 				</DrawerContent>
 			</Drawer>
 		)
@@ -164,14 +162,7 @@ export default function ShareInfoDialog() {
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
-				<FadeScroller direction='y' className='umbrel-hide-scrollbar flex-1 overflow-y-auto'>
-					{content}
-				</FadeScroller>
-				<DialogFooter>
-					<Button variant='default' onClick={dialogProps.onOpenChange.bind(null, false)}>
-						<span>{t('done')}</span>
-					</Button>
-				</DialogFooter>
+				<div className='umbrel-stable-gutter min-h-0 flex-1 overflow-y-auto'>{content}</div>
 			</DialogContent>
 		</Dialog>
 	)

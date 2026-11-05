@@ -1,5 +1,14 @@
 #:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bakery-project.schema.json
 
+# The system partitions have a fixed size because Rugix Bakery's computed size
+# depends on the build host's filesystem, which would make the images differ
+# between machines. Raise it if the root filesystem no longer fits, up to the
+# system slots in `recipes/setup-rugix/files/bootstrapping.toml` (10GiB, legacy
+# Mender devices have slightly smaller ones) and `bootstrapping-pi.toml` (5GiB).
+#
+# The ext4 filesystems have fixed UUIDs and hash seeds, which mkfs.ext4 would
+# otherwise pick at random.
+
 # Image for AMD64 EFI systems.
 [systems.umbrelos-amd64]
 layer = "umbrelos-amd64"
@@ -10,9 +19,14 @@ target = "generic-grub-efi"
 type = "gpt"
 partitions = [
     { root = "config", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", size = "256M", filesystem = { type = "fat32" } },
-    { root = "boot", size = "512MiB", filesystem = { type = "ext4" } },
+    { root = "boot", size = "512MiB", filesystem = { type = "ext4", additional-options = [
+        "-E",
+        "hash_seed=363761d4-3a61-4d0b-bdba-b5844a2a4bf3",
+        "-U",
+        "41df2fd7-cef3-4e13-890b-4d6d5d728312",
+    ] } },
     { size = "512M" },
-    { root = "system", filesystem = { type = "ext4", additional-options = [
+    { root = "system", size = "8GiB", filesystem = { type = "ext4", additional-options = [
         "-O",
         "^has_journal",
         "-E",
@@ -32,9 +46,14 @@ target = "generic-grub-efi"
 type = "gpt"
 partitions = [
     { root = "config", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", size = "256M", filesystem = { type = "fat32" } },
-    { root = "boot", size = "512MiB", filesystem = { type = "ext4" } },
+    { root = "boot", size = "512MiB", filesystem = { type = "ext4", additional-options = [
+        "-E",
+        "hash_seed=363761d4-3a61-4d0b-bdba-b5844a2a4bf3",
+        "-U",
+        "41df2fd7-cef3-4e13-890b-4d6d5d728312",
+    ] } },
     { size = "512M" },
-    { root = "system", filesystem = { type = "ext4", additional-options = [
+    { root = "system", size = "8GiB", filesystem = { type = "ext4", additional-options = [
         "-O",
         "^has_journal",
         "-E",
@@ -58,7 +77,7 @@ partitions = [
     { type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", size = "128M" },
     # zstd level 19 with 1M blocks compresses notably smaller than the
     # gzip/128k defaults and decompresses faster at runtime.
-    { root = "system", filesystem = { type = "squashfs", additional-options = [
+    { root = "system", size = "5GiB", filesystem = { type = "squashfs", additional-options = [
         "-comp",
         "zstd",
         "-b",
@@ -82,7 +101,7 @@ partitions = [
     { type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", size = "128M" },
     # zstd level 19 with 1M blocks compresses notably smaller than the
     # gzip/128k defaults and decompresses faster at runtime.
-    { root = "system", filesystem = { type = "squashfs", additional-options = [
+    { root = "system", size = "5GiB", filesystem = { type = "squashfs", additional-options = [
         "-comp",
         "zstd",
         "-b",
@@ -110,7 +129,7 @@ target = "unknown"
 [systems.umbrelos-mender-amd64.image.layout]
 type = "gpt"
 partitions = [
-    { root = "system", filesystem = { type = "ext4", additional-options = [
+    { root = "system", size = "8GiB", filesystem = { type = "ext4", additional-options = [
         "-O",
         "^metadata_csum_seed,^has_journal",
         "-E",

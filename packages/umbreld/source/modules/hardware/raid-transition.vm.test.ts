@@ -2,8 +2,8 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {FailsafeTransitionStatus} from './raid.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import type {FailsafeTransitionStatus} from './raid.ts'
 
 describe('RAID storage to failsafe transition', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

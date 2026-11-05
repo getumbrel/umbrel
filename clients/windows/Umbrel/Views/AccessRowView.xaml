@@ -1,0 +1,70 @@
+<UserControl x:Class="Umbrel.Views.AccessRowView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Umbrel.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:AccessRow}"
+             Opacity="{Binding Opacity}">
+  <!-- macOS AccessRow. Copy sits over the row as a sibling, not inside the row button,
+       so the hover is on this outer border to cover both. -->
+  <Border>
+    <Border.Style>
+      <Style TargetType="Border">
+        <Setter Property="Background" Value="Transparent" />
+        <Style.Triggers>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter Property="Background" Value="#0FFFFFFF" />
+          </Trigger>
+        </Style.Triggers>
+      </Style>
+    </Border.Style>
+    <Grid>
+      <Button Style="{StaticResource LinkButton}" Click="Open_Click"
+              AutomationProperties.Name="{Binding Host, StringFormat='Open {0} in your browser'}"
+              AutomationProperties.ItemStatus="{Binding AvailabilityText}">
+        <Border Background="Transparent" Padding="10">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding Host}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TitleBrush}"
+                       TextWrapping="NoWrap" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center"
+                        Visibility="{Binding IsTailscale, Converter={StaticResource BoolToVisibility}}">
+              <Image Source="{Binding Source={x:Static vm:AccessRow.TailscaleIconPath}}" Width="12" Height="12"
+                     RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center">
+                <Image.Clip>
+                  <RectangleGeometry Rect="0,0,12,12" RadiusX="3" RadiusY="3" />
+                </Image.Clip>
+              </Image>
+              <TextBlock Text="Tailscale" FontSize="9" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
+                         TextWrapping="NoWrap" Margin="4,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <!-- Kept clear for the copy button that sits on top of it. -->
+            <Border Grid.Column="3" Width="12" Height="12" Margin="8,0,0,0" />
+            <!-- OpenInNewWindow (macOS arrow.up.right). -->
+            <TextBlock Grid.Column="4" Text="&#xE8A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12"
+                       Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+      </Button>
+      <Button x:Name="CopyButton" Style="{StaticResource LinkButton}" HorizontalAlignment="Right" VerticalAlignment="Center"
+              Margin="0,0,24,0" Click="Copy_Click" ToolTip="Copy address" AutomationProperties.Name="Copy address">
+        <Border Background="Transparent" Padding="6">
+          <!-- Copy, then CheckMark once copied (macOS doc.on.doc and checkmark). -->
+          <TextBlock x:Name="CopyGlyph" Text="&#xE8C8;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12"
+                     Foreground="{StaticResource MutedBrush}" />
+        </Border>
+      </Button>
+      <!-- The Mac divider is 0.5pt; layout rounding would turn 0.5 into nothing at 100% scale. -->
+      <Rectangle Height="1" VerticalAlignment="Top" Fill="#0FFFFFFF" IsHitTestVisible="False"
+                 Visibility="{Binding HasDivider, Converter={StaticResource BoolToVisibility}}" />
+    </Grid>
+  </Border>
+</UserControl>

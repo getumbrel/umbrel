@@ -3,8 +3,8 @@ import path from 'node:path'
 import {$} from 'execa'
 import fse from 'fs-extra'
 
-import type Umbreld from '../../index.js'
-import {reboot} from './system.js'
+import type Umbreld from '../../index.ts'
+import {reboot} from './system.ts'
 
 const BACKUP_PREFIX = 'umbrel-factory-reset'
 const RAID_FACTORY_RESET_PREPARE_HOOK = '/etc/rugix/hooks/state-reset/prepare/10-umbrel.sh'
@@ -15,13 +15,20 @@ const RAID_FACTORY_RESET_PREPARE_HOOK = '/etc/rugix/hooks/state-reset/prepare/10
 // state in the background after umbreld starts.
 export async function performReset(umbreld: Umbreld) {
 	const isRunningFromRaidData = await umbreld.hardware.raid.isRunningFromRaidData().catch(() => false)
+	const dataMountFailed = await umbreld.hardware.raid.checkRaidMountFailure().catch(() => false)
 
-	if (isRunningFromRaidData) {
+	if (isRunningFromRaidData || dataMountFailed) {
 		// Rugix resets the active data mount. When that mount is the RAID dataset,
 		// using Rugix would move/reset the previous install and hide the saved boot
 		// config needed for onboarding recovery. For RAID-backed data we only reset
 		// the boot/internal state: clear the config partition, wipe the boot disk
 		// data partition, leave the RAID pool untouched, then reboot to onboarding.
+		//
+		// The same applies when the data mount failed at boot (recovery mode). Rugix
+		// then keeps its state in the RAM-backed /run, so a Rugix state reset would
+		// write its reset flag somewhere that is discarded on reboot, and fails
+		// outright once /run fills up, after the hook has already wiped the data
+		// partition. The hook alone performs the reset in that state.
 		await $`${RAID_FACTORY_RESET_PREPARE_HOOK}`
 		await reboot()
 		return

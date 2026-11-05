@@ -2,7 +2,7 @@
 // loads of stuff from the backend and blows up.
 
 // Export the router type for use in clients in other packages
-export type {AppRouter} from './index.js'
+export type {AppRouter} from './index.ts'
 
 // RPCs that MUST use HTTP (cookie/header semantics). Clients use this list for split-link routing.
 export const httpOnlyPaths = [
@@ -34,4 +34,8 @@ export const httpOnlyPaths = [
 	'system.shutdown',
 	// bootstraps local HTTPS trust and sets a no-store response header
 	'system.localHttpsIdentity',
+	// The full catalog is about 1 MB. Over WebSocket the keepalive pong queues behind it,
+	// so on a slow link the pong timeout closes the socket before the response lands
+	// and the query never completes. HTTP has no such deadline.
+	'appStore.registry',
 ] as const

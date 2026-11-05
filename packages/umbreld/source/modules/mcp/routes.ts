@@ -1,6 +1,6 @@
 import {z} from 'zod'
 
-import {privateProcedure, router} from '../server/trpc/trpc.js'
+import {privateProcedure, router} from '../server/trpc/trpc.ts'
 
 const permissions = z
 	.object({

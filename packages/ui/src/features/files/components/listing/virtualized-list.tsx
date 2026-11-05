@@ -18,6 +18,7 @@ import {
 import {getItemKey} from '@/features/files/utils/get-item-key'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useHomeFit} from '@/modules/desktop/home-fit'
 
 // Hook to detect scroll in react-window components so we can apply custom fade styling
 const useScrollFade = () => {
@@ -91,6 +92,7 @@ const INFINITE_LOADER_THRESHOLD = 100
 
 interface VirtualizedListProps {
 	items: FileSystemItem[]
+	hiddenRenamedPaths?: string[]
 	hasMore: boolean
 	isLoading: boolean
 	onLoadMore: (startIndex: number) => Promise<boolean>
@@ -149,19 +151,22 @@ interface GridItemData {
 // Trailing scroll room inside the virtualized content so the last row can be
 // scrolled up past the bottom fade and read comfortably. Extends the scrollable
 // height without shrinking the viewport (which must stay flush with the card edge).
-const SCROLL_END_SPACER_PX = 28
+const SCROLL_END_SPACER_PX = LISTING_FADE_BOTTOM_PX
+const SCROLL_END_SPACER_UNDER_DOCK_PX = 96
 const InnerElementWithEndSpacer = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
 	function InnerElementWithEndSpacer({style, ...rest}, ref) {
+		// On a phone on its side the card runs under the dock, so the end clears it
+		const {low} = useHomeFit()
+		const endSpacer = low ? SCROLL_END_SPACER_UNDER_DOCK_PX : SCROLL_END_SPACER_PX
 		const height =
-			typeof style?.height === 'number'
-				? style.height + SCROLL_END_SPACER_PX
-				: `calc(${style?.height} + ${SCROLL_END_SPACER_PX}px)`
+			typeof style?.height === 'number' ? style.height + endSpacer : `calc(${style?.height} + ${endSpacer}px)`
 		return <div ref={ref} style={{...style, height}} {...rest} />
 	},
 )
 
 export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	items,
+	hiddenRenamedPaths,
 	hasMore,
 	isLoading,
 	onLoadMore,
@@ -174,21 +179,31 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	const {width, height} = useContainerSize(containerRef)
 	// Bring a programmatically-selected item into view: type-ahead search, a
 	// freshly created folder, and deep links (e.g. the Recents widget or cmdk)
-	// all select without scrolling. Each new single selection is handled once,
-	// so later data refreshes never yank a scroll position the user has since
-	// changed. If the selected item isn't loaded yet (a deep link into a large
-	// directory), keep paging until it appears — onLoadMore self-guards against
-	// duplicate in-flight requests.
+	// all select without scrolling. Reveal once using current metadata so later
+	// server updates do not interrupt manual scrolling. Missing deep links keep
+	// paging; renames only follow within the loaded range.
 	const selectedItems = useFilesStore((s) => s.selectedItems)
 	const selectedPath = selectedItems.length === 1 ? selectedItems[0].path : undefined
+	// Match the selected object so a later deep link to the same path is not
+	// mistaken for the rename that left this optimistic entry behind.
+	const isRenameSelection = useFilesStore((s) =>
+		s.incomingItems.some((item) => item === selectedItems[0] && !!item.renamedFrom),
+	)
 	const handledSelectionRef = useRef<string | null>(null)
 	useEffect(() => {
 		handledSelectionRef.current = null
 	}, [selectedPath])
 	useEffect(() => {
 		if (!selectedPath || handledSelectionRef.current === selectedPath) return
+		if (isRenameSelection && hiddenRenamedPaths?.includes(selectedPath)) {
+			// Do not fetch pages for this rename or jump when it arrives later.
+			handledSelectionRef.current = selectedPath
+			return
+		}
 		const index = items.findIndex((item) => item.path === selectedPath)
 		if (index === -1) {
+			// The store can update before the listing supplies its rename result.
+			if (isRenameSelection) return
 			if (hasMore) onLoadMore(items.length)
 			return
 		}
@@ -208,7 +223,18 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 			scrollEl.scrollTo({top: itemBottom - clientHeight + LISTING_FADE_BOTTOM_PX})
 		}
 		handledSelectionRef.current = selectedPath
-	}, [selectedPath, items, hasMore, onLoadMore, view, width, isMobile, scrollAreaRef])
+	}, [
+		selectedPath,
+		isRenameSelection,
+		hiddenRenamedPaths,
+		items,
+		hasMore,
+		onLoadMore,
+		view,
+		width,
+		isMobile,
+		scrollAreaRef,
+	])
 
 	const isItemsEmpty = items.length === 0
 

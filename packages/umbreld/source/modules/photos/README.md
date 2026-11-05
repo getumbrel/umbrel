@@ -26,7 +26,10 @@ unbounded file list) use the shared reader. Album lists aggregate memberships an
 choose covers; filtered neighbors materialize the matching collection. Neither
 can occupy the reader reserved for quick requests. Paged album/source browsing
 without text search and neighbors without album/source/text filters remain quick
-requests, which can use both readers when capacity is available.
+requests, which can use both readers when capacity is available. The map's
+points, and lists and neighbors narrowed to a stretch of the map (`bounds`), use
+the shared reader too: no index knows where anything was taken, so they read the
+library.
 
 Two readers balance responsiveness with limited RAM. Device tests using SQLite's
 default cache found that reserving one reader removed most thumbnail queuing
@@ -123,11 +126,24 @@ later background enrichment pass.
 
 ## Upgrade and rollback (2.0 rollout)
 
-The final file-index schema is **20** and the durable Photos schema is **9**.
+The final file-index schema is **22** and the durable Photos schema is **11**.
 Schema 19 adds stored indexing counters. Schema 20 removes the duplicated source
 name; durable schema 9 replaces the v8 source-update trigger so name-only changes
 do not invalidate the account. Existing v18/v19 indexes upgrade in place, and the
 source-name migration preserves their stored library rows.
+
+Durable schema 10 records the platform each phone's app reports. Schema 11 adds
+two columns to iPhone backup receipts: the PhotoKit cloud identifier and resource
+role a newer app reports. An index over the cloud identifier serves claims by a
+phone continuing another's backup. Existing receipts upgrade in place with no
+cloud identifier. Neither column is a library input, so the upgrade changes no
+stored library rows.
+
+File-index schema 22 changes no tables. Media without an embedded date now uses
+its source date, else the earlier of its modification and birth dates, so the migration
+journals exactly those items and the next Photos sync recomputes their stored
+dates through ordinary incremental maintenance, or one account rebuild above the
+usual threshold. Schema 21 adds directory sizes for Files.
 
 On the first upgrade from a build without stored library tables, startup builds
 the projection and indexing counters from the existing index. This is synchronous
@@ -140,8 +156,8 @@ for the measured cost and its limits.
 **OS rollback does not roll back persistent application data.** Existing Photos
 migration policy rejects a durable schema newer than the running code understands,
 preserving `umbrel.db` rather than deleting it or guessing how to downgrade it.
-After this update, a fallback build supporting only Photos schema 7 or 8 therefore
-cannot serve Photos. The disposable file index can be recreated by older code;
+After this update, a fallback build supporting only Photos schema 10 or earlier
+therefore cannot serve Photos. The disposable file index can be recreated by older code;
 ordinary Files indexing remains available when Photos is unavailable.
 
 For a 2.0 rollout, retain a supported pre-upgrade data backup if a data rollback is

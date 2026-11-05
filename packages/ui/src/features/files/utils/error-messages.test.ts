@@ -1,6 +1,6 @@
 import {describe, expect, test, vi} from 'vitest'
 
-import {getFilesApiErrorMessage} from './error-messages'
+import {getFilesApiErrorMessage, getFilesErrorMessage} from './error-messages'
 
 vi.mock('@/utils/i18n', () => ({t: (key: string) => key}))
 
@@ -17,4 +17,10 @@ describe('getFilesApiErrorMessage', () => {
 			expect(getFilesApiErrorMessage(responseText, 'fallback')).toBe('fallback')
 		},
 	)
+})
+
+describe('getFilesErrorMessage', () => {
+	test('translates a forbidden path instead of showing the raw code and path', () => {
+		expect(getFilesErrorMessage("[forbidden] '/Home'")).toBe('files-backend-error.forbidden')
+	})
 })

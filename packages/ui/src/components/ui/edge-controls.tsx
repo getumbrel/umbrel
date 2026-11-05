@@ -55,9 +55,10 @@ export function SearchField({
 	className?: string
 }) {
 	return (
-		<div
+		// A label, so a tap anywhere on the pill, not just on the line of text, goes to the field
+		<label
 			className={cn(
-				'settings-edge-material flex h-11 w-[184px] shrink-0 items-center gap-2 overflow-hidden rounded-24 bg-white/6 px-3 text-white/70 transition-colors duration-200 focus-within:bg-white/12 focus-within:text-white hover:bg-white/9',
+				'settings-edge-material flex h-11 w-[184px] shrink-0 cursor-text items-center gap-2 overflow-hidden rounded-24 bg-white/6 px-3 text-white/70 transition-colors duration-200 focus-within:bg-white/12 focus-within:text-white hover:bg-white/9',
 				className,
 			)}
 		>
@@ -72,7 +73,7 @@ export function SearchField({
 				aria-label={label}
 				className='min-w-0 flex-1 bg-transparent text-12 text-white outline-hidden placeholder:text-white/50'
 			/>
-		</div>
+		</label>
 	)
 }
 

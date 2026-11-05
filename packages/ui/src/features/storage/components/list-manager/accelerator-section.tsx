@@ -13,6 +13,7 @@ import {
 	StorageDevice,
 } from '../../hooks/use-storage'
 import {formatStorageSize, hasRaidErrors, recommendedSsdSizeLabel} from '../../utils'
+import {OtherDrives} from '../other-drives'
 import {DriveActionButton, ReadyToReplacePill, ReplaceIcon} from './drive-card'
 import {DriveLed, SsdChip} from './drive-visuals'
 import {PairCard, PairPlaceholderCell} from './mirror-pair-card'
@@ -66,15 +67,15 @@ function AcceleratorCell({
 				className={cn(!device && 'opacity-40')}
 				led={getAcceleratorLed(member)}
 			/>
-			<div className='flex flex-col items-center gap-0.5 text-center'>
-				<span className='max-w-full truncate text-[15px] font-medium text-white'>
+			<div className='flex w-full min-w-0 flex-col items-center gap-0.5 text-center'>
+				<span className='max-w-full truncate text-[15px] font-medium text-white' title={device?.name}>
 					{device ? device.name : t('storage-manager.missing-drive')}
 				</span>
 				{/* Missing members show their id truncated from the start so the serial stays visible */}
 				<span
 					dir={device ? undefined : 'rtl'}
-					className={cn('truncate text-13 text-white/50', device ? 'max-w-full' : 'max-w-[200px]')}
-					title={device ? undefined : member?.id}
+					className='max-w-full truncate text-13 text-white/50'
+					title={device ? device.serial : member?.id}
 				>
 					{device ? device.serial : member?.id}
 				</span>
@@ -139,7 +140,7 @@ function AcceleratorEmptyState({failsafe}: {failsafe: boolean}) {
 	if (memorySizeQ.isLoading) return null
 	return (
 		<div className='flex w-full flex-col gap-4 rounded-12 bg-white/5 p-4 sm:flex-row sm:items-center'>
-			<div className='flex shrink-0 flex-col gap-1.5'>
+			<div className='flex shrink-0 gap-1.5 sm:flex-col'>
 				{(failsafe ? [1, 2] : [1]).map((number) => (
 					<SsdChip key={number} sizeLabel={sizeLabel} />
 				))}
@@ -217,6 +218,18 @@ export function AcceleratorSection({
 		replacementCandidate && candidateSsds.some((ssd) => ssd.id === replacementCandidate.id)
 			? replacementCandidate
 			: undefined
+	// Keep every unused SSD visible. The proposed FailSafe pair and any replacement
+	// candidate already have their own cards and must not appear twice.
+	const otherSsds = acceleratorExists
+		? candidates.filter((ssd) => ssd.id !== unpooledCandidate?.id)
+		: isFailsafe
+			? candidates.slice(2)
+			: []
+	const setupDescription = isFailsafe
+		? candidates.length === 1
+			? t('storage-manager.ssd-acceleration.needs-pair')
+			: t('storage-manager.ssd-acceleration.ready-pair')
+		: t('storage-manager.ssd-acceleration.choose-ssd')
 
 	let content: React.ReactNode
 	if (acceleratorExists && !isFailsafe) {
@@ -340,15 +353,32 @@ export function AcceleratorSection({
 					{acceleratorExists && <TbCircleCheckFilled className='size-4 text-brand' />}
 				</span>
 				<p className='text-13 leading-snug text-white/40'>{t('storage-manager.ssd-acceleration.description')}</p>
+				{!acceleratorExists && candidates.length > 0 && (
+					<p className='text-13 leading-relaxed text-white/50'>{setupDescription}</p>
+				)}
 			</div>
 			{content}
 			{unpooledCandidate && (
-				<AcceleratorRow
-					device={unpooledCandidate}
-					onClick={() => onHealthClick(unpooledCandidate)}
-					action={<ReadyToReplacePill />}
-				/>
+				<div className='flex flex-col gap-1'>
+					<AcceleratorRow
+						device={unpooledCandidate}
+						onClick={() => onHealthClick(unpooledCandidate)}
+						action={<ReadyToReplacePill />}
+					/>
+					<p className='text-13 leading-relaxed text-white/50'>{t('storage-manager.ready-to-replace-description')}</p>
+				</div>
 			)}
+			<OtherDrives
+				drives={otherSsds}
+				description={
+					<p>
+						{acceleratorExists
+							? t('storage-manager.other-drives.acceleration-enabled')
+							: t('storage-manager.other-drives.acceleration-pair-selected')}
+					</p>
+				}
+				onHealthClick={onHealthClick}
+			/>
 		</div>
 	)
 }

@@ -5,12 +5,12 @@ import {fileURLToPath} from 'node:url'
 import express from 'express'
 import {createProxyMiddleware} from 'http-proxy-middleware'
 
-import type Umbreld from '../../index.js'
-import {appGatewayTokenFromRequest, clearAppGatewayCookies, setAppGatewayCookie} from '../auth/app-gateway-cookie.js'
-import {SessionIssuanceInvalidatedError} from '../auth/auth.js'
-import {serializeAccountAvatar, serveAccountAvatar} from '../user/avatar-api.js'
-import {OWNER_USER_ID} from '../user/constants.js'
-import {resolveWallpaperAppearance} from '../user/wallpapers.js'
+import type Umbreld from '../../index.ts'
+import {appGatewayTokenFromRequest, clearAppGatewayCookies, setAppGatewayCookie} from '../auth/app-gateway-cookie.ts'
+import {SessionIssuanceInvalidatedError} from '../auth/auth.ts'
+import {serializeAccountAvatar, serveAccountAvatar} from '../user/avatar-api.ts'
+import {OWNER_USER_ID} from '../user/constants.ts'
+import {resolveWallpaperAppearance} from '../user/wallpapers.ts'
 
 type AppAuthRequest = {
 	appId: string

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Only taken on devices before T extension 7, where the Wi-Fi stack filters mDNS. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- A transfer the user starts runs as a user-initiated data transfer job on Android 14+
+         and as a WorkManager long-running worker with a dataSync foreground service on
+         Android 11 to 13. Automatic backup runs as ordinary WorkManager jobs. -->
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
+    <!-- JobScheduler persists the user-initiated transfer across reboots only with this. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <!-- Without it MediaStore serves photos and videos with their location removed. -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+
+    <application>
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
+        <!-- Scheduled only on Android 14+, where user-initiated data transfer jobs exist. -->
+        <service
+            android:name="com.umbrel.kit.backup.PhotoBackupTransferService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            tools:targetApi="34" />
+
+        <receiver
+            android:name="com.umbrel.kit.backup.PhotoBackupPauseReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

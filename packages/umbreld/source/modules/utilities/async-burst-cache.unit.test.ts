@@ -1,6 +1,6 @@
 import {afterEach, expect, test, vi} from 'vitest'
 
-import AsyncBurstCache from './async-burst-cache.js'
+import AsyncBurstCache from './async-burst-cache.ts'
 
 afterEach(() => vi.useRealTimers())
 

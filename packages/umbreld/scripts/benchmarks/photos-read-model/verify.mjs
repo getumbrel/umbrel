@@ -247,11 +247,10 @@ else if (mode === 'reads') {
 			cases = makeCases(db)
 		db.close()
 		for (const test of cases) {
-			const child = spawnSync(
-				process.execPath,
-				['--import', 'tsx', new URL(import.meta.url).pathname, 'read-case', profile, test.name],
-				{stdio: 'inherit', timeout: 75000},
-			)
+			const child = spawnSync(process.execPath, [new URL(import.meta.url).pathname, 'read-case', profile, test.name], {
+				stdio: 'inherit',
+				timeout: 75000,
+			})
 			if (child.error) throw child.error
 			if (child.status !== 0) throw new Error(`${profile}/${test.name} failed: ${child.status ?? child.signal}`)
 		}

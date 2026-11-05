@@ -2,6 +2,14 @@
 	"extends": "@tsconfig/node22/tsconfig.json",
 	"compilerOptions": {
 		"lib": ["ES2023"],
-		"resolveJsonModule": true
+		"resolveJsonModule": true,
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		// umbreld runs its TypeScript sources directly with Node's built-in type
+		// stripping, which needs .ts import specifiers and only erasable syntax.
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"erasableSyntaxOnly": true
 	}
 }

@@ -31,6 +31,9 @@ type Chip = {
 	tooltip?: string
 	className: string
 	onClick?: () => void
+	/** Show only the glyph on phones. Just for a glyph that reads on its own: the
+	 * warnings share one, and tooltips don't open on touch, so they keep their label */
+	glyphOnPhones?: boolean
 }
 
 // Keep these as *TKey properties: update-translations.js recognizes that
@@ -155,6 +158,7 @@ export function CloudBanner({path}: {path: string}) {
 				label: t('files-cloud.chip-up-to-date'),
 				tooltip: t('files-cloud.banner-updated', {ago: relative(cloud.lastSuccessfulAt)}),
 				className: 'text-green-400',
+				glyphOnPhones: true,
 			}
 		}
 		return {label: t('files-cloud.chip-waiting'), className: 'text-white/60'}
@@ -194,12 +198,12 @@ export function CloudBanner({path}: {path: string}) {
 										)}
 									>
 										{ChipIcon && <ChipIcon className='size-3.5' />}
-										<span className={cn(ChipIcon && 'hidden sm:inline')}>{chip.label}</span>
+										<span className={cn(chip.glyphOnPhones && 'max-sm:sr-only')}>{chip.label}</span>
 									</button>
 								) : (
 									<span className={cn('flex shrink-0 cursor-default items-center gap-1 text-12', chip.className)}>
 										{ChipIcon && <ChipIcon className='size-3.5' />}
-										<span className={cn(ChipIcon && 'hidden sm:inline')}>{chip.label}</span>
+										<span className={cn(chip.glyphOnPhones && 'max-sm:sr-only')}>{chip.label}</span>
 									</span>
 								)}
 							</TooltipTrigger>

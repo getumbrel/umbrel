@@ -88,9 +88,12 @@ const PLATE_SPRING = {type: 'spring' as const, stiffness: 190, damping: 24, mass
 // The elliptical path as keyframes, relative to the satellite's resting point
 // so the loop starts and ends at zero and the morph to the picker can catch it
 // anywhere mid-flight. Depth follows the vertical position: at the bottom of
-// the ellipse a satellite is near (larger, above its ring-mates), at the top
-// it is far (smaller, slipping behind them and the umbrel). The z flip is
-// what sells the tilted orbital plane.
+// the ellipse a satellite is near (larger), at the top it is far (smaller).
+// The samples are whole `transform` strings rather than separate x, y and
+// scale values: animating `transform` directly lets Motion hand the loop to
+// the browser's compositor, so it keeps running while the main thread is
+// busy. Motion cannot animate z-index, so each satellite keeps the z of its
+// starting angle.
 const ORBIT_STEPS = 24
 function orbitKeyframes(slot: SatelliteSlot) {
 	const ring = ORBIT_RINGS[slot.ring]
@@ -100,10 +103,11 @@ function orbitKeyframes(slot: SatelliteSlot) {
 	return {
 		baseX: ring.rx * Math.cos(theta),
 		baseY: ring.ry * Math.sin(theta),
-		x: samples.map((a) => ring.rx * (Math.cos(a) - Math.cos(theta))),
-		y: samples.map((a) => ring.ry * (Math.sin(a) - Math.sin(theta))),
-		scale: samples.map((a) => 0.85 + 0.3 * depth(a)),
-		zIndex: samples.map((a) => Math.round(4 + 12 * depth(a))),
+		transform: samples.map(
+			(a) =>
+				`translate(${ring.rx * (Math.cos(a) - Math.cos(theta))}px, ${ring.ry * (Math.sin(a) - Math.sin(theta))}px) scale(${0.85 + 0.3 * depth(a)})`,
+		),
+		zIndex: Math.round(4 + 12 * depth(theta)),
 		duration: ring.duration,
 	}
 }
@@ -342,16 +346,9 @@ export function CloudConstellation({
 			<motion.button
 				key={`${entry.id}-${view}`}
 				layoutId={`cloud-tile-${entry.id}`}
-				animate={orbiting ? {x: orbit.x, y: orbit.y, scale: orbit.scale, zIndex: orbit.zIndex} : undefined}
+				animate={orbiting ? {transform: orbit.transform} : undefined}
 				transition={
-					orbiting
-						? {
-								x: {duration: orbit.duration, repeat: Infinity, ease: 'linear'},
-								y: {duration: orbit.duration, repeat: Infinity, ease: 'linear'},
-								scale: {duration: orbit.duration, repeat: Infinity, ease: 'linear'},
-								zIndex: {duration: orbit.duration, repeat: Infinity, ease: 'linear'},
-							}
-						: layoutTransition
+					orbiting ? {transform: {duration: orbit.duration, repeat: Infinity, ease: 'linear'}} : layoutTransition
 				}
 				type='button'
 				disabled={isPitch}
@@ -381,6 +378,7 @@ export function CloudConstellation({
 								position: 'absolute',
 								left: `calc(50% + ${orbit.baseX - slot.size / 2}px)`,
 								top: `calc(50% + ${orbit.baseY - slot.size / 2}px)`,
+								zIndex: orbit.zIndex,
 							}
 						: undefined
 				}

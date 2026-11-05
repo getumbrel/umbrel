@@ -245,7 +245,7 @@ function DependencyAction({
 				disabled={state !== 'not-installed'}
 				style={{['--progress-button-bg' as string]: 'hsl(var(--color-brand))'}}
 			>
-				{transitioning ? appStateToString(state, t) + '...' : t('app.install')}
+				{transitioning ? appStateToString(state, t) + '…' : t('app.install')}
 				{showProgress && (
 					<span className='ml-1 inline-block w-[4ch] text-right opacity-60'>{Math.round(appInstall.progress!)}%</span>
 				)}

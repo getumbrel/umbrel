@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {defaultWallpaperId, resolveWallpaperAppearance, wallpapers} from './wallpapers.js'
+import {defaultWallpaperId, resolveWallpaperAppearance, wallpapers} from './wallpapers.ts'
 
 describe('wallpaper catalog', () => {
 	test('has one entry per id', () => {

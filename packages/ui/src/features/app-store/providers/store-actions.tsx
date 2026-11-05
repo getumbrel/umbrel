@@ -20,6 +20,8 @@ type StoreActionsContextT = {
 	installApp: InstallDependency
 	updateApp: (app: RegistryApp) => void
 	openApp: (appId: string) => void
+	/** Undefined for members, who can't start apps */
+	startApp: ((appId: string) => void) | undefined
 	isAppIdAmbiguous: (appId: string) => boolean
 	pendingStates: ReadonlyMap<string, AppState>
 }
@@ -86,6 +88,40 @@ export function StoreActionsProvider({children}: {children: React.ReactNode}) {
 	// The same optimistic seeding and refresh as every other update surface
 	const updateMut = useUpdateAppMutation()
 
+	// Starting and restarting don't return until the app is up, so the card
+	// shows the transition from the moment the mutation starts
+	const seedLifecycleState = (appId: string, state: 'starting' | 'restarting') => {
+		setPendingState(appId, state)
+		utils.apps.state.cancel()
+		utils.apps.state.setData({appId}, {state, progress: 0})
+	}
+	const settleLifecycle = (appId: string) => {
+		finishAppAction(appId)
+		setPendingState(appId)
+		utils.apps.state.invalidate({appId})
+		utils.apps.list.invalidate()
+	}
+	const startMut = trpcReact.apps.start.useMutation({
+		onMutate: ({appId}) => seedLifecycleState(appId, 'starting'),
+		onSettled: (_data, _error, {appId}) => settleLifecycle(appId),
+		onError: (error) =>
+			toast.error(t('app.toast.start-failed'), {area: 'app-store', description: stripErrorCode(error.message)}),
+	})
+	const restartMut = trpcReact.apps.restart.useMutation({
+		onMutate: ({appId}) => seedLifecycleState(appId, 'restarting'),
+		onSettled: (_data, _error, {appId}) => settleLifecycle(appId),
+		onError: (error) =>
+			toast.error(t('app.toast.restart-failed'), {area: 'app-store', description: stripErrorCode(error.message)}),
+	})
+
+	// What tapping a stopped app's home screen icon does: start it, or restart
+	// one whose state is unknown
+	const startApp = (appId: string) => {
+		if (!beginAppAction(appId)) return
+		if (userAppsKeyed?.[appId]?.state === 'unknown') restartMut.mutate({appId})
+		else startMut.mutate({appId})
+	}
+
 	const installApp: InstallDependency = async (app, presentDialog) => {
 		if (!userQ.data) return
 		if (isMember) return void toast(t('app-store.ask-owner-to-install'), {area: 'app-store'})
@@ -133,6 +169,8 @@ export function StoreActionsProvider({children}: {children: React.ReactNode}) {
 				installApp,
 				updateApp,
 				openApp: launchApp,
+				// Only once the account is known to be the owner's: members can't start apps
+				startApp: userQ.data?.role === 'owner' ? startApp : undefined,
 				isAppIdAmbiguous: (appId) => ambiguousAppIds?.has(appId) ?? false,
 				pendingStates,
 			}}

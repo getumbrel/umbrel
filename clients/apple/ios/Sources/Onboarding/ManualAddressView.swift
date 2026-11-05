@@ -1,4 +1,5 @@
 import SwiftUI
+import UmbrelKit
 
 // A verified alternate route for an Umbrel the completed scan did not show. A
 // successful check opens sign-in directly; the device is not saved beforehand.
@@ -8,10 +9,18 @@ struct ManualAddressView: View {
 	@State private var address = ""
 	@State private var error: String?
 	@State private var updateRequiredHost: String?
+	// A current Umbrel answered here but couldn't prove its identity
+	@State private var unverified: Umbreld.UnverifiedDevice?
 	@State private var isConnecting = false
 	@State private var showingSignIn = false
 	@State private var connectionTask: Task<Void, Never>?
 	@FocusState private var addressFocused: Bool
+
+	// The arguments seed the canvas preview; the flow starts empty
+	init(address: String = "", unverified: Umbreld.UnverifiedDevice? = nil) {
+		_address = State(initialValue: address)
+		_unverified = State(initialValue: unverified)
+	}
 
 	var body: some View {
 		VStack(spacing: 0) {
@@ -52,6 +61,7 @@ struct ManualAddressView: View {
 					.onChange(of: address) {
 						error = nil
 						updateRequiredHost = nil
+						unverified = nil
 					}
 					.accessibilityLabel("Umbrel address")
 
@@ -64,10 +74,23 @@ struct ManualAddressView: View {
 
 				if updateRequiredHost != nil {
 					VStack(alignment: .leading, spacing: 5) {
-						Text("Update required")
+						Text("Update to connect")
 							.font(.headline)
 							.foregroundStyle(.white)
 						Text("This Umbrel needs to be updated before it can connect to the app.")
+							.font(.footnote)
+							.foregroundStyle(Palette.textMuted)
+							.fixedSize(horizontal: false, vertical: true)
+					}
+					.padding(.top, 4)
+				}
+
+				if let unverified {
+					VStack(alignment: .leading, spacing: 5) {
+						Text("Couldn\u{2019}t connect")
+							.font(.headline)
+							.foregroundStyle(.white)
+						Text(unverified.reason.explanation)
 							.font(.footnote)
 							.foregroundStyle(Palette.textMuted)
 							.fixedSize(horizontal: false, vertical: true)
@@ -81,9 +104,25 @@ struct ManualAddressView: View {
 
 			Group {
 				if let updateRequiredHost {
-					OnboardingButton(title: "Open Umbrel", style: .prominent) {
+					OnboardingButton(title: "Update umbrelOS", style: .prominent) {
 						guard let url = URL(string: "http://\(updateRequiredHost)") else { return }
 						openURL(url)
+					}
+				} else if let unverified {
+					VStack(spacing: 6) {
+						OnboardingButton(title: "Try again", style: .prominent, isBusy: isConnecting, action: connect)
+						// umbrelOS may still open there
+						Button {
+							guard let url = URL(string: "http://\(unverified.host)") else { return }
+							openURL(url)
+						} label: {
+							Text("Open in browser")
+								.font(.subheadline.weight(.semibold))
+								.foregroundStyle(Palette.textMuted)
+								.frame(maxWidth: .infinity, minHeight: 44)
+								.contentShape(Rectangle())
+						}
+						.buttonStyle(.plain)
 					}
 				} else {
 					OnboardingButton(
@@ -124,6 +163,8 @@ struct ManualAddressView: View {
 			do {
 				let result = try await model.discoverManually(at: submittedAddress)
 				try Task.checkCancellation()
+				// Try again keeps the previous answer on screen until this one arrives
+				unverified = nil
 				switch result {
 				case .device(let device):
 					guard !model.savedIds.contains(device.id) else {
@@ -132,16 +173,31 @@ struct ManualAddressView: View {
 					}
 					model.selectedDevice = device
 					showingSignIn = true
+				case .unverified(let device):
+					unverified = device
 				case .updateRequired(let device):
 					updateRequiredHost = device.host
 				}
 			} catch is CancellationError {
 				return
 			} catch let connectionError {
+				unverified = nil
 				error = connectionError.localizedDescription
 			}
 			isConnecting = false
 			connectionTask = nil
 		}
 	}
+}
+
+// Harness for finessing the "Couldn't connect" answer in the Xcode canvas
+#Preview("Couldn't Connect") {
+	ZStack {
+		OnboardingBackground()
+		ManualAddressView(
+			address: "192.168.1.20",
+			unverified: Umbreld.UnverifiedDevice(host: "192.168.1.20", reason: .slow)
+		)
+	}
+	.environment(OnboardingModel())
 }

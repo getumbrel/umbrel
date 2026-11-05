@@ -5,7 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_DIR="${VM_STATE_DIR:-$SCRIPT_DIR/vm-state}"
 NVME_STATE_FILE="$STATE_DIR/nvme.json"
 HDD_STATE_FILE="$STATE_DIR/hdd.json"
+SAS_STATE_FILE="$STATE_DIR/sas.json"
 USB_STATE_FILE="$STATE_DIR/usb.json"
+USB_SERIAL_STATE_FILE="$STATE_DIR/usb-serial.json"
+USB_NET_STATE_FILE="$STATE_DIR/usb-net.json"
 QMP_SOCKET=""
 RUNNING_DEVICE_FILE="$STATE_DIR/running-device"
 
@@ -26,7 +29,12 @@ DEFAULT_HDD_SIZE="1T"
 DEFAULT_USB_STORAGE_SIZE="64G"
 MAX_NVME_SLOTS=8
 MAX_HDD_SLOTS=8
+MAX_SAS_SLOTS=8
 MAX_USB_STORAGE_SLOTS=8
+# One per USB 2 port on the serial adapters' own xHCI controller
+MAX_USB_SERIAL_SLOTS=4
+# Likewise for the network adapters' controller
+MAX_USB_NET_SLOTS=4
 
 # Get Umbrel Pro PCIe slot number for an NVMe slot.
 # Returns empty if no explicit mapping exists.
@@ -96,7 +104,8 @@ Usage: $0 <command> [options]
 Commands:
     boot [image]                   Boot VM from the given image (defaults to native arch image)
     reflash                        Delete boot disk overlay (simulates reflashing the OS)
-    reset                          Delete all VM state (overlay, NVMe disks, HDDs, UEFI vars)
+    reset                          Delete all VM state (overlay, NVMe disks, SATA/SAS drives, UEFI vars)
+    power-button                   Press the power button of the running VM (ACPI power button event)
 
     nvme list                      List all NVMe devices and their status
     nvme add <slot> [--size SIZE]  Add an NVMe device to slot (1-${MAX_NVME_SLOTS})
@@ -111,12 +120,41 @@ Commands:
     sata destroy <slot>            Destroy SATA device (deletes data)
     sata connect <slot>            Connect an existing SATA device to the VM
     sata disconnect <slot>         Disconnect a SATA device from the VM
+    sata move <from> <to>          Move a SATA device from one slot to another
+
+    sas list                       List all SAS slot devices and their status
+    sas add <slot> [--size SIZE] [--type hdd|ssd]
+                                   Add a HDD/SSD behind a SAS HBA to slot (1-${MAX_SAS_SLOTS})
+    sas destroy <slot>             Destroy SAS device (deletes data)
+    sas connect <slot>             Connect an existing SAS device to the VM
+    sas disconnect <slot>          Disconnect a SAS device from the VM
+    sas move <from> <to>           Move a SAS device from one slot to another
 
     usb list                       List all USB storage devices and their status
     usb add <slot> [--size SIZE]   Add a USB storage device to slot (1-${MAX_USB_STORAGE_SLOTS})
     usb destroy <slot>             Destroy USB storage device (deletes data)
     usb connect <slot>             Connect an existing USB storage device to the running VM
     usb disconnect <slot>          Disconnect USB storage from the running VM without deleting data
+
+    usb-serial list                Live USB serial adapters (FTDI, 0403:6001) and their status
+    usb-serial add <slot> [--serial SERIAL]
+                                   Add a USB serial adapter to slot (1-${MAX_USB_SERIAL_SLOTS}), plugged into port <slot>
+                                   of its own xHCI controller. Adapters get distinct serial numbers
+                                   unless one is given, so identical ones can share a serial number.
+    usb-serial remove <slot>       Remove the USB serial adapter from slot
+    usb-serial connect <slot>      Plug the USB serial adapter back into the running VM
+    usb-serial disconnect <slot>   Unplug the USB serial adapter from the running VM
+    usb-serial swap <slot>         Replace the adapter with a QEMU USB keyboard (0627:0001) in the same
+                                   port, or swap the keyboard back, as a device reconnecting as a
+                                   different model does once its firmware loads
+
+    usb-net list                   List USB network adapters (QEMU usb-net, 0525:a4a2) and their status
+    usb-net add <slot>             Add a USB network adapter to slot (1-${MAX_USB_NET_SLOTS}), plugged into port <slot>
+                                   of its own xHCI controller. Each one is on a network of its own,
+                                   10.0.<10 + slot>.0/24, which hands out addresses over DHCP.
+    usb-net remove <slot>          Remove the USB network adapter from slot
+    usb-net connect <slot>         Plug the USB network adapter back into the running VM
+    usb-net disconnect <slot>      Unplug the USB network adapter from the running VM
 
 Boot Options:
     --device <type>                Device to emulate: umbrel-pro, umbrel-home, nas, pi (default: ${DEFAULT_DEVICE})
@@ -133,8 +171,8 @@ Boot Options:
     --forward-port <host:guest>    Extra local TCP port forward to the VM, repeatable
 
 Disk Options:
-    --size <size>                  Disk size for nvme/sata/usb add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata, ${DEFAULT_USB_STORAGE_SIZE} usb)
-    --type <hdd|ssd>               For sata add only: set SATA device type (default: hdd)
+    --size <size>                  Disk size for nvme/sata/sas/usb add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata/sas, ${DEFAULT_USB_STORAGE_SIZE} usb)
+    --type <hdd|ssd>               For sata/sas add only: set device type (default: hdd)
 
 Environment Variables:
     VM_STATE_DIR                   Override state directory (default: ./vm-state)
@@ -149,6 +187,7 @@ Examples:
     $0 boot --arch arm64                           # Boot arm64 image
     $0 nvme add 1 --size 128G
     $0 sata add 1 --size 4T --type hdd
+    $0 sas add 1 --size 4T --type ssd
     $0 usb add 1 --size 128G
     $0 nvme list
     $0 sata list
@@ -210,8 +249,17 @@ init_state() {
   if [[ ! -f "$HDD_STATE_FILE" ]]; then
     echo '{}' > "$HDD_STATE_FILE"
   fi
+  if [[ ! -f "$SAS_STATE_FILE" ]]; then
+    echo '{}' > "$SAS_STATE_FILE"
+  fi
   if [[ ! -f "$USB_STATE_FILE" ]]; then
     echo '{}' > "$USB_STATE_FILE"
+  fi
+  if [[ ! -f "$USB_SERIAL_STATE_FILE" ]]; then
+    echo '{}' > "$USB_SERIAL_STATE_FILE"
+  fi
+  if [[ ! -f "$USB_NET_STATE_FILE" ]]; then
+    echo '{}' > "$USB_NET_STATE_FILE"
   fi
 }
 
@@ -275,6 +323,33 @@ get_hdd_disk_path() {
   echo "$STATE_DIR/hdd-slot${slot}.qcow2"
 }
 
+get_sas_disk_path() {
+  local slot="$1"
+  echo "$STATE_DIR/sas-slot${slot}.qcow2"
+}
+
+# SATA and SAS drive bays share one implementation, keyed by bus
+get_bay_state_file() {
+  local bus="$1"
+  if [[ "$bus" == "sas" ]]; then echo "$SAS_STATE_FILE"; else echo "$HDD_STATE_FILE"; fi
+}
+
+get_bay_max_slots() {
+  local bus="$1"
+  if [[ "$bus" == "sas" ]]; then echo "$MAX_SAS_SLOTS"; else echo "$MAX_HDD_SLOTS"; fi
+}
+
+get_bay_disk_path() {
+  local bus="$1"
+  local slot="$2"
+  if [[ "$bus" == "sas" ]]; then get_sas_disk_path "$slot"; else get_hdd_disk_path "$slot"; fi
+}
+
+get_bay_label() {
+  local bus="$1"
+  if [[ "$bus" == "sas" ]]; then echo "SAS drive"; else echo "HDD"; fi
+}
+
 get_usb_disk_path() {
   local slot="$1"
   echo "$STATE_DIR/usb-slot${slot}.qcow2"
@@ -321,22 +396,21 @@ disk_list() {
 
 nvme_list() { disk_list "NVMe" "$NVME_STATE_FILE" "$MAX_NVME_SLOTS"; }
 sata_list() { disk_list "SATA" "$HDD_STATE_FILE" "$MAX_HDD_SLOTS"; }
+sas_list() { disk_list "SAS" "$SAS_STATE_FILE" "$MAX_SAS_SLOTS"; }
 usb_list() { disk_list "USB Storage" "$USB_STATE_FILE" "$MAX_USB_STORAGE_SLOTS"; }
 
-sata_add() {
-  local slot="$1"
-  local size="$2"
-  local sata_type="$3"
+# Arguments: <bus> <slot> <size> <hdd|ssd>
+bay_add() {
+  local bus="$1"
+  local slot="$2"
+  local size="$3"
+  local drive_type="$4"
   local is_ssd="false"
-  if [[ "$sata_type" == "ssd" ]]; then
+  if [[ "$drive_type" == "ssd" ]]; then
     is_ssd="true"
   fi
-  hdd_add "$slot" "$size" "$is_ssd"
+  hdd_add "$bus" "$slot" "$size" "$is_ssd"
 }
-
-sata_destroy() { hdd_destroy "$1"; }
-sata_connect() { hdd_connect "$1"; }
-sata_disconnect() { hdd_disconnect "$1"; }
 
 # Add NVMe device
 nvme_add() {
@@ -479,21 +553,25 @@ nvme_move() {
   echo "NVMe device moved from slot $from_slot to slot $to_slot"
 }
 
-# Add HDD device
+# Add a drive to a SATA or SAS bay
+# Arguments: <bus> <slot> <size> <is_ssd>
 hdd_add() {
-  local slot="$1"
-  local size="$2"
-  local is_ssd="$3"
+  local bus="$1"
+  local slot="$2"
+  local size="$3"
+  local is_ssd="$4"
+  local state_file
+  state_file=$(get_bay_state_file "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local disk_path
-  disk_path=$(get_hdd_disk_path "$slot")
+  disk_path=$(get_bay_disk_path "$bus" "$slot")
 
   if [[ -f "$disk_path" ]]; then
-    echo "Error: HDD already exists in slot $slot" >&2
-    echo "Use 'sata destroy $slot' to remove it first" >&2
+    echo "Error: $(get_bay_label "$bus") already exists in slot $slot" >&2
+    echo "Use '$bus destroy $slot' to remove it first" >&2
     exit 1
   fi
 
@@ -503,96 +581,168 @@ hdd_add() {
     label="SATA SSD"
     serial_prefix="satassd"
   fi
+  # Every SAS device carries a unique NAA world wide name, which udev prefers over the
+  # serial for its ID. Persist one per drive so its ID is stable across boots.
+  local wwn=""
+  if [[ "$bus" == "sas" ]]; then
+    label="SAS ${label#SATA }"
+    serial_prefix="sas${serial_prefix#sata}"
+    wwn=$(printf '0x5000c500%02x%06x' "$slot" "$(( (RANDOM << 9 ^ RANDOM) & 0xffffff ))")
+  fi
   local serial="${serial_prefix}${slot}-$(date +%s)-${RANDOM}"
+  # QEMU rejects scsi-hd serials longer than 20 characters (the serial doubles as
+  # the device id), so keep SAS ones short: sas{hdd,ssd}N-<epoch><2 digits>.
+  if [[ "$bus" == "sas" ]]; then
+    serial="${serial_prefix}${slot}-$(date +%s)$((RANDOM % 100))"
+  fi
 
   echo "Creating ${label} in slot $slot (${size})..."
   qemu-img create -f qcow2 "$disk_path" "$size" >/dev/null
   local tmp
   tmp=$(mktemp)
-  jq --arg size "$size" --arg serial "$serial" --argjson is_ssd "$is_ssd" \
-    ".\"$slot\" = {\"size\": \$size, \"serial\": \$serial, \"connected\": true, \"exists\": true, \"ssd\": \$is_ssd}" \
-    "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
+  jq --arg size "$size" --arg serial "$serial" --argjson is_ssd "$is_ssd" --arg wwn "$wwn" \
+    ".\"$slot\" = {\"size\": \$size, \"serial\": \$serial, \"connected\": true, \"exists\": true, \"ssd\": \$is_ssd} + (if \$wwn == \"\" then {} else {\"wwn\": \$wwn} end)" \
+    "$state_file" > "$tmp" && mv "$tmp" "$state_file"
   echo "Done. ${label} created in slot $slot (serial: $serial)"
 }
 
-# Destroy HDD device
+# Destroy the drive in a SATA or SAS bay
+# Arguments: <bus> <slot>
 hdd_destroy() {
-  local slot="$1"
+  local bus="$1"
+  local slot="$2"
+  local state_file label
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local disk_path
-  disk_path=$(get_hdd_disk_path "$slot")
+  disk_path=$(get_bay_disk_path "$bus" "$slot")
 
   if [[ ! -f "$disk_path" ]]; then
-    echo "Error: No HDD in slot $slot" >&2
+    echo "Error: No $label in slot $slot" >&2
     exit 1
   fi
 
-  echo "Destroying HDD in slot $slot..."
+  echo "Destroying $label in slot $slot..."
   rm -f "$disk_path"
   local tmp
   tmp=$(mktemp)
-  jq "del(.\"$slot\")" "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
-  echo "Done. HDD in slot $slot destroyed"
+  jq "del(.\"$slot\")" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+  echo "Done. $label in slot $slot destroyed"
 }
 
-# Connect HDD device
+# Connect the drive in a SATA or SAS bay
+# Arguments: <bus> <slot>
 hdd_connect() {
-  local slot="$1"
+  local bus="$1"
+  local slot="$2"
+  local state_file label
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local disk_path
-  disk_path=$(get_hdd_disk_path "$slot")
+  disk_path=$(get_bay_disk_path "$bus" "$slot")
 
   if [[ ! -f "$disk_path" ]]; then
-    echo "Error: No HDD in slot $slot" >&2
-    echo "Use 'sata add $slot --type hdd' to create one first" >&2
+    echo "Error: No $label in slot $slot" >&2
+    echo "Use '$bus add $slot --type hdd' to create one first" >&2
     exit 1
   fi
 
   local connected
-  connected=$(jq -r ".\"$slot\".connected // empty" "$HDD_STATE_FILE")
+  connected=$(jq -r ".\"$slot\".connected // empty" "$state_file")
   if [[ "$connected" == "true" ]]; then
-    echo "HDD in slot $slot is already connected"
+    echo "$label in slot $slot is already connected"
     exit 0
   fi
 
   local tmp
   tmp=$(mktemp)
-  jq ".\"$slot\".connected = true" "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
-  echo "HDD in slot $slot connected (will be available on next boot)"
+  jq ".\"$slot\".connected = true" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+  echo "$label in slot $slot connected (will be available on next boot)"
 }
 
-# Disconnect HDD device
+# Disconnect the drive in a SATA or SAS bay
+# Arguments: <bus> <slot>
 hdd_disconnect() {
-  local slot="$1"
+  local bus="$1"
+  local slot="$2"
+  local state_file label
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
 
-  validate_slot "$slot" "$MAX_HDD_SLOTS"
+  validate_slot "$slot" "$(get_bay_max_slots "$bus")"
   init_state
 
   local exists
-  exists=$(jq -r ".\"$slot\".exists // empty" "$HDD_STATE_FILE")
+  exists=$(jq -r ".\"$slot\".exists // empty" "$state_file")
 
   if [[ "$exists" != "true" ]]; then
-    echo "Error: No HDD in slot $slot" >&2
+    echo "Error: No $label in slot $slot" >&2
     exit 1
   fi
 
   local connected
-  connected=$(jq -r ".\"$slot\".connected // empty" "$HDD_STATE_FILE")
+  connected=$(jq -r ".\"$slot\".connected // empty" "$state_file")
   if [[ "$connected" != "true" ]]; then
-    echo "HDD in slot $slot is already disconnected"
+    echo "$label in slot $slot is already disconnected"
     exit 0
   fi
 
   local tmp
   tmp=$(mktemp)
-  jq ".\"$slot\".connected = false" "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
-  echo "HDD in slot $slot disconnected (will be unavailable on next boot)"
+  jq ".\"$slot\".connected = false" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+  echo "$label in slot $slot disconnected (will be unavailable on next boot)"
+}
+
+# Move the drive in a SATA or SAS bay to another bay on the same controller, keeping
+# its serial and WWN like a physically re-seated disk
+# Arguments: <bus> <from_slot> <to_slot>
+hdd_move() {
+  local bus="$1"
+  local from_slot="$2"
+  local to_slot="$3"
+  local state_file label max_slots
+  state_file=$(get_bay_state_file "$bus")
+  label=$(get_bay_label "$bus")
+  max_slots=$(get_bay_max_slots "$bus")
+
+  validate_slot "$from_slot" "$max_slots"
+  validate_slot "$to_slot" "$max_slots"
+  init_state
+
+  if [[ "$from_slot" == "$to_slot" ]]; then
+    echo "Error: Source and destination slots are the same" >&2
+    exit 1
+  fi
+
+  local from_disk_path to_disk_path
+  from_disk_path=$(get_bay_disk_path "$bus" "$from_slot")
+  to_disk_path=$(get_bay_disk_path "$bus" "$to_slot")
+
+  if [[ ! -f "$from_disk_path" ]]; then
+    echo "Error: No $label in slot $from_slot" >&2
+    exit 1
+  fi
+
+  if [[ -f "$to_disk_path" ]]; then
+    echo "Error: Slot $to_slot already has a $label" >&2
+    echo "Use '$bus destroy $to_slot' to remove it first" >&2
+    exit 1
+  fi
+
+  mv "$from_disk_path" "$to_disk_path"
+  local tmp
+  tmp=$(mktemp)
+  jq ".\"$to_slot\" = .\"$from_slot\" | del(.\"$from_slot\")" "$state_file" > "$tmp" && mv "$tmp" "$state_file"
+
+  echo "$label moved from slot $from_slot to slot $to_slot"
 }
 
 # Add USB storage device
@@ -819,6 +969,326 @@ usb_connect() {
   echo "USB storage in slot $slot connected"
 }
 
+usb_serial_list() {
+  init_state
+  echo "USB Serial Adapters:"
+  echo "===================="
+  echo
+  printf "%-6s %-12s %-10s %-20s\n" "Slot" "Status" "Connected" "Serial"
+  printf "%-6s %-12s %-10s %-20s\n" "----" "------" "---------" "------"
+  for (( slot=1; slot<=MAX_USB_SERIAL_SLOTS; slot++ )); do
+    local exists connected serial
+    exists=$(jq -r ".\"$slot\".exists // empty" "$USB_SERIAL_STATE_FILE")
+    connected=$(jq -r ".\"$slot\".connected // empty" "$USB_SERIAL_STATE_FILE")
+    serial=$(jq -r ".\"$slot\".serial // \"(per port)\"" "$USB_SERIAL_STATE_FILE")
+    if [[ "$exists" != "true" ]]; then
+      printf "%-6s %-12s %-10s %-20s\n" "$slot" "empty" "-" "-"
+    elif [[ "$connected" == "true" ]]; then
+      printf "%-6s %-12s %-10s %-20s\n" "$slot" "present" "yes" "$serial"
+    else
+      printf "%-6s %-12s %-10s %-20s\n" "$slot" "unplugged" "no" "$serial"
+    fi
+  done
+  echo
+}
+
+usb_serial_add() {
+  local slot="$1"
+  local serial="$2"
+  validate_slot "$slot" "$MAX_USB_SERIAL_SLOTS"
+  init_state
+
+  if qmp_is_available; then
+    echo "Error: Adding a USB serial adapter while the VM is running is not supported. Power off the VM, add it, then boot it again." >&2
+    exit 1
+  fi
+  if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_SERIAL_STATE_FILE")" == "true" ]]; then
+    echo "Error: USB serial adapter already exists in slot $slot" >&2
+    exit 1
+  fi
+
+  local tmp
+  tmp=$(mktemp)
+  jq --arg serial "$serial" \
+    ".\"$slot\" = ({\"exists\": true, \"connected\": true} + (if \$serial == \"\" then {} else {\"serial\": \$serial} end))" \
+    "$USB_SERIAL_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_SERIAL_STATE_FILE"
+  echo "Done. USB serial adapter added to slot $slot"
+}
+
+usb_serial_remove() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_SERIAL_SLOTS"
+  init_state
+
+  if qmp_is_available; then
+    echo "Error: Removing a USB serial adapter while the VM is running is not supported. Use 'usb-serial disconnect' instead." >&2
+    exit 1
+  fi
+  local tmp
+  tmp=$(mktemp)
+  jq "del(.\"$slot\")" "$USB_SERIAL_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_SERIAL_STATE_FILE"
+  echo "Done. USB serial adapter removed from slot $slot"
+}
+
+# QMP arguments that plug a serial adapter into its slot's port, or the
+# keyboard it was swapped for
+usb_serial_device_json() {
+  local slot="$1"
+  local serial
+  if [[ "$(jq -r ".\"$slot\".model // empty" "$USB_SERIAL_STATE_FILE")" == "keyboard" ]]; then
+    jq -cn --arg id "usb-serial${slot}" --arg port "$slot" '{driver:"usb-kbd",id:$id,bus:"usb_serial_xhci.0",port:$port}'
+    return
+  fi
+  serial=$(jq -r ".\"$slot\".serial // empty" "$USB_SERIAL_STATE_FILE")
+  jq -cn --arg id "usb-serial${slot}" --arg chardev "usbserial${slot}" --arg port "$slot" --arg serial "$serial" \
+    '{driver:"usb-serial",id:$id,chardev:$chardev,bus:"usb_serial_xhci.0",port:$port} + (if $serial == "" then {} else {serial:$serial} end)'
+}
+
+set_usb_serial_connected() {
+  local slot="$1"
+  local connected="$2"
+  local tmp
+  tmp=$(mktemp)
+  jq ".\"$slot\".connected = $connected" "$USB_SERIAL_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_SERIAL_STATE_FILE"
+}
+
+usb_serial_disconnect() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_SERIAL_SLOTS"
+  init_state
+
+  if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_SERIAL_STATE_FILE")" != "true" ]]; then
+    echo "Error: No USB serial adapter in slot $slot" >&2
+    exit 1
+  fi
+  if [[ "$(jq -r ".\"$slot\".connected" "$USB_SERIAL_STATE_FILE")" != "true" ]]; then
+    echo "USB serial adapter in slot $slot is already unplugged"
+    return
+  fi
+  if ! qmp_is_available; then
+    echo "Error: USB serial adapters can only be unplugged while the VM is running" >&2
+    exit 1
+  fi
+  local command
+  command=$(jq -cn --arg id "usb-serial${slot}" '{execute:"device_del",arguments:{id:$id}}')
+  qmp_execute "$command" "DEVICE_DELETED" "usb-serial${slot}"
+  set_usb_serial_connected "$slot" false
+  echo "USB serial adapter in slot $slot unplugged"
+}
+
+usb_serial_connect() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_SERIAL_SLOTS"
+  init_state
+
+  if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_SERIAL_STATE_FILE")" != "true" ]]; then
+    echo "Error: No USB serial adapter in slot $slot" >&2
+    exit 1
+  fi
+  if [[ "$(jq -r ".\"$slot\".connected" "$USB_SERIAL_STATE_FILE")" == "true" ]]; then
+    echo "USB serial adapter in slot $slot is already plugged in"
+    return
+  fi
+  if ! qmp_is_available; then
+    echo "Error: USB serial adapters can only be plugged in while the VM is running" >&2
+    exit 1
+  fi
+  qmp_execute "$(jq -cn --argjson arguments "$(usb_serial_device_json "$slot")" '{execute:"device_add",arguments:$arguments}')"
+  set_usb_serial_connected "$slot" true
+  echo "USB serial adapter in slot $slot plugged in"
+}
+
+# Unplug the device in a serial slot and plug in the other model straight away
+usb_serial_swap() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_SERIAL_SLOTS"
+  init_state
+
+  if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_SERIAL_STATE_FILE")" != "true" ]]; then
+    echo "Error: No USB serial adapter in slot $slot" >&2
+    exit 1
+  fi
+  if [[ "$(jq -r ".\"$slot\".connected" "$USB_SERIAL_STATE_FILE")" != "true" ]]; then
+    echo "Error: The device in slot $slot is unplugged" >&2
+    exit 1
+  fi
+  if ! qmp_is_available; then
+    echo "Error: Devices can only be swapped while the VM is running" >&2
+    exit 1
+  fi
+  qmp_execute "$(jq -cn --arg id "usb-serial${slot}" '{execute:"device_del",arguments:{id:$id}}')" "DEVICE_DELETED" "usb-serial${slot}"
+  local tmp
+  tmp=$(mktemp)
+  jq ".\"$slot\" |= (if .model == \"keyboard\" then del(.model) else .model = \"keyboard\" end)" \
+    "$USB_SERIAL_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_SERIAL_STATE_FILE"
+  qmp_execute "$(jq -cn --argjson arguments "$(usb_serial_device_json "$slot")" '{execute:"device_add",arguments:$arguments}')"
+  echo "Device in slot $slot swapped"
+}
+
+usb_net_list() {
+  init_state
+  echo "USB Network Adapters:"
+  echo "====================="
+  echo
+  printf "%-6s %-12s %-10s\n" "Slot" "Status" "Network"
+  printf "%-6s %-12s %-10s\n" "----" "------" "-------"
+  for (( slot=1; slot<=MAX_USB_NET_SLOTS; slot++ )); do
+    if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_NET_STATE_FILE")" != "true" ]]; then
+      printf "%-6s %-12s %-10s\n" "$slot" "empty" "-"
+    elif [[ "$(jq -r ".\"$slot\".connected" "$USB_NET_STATE_FILE")" == "true" ]]; then
+      printf "%-6s %-12s %-10s\n" "$slot" "present" "$(usb_net_subnet "$slot")"
+    else
+      printf "%-6s %-12s %-10s\n" "$slot" "unplugged" "$(usb_net_subnet "$slot")"
+    fi
+  done
+  echo
+}
+
+usb_net_subnet() {
+  echo "10.0.$(( 10 + $1 )).0/24"
+}
+
+usb_net_add() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_NET_SLOTS"
+  init_state
+
+  if qmp_is_available; then
+    echo "Error: Adding a USB network adapter while the VM is running is not supported. Power off the VM, add it, then boot it again." >&2
+    exit 1
+  fi
+  if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_NET_STATE_FILE")" == "true" ]]; then
+    echo "Error: USB network adapter already exists in slot $slot" >&2
+    exit 1
+  fi
+  local tmp
+  tmp=$(mktemp)
+  jq ".\"$slot\" = {\"exists\": true, \"connected\": true}" "$USB_NET_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_NET_STATE_FILE"
+  echo "Done. USB network adapter added to slot $slot"
+}
+
+usb_net_remove() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_NET_SLOTS"
+  init_state
+
+  if qmp_is_available; then
+    echo "Error: Removing a USB network adapter while the VM is running is not supported. Use 'usb-net disconnect' instead." >&2
+    exit 1
+  fi
+  local tmp
+  tmp=$(mktemp)
+  jq "del(.\"$slot\")" "$USB_NET_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_NET_STATE_FILE"
+  echo "Done. USB network adapter removed from slot $slot"
+}
+
+# QMP arguments that plug a network adapter into its slot's port
+usb_net_device_json() {
+  local slot="$1"
+  jq -cn --arg id "usb-net${slot}" --arg netdev "usbnet${slot}" --arg port "$slot" \
+    '{driver:"usb-net",id:$id,netdev:$netdev,bus:"usb_net_xhci.0",port:$port}'
+}
+
+set_usb_net_connected() {
+  local slot="$1"
+  local connected="$2"
+  local tmp
+  tmp=$(mktemp)
+  jq ".\"$slot\".connected = $connected" "$USB_NET_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_NET_STATE_FILE"
+}
+
+usb_net_disconnect() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_NET_SLOTS"
+  init_state
+
+  if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_NET_STATE_FILE")" != "true" ]]; then
+    echo "Error: No USB network adapter in slot $slot" >&2
+    exit 1
+  fi
+  if [[ "$(jq -r ".\"$slot\".connected" "$USB_NET_STATE_FILE")" != "true" ]]; then
+    echo "USB network adapter in slot $slot is already unplugged"
+    return
+  fi
+  if ! qmp_is_available; then
+    echo "Error: USB network adapters can only be unplugged while the VM is running" >&2
+    exit 1
+  fi
+  qmp_execute "$(jq -cn --arg id "usb-net${slot}" '{execute:"device_del",arguments:{id:$id}}')" "DEVICE_DELETED" "usb-net${slot}"
+  set_usb_net_connected "$slot" false
+  echo "USB network adapter in slot $slot unplugged"
+}
+
+usb_net_connect() {
+  local slot="$1"
+  validate_slot "$slot" "$MAX_USB_NET_SLOTS"
+  init_state
+
+  if [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_NET_STATE_FILE")" != "true" ]]; then
+    echo "Error: No USB network adapter in slot $slot" >&2
+    exit 1
+  fi
+  if [[ "$(jq -r ".\"$slot\".connected" "$USB_NET_STATE_FILE")" == "true" ]]; then
+    echo "USB network adapter in slot $slot is already plugged in"
+    return
+  fi
+  if ! qmp_is_available; then
+    echo "Error: USB network adapters can only be plugged in while the VM is running" >&2
+    exit 1
+  fi
+  qmp_execute "$(jq -cn --argjson arguments "$(usb_net_device_json "$slot")" '{execute:"device_add",arguments:$arguments}')"
+  set_usb_net_connected "$slot" true
+  echo "USB network adapter in slot $slot plugged in"
+}
+
+# Build QEMU arguments for USB network adapters. Each keeps its own user-mode
+# network, with a DHCP server, so an unplugged one can be plugged back in.
+# Arguments: <device>
+build_usb_net_args() {
+  local device="$1"
+  local args=""
+  for (( slot=1; slot<=MAX_USB_NET_SLOTS; slot++ )); do
+    [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_NET_STATE_FILE")" == "true" ]] || continue
+    if [[ "$device" == "pi" ]]; then
+      echo "Error: USB network adapters are not supported on the pi device" >&2
+      exit 1
+    fi
+    if [[ -z "$args" ]]; then
+      args="-device qemu-xhci,id=usb_net_xhci"
+    fi
+    args="$args -netdev user,id=usbnet${slot},net=$(usb_net_subnet "$slot")"
+    if [[ "$(jq -r ".\"$slot\".connected" "$USB_NET_STATE_FILE")" == "true" ]]; then
+      args="$args -device $(usb_net_device_json "$slot" | jq -r 'to_entries | map(if .key == "driver" then .value else "\(.key)=\(.value)" end) | join(",")')"
+    fi
+  done
+  echo "$args"
+}
+
+# Build QEMU arguments for USB serial adapters. Every adapter keeps its own
+# character backend so an unplugged one can be plugged back in. usb-serial only
+# attaches once its backend reports being open, which a null backend never does,
+# so use an in-memory ring buffer.
+# Arguments: <device>
+build_usb_serial_args() {
+  local device="$1"
+  local args=""
+  for (( slot=1; slot<=MAX_USB_SERIAL_SLOTS; slot++ )); do
+    [[ "$(jq -r ".\"$slot\".exists // empty" "$USB_SERIAL_STATE_FILE")" == "true" ]] || continue
+    if [[ "$device" == "pi" ]]; then
+      echo "Error: USB serial adapters are not supported on the pi device" >&2
+      exit 1
+    fi
+    if [[ -z "$args" ]]; then
+      args="-device qemu-xhci,id=usb_serial_xhci"
+    fi
+    args="$args -chardev ringbuf,id=usbserial${slot}"
+    if [[ "$(jq -r ".\"$slot\".connected" "$USB_SERIAL_STATE_FILE")" == "true" ]]; then
+      args="$args -device $(usb_serial_device_json "$slot" | jq -r 'to_entries | map(if .key == "driver" then .value else "\(.key)=\(.value)" end) | join(",")')"
+    fi
+  done
+  echo "$args"
+}
+
 # Build QEMU HDD arguments for connected devices (SATA via AHCI)
 build_hdd_args() {
   local hdd_args=""
@@ -855,6 +1325,43 @@ build_hdd_args() {
   done
 
   echo "$hdd_args"
+}
+
+# Build QEMU SAS arguments for connected devices (SCSI disks behind an LSI SAS HBA, the
+# same Fusion-MPT family as the SAS2008/SAS3008 cards common in DIY NAS builds)
+build_sas_args() {
+  local sas_args=""
+  local has_sas=false
+
+  for (( slot=1; slot<=MAX_SAS_SLOTS; slot++ )); do
+    local exists connected
+    exists=$(jq -r ".\"$slot\".exists // empty" "$SAS_STATE_FILE")
+    connected=$(jq -r ".\"$slot\".connected // empty" "$SAS_STATE_FILE")
+
+    if [[ "$exists" == "true" && "$connected" == "true" ]]; then
+      local disk_path serial wwn ssd rotation_rate
+      disk_path=$(get_sas_disk_path "$slot")
+      serial=$(jq -r ".\"$slot\".serial // \"sas${slot}\"" "$SAS_STATE_FILE")
+      wwn=$(jq -r ".\"$slot\".wwn" "$SAS_STATE_FILE")
+      ssd=$(jq -r ".\"$slot\".ssd // false" "$SAS_STATE_FILE")
+      rotation_rate=7200
+      if [[ "$ssd" == "true" ]]; then
+        # SCSI medium rotation rate of 1 indicates non-rotational media (SSD).
+        rotation_rate=1
+      fi
+
+      # Add the HBA on first SAS device
+      if [[ "$has_sas" == "false" ]]; then
+        sas_args="$sas_args -device mptsas1068,id=sas"
+        has_sas=true
+      fi
+
+      sas_args="$sas_args -drive file=${disk_path},format=qcow2,if=none,id=sas${slot},cache=none,discard=unmap,aio=threads"
+      sas_args="$sas_args -device scsi-hd,drive=sas${slot},bus=sas.0,scsi-id=$(( slot - 1 )),serial=${serial},wwn=${wwn},rotation_rate=${rotation_rate}"
+    fi
+  done
+
+  echo "$sas_args"
 }
 
 # Build QEMU USB storage arguments for existing devices
@@ -1251,10 +1758,13 @@ boot_vm() {
   fi
 
   # Build disk arguments for data drives
-  local nvme_args hdd_args usb_args
+  local nvme_args hdd_args sas_args usb_args usb_serial_args usb_net_args
   nvme_args=$(build_nvme_args "$device" "$boot_nvme_slot")
   hdd_args=$(build_hdd_args)
+  sas_args=$(build_sas_args)
   usb_args=$(build_usb_args "$device")
+  usb_serial_args=$(build_usb_serial_args "$device")
+  usb_net_args=$(build_usb_net_args "$device")
 
   # Platform and architecture-specific settings
   local accel_args machine_args cpu_args
@@ -1373,7 +1883,10 @@ boot_vm() {
     -device ${network_device},netdev=net0 \
     $nvme_args \
     $hdd_args \
-    $usb_args
+    $sas_args \
+    $usb_args \
+    $usb_serial_args \
+    $usb_net_args
 }
 
 # Reflash (delete overlay to simulate fresh OS install)
@@ -1405,6 +1918,17 @@ reflash() {
   else
     echo "No overlay to remove."
   fi
+}
+
+# Press the power button (sends an ACPI power button event to the guest)
+press_power_button() {
+  initialize_qmp_socket
+  if ! qmp_is_available; then
+    echo "Error: The power button can only be pressed while the VM is running" >&2
+    exit 1
+  fi
+  qmp_execute '{"execute":"system_powerdown"}'
+  echo "Power button pressed"
 }
 
 # Reset all state
@@ -1441,6 +1965,11 @@ case "$command" in
 
   reset)
     reset_state
+    exit 0
+    ;;
+
+  power-button)
+    press_power_button
     exit 0
     ;;
 
@@ -1518,10 +2047,11 @@ case "$command" in
     exit 0
     ;;
 
-  sata)
+  sata|sas)
+    bus="$command"
     if [[ $# -lt 1 ]]; then
-      echo "Error: sata requires a subcommand" >&2
-      echo "Usage: $0 sata <list|add|destroy|connect|disconnect> [args]" >&2
+      echo "Error: $bus requires a subcommand" >&2
+      echo "Usage: $0 $bus <list|add|destroy|connect|disconnect|move> [args]" >&2
       exit 1
     fi
 
@@ -1530,17 +2060,17 @@ case "$command" in
 
     case "$subcommand" in
       list)
-        sata_list
+        if [[ "$bus" == "sas" ]]; then sas_list; else sata_list; fi
         ;;
       add)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata add requires a slot number" >&2
+          echo "Error: $bus add requires a slot number" >&2
           exit 1
         fi
         slot="$1"
         shift
         size="$DEFAULT_HDD_SIZE"
-        sata_type="hdd"
+        drive_type="hdd"
         while [[ $# -gt 0 ]]; do
           case "$1" in
             --size)
@@ -1548,7 +2078,7 @@ case "$command" in
               shift 2
               ;;
             --type)
-              sata_type="$2"
+              drive_type="$2"
               shift 2
               ;;
             *)
@@ -1557,36 +2087,44 @@ case "$command" in
               ;;
           esac
         done
-        if [[ "$sata_type" != "hdd" && "$sata_type" != "ssd" ]]; then
+        if [[ "$drive_type" != "hdd" && "$drive_type" != "ssd" ]]; then
           echo "Error: --type must be one of: hdd, ssd" >&2
           exit 1
         fi
-        sata_add "$slot" "$size" "$sata_type"
+        bay_add "$bus" "$slot" "$size" "$drive_type"
         ;;
       destroy)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata destroy requires a slot number" >&2
+          echo "Error: $bus destroy requires a slot number" >&2
           exit 1
         fi
-        sata_destroy "$1"
+        hdd_destroy "$bus" "$1"
         ;;
       connect)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata connect requires a slot number" >&2
+          echo "Error: $bus connect requires a slot number" >&2
           exit 1
         fi
-        sata_connect "$1"
+        hdd_connect "$bus" "$1"
         ;;
       disconnect)
         if [[ $# -lt 1 ]]; then
-          echo "Error: sata disconnect requires a slot number" >&2
+          echo "Error: $bus disconnect requires a slot number" >&2
           exit 1
         fi
-        sata_disconnect "$1"
+        hdd_disconnect "$bus" "$1"
+        ;;
+      move)
+        if [[ $# -lt 2 ]]; then
+          echo "Error: $bus move requires source and destination slot numbers" >&2
+          echo "Usage: $0 $bus move <from-slot> <to-slot>" >&2
+          exit 1
+        fi
+        hdd_move "$bus" "$1" "$2"
         ;;
       *)
-        echo "Error: Unknown sata subcommand: $subcommand" >&2
-        echo "Usage: $0 sata <list|add|destroy|connect|disconnect> [args]" >&2
+        echo "Error: Unknown $bus subcommand: $subcommand" >&2
+        echo "Usage: $0 $bus <list|add|destroy|connect|disconnect|move> [args]" >&2
         exit 1
         ;;
     esac
@@ -1653,6 +2191,65 @@ case "$command" in
       *)
         echo "Error: Unknown usb subcommand: $subcommand" >&2
         echo "Usage: $0 usb <list|add|destroy|connect|disconnect> [args]" >&2
+        exit 1
+        ;;
+    esac
+    exit 0
+    ;;
+
+  usb-serial)
+    if [[ $# -lt 2 ]]; then
+      [[ "${1:-}" == "list" ]] && { usb_serial_list; exit 0; }
+      echo "Usage: $0 usb-serial <list|add|remove|connect|disconnect|swap> <slot> [--serial SERIAL]" >&2
+      exit 1
+    fi
+    subcommand="$1"
+    slot="$2"
+    shift 2
+    case "$subcommand" in
+      add)
+        serial=""
+        while [[ $# -gt 0 ]]; do
+          case "$1" in
+            --serial)
+              serial="$2"
+              shift 2
+              ;;
+            *)
+              echo "Error: Unknown option: $1" >&2
+              exit 1
+              ;;
+          esac
+        done
+        usb_serial_add "$slot" "$serial"
+        ;;
+      remove) usb_serial_remove "$slot" ;;
+      connect) usb_serial_connect "$slot" ;;
+      disconnect) usb_serial_disconnect "$slot" ;;
+      swap) usb_serial_swap "$slot" ;;
+      *)
+        echo "Error: Unknown usb-serial subcommand: $subcommand" >&2
+        exit 1
+        ;;
+    esac
+    exit 0
+    ;;
+
+  usb-net)
+    if [[ $# -lt 2 ]]; then
+      [[ "${1:-}" == "list" ]] && { usb_net_list; exit 0; }
+      echo "Usage: $0 usb-net <list|add|remove|connect|disconnect> <slot>" >&2
+      exit 1
+    fi
+    subcommand="$1"
+    slot="$2"
+    case "$subcommand" in
+      add) usb_net_add "$slot" ;;
+      remove) usb_net_remove "$slot" ;;
+      connect) usb_net_connect "$slot" ;;
+      disconnect) usb_net_disconnect "$slot" ;;
+      *)
+        echo "Error: Unknown usb-net subcommand: $subcommand" >&2
         exit 1
         ;;
     esac

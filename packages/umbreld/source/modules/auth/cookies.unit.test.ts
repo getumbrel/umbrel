@@ -9,14 +9,14 @@ import {
 	clearAppGatewayCookies,
 	setAppGatewayCookie,
 	stripAppGatewayCookies,
-} from './app-gateway-cookie.js'
+} from './app-gateway-cookie.ts'
 import {
 	BROWSER_SESSION_HTTP_COOKIE_NAME,
 	BROWSER_SESSION_HTTPS_COOKIE_NAME,
 	browserSessionTokenFromRequest,
 	clearBrowserSessionCookies,
 	setBrowserSessionCookie,
-} from './browser-session-cookie.js'
+} from './browser-session-cookie.ts'
 
 function request(secure: boolean, cookies: Record<string, string> = {}) {
 	return {secure, cookies} as express.Request

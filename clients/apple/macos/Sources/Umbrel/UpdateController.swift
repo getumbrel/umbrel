@@ -5,10 +5,11 @@ import Sparkle
 // signature verification, download, extraction, installation, and relaunch. The
 // user driver below changes only how those states are presented.
 @MainActor
+@Observable
 final class UpdateController: NSObject, SPUUpdaterDelegate {
 	private(set) var availableUpdateVersion: String?
 	private let userDriver: UmbrelUpdateUserDriver
-	private lazy var updater = SPUUpdater(
+	@ObservationIgnored private lazy var updater = SPUUpdater(
 		hostBundle: .main,
 		applicationBundle: .main,
 		userDriver: userDriver,
@@ -46,8 +47,8 @@ final class UpdateController: NSObject, SPUUpdaterDelegate {
 		updater.checkForUpdates()
 	}
 
-	// The compact update window intentionally omits release notes. Tell Sparkle
-	// not to download content that this user driver will not present.
+	// The update window shows only release notes embedded in the appcast
+	// (scripts/generate-appcast.sh embeds them), so Sparkle has nothing to download.
 	func updater(_ updater: SPUUpdater, shouldDownloadReleaseNotesForUpdate updateItem: SUAppcastItem) -> Bool {
 		false
 	}
@@ -156,12 +157,65 @@ private final class UmbrelUpdateUserDriver: NSObject, SPUUserDriver {
 			.title("Version \(appcastItem.displayVersionString) is available."),
 			message: "You’re currently using version \(currentDisplayVersion).",
 			buttons: buttons,
-			onClose: dismiss
+			onClose: dismiss,
+			notes: Self.windowNotes(for: appcastItem)
 		)
 	}
 
+	// The section is titled with the version its notes describe, matching the version
+	// named in the line above it, so it never reads as new compared to something else.
+	private static func windowNotes(for item: SUAppcastItem) -> UpdateWindowNotes? {
+		releaseNotes(for: item).map {
+			UpdateWindowNotes(title: "What’s New in \(item.displayVersionString)", text: $0)
+		}
+	}
+
+	// Markdown or plain-text notes embedded in the appcast. Inline Markdown (bold,
+	// links) is rendered and line breaks are kept, so each note is written on its own
+	// line. HTML notes would need a web view and aren't shown.
+	private static func releaseNotes(for item: SUAppcastItem) -> NSAttributedString? {
+		guard let text = item.itemDescription?.trimmingCharacters(in: .whitespacesAndNewlines),
+			!text.isEmpty
+		else { return nil }
+		let notes: NSMutableAttributedString
+		switch item.itemDescriptionFormat {
+		case "markdown":
+			let options = AttributedString.MarkdownParsingOptions(
+				interpretedSyntax: .inlineOnlyPreservingWhitespace
+			)
+			guard let parsed = try? AttributedString(markdown: text, options: options) else { return nil }
+			notes = NSMutableAttributedString(parsed)
+		case "plain-text":
+			notes = NSMutableAttributedString(string: text)
+		default:
+			return nil
+		}
+		let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+		notes.addAttributes([
+			.font: font,
+			.foregroundColor: NSColor.labelColor,
+		], range: NSRange(location: 0, length: notes.length))
+		// Each line is one note. A line starting with "• " or "- " shows as a bullet,
+		// with wrapped lines indented to the text after it.
+		let bulletWidth = ("• " as NSString).size(withAttributes: [.font: font]).width
+		let lines = notes.string as NSString
+		lines.enumerateSubstrings(
+			in: NSRange(location: 0, length: lines.length),
+			options: .byParagraphs
+		) { line, lineRange, enclosingRange, _ in
+			let style = NSMutableParagraphStyle()
+			style.paragraphSpacing = 3
+			if let line, line.hasPrefix("• ") || line.hasPrefix("- ") {
+				notes.replaceCharacters(in: NSRange(location: lineRange.location, length: 1), with: "•")
+				style.headIndent = bulletWidth
+			}
+			notes.addAttribute(.paragraphStyle, value: style, range: enclosingRange)
+		}
+		return notes
+	}
+
 	// Required user-driver hooks. UpdateController prevents these downloads because
-	// the compact About-style window intentionally omits a browser-sized notes pane.
+	// the window shows only notes embedded in the appcast (see releaseNotes(for:)).
 	func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {}
 
 	func showUpdateReleaseNotesFailedToDownloadWithError(_ error: Error) {}
@@ -169,12 +223,20 @@ private final class UmbrelUpdateUserDriver: NSObject, SPUUserDriver {
 	func showUpdateNotFoundWithError(_ error: Error, acknowledgement: @escaping () -> Void) {
 		onAvailabilityChange?(nil)
 		let nsError = error as NSError
+		// On the latest version, Sparkle's newest feed entry is the running version, so
+		// its notes are what's new in the version the user already has.
+		let reason = (nsError.userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber)?.int32Value
+		let latestItem = nsError.userInfo[SPULatestAppcastItemFoundKey] as? SUAppcastItem
+		let notes = reason == SPUNoUpdateFoundReason.onLatestVersion.rawValue
+			? latestItem.flatMap(Self.windowNotes(for:))
+			: nil
 		present(
 			.title(nsError.localizedDescription),
 			message: nsError.localizedRecoverySuggestion,
 			buttons: [.ok(acknowledgement)],
 			onClose: acknowledgement,
-			expandedMessage: true
+			expandedMessage: true,
+			notes: notes
 		)
 	}
 
@@ -312,7 +374,8 @@ private final class UmbrelUpdateUserDriver: NSObject, SPUUserDriver {
 		progress: UpdateWindowProgress? = nil,
 		buttons: [UpdateWindowButton] = [],
 		onClose: (() -> Void)? = nil,
-		expandedMessage: Bool = false
+		expandedMessage: Bool = false,
+		notes: UpdateWindowNotes? = nil
 	) {
 		let controller = windowController ?? UpdateWindowController()
 		windowController = controller
@@ -322,9 +385,15 @@ private final class UmbrelUpdateUserDriver: NSObject, SPUUserDriver {
 			progress: progress,
 			buttons: buttons,
 			onClose: onClose,
-			expandedMessage: expandedMessage
+			expandedMessage: expandedMessage,
+			notes: notes
 		)
 	}
+}
+
+private struct UpdateWindowNotes {
+	let title: String
+	let text: NSAttributedString
 }
 
 private struct UpdateWindowTitle {
@@ -357,6 +426,21 @@ private struct UpdateWindowButton {
 private final class UpdateWindowController: NSWindowController, NSWindowDelegate {
 	private var closeAction: (() -> Void)?
 	private weak var progressIndicator: NSProgressIndicator?
+	// "What's New" starts collapsed so the window keeps its compact size. Expanded,
+	// the notes grow to at most about eight lines and scroll beyond that.
+	// The buttons sit 16 pt below the notes, the spacing macOS alerts use between their
+	// content and buttons.
+	private static let notesSpacing: CGFloat = 6
+	private static let notesButtonSpacing: CGFloat = 16
+	private static let maximumNotesHeight: CGFloat = 116
+	// The notes scroll inside a rounded well, so it's clear where the scrolling area ends.
+	private static let notesPadding = NSSize(width: 10, height: 8)
+	private weak var notesWell: NSBox?
+	private weak var notesScrollView: NSScrollView?
+	private weak var notesDisclosure: NSButton?
+	private var notesTopConstraint: NSLayoutConstraint?
+	private var notesHeightConstraint: NSLayoutConstraint?
+	private var notesHeight: CGFloat = 0
 
 	init() {
 		let window = NSPanel(
@@ -385,7 +469,8 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 		progress: UpdateWindowProgress?,
 		buttons: [UpdateWindowButton],
 		onClose: (() -> Void)?,
-		expandedMessage: Bool
+		expandedMessage: Bool,
+		notes: UpdateWindowNotes?
 	) {
 		guard let window else { return }
 		closeAction = onClose
@@ -393,14 +478,18 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 			title: title,
 			message: message,
 			progress: progress,
-			buttons: buttons
+			buttons: buttons,
+			notes: notes
 		)
 		if onClose == nil {
 			window.styleMask.remove(.closable)
 		} else {
 			window.styleMask.insert(.closable)
 		}
-		let height: CGFloat = progress == nil ? (expandedMessage ? 250 : 228) : 232
+		// With notes the layout runs top to bottom, so it sets its own height.
+		let height: CGFloat = notes != nil
+			? window.contentView?.fittingSize.height ?? 250
+			: progress == nil ? (expandedMessage ? 250 : 228) : 232
 		window.setContentSize(NSSize(width: 360, height: height))
 		NSApp.activate(ignoringOtherApps: true)
 		window.center()
@@ -430,10 +519,16 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 		title: String,
 		message: String?,
 		progress: UpdateWindowProgress?,
-		buttons: [UpdateWindowButton]
+		buttons: [UpdateWindowButton],
+		notes: UpdateWindowNotes?
 	) -> NSView {
 		let content = NSView()
 		progressIndicator = nil
+		notesWell = nil
+		notesScrollView = nil
+		notesDisclosure = nil
+		notesTopConstraint = nil
+		notesHeightConstraint = nil
 
 		let icon = NSImageView(image: NSApp.applicationIconImage)
 		icon.imageScaling = .scaleProportionallyUpOrDown
@@ -478,6 +573,83 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 			]
 		}
 
+		if let notes {
+			let disclosure = ClosureButton(title: "", action: { [weak self] in self?.toggleNotes() })
+			disclosure.bezelStyle = .disclosure
+			disclosure.setButtonType(.pushOnPushOff)
+			disclosure.setAccessibilityLabel(notes.title)
+			notesDisclosure = disclosure
+			let notesTitle = ClosureButton(title: notes.title, action: { [weak self] in self?.toggleNotes() })
+			notesTitle.isBordered = false
+			notesTitle.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
+			notesTitle.contentTintColor = .secondaryLabelColor
+			let row = NSStackView(views: [disclosure, notesTitle])
+			row.orientation = .horizontal
+			row.spacing = 2
+			row.translatesAutoresizingMaskIntoConstraints = false
+
+			let notesWidth = 312 - 2 * Self.notesPadding.width
+			let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: notesWidth, height: 0))
+			textView.isEditable = false
+			textView.isSelectable = true
+			textView.drawsBackground = false
+			textView.textContainerInset = .zero
+			textView.textContainer?.lineFragmentPadding = 0
+			textView.textContainer?.widthTracksTextView = true
+			textView.isVerticallyResizable = true
+			textView.autoresizingMask = [.width]
+			textView.textStorage?.setAttributedString(notes.text)
+			textView.setSelectedRange(NSRange(location: 0, length: 0))
+			if let layoutManager = textView.layoutManager, let container = textView.textContainer {
+				layoutManager.ensureLayout(for: container)
+				notesHeight = min(ceil(layoutManager.usedRect(for: container).height), Self.maximumNotesHeight)
+			}
+
+			let scrollView = NSScrollView()
+			scrollView.drawsBackground = false
+			scrollView.hasVerticalScroller = true
+			scrollView.autohidesScrollers = true
+			scrollView.documentView = textView
+			scrollView.translatesAutoresizingMaskIntoConstraints = false
+			notesScrollView = scrollView
+
+			// NSBox redraws its fill when the appearance changes, so the well follows
+			// light and dark mode.
+			let well = NSBox()
+			well.boxType = .custom
+			well.titlePosition = .noTitle
+			well.borderWidth = 0
+			well.cornerRadius = 8
+			well.fillColor = .quaternarySystemFill
+			well.contentViewMargins = .zero
+			well.isHidden = true
+			well.translatesAutoresizingMaskIntoConstraints = false
+			well.contentView?.addSubview(scrollView)
+			notesWell = well
+			let heightConstraint = well.heightAnchor.constraint(equalToConstant: 0)
+			notesHeightConstraint = heightConstraint
+			// Collapsed, the notes take no space at all, including the gap above them.
+			let topConstraint = well.topAnchor.constraint(equalTo: row.bottomAnchor)
+			notesTopConstraint = topConstraint
+
+			content.addSubview(row)
+			content.addSubview(well)
+			constraints += [
+				row.topAnchor.constraint(equalTo: textStack.bottomAnchor, constant: 14),
+				row.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+				topConstraint,
+				well.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
+				well.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
+				heightConstraint,
+				// The scroll view keeps its full height while the well is collapsed and hidden,
+				// so the two never conflict.
+				scrollView.topAnchor.constraint(equalTo: well.topAnchor, constant: Self.notesPadding.height),
+				scrollView.leadingAnchor.constraint(equalTo: well.leadingAnchor, constant: Self.notesPadding.width),
+				scrollView.trailingAnchor.constraint(equalTo: well.trailingAnchor, constant: -Self.notesPadding.width),
+				scrollView.heightAnchor.constraint(equalToConstant: notesHeight),
+			]
+		}
+
 		if !buttons.isEmpty {
 			let buttonViews = buttons.map(makeButton)
 			let buttonStack = NSStackView(views: buttonViews)
@@ -490,10 +662,39 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 				buttonStack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
 				buttonStack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -20),
 			]
+			if let notesWell {
+				constraints.append(
+					buttonStack.topAnchor.constraint(equalTo: notesWell.bottomAnchor, constant: Self.notesButtonSpacing)
+				)
+			}
 		}
 
 		NSLayoutConstraint.activate(constraints)
 		return content
+	}
+
+	// Grow or shrink the window by the notes' height, keeping its top edge in place.
+	private func toggleNotes() {
+		guard let window, let well = notesWell, let scrollView = notesScrollView,
+			let heightConstraint = notesHeightConstraint
+		else { return }
+		let expanding = well.isHidden
+		let wellHeight = notesHeight + 2 * Self.notesPadding.height
+		notesDisclosure?.state = expanding ? .on : .off
+		notesTopConstraint?.constant = expanding ? Self.notesSpacing : 0
+		heightConstraint.constant = expanding ? wellHeight : 0
+		well.isHidden = !expanding
+		let expandedHeight = wellHeight + Self.notesSpacing
+		let delta = expanding ? expandedHeight : -expandedHeight
+		var frame = window.frame
+		frame.size.height += delta
+		frame.origin.y -= delta
+		window.setFrame(frame, display: true, animate: true)
+		guard expanding else { return }
+		// Open at the first note, and flash the scroller so longer notes read as scrollable.
+		scrollView.layoutSubtreeIfNeeded()
+		scrollView.documentView?.scroll(.zero)
+		scrollView.flashScrollers()
 	}
 
 	private func label(_ text: String, font: NSFont) -> NSTextField {

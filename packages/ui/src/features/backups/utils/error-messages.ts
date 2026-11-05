@@ -7,6 +7,10 @@ export function getUserFriendlyErrorMessage(error: any): string {
 	// ========================================
 	// Handle specific bracketed error codes
 	// ========================================
+	// Backups hasn't finished starting since boot
+	if (message.includes('[backups-starting]')) {
+		return t('backups-error.starting')
+	}
 	// Backup/restore already running
 	if (message.includes('[in-progress]')) {
 		return t('backups-error.in-progress')

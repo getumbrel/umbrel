@@ -211,13 +211,13 @@ export function CatalogIntro({entries, onCommit}: {entries: IntroWallEntry[]; on
 	const copyState = leaving ? {opacity: 0, y: -6} : {opacity: 1, y: 0}
 
 	return (
-		<div className='flex flex-col items-center gap-6 px-4 py-6 md:p-12'>
+		<div className='flex flex-col items-center gap-6 px-4 py-6 md:p-12 low:gap-3 low:p-3'>
 			<div className='flex flex-col items-center gap-2 pt-2 text-center'>
 				<motion.h1
 					initial={{opacity: 0, y: 8}}
 					animate={copyState}
 					transition={enter(0)}
-					className='text-[28px] font-semibold -tracking-2 text-white md:text-[32px]'
+					className='low:text-20 text-[28px] font-semibold -tracking-2 text-white md:text-[32px]'
 				>
 					{t('machines.intro-title')}
 				</motion.h1>
@@ -225,13 +225,14 @@ export function CatalogIntro({entries, onCommit}: {entries: IntroWallEntry[]; on
 					initial={{opacity: 0, y: 8}}
 					animate={copyState}
 					transition={enter(1)}
-					className='max-w-md text-15 leading-snug -tracking-2 text-white/50'
+					className='max-w-md text-15 leading-snug -tracking-2 text-white/50 low:hidden'
 				>
 					<Trans t={t} i18nKey='machines.intro-description' components={{highlight: <span className='text-white' />}} />
 				</motion.p>
 			</div>
 
-			{/* CTA sits above the wall so the action is never below the fold —
+			{/* CTA sits above the wall so the action is never below the fold, which
+			    on a phone on its side means giving up the description —
 			    the pile becomes atmosphere beneath the decision */}
 			<motion.div initial={{opacity: 0, y: 8}} animate={copyState} transition={enter(2)}>
 				<Button variant='primary' size='lg' onClick={commit}>

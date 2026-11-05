@@ -7,13 +7,14 @@ import yaml from 'js-yaml'
 import pWaitFor from 'p-wait-for'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
+import type Umbreld from '../../index.ts'
 
 const downloadControls = vi.hoisted(
 	() =>
 		[] as Array<{
 			resolve: () => Promise<void>
 			reject: (error: Error) => void
+			progress: (percent: number) => void
 		}>,
 )
 const preparedWindowsOptions = vi.hoisted(() => [] as Array<{licenseKey?: string}>)
@@ -42,9 +43,32 @@ const libvirtControls = vi.hoisted(() => ({
 	backupCommitFailures: new Set<string>(),
 	waitForConvertAbort: false,
 	convertSignals: [] as AbortSignal[],
+	startedNetworkModes: [] as Array<{id: string; joinsLan: boolean}>,
+	joinLanCalls: [] as string[],
+}))
+const lanBridgeControls = vi.hoisted(() => ({
+	availability: {available: true, interface: 'enp1s0'} as
+		| {available: true; interface: string}
+		| {available: false; reason: 'wifi' | 'no-ethernet'},
+	ensureCalls: 0,
+	removeCalls: 0,
 }))
 
-vi.mock('./safe-download.js', async () => {
+vi.mock('./lan-bridge.ts', () => ({
+	default: class FakeLanBridge {
+		async availability() {
+			return lanBridgeControls.availability
+		}
+		async ensure() {
+			lanBridgeControls.ensureCalls++
+		}
+		async remove() {
+			lanBridgeControls.removeCalls++
+		}
+	},
+}))
+
+vi.mock('./safe-download.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	const nodePath = await import('node:path')
 	return {
@@ -68,6 +92,7 @@ vi.mock('./safe-download.js', async () => {
 							resolve({size: 1024, sha256: 'ab'.repeat(32)})
 						},
 						reject,
+						progress: (percent) => onProgress?.({downloadedBytes: 512, totalBytes: 1024, percent}),
 					})
 					const onStart = downloadHooks.onStart
 					downloadHooks.onStart = undefined
@@ -93,7 +118,7 @@ vi.mock('execa', async () => {
 	}
 })
 
-vi.mock('./windows-image.js', async () => {
+vi.mock('./windows-image.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	return {
 		prepareWindowsInstallMedia: vi.fn(async (_source: string, destination: string, options: {licenseKey?: string}) => {
@@ -103,7 +128,7 @@ vi.mock('./windows-image.js', async () => {
 	}
 })
 
-vi.mock('./guest-api.js', () => ({
+vi.mock('./guest-api.ts', () => ({
 	default: class FakeMachineGuestApi {
 		async start() {
 			guestApiControls.starts++
@@ -114,7 +139,7 @@ vi.mock('./guest-api.js', () => ({
 	},
 }))
 
-vi.mock('./omarchy-install.js', async () => {
+vi.mock('./omarchy-install.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	const path = await import('node:path')
 	return {
@@ -135,8 +160,8 @@ vi.mock('./omarchy-install.js', async () => {
 	}
 })
 
-vi.mock('./rfb-client.js', async () => ({
-	...(await vi.importActual<typeof import('./rfb-client.js')>('./rfb-client.js')),
+vi.mock('./rfb-client.ts', async () => ({
+	...(await vi.importActual<typeof import('./rfb-client.ts')>('./rfb-client.ts')),
 	default: class FakeRfbClient {
 		width = 1280
 		height = 800
@@ -158,8 +183,8 @@ vi.mock('./rfb-client.js', async () => ({
 	},
 }))
 
-vi.mock('./machine-control.js', async () => {
-	const actual = await vi.importActual<typeof import('./machine-control.js')>('./machine-control.js')
+vi.mock('./machine-control.ts', async () => {
+	const actual = await vi.importActual<typeof import('./machine-control.ts')>('./machine-control.ts')
 	return {
 		...actual,
 		encodeScreenshot: async (frame: {width: number; height: number}) => ({
@@ -171,7 +196,7 @@ vi.mock('./machine-control.js', async () => {
 	}
 })
 
-vi.mock('./libvirt.js', async () => {
+vi.mock('./libvirt.ts', async () => {
 	const fsp = await import('node:fs/promises')
 	const nodePath = await import('node:path')
 	return {
@@ -257,14 +282,23 @@ vi.mock('./libvirt.js', async () => {
 				await fsp.writeFile(nodePath.join(directory, 'nvram.fd'), 'nvram')
 			}
 
-			async start(definition: {
-				id: string
-				cores: number
-				memoryMb: number
-				firmware: 'uefi' | 'bios'
-				diskBus?: 'virtio' | 'sata'
-			}) {
+			async start(
+				definition: {
+					id: string
+					cores: number
+					memoryMb: number
+					firmware: 'uefi' | 'bios'
+					diskBus?: 'virtio' | 'sata'
+					networkMode?: 'nat' | 'bridged'
+					firstBootSetup?: unknown
+				},
+				_machineDirectory?: string,
+				_diskPath?: string,
+				_usbDevices?: unknown[],
+				{joinLan = false}: {joinLan?: boolean} = {},
+			) {
 				libvirtControls.startCalls.push(definition.id)
+				libvirtControls.startedNetworkModes.push({id: definition.id, joinsLan: joinLan})
 				await libvirtControls.startBarrier
 				libvirtControls.suspendedIds.delete(definition.id)
 				this.states.set(definition.id, 'running')
@@ -277,6 +311,9 @@ vi.mock('./libvirt.js', async () => {
 				this.states.set(id, 'stopped')
 			}
 			async restart() {}
+			async joinLan(definition: {id: string}) {
+				libvirtControls.joinLanCalls.push(definition.id)
+			}
 
 			async ejectInstallMedia(definition: {id: string}) {
 				libvirtControls.ejectCalls.push(definition.id)
@@ -299,8 +336,8 @@ vi.mock('./libvirt.js', async () => {
 	}
 })
 
-import Machines from './machines.js'
-import * as machineDomain from './domain.js'
+import Machines, {FIRST_BOOT_SETUP_TIMEOUT_MS} from './machines.ts'
+import * as machineDomain from './domain.ts'
 
 const roots: string[] = []
 const instances: Machines[] = []
@@ -329,6 +366,11 @@ afterEach(async () => {
 	libvirtControls.backupCommitFailures.clear()
 	libvirtControls.waitForConvertAbort = false
 	libvirtControls.convertSignals.splice(0)
+	libvirtControls.startedNetworkModes.splice(0)
+	libvirtControls.joinLanCalls.splice(0)
+	lanBridgeControls.availability = {available: true, interface: 'enp1s0'}
+	lanBridgeControls.ensureCalls = 0
+	lanBridgeControls.removeCalls = 0
 	await Promise.all(roots.splice(0).map((root) => fse.remove(root)))
 })
 
@@ -692,6 +734,10 @@ describe('background machine installation', () => {
 			memoryGb: 1,
 		})
 		await pWaitFor(() => downloadControls.length === 1)
+		// Both installs must have joined the shared download before one leaves.
+		// Consumers adopt its progress, while an install still preparing has none.
+		downloadControls[0].progress(50)
+		await pWaitFor(async () => (await machines.list()).every(({installProgress}) => installProgress === 35))
 
 		await machines.uninstall(first.id)
 		expect(downloadControls).toHaveLength(1)
@@ -1317,4 +1363,191 @@ test('agent input is serialized per machine, retains a held action, and snapshot
 	} finally {
 		delete process.env.UMBREL_MACHINE_AGENT_CONTROL_TIMEOUT_MS
 	}
+})
+
+describe('bridged networking', () => {
+	const catalogOsId = process.arch === 'arm64' ? 'ubuntu-26.04-server-arm64' : 'ubuntu-26.04-server-amd64'
+	const spec = {diskSizeGb: 1, cores: 1, memoryGb: 1}
+
+	async function createCustomMachine(
+		machines: Machines,
+		filesRoot: string,
+		options: {name: string; networkMode?: 'nat' | 'bridged'},
+	) {
+		const imports = nodePath.join(filesRoot, 'External', 'imports')
+		await fse.ensureDir(imports)
+		await fsp.writeFile(nodePath.join(imports, 'disk.img'), 'disk')
+		const machine = await machines.create({...options, imagePath: '/External/imports/disk.img', ...spec})
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+		return machine
+	}
+
+	test('creates NAT machines by default and treats older definitions as NAT', async () => {
+		const {machines, filesRoot, root} = await createMachines()
+		const machine = await createCustomMachine(machines, filesRoot, {name: 'Default network'})
+		expect(machine.networkMode).toBe('nat')
+		expect(libvirtControls.startedNetworkModes).toEqual([{id: machine.id, joinsLan: false}])
+		expect(lanBridgeControls.ensureCalls).toBe(0)
+
+		// Machines created before network modes existed have no networkMode saved
+		const definitionPath = nodePath.join(root, 'machines', machine.id, 'machine.yaml')
+		const definition = yaml.load(await fsp.readFile(definitionPath, 'utf8')) as Record<string, unknown>
+		delete definition.networkMode
+		await fsp.writeFile(definitionPath, yaml.dump(definition))
+		expect((await machines.list()).find(({id}) => id === machine.id)?.networkMode).toBe('nat')
+	})
+
+	test('puts a bridged custom machine on the LAN bridge from its first start', async () => {
+		const {machines, filesRoot, root} = await createMachines()
+		const machine = await createCustomMachine(machines, filesRoot, {name: 'Home Assistant', networkMode: 'bridged'})
+
+		expect(machine.networkMode).toBe('bridged')
+		expect(libvirtControls.startedNetworkModes).toEqual([{id: machine.id, joinsLan: true}])
+		expect(lanBridgeControls.ensureCalls).toBe(1)
+		const persisted = yaml.load(
+			await fsp.readFile(nodePath.join(root, 'machines', machine.id, 'machine.yaml'), 'utf8'),
+		) as {networkMode?: string}
+		expect(persisted.networkMode).toBe('bridged')
+
+		// Every later start makes sure the bridge is still there
+		await machines.forceStopMachine(machine.id)
+		await machines.startMachine(machine.id)
+		expect(lanBridgeControls.ensureCalls).toBe(2)
+	})
+
+	test('sets a bridged catalog machine up on NAT, then moves it onto the LAN once it calls home', async () => {
+		const {machines} = await createMachines()
+		const machine = await machines.create({
+			name: 'Bridged server',
+			osId: catalogOsId,
+			username: 'umbrel',
+			password: 'password',
+			networkMode: 'bridged',
+			...spec,
+		})
+		await pWaitFor(() => downloadControls.length === 1)
+		await downloadControls[0].resolve()
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+
+		// The setup callback goes to Umbrel over the private machine network
+		expect(libvirtControls.startedNetworkModes).toEqual([{id: machine.id, joinsLan: false}])
+		expect(lanBridgeControls.ensureCalls).toBe(0)
+		const config = yaml.load(cloudInitUserData[0].replace(/^#cloud-config\n/, '')) as {phone_home: {url: string}}
+		expect(config.phone_home.url).toMatch(/^http:\/\/10\.203\.0\.1:3006\//)
+		const token = new URL(config.phone_home.url).pathname.split('/').at(-1)!
+
+		await expect(machines.completeFirstBootSetup(machine.id, token)).resolves.toBe(true)
+		// The reply goes out before the machine moves
+		expect(libvirtControls.joinLanCalls).toEqual([])
+		await pWaitFor(() => libvirtControls.joinLanCalls.length === 1, {timeout: 10_000})
+		expect(libvirtControls.joinLanCalls).toEqual([machine.id])
+		expect(lanBridgeControls.ensureCalls).toBe(1)
+
+		// From now on it starts straight on the LAN
+		await machines.forceStopMachine(machine.id)
+		await machines.startMachine(machine.id)
+		expect(libvirtControls.startedNetworkModes.at(-1)).toEqual({id: machine.id, joinsLan: true})
+	}, 20_000)
+
+	test('lets a bridged machine whose setup never called home join the LAN once Umbrel stops waiting', async () => {
+		const {machines, root} = await createMachines()
+		const machine = await machines.create({
+			name: 'Abandoned setup',
+			osId: catalogOsId,
+			username: 'umbrel',
+			password: 'password',
+			networkMode: 'bridged',
+			...spec,
+		})
+		await pWaitFor(() => downloadControls.length === 1)
+		await downloadControls[0].resolve()
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+		expect(libvirtControls.startedNetworkModes).toEqual([{id: machine.id, joinsLan: false}])
+
+		// Setup started longer ago than Umbrel waits for it to call home
+		const definitionPath = nodePath.join(root, 'machines', machine.id, 'machine.yaml')
+		const definition = yaml.load(await fsp.readFile(definitionPath, 'utf8')) as {firstBootSetup: {startedAt: number}}
+		definition.firstBootSetup.startedAt = Date.now() - FIRST_BOOT_SETUP_TIMEOUT_MS - 1_000
+		await fsp.writeFile(definitionPath, yaml.dump(definition))
+
+		await machines.forceStopMachine(machine.id)
+		await machines.startMachine(machine.id)
+		expect(libvirtControls.startedNetworkModes.at(-1)).toEqual({id: machine.id, joinsLan: true})
+		expect(lanBridgeControls.ensureCalls).toBe(1)
+	})
+
+	test('does not move a NAT machine after its setup completes', async () => {
+		const {machines} = await createMachines()
+		const machine = await machines.create({
+			name: 'NAT server',
+			osId: catalogOsId,
+			username: 'umbrel',
+			password: 'password',
+			...spec,
+		})
+		await pWaitFor(() => downloadControls.length === 1)
+		await downloadControls[0].resolve()
+		await pWaitFor(async () => (await machines.list()).some(({id, state}) => id === machine.id && state === 'running'))
+		const config = yaml.load(cloudInitUserData[0].replace(/^#cloud-config\n/, '')) as {phone_home: {url: string}}
+
+		await machines.completeFirstBootSetup(machine.id, new URL(config.phone_home.url).pathname.split('/').at(-1)!)
+		await new Promise((resolve) => setTimeout(resolve, 2_500))
+
+		expect(libvirtControls.joinLanCalls).toEqual([])
+		expect(lanBridgeControls.ensureCalls).toBe(0)
+	}, 20_000)
+
+	test('refuses bridged networking when Umbrel is on Wi-Fi', async () => {
+		const {machines, filesRoot} = await createMachines()
+		lanBridgeControls.availability = {available: false, reason: 'wifi'}
+		const imports = nodePath.join(filesRoot, 'External', 'imports')
+		await fse.ensureDir(imports)
+		await fsp.writeFile(nodePath.join(imports, 'disk.img'), 'disk')
+
+		await expect(
+			machines.create({name: 'On Wi-Fi', imagePath: '/External/imports/disk.img', networkMode: 'bridged', ...spec}),
+		).rejects.toThrow('[machine-lan-bridge-unavailable-wifi]')
+		expect(await machines.list()).toEqual([])
+
+		// NAT machines still work, and can't be switched over either
+		const machine = await createCustomMachine(machines, filesRoot, {name: 'Still NAT'})
+		await expect(machines.updateSettings(machine.id, {networkMode: 'bridged'})).rejects.toThrow(
+			'[machine-lan-bridge-unavailable-wifi]',
+		)
+		expect((await machines.list())[0].networkMode).toBe('nat')
+	})
+
+	test('only lets NAT machines forward ports', async () => {
+		const {machines, filesRoot} = await createMachines()
+		const machine = await createCustomMachine(machines, filesRoot, {name: 'Forwards'})
+		const forward = {id: 'ssh', protocol: 'tcp' as const, hostPort: 40_022, guestPort: 22}
+		await machines.updateSettings(machine.id, {portForwards: [forward]})
+
+		// Its forwards would point at an address it no longer has
+		await expect(machines.updateSettings(machine.id, {networkMode: 'bridged'})).rejects.toThrow(
+			'[machine-port-forwards-nat-only]',
+		)
+		// Dropping them in the same change is fine
+		await expect(
+			machines.updateSettings(machine.id, {networkMode: 'bridged', portForwards: []}),
+		).resolves.toMatchObject({networkMode: 'bridged', portForwards: []})
+		await expect(machines.updateSettings(machine.id, {portForwards: [forward]})).rejects.toThrow(
+			'[machine-port-forwards-nat-only]',
+		)
+
+		// The change applies on the next start, and switching back is always allowed
+		lanBridgeControls.availability = {available: false, reason: 'wifi'}
+		await expect(
+			machines.updateSettings(machine.id, {networkMode: 'nat', portForwards: [forward]}),
+		).resolves.toMatchObject({networkMode: 'nat', portForwards: [forward]})
+	})
+
+	test('reports whether machines can join the LAN in capabilities', async () => {
+		const {machines} = await createMachines()
+		await expect(machines.capabilities()).resolves.toMatchObject({
+			lanBridge: {available: true, interface: 'enp1s0'},
+		})
+		lanBridgeControls.availability = {available: false, reason: 'wifi'}
+		await expect(machines.capabilities()).resolves.toMatchObject({lanBridge: {available: false, reason: 'wifi'}})
+	})
 })

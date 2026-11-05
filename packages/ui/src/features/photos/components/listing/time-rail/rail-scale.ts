@@ -11,7 +11,13 @@
 // forty — which is also (rows being uniform) proportional to scroll
 // distance, so a spot on the rail lands where the eye expects.
 
-import {rectOf, type Layout} from '@/features/photos/components/listing/timeline-rows'
+import {
+	firstItemBelow,
+	rectOf,
+	sectionIndexAt,
+	sectionIndexOf,
+	type Layout,
+} from '@/features/photos/components/listing/timeline-rows'
 
 // ── Months ────────────────────────────────────────────────────────────────
 
@@ -109,6 +115,21 @@ export function railDomain({
 		buckets.push({key: oldest - 1 - index, count: remaining / tail, estimated: true})
 	}
 	return buckets
+}
+
+// Keys descend: the first bucket at or below the month
+export function bucketIndexFor(buckets: MonthBucket[], key: MonthKey): number {
+	if (buckets.length === 0) return 0
+	if (key >= buckets[0]!.key) return 0
+	if (key <= buckets[buckets.length - 1]!.key) return buckets.length - 1
+	let lo = 0
+	let hi = buckets.length - 1
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1
+		if (buckets[mid]!.key <= key) hi = mid
+		else lo = mid + 1
+	}
+	return lo
 }
 
 // How many calendar months the domain spans, gaps included
@@ -261,15 +282,7 @@ export function monthRange(items: {takenAt: number}[], key: MonthKey): {start: n
 export function timeAtScroll(layout: Layout, scrollTop: number): {key: MonthKey; fraction: number} | undefined {
 	const {items} = layout
 	if (items.length === 0) return undefined
-	let lo = 0
-	let hi = items.length
-	while (lo < hi) {
-		const mid = (lo + hi) >> 1
-		const rect = rectOf(layout, mid)
-		if (rect.y + rect.size > scrollTop) hi = mid
-		else lo = mid + 1
-	}
-	const index = Math.min(items.length - 1, lo)
+	const index = Math.min(items.length - 1, firstItemBelow(layout, scrollTop))
 	const key = monthKeyOf(items[index]!.takenAt)
 	const {start, end} = monthRange(items, key)
 	return {key, fraction: Math.min(1, Math.max(0, (index - start) / Math.max(1, end - start)))}
@@ -297,14 +310,8 @@ export function scrollForMonth(
 	if (start >= end) return undefined
 	const index = Math.min(end - 1, start + Math.floor(Math.min(1, Math.max(0, fraction)) * (end - start)))
 	if (index === start && sections.length > 0) {
-		let lo = 0
-		let hi = sections.length - 1
-		while (lo < hi) {
-			const mid = (lo + hi + 1) >> 1
-			if (sections[mid]!.start <= index) lo = mid
-			else hi = mid - 1
-		}
-		if (sections[lo]!.start === index) return clampScroll(layout, tops[lo]! - tops[0]!, window)
+		const section = sectionIndexOf(layout, index)
+		if (sections[section]!.start === index) return clampScroll(layout, tops[section]! - tops[0]!, window)
 	}
 	return clampScroll(layout, rectOf(layout, index).y - window.inset, window)
 }
@@ -316,4 +323,49 @@ export function scrollForTime(layout: Layout, t: number, window: ScrollWindow): 
 	if (items.length === 0) return undefined
 	const index = Math.min(items.length - 1, firstIndexBefore(items, t))
 	return clampScroll(layout, rectOf(layout, index).y - window.inset, window)
+}
+
+// `scrollForMonth`, for a landing the actions bar must agree with. The bar
+// names the section whose header has reached the hand-off (see TimelineGrid),
+// and a row parked just under the bar — the first row of a section — still
+// has its header below that line, so the bar would name the section before
+// it: a scrubber's bubble saying October over a bar saying November. Such a
+// landing goes the header's height further, to where the section hands its
+// title off; anywhere else in a section the two already agree.
+export function scrollNamingMonth(
+	layout: Layout,
+	key: MonthKey,
+	fraction: number,
+	window: ScrollWindow & {handoff: number},
+): number | undefined {
+	const target = scrollForMonth(layout, key, fraction, window)
+	if (target === undefined) return undefined
+	const {items, tops} = layout
+	const {start, end} = monthRange(items, key)
+	const index = Math.min(end - 1, start + Math.floor(Math.min(1, Math.max(0, fraction)) * (end - start)))
+	const top = tops[sectionIndexOf(layout, index)]
+	if (top === undefined || target + window.handoff >= top) return target
+	// A pixel past the line, so a scrollTop the browser rounds to its device
+	// pixels can't fall back short of it
+	return clampScroll(layout, top - window.handoff + 1, window)
+}
+
+// The month the actions bar is naming at a scroll position: its section is
+// the one at the hand-off line (see TimelineGrid), and the month is that of
+// the row at the top of what the eye can see, kept inside that section — one
+// month under months or days grouping, and under years the month the eye is
+// actually on within the year the bar says. What a scrubber's bubble shows
+// once the grid can travel no further (the foot of the list), so the two
+// never disagree.
+export function monthNamedAt(
+	layout: Layout,
+	scrollTop: number,
+	window: {inset: number; handoff: number},
+): MonthKey | undefined {
+	const {items, sections} = layout
+	if (items.length === 0 || sections.length === 0) return undefined
+	const section = sections[sectionIndexAt(layout, scrollTop + window.handoff)]!
+	const first = firstItemBelow(layout, scrollTop + window.inset)
+	const index = Math.min(section.start + section.count - 1, Math.max(section.start, first))
+	return monthKeyOf(items[index]!.takenAt)
 }

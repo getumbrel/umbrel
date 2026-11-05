@@ -1,7 +1,7 @@
 import {describe, expect, test, vi} from 'vitest'
 
-import type Umbreld from '../../index.js'
-import Files from './files.js'
+import type Umbreld from '../../index.ts'
+import Files from './files.ts'
 
 const mountedFolder = '/Home/Media/Transmission'
 

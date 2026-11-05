@@ -30,16 +30,6 @@ export const widgetContainerCva = cva(
 	},
 )
 
-export const widgetTextCva = cva('text-11 sm:text-13 leading-snug font-semibold -tracking-2 truncate', {
-	variants: {
-		opacity: {
-			primary: 'opacity-80',
-			secondary: 'opacity-50',
-			tertiary: 'opacity-25',
-		},
-	},
-})
-
 type WidgetContainerButtonProps = React.ComponentPropsWithoutRef<'button'>
 type WidgetContainerDivProps = React.ComponentPropsWithoutRef<'div'>
 type WidgetContainerProps = WidgetContainerButtonProps | WidgetContainerDivProps

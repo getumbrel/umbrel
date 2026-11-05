@@ -1,17 +1,23 @@
 import {motion} from 'motion/react'
 import {Suspense, useCallback, useEffect, useState, type MouseEvent as ReactMouseEvent} from 'react'
-import {RiCloseCircleFill} from 'react-icons/ri'
 import {Outlet, useMatch, useNavigate, useParams} from 'react-router-dom'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
+import {CloseButton} from '@/components/ui/dialog-close-button'
 import {MachineRail} from '@/features/machines/components/machine-rail'
 import {MachinesTabBar} from '@/features/machines/components/machines-tab-bar'
-import {layoutMorphTransition, MACHINES_CONFIGURE_PATH, MACHINES_PATH} from '@/features/machines/constants'
+import {
+	layoutMorphTransition,
+	MACHINES_CONFIGURE_PATH,
+	MACHINES_PATH,
+	MACHINES_RAIL_SIDE_QUERY,
+} from '@/features/machines/constants'
 import {useMachines} from '@/features/machines/hooks/use-machines'
 import {cn} from '@/lib/utils'
 import {DockSpacer} from '@/modules/desktop/dock'
+import {useTuckDockOnScroll} from '@/modules/desktop/dock-tuck'
+import {useHomeFit} from '@/modules/desktop/home-fit'
 import {usePauseWallpaperVideo} from '@/providers/wallpaper'
-import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 
 import {MachineViewerActionsProvider} from './components/machine-viewer-actions'
@@ -31,12 +37,12 @@ function useMachineViewHeaderFits(aspectRatio: number) {
 	useEffect(() => {
 		const compute = () => {
 			const vw = window.innerWidth
-			const xl = vw >= 1280
+			const railSide = window.matchMedia?.(MACHINES_RAIL_SIDE_QUERY).matches ?? vw >= 1280
 			const md = vw >= 768
-			const contentWidth = Math.min(1600, vw) - (md ? 64 : 0)
-			// xl: rail (48) + counterweight (48) + two row gaps (12) sit beside
-			const consoleWidth = xl ? contentWidth - 120 : contentWidth
-			const chromeWithHeader = (xl ? 170 : 230) + 50 + 20 + (md ? 32 : 16)
+			const contentWidth = Math.min(1600, vw) - (md ? 64 : 24)
+			// Rail (48) + counterweight (48) + two row gaps (12) sit beside
+			const consoleWidth = railSide ? contentWidth - 120 : contentWidth
+			const chromeWithHeader = (railSide ? 170 : 230) + 50 + 20 + (md ? 32 : 16)
 			setFits(window.innerHeight >= consoleWidth / aspectRatio + chromeWithHeader)
 		}
 		compute()
@@ -62,6 +68,8 @@ function MachinesLayoutContent() {
 	const {machines, isLoading} = useMachines()
 	const {machineId} = useParams<{machineId: string}>()
 	const [closing, setClosing] = useState(false)
+	const [scroller, setScroller] = useState<HTMLDivElement | null>(null)
+	const {low} = useHomeFit()
 	const isSettingsView = !!useMatch(`${MACHINES_PATH}/:machineId/settings`)
 	const isCreateView = !!useMatch(MACHINES_CONFIGURE_PATH)
 	const canImplicitlyDismiss = !isSettingsView && !isCreateView
@@ -115,17 +123,26 @@ function MachinesLayoutContent() {
 	// always height-limited, so there it always goes.
 	const isPhoneConsole = machine?.osId === 'android'
 	const headerFits = useMachineViewHeaderFits(isPhoneConsole ? PHONE_ASPECT_RATIO : LANDSCAPE_ASPECT_RATIO)
-	const hideHeader = isMachineView && !headerFits
+	// A phone on its side can't spare the height: the tab bar stands in for the
+	// header on every page, and picks up its close button
+	const hasTabBar = !isLoading && machines.length > 0
+	const headerInTabBar = low && hasTabBar
+	const hideHeader = headerInTabBar || (isMachineView && !headerFits)
+
+	// The console never scrolls, so a tucked dock could never come back there
+	useTuckDockOnScroll(isMachineView ? null : scroller)
 
 	return (
 		<motion.div
+			ref={setScroller}
 			initial={{opacity: 0}}
 			animate={{opacity: closing ? 0 : 1}}
 			transition={{duration: 0.15, ease: 'easeOut'}}
 			// stable both-edges: pages taller than the viewport (catalog) and shorter
 			// ones (index) would otherwise toggle the scrollbar and shift the centered
-			// column; both-edges reserves symmetric gutters so it stays centered
-			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xl [scrollbar-gutter:stable_both-edges]'
+			// column; both-edges reserves symmetric gutters so it stays centered.
+			// Touch scrollbars float over the page, so they need none.
+			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xl [scrollbar-gutter:stable_both-edges] pointer-coarse:[scrollbar-gutter:auto]'
 			onClick={!closing && canImplicitlyDismiss ? close : undefined}
 		>
 			<motion.div
@@ -133,14 +150,16 @@ function MachinesLayoutContent() {
 				animate={{scale: closing ? 0.99 : 1}}
 				transition={{duration: 0.2, ease: 'easeOut'}}
 				className={cn(
-					'relative z-10 mx-auto flex min-h-full w-full flex-col gap-5 pt-8 pb-4 md:px-8 md:pt-12',
+					'relative z-10 mx-auto flex min-h-full w-full flex-col gap-5 px-3 pt-8 pb-4 md:px-8 md:pt-12 low:gap-2 low:pt-2 low:pb-1',
 					// Machine-view fixed chrome, feeding the console's Fit cap below:
 					// 16px effective top padding (pt minus the chrome's rise) + tab
 					// bar (32) + one gap (20) + dock spacer (74/84) + pb (16) + 2px
 					// rounding cushion — the header is slid out on this route and the
-					// trailing gaps are collapsed. Below xl the rail wraps under the
-					// console, adding its 48px height plus the 12px row gap.
-					'[--machines-chrome:230px] xl:[--machines-chrome:170px]',
+					// trailing gaps are collapsed. Unless the window is wide the rail
+					// sits under the console, adding its 48px height plus the 12px row
+					// gap. Phones on their side use a tighter column: 8 top + 32 tab
+					// bar + 8 gap + dock spacer + 4 pb + 2 cushion.
+					'[--machines-chrome:230px] rail-side:[--machines-chrome:170px] low:[--machines-chrome:138px]',
 					isMachineView ? 'max-w-[1600px]' : 'max-w-[1054px]',
 				)}
 			>
@@ -153,7 +172,7 @@ function MachinesLayoutContent() {
 					onClick={stopImplicitDismiss}
 					className={cn(
 						'mx-auto flex w-full max-w-[1054px] flex-col gap-5 transition-[margin] duration-[350ms] ease-[cubic-bezier(0.32,0.72,0,1)] md:max-w-[990px]',
-						hideHeader && '-mt-4 md:-mt-8',
+						hideHeader && '-mt-4 md:-mt-8 low:mt-0',
 					)}
 				>
 					{/* The header slides up and out on the console route — the screen
@@ -185,13 +204,20 @@ function MachinesLayoutContent() {
 							</div>
 						</div>
 						<DarkTooltip label={t('close')} side='left'>
-							<button onClick={close} aria-label={t('close')} className={dialogHeaderCircleButtonClass}>
-								<RiCloseCircleFill className='h-5 w-5 lg:h-6 lg:w-6' />
-							</button>
+							<CloseButton onClick={close} />
 						</DarkTooltip>
 					</motion.div>
 
-					{!isLoading && machines.length > 0 && <MachinesTabBar machines={machines} />}
+					{hasTabBar && (
+						<div className='flex min-w-0 items-start gap-2'>
+							<MachinesTabBar machines={machines} />
+							{headerInTabBar && (
+								<DarkTooltip label={t('close')} side='left'>
+									<CloseButton onClick={close} className='mt-2 shrink-0' />
+								</DarkTooltip>
+							)}
+						</div>
+					)}
 				</div>
 
 				{/* One persistent container shared by every page: the dark card holding
@@ -200,13 +226,14 @@ function MachinesLayoutContent() {
 				<div
 					className={cn(
 						'flex w-full flex-col items-start gap-3',
-						// Machine view centers the (possibly height-capped) screen
-						isMachineView && 'items-center xl:flex-row xl:items-start xl:justify-center',
+						// Machine view centers the (possibly height-capped) screen, in
+						// the space left over on tall windows too
+						isMachineView && 'my-auto items-center rail-side:flex-row rail-side:items-start rail-side:justify-center',
 					)}
 				>
 					{/* Invisible counterweight matching the rail's width, so the screen
 					   itself sits dead center with the rail balancing it on the right */}
-					{machine && <div aria-hidden className='hidden w-12 shrink-0 xl:block' />}
+					{machine && <div aria-hidden className='hidden w-12 shrink-0 rail-side:block low:w-[136px]' />}
 					<motion.div
 						onClick={stopImplicitDismiss}
 						layout
@@ -236,8 +263,9 @@ function MachinesLayoutContent() {
 						</motion.div>
 					</motion.div>
 					{machine && (
-						<div className='w-full shrink-0 xl:w-auto' onClick={stopImplicitDismiss}>
-							<MachineRail machine={machine} onClose={close} />
+						<div className='w-full shrink-0 rail-side:w-auto' onClick={stopImplicitDismiss}>
+							{/* The rail only takes over the close once the header has slid away */}
+							<MachineRail machine={machine} onClose={hideHeader && !headerInTabBar ? close : undefined} />
 						</div>
 					)}
 				</div>
@@ -245,7 +273,7 @@ function MachinesLayoutContent() {
 				{/* Machine view: no grow spacer and the dock spacer pulls up over the
 				   trailing column gap, so the screen sits just above the dock */}
 				{!isMachineView && <div className='grow' />}
-				<DockSpacer className={cn(isMachineView && '-mt-5')} />
+				<DockSpacer className={cn(isMachineView && '-mt-5 low:-mt-2')} />
 			</motion.div>
 		</motion.div>
 	)

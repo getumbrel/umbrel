@@ -1,14 +1,17 @@
 import {fileURLToPath} from 'node:url'
 import path from 'node:path'
+import http from 'node:http'
+import type {AddressInfo} from 'node:net'
 
 import {describe, beforeAll, afterAll, expect, test, vi} from 'vitest'
 import fse from 'fs-extra'
+import {$} from 'execa'
 
-import runGitServer from '../test-utilities/run-git-server.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
+import runGitServer from '../test-utilities/run-git-server.ts'
+import temporaryDirectory from '../utilities/temporary-directory.ts'
 
-import AppRepository from './app-repository.js'
-import Umbreld from '../../index.js'
+import AppRepository from './app-repository.ts'
+import Umbreld from '../../index.ts'
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 
@@ -187,6 +190,73 @@ describe('appRepository.atomicClone()', () => {
 			remove.mockRestore()
 			logError.mockRestore()
 			await fse.remove(`${dataDirectory}/app-stores/.tmp`)
+		}
+	})
+})
+
+// A store is third-party content cloned as root, so nothing it serves may write
+// outside the clone. Git refuses to create these trees and refs itself, so the
+// tests below write the objects and the ref advertisement directly.
+describe('appRepository.atomicClone() with a hostile store', () => {
+	test('refuses tree entries that climb out of the clone', async () => {
+		const repository = `${path.dirname(gitServer.directory)}/escape.git`
+		const $$ = $({cwd: repository})
+		await $({cwd: path.dirname(repository)})`git init --quiet --bare ${repository}`
+		const writeObject = async (type: string, content: Buffer) =>
+			(await $$({input: content})`git hash-object --literally -w -t ${type} --stdin`).stdout
+		const tree = async (mode: string, name: string, oid: string) =>
+			writeObject('tree', Buffer.concat([Buffer.from(`${mode} ${name}\0`), Buffer.from(oid, 'hex')]))
+		// x/../../../ESCAPED resolves to app-stores/ESCAPED from app-stores/.tmp/<token>
+		let oid = await tree('100644', 'ESCAPED', await writeObject('blob', Buffer.from('escaped\n')))
+		for (let level = 0; level < 3; level++) oid = await tree('40000', '..', oid)
+		oid = await tree('40000', 'x', oid)
+		const commit = await writeObject(
+			'commit',
+			Buffer.from(`tree ${oid}\nauthor a <a@a> 0 +0000\ncommitter a <a@a> 0 +0000\n\nescape\n`),
+		)
+		await $$`git update-ref HEAD ${commit}`
+
+		const dataDirectory = await directory.create()
+		const appRepository = new AppRepository(new Umbreld({dataDirectory}), gitServer.url.replace(/[^/]+$/, 'escape.git'))
+		await expect(appRepository.atomicClone()).rejects.toMatchObject({code: 'UnsafeFilepathError'})
+		await expect(fse.pathExists(`${dataDirectory}/app-stores/ESCAPED`)).resolves.toBe(false)
+		await expect(fse.readdir(`${dataDirectory}/app-stores/.tmp`)).resolves.toEqual([])
+	})
+
+	test('refuses a default branch that climbs out of the git directory', async () => {
+		const head = (await $({cwd: gitServer.directory})`git rev-parse HEAD`).stdout
+		const branch = 'refs/heads/../../../../../ESCAPED'
+		const packet = (line: string) => `${(line.length + 4).toString(16).padStart(4, '0')}${line}`
+		// Advertise a HEAD symref to a branch name containing `..`, and serve the
+		// fixture repository's real objects for it
+		const server = http.createServer((request, response) => {
+			if (request.method === 'GET' && request.url?.includes('/info/refs')) {
+				response.setHeader('Content-Type', 'application/x-git-upload-pack-advertisement')
+				response.end(
+					packet('# service=git-upload-pack\n') +
+						'0000' +
+						packet(`${head} HEAD\0side-band-64k ofs-delta shallow no-progress symref=HEAD:${branch}\n`) +
+						packet(`${head} ${branch}\n`) +
+						'0000',
+				)
+				return
+			}
+			response.setHeader('Content-Type', 'application/x-git-upload-pack-result')
+			const uploadPack = $({cwd: gitServer.directory, stdin: 'pipe'})`git upload-pack --stateless-rpc .`
+			request.pipe(uploadPack.stdin!)
+			uploadPack.stdout!.pipe(response)
+		})
+		await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+
+		try {
+			const dataDirectory = await directory.create()
+			const {port} = server.address() as AddressInfo
+			const appRepository = new AppRepository(new Umbreld({dataDirectory}), `http://127.0.0.1:${port}/store.git`)
+			await expect(appRepository.atomicClone()).rejects.toMatchObject({code: 'InvalidRefNameError'})
+			await expect(fse.pathExists(`${dataDirectory}/app-stores/ESCAPED`)).resolves.toBe(false)
+			await expect(fse.readdir(`${dataDirectory}/app-stores/.tmp`)).resolves.toEqual([])
+		} finally {
+			await new Promise<void>((resolve) => server.close(() => resolve()))
 		}
 	})
 })

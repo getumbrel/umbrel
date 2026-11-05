@@ -1,7 +1,7 @@
 import {keepPreviousData} from '@tanstack/react-query'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
-import {USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
+import {CLOUD_PATH, RECENTS_PATH, SEARCH_PATH, USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
 import {useNetworkSharesQuery} from '@/features/files/hooks/use-network-shares-query'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useFilesStore} from '@/features/files/store/use-files-store'
@@ -10,7 +10,7 @@ import {useUploadListingItems} from '@/features/files/transfers/use-transfers'
 import type {FileSystemItem, ViewPreferences} from '@/features/files/types'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {getNetworkDirectoryListing} from '@/features/files/utils/network-directory-listing'
-import {sortFilesystemItems} from '@/features/files/utils/sort-filesystem-items'
+import {compareFilesystemItems, sortFilesystemItems} from '@/features/files/utils/sort-filesystem-items'
 import {trpcReact} from '@/trpc/trpc'
 
 interface UseListDirectoryOptions {
@@ -36,6 +36,11 @@ export function useListDirectory(
 	// Uploads heading here, plus a placeholder for each folder still being created
 	const uploadingItems = useUploadListingItems(path)
 	const utils = trpcReact.useUtils()
+	// Shared context menus and rename controls also mount this hook in views
+	// whose items come from other APIs and have no directory of their own.
+	const isUiOnlyPath = [SEARCH_PATH, RECENTS_PATH, CLOUD_PATH].some(
+		(root) => path === root || path.startsWith(`${root}/`),
+	)
 
 	const sortBy = sortByOverride ?? preferences?.sortBy ?? 'name'
 	const sortOrder = sortOrderOverride ?? preferences?.sortOrder ?? 'ascending'
@@ -89,6 +94,7 @@ export function useListDirectory(
 	const isDirectoryQueryEnabled =
 		enabled &&
 		!!path &&
+		!isUiOnlyPath &&
 		!skipBackendRequest &&
 		!isNetworkPending &&
 		!isDisconnectedShare &&
@@ -161,9 +167,9 @@ export function useListDirectory(
 		() => (isDisconnectedShare ? new Error('[network-share-disconnected]') : null),
 		[isDisconnectedShare],
 	)
-	// A disconnected share has nothing to show; the previous folder's placeholder
-	// data must not linger (it would read as loading, hiding the explanation).
-	const data = isDisconnectedShare ? undefined : (configuredListing ?? directoryQuery.data)
+	// UI-only views and disconnected shares must not retain the previous folder's
+	// data or writable capabilities, even when the disabled query still holds it.
+	const data = isUiOnlyPath || isDisconnectedShare ? undefined : (configuredListing ?? directoryQuery.data)
 	// Disabling a query does not cancel its in-flight request, so a request that
 	// stalls during an outage must not keep a listing we no longer need waiting.
 	const isLoading = isNetworkPending || (isDirectoryQueryEnabled && directoryQuery.isLoading)
@@ -171,7 +177,8 @@ export function useListDirectory(
 	// (e.g. listing a missing host directory while the role was still loading).
 	const isError = isDisconnectedShare || (isDirectoryQueryEnabled && directoryQuery.isError)
 	const error = disconnectedShareError ?? (isDirectoryQueryEnabled ? directoryQuery.error : null)
-	const isPlaceholderData = !configuredListing && !isDisconnectedShare && directoryQuery.isPlaceholderData
+	const isPlaceholderData =
+		!isUiOnlyPath && !configuredListing && !isDisconnectedShare && directoryQuery.isPlaceholderData
 
 	// Track the previous path so we can distinguish placeholder data from
 	// a directory change (hide old items) vs a sort change (keep showing items).
@@ -195,7 +202,8 @@ export function useListDirectory(
 		return Array.from(map.values())
 	}, [data?.files, extraItems, isStaleDirectory, configuredListing])
 
-	const hasMore = hasConfiguredListing ? false : isStaleDirectory ? true : (extraHasMore ?? data?.hasMore ?? true)
+	const hasMore =
+		isUiOnlyPath || hasConfiguredListing ? false : isStaleDirectory ? true : (extraHasMore ?? data?.hasMore ?? true)
 
 	// Keep the ref in sync for the skip-refetch-on-sort optimization
 	fullyLoadedRef.current = items.length > 0 && !hasMore
@@ -213,6 +221,26 @@ export function useListDirectory(
 	// Guard against late responses landing in the wrong directory
 	const requestIdRef = useRef(0)
 
+	useEffect(
+		() =>
+			transfers.onTransition((item) => {
+				if (
+					item.kind !== 'move' ||
+					item.state !== 'completed' ||
+					!item.sourcePath ||
+					item.resultPath === item.sourcePath ||
+					(item.sourcePath.slice(0, item.sourcePath.lastIndexOf('/')) || '/') !== path
+				)
+					return
+				// The first-page refresh cannot remove a stale row held in later
+				// pages. Prune it only once the move has actually succeeded.
+				requestIdRef.current++
+				setIsFetchingMore(false)
+				setExtraItems((items) => items.filter((entry) => entry.path !== item.sourcePath))
+			}),
+		[path],
+	)
+
 	const fetchMoreItems = useCallback(async (): Promise<boolean> => {
 		if (isLoading || isFetchingMore || !hasMore) return false
 
@@ -224,13 +252,11 @@ export function useListDirectory(
 		const lastFileName = lastItem?.path.split('/').pop()
 
 		try {
-			const result = await utils.files.list.fetch({
-				path,
-				lastFile: lastFileName,
-				limit: itemsOnScrollEnd,
-				sortBy,
-				sortOrder,
-			})
+			// Reusing a cached page could bring back a file that has since moved.
+			const result = await utils.files.list.fetch(
+				{path, lastFile: lastFileName, limit: itemsOnScrollEnd, sortBy, sortOrder},
+				{staleTime: 0},
+			)
 
 			// Ignore responses that belong to an outdated directory
 			if (thisRequest !== requestIdRef.current) return false
@@ -263,7 +289,7 @@ export function useListDirectory(
 	const removeIncomingItems = useFilesStore((s) => s.removeIncomingItems)
 
 	// Merge optimistic uploading items & *always* sort locally
-	const directoryItems = useMemo(() => {
+	const {directoryItems, hiddenRenamedPaths} = useMemo(() => {
 		// Placeholders (a landed upload, a folder still being created) yield to
 		// the real entry once the server lists it; a file still uploading stays
 		// beside the entry it may be replacing
@@ -280,8 +306,31 @@ export function useListDirectory(
 			(item) => item.path.substring(0, item.path.lastIndexOf('/')) === path && !existingPaths.has(item.path),
 		)
 
-		return sortFilesystemItems([...visible, ...arriving], sortBy, sortOrder)
-	}, [uploadingItems, items, path, sortBy, sortOrder, pendingPaths, incomingItems])
+		// Keep the original source in the boundary calculation, even while hidden.
+		const loadedBoundary = items.reduce<FileSystemItem | undefined>(
+			(last, item) => (!last || compareFilesystemItems(item, last, sortBy, sortOrder) > 0 ? item : last),
+			undefined,
+		)
+		const hiddenRenamedPaths: string[] = []
+		const visibleArrivals = arriving.filter((item) => {
+			// A rename beyond the loaded range stays selected, but must not appear
+			// at a false end of the folder. Normal paging will reveal it later.
+			if (
+				item.renamedFrom &&
+				hasMore &&
+				(!loadedBoundary || compareFilesystemItems(item, loadedBoundary, sortBy, sortOrder) > 0)
+			) {
+				hiddenRenamedPaths.push(item.path)
+				return false
+			}
+			return true
+		})
+
+		return {
+			directoryItems: sortFilesystemItems([...visible, ...visibleArrivals], sortBy, sortOrder),
+			hiddenRenamedPaths,
+		}
+	}, [uploadingItems, items, path, sortBy, sortOrder, pendingPaths, incomingItems, hasMore])
 
 	// Clean up stale optimistic state after server data refreshes.
 	// pendingPaths is read via getState() to avoid the effect running when
@@ -330,7 +379,7 @@ export function useListDirectory(
 	const isLoadingItems = isLoading || isStaleDirectory
 
 	return {
-		listing: data && !isStaleDirectory ? {...data, items: directoryItems, hasMore} : undefined,
+		listing: data && !isStaleDirectory ? {...data, items: directoryItems, hasMore, hiddenRenamedPaths} : undefined,
 		isLoading: isLoadingItems,
 		isError,
 		error,

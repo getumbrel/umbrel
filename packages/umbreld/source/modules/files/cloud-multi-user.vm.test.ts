@@ -2,7 +2,7 @@ import nodePath from 'node:path'
 
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 import {
 	createVmCloudFixtureDirectory,
 	startVmCloudWebDav,
@@ -11,7 +11,7 @@ import {
 	VM_CLOUD_WEBDAV_URL,
 	VM_CLOUD_WEBDAV_USERNAME,
 	writeVmCloudFixture,
-} from './cloud.vm-test-helpers.js'
+} from './cloud.vm-test-helpers.ts'
 
 const ownerPassword = 'moneyprintergobrrr'
 const memberPassword = 'member-password'

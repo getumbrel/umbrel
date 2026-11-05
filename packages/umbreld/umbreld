@@ -1,7 +1,7 @@
 #!/bin/env bash
 
-# We need to add this shim as the main umbreld entrypoint so we can set up the environment we need
-# like adding node_modules/.bin to the PATH so we have access to tsx.
+# This shim is the main umbreld entrypoint so we can hook development mode and resolve the
+# start script from package.json.
 
 
 # Hook to run development mode
@@ -21,9 +21,6 @@ entrypoint=$(npm --prefix "${project_directory}" pkg get scripts.start)
 # Remove double quotes
 entrypoint="${entrypoint#\"}"
 entrypoint="${entrypoint%\"}"
-
-# Set up PATH so we can resolve tsx and local node
-export PATH="${project_directory}/node_modules/.bin:${PATH}"
 
 # Execute the entrypoint and pass through any arguments
 exec "${project_directory}/${entrypoint}" "$@"

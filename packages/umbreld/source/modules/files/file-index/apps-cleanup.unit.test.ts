@@ -1,7 +1,7 @@
 import BetterSqlite3 from 'better-sqlite3'
 import {expect, test} from 'vitest'
 
-import {fileIndexMigrations, migrateFileIndex} from './migrations.js'
+import {fileIndexMigrations, migrateFileIndex} from './migrations.ts'
 
 test('removes previously crawled app entries once while preserving other roots and shared content', async () => {
 	const database = new BetterSqlite3(':memory:')

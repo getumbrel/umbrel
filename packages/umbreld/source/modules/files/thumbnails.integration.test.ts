@@ -3,8 +3,8 @@ import nodePath from 'node:path'
 import {afterEach, beforeEach, describe, expect, test} from 'vitest'
 import fse from 'fs-extra'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
-import {parseThumbnailFilename, thumbnailSystemPath} from './thumbnail-support.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
+import {parseThumbnailFilename, thumbnailSystemPath} from './thumbnail-support.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 

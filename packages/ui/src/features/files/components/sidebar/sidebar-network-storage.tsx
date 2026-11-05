@@ -104,7 +104,7 @@ function NetworkRootItem() {
 					isActive ? selectedClass : 'text-white/60 group-hover:bg-white/10 group-hover:text-white',
 				)}
 			>
-				<img src={networkIcon} alt='' className='h-5 w-auto flex-shrink-0' />
+				<img src={networkIcon} alt='' className='size-5 flex-shrink-0 object-contain' />
 				<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'>
 					{t('files-sidebar.network-sidebar')}
 				</span>

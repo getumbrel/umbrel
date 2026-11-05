@@ -35,10 +35,13 @@ function DialogContent({
 	className,
 	children,
 	slide = true,
+	closeButton = true,
 	onPointerDownOutside,
 	ref,
 	...props
-}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {slide?: boolean} & {
+}: Omit<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>, 'asChild'> & {
+	slide?: boolean
+	closeButton?: boolean
 	ref?: React.Ref<React.ComponentRef<typeof DialogPrimitive.Content>>
 }) {
 	return (
@@ -62,10 +65,7 @@ function DialogContent({
 				}}
 			>
 				{children}
-				{/* <DialogPrimitive.Close className="absolute right-4 top-4 rounded-xs opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-neutral-100 data-[state=open]:text-neutral-500 dark:ring-offset-neutral-950 dark:focus:ring-neutral-300 dark:data-[state=open]:bg-neutral-800 dark:data-[state=open]:text-neutral-400">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close> */}
+				{closeButton && <DialogCloseButton />}
 			</DialogPrimitive.Content>
 		</DialogPortal>
 	)
@@ -73,28 +73,38 @@ function DialogContent({
 
 const DialogScrollableContent = ({
 	children,
-	showClose,
+	closeButton = true,
+	fade = true,
 	onOpenAutoFocus,
 	onCloseAutoFocus,
 	className,
+	viewportRef,
 }: {
 	children: React.ReactNode
-	showClose?: boolean
+	closeButton?: boolean
+	fade?: boolean
 	onOpenAutoFocus?: (e: Event) => void
 	onCloseAutoFocus?: (e: Event) => void
 	className?: string
+	viewportRef?: React.RefObject<HTMLDivElement | null>
 }) => {
 	return (
 		<DialogContent
 			className={cn('flex flex-col p-0', className)}
+			closeButton={closeButton}
 			onOpenAutoFocus={onOpenAutoFocus}
 			onCloseAutoFocus={onCloseAutoFocus}
 		>
-			{/* TODO: adjust dialog inset if `showClose` is true so close button isn't too close to scrollbar */}
-			<ScrollArea className='flex flex-col' dialogInset>
+			{/* The scrollbar starts below the close button */}
+			<ScrollArea
+				className='flex flex-col'
+				dialogInset
+				fade={fade}
+				scrollbarClass={closeButton ? 'mt-10' : undefined}
+				viewportRef={viewportRef}
+			>
 				{children}
 			</ScrollArea>
-			{showClose && <DialogCloseButton className='absolute top-2 right-2 z-50' />}
 		</DialogContent>
 	)
 }
@@ -119,7 +129,8 @@ function DialogTitle({
 	return (
 		<DialogPrimitive.Title
 			ref={ref}
-			className={cn('text-left text-17 leading-snug font-semibold -tracking-2', className)}
+			// Keeps a long title out of the corner the close button sits in
+			className={cn('pe-6 text-left text-17 leading-snug font-semibold -tracking-2', className)}
 			{...props}
 		/>
 	)

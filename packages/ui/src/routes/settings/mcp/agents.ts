@@ -3,7 +3,7 @@
 // connect view, and identity matching for the "Claude Code · 2 minutes ago"
 // status line. Brand names are intentionally untranslated.
 
-export type McpAgentId = 'claude-code' | 'codex' | 'cursor' | 'openclaw' | 'hermes'
+export type McpAgentId = 'claude-code' | 'codex' | 'cursor' | 'openclaw' | 'hermes' | 'murmur'
 
 // The visual identity shared by registry entries and the "any other agent"
 // pseudo-entry (the waving robot)
@@ -21,6 +21,8 @@ export type McpAgent = McpAgentVisual & {
 	// App Store id for agents that can run on this device as an Umbrel app —
 	// when installed, the connect view defaults to the in-container endpoint URL
 	appId?: string
+	// False keeps an agent out of the picker's tiles, everywhere else it appears
+	picker?: false
 	// Substrings matched case-insensitively against the MCP clientInfo name
 	clientMatch: string[]
 	snippet: (url: string, token: string) => string
@@ -42,8 +44,32 @@ export const OTHER_AGENT: McpAgentVisual = {
 }
 
 // Registry order is display order: constellation slots, picker tiles, and
-// setup chips all follow it
+// setup chips all follow it. Murmur leads as Umbrel's own home for Hermes.
 export const MCP_AGENTS: McpAgent[] = [
+	{
+		id: 'murmur',
+		name: 'Murmur',
+		logo: '/assets/mcp/murmur.webp',
+		tile: true,
+		appId: 'murmur',
+		// Murmur's agents run in its own Hermes, which identifies itself as
+		// Hermes. Its key is still shown as Murmur everywhere, by its agent type,
+		// and 'hermes' isn't matched here, which would take the Hermes Agent
+		// entry's matches.
+		clientMatch: ['murmur'],
+		// Murmur finds the key in whatever is pasted into it
+		snippet: (url, token) => genericSnippet(url, token),
+	},
+	{
+		id: 'hermes',
+		name: 'Hermes Agent',
+		logo: '/assets/mcp/hermes.webp',
+		tile: true,
+		appId: 'hermes-agent',
+		clientMatch: ['hermes'],
+		snippet: (url, token) =>
+			`mcp_servers:\n  umbrel:\n    url: "${url}"\n    headers:\n      Authorization: "Bearer ${token}"`,
+	},
 	{
 		id: 'openclaw',
 		name: 'OpenClaw',
@@ -55,14 +81,12 @@ export const MCP_AGENTS: McpAgent[] = [
 			`openclaw mcp set umbrel '{"url":"${url}","transport":"streamable-http","headers":{"Authorization":"Bearer ${token}"}}'`,
 	},
 	{
-		id: 'hermes',
-		name: 'Hermes Agent',
-		logo: '/assets/mcp/hermes.webp',
-		tile: true,
-		appId: 'hermes-agent',
-		clientMatch: ['hermes'],
-		snippet: (url, token) =>
-			`mcp_servers:\n  umbrel:\n    url: "${url}"\n    headers:\n      Authorization: "Bearer ${token}"`,
+		id: 'claude-code',
+		name: 'Claude Code',
+		logo: '/assets/mcp/claude-code.webp',
+		tile: false,
+		clientMatch: ['claude'],
+		snippet: (url, token) => `claude mcp add --transport http umbrel ${url} --header "Authorization: Bearer ${token}"`,
 	},
 	{
 		id: 'codex',
@@ -76,18 +100,13 @@ export const MCP_AGENTS: McpAgent[] = [
 			`[mcp_servers.umbrel]\nurl = "${url}"\nhttp_headers = { "Authorization" = "Bearer ${token}" }`,
 	},
 	{
-		id: 'claude-code',
-		name: 'Claude Code',
-		logo: '/assets/mcp/claude-code.webp',
-		tile: false,
-		clientMatch: ['claude'],
-		snippet: (url, token) => `claude mcp add --transport http umbrel ${url} --header "Authorization: Bearer ${token}"`,
-	},
-	{
 		id: 'cursor',
 		name: 'Cursor',
 		logo: '/assets/mcp/cursor.webp',
 		tile: false,
+		// Still one of the agents orbiting in the intro, and still a setup chip,
+		// but the picker's tiles are kept to the agents most people connect
+		picker: false,
 		clientMatch: ['cursor'],
 		snippet: (url, token) =>
 			JSON.stringify({mcpServers: {umbrel: {url, headers: {Authorization: `Bearer ${token}`}}}}, null, 2),

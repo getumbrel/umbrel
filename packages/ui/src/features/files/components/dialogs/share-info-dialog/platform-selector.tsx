@@ -21,8 +21,17 @@ export const platforms: Platform[] = [
 	{id: 'umbrelos', name: 'Another Umbrel', icon: umbrelDeviceIconActive},
 ]
 
+export function getDefaultPlatform(): Platform | undefined {
+	const {userAgent, maxTouchPoints} = navigator
+	const isMac = /Mac/i.test(userAgent)
+	// iPadOS can use a Mac user agent when requesting desktop websites.
+	const isIOS = /iPhone|iPad|iPod/i.test(userAgent) || (isMac && maxTouchPoints > 1)
+	const id = isIOS ? 'ios' : isMac ? 'macos' : /Windows NT|Win32|Win64/i.test(userAgent) ? 'windows' : undefined
+	return platforms.find((platform) => platform.id === id)
+}
+
 interface PlatformSelectorProps {
-	selectedPlatform: Platform
+	selectedPlatform: Platform | undefined
 	onPlatformChange: (platform: Platform) => void
 }
 
@@ -34,8 +43,14 @@ export function PlatformSelector({selectedPlatform, onPlatformChange}: PlatformS
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button variant='default' className='flex items-center gap-2'>
-						<img src={selectedPlatform.icon} alt={selectedPlatform.name} className='h-5 w-5' />
-						<span>{selectedPlatform.name}</span>
+						{selectedPlatform ? (
+							<>
+								<img src={selectedPlatform.icon} alt={selectedPlatform.name} className='h-5 w-5' />
+								<span>{selectedPlatform.name}</span>
+							</>
+						) : (
+							<span>{t('files-share.instructions.select-platform')}</span>
+						)}
 						<ChevronDown className='h-3 w-3' />
 					</Button>
 				</DropdownMenuTrigger>

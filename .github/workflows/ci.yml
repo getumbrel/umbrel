@@ -11,9 +11,10 @@ jobs:
       ui-only: ${{ steps.check.outputs.ui-only }}
       ui-changed: ${{ steps.check.outputs.ui-changed }}
       apple-changed: ${{ steps.check.outputs.apple-changed }}
+      android-changed: ${{ steps.check.outputs.android-changed }}
       run-pi-tests: ${{ steps.pi.outputs.run-pi-tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - id: check
@@ -27,6 +28,7 @@ jobs:
             echo "ui-only=false" >> $GITHUB_OUTPUT
             echo "ui-changed=true" >> $GITHUB_OUTPUT
             echo "apple-changed=true" >> $GITHUB_OUTPUT
+            echo "android-changed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -51,6 +53,7 @@ jobs:
           UI_ONLY="true"
           UI_CHANGED="false"
           APPLE_CHANGED="false"
+          ANDROID_CHANGED="false"
           while IFS= read -r file; do
             if [[ -n "$file" && ! "$file" =~ ^packages/ui/ ]]; then
               UI_ONLY="false"
@@ -67,6 +70,12 @@ jobs:
                 APPLE_CHANGED="true"
                 ;;
             esac
+
+            case "$file" in
+              clients/android/*|.github/workflows/ci.yml)
+                ANDROID_CHANGED="true"
+                ;;
+            esac
           done <<< "$CHANGED_FILES"
 
           if [[ -z "$CHANGED_FILES" ]]; then
@@ -78,9 +87,11 @@ jobs:
           echo "UI only: $UI_ONLY"
           echo "UI changed: $UI_CHANGED"
           echo "Apple changed: $APPLE_CHANGED"
+          echo "Android changed: $ANDROID_CHANGED"
           echo "ui-only=$UI_ONLY" >> $GITHUB_OUTPUT
           echo "ui-changed=$UI_CHANGED" >> $GITHUB_OUTPUT
           echo "apple-changed=$APPLE_CHANGED" >> $GITHUB_OUTPUT
+          echo "android-changed=$ANDROID_CHANGED" >> $GITHUB_OUTPUT
       # The Pi VM tests boot the production Pi image in an emulated Raspberry
       # Pi 4. Emulation is TCG-only (no hardware acceleration exists for the
       # raspi4b machine) so they're the slowest jobs in CI and only run on
@@ -120,36 +131,80 @@ jobs:
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-ubuntu-2404
     steps:
-      - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build amd64 Docker image
         working-directory: packages/os
-        run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
+        run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
   umbrelos-arm64-cache:
     name: Build umbrelOS arm64
     needs: detect-changes
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-arm-ubuntu-2404
     steps:
-      - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build arm64 Docker image
         working-directory: packages/os
-        run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
+        run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
   umbrelos-pi-cache:
     name: Build umbrelOS Pi
     needs: detect-changes
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-arm-ubuntu-2404
     steps:
-      - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build Pi Docker image
         working-directory: packages/os
-        run: docker buildx build --platform linux/arm64 --build-arg BASE_VARIANT=-pi --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-pi --cache-to type=gha,mode=max,scope=umbrelos-pi ../../
+        run: docker buildx build --platform linux/arm64 --build-arg BASE_VARIANT=-pi --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-pi --cache-to type=gha,mode=max,scope=umbrelos-pi ../../
+
+  # Check the software installed in each umbrelOS image against the committed
+  # lists in packages/os/package-versions/. This runs alongside the VM tests, so
+  # it doesn't hold them up.
+  umbrelos-package-versions:
+    name: Check umbrelOS ${{ matrix.variant }} package versions
+    needs: [detect-changes, umbrelos-amd64-cache, umbrelos-arm64-cache, umbrelos-pi-cache]
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: amd64
+            runner: ubicloud-standard-4-ubuntu-2404
+            build-args: --platform linux/amd64
+          - variant: arm64
+            runner: ubicloud-standard-4-arm-ubuntu-2404
+            build-args: --platform linux/arm64
+          - variant: pi
+            runner: ubicloud-standard-4-arm-ubuntu-2404
+            build-args: --platform linux/arm64 --build-arg BASE_VARIANT=-pi
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
+      - name: Compare package versions
+        working-directory: packages/os
+        run: docker buildx build ${{ matrix.build-args }} --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-${{ matrix.variant }} --load --tag umbrelos ../../ && docker run --rm --entrypoint bash --volume "$PWD/package-versions.sh:/package-versions.sh:ro" umbrelos /package-versions.sh | diff --unified package-versions/${{ matrix.variant }}.txt -
 
   # Build the image for the VM tests
   # We run this in a seperate step so we only build it once and reuse for all VM runners to reduce billed minutes.
@@ -158,19 +213,27 @@ jobs:
     needs: [detect-changes, umbrelos-amd64-cache]
     if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubicloud-standard-4-ubuntu-2404
+    outputs:
+      image-key: ${{ steps.image-key.outputs.key }}
+      update-bundle-key: ${{ steps.update-bundle-key.outputs.key }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build OS image
         working-directory: packages/os
         # SKIP_CACHE_EXPORT: the umbrelos-amd64-cache job (a dependency of this
@@ -178,33 +241,99 @@ jobs:
         # redundant re-export. It can intermittently fail the build with cache
         # backend errors, which would block every VM test that depends on this
         # image; the --cache-from import keeps the build fast regardless.
-        run: SKIP_AMD64_RUGIX_BUNDLE=true SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
+        run: SKIP_CACHE_EXPORT=true npm run build:amd64:rugix
+      # The build is reproducible, so building this commit anywhere else should
+      # give the same checksums.
+      - name: Show OS image checksums
+        working-directory: packages/os
+        run: sha256sum build/umbrelos-amd64.img build/umbrelos-amd64.update
       # Hack to pass the image to the next job. We used to use upload-artifact but network performance
       # is terrible between GitHub <> Ubicloud. Just abuse the cache for now which is local and fast.
+      # Each attempt saves under its own key. A failed save can leave its key
+      # reserved, so a re-run reusing it could never save the image.
+      - name: Choose OS image cache key
+        id: image-key
+        run: echo "key=umbrelos-amd64-image-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - name: Cache OS image
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
-          key: umbrelos-amd64-image-${{ github.run_id }}
+          key: ${{ steps.image-key.outputs.key }}
+      # actions/cache/save only warns when saving fails, and then every VM test
+      # job fails to restore the image. Fail here instead, where re-running this
+      # job recovers. The lookup is retried once like the VM jobs' restore.
+      - name: Check the OS image was cached
+        id: check-os-image
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+      - name: Wait before checking the OS image again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Check the OS image was cached again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+          fail-on-cache-miss: true
+      # The update bundle is cached separately, the same way, so only the OS
+      # update tests restore it. The glob includes the bundle hash build.sh records.
+      - name: Choose OS update bundle cache key
+        id: update-bundle-key
+        run: echo "key=umbrelos-amd64-update-bundle-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+      - name: Cache OS update bundle
+        uses: actions/cache/save@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update*
+          key: ${{ steps.update-bundle-key.outputs.key }}
+      - name: Check the OS update bundle was cached
+        id: check-update-bundle
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update*
+          key: ${{ steps.update-bundle-key.outputs.key }}
+          lookup-only: true
+      - name: Wait before checking the OS update bundle again
+        if: steps.check-update-bundle.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Check the OS update bundle was cached again
+        if: steps.check-update-bundle.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update*
+          key: ${{ steps.update-bundle-key.outputs.key }}
+          lookup-only: true
+          fail-on-cache-miss: true
 
   umbrelos-pi-vm-image-build:
     name: Build umbrelOS Pi VM image
     needs: [detect-changes, umbrelos-pi-cache]
     if: needs.detect-changes.outputs.ui-only != 'true' && needs.detect-changes.outputs.run-pi-tests == 'true'
     runs-on: ubicloud-standard-4-ubuntu-2404
+    outputs:
+      image-key: ${{ steps.image-key.outputs.key }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build OS image
         working-directory: packages/os
         # SKIP_CACHE_EXPORT: the umbrelos-pi-cache job (a dependency of this job)
@@ -213,11 +342,37 @@ jobs:
         # backend errors, which would block the Pi VM test that depends on this
         # image; the --cache-from import keeps the build fast regardless.
         run: SKIP_CACHE_EXPORT=true npm run build:pi5
+      # Each attempt saves under its own key. A failed save can leave its key
+      # reserved, so a re-run reusing it could never save the image.
+      - name: Choose OS image cache key
+        id: image-key
+        run: echo "key=umbrelos-pi-image-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
       - name: Cache OS image
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: packages/os/build/umbrelos-pi.img
-          key: umbrelos-pi-image-${{ github.run_id }}
+          key: ${{ steps.image-key.outputs.key }}
+      # actions/cache/save only warns when saving fails, and then every VM test
+      # job fails to restore the image. Fail here instead, where re-running this
+      # job recovers. The lookup is retried once like the VM jobs' restore.
+      - name: Check the OS image was cached
+        id: check-os-image
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-pi.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+      - name: Wait before checking the OS image again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Check the OS image was cached again
+        if: steps.check-os-image.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-pi.img
+          key: ${{ steps.image-key.outputs.key }}
+          lookup-only: true
+          fail-on-cache-miss: true
 
   # Discover all MV test files so we can run the result as a build matrix
   discover-vm-tests:
@@ -228,7 +383,7 @@ jobs:
     outputs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - id: find
         run: |
           tests=$(
@@ -240,11 +395,16 @@ jobs:
                 if grep --quiet '^// @vm-requires-playwright$' "${test_path}"; then
                   requires_playwright=true
                 fi
+                requires_update_bundle=false
+                if grep --quiet '^// @vm-requires-update-bundle$' "${test_path}"; then
+                  requires_update_bundle=true
+                fi
                 jq --null-input --compact-output \
                   --arg path "${relative_path}" \
                   --arg name "${name}" \
                   --argjson requiresPlaywright "${requires_playwright}" \
-                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright}'
+                  --argjson requiresUpdateBundle "${requires_update_bundle}" \
+                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright, requiresUpdateBundle: $requiresUpdateBundle}'
               done |
               jq --slurp --compact-output
           )
@@ -260,7 +420,7 @@ jobs:
     outputs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - id: find
         run: |
           tests=$(find packages/umbreld/source -name "*.pi.vm.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.pi\\.vm\\.test\\.ts$"; ""))})')
@@ -278,31 +438,82 @@ jobs:
         test: ${{ fromJSON(needs.discover-vm-tests.outputs.tests) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
+      # The cache service intermittently answers the lookup with HTTP 500,
+      # which restore treats as a miss. Wait briefly and retry once before
+      # failing the job.
       - name: Restore OS image from cache
-        uses: actions/cache/restore@v4
+        id: restore-os-image
+        uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-amd64.img
-          key: umbrelos-amd64-image-${{ github.run_id }}
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.image-key }}
+      - name: Wait before retrying OS image restore
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Retry restoring OS image from cache
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.image-key }}
+          fail-on-cache-miss: true
+      - name: Restore OS update bundle from cache
+        id: restore-update-bundle
+        if: matrix.test.requiresUpdateBundle
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update*
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
+      - name: Wait before retrying OS update bundle restore
+        if: matrix.test.requiresUpdateBundle && steps.restore-update-bundle.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Retry restoring OS update bundle from cache
+        if: matrix.test.requiresUpdateBundle && steps.restore-update-bundle.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-amd64.update*
+          key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
           fail-on-cache-miss: true
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
+      # Retried once: a dropped registry connection (ECONNRESET) or a race in
+      # npm's own cache (EEXIST) has failed this step, and with it the job
       - name: Install umbreld dependencies
         working-directory: packages/umbreld
-        run: npm clean-install
+        run: |
+          npm clean-install || {
+            echo "::warning title=Retried npm install::npm clean-install failed, retrying once"
+            sleep 10
+            npm clean-install
+          }
       - name: Install browser for LAN ingress end-to-end test
         if: matrix.test.requiresPlaywright
         working-directory: packages/umbreld
         run: npx playwright install --with-deps chromium
+      # VM tests boot a full OS and exercise real reboots, storage and networking,
+      # so a small per-test flake rate adds up across ~100 of them and most runs
+      # had at least one failure. A failed test file is retried once with a fresh
+      # VM and only fails the job if both attempts fail. A pass on retry is
+      # annotated as flaky so it stays visible on the run summary; don't ignore
+      # them, track and fix them like any other failure.
       - name: Run VM test
+        id: vm-test
+        continue-on-error: true
         working-directory: packages/umbreld
         run: npm run test -- ${{ matrix.test.path }}
+      - name: Retry VM test
+        if: steps.vm-test.outcome == 'failure'
+        working-directory: packages/umbreld
+        run: |
+          npm run test -- ${{ matrix.test.path }}
+          echo "::warning title=Flaky VM test (${{ matrix.test.name }})::Failed on the first attempt and passed on retry"
 
   umbrelos-pi-vm:
     name: Pi VM test (${{ matrix.test.name }})
@@ -319,24 +530,37 @@ jobs:
         test: ${{ fromJSON(needs.discover-pi-vm-tests.outputs.tests) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
+      # The cache service intermittently answers the lookup with HTTP 500,
+      # which restore treats as a miss. Wait briefly and retry once before
+      # failing the job.
       - name: Restore OS image from cache
-        uses: actions/cache/restore@v4
+        id: restore-os-image
+        uses: actions/cache/restore@v5
         with:
           path: packages/os/build/umbrelos-pi.img
-          key: umbrelos-pi-image-${{ github.run_id }}
+          key: ${{ needs.umbrelos-pi-vm-image-build.outputs.image-key }}
+      - name: Wait before retrying OS image restore
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
+        run: sleep 10
+      - name: Retry restoring OS image from cache
+        if: steps.restore-os-image.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/os/build/umbrelos-pi.img
+          key: ${{ needs.umbrelos-pi-vm-image-build.outputs.image-key }}
           fail-on-cache-miss: true
       - name: Prepare Nix store for caching
         run: sudo mkdir -p /nix && sudo chown "$(id -un)" /nix
       - name: Cache QEMU from nixpkgs
         id: nix-qemu-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /nix
           key: nix-qemu-${{ runner.os }}-${{ env.NIXPKGS_REV }}
@@ -358,12 +582,28 @@ jobs:
           fi
           echo "/nix/qemu/bin" >> "$GITHUB_PATH"
           /nix/qemu/bin/qemu-system-aarch64 --version
+      # Retried once: a dropped registry connection (ECONNRESET) or a race in
+      # npm's own cache (EEXIST) has failed this step, and with it the job
       - name: Install umbreld dependencies
         working-directory: packages/umbreld
-        run: npm clean-install
+        run: |
+          npm clean-install || {
+            echo "::warning title=Retried npm install::npm clean-install failed, retrying once"
+            sleep 10
+            npm clean-install
+          }
+      # Retried once with a fresh VM for the same reason as the amd64 VM tests
       - name: Run Pi VM test
+        id: vm-test
+        continue-on-error: true
         working-directory: packages/umbreld
         run: npm run test -- ${{ matrix.test.path }}
+      - name: Retry Pi VM test
+        if: steps.vm-test.outcome == 'failure'
+        working-directory: packages/umbreld
+        run: |
+          npm run test -- ${{ matrix.test.path }}
+          echo "::warning title=Flaky Pi VM test (${{ matrix.test.name }})::Failed on the first attempt and passed on retry"
 
   # Discover all integration test files so we can run the result as a build matrix
   discover-integration-tests:
@@ -374,7 +614,7 @@ jobs:
     outputs:
       tests: ${{ steps.find.outputs.tests }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - id: find
         run: |
           tests=$(find packages/umbreld/source -name "*.integration.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.integration\\.test\\.ts$"; ""))})')
@@ -392,15 +632,20 @@ jobs:
         test: ${{ fromJSON(needs.discover-integration-tests.outputs.tests) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version: 18
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - run: npm run dev rebuild
         env:
           # The umbrelos-amd64-cache job has already exported these layers to the
@@ -410,11 +655,23 @@ jobs:
           UMBREL_DEV_SKIP_CACHE_EXPORT: 'true'
       - run: npm run dev start
       - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
-      - run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+      # Retried once for the same reason as the VM tests. Each run creates its own
+      # umbreld instances, so the retry reuses the running umbrel-dev container.
+      - name: Run integration test
+        id: integration-test
+        continue-on-error: true
+        run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+      - name: Retry integration test
+        if: steps.integration-test.outcome == 'failure'
+        run: |
+          npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+          echo "::warning title=Flaky integration test (${{ matrix.test.name }})::Failed on the first attempt and passed on retry"
 
   # Run umbreld checks
   umbreld:
     name: umbreld checks
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -428,14 +685,20 @@ jobs:
           - test:unit -- --coverage
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 18
+          node-version: 26
+      # sudo resets PATH, which would run the runner's own Node.js instead of setup-node's
       - name: Install dependencies
-        run: sudo npm clean-install
-      - run: sudo npm run ${{ matrix.task }}
+        run: |
+          sudo env "PATH=$PATH" npm clean-install || {
+            echo "::warning title=Retried npm install::sudo npm clean-install failed, retrying once"
+            sleep 10
+            sudo env "PATH=$PATH" npm clean-install
+          }
+      - run: sudo env "PATH=$PATH" npm run ${{ matrix.task }}
 
   # Run the shared Apple client tests and compile both native apps. The macOS 26
   # runner includes the iOS 26.5 SDK required by the generated iOS project.
@@ -446,7 +709,7 @@ jobs:
     runs-on: macos-26
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Test UmbrelKit
@@ -479,6 +742,32 @@ jobs:
           CODE_SIGNING_ALLOWED=NO
           build
 
+  # Run the Android app's unit tests and lint, and build its release bundle, which runs
+  # R8 and resource shrinking. The bundle is unsigned: Play uploads are signed with the
+  # upload key outside CI.
+  android:
+    name: Android client checks
+    needs: detect-changes
+    if: needs.detect-changes.outputs.android-changed == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: clients/android
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Test and lint
+        run: ./gradlew :umbrelkit:testDebugUnitTest :app:testDebugUnitTest lint
+      - name: Build release bundle
+        run: ./gradlew :app:bundleRelease
+
   # Run ui checks
   ui:
     name: ui checks
@@ -499,16 +788,26 @@ jobs:
           - test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
       - name: Install Umbreld dependencies
         if: ${{ matrix.task == 'typecheck' || matrix.task == 'test' }}
-        run: npm --prefix ../umbreld clean-install
+        run: |
+          npm --prefix ../umbreld clean-install || {
+            echo "::warning title=Retried npm install::npm --prefix ../umbreld clean-install failed, retrying once"
+            sleep 10
+            npm --prefix ../umbreld clean-install
+          }
       - name: Install dependencies
-        run: npm clean-install
+        run: |
+          npm clean-install || {
+            echo "::warning title=Retried npm install::npm clean-install failed, retrying once"
+            sleep 10
+            npm clean-install
+          }
       - run: npm run ${{ matrix.task }}
 
   # If the current build is tagged, build all release assets, push to Cloudflare R2 and create a GitHub Release
@@ -521,22 +820,37 @@ jobs:
       run:
         working-directory: packages/os
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
+        with:
+          # Use the BuildKit that build.sh pins, so layers built and cached here match
+          # what a local build produces. Keep in sync with BUILDKIT_IMAGE in
+          # packages/os/build.sh.
+          driver-opts: image=moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
       - name: Expose GitHub Actions runtime for Docker cache
-        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       # We need this to namespace Docker images on forks
       - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
       - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
       - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
+      # create-release-manifest.sh refuses a version tag without its release notes, so fail before the build
+      # rather than after it
+      - name: Check release notes
+        if: env.VERSION_IS_SEMVER == 'true'
+        run: test -f "release-notes/${VERSION}.md" || { echo "Release notes for ${VERSION} are missing from packages/os/release-notes/${VERSION}.md" >&2; exit 1; }
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+      # Go through build.sh rather than pushing with docker buildx build
+      # directly. It builds the single-layer umbrelos-docker stage with fixed
+      # timestamps and no provenance attestation, which would otherwise make
+      # the digest differ on every build.
       - name: Build and push Docker image
-        run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push --cache-from type=gha,scope=umbrelos-amd64 --cache-from type=gha,scope=umbrelos-arm64 ../../
-      - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
+        run: SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true DOCKER_IMAGE_OUTPUT="type=image,name=ghcr.io/${{ env.TAG }},push=true" ./build.sh
+      # The image index's digest pins the image for every platform, and the release manifest signs it
+      - run: echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos@$(docker buildx imagetools inspect ghcr.io/${{ env.TAG }} --format '{{json .Manifest}}' | jq --raw-output .digest)" >> $GITHUB_ENV
       # Build OS images
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v5
         with:
           node-version: 18
       - name: Build OS images
@@ -556,10 +870,13 @@ jobs:
           wait $pid3 || exit 1
       # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
       - name: Compress release assets
-        # Awkward hack to run in parallel but correctly handle errors
+        # Awkward hack to run in parallel but correctly handle errors.
+        # zip -X leaves out the image's owner and access time, and TZ=UTC stops
+        # the runner's timezone changing the recorded modification time, so the
+        # zip is reproducible.
         run: |
           cd build
-          zip umbrelos-pi.img.zip umbrelos-pi.img &
+          TZ=UTC zip -X umbrelos-pi.img.zip umbrelos-pi.img &
           pid1=$!
           sudo xz --keep --threads=0 umbrelos-amd64.img &
           pid2=$!
@@ -570,20 +887,23 @@ jobs:
       - name: Create release directory
         run: |
           mkdir -p release
-          mv build/docker-umbrelos-* release/
           mv build/*.update release/
           mv build/*.img.zip release/
           mv build/*.img.xz release/
           mv build/*.img release/
           mv build/umbrelos-amd64-usb-installer.iso release/
-      - name: Create SHASUM
-        run: cd release && shasum -a 256 * | tee SHA256SUMS
+          # A release that needs to run something to install has an update script, which the manifest pins
+          if [[ -f update.sh ]]; then cp update.sh release/; fi
+      # The manifest pins every file in the release and gets timestamped here. Release signers sign it
+      # and the release notes separately.
+      - name: Create release manifest
+        run: RELEASE_TAG="${{ env.VERSION }}" ./create-release-manifest.sh release && cat release/manifest.txt
       - name: OpenTimestamps
-        run: npm ci && npx ots-cli.js stamp release/SHA256SUMS
-      - name: Nuke uncompressed images (we just wanted them covered by the SHASUMs)
+        run: npm ci && npx ots-cli.js stamp release/manifest.txt
+      - name: Nuke uncompressed images (we just wanted them covered by the manifest)
         run: rm -rf release/*.img
       - name: Upload to R2
-        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # v1.5
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
           r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -592,9 +912,10 @@ jobs:
           source-dir: packages/os/release
           destination-dir: ./${{ env.VERSION }}
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           draft: true
           name: umbrelOS ${{ github.ref_name }}
           files: |
-            packages/os/release/SHA256SUMS*
+            packages/os/release/manifest.txt*
+            packages/os/release/release-notes.md

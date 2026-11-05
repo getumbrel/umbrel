@@ -1,0 +1,38 @@
+<UserControl x:Class="Umbrel.Views.StatusLine"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:Umbrel.Views"
+             x:Name="Root" FontSize="11">
+  <!-- macOS StatusLine: dot + white label (spinner while verifying), then "· secondary". -->
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <v:Spinner x:Name="Progress" VerticalAlignment="Center" Opacity="0"
+               Visibility="{Binding Status.ShowsProgress, ElementName=Root, Converter={StaticResource BoolToVisibility}}" />
+
+    <!-- macOS StatusDot: 14px halo at 20% behind a 6px center. -->
+    <Grid Width="14" Height="14" VerticalAlignment="Center"
+          Visibility="{Binding Status.ShowsProgress, ElementName=Root, Converter={StaticResource InverseBoolToVisibility}}">
+      <Ellipse Fill="{Binding Status.Color, ElementName=Root}" Opacity="0.2" />
+      <Ellipse Width="6" Height="6" Fill="{Binding Status.Color, ElementName=Root}" />
+    </Grid>
+
+    <TextBlock Grid.Column="1" Margin="4,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap"
+               Text="{Binding Status.Text, ElementName=Root}" Foreground="{StaticResource TextBrush}"
+               Visibility="{Binding Status.ShowsProgress, ElementName=Root, Converter={StaticResource InverseBoolToVisibility}}" />
+
+    <TextBlock Grid.Column="2" Margin="4,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap"
+               Text="&#x00B7;" Foreground="#80FFFFFF"
+               Visibility="{Binding Secondary, ElementName=Root, Converter={StaticResource NullToVisibility}}" />
+
+    <!-- macOS truncates the middle; WPF TextTrimming only trims the end. -->
+    <TextBlock Grid.Column="3" Margin="4,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+               Text="{Binding Secondary, ElementName=Root}" Foreground="#B3FFFFFF"
+               Visibility="{Binding Secondary, ElementName=Root, Converter={StaticResource NullToVisibility}}" />
+  </Grid>
+</UserControl>

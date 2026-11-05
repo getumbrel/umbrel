@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url'
 
 import {expect, test, vi} from 'vitest'
 
-import {isRaspberryPiCpuInfo, loadBlake3Hasher, type Blake3HasherConstructor} from './blake3.js'
+import {isRaspberryPiCpuInfo, loadBlake3Hasher, type Blake3HasherConstructor} from './blake3.ts'
 
 class FakeNativeHasher {
 	update() {

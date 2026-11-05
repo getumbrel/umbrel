@@ -29,6 +29,7 @@ import {usePendingRaidOperation} from '@/features/storage/providers/pending-oper
 import {getDeviceHealth, RaidDevice, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
 import {StorageDonutChart} from '../storage-donut-chart'
+import {StorageNotice} from '../storage-page'
 import {OperationInProgressBanner} from './operation-in-progress-banner'
 
 // --- Info Text Component ---
@@ -202,6 +203,7 @@ type AddToRaidDialogProps = {
 	device: StorageDevice | null
 	canChooseMode: boolean
 	raidType?: 'storage' | 'failsafe'
+	poolStatus?: string // ZFS state of the pool
 	raidDevices: RaidDevice[] // Devices currently in the RAID array
 	addDeviceAsync: (params: {deviceId: string}) => Promise<boolean>
 	transitionToFailsafeAsync: (params: {newDeviceId: string}) => Promise<boolean>
@@ -213,6 +215,7 @@ export function AddToRaidDialog({
 	device,
 	canChooseMode,
 	raidType,
+	poolStatus,
 	raidDevices,
 	addDeviceAsync,
 	transitionToFailsafeAsync,
@@ -223,11 +226,14 @@ export function AddToRaidDialog({
 	const [showRestartConfirmation, setShowRestartConfirmation] = useState(false)
 
 	// Context for showing island immediately for non-blocking operations
-	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
+	const {setPendingOperation, clearPendingOperation, setOperationError} = usePendingRaidOperation()
 
 	// Check if a RAID operation is already in progress
 	const activeOperation = useActiveRaidOperation()
 	const isOperationInProgress = !!activeOperation
+	// Adding a drive is permanent and erases it, and ZFS can't expand a raidz with a dead
+	// member, so the pool has to be repaired first
+	const isPoolUnhealthy = !!poolStatus && poolStatus !== 'ONLINE'
 
 	// Get existing RAID devices - these are the devices actually in the RAID array
 	// (not to be confused with all detected devices)
@@ -315,10 +321,8 @@ export function AddToRaidDialog({
 
 			transitionToFailsafeAsync({newDeviceId: device.id}).catch((error) => {
 				clearPendingOperation()
-				toast.error(t('storage-manager.add-to-raid.failed-enable-failsafe'), {
-					area: 'settings',
-					description: error instanceof Error ? error.message : t('unknown-error'),
-				})
+				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
+				toast.error(t('storage-manager.add-to-raid.failed-enable-failsafe'), {area: 'settings'})
 			})
 		} else if (raidType === 'failsafe') {
 			// Adding to existing failsafe: non-blocking expansion - we show island immediately
@@ -331,14 +335,12 @@ export function AddToRaidDialog({
 
 			addDeviceAsync({deviceId: device.id}).catch((error) => {
 				clearPendingOperation()
+				setOperationError(error instanceof Error ? error.message : t('unknown-error'))
 				toast.error(
 					device.type === 'hdd'
 						? t('storage-manager.add-to-raid.failed-add-drive')
 						: t('storage-manager.add-to-raid.failed-add'),
-					{
-						area: 'settings',
-						description: error instanceof Error ? error.message : t('unknown-error'),
-					},
+					{area: 'settings'},
 				)
 			})
 		} else {
@@ -365,14 +367,12 @@ export function AddToRaidDialog({
 				})
 				.catch((error) => {
 					clearPendingOperation()
+					setOperationError(error instanceof Error ? error.message : t('unknown-error'))
 					toast.error(
 						device.type === 'hdd'
 							? t('storage-manager.add-to-raid.failed-add-drive')
 							: t('storage-manager.add-to-raid.failed-add'),
-						{
-							area: 'settings',
-							description: error instanceof Error ? error.message : t('unknown-error'),
-						},
+						{area: 'settings'},
 					)
 				})
 		}
@@ -444,7 +444,11 @@ export function AddToRaidDialog({
 							{showFailSafeOption && (
 								<div className='flex items-center justify-between'>
 									<div className='flex items-center gap-3'>
-										<Switch checked={failSafeEnabled} onCheckedChange={setFailSafeEnabled} />
+										<Switch
+											checked={failSafeEnabled}
+											onCheckedChange={setFailSafeEnabled}
+											aria-label={t('storage-manager.add-to-raid.enable-failsafe')}
+										/>
 										<span className='text-[15px] text-white/85'>
 											{t('storage-manager.add-to-raid.enable-failsafe')}
 											{/* Mobile: inline text instead of pill to save space */}
@@ -554,13 +558,19 @@ export function AddToRaidDialog({
 							)}
 						</div>
 
+						{isPoolUnhealthy && <StorageNotice>{t('storage-status.degraded-help')}</StorageNotice>}
 						{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
 
 						<DialogFooter>
-							<Button variant='primary' onClick={handleAddDevice} disabled={isBlockedBySize || isOperationInProgress}>
+							<Button
+								variant='primary'
+								size='dialog'
+								onClick={handleAddDevice}
+								disabled={isBlockedBySize || isOperationInProgress || isPoolUnhealthy}
+							>
 								{isHdd ? t('storage-manager.add-to-raid.add-drive') : t('storage-manager.add-to-raid.add-ssd')}
 							</Button>
-							<Button variant='default' onClick={() => onOpenChange(false)}>
+							<Button variant='default' size='dialog' onClick={() => onOpenChange(false)}>
 								{t('cancel')}
 							</Button>
 						</DialogFooter>

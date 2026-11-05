@@ -12,7 +12,10 @@ export const UmbrelLogoLarge = () => (
 export function Title({children, className}: {children: React.ReactNode; className?: string}) {
 	return (
 		<h1
-			className={cn('text-center text-[24px] leading-tight font-bold -tracking-2 opacity-85 sm:text-[32px]', className)}
+			className={cn(
+				'text-center text-[24px] leading-tight font-bold -tracking-2 text-balance opacity-85 sm:text-[32px]',
+				className,
+			)}
 			style={{
 				viewTransitionName: 'title',
 				textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)',
@@ -32,7 +35,7 @@ export function SubTitle({
 	className?: string
 } & HTMLProps<HTMLParagraphElement>) {
 	return (
-		<p className={cn('text-center text-[15px] font-medium text-white/70', className)} {...props}>
+		<p className={cn('text-center text-[15px] font-medium text-balance text-white/70', className)} {...props}>
 			{children}
 		</p>
 	)

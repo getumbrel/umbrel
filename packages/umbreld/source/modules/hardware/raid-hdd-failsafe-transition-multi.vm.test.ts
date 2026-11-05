@@ -1,10 +1,10 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import type {FailsafeTransitionStatus} from './raid.js'
+import {createTestVm, driveBuses} from '../test-utilities/create-test-umbreld.ts'
+import type {FailsafeTransitionStatus} from './raid.ts'
 
-describe('RAID HDD multi-disk storage to failsafe mirror transition', () => {
+describe.each(driveBuses)('RAID HDD multi-disk storage to failsafe mirror transition (%s)', (bus) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let hddDeviceId1: string
 	let hddDeviceId2: string
@@ -34,8 +34,8 @@ describe('RAID HDD multi-disk storage to failsafe mirror transition', () => {
 	// --- Phase 1: Setup 2-HDD storage ---
 
 	test('adds two HDDs and boots VM', async () => {
-		await umbreld.vm.addHdd({slot: 1})
-		await umbreld.vm.addHdd({slot: 2})
+		await umbreld.vm.addHdd({slot: 1, bus})
+		await umbreld.vm.addHdd({slot: 2, bus})
 		await umbreld.vm.powerOn()
 	})
 
@@ -99,9 +99,9 @@ describe('RAID HDD multi-disk storage to failsafe mirror transition', () => {
 
 	test('shuts down and adds three more HDDs (including one smaller drive)', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.addHdd({slot: 3})
-		await umbreld.vm.addHdd({slot: 4})
-		await umbreld.vm.addHdd({slot: 5, size: '500G'})
+		await umbreld.vm.addHdd({slot: 3, bus})
+		await umbreld.vm.addHdd({slot: 4, bus})
+		await umbreld.vm.addHdd({slot: 5, size: '500G', bus})
 		await umbreld.vm.powerOn()
 	})
 

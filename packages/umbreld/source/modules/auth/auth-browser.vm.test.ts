@@ -1,8 +1,8 @@
 // @vm-requires-playwright
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.js'
-import createVmBrowser from '../test-utilities/create-vm-browser.js'
+import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import createVmBrowser from '../test-utilities/create-vm-browser.ts'
 
 describe.sequential('Dashboard browser authentication', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>

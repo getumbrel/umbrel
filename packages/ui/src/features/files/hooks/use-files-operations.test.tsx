@@ -91,6 +91,8 @@ beforeEach(() => {
 		draggedItems: [],
 		clipboardItems: [],
 		clipboardMode: null,
+		incomingItems: [],
+		pendingPaths: new Map(),
 	})
 	const container = document.createElement('div')
 	document.body.appendChild(container)
@@ -105,6 +107,30 @@ afterEach(() => {
 })
 
 describe('Files command capabilities', () => {
+	it('selects the optimistic rename and restores the source if it fails', async () => {
+		const source = item(['rename'])
+		let rejectRename!: (error: Error) => void
+		mocks.rename.mockReturnValueOnce(new Promise((_, reject) => (rejectRename = reject)))
+		let renamePromise!: Promise<void>
+
+		await act(async () => {
+			renamePromise = actions.renameItem({item: source, newName: 'renamed.txt'})
+		})
+		const pending = useFilesStore.getState()
+		expect(pending.selectedItems[0]).toBe(pending.incomingItems[0])
+		expect(pending.incomingItems[0]).toMatchObject({path: '/Home/renamed.txt', renamedFrom: source.path})
+		expect(pending.pendingPaths.get(source.path)).toBe('removing')
+
+		await act(async () => {
+			rejectRename(new Error('Rename failed'))
+			await renamePromise
+		})
+		const restored = useFilesStore.getState()
+		expect(restored.selectedItems).toEqual([source])
+		expect(restored.incomingItems).toEqual([])
+		expect(restored.pendingPaths.has(source.path)).toBe(false)
+	})
+
 	it('does not paste into a destination without writable capability', async () => {
 		act(() => useFilesStore.setState({clipboardItems: [item(['copy'])], clipboardMode: 'copy'}))
 		mocks.pathOperations.mockResolvedValue(['copy'])

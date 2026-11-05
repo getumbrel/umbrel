@@ -9,7 +9,11 @@ import type {CloudIslandRow} from './index'
 
 vi.mock('react-i18next', () => ({
 	initReactI18next: {type: '3rdParty', init: vi.fn()},
-	useTranslation: () => ({t: (key: string) => key}),
+	useTranslation: () => ({
+		t: (key: string, options?: {transferred?: string; total?: string}) =>
+			options?.total ? `${options.transferred} of ${options.total}` : key,
+		i18n: {language: 'en'},
+	}),
 }))
 vi.mock('motion/react', () => ({
 	motion: {
@@ -77,4 +81,21 @@ it('never renders a missing logo URL in the multi-transfer list', () => {
 		'/assets/cloud/cloud.webp',
 	])
 	expect(container.textContent).toContain('0 B/s')
+})
+
+it('groups the digits of file counts', () => {
+	const container = document.createElement('div')
+	document.body.appendChild(container)
+	root = createRoot(container)
+
+	act(() =>
+		root?.render(
+			<ExpandedContent
+				rows={[{...row('large', 'dropbox'), transferredFiles: 1234, totalFiles: 98765}]}
+				totalSpeed={0}
+			/>,
+		),
+	)
+
+	expect(container.textContent).toContain('1,234 of 98,765')
 })

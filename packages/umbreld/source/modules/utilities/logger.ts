@@ -27,9 +27,17 @@ function createLogger(scope: string, globalLogLevel: LogLevel = 'normal') {
 		}
 	}
 
+	// Callers on hot paths, such as every file event, check this before building
+	// an expensive message
+	const isVerbose = value(globalLogLevel) >= value('verbose')
+
 	return {
 		log: (message?: string) => log(message),
-		verbose: (message: string) => log(chalkTemplate`{grey ${message}}`, {logLevel: 'verbose'}),
+		isVerbose,
+		// Formatting is skipped entirely when verbose logging is off
+		verbose: (message: string) => {
+			if (isVerbose) log(chalkTemplate`{grey ${message}}`, {logLevel: 'verbose'})
+		},
 		error: (message: string, error?: any) => log(chalkTemplate`{red [error]} ${message}`, {error}),
 		createChildLogger: (scope: string) => createLogger(scope, globalLogLevel),
 	}

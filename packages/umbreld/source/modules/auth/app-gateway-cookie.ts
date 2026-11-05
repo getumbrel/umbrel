@@ -1,6 +1,6 @@
 import type express from 'express'
 
-import {BROWSER_SESSION_COOKIE_NAMES} from './browser-session-cookie.js'
+import {BROWSER_SESSION_COOKIE_NAMES} from './browser-session-cookie.ts'
 
 export const APP_GATEWAY_HTTPS_COOKIE_NAME = '__Host-UMBREL_APP_SESSION_HTTPS'
 export const APP_GATEWAY_HTTP_COOKIE_NAME = 'UMBREL_APP_SESSION'

@@ -4,8 +4,8 @@ import fse from 'fs-extra'
 import {delay} from 'es-toolkit'
 import pWaitFor from 'p-wait-for'
 
-import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
-import type {OperationsInProgress} from './files.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.ts'
+import type {OperationsInProgress} from './files.ts'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 

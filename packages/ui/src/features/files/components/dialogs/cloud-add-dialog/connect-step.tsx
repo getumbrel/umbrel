@@ -165,12 +165,12 @@ function OAuthConnect({
 				<div className='flex flex-col items-center gap-4 py-4 text-center'>
 					<p className='max-w-[340px] text-13 leading-relaxed text-white/60'>{failureText}</p>
 				</div>
-				<DialogFooter className='flex-col-reverse justify-center gap-2 pt-4'>
-					<Button size='dialog' onClick={onBack}>
-						{t('back')}
-					</Button>
+				<DialogFooter className='justify-center gap-2 pt-4'>
 					<Button variant='primary' size='dialog' onClick={() => setFailure(null)}>
 						{t('try-again')}
+					</Button>
+					<Button size='dialog' onClick={onBack}>
+						{t('back')}
 					</Button>
 				</DialogFooter>
 			</div>
@@ -200,10 +200,7 @@ function OAuthConnect({
 					onCodeChange={setCode}
 					onSubmit={(value) => oauth.complete(value)}
 				/>
-				<DialogFooter className='flex-col-reverse justify-center gap-2 pt-4'>
-					<Button size='dialog' disabled={oauth.isCompleting} onClick={oauth.cancel}>
-						{t('cancel')}
-					</Button>
+				<DialogFooter className='justify-center gap-2 pt-4'>
 					<Button
 						variant='primary'
 						size='dialog'
@@ -215,6 +212,9 @@ function OAuthConnect({
 							<span className={oauth.isCompleting ? 'opacity-0' : undefined}>{t('files-cloud.oauth-finish')}</span>
 							{oauth.isCompleting && <Loader2 className='absolute size-4 animate-spin' />}
 						</span>
+					</Button>
+					<Button size='dialog' disabled={oauth.isCompleting} onClick={oauth.cancel}>
+						{t('cancel')}
 					</Button>
 				</DialogFooter>
 			</div>
@@ -228,10 +228,7 @@ function OAuthConnect({
 					{t('files-cloud.oauth-description', {provider: provider.displayName})}
 				</p>
 			</div>
-			<DialogFooter className='flex-col-reverse justify-center gap-2 pt-4'>
-				<Button size='dialog' onClick={onBack}>
-					{t('back')}
-				</Button>
+			<DialogFooter className='justify-center gap-2 pt-4'>
 				<Button
 					variant='primary'
 					size='dialog'
@@ -242,6 +239,9 @@ function OAuthConnect({
 				>
 					{t('files-cloud.oauth-continue', {provider: provider.displayName})}
 					<ArrowUpRight className='ml-1 size-4' />
+				</Button>
+				<Button size='dialog' onClick={onBack}>
+					{t('back')}
 				</Button>
 			</DialogFooter>
 		</div>
@@ -301,12 +301,12 @@ function UntrustedCertificateDialog({
 					<AlertDialogDescription>{t('files-cloud.untrusted-cert-message', {host})}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<Button variant='default' size='dialog' onClick={onCancel}>
-						{t('cancel')}
-					</Button>
 					<AlertDialogAction variant='primary' onClick={onConfirm}>
 						{t('files-cloud.untrusted-cert-confirm')}
 					</AlertDialogAction>
+					<Button variant='default' size='dialog' onClick={onCancel}>
+						{t('cancel')}
+					</Button>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -374,12 +374,12 @@ function WebDavConnect({
 			<FieldRow label={t('files-cloud.webdav-password')}>
 				<PasswordInput value={password} onValueChange={setPassword} />
 			</FieldRow>
-			<DialogFooter className='flex-col-reverse justify-center gap-2 pt-2'>
-				<Button size='dialog' onClick={onBack}>
-					{t('back')}
-				</Button>
+			<DialogFooter className='justify-center gap-2 pt-2'>
 				<Button variant='primary' size='dialog' disabled={!canSubmit} onClick={() => submit()}>
 					{isConnectingWebDav ? <Loader2 className='size-4 animate-spin' /> : t('files-cloud.connect')}
+				</Button>
+				<Button size='dialog' onClick={onBack}>
+					{t('back')}
 				</Button>
 			</DialogFooter>
 			<UntrustedCertificateDialog
@@ -465,12 +465,12 @@ function WebDavFlavorConnect({
 			>
 				<PasswordInput value={password} onValueChange={setPassword} />
 			</FieldRow>
-			<DialogFooter className='flex-col-reverse justify-center gap-2 pt-2'>
-				<Button size='dialog' onClick={onBack}>
-					{t('back')}
-				</Button>
+			<DialogFooter className='justify-center gap-2 pt-2'>
 				<Button variant='primary' size='dialog' disabled={!canSubmit} onClick={() => submit()}>
 					{isConnectingWebDav ? <Loader2 className='size-4 animate-spin' /> : t('files-cloud.connect')}
+				</Button>
+				<Button size='dialog' onClick={onBack}>
+					{t('back')}
 				</Button>
 			</DialogFooter>
 			<UntrustedCertificateDialog
@@ -630,7 +630,7 @@ function ICloudConnect({
 						</>
 					)}
 				</div>
-				<DialogFooter className='flex-col-reverse justify-center gap-2 pt-4'>
+				<DialogFooter className='justify-center gap-2 pt-4'>
 					<Button size='dialog' disabled={isChallengePending} onClick={restartAfterFailure}>
 						{t('cancel')}
 					</Button>
@@ -663,12 +663,12 @@ function ICloudConnect({
 				<PasswordInput value={password} onValueChange={setPassword} />
 			</FieldRow>
 			<p className='text-12 text-white/50'>{t('files-cloud.icloud-note')}</p>
-			<DialogFooter className='flex-col-reverse justify-center gap-2 pt-2'>
-				<Button size='dialog' onClick={onBack}>
-					{t('back')}
-				</Button>
+			<DialogFooter className='justify-center gap-2 pt-2'>
 				<Button variant='primary' size='dialog' disabled={!canSubmit} onClick={begin}>
 					{isBeginningICloud ? <Loader2 className='size-4 animate-spin' /> : t('files-cloud.connect')}
+				</Button>
+				<Button size='dialog' onClick={onBack}>
+					{t('back')}
 				</Button>
 			</DialogFooter>
 		</div>

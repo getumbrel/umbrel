@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {parsePoolAccelerator} from './raid.js'
+import {parsePoolAccelerator} from './raid.ts'
 
 type PoolInput = Parameters<typeof parsePoolAccelerator>[0]
 type VdevInput = PoolInput['vdevs'][string]

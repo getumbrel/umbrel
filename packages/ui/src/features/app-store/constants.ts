@@ -92,7 +92,9 @@ export function categoryPath(categoryId: string) {
 export const storeCardClass = tw`settings-edge-material rounded-24 bg-white/4`
 export const storeCardPaddedClass = tw`settings-edge-material rounded-24 bg-white/4 p-4 md:p-6`
 
-export const appGridClass = tw`grid sm:grid-cols-2 xl:grid-cols-3 gap-x-2.5 gap-y-1.5`
+// The single phone column is declared too: an implicit one grows to fit the
+// longest app name, which ran its card off the screen instead of truncating.
+export const appGridClass = tw`grid grid-cols-1 min-[560px]:grid-cols-2 xl:grid-cols-3 gap-x-2.5 gap-y-1.5`
 
 // Bleeds a horizontally scrolling rail through the sheet's responsive padding
 // (layouts/sheet.tsx) so cards scroll edge-to-edge — keep the two in sync.

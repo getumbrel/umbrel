@@ -81,7 +81,7 @@ from 12.15 MiB to 26.07 MiB. WAL volume is not a physical SSD-endurance measurem
 
 ## Reproduce
 
-Use Node 22 with the umbrella package's installed `tsx` and native `better-sqlite3`
+Use Node 26, which runs the TypeScript sources natively, with the native `better-sqlite3`
 dependencies. The recorded host was an M4 Max, Node 22.14.0, SQLite 3.53.2. Both
 attached databases used WAL, with the normal application's default SQLite settings.
 No `ANALYZE`, extra base-table indexes, or larger memory budgets were applied.
@@ -100,9 +100,9 @@ From `packages/umbreld` in this branch:
 export PHOTOS_SCHEMA_HARNESS=/absolute/path/to/photos-schema-benchmark/packages/umbreld/scripts/benchmarks/photos-schema
 export PHOTOS_BENCH_DIR=/absolute/path/to/completed-synthetic-experiment
 export PRODUCTION_PHOTOS_BENCH_DIR="$(mktemp -d -t photos-read-model)"
-node --import tsx scripts/benchmarks/photos-read-model/verify.mjs build
-node --import tsx scripts/benchmarks/photos-read-model/verify.mjs reads
-node --import tsx scripts/benchmarks/photos-read-model/verify.mjs writes
+node scripts/benchmarks/photos-read-model/verify.mjs build
+node scripts/benchmarks/photos-read-model/verify.mjs reads
+node scripts/benchmarks/photos-read-model/verify.mjs writes
 ```
 
 The verifier migrates local copies of the fixtures. Each read case runs in a

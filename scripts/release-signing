@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# umbrelOS release signing tools: provision and revoke signing keys, sign the approved keys list and
+# sign and verify releases. Run it without arguments for usage, and see
+# packages/umbreld/scripts/release-signing.ts for how it works.
+
+umbreld_directory="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../packages/umbreld"
+if [[ ! -d "${umbreld_directory}/node_modules" ]]; then
+	echo "Install umbreld's dependencies first with: npm --prefix packages/umbreld install" >&2
+	exit 1
+fi
+
+# Like umbreld, this runs its TypeScript directly, which needs a Node version that strips types by default
+if [[ ! "$(node --print 'process.features.typescript' 2>/dev/null)" =~ ^(strip|transform)$ ]]; then
+	echo "Use Node 22.18 or later, which runs TypeScript directly" >&2
+	exit 1
+fi
+
+exec node "${umbreld_directory}/scripts/release-signing.ts" "$@"

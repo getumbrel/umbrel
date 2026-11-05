@@ -23,7 +23,7 @@ export function AlreadyConfiguredModal({
 			<DialogContent className='flex flex-col items-center text-center'>
 				<DialogHeader className='items-center text-center'>
 					<BackupDeviceIcon path={folderPath || ''} className='mb-2 size-10 opacity-80' />
-					<DialogTitle>{t('backups.modals.already-in-use.title')}</DialogTitle>
+					<DialogTitle className='px-6 text-center'>{t('backups.modals.already-in-use.title')}</DialogTitle>
 					<DialogDescription>{t('backups.modals.already-in-use.description')}</DialogDescription>
 				</DialogHeader>
 				<DialogFooter className='justify-center gap-2 pt-2'>
@@ -31,7 +31,7 @@ export function AlreadyConfiguredModal({
 						{t('backups.modals.already-in-use.manage')}
 					</Button>
 					<Button variant='default' size='dialog' onClick={onClose}>
-						{t('close')}
+						{t('cancel')}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

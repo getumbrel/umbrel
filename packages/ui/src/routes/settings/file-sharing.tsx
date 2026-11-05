@@ -13,8 +13,8 @@ import {HomeIcon} from '@/features/files/assets/home-icon'
 import {ChangeSmbPassword} from '@/features/files/components/dialogs/share-info-dialog/change-smb-password'
 import {PlatformInstructions} from '@/features/files/components/dialogs/share-info-dialog/platform-instructions'
 import {
+	getDefaultPlatform,
 	Platform,
-	platforms,
 	PlatformSelector,
 } from '@/features/files/components/dialogs/share-info-dialog/platform-selector'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
@@ -25,7 +25,7 @@ import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-na
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {trpcReact} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
@@ -34,7 +34,7 @@ export default function FileSharingDrawerOrDialog() {
 	const {t} = useTranslation()
 	const title = t('settings.file-sharing')
 	const dialogProps = useSettingsDialogProps()
-	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
 	const homeDirectoryName = useHomeDirectoryName()
 	// The account's home root: /Home for the owner, /Users/<slug> for members
 	const homePath = useHomePath()
@@ -62,7 +62,7 @@ export default function FileSharingDrawerOrDialog() {
 	const isBusy = isAddingShare || isRemovingShare
 	const isLoading = isLoadingShares || isBusy
 
-	const [selectedPlatform, setSelectedPlatform] = useState<Platform>(platforms[0])
+	const [selectedPlatform, setSelectedPlatform] = useState<Platform | undefined>(getDefaultPlatform)
 	const [isAddFolderOpen, setAddFolderOpen] = useState(false)
 
 	// Stable-ordered list of all folders seen during this dialog session.
@@ -139,9 +139,9 @@ export default function FileSharingDrawerOrDialog() {
 	}
 
 	const smbUrl =
-		selectedPlatform.id === 'windows' ? `\\\\${window.location.hostname}` : `smb://${window.location.hostname}/`
+		selectedPlatform?.id === 'windows' ? `\\\\${window.location.hostname}` : `smb://${window.location.hostname}/`
 	const username = user?.sambaUsername ?? ''
-	const password = isLoadingSharesPassword ? '...' : sharePassword || ''
+	const password = isLoadingSharesPassword ? '…' : sharePassword || ''
 
 	// --- First-run choice screen ---
 	const choiceScreen = (
@@ -251,7 +251,7 @@ export default function FileSharingDrawerOrDialog() {
 												className='h-7 w-7 shrink-0'
 											/>
 											<div className='min-w-0 flex-1'>
-												<span className='truncate text-14 font-medium'>{share.name}</span>
+												<span className='block truncate text-14 font-medium'>{share.name}</span>
 												{unavailableReason && (
 													<div className='flex items-center gap-1 text-[#F5A623]'>
 														<TbAlertTriangle className='size-3 shrink-0' />
@@ -344,14 +344,14 @@ export default function FileSharingDrawerOrDialog() {
 		</>
 	)
 
-	if (isMobile) {
+	if (isPhone) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
 					<DrawerHeader>
 						<DrawerTitle>{title}</DrawerTitle>
 					</DrawerHeader>
-					<DrawerScroller>{content}</DrawerScroller>
+					<DrawerScroller fade={false}>{content}</DrawerScroller>
 				</DrawerContent>
 			</Drawer>
 		)
@@ -359,7 +359,7 @@ export default function FileSharingDrawerOrDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogScrollableContent showClose>
+			<DialogScrollableContent fade={false}>
 				<div className='space-y-3 px-5 py-6'>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
