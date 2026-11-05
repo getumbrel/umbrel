@@ -981,6 +981,12 @@ export function renderCloudInitUserData(
 		],
 		ssh_pwauth: true,
 		chpasswd: {expire: false},
+		// Machines removes this seed once setup completes. Without it a guest
+		// that has no ds-identify, like Alpine, falls back to the None datasource
+		// on its next boot and treats itself as a brand new instance: it waits
+		// minutes on cloud metadata services, regenerates its SSH host keys and
+		// turns SSH password login back off. Keep using the cached datasource.
+		write_files: [{path: '/etc/cloud/cloud.cfg.d/99-umbrel-machine.cfg', content: 'manual_cache_clean: true\n'}],
 	}
 
 	if (provisioning.packages?.length) {

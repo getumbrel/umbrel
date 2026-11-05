@@ -57,6 +57,18 @@ describe('Machines cloud-init seed', () => {
 		expect(config.ssh_pwauth).toBe(true)
 	})
 
+	test('keeps guests on the setup instance after the seed is removed', () => {
+		const document = renderCloudInitUserData('alpine', '$6$test-hash', {shell: '/bin/ash', packages: ['sudo']})
+		const config = yaml.load(document.replace(/^#cloud-config\n/, '')) as {
+			write_files: Array<{path: string; content: string}>
+		}
+
+		expect(config.write_files).toEqual([
+			{path: '/etc/cloud/cloud.cfg.d/99-umbrel-machine.cfg', content: 'manual_cache_clean: true\n'},
+		])
+		expect(yaml.load(config.write_files[0].content)).toEqual({manual_cache_clean: true})
+	})
+
 	test('uses Alpine ash and installs sudo', () => {
 		const document = renderCloudInitUserData('alpine', '$6$test-hash', {shell: '/bin/ash', packages: ['sudo']})
 		const config = yaml.load(document.replace(/^#cloud-config\n/, '')) as {
