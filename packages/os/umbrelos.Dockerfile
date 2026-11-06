@@ -526,7 +526,7 @@ RUN cd /tmp/avahi-debs && \
 RUN apt-get install --yes bluez
 
 # Install essential system utilities
-RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential e2fsprogs
+RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential e2fsprogs python3-yaml
 
 # Install the host virtualization stack used by Umbrel Machines. Both system
 # emulators and firmware families are present on every architecture so restored
