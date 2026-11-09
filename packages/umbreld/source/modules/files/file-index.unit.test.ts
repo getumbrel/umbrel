@@ -448,6 +448,25 @@ describe('file index migrations', () => {
 			expect(plan.some(({detail}) => detail.includes(workIndex))).toBe(true)
 			expect(plan.some(({detail}) => detail === 'SCAN entries')).toBe(false)
 		}
+
+		const metadataRefreshPlan = database
+			.prepare(
+				`EXPLAIN QUERY PLAN
+				SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
+					entries.device, entries.inode, entries.size, entries.modified_ns,
+					entries.ctime_ns, entries.thumbnail_identity_kind,
+					index_roots.system_path AS root_system_path, entries.relative_path
+				FROM media_metadata_refresh
+				CROSS JOIN contents ON contents.id = media_metadata_refresh.content_id
+				CROSS JOIN entries INDEXED BY entries_by_content ON entries.content_id = media_metadata_refresh.content_id
+				JOIN index_roots ON index_roots.id = entries.root_id
+				WHERE index_roots.kind IN ('home', 'trash')
+				ORDER BY media_metadata_refresh.content_id, entries.id
+				LIMIT 1`,
+			)
+			.all() as Array<{detail: string}>
+		expect(metadataRefreshPlan[0].detail).toBe('SCAN media_metadata_refresh')
+		expect(metadataRefreshPlan.some(({detail}) => detail.startsWith('SCAN entries'))).toBe(false)
 		database.exec(
 			'CREATE TEMP TABLE content_gc_candidates(content_id INTEGER PRIMARY KEY, deferred_at INTEGER NOT NULL)',
 		)

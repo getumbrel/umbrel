@@ -889,6 +889,9 @@ export default class FileIndexEnrichment {
 				excluded.length > 0
 					? `AND media_metadata_refresh.content_id NOT IN (${excluded.map(() => '?').join(', ')})`
 					: ''
+			// The refresh queue is usually empty, so start from it. Left to choose,
+			// SQLite walks every entry by content to satisfy the ORDER BY, which
+			// costs a full pass over a large index on every background step.
 			const row = (await database
 				.prepare(
 					`SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
@@ -896,8 +899,8 @@ export default class FileIndexEnrichment {
 						entries.ctime_ns, entries.thumbnail_identity_kind,
 						index_roots.system_path AS root_system_path, entries.relative_path
 					FROM media_metadata_refresh
-					JOIN contents ON contents.id = media_metadata_refresh.content_id
-					JOIN entries INDEXED BY entries_by_content ON entries.content_id = media_metadata_refresh.content_id
+					CROSS JOIN contents ON contents.id = media_metadata_refresh.content_id
+					CROSS JOIN entries INDEXED BY entries_by_content ON entries.content_id = media_metadata_refresh.content_id
 					JOIN index_roots ON index_roots.id = entries.root_id
 					WHERE ${BACKGROUND_ENRICHMENT_ROOT_SQL}
 						${exclusion}
