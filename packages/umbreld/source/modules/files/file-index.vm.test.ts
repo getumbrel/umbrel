@@ -91,6 +91,26 @@ describe('durable file index', () => {
 		await expectEventually(`${suiteRoot}/watch-burst/watch-burst-500-91a6.txt`, false)
 	})
 
+	test('indexes a folder moved into Home from the events for its contents, without rescanning Home', async () => {
+		const outside = `${umbreld.vm.dataDirectory}/move-in-source-4c1e`
+		const destination = `${umbreld.vm.dataDirectory}/home/file-index-vm/moved-in-4c1e`
+		const startedAt = (await umbreld.vm.sshAsRoot('date +%s')).trim()
+		await umbreld.vm.sshAsRoot(`
+			mkdir -p '${outside}/nested/deeper'
+			for i in $(seq -w 1 20); do printf '%s' "$i" > '${outside}/nested/deeper/moved-in-'"$i"'-4c1e.txt'; done
+			mv '${outside}' '${destination}'
+		`)
+
+		await expectEventually(`${suiteRoot}/moved-in-4c1e/nested/deeper/moved-in-01-4c1e.txt`, true)
+		await expectEventually(`${suiteRoot}/moved-in-4c1e/nested/deeper/moved-in-20-4c1e.txt`, true)
+		// Only directory changes count. --since includes the whole second, which can
+		// hold the start of the previous test's burst scan.
+		const homeScans = await umbreld.vm.sshAsRoot(
+			`journalctl -u umbrel --no-pager --since @${startedAt} | grep -cF "Reconciling '/Home' (directory-changed)" || true`,
+		)
+		expect(homeScans.trim()).toBe('0')
+	})
+
 	test('keeps umbreld responsive while the worker performs repeated full-index searches', async () => {
 		const systemRoot = `${umbreld.vm.dataDirectory}/home/file-index-vm/worker-load`
 		await umbreld.vm.sshAsRoot(`

@@ -627,6 +627,11 @@ export default class FileIndex {
 		await this.#request('reconcilePath', [systemPath])
 	}
 
+	async reconcileCreatedDirectory(systemPath: string) {
+		if (!this.#workerReady) return
+		await this.#request('reconcileCreatedDirectory', [systemPath])
+	}
+
 	async removePath(systemPath: string) {
 		if (!this.#workerReady) return
 		await this.#request('removePath', [systemPath])

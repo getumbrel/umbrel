@@ -7102,30 +7102,152 @@ test('uses one root snapshot for a large watcher burst', async () => {
 	expect(logger.log).toHaveBeenCalledWith("Reconciling '/Home' (watcher-burst)")
 })
 
-test('uses a full root reconciliation for a watcher directory creation', async () => {
-	const entryCount = 2_000
-	const walkedRoots: string[] = []
-	const walk: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (root) {
-		walkedRoots.push(root)
-		const stats = await lstat(root)
-		for (let index = 0; index < entryCount; index++) {
-			yield {systemPath: nodePath.join(root, `watcher-bulk-${String(index).padStart(4, '0')}`), stats}
-		}
-	}
-	const {index, homeDirectory} = await fixture(walk)
-	const changedDirectory = nodePath.join(homeDirectory, 'watcher-directory')
-	await fse.ensureDir(changedDirectory)
+test('indexes a directory the watcher reports, with the contents reported alongside it, without rescanning its root', async () => {
+	const walkTree = vi.fn(walkFileTree)
+	const {index, homeDirectory, trashDirectory} = await fixture(walkTree, {includeTrash: true})
+	await index.reconcileRoot('/Home', 'initial')
+	walkTree.mockClear()
+	// Watchman reports everything inside a directory moved in whole, not just the
+	// directory itself
+	const moved = nodePath.join(homeDirectory, 'moved')
+	const nested = nodePath.join(moved, 'nested')
+	const inside = nodePath.join(nested, 'inside.txt')
+	await fse.outputFile(inside, 'inside')
 
-	noteWatcherChanges(index, [changedDirectory])
-
-	await pRetry(async () => expect(await index.status()).toMatchObject({entryCount}), {
-		retries: 100,
+	noteWatcherChanges(index, [moved, nested, inside])
+	await pRetry(async () => expect(await index.getEntryBySystemPath(inside)).toMatchObject({name: 'inside.txt'}), {
+		retries: 20,
 		minTimeout: 10,
 		maxTimeout: 20,
 	})
-	expect(walkedRoots).toStrictEqual([homeDirectory])
-	expect(logger.log).toHaveBeenCalledWith("Reconciling '/Home' (directory-changed)")
-}, 10_000)
+
+	// Root scans run in order, so any scan of Home these events queued has run by now
+	await index.reconcileRoot('/Trash', 'barrier')
+	expect(walkTree.mock.calls.filter(([root]) => root === homeDirectory)).toHaveLength(0)
+	expect(walkTree.mock.calls.filter(([root]) => root === trashDirectory)).toHaveLength(1)
+	expect(await index.getEntryBySystemPath(moved)).toMatchObject({type: 'directory'})
+	expect(await index.getEntryBySystemPath(nested)).toMatchObject({type: 'directory'})
+})
+
+test('notifies Photos about a watcher delete only when it removed something from the index', async () => {
+	const onPhotosChange = vi.fn()
+	const {index, homeDirectory} = await fixture(undefined, {onPhotosChange})
+	const indexed = nodePath.join(homeDirectory, 'indexed.txt')
+	await writeFile(indexed, 'indexed')
+	await index.reconcileRoot('/Home', 'initial')
+	await index.initializePhotos('owner')
+	await new Promise((resolve) => setTimeout(resolve, 500))
+	onPhotosChange.mockClear()
+
+	// A temporary file created and removed within a batch was never indexed
+	noteWatcherChanges(index, [nodePath.join(homeDirectory, '.indexed.txt.tmp')], 'delete')
+	await new Promise((resolve) => setTimeout(resolve, 500))
+	expect(onPhotosChange).not.toHaveBeenCalled()
+
+	await fse.remove(indexed)
+	noteWatcherChanges(index, [indexed], 'delete')
+	await pRetry(() => expect(onPhotosChange).toHaveBeenCalledWith(['owner']), {
+		retries: 50,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	expect(await index.getEntryBySystemPath(indexed)).toBeUndefined()
+})
+
+test('does not index a directory Files creates in a root that is not scanned', async () => {
+	const {index, rootDirectory} = await fixture()
+	const externalDirectory = nodePath.join(rootDirectory, 'external')
+	await fse.ensureDir(externalDirectory)
+	await index.addRoot({
+		virtualPath: '/External',
+		systemPath: externalDirectory,
+		ownerId: 'owner',
+		kind: 'apps',
+		searchEnabled: false,
+		scanEnabled: false,
+	})
+	const created = nodePath.join(externalDirectory, 'created')
+	await fse.ensureDir(created)
+
+	await index.reconcileCreatedDirectory(created)
+	await expect(index.getEntryBySystemPath(created)).resolves.toBeUndefined()
+})
+
+test('indexes a directory Files created without rescanning its root, and drops it once the watcher reports it gone', async () => {
+	const walkTree = vi.fn(walkFileTree)
+	const {index, homeDirectory, trashDirectory} = await fixture(walkTree, {includeTrash: true})
+	await index.reconcileRoot('/Home', 'initial')
+	walkTree.mockClear()
+	const directory = nodePath.join(homeDirectory, 'created')
+	await fse.ensureDir(directory)
+
+	await index.reconcileCreatedDirectory(directory)
+	expect(await index.getEntryBySystemPath(directory)).toMatchObject({type: 'directory'})
+
+	// Removed by something other than Files before the watcher reported the create
+	await fse.remove(directory)
+	noteWatcherChanges(index, [directory], 'delete')
+	await pRetry(async () => expect(await index.getEntryBySystemPath(directory)).toBeUndefined(), {
+		retries: 20,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+
+	await index.reconcileRoot('/Trash', 'barrier')
+	expect(walkTree.mock.calls.filter(([root]) => root === homeDirectory)).toHaveLength(0)
+	expect(walkTree.mock.calls.filter(([root]) => root === trashDirectory)).toHaveLength(1)
+})
+
+test('registers a photo backup upload into a new shard directory without rescanning its root', async () => {
+	const hash = Buffer.alloc(32, 0x43)
+	const walkTree = vi.fn(walkFileTree)
+	const {index, homeDirectory} = await fixture(walkTree, {
+		includeTrash: true,
+		enrichmentRuntime: {
+			hashFile: async () => hash,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	await index.initializePhotos('owner')
+	const sourceId = 'iphone:new-shard'
+	await index.photosUpsertBackupSource('owner', sourceId, 'Phone', 123)
+	await fse.ensureDir(nodePath.join(homeDirectory, 'Photos', 'Phone'))
+	await index.reconcileRoot('/Home', 'initial')
+	walkTree.mockClear()
+
+	// Backup creates the shard through Files and writes the upload's temporary file
+	// into it, possibly before the index has handled the new directory
+	const resourceKey = 'ab'.padEnd(64, 'c')
+	const shard = nodePath.join(homeDirectory, 'Photos', 'Phone', 'ab')
+	const temporaryUpload = nodePath.join(shard, `.${resourceKey}.heic.0123.umbrel-upload`)
+	const uploaded = nodePath.join(shard, `${resourceKey}.heic`)
+	await fse.outputFile(temporaryUpload, 'photo')
+	await index.reconcileCreatedDirectory(shard)
+	noteWatcherChanges(index, [shard, temporaryUpload])
+	await pRetry(async () => expect(await index.getEntryBySystemPath(temporaryUpload)).toMatchObject({hidden: true}), {
+		retries: 20,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+
+	// Publishing links the upload under its resource key, then registers it
+	await link(temporaryUpload, uploaded)
+	await fse.remove(temporaryUpload)
+	const revision = await contentRevision(uploaded)
+	const moved = index.movePath(temporaryUpload, uploaded)
+	await expect(
+		index.photosRegisterBackupResource('owner', sourceId, resourceKey, uploaded, hash, revision),
+	).resolves.toMatchObject({resourceKey, path: `/Home/Photos/Phone/ab/${resourceKey}.heic`})
+	await moved
+
+	// Root scans run in order, so any scan of Home these events queued has run by now
+	await index.reconcileRoot('/Trash', 'barrier')
+	expect(walkTree.mock.calls.filter(([root]) => root === homeDirectory)).toHaveLength(0)
+	expect(await index.getEntryBySystemPath(shard)).toMatchObject({type: 'directory'})
+	await expect(index.photosConfirmedBackupResources('owner', sourceId, [resourceKey])).resolves.toMatchObject([
+		{resourceKey, path: `/Home/Photos/Phone/ab/${resourceKey}.heic`},
+	])
+})
 
 test('applies direct move hints to both paths, including regular files', async () => {
 	const {index, homeDirectory} = await fixture()
@@ -7742,4 +7864,29 @@ test('purges a removed member when the optional Photos database recovers', async
 		count: 0,
 	})
 	photos.close()
+})
+
+test('drops the contents of a directory replaced by a file when the watcher reports them gone', async () => {
+	const {index, homeDirectory} = await fixture()
+	const directory = nodePath.join(homeDirectory, 'replaced')
+	const child = nodePath.join(directory, 'child.txt')
+	await fse.ensureDir(directory)
+	await writeFile(child, 'child')
+	await index.reconcileRoot('/Home', 'initial')
+	await expect(index.getEntryBySystemPath(child)).resolves.toBeDefined()
+
+	await fse.remove(directory)
+	await writeFile(directory, 'now a file')
+	index.noteWatcherChanges('/Home', [
+		{path: directory, type: 'update'},
+		{path: child, type: 'delete'},
+	])
+
+	await pRetry(async () => expect(await index.getEntryBySystemPath(child)).toBeUndefined(), {
+		retries: 50,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	expect(await index.getEntryBySystemPath(directory)).toMatchObject({type: 'file'})
+	await expect(index.status()).resolves.toMatchObject({roots: [{virtualPath: '/Home', state: 'ready'}]})
 })

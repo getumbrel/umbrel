@@ -225,6 +225,8 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 			return index.reconcileRoot(stringArg(args), stringArg(args, 1))
 		case 'reconcilePath':
 			return index.reconcilePath(stringArg(args))
+		case 'reconcileCreatedDirectory':
+			return index.reconcileCreatedDirectory(stringArg(args))
 		case 'removePath':
 			return index.removePath(stringArg(args))
 		case 'movePath':

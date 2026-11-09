@@ -8,9 +8,14 @@ import watchman from 'fb-watchman'
 // worker thread. Everything here runs on the event loop, so that can't happen,
 // and failures surface as ordinary errors.
 //
-// The event semantics deliberately match @parcel/watcher's Watchman backend: the
-// same fields and create/update/delete mapping, the same per-path coalescing
-// within a batch, the same path ordering, and the same batching window.
+// The event semantics match @parcel/watcher's Watchman backend: the same fields
+// and create/update/delete mapping, the same per-path coalescing within a batch,
+// the same path ordering, and the same batching window. The one difference is
+// that a path gone by the end of a batch is always reported as deleted, where
+// @parcel/watcher drops it if it was created during the batch. Watchman flags a
+// path new when its latest incarnation is, even if an earlier one existed, and
+// consumers such as the file index may have recorded a path before its create
+// arrived, so dropping the event can leave them holding a path that's gone.
 
 export type FileChangeEvent = {path: string; type: 'create' | 'update' | 'delete'}
 export type WatchmanCallback = (error: Error | null, events: FileChangeEvent[]) => void
@@ -237,7 +242,8 @@ export default class Watchman {
 		this.#scheduleFlush(subscription)
 	}
 
-	// @parcel/watcher's mapping and per-path coalescing
+	// @parcel/watcher's mapping and per-path coalescing, except that a path that's
+	// gone is always a delete
 	#record(subscription: Subscription, path: string, file: WatchmanFile) {
 		const isDirectory = (file.mode & S_IFMT) === S_IFDIR
 		let event = subscription.events.get(path)
@@ -248,8 +254,9 @@ export default class Watchman {
 			else event.created = true
 		} else if (file.exists && !isDirectory) {
 			event ??= {created: false, deleted: false}
-		} else if (!file.new && !file.exists) {
-			event ??= {created: false, deleted: false}
+		} else if (!file.exists) {
+			// A path that came and went before Watchman looked is new if it comes back
+			event ??= {created: file.new, deleted: false}
 			event.deleted = true
 		} else {
 			return
@@ -268,9 +275,7 @@ export default class Watchman {
 		subscription.lastFlushAt = Date.now()
 		const events: FileChangeEvent[] = []
 		for (const [path, {created, deleted}] of subscription.events) {
-			// Created and deleted within the same batch
-			if (created && deleted) continue
-			events.push({path, type: created ? 'create' : deleted ? 'delete' : 'update'})
+			events.push({path, type: deleted ? 'delete' : created ? 'create' : 'update'})
 		}
 		subscription.events.clear()
 		if (events.length === 0 || !this.#subscriptions.has(subscription.name)) return

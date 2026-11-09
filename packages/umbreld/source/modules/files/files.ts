@@ -639,7 +639,7 @@ export default class Files {
 		await this.chownSystemPath(path).catch(() => {})
 
 		const {dev: device, ino: inode, birthtimeMs} = await fse.lstat(path)
-		this.#updateFileIndex(`create '${path}'`, () => this.fileIndex.reconcilePath(path))
+		this.#updateFileIndex(`create '${path}'`, () => this.fileIndex.reconcileCreatedDirectory(path))
 		return {created: true as const, identity: {device, inode, birthtimeMs}}
 	}
 

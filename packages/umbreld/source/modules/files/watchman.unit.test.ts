@@ -179,7 +179,7 @@ describe('subscribing', () => {
 })
 
 describe('events', () => {
-	test("maps Watchman's fields the same way as @parcel/watcher", async () => {
+	test("maps Watchman's fields the same way as @parcel/watcher, except that a path that's gone is a delete", async () => {
 		const watchman = new Watchman()
 		const {client, name, callback} = await subscribed(watchman)
 
@@ -192,8 +192,10 @@ describe('events', () => {
 				file('new-directory', {isNew: true, mode: S_IFDIR}),
 				file('touched-directory', {mode: S_IFDIR}),
 				file('removed-directory', {exists: false, mode: S_IFDIR}),
-				// Created and removed again before Watchman looked
+				// Created and removed again before Watchman looked. An earlier
+				// incarnation may have existed, so it's still a delete.
 				file('transient', {exists: false, isNew: true, mode: 0}),
+				file('replaced-directory', {exists: false, isNew: true, mode: S_IFDIR}),
 			],
 		})
 
@@ -202,11 +204,13 @@ describe('events', () => {
 			{path: '/data/home/deleted', type: 'delete'},
 			{path: '/data/home/new-directory', type: 'create'},
 			{path: '/data/home/removed-directory', type: 'delete'},
+			{path: '/data/home/replaced-directory', type: 'delete'},
+			{path: '/data/home/transient', type: 'delete'},
 			{path: '/data/home/updated', type: 'update'},
 		])
 	})
 
-	test('coalesces repeated changes to a path within a batch like @parcel/watcher', async () => {
+	test('coalesces repeated changes to a path within a batch like @parcel/watcher, except that a path that ends up gone is a delete', async () => {
 		const watchman = new Watchman()
 		const {client, name, callback} = await subscribed(watchman)
 		// The first notification after a quiet period is delivered straight away,
@@ -222,12 +226,27 @@ describe('events', () => {
 		notify(client, {subscription: name, files: [file('created-then-updated')]})
 		notify(client, {subscription: name, files: [file('updated-then-deleted')]})
 		notify(client, {subscription: name, files: [file('updated-then-deleted', {exists: false})]})
+		notify(client, {subscription: name, files: [file('recreated-then-deleted', {exists: false})]})
+		notify(client, {subscription: name, files: [file('recreated-then-deleted', {isNew: true})]})
+		notify(client, {subscription: name, files: [file('recreated-then-deleted', {exists: false})]})
+		notify(client, {subscription: name, files: [file('created-deleted-recreated', {isNew: true})]})
+		notify(client, {subscription: name, files: [file('created-deleted-recreated', {exists: false, isNew: true})]})
+		notify(client, {subscription: name, files: [file('created-deleted-recreated', {isNew: true})]})
+		notify(client, {subscription: name, files: [file('transient-then-created', {exists: false, isNew: true})]})
+		notify(client, {subscription: name, files: [file('transient-then-created', {isNew: true})]})
 		await vi.advanceTimersByTimeAsync(50)
 
 		expect(callback).toHaveBeenCalledOnce()
 		expect(callback).toHaveBeenCalledWith(null, [
+			// Something may have recorded the path before Watchman reported it, such as
+			// the file index after Files created it
+			{path: '/data/home/created-deleted-recreated', type: 'create'},
+			{path: '/data/home/created-then-deleted', type: 'delete'},
 			{path: '/data/home/created-then-updated', type: 'create'},
 			{path: '/data/home/deleted-then-created', type: 'update'},
+			{path: '/data/home/recreated-then-deleted', type: 'delete'},
+			// A create, so the file index can still match it as a move destination
+			{path: '/data/home/transient-then-created', type: 'create'},
 			{path: '/data/home/updated-then-deleted', type: 'delete'},
 		])
 	})

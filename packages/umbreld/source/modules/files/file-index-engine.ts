@@ -1197,14 +1197,13 @@ export default class FileIndexEngine {
 				async () => {
 					for (const {path: systemPath, type} of batch) {
 						if (type === 'delete') await this.#reuseWatcherMove(systemPath, createdPaths, 5)
-						// A newly visible directory may already contain files (for example,
-						// an atomic move into the watched root). Use the existing coalesced
-						// root snapshot rather than maintaining a second subtree crawler.
-						// Directory updates only describe the directory inode; Watchman reports
-						// child changes separately. Re-scanning the whole root for each one
-						// turns modest directory churn into repeated million-entry walks.
-						const directoryReconciliation = type === 'create' ? 'root' : 'entry'
-						await this.#reconcileSystemPath(systemPath, 5, directoryReconciliation).catch((error) => {
+						// A directory event only needs the directory's own entry. Watchman
+						// reports every path beneath a directory that appears, including the
+						// contents of one moved in whole, and every path removed beneath one
+						// that goes. Re-scanning the whole root for each new directory turned
+						// every new folder, such as each photo backup shard, into a
+						// million-entry walk.
+						await this.#reconcileSystemPath(systemPath, 5, 'entry').catch((error) => {
 							this.logger.error(`Failed to update file index for '${systemPath}'`, error)
 						})
 					}
@@ -1270,6 +1269,16 @@ export default class FileIndexEngine {
 	async reconcilePath(systemPath: string) {
 		if (!this.#rootForSystemPath(systemPath) || !this.#available) return
 		await this.#schedulePathReconciliation(systemPath, 10, 'root')
+	}
+
+	// A directory the caller has just created was empty at that moment, so its own
+	// entry is all a scan could find. Anything written into it afterwards arrives as
+	// its own watcher event. Like reconcilePath, it indexes nothing in a root that
+	// isn't scanned.
+	async reconcileCreatedDirectory(systemPath: string) {
+		const root = this.#rootForSystemPath(systemPath)
+		if (!root || root.scanEnabled === false || !this.#available) return
+		await this.#schedulePathReconciliation(systemPath, 10, 'entry')
 	}
 
 	async #schedulePathReconciliation(
@@ -1479,7 +1488,9 @@ export default class FileIndexEngine {
 			try {
 				stats = await lstat(systemPath, {bigint: true})
 			} catch (error) {
-				if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+				// ENOTDIR means a parent is now a file, so the path is gone too
+				const code = (error as NodeJS.ErrnoException).code
+				if (code === 'ENOENT' || code === 'ENOTDIR') {
 					await this.#deleteRelativePath(root, relativePath, priority)
 					return
 				}
@@ -1491,8 +1502,9 @@ export default class FileIndexEngine {
 			}
 
 			if (stats.isDirectory() && directoryReconciliation === 'root') {
-				// A directory event does not tell us which children changed. A full root
-				// scan is the smallest simple operation that can also remove stale rows.
+				// A caller asking for a directory wants its contents indexed without
+				// waiting for watcher events. A full root scan is the smallest simple
+				// operation that can also remove stale rows.
 				return {completion: this.reconcileRoot(root.virtualPath, 'directory-changed')}
 			}
 
@@ -1551,10 +1563,24 @@ export default class FileIndexEngine {
 	async #deleteRelativePath(root: RootState, relativePath: string, priority: number) {
 		const rootId = root.id
 		if (!rootId) return
-		await this.#mutate(
-			(database) => this.#applyPathMutation(database, {type: 'delete', rootId, relativePath}),
-			priority,
-		)
+		const deleted = await this.#mutate((database) => {
+			// Nothing is indexed at or beneath most deleted paths the watcher reports,
+			// such as temporary files created and removed between batches. Skip them
+			// so they don't make Photos clients refetch.
+			// Two lookups, since SQLite can't use the path index for an OR of both
+			if (
+				relativePath !== '' &&
+				!database.prepare('SELECT 1 FROM entries WHERE root_id = ? AND relative_path = ?').get(rootId, relativePath) &&
+				!database
+					.prepare('SELECT 1 FROM entries WHERE root_id = ? AND relative_path >= ? AND relative_path < ? LIMIT 1')
+					.get(rootId, `${relativePath}/`, `${relativePath}0`)
+			) {
+				return false
+			}
+			this.#applyPathMutation(database, {type: 'delete', rootId, relativePath})
+			return true
+		}, priority)
+		if (!deleted) return
 		if (isPhotosRootKind(root.kind)) this.#notifyPhotosChanged([root.ownerId])
 		this.#enrichment.kick()
 	}

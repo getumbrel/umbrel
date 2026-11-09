@@ -21,6 +21,7 @@ export type FileIndexRequestMethod =
 	| 'reconcileAll'
 	| 'reconcileRoot'
 	| 'reconcilePath'
+	| 'reconcileCreatedDirectory'
 	| 'removePath'
 	| 'movePath'
 	| 'createUmbrelDatabaseBackup'
