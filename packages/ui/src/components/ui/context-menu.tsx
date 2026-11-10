@@ -29,7 +29,7 @@ function ContextMenuTrigger({
 			{...props}
 			onPointerDown={(e) => {
 				onPointerDown?.(e)
-				claimEvent(e)
+				if (e.pointerType !== 'mouse') claimEvent(e)
 			}}
 			onContextMenu={(e) => {
 				onContextMenu?.(e)
