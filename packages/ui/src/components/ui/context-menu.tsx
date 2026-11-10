@@ -9,13 +9,32 @@ import {contextMenuClasses} from './shared/menu'
 
 const ContextMenu = ContextMenuPrimitive.Root
 
+// Events already seen by a nested trigger. Radix opens every ancestor menu on a long touch, so outer triggers
+// cancel (via preventDefault) events an inner trigger has handled, leaving only the innermost menu open.
+const handledEvents = new WeakSet<Event>()
+
+function claimEvent(e: React.SyntheticEvent) {
+	if (handledEvents.has(e.nativeEvent)) e.preventDefault()
+	else handledEvents.add(e.nativeEvent)
+}
+
 function ContextMenuTrigger({
 	onContextMenuCapture,
+	onPointerDown,
+	onContextMenu,
 	...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Trigger>) {
 	return (
 		<ContextMenuPrimitive.Trigger
 			{...props}
+			onPointerDown={(e) => {
+				onPointerDown?.(e)
+				if (e.pointerType !== 'mouse') claimEvent(e)
+			}}
+			onContextMenu={(e) => {
+				onContextMenu?.(e)
+				claimEvent(e)
+			}}
 			onContextMenuCapture={(e) => {
 				onContextMenuCapture?.(e)
 				// A text field inside the trigger (a rename, the Files path) gets the browser's text menu: stopping
