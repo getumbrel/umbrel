@@ -7,6 +7,9 @@ get_addresses() {
         # Get the interface IP
         local ip=$(nmcli --terse --fields IP4.ADDRESS dev show "${interface}" | grep 'IP4.ADDRESS' | cut -d':' -f2 | cut -d'/' -f1)
 
+        # Skip interfaces that are active but don't have an IP yet
+        [[ -z "${ip}" ]] && continue
+
         # Return the IP
         echo "${ip}"
 
