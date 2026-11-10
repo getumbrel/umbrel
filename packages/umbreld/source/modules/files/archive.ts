@@ -122,6 +122,10 @@ export default class Archive {
 				})(this.#umbreld),
 			)
 			sources.push(source)
+			// Archiver pipes a source without listening for its errors, so a file that
+			// fails to open or read would be an uncaught exception. Fail the archive
+			// instead so the error reaches whoever is consuming it.
+			source.on('error', (error) => archive.destroy(error))
 			archive.append(source, {
 				name,
 				...(modifiedMs !== undefined && modifiedMs > 0 ? {date: new Date(modifiedMs)} : {}),
