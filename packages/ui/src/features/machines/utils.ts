@@ -56,3 +56,8 @@ export function prettyMbPair(downloadedMb: number, totalMb: number) {
 	const downloadedValue = downloadedUnit === totalUnit ? downloaded.split(' ')[0] : downloaded
 	return {downloaded: downloadedValue, total}
 }
+
+// Fingers get a console of their own, with a keyboard, a trackpad and a view that
+// can zoom and pan. A mouse and keyboard get the desktop console, which shows the
+// guest as it is.
+export const prefersTouchConsole = () => window.matchMedia?.('(pointer: coarse)').matches ?? false

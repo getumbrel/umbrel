@@ -4,10 +4,12 @@ import {useParams} from 'react-router-dom'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
 import {MachineDisplay} from '@/features/machines/components/machine-display'
+import {MachineKeysMenu} from '@/features/machines/components/machine-keys-menu'
 import {OsIcon} from '@/features/machines/components/os-icon'
 import {machinePath, machineStopTextClass} from '@/features/machines/constants'
 import {useMachineActions} from '@/features/machines/hooks/use-machine-actions'
 import {useMachine, useMachinesLiveUpdates} from '@/features/machines/hooks/use-machines'
+import {prefersTouchConsole} from '@/features/machines/utils'
 import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -31,6 +33,17 @@ export default function FullscreenConsole() {
 		const onChange = () => setIsBrowserFullscreen(!!document.fullscreenElement)
 		document.addEventListener('fullscreenchange', onChange)
 		return () => document.removeEventListener('fullscreenchange', onChange)
+	}, [])
+
+	// Fullscreen hands the machine the whole keyboard, including what this
+	// computer otherwise acts on first: the Windows key, Alt+Tab, Esc. Browsers
+	// that can do it (Chromium, on a secure origin) only do while the page is
+	// fullscreen, and make holding Esc the way out.
+	useEffect(() => {
+		const keyboard = navigator.keyboard
+		if (!keyboard) return
+		keyboard.lock().catch(() => {})
+		return () => keyboard.unlock()
 	}, [])
 
 	const toggleBrowserFullscreen = () => {
@@ -77,6 +90,15 @@ export default function FullscreenConsole() {
 					<span className='text-13 -tracking-2 text-white/70'>{t('machines.umbrel-machines')}</span>
 				</div>
 				<div className='flex items-center gap-1 justify-self-end'>
+					{/* The touch console has keys of its own */}
+					{!prefersTouchConsole() && (
+						<MachineKeysMenu
+							machine={machine}
+							buttonClassName={consoleButtonClass}
+							iconClassName='size-4'
+							side='bottom'
+						/>
+					)}
 					<DarkTooltip label={t('machines.fullscreen')} side='bottom'>
 						<button
 							className={consoleButtonClass}

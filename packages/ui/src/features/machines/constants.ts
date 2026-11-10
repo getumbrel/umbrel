@@ -193,13 +193,13 @@ export const machineSegmentButtonClass = (active: boolean) =>
 		active ? tw`border-brand bg-brand/20 text-white` : tw`border-white/10 bg-white/5 text-white/60 hover:bg-white/10`,
 	)
 
-// Machine view rail: 48px, or 40px where seven won't fit a row or a short
-// column. Same minimal surface as the row buttons plus the settings-card edge
-// material, whose inset top shine separates the floating buttons from the dark
-// canvas behind them
+// Machine view rail: 48px, or 40px where its buttons won't fit a row or the
+// column beside the screen. Same minimal surface as the row buttons plus the
+// settings-card edge material, whose inset top shine separates the floating
+// buttons from the dark canvas behind them
 export const machineRailButtonClass = cn(
 	machineControlButtonClass,
-	tw`settings-edge-material size-10 bg-white/6 hover:bg-white/12 disabled:opacity-40 sm:size-12 [@media(height<660px)]:size-10`,
+	tw`settings-edge-material size-10 bg-white/6 hover:bg-white/12 disabled:opacity-40 sm:size-12 rail-tight:size-10`,
 )
 
 // Repeated feature color: stop/error red (#f63636). Arbitrary-value Tailwind

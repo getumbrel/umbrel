@@ -21,6 +21,13 @@
 		@slot;
 	}
 }
+/* Where that column of controls at full size would run past the bottom of the
+   screen beside it: short windows, and ones only just wide enough for it */
+@custom-variant rail-tight {
+	@media (height < 700px), (min-aspect-ratio: 13/10) and (width < 1040px) {
+		@slot;
+	}
+}
 /* Windows too short for Home's regular scale: phones on their side */
 @custom-variant low (@media (height < 500px));
 /* Tablets, inner displays and phones on their side: room for two panes, below the desktop layout */

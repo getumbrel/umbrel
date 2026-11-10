@@ -10,17 +10,12 @@ import {machineStopTextClass} from '@/features/machines/constants'
 import {getMachinesErrorMessage, useMachineActions} from '@/features/machines/hooks/use-machine-actions'
 import {useOsImages} from '@/features/machines/hooks/use-machines'
 import type {Machine} from '@/features/machines/types'
-import {prettyMb, prettyMbPair} from '@/features/machines/utils'
+import {prefersTouchConsole, prettyMb, prettyMbPair} from '@/features/machines/utils'
 import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
 const TouchMachineConsole = lazy(() => import('@/features/machines/touch/touch-machine-console'))
-
-// Fingers get a console of their own, with a keyboard, a trackpad and a view that
-// can zoom and pan. A mouse and keyboard get the desktop console, which shows the
-// guest as it is.
-const prefersTouchConsole = () => window.matchMedia?.('(pointer: coarse)').matches ?? false
 
 // Shared "start" affordance on the stopped/error screens
 const screenActionButtonClass =
@@ -118,7 +113,12 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 
 	return (
 		<>
-			<MachineConsole machineId={machine.id} resizeSession={followsBrowserSize} omarchy={machine.osId === 'omarchy'} />
+			<MachineConsole
+				machineId={machine.id}
+				resizeSession={followsBrowserSize}
+				omarchy={machine.osId === 'omarchy'}
+				windows={machine.osId.startsWith('windows')}
+			/>
 			{overlays}
 		</>
 	)

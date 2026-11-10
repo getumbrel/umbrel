@@ -15,6 +15,7 @@ import {
 	USER_COPY_WINDOW_MS,
 	writeLocalClipboard,
 } from '@/features/machines/console-clipboard'
+import {listenForConsoleKeys, pressConsoleKey} from '@/features/machines/console-keys'
 import {machineSocketUrl, reconnectDelay, SUPERSEDED_CLOSE_CODE} from '@/features/machines/console-socket'
 import {useConsoleAgent} from '@/features/machines/hooks/use-console-agent'
 import {useMachineAudio} from '@/features/machines/hooks/use-machine-audio'
@@ -42,10 +43,12 @@ export function MachineConsole({
 	machineId,
 	resizeSession,
 	omarchy,
+	windows,
 }: {
 	machineId: string
 	resizeSession: boolean
 	omarchy?: boolean
+	windows?: boolean
 }) {
 	const root = useRef<HTMLDivElement>(null)
 	const screen = useRef<HTMLDivElement>(null)
@@ -66,6 +69,7 @@ export function MachineConsole({
 	const {audioBlocked} = useMachineAudio({machineId, sessionId, live: !!liveConsole, muted, gestureTarget: root})
 	const [clipboardNotice, setClipboardNotice] = useState<ClipboardNotice>()
 	const typing = useRef<AbortController>(undefined)
+	const [superHeld, setSuperHeld] = useState(false)
 
 	const {agentControl, arrivalToken, takenOver, takeOver, agentOwned} = useConsoleAgent(machineId)
 	const rfbRef = useRef<RFB | undefined>(undefined)
@@ -296,6 +300,19 @@ export function MachineConsole({
 	}, [liveConsole, machineId, omarchy])
 
 	useEffect(() => {
+		const element = screen.current
+		const rfb = liveConsole
+		if (!element || !rfb) return
+		return listenForConsoleKeys({
+			machineId,
+			rfb,
+			screen: element,
+			canSend: () => !agentOwnedRef.current,
+			onSuperHeld: setSuperHeld,
+		})
+	}, [liveConsole, machineId])
+
+	useEffect(() => {
 		if (!clipboardNotice || clipboardNotice.kind === 'typing') return
 		const timer = setTimeout(() => setClipboardNotice(undefined), CLIPBOARD_NOTICE_MS)
 		return () => clearTimeout(timer)
@@ -309,6 +326,20 @@ export function MachineConsole({
 		setClipboardNotice(undefined)
 		rfb.focus()
 	}
+
+	// One pill at a time. A held key outranks the clipboard: it's still down.
+	const notice = superHeld
+		? {
+				text: t(windows ? 'machines.keys-holding-windows' : 'machines.keys-holding-super'),
+				action: t('machines.keys-release'),
+				onAction: () => pressConsoleKey(machineId, 'super'),
+			}
+		: clipboardNotice && {
+				text: t(`machines.clipboard-${clipboardNotice.kind}`),
+				action:
+					clipboardNotice.kind === 'too-long' ? undefined : t(`machines.clipboard-${clipboardNotice.kind}-action`),
+				onAction: () => onClipboardNoticeAction(clipboardNotice),
+			}
 
 	return (
 		<div
@@ -341,22 +372,22 @@ export function MachineConsole({
 					<VolumeX className='size-3.5' />
 				</div>
 			)}
-			{clipboardNotice && connectionState === 'connected' && (
+			{notice && connectionState === 'connected' && (
 				<div className={cn(statusPillClass, 'px-4')}>
 					<div
 						className={cn(
 							'flex items-center gap-3 rounded-full bg-black/70 py-1 pl-3.5 text-12 text-white/60 backdrop-blur',
-							clipboardNotice.kind === 'too-long' ? 'pr-3.5' : 'pr-1',
+							notice.action ? 'pr-1' : 'pr-3.5',
 						)}
 					>
-						<span className='py-1'>{t(`machines.clipboard-${clipboardNotice.kind}`)}</span>
-						{clipboardNotice.kind !== 'too-long' && (
+						<span className='py-1'>{notice.text}</span>
+						{notice.action && (
 							<button
 								type='button'
 								className='rounded-full bg-white/12 px-3 py-1 font-medium text-white transition-colors hover:bg-white/20'
-								onClick={() => onClipboardNoticeAction(clipboardNotice)}
+								onClick={notice.onAction}
 							>
-								{t(`machines.clipboard-${clipboardNotice.kind}-action`)}
+								{notice.action}
 							</button>
 						)}
 					</div>
