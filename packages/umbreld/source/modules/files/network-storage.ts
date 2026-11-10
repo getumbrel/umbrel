@@ -228,7 +228,17 @@ export default class NetworkStorage {
 	async addShare(newShare: Omit<NetworkShare, 'mountPath'>) {
 		// Generate mount path
 		const sanitize = (string: string) => string.replace(/[^a-zA-Z0-9\-\.\' \(\)]/g, '')
-		const mountPath = `/Network/${sanitize(newShare.host)}/${sanitize(newShare.share)}`
+		const host = sanitize(newShare.host)
+		const shareName = sanitize(newShare.share)
+
+		// Each name must be a real directory name. An empty name, `.` or `..`
+		// would resolve the mount path to the host directory or to /Network
+		// itself, mounting over every share beneath it.
+		if ([host, shareName].some((name) => ['', '.', '..'].includes(name))) {
+			throw new Error('Invalid network share host or share name')
+		}
+
+		const mountPath = `/Network/${host}/${shareName}`
 
 		// Check if the share already exists
 		const alreadyExists = await this.getShare(mountPath)

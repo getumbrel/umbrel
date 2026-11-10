@@ -143,6 +143,43 @@ describe.sequential('Network storage', () => {
 		).rejects.toThrow('already exists')
 	})
 
+	test('rejects host and share names that do not name a directory', async () => {
+		const sharePassword = await umbreld.client.files.sharePassword.query()
+
+		// `$` is stripped when building the mount path, so `..$` becomes `..` and `$` becomes empty
+		for (const name of ['.', '..', '..$', '$']) {
+			await expect(
+				umbreld.client.files.addNetworkShare.mutate({
+					host: 'localhost',
+					share: name,
+					username: 'umbrel',
+					password: sharePassword,
+				}),
+			).rejects.toThrow('Invalid network share host or share name')
+			await expect(
+				umbreld.client.files.addNetworkShare.mutate({
+					host: name,
+					share: `${primaryShareName} (Umbrel)`,
+					username: 'umbrel',
+					password: sharePassword,
+				}),
+			).rejects.toThrow('Invalid network share host or share name')
+		}
+
+		// The existing share is still the only one and is still reachable
+		await expect(umbreld.client.files.listNetworkShares.query()).resolves.toEqual([
+			{
+				host: 'localhost',
+				share: `${primaryShareName} (Umbrel)`,
+				mountPath: primaryMountPath,
+				isMounted: true,
+			},
+		])
+		const networkRoot = await umbreld.client.files.list.query({path: '/Network'})
+		expect(networkRoot.files.map((file) => file.name)).toEqual(['localhost'])
+		await expectMountedShareToContain(primaryMountPath, 'source-marker')
+	})
+
 	test('rejects invalid credentials for mounting and discovery', async () => {
 		await expect(
 			umbreld.client.files.addNetworkShare.mutate({
