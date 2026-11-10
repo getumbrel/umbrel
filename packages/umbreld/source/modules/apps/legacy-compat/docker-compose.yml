@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   tor_proxy:
     container_name: tor_proxy
