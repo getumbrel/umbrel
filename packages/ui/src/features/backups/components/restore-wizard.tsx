@@ -34,14 +34,9 @@ import {
 	useRestoreBackup as useBackupsRestore,
 	useRepositoryBackups,
 } from '@/features/backups/hooks/use-backups'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
-import {
-	BACKUP_FILE_NAME,
-	getDisplayRepositoryPath,
-	getRepositoryDisplayName,
-	getRepositoryPathFromBackupFile,
-	getRepositoryRelativePath,
-} from '@/features/backups/utils/filepath-helpers'
+import {BACKUP_FILE_NAME, getRepositoryPathFromBackupFile} from '@/features/backups/utils/filepath-helpers'
 import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
@@ -386,9 +381,7 @@ function RepositoryStep({
 		</>
 	)
 
-	const repoName = (path: string) => getRepositoryDisplayName(path) || t('unknown')
-
-	const repoPathDisplay = (path: string) => getRepositoryRelativePath(path)
+	const describeBackupLocation = useDescribeBackupLocation()
 
 	// Simple folder browser state for manual mode
 	const [isBrowserOpen, setBrowserOpen] = useState(false)
@@ -409,6 +402,7 @@ function RepositoryStep({
 								<div className='space-y-3'>
 									{repositories.map((repo) => {
 										const selected = repo.id === selectedId
+										const location = describeBackupLocation(repo.path)
 										return (
 											// We do not allow continuing with a disconnected device. If not connected,the row is visually disabled and non-interactive.
 											<div
@@ -444,8 +438,8 @@ function RepositoryStep({
 												</div>
 												<div className='min-w-0 flex-1'>
 													<div className='text-sm break-words whitespace-normal' title={repo.path}>
-														<span className='font-medium'>{repoName(repo.path)}</span>
-														<span> · {repoPathDisplay(repo.path)}</span>
+														<span className='font-medium'>{location.name}</span>
+														<span> · {location.folder}</span>
 													</div>
 													<div className='text-[12px] opacity-60'>
 														{repo.lastBackup
@@ -731,12 +725,10 @@ function ReviewStep({repository, backup}: {repository?: BackupRepository; backup
 	const size = backup?.size
 	const sizeTxt = typeof size === 'number' ? formatFilesystemSize(size) : t('unknown')
 
-	const repoDisplayPath = useMemo(() => {
-		const p = repository?.path || ''
-		if (!p) return t('backups-restore.unknown-repository')
-		const display = getDisplayRepositoryPath(p)
-		return display || t('backups-restore.unknown-repository')
-	}, [repository?.path])
+	const describeBackupLocation = useDescribeBackupLocation()
+	const repoDisplayPath = repository?.path
+		? describeBackupLocation(repository.path).path
+		: t('backups-restore.unknown-repository')
 
 	return (
 		<div className='space-y-4'>

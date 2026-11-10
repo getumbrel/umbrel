@@ -4,16 +4,16 @@ import {trpcReact} from '@/trpc/trpc'
 
 // Shared, read-only inventory for Files and Storage Manager. The server excludes
 // USB disks backing the running system, internal drives, and network shares.
-export function useExternalStorageDevices() {
+export function useExternalStorageDevices({enabled = true}: {enabled?: boolean} = {}) {
 	const utils = trpcReact.useUtils()
 	const userQ = trpcReact.user.get.useQuery()
 	// Also used during onboarding, before an owner account exists.
-	const enabled = userQ.data?.role !== 'member'
+	const canList = enabled && userQ.data?.role !== 'member'
 
 	trpcReact.eventBus.listen.useSubscription(
 		{event: 'files:external-storage:change'},
 		{
-			enabled,
+			enabled: canList,
 			onData() {
 				utils.files.externalDevices.invalidate()
 			},
@@ -29,6 +29,6 @@ export function useExternalStorageDevices() {
 		// and more slowly when empty in case a connection event was missed.
 		refetchInterval: (query) => (query.state.data?.length ? 5000 : 30_000),
 		staleTime: 0,
-		enabled,
+		enabled: canList,
 	})
 }

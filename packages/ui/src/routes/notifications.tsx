@@ -17,7 +17,7 @@ import {
 import {Button} from '@/components/ui/button'
 import {toast} from '@/components/ui/toast'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {getDeviceNameFromPath} from '@/features/backups/utils/backup-location-helpers'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {CloudBreakDiagram} from '@/features/files/components/cloud-break-diagram'
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {cloudAccountBrand} from '@/features/files/utils/cloud'
@@ -117,6 +117,7 @@ function parseBackupNotificationId(notification: string): {repoId: string | null
 function getBackupFailingContent(
 	notification: string,
 	backupRepositoriesQuery: {data?: Array<{id: string; path: string}>},
+	describeBackupLocation: ReturnType<typeof useDescribeBackupLocation>,
 	onGoToBackups: () => void,
 	onClearNotification: () => void,
 	t: TFunction,
@@ -126,8 +127,8 @@ function getBackupFailingContent(
 	// Find repository details if we have a repo ID
 	const repository = repoId ? backupRepositoriesQuery.data?.find((r) => r.id === repoId) : null
 
-	// Get device name from path if available
-	const deviceName = repository?.path ? getDeviceNameFromPath(repository.path) : null
+	// Name the drive or NAS if we know where the repository is
+	const deviceName = repository?.path ? describeBackupLocation(repository.path).name : null
 
 	const actionButtons = (
 		<>
@@ -205,6 +206,7 @@ export function Notifications() {
 	const backupRepositoriesQuery = trpcReact.backups.getRepositories.useQuery(undefined, {
 		enabled: hasBackupNotification,
 	})
+	const describeBackupLocation = useDescribeBackupLocation({enabled: hasBackupNotification})
 
 	// Query apps to resolve app names for app storage notifications (only when
 	// needed). This component renders outside AppsProvider so we query directly.
@@ -327,7 +329,14 @@ export function Notifications() {
 			const onClearNotification = () => {
 				clearNotification(notification)
 			}
-			return getBackupFailingContent(notification, backupRepositoriesQuery, onGoToBackups, onClearNotification, t)
+			return getBackupFailingContent(
+				notification,
+				backupRepositoriesQuery,
+				describeBackupLocation,
+				onGoToBackups,
+				onClearNotification,
+				t,
+			)
 		}
 
 		// Handle cloud auth notifications: cloud-auth:<accountId>

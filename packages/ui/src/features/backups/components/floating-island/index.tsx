@@ -1,7 +1,5 @@
-import {useTranslation} from 'react-i18next'
-
 import {useBackupProgress} from '@/features/backups/hooks/use-backups'
-import {getDeviceNameFromPath} from '@/features/backups/utils/backup-location-helpers'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {Island, IslandExpanded, IslandMinimized} from '@/modules/floating-island/bare-island'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -9,10 +7,10 @@ import {ExpandedContent} from './expanded'
 import {MinimizedContent} from './minimized'
 
 export function BackupsIsland() {
-	const {t} = useTranslation()
 	// Poll backup progress; island visibility is controlled by container
 	const progressQ = useBackupProgress(1000)
 	const reposQ = trpcReact.backups.getRepositories.useQuery()
+	const describeBackupLocation = useDescribeBackupLocation()
 
 	const progresses = progressQ.data ?? []
 	const repoMap = new Map((reposQ.data || []).map((r) => [r.id, r]))
@@ -24,7 +22,7 @@ export function BackupsIsland() {
 
 			return {
 				percent: p.percent ?? 0,
-				name: getDeviceNameFromPath(repoPath) || t('backups.backup-location'),
+				name: describeBackupLocation(repoPath).name,
 				path: repoPath,
 			}
 		})

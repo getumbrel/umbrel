@@ -27,8 +27,10 @@ import {LoadingTile as LoadingCard} from '@/features/backups/components/tiles'
 import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-backup-ignore'
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
 import {normalizeEncryptionPassword, useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {useExistingBackupDetection} from '@/features/backups/hooks/use-existing-backup-detection'
-import {BACKUP_FILE_NAME, getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
+import {getNetworkHostPath} from '@/features/backups/utils/backup-location-helpers'
+import {BACKUP_FILE_NAME} from '@/features/backups/utils/filepath-helpers'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
@@ -48,7 +50,6 @@ import {useConfirmation} from '@/providers/confirmation'
 const destinationSchema = z.discriminatedUnion('type', [
 	z.object({
 		type: z.literal('nas'),
-		host: z.string().min(1),
 		rootPath: z.string().min(1),
 	}),
 	z.object({
@@ -145,7 +146,6 @@ export function BackupsSetupWizard() {
 	})
 
 	const {setupBackup, isSettingUpBackup, repositories, connectExistingRepository, isConnectingExisting} = useBackups()
-	const {disks} = useExternalStorage()
 	const showExclusionsStep = (repositories?.length ?? 0) === 0
 
 	// Watches so the parent re-renders when these fields change
@@ -308,20 +308,6 @@ export function BackupsSetupWizard() {
 							disabledPaths={destination?.type === 'nas' ? [folderRootPath] : []}
 							value={folder}
 							onChange={(val) => form.setValue('folder', val, {shouldValidate: true})}
-							selectedName={
-								destination?.type === 'nas'
-									? destination.host
-									: destination?.type === 'external'
-										? disks
-												?.flatMap((disk) =>
-													disk.partitions.map((p) => ({
-														mountpoint: p.mountpoints?.[0],
-														label: p.label || disk.name || t('external-drive'),
-													})),
-												)
-												.find((p) => p.mountpoint === destination.mountpoint)?.label
-										: t('external-drive')
-							}
 						/>
 					)}
 					{step === Step.Exclusions && showExclusionsStep && <BackupsExclusions />}
@@ -433,12 +419,16 @@ function DestinationStep({
 		}
 	}, [dest?.type])
 
-	// NAS sources: show hosts that have at least one mounted share
+	// NAS sources: show hosts that have at least one mounted share, each with the
+	// folder its shares are mounted in. That folder can't be worked out from the
+	// host's name, since mount paths only keep a small set of characters.
 	const {shares, isLoadingShares, refetchShares} = useNetworkStorage({suppressNavigateOnAdd: true})
 	const hosts = useMemo(() => {
-		if (!shares) return []
-		const mounted = shares.filter((s) => s.isMounted)
-		return Array.from(new Set(mounted.map((s) => s.host)))
+		const hostsByRootPath = new Map<string, string>()
+		for (const share of shares ?? []) {
+			if (share.isMounted) hostsByRootPath.set(getNetworkHostPath(share.mountPath), share.host)
+		}
+		return Array.from(hostsByRootPath, ([rootPath, host]) => ({host, rootPath}))
 	}, [shares])
 
 	// External drives (partitions)
@@ -520,18 +510,15 @@ function DestinationStep({
 								onClick={() => setAddNasOpen(true)}
 								label={t('backups.add-umbrel-or-nas')}
 							/>,
-							...hosts.map((host) => {
-								const selected =
-									currentDest?.type === 'nas' &&
-									currentDest.host === host &&
-									currentDest.rootPath === `/Network/${host}`
+							...hosts.map(({host, rootPath}) => {
+								const selected = currentDest?.type === 'nas' && currentDest.rootPath === rootPath
 								return (
 									<ServerCard
-										key={host}
-										selected={!!selected}
-										onClick={() => onChangeDestination({type: 'nas', host, rootPath: `/Network/${host}`})}
+										key={rootPath}
+										selected={selected}
+										onClick={() => onChangeDestination({type: 'nas', rootPath})}
 									>
-										<BackupDeviceIcon path={`/Network/${host}`} connected className='mb-2 size-12' />
+										<BackupDeviceIcon path={rootPath} connected className='mb-2 size-12' />
 										<span className='w-full truncate text-center text-[12px]' title={host}>
 											{host}
 										</span>
@@ -666,7 +653,7 @@ function DestinationStep({
 					refetchShares()
 					// If we know which host was added, select it as the destination and advance
 					if (host) {
-						onChangeDestination({type: 'nas', host, rootPath: `/Network/${host}`})
+						onChangeDestination({type: 'nas', rootPath: `/Network/${host}`})
 						onNext()
 					}
 				}}
@@ -683,24 +670,20 @@ function FolderPickerStep({
 	rootPath,
 	value,
 	onChange,
-	selectedName,
 	disabledPaths = [],
 }: {
 	rootPath: string
 	value?: string
 	onChange: (v: string) => void
-	selectedName?: string
 	disabledPaths?: string[]
 }) {
 	const {t} = useTranslation()
 	const [isBrowserOpen, setBrowserOpen] = useState(false)
 
+	const describeBackupLocation = useDescribeBackupLocation()
+	const deviceName = describeBackupLocation(rootPath).name
 	// Show nothing until a subfolder is chosen
-	const displayValue = value || ''
-	const shownValue = React.useMemo(() => {
-		if (!displayValue) return ''
-		return getRelativePathFromRoot(displayValue, rootPath)
-	}, [displayValue, rootPath])
+	const shownValue = value ? describeBackupLocation(value).folder : ''
 
 	return (
 		<div className='space-y-4'>
@@ -710,7 +693,7 @@ function FolderPickerStep({
 					<Trans
 						t={t}
 						i18nKey='backups.choose-folder-within-device'
-						values={{device: selectedName || ''}}
+						values={{device: deviceName}}
 						tOptions={{interpolation: {escapeValue: true}}}
 						shouldUnescape
 						components={{
@@ -740,10 +723,7 @@ function FolderPickerStep({
 				</div>
 
 				<div className='mt-4'>
-					<WarningAlert
-						icon={HardDrive}
-						description={t('backups.storage-capacity-warning', {device: selectedName || ''})}
-					/>
+					<WarningAlert icon={HardDrive} description={t('backups.storage-capacity-warning', {device: deviceName})} />
 				</div>
 			</div>
 
@@ -833,28 +813,12 @@ function EncryptionStep() {
 
 function ReviewStep({values}: {values: FormValues}) {
 	const {t} = useTranslation()
-	let pathOnly = values.folder
-	if (values.destination.type === 'nas') {
-		const hostRoot = `/Network/${values.destination.host}`
-		if (pathOnly.startsWith(hostRoot)) {
-			pathOnly = pathOnly.slice(hostRoot.length) || '/'
-			if (!pathOnly.startsWith('/')) pathOnly = `/${pathOnly}`
-		}
-	} else {
-		const mountRoot = values.destination.mountpoint
-		if (mountRoot && pathOnly.startsWith(mountRoot)) {
-			pathOnly = pathOnly.slice(mountRoot.length) || '/'
-			if (!pathOnly.startsWith('/')) pathOnly = `/${pathOnly}`
-		}
-	}
-
-	let locationCombined: string
+	const describeBackupLocation = useDescribeBackupLocation()
+	const location = describeBackupLocation(values.folder)
 	const {deviceType} = useNetworkDeviceType(values.destination.type === 'nas' ? values.destination.rootPath : '')
-	if (values.destination.type === 'nas') {
-		locationCombined = `${deviceType === 'umbrel' ? t('umbrel') : t('nas')} · ${values.destination.host} · ${pathOnly}`
-	} else {
-		locationCombined = `${t('external-drive')} · ${getLastPathSegment(values.destination.mountpoint)} · ${pathOnly}`
-	}
+	const kind =
+		values.destination.type === 'nas' ? (deviceType === 'umbrel' ? t('umbrel') : t('nas')) : t('external-drive')
+	const locationCombined = `${kind} · ${location.name} · ${location.folder}`
 
 	const [showPw, setShowPw] = useState(false)
 	// What will actually be saved, so what's shown and copied is what restores

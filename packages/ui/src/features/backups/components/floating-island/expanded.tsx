@@ -49,7 +49,7 @@ export function ExpandedContent({progresses}: {progresses: Progress[]}) {
 			<ScrollArea className='flex-1 px-5 pb-1'>
 				<div className='space-y-3'>
 					{progresses.map((p) => (
-						<div key={p.name} className='flex items-center gap-3'>
+						<div key={p.path ?? p.name} className='flex items-center gap-3'>
 							{p.path ? (
 								<BackupDeviceIcon path={p.path} className='size-7 shrink-0' />
 							) : (

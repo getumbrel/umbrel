@@ -7,8 +7,8 @@ import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle} from '@/components/ui/dialog'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
-import {getRepositoryDisplayName} from '@/features/backups/utils/filepath-helpers'
 import {RewindIcon} from '@/features/files/assets/rewind-icon'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
@@ -42,14 +42,8 @@ export function PreRewindDialog({
 	const activeId = pendingRepoId ?? list[0]?.id ?? ''
 	const active = list.find((r) => r.id === activeId) || null
 	const path: string = active?.path || ''
-	const makeName = (p: string) => {
-		const name = getRepositoryDisplayName(p)
-		if (name) return name
-		// Defensive fallbacks for malformed paths (should not occur)
-		if (p.startsWith('/Network/')) return t('nas')
-		if (p.startsWith('/External/')) return t('external-drive')
-		return t('unknown')
-	}
+	const describeBackupLocation = useDescribeBackupLocation()
+	const makeName = (p: string) => (p ? describeBackupLocation(p).name : t('unknown'))
 	const makeLastBackupText = (lastBackup: any) => {
 		if (!lastBackup) return t('backups-restore.no-backups-yet')
 		return `${t('backups-configure.last-backup')}: ${formatFilesystemDate(Number(lastBackup), lang)}`
