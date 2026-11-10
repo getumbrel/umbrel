@@ -409,20 +409,24 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 			const variant = THUMB_VARIANTS[s]
 			if (!variant) return response.status(400).json({error: 'invalid s parameter'})
 			const {virtualPath} = await resolveItem(request, response)
+			const send = (thumbnailSystemPath: string) => {
+				response.setHeader('Cache-Control', PRIVATE_IMMUTABLE_CACHE_CONTROL)
+				response.setHeader('X-Content-Type-Options', 'nosniff')
+				return response.sendFile(thumbnailSystemPath, {cacheControl: false, dotfiles: 'deny'})
+			}
+			// An item's id is its content hash, which also names its renditions. One
+			// that exists is served without looking at the file, so thumbnails stay
+			// fast while the index is busy, and keep working while Photos still
+			// lists a moved file at the path it had before the index caught up.
+			const existing = await umbreld.files.thumbnails.existingContentThumbnail(String(request.params.id), variant)
+			if (existing) return send(existing)
 			const thumbnailUrl = await umbreld.files.thumbnails.getThumbnailOnDemand(
 				virtualPath,
 				accountId(response),
 				variant,
 			)
 			const filename = nodePath.posix.basename(new URL(thumbnailUrl, 'http://localhost').pathname)
-			const thumbnailSystemPath = await umbreld.files.thumbnails.resolveThumbnailRequest(
-				filename,
-				virtualPath,
-				accountId(response),
-			)
-			response.setHeader('Cache-Control', PRIVATE_IMMUTABLE_CACHE_CONTROL)
-			response.setHeader('X-Content-Type-Options', 'nosniff')
-			return response.sendFile(thumbnailSystemPath, {cacheControl: false, dotfiles: 'deny'})
+			return send(await umbreld.files.thumbnails.resolveThumbnailRequest(filename, virtualPath, accountId(response)))
 		} catch {
 			return response.status(404).json({error: 'not found'})
 		}

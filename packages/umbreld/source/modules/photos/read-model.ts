@@ -102,7 +102,18 @@ export default class PhotosReadModel {
 					)
 					.run(accountId)
 			}
-			database.exec('CREATE TEMP TABLE photos_stage_hashes(content_hash BLOB PRIMARY KEY)')
+			database.exec(`
+				CREATE TEMP TABLE photos_stage_hashes(content_hash BLOB PRIMARY KEY);
+				-- Later stages look up earlier ones per row. Without these, a full
+				-- rebuild checks every Live Photo pair against every staged location.
+				CREATE INDEX temp.photos_stage_locations_by_content
+					ON photos_stage_locations(account_id, content_hash, root_kind);
+				CREATE INDEX temp.photos_stage_pairs_by_still ON photos_stage_pairs(account_id, still_hash);
+				CREATE INDEX temp.photos_stage_active_pairs_by_still
+					ON photos_stage_active_pairs(account_id, still_hash, root_kind);
+				CREATE INDEX temp.photos_stage_active_pairs_by_motion
+					ON photos_stage_active_pairs(account_id, motion_hash, root_kind);
+			`)
 		}
 		const affected = hashes ? this.dependencies(database, accountId, hashes) : undefined
 		if (affected?.length === 0) return

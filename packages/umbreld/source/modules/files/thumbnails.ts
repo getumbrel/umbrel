@@ -68,6 +68,13 @@ export default class Thumbnails {
 		return reference ? this.thumbnailUrl(reference, systemPath) : undefined
 	}
 
+	// The stored rendition of some content, if it has been generated. Renditions
+	// are named by content hash, so finding one needs no file or index lookup.
+	async existingContentThumbnail(hash: string, variant: ThumbnailVariant) {
+		const thumbnailPath = thumbnailSystemPath(this.thumbnailDirectory, {kind: 'content', key: hash, variant})
+		return (await fse.pathExists(thumbnailPath)) ? thumbnailPath : undefined
+	}
+
 	async resolveThumbnailRequest(filename: string, virtualPath: string, userId: string) {
 		const requested = parseThumbnailFilename(filename)
 		if (!requested) throw new Error('[thumbnail-not-found]')

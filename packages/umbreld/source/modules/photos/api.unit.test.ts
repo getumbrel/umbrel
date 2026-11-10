@@ -19,6 +19,8 @@ describe('Photos HTTP account boundaries', () => {
 	let origin: string
 	let directory: string
 	const resolveThumbnailRequest = vi.fn()
+	const existingContentThumbnail = vi.fn()
+	const getThumbnailOnDemand = vi.fn()
 	const prepareUpload = vi.fn()
 	const registerUpload = vi.fn()
 	const mapPoints = vi.fn()
@@ -94,8 +96,8 @@ describe('Photos HTTP account boundaries', () => {
 				fileIndex: {movePath: async () => {}},
 				logger: {error: vi.fn()},
 				thumbnails: {
-					getThumbnailOnDemand: async () =>
-						'/api/files/thumbnail/content-preview-192-webp-v1-hash.webp?path=%2FUsers%2Fmember%2Fmember.jpg',
+					existingContentThumbnail,
+					getThumbnailOnDemand,
 					resolveThumbnailRequest: resolveThumbnailRequest.mockResolvedValue(nodePath.join(directory, 'member.webp')),
 				},
 			},
@@ -125,6 +127,12 @@ describe('Photos HTTP account boundaries', () => {
 		registerUpload.mockReset().mockResolvedValue('imported')
 		mapPoints.mockReset().mockResolvedValue(new Uint8Array([1, 0, 0, 0]))
 		mapTile.mockReset()
+		existingContentThumbnail.mockReset().mockResolvedValue(undefined)
+		getThumbnailOnDemand
+			.mockReset()
+			.mockResolvedValue(
+				'/api/files/thumbnail/content-preview-192-webp-v1-hash.webp?path=%2FUsers%2Fmember%2Fmember.jpg',
+			)
 	})
 
 	test.each([
@@ -178,6 +186,23 @@ describe('Photos HTTP account boundaries', () => {
 			'/Users/member/member.jpg',
 			'member',
 		)
+	})
+
+	test('a stored thumbnail is served by content without the file, for an item the account can see', async () => {
+		const headers = {Authorization: 'Bearer member'}
+		// The item's file has moved and Photos hasn't caught up, but its rendition is stored
+		existingContentThumbnail.mockImplementation(async (hash: string) =>
+			hash === 'member-item' || hash === 'owner-item' ? nodePath.join(directory, 'member.webp') : undefined,
+		)
+		const thumbnail = await got(`${origin}/api/photos/thumb/member-item?s=192`, {headers})
+		expect(thumbnail.body).toBe('member-thumbnail')
+		expect(thumbnail.headers['cache-control']).toBe('private, max-age=31536000, immutable')
+		expect(existingContentThumbnail).toHaveBeenCalledWith('member-item', 'preview-192-webp-v1')
+		expect(getThumbnailOnDemand).not.toHaveBeenCalled()
+
+		const other = await got(`${origin}/api/photos/thumb/owner-item?s=192`, {headers, throwHttpErrors: false})
+		expect(other.statusCode).toBe(404)
+		expect(existingContentThumbnail).not.toHaveBeenCalledWith('owner-item', expect.anything())
 	})
 
 	test('map points are read for the requesting account, with its filter, and revalidate by ETag', async () => {
