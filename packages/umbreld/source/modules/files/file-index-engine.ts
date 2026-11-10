@@ -340,6 +340,7 @@ export default class FileIndexEngine {
 	#rootScans = new Map<string, RootReconciliation>()
 	#activeRootSnapshot?: ActiveRootSnapshot
 	#pendingLiveWork: PendingLiveWork[] = []
+	#moves = new Set<Promise<void>>()
 	#nextLiveWorkSequence = 0
 	#mutationQueue = new PQueue({concurrency: 1})
 	#foregroundActiveUntil = 0
@@ -1339,7 +1340,19 @@ export default class FileIndexEngine {
 		}, 10)
 	}
 
+	// A move checks the file system and hops between the queues, so stop()
+	// can't see it by draining them and waits for it here instead
 	async movePath(sourceSystemPath: string, destinationSystemPath: string) {
+		const move = this.#movePath(sourceSystemPath, destinationSystemPath)
+		this.#moves.add(move)
+		try {
+			await move
+		} finally {
+			this.#moves.delete(move)
+		}
+	}
+
+	async #movePath(sourceSystemPath: string, destinationSystemPath: string) {
 		if (await this.#moveDirectoryRows(sourceSystemPath, destinationSystemPath)) return
 		// Reconcile the live destination before dropping the stale source path.
 		try {
@@ -2595,6 +2608,7 @@ export default class FileIndexEngine {
 		await this.#recoveryAttempt
 		await this.#photosRecoveryAttempt
 		await this.#enrichment.stop()
+		await Promise.allSettled(this.#moves)
 		await this.#scanQueue.onIdle()
 		await this.#mutationQueue.onIdle()
 		try {
