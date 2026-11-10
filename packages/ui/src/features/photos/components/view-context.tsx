@@ -106,11 +106,21 @@ export type PhotosSearch = {
 	filter: SearchFilter
 }
 
+// A timeline opened part-way down: which list (see listKey in use-items),
+// and the moment (epoch ms) it runs back from
+export type TimelineTail = {list: string; before: number}
+
 type PhotosView = {
 	zoom: Zoom
 	setZoom: (zoom: Zoom) => void
 	// The page size every items list asks with; see pageSizeFor
 	pageSize: number
+	// The tail a jump down the timeline has put on screen in place of the list
+	// from the top (see useItems, and time-rail/use-seek.ts which opens and
+	// closes it): here, so the grid, the lightbox and the selection bar all
+	// read the same list. Null when every list starts at its newest item.
+	tail: TimelineTail | null
+	setTail: (tail: TimelineTail | null) => void
 	search: PhotosSearch
 	// Preferred tile width in px. The grid rounds it to whole columns for its
 	// width, so it's device independent; see TILE_SIZE
@@ -287,6 +297,7 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 	const [chosenTileSize, setChosenTileSize] = useState(readStoredTileSize)
 	const tileSize = chosenTileSize ?? defaultTileSize(isMobile)
 	const [pageSize] = useState(() => pageSizeFor(tileSize))
+	const [tail, setTail] = useState<TimelineTail | null>(null)
 	const [grid, setGrid] = useState<GridHandle | null>(null)
 	const [section, setSection] = useState<string | null>(null)
 	const [mapArea, setMapArea] = useState<MapArea | null>(null)
@@ -308,6 +319,8 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 			zoom,
 			setZoom,
 			pageSize,
+			tail,
+			setTail,
 			search,
 			tileSize,
 			setTileSize,
@@ -320,7 +333,7 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 			mapControls,
 			setMapControls,
 		}),
-		[zoom, pageSize, search, tileSize, setTileSize, grid, section, mapArea, mapControls],
+		[zoom, pageSize, tail, search, tileSize, setTileSize, grid, section, mapArea, mapControls],
 	)
 	return <PhotosViewContext value={value}>{children}</PhotosViewContext>
 }

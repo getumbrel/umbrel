@@ -141,6 +141,37 @@ describe('ItemThumbnail', () => {
 		expect(imgs()[0]!.src).toContain('s=512')
 	})
 
+	test('a photograph that fails to load is asked for again, twice at most', () => {
+		vi.useFakeTimers()
+		try {
+			render(<ItemThumbnail item={{id: 'a', tint: 0x336699}} size={512} />)
+			const img = imgs()[0]!
+			const url = img.getAttribute('src')
+			const asked = vi.spyOn(img, 'src', 'set')
+			const fail = () => act(() => void img.dispatchEvent(new Event('error')))
+
+			fail()
+			expect(asked).not.toHaveBeenCalled()
+			act(() => void vi.advanceTimersByTime(1000))
+			expect(asked).toHaveBeenCalledTimes(1)
+			expect(asked).toHaveBeenLastCalledWith(url)
+
+			fail()
+			act(() => void vi.advanceTimersByTime(4000))
+			expect(asked).toHaveBeenCalledTimes(2)
+
+			// … and after that the tile keeps its tint
+			fail()
+			act(() => void vi.advanceTimersByTime(60_000))
+			expect(asked).toHaveBeenCalledTimes(2)
+
+			load(img)
+			expect(img.className).toContain('opacity-100')
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
 	test('the grid gates its src and clears an unfinished request when the tile leaves', async () => {
 		const queue = new ThumbnailQueue({capacity: 1})
 		const blocker = queue.enqueue(

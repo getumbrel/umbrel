@@ -420,11 +420,23 @@ export function ItemViewer() {
 	// an original — or mounts an autoplaying player — only for this one, so
 	// flying along the strip runs on thumbnails alone. A prefetched neighbour
 	// bypasses the rest (`warm`): its bytes are already here, show them at once.
+	// A photo the strip is only coasting past is never rested on, however slow
+	// the last of the coast: its end dwells on each of the photos before the
+	// one it lands on for longer than the beat.
 	const [restedId, setRestedId] = useState<string>()
+	const [passingId, setPassingId] = useState<string>()
 	useEffect(() => {
+		if (currentId === passingId) return
 		const handle = setTimeout(() => setRestedId(currentId), REST_MS)
 		return () => clearTimeout(handle)
-	}, [currentId])
+	}, [currentId, passingId])
+	const selectFromStrip = useCallback(
+		(id: string, passing = false) => {
+			setPassingId(passing ? id : undefined)
+			goTo(id)
+		},
+		[goTo],
+	)
 
 	useEffect(() => {
 		if (!dialogProps.open) return
@@ -869,7 +881,7 @@ export function ItemViewer() {
 										currentId={currentId}
 										hasMore={hasMore}
 										loadMore={loadMore}
-										onSelect={goTo}
+										onSelect={selectFromStrip}
 										grow={FILMSTRIP_MODE === 'grow'}
 										drive={drive}
 									/>

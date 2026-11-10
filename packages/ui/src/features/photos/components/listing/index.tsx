@@ -13,7 +13,7 @@ import {TimelineGrid} from '@/features/photos/components/listing/timeline-grid'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {isCollectionSection} from '@/features/photos/constants'
-import {useItems, type ItemFilter} from '@/features/photos/hooks/use-items'
+import {listKey, useItems, type ItemFilter} from '@/features/photos/hooks/use-items'
 import {useLibraryStatus} from '@/features/photos/hooks/use-library'
 import {usePhotoSources} from '@/features/photos/hooks/use-photo-sources'
 import {useUpload} from '@/features/photos/hooks/use-upload'
@@ -40,7 +40,7 @@ function Timeline() {
 	// `keepPrevious` while a search is refining: the last results stay up until
 	// the next arrive — the grid narrows in steps rather than blinking through
 	// a spinner on every applied keystroke
-	const {items, total, isLoading, hasMore, loadMore} = useItems(filter, {
+	const {items, total, isLoading, hasMore, before, loadMore} = useItems(filter, {
 		enabled: libraryQueryable,
 		keepPrevious: search.active,
 	})
@@ -50,7 +50,7 @@ function Timeline() {
 	// By value (see isWholeLibrary): the filter always carries its keys.
 	const stillFilling = indexingState?.phase === 'enriching' && isWholeLibrary(filter)
 	// A new filter is a new list: remount so scroll position and row cache start clean
-	const listKey = JSON.stringify(filter)
+	const key = listKey(filter)
 
 	return (
 		// Edge to edge below lg, like iOS Photos' grid (see ListingSurface)
@@ -67,11 +67,12 @@ function Timeline() {
 					<Empty filter={filter} frame={frame} />
 				) : (
 					<TimelineGrid
-						key={listKey}
+						key={key}
 						items={items}
 						total={total}
 						filter={filter}
 						hasMore={hasMore}
+						before={before}
 						loadMore={loadMore}
 						frame={frame}
 						inDeleted={filter.deleted === true}

@@ -29,8 +29,9 @@ type PhotosSelection = {
 	toggle: (id: string) => void
 	// Replace the selection
 	set: (ids: Iterable<string>) => void
-	// Drop what is no longer in the list
-	retain: (known: ReadonlySet<string>) => void
+	// Drop what has left a list: what it held (`was`) and no longer does
+	// (`now`). What was selected somewhere else is not the list's to drop.
+	retain: (was: Pick<ReadonlySet<string>, 'has'>, now: ReadonlySet<string>) => void
 	// The album items are being picked for, while they are: selection mode
 	// that follows the user from view to view — the library, Videos, a
 	// person, another album — gathering one selection for the album, until
@@ -156,10 +157,10 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 	)
 	const set = useCallback((next: Iterable<string>) => setIds((prev) => (covering.current ? prev : new Set(next))), [])
 	const retain = useCallback(
-		(known: ReadonlySet<string>) =>
+		(was: Pick<ReadonlySet<string>, 'has'>, now: ReadonlySet<string>) =>
 			setIds((prev) => {
 				if (prev.size === 0) return prev
-				const next = new Set([...prev].filter((id) => known.has(id)))
+				const next = new Set([...prev].filter((id) => now.has(id) || !was.has(id)))
 				return next.size === prev.size ? prev : next
 			}),
 		[],

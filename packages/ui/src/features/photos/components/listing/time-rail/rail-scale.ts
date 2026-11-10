@@ -316,6 +316,20 @@ export function scrollForMonth(
 	return clampScroll(layout, rectOf(layout, index).y - window.inset, window)
 }
 
+// Whether the list runs through where a month would be: it starts at or
+// above the month's end and carries on to or below its start. A month such a
+// list shows nothing of is one the listing skips, and its neighbour is where
+// it lands. Otherwise the month is beyond what the list holds — below the
+// loading frontier, or above where a tail of the timeline begins — and
+// showing it is a seek (see use-seek.ts).
+export function spansMonth({items, hasMore, before}: Layout, key: MonthKey): boolean {
+	if (items.length === 0) return false
+	return (
+		(before === undefined || before >= monthStartUtc(key + 1)) &&
+		(!hasMore || items[items.length - 1]!.takenAt < monthStartUtc(key))
+	)
+}
+
 // Where a moment would sit: the row of the first item at or past it — the
 // landing for a month the listing turns out not to hold
 export function scrollForTime(layout: Layout, t: number, window: ScrollWindow): number | undefined {

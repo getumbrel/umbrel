@@ -3,38 +3,56 @@ import {getQueryKey} from '@trpc/react-query'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {monthStartUtc, type MonthKey} from '@/features/photos/components/listing/time-rail/rail-scale'
-import type {ItemFilter, ItemsPage} from '@/features/photos/hooks/use-items'
+import {usePhotosView} from '@/features/photos/components/view-context'
+import {listKey, tailFilter, type ItemFilter, type ItemsPage} from '@/features/photos/hooks/use-items'
 import {trpcReact} from '@/trpc/trpc'
 
 // Jumping past the loading frontier. Keyset pagination can only walk
-// forward, so a jump to a month nothing has loaded yet is a run of pages.
-// The seek fetches them at the contract's ceiling — 1000 a page, however
-// small the session's own page size — and splices each into the same
-// infinite-query cache every list shares: cursors are opaque positions, not
-// offsets, so pages of different lengths chain fine, and everything reading
-// the list (the grid, the lightbox, ⌘A) sees the pages land as if the user
-// had scrolled there.
+// forward, so reaching a month nothing has loaded yet by paging is a run of
+// requests as long as the library is deep — on a slow link, most of a minute
+// of looking at the wrong year. A jump doesn't wait for that. It asks for the
+// month directly: the list's tail from the month on (see tailFilter) is one
+// request wherever the month is, and it goes on screen in place of the list
+// from the top (PhotosView.tail) the moment it arrives.
 //
-// While a seek runs the grid's own load-ahead must stand down (it gates on
-// `busy`): both would chain a fetch from the same tail cursor, and the same
-// page would splice in twice.
+// Behind it the list from the top is paged down to meet the tail — at the
+// contract's ceiling, 1000 a page, however small the session's own page
+// size, each page spliced into the infinite-query cache every list shares
+// (cursors are opaque positions, not offsets, so pages of different lengths
+// chain fine). Those pages are for later, so each waits its turn behind the
+// photographs on screen (`idle`): on a slow link they would otherwise take
+// the wire from the very thumbnails the jump was for. Once the list holds
+// everything the tail does the two are the same photographs, and the grid
+// is handed back the whole list the next time it rests: it keeps the tile
+// under the eye where it is (see TimelineGrid), so all anyone sees is that
+// there is now something to scroll up into.
+//
+// While those pages land in a list that is itself on screen, the grid's own
+// load-ahead must stand down (it gates on `busy`): both would chain a fetch
+// from the same tail cursor, and the same page would splice in twice.
 
 const SEEK_LIMIT = 1000
-// However deep the target, stop somewhere: 500 pages is half a million items
+// However deep the tail, stop somewhere: 500 pages is half a million items
 const SEEK_MAX_PAGES = 500
 // An in-flight page the grid's load-ahead already started must land before
 // the first splice. Wait it out, bounded.
 const FETCH_WAIT_MS = 50
 const FETCH_WAIT_MAX = 100
+// The grid is at rest once it has been still this long with no finger on it
+const REST_MS = 200
 
-export type SeekOutcome = 'reached' | 'exhausted' | 'cancelled'
+// What a jump hands the landing once its photographs are in hand: `show`
+// puts their list on screen, and `first` is that list's first item — how the
+// landing knows the grid has taken it up
+export type Arrival = {first: string | undefined; show: () => void}
 
 export type Seek = {
 	// While true the grid must not page on its own (see the load-ahead effect)
 	busy: boolean
-	// The month being sought — what the rail's pill names; null at rest
+	// The month a jump is waiting on — what the rail's pill names; null at rest
 	target: MonthKey | null
-	start: (key: MonthKey, done: (outcome: SeekOutcome) => void) => void
+	start: (key: MonthKey, arrive: (arrival: Arrival) => void) => void
+	// Never mind the jump being waited on
 	cancel: () => void
 }
 
@@ -49,67 +67,237 @@ function oldestLoaded(pages: ItemsPage[]) {
 	return undefined
 }
 
-export function useSeek({filter, pageSize}: {filter: ItemFilter; pageSize: number}): Seek {
+// The next time the scroller has been still for a beat with no finger on it.
+// What is about to happen moves the scroll position (content arrives above
+// the viewport), and a scroll in flight would carry that away: iOS keeps a
+// fling on the course it was thrown at, whatever is written under it.
+function atRest(scroller: HTMLElement) {
+	return new Promise<void>((resolve) => {
+		let touches = 0
+		let timer: ReturnType<typeof setTimeout>
+		const moving = ['scroll', 'wheel'] as const
+		const settle = () => {
+			clearTimeout(timer)
+			timer = setTimeout(() => {
+				if (touches > 0) return
+				for (const type of moving) scroller.removeEventListener(type, settle)
+				scroller.removeEventListener('touchstart', onTouch)
+				scroller.removeEventListener('touchend', onTouch)
+				scroller.removeEventListener('touchcancel', onTouch)
+				resolve()
+			}, REST_MS)
+		}
+		const onTouch = (event: TouchEvent) => {
+			touches = event.touches.length
+			settle()
+		}
+		for (const type of moving) scroller.addEventListener(type, settle, {passive: true})
+		scroller.addEventListener('touchstart', onTouch, {passive: true})
+		scroller.addEventListener('touchend', onTouch, {passive: true})
+		scroller.addEventListener('touchcancel', onTouch, {passive: true})
+		settle()
+	})
+}
+
+export function useSeek({
+	filter,
+	pageSize,
+	scrollerRef,
+	idle,
+}: {
+	filter: ItemFilter
+	pageSize: number
+	scrollerRef: {readonly current: HTMLElement | null}
+	// Resolves once what is on screen has its photographs
+	idle: () => Promise<void>
+}): Seek {
 	const queryClient = useQueryClient()
 	const utils = trpcReact.useUtils()
+	const {setTail} = usePhotosView()
 	const [target, setTarget] = useState<MonthKey | null>(null)
-	// True from a run's start until it fully drains — past a cancel, whose
-	// in-flight page still lands and splices; only then may the grid page again
-	const [draining, setDraining] = useState(false)
-	const runRef = useRef<{cancelled: boolean} | null>(null)
+	// True while pages are being spliced into the list from the top
+	const [paging, setPaging] = useState(false)
+	// Whether the list on screen is the tail this hook opened
+	const [tailed, setTailed] = useState(false)
+	const state = useRef({
+		// The jump being waited on
+		pending: null as {key: MonthKey; cancelled: boolean; arrive: (arrival: Arrival) => void} | null,
+		// Where the tail on screen runs back from
+		tail: null as number | null,
+		// The paging under way, and whether the list is being brought to a tail
+		paged: null as Promise<void> | null,
+		joining: false,
+		disposed: false,
+	})
+
+	const lists = useMemo(() => {
+		const input = {filter, limit: pageSize}
+		const tailInput = (before: number) => ({filter: tailFilter(filter, before), limit: pageSize})
+		return {
+			input,
+			tailInput,
+			whole: () => utils.photos.items.list.getInfiniteData(input),
+			tail: (before: number) => utils.photos.items.list.getInfiniteData(tailInput(before)),
+		}
+	}, [filter, pageSize, utils])
 
 	const cancel = useCallback(() => {
-		if (runRef.current) runRef.current.cancelled = true
+		const {pending} = state.current
+		if (!pending) return
+		pending.cancelled = true
+		state.current.pending = null
 		setTarget(null)
 	}, [])
-	// Leaving the listing abandons the run (the grid remounts per filter)
-	useEffect(() => cancel, [cancel])
 
-	const start = useCallback(
-		(key: MonthKey, done: (outcome: SeekOutcome) => void) => {
-			if (runRef.current) runRef.current.cancelled = true
-			const run = {cancelled: false}
-			runRef.current = run
-			setTarget(key)
-			setDraining(true)
-			const input = {filter, limit: pageSize}
-			const infiniteKey = getQueryKey(trpcReact.photos.items.list, input, 'infinite')
-			const loop = async (): Promise<SeekOutcome> => {
-				const end = monthStartUtc(key + 1)
+	const open = useCallback(
+		(before: number | null) => {
+			state.current.tail = before
+			setTailed(before !== null)
+			setTail(before === null ? null : {list: listKey(filter), before})
+		},
+		[filter, setTail],
+	)
+
+	// Leaving the listing abandons the jump and the tail (the grid remounts per filter)
+	useEffect(() => {
+		const current = state.current
+		current.disposed = false
+		return () => {
+			current.disposed = true
+			cancel()
+			if (current.tail !== null) setTail(null)
+			current.tail = null
+		}
+	}, [cancel, setTail])
+
+	// Pages the list from the top until `done`, or until it runs out, each
+	// page after `turn`. One run at a time: a second waits for the first,
+	// then looks for itself.
+	const pageDown = useCallback(
+		(done: (pages: ItemsPage[]) => boolean, turn?: () => Promise<void>) => {
+			const current = state.current
+			const run = async () => {
+				const {input} = lists
+				const infiniteKey = getQueryKey(trpcReact.photos.items.list, input, 'infinite')
 				for (let waited = 0; queryClient.isFetching({queryKey: infiniteKey}) > 0 && waited < FETCH_WAIT_MAX; waited++) {
-					if (run.cancelled) return 'cancelled'
 					await sleep(FETCH_WAIT_MS)
 				}
-				for (let page = 0; page < SEEK_MAX_PAGES; page++) {
-					if (run.cancelled) return 'cancelled'
-					const data = utils.photos.items.list.getInfiniteData(input)
-					if (!data || data.pages.length === 0) return 'cancelled'
-					const oldest = oldestLoaded(data.pages)
-					if (oldest && oldest.takenAt < end) return 'reached'
+				for (let page = 0; page < SEEK_MAX_PAGES && !current.disposed; page++) {
+					await turn?.()
+					const data = lists.whole()
+					if (current.disposed || !data || data.pages.length === 0 || done(data.pages)) return
 					const cursor = data.pages[data.pages.length - 1]!.nextCursor
-					if (cursor === undefined) return 'exhausted'
+					if (cursor === undefined) return
 					const fetched = await utils.client.photos.items.list.query({filter, cursor, limit: SEEK_LIMIT})
-					utils.photos.items.list.setInfiniteData(input, (current) => {
+					utils.photos.items.list.setInfiniteData(input, (latest) => {
 						// Splice only onto the tail this page was fetched from —
 						// if anything moved it (it shouldn't, the grid is gated),
 						// drop the page and let the next lap re-read
-						if (!current || current.pages[current.pages.length - 1]?.nextCursor !== cursor) return current
-						return {pages: [...current.pages, fetched], pageParams: [...current.pageParams, cursor]}
+						if (!latest || latest.pages[latest.pages.length - 1]?.nextCursor !== cursor) return latest
+						return {pages: [...latest.pages, fetched], pageParams: [...latest.pageParams, cursor]}
 					})
 				}
-				return 'exhausted'
 			}
-			void loop().then((outcome) => {
-				if (runRef.current === run) {
-					runRef.current = null
-					setTarget(null)
-					setDraining(false)
-				}
-				done(run.cancelled ? 'cancelled' : outcome)
+			const paged = (current.paged ?? Promise.resolve()).then(async () => {
+				setPaging(true)
+				// A page that fails leaves the list where it got to
+				await run().catch(() => undefined)
+				if (current.paged !== paged) return
+				current.paged = null
+				if (!current.disposed) setPaging(false)
 			})
+			current.paged = paged
+			return paged
 		},
-		[filter, pageSize, queryClient, utils],
+		[filter, lists, queryClient, utils],
 	)
 
-	return useMemo(() => ({busy: draining || target !== null, target, start, cancel}), [draining, target, start, cancel])
+	// Behind a tail: bring the list from the top down to it, and hand the grid
+	// the whole list once it rests. The tail keeps paging while this runs, and
+	// a later jump can replace it, so every lap looks at both again.
+	const join = useCallback(async () => {
+		const current = state.current
+		if (current.joining) return
+		current.joining = true
+		// Whether the list from the top holds everything the tail on screen does
+		const met = (pages: ItemsPage[]) => {
+			const reached = current.tail === null ? undefined : oldestLoaded(lists.tail(current.tail)?.pages ?? [])
+			const oldest = oldestLoaded(pages)
+			return !reached || (oldest !== undefined && oldest.takenAt < reached.takenAt)
+		}
+		try {
+			while (current.tail !== null && !current.disposed) {
+				await pageDown(met, idle)
+				const scroller = scrollerRef.current
+				if (scroller) await atRest(scroller)
+				if (current.disposed || current.tail === null) return
+				const pages = lists.whole()?.pages
+				// Nothing to join it to (the list from the top was dropped, or
+				// can't be paged): the tail stays
+				if (!pages || pages.length === 0) return
+				if (met(pages) || pages[pages.length - 1]!.nextCursor === undefined) return open(null)
+			}
+		} finally {
+			current.joining = false
+		}
+	}, [lists, pageDown, open, scrollerRef, idle])
+
+	const start = useCallback(
+		(key: MonthKey, arrive: (arrival: Arrival) => void) => {
+			const current = state.current
+			// Already on its way (a scrub that rested on the month, then let go there)
+			if (current.pending?.key === key) {
+				current.pending.arrive = arrive
+				return
+			}
+			cancel()
+			const pending = {key, cancelled: false, arrive}
+			current.pending = pending
+			setTarget(key)
+			const settle = (arrival?: Arrival) => {
+				if (pending.cancelled || current.disposed) return
+				current.pending = null
+				setTarget(null)
+				if (arrival) pending.arrive(arrival)
+			}
+			const showWhole = (): Arrival => ({first: lists.whole()?.pages[0]?.items[0]?.id, show: () => open(null)})
+
+			// The list from the top already holds the month (the jump came from a
+			// tail further down), or holds everything there is
+			const before = monthStartUtc(key + 1)
+			const pages = lists.whole()?.pages ?? []
+			const oldest = oldestLoaded(pages)
+			if ((oldest && oldest.takenAt < before) || pages[pages.length - 1]?.nextCursor === undefined) {
+				return settle(showWhole())
+			}
+
+			const held = lists.tail(before)
+			const ready = held
+				? Promise.resolve(held)
+				: utils.photos.items.list.fetchInfinite(lists.tailInput(before), {initialCursor: undefined})
+			ready.then(
+				async (tail) => {
+					const first = tail.pages[0]?.items[0]
+					if (first) {
+						return settle({
+							first: first.id,
+							show: () => {
+								open(before)
+								void join()
+							},
+						})
+					}
+					// Nothing as old as the month (the rail's far end was an estimate):
+					// the end of the listing is its neighbour, and reaching that is
+					// paging to it
+					await pageDown(() => false)
+					settle(showWhole())
+				},
+				() => settle(),
+			)
+		},
+		[lists, utils, cancel, open, join, pageDown],
+	)
+
+	return useMemo(() => ({busy: paging && !tailed, target, start, cancel}), [paging, tailed, target, start, cancel])
 }

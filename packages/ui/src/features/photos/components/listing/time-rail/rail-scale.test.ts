@@ -28,6 +28,7 @@ import {
 	scrollForMonth,
 	scrollForTime,
 	scrollNamingMonth,
+	spansMonth,
 	timeAtFraction,
 	timeAtScroll,
 	yearMarks,
@@ -363,6 +364,48 @@ describe('time ⇄ scroll', () => {
 	it('keeps headers in the geometry it reasons over', () => {
 		// Sanity: the section math above depends on HEADER_HEIGHT rows existing
 		expect(layout.tops[1]! - layout.tops[0]!).toBe(HEADER_HEIGHT + 2 * 100)
+	})
+})
+
+describe('spansMonth', () => {
+	const items = [...month(2024, 6, 4, 'jun'), ...month(2024, 3, 4, 'mar')]
+	const layoutWith = (edges: {hasMore?: boolean; before?: number}) =>
+		layoutAt(groupItems({items, zoom: 'months', hasMore: false, language: 'en-US', ...edges}), 4, 100, 0)
+
+	it('a list that is all there runs through every month, held or skipped', () => {
+		const layout = layoutWith({})
+		for (const [year, month1] of [
+			[2025, 1],
+			[2024, 6],
+			[2024, 4],
+			[2024, 3],
+			[2020, 1],
+		] as const) {
+			expect(spansMonth(layout, monthKeyFor(year, month1))).toBe(true)
+		}
+	})
+
+	it('stops at the loading frontier while pages remain', () => {
+		const layout = layoutWith({hasMore: true})
+		// Between two loaded months: skipped. The oldest loaded month may have
+		// more to come, and anything older is not loaded at all.
+		expect(spansMonth(layout, monthKeyFor(2024, 4))).toBe(true)
+		expect(spansMonth(layout, monthKeyFor(2024, 3))).toBe(false)
+		expect(spansMonth(layout, monthKeyFor(2024, 2))).toBe(false)
+	})
+
+	it('a tail starts where it was cut, and runs through everything below that', () => {
+		// Everything before August: July is in it (and skipped), August is not
+		const layout = layoutWith({before: Date.UTC(2024, 7, 1)})
+		expect(spansMonth(layout, monthKeyFor(2024, 8))).toBe(false)
+		expect(spansMonth(layout, monthKeyFor(2024, 7))).toBe(true)
+		expect(spansMonth(layout, monthKeyFor(2024, 5))).toBe(true)
+		expect(spansMonth(layout, monthKeyFor(2020, 1))).toBe(true)
+	})
+
+	it('an empty list runs through nothing', () => {
+		const layout = layoutAt(groupItems({items: [], zoom: 'months', hasMore: false, language: 'en-US'}), 4, 100, 0)
+		expect(spansMonth(layout, monthKeyFor(2024, 6))).toBe(false)
 	})
 })
 

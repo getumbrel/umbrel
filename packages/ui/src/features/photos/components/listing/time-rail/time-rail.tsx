@@ -17,13 +17,11 @@ import {
 	buildScale,
 	labelUnit,
 	monthAtRailY,
-	monthKeyOf,
 	monthSpan,
 	monthStartUtc,
 	pickMonthLabels,
 	pickYearLabels,
 	railYForMonth,
-	scrollForMonth,
 	timeAtFraction,
 	timeAtScroll,
 	yearMarks,
@@ -35,6 +33,7 @@ import {
 	useLanding,
 	type CommittedView,
 	type ElementRef,
+	type Landing,
 } from '@/features/photos/components/listing/time-rail/use-landing'
 import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
 import {cn} from '@/lib/utils'
@@ -97,30 +96,30 @@ const LENS_EASE_MS = 80
 // The Time Machine-style index down a long timeline's right edge: a thumb
 // marking where in time the viewport is, year ticks and labels, and a pill
 // naming the month under the pointer. A click or a released drag travels
-// there; a drag scrubs the grid live through everything loaded; past the
-// loading frontier the seek (see use-seek.ts) pages toward the month while
-// the pill counts the frontier down, and the landing settles on the real
-// thing. Renders nothing per scroll frame — the thumb follows by transform,
-// off React's render path, the discipline the zoom control set.
+// there; a drag scrubs the grid live — through everything the list holds,
+// and beyond it by a seek (see use-seek.ts) that puts each month it comes to
+// on screen as its photographs arrive, the pill naming where the drag is
+// heading meanwhile. Renders nothing per scroll frame — the thumb follows by
+// transform, off React's render path, the discipline the zoom control set.
 export function TimeRail({
 	buckets,
 	scrollerRef,
 	contentRef,
 	viewRef,
+	landingRef,
 	frame,
 	height,
 	endSpacer,
-	hasMore,
 	seek,
 }: {
 	buckets: MonthBucket[]
 	scrollerRef: ElementRef<HTMLDivElement>
 	contentRef: ElementRef<HTMLDivElement>
 	viewRef: ElementRef<CommittedView>
+	landingRef: {current: Landing | null}
 	frame: Frame
 	height: number
 	endSpacer: number
-	hasMore: boolean
 	seek: Seek
 }) {
 	const {t, i18n} = useTranslation()
@@ -203,13 +202,13 @@ export function TimeRail({
 	const moveRaf = useRef(0)
 	const pendingY = useRef(0)
 
-	const {scrollWindow, stopTween, jump} = useLanding({
+	const {locate, stopTween, jump, scrubBeyond, scrubWithin} = useLanding({
 		scrollerRef,
 		contentRef,
 		viewRef,
+		landingRef,
 		inset: frame.inset,
 		endSpacer,
-		hasMore,
 		seek,
 	})
 
@@ -371,31 +370,32 @@ export function TimeRail({
 			if (!at) return
 			const view = viewRef.current
 			const scroller = scrollerRef.current
-			const where = view ? scrollWindow(view) : null
-			const target = view && where ? scrollForMonth(view.layout, at.key, at.fraction, where) : undefined
+			const target = view ? locate(view, at.key, at.fraction) : undefined
 			const clamped = Math.min(Math.max(0, y), trackHeight)
 			lensRef.current.y = clamped + TRACK_PAD
 			setHover({
 				y: clamped,
 				key: at.key,
 				fraction: at.fraction,
-				pending: target === undefined && hasMore,
+				pending: view !== null && target === undefined,
 			})
-			if (!scrub || !view || !scroller || !where) return
+			if (!scrub || !view || !scroller) return
 			stopTween()
-			// Loaded territory scrubs live under the finger; past the frontier
-			// the grid holds at the deepest loaded row and the pill says where
-			// this is heading
-			scroller.scrollTop = target ?? Math.max(0, view.layout.total + endSpacer - view.height)
+			// What the list holds scrubs live under the finger; beyond it the
+			// pill says where this is heading and the grid follows as that
+			// arrives
+			if (target === undefined) return scrubBeyond(at.key, at.fraction)
+			scrubWithin()
+			scroller.scrollTop = target
 		},
-		[railY, scale, viewRef, scrollerRef, scrollWindow, trackHeight, hasMore, stopTween, endSpacer],
+		[railY, scale, viewRef, scrollerRef, locate, trackHeight, stopTween, scrubBeyond, scrubWithin],
 	)
 
 	const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
 		if (event.pointerType === 'mouse' && event.button !== 0) return
 		event.currentTarget.setPointerCapture(event.pointerId)
 		dragRef.current = {startY: event.clientY, scrubbing: false}
-		if (seek.busy) seek.cancel()
+		seek.cancel()
 		stopTween()
 		wake()
 		applyPointer(event.clientY, false)
@@ -423,18 +423,20 @@ export function TimeRail({
 		const at = y === null ? undefined : monthAtRailY(scale, y)
 		if (!at) return
 		if (!drag.scrubbing) return jump(at.key, at.fraction)
-		// Released after a live scrub: settle exactly, or seek what the drag
-		// ran past the frontier for
+		// Released after a live scrub: settle exactly, or on what the drag ran
+		// beyond the list for once that is here
 		const view = viewRef.current
-		const target = view ? scrollForMonth(view.layout, at.key, at.fraction, scrollWindow(view)) : undefined
-		if (target === undefined) jump(at.key, at.fraction)
-		else if (scrollerRef.current) scrollerRef.current.scrollTop = target
+		const target = view ? locate(view, at.key, at.fraction) : undefined
+		if (target === undefined) return scrubBeyond(at.key, at.fraction, true)
+		scrubWithin()
+		if (scrollerRef.current) scrollerRef.current.scrollTop = target
 	}
 
 	const onPointerCancel = () => {
 		dragRef.current = null
 		cancelAnimationFrame(moveRaf.current)
 		moveRaf.current = 0
+		scrubWithin()
 	}
 
 	// ── The keyboard on the slider ──
@@ -456,13 +458,8 @@ export function TimeRail({
 
 	if (trackHeight < MIN_TRACK || scale.segments.length === 0) return null
 
-	// While a seek runs its pill pins at the destination and counts the
-	// loading frontier down beneath it; otherwise the pill follows the pointer
-	const frontierKey = (() => {
-		const items = viewRef.current?.layout.items
-		const last = items?.[items.length - 1]
-		return last === undefined ? null : monthKeyOf(last.takenAt)
-	})()
+	// While a seek is awaited its pill pins at the destination; otherwise the
+	// pill follows the pointer
 	const pill =
 		seek.target !== null
 			? {
@@ -479,7 +476,7 @@ export function TimeRail({
 	})()
 	// The rail is always present — quiet at rest so the timeline can be seen
 	// to have this axis at all, clearer while scrolling, full on approach
-	const presence = engaged || seek.busy ? 'opacity-100' : awake ? 'opacity-90' : 'opacity-60'
+	const presence = engaged || seek.target !== null ? 'opacity-100' : awake ? 'opacity-90' : 'opacity-60'
 
 	return (
 		// The mount fades in: the rail can arrive from a zoom-in or a window
@@ -565,12 +562,7 @@ export function TimeRail({
 				>
 					<span className='text-13 leading-none font-medium text-white/90'>{pillLabel(pill.key, pill.fraction)}</span>
 					{pill.pending ? (
-						<>
-							{seek.target !== null && frontierKey !== null && frontierKey !== pill.key && (
-								<span className='text-12 leading-none text-white/50 tabular-nums'>{monthLabel(frontierKey)}</span>
-							)}
-							<TbLoader className='size-3 animate-spin text-white/60' />
-						</>
+						<TbLoader className='size-3 animate-spin text-white/60' />
 					) : (
 						pillCount !== null && (
 							<span className='text-12 leading-none text-white/50'>

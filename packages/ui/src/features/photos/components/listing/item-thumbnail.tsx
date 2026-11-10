@@ -1,4 +1,4 @@
-import {useLayoutEffect, useRef, useState} from 'react'
+import {useEffect, useLayoutEffect, useRef, useState} from 'react'
 
 import type {ThumbnailQueue, ThumbnailRequestSlot} from '@/features/photos/components/listing/thumbnail-queue'
 import {itemThumbnailUrl, type Item, type ThumbSize} from '@/features/photos/hooks/use-items'
@@ -21,6 +21,12 @@ export const tintColor = (tint: number | undefined) =>
 // share the browser's cache and neither crossing refetches what is on
 // screen. Above that, the 512.
 export const thumbSizeForTile = (devicePx: number): ThumbSize => (devicePx <= 192 ? 192 : 512)
+
+// A request that fails is made again after these waits, then left alone. One
+// dropped connection — a phone changing networks, a server busy preparing
+// the rendition — would otherwise leave the tile its tint for as long as it
+// stays mounted, which for the photograph someone is looking at is for good.
+const RETRY_MS = [1000, 4000]
 
 // The finest rendition an item's tile has on screen right now — undefined
 // when it has no tile, or one still waiting on its first pixels. Asked of the
@@ -85,6 +91,12 @@ export function ItemThumbnail({
 		coarse === null ? undefined : itemThumbnailUrl(item.id, coarse),
 	)
 	const [queuedUrl, setQueuedUrl] = useState<string>()
+	// How many times the photograph has been asked for again (see RETRY_MS)
+	const retry = useRef<{count: number; timer?: ReturnType<typeof setTimeout>}>({count: 0})
+	useEffect(() => {
+		const state = retry.current
+		return () => clearTimeout(state.timer)
+	}, [])
 	const fineImgRef = useRef<HTMLImageElement>(null)
 	const queuedRequest = useRef<{url: string; slot: ThumbnailRequestSlot; settled: boolean} | undefined>(undefined)
 	const requestIndexRef = useRef(requestIndex)
@@ -93,7 +105,10 @@ export function ItemThumbnail({
 	// canvas just displayed. Preserve that instant cache handoff instead of
 	// revealing it five tiles at a time through the request gate.
 	const [warmCacheHandoff] = useState(() => performance.now() < warmUntil)
-	const usesRequestQueue = requestQueue !== undefined && requestIndex !== undefined && !warmCacheHandoff
+	// … and so does a rendition this grid has loaded before: it is in the
+	// browser's cache, and the gate is for requests
+	const cached = authorizedUrl !== undefined && requestQueue?.remembers(authorizedUrl) === true
+	const usesRequestQueue = requestQueue !== undefined && requestIndex !== undefined && !warmCacheHandoff && !cached
 	useLayoutEffect(() => {
 		if (!requestQueue || !usesRequestQueue || !authorizedUrl) return
 		const request = {
@@ -152,6 +167,7 @@ export function ItemThumbnail({
 					loading={loading}
 					onLoad={(event) => {
 						const img = event.currentTarget
+						requestQueue?.remember(authorizedUrl)
 						settleQueuedRequest(authorizedUrl)
 						setLoaded(performance.now() < fine.warmUntil ? 'instant' : 'fade')
 						// The coarse layer goes once the finer pixels can truly
@@ -159,7 +175,21 @@ export function ItemThumbnail({
 						if (coarse !== null) img.decode().then(dropCoarse, dropCoarse)
 						onLoad?.(img)
 					}}
-					onError={() => settleQueuedRequest(authorizedUrl)}
+					onError={(event) => {
+						settleQueuedRequest(authorizedUrl)
+						const img = event.currentTarget
+						const state = retry.current
+						const wait = RETRY_MS[state.count]
+						if (wait === undefined) return
+						state.count++
+						clearTimeout(state.timer)
+						state.timer = setTimeout(() => {
+							// Setting src again, even to what it is, is a new request.
+							// Not for a tile that has left, or been given something else.
+							const src = img.getAttribute('src')
+							if (img.isConnected && src) img.src = src
+						}, wait)
+					}}
 					className={cn(
 						'absolute inset-0 h-full w-full object-cover',
 						loaded === 'fade' && 'transition-opacity duration-300',

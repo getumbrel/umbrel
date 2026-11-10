@@ -43,6 +43,7 @@ import {
 	RAIL_SHOW_VIEWPORTS,
 	TimeRail,
 } from '@/features/photos/components/listing/time-rail/time-rail'
+import type {Landing} from '@/features/photos/components/listing/time-rail/use-landing'
 import {useSeek} from '@/features/photos/components/listing/time-rail/use-seek'
 import {
 	anchoredScrollTop,
@@ -83,6 +84,8 @@ import {useDockClearance} from '@/modules/desktop/dock'
 import {formatNumberI18n} from '@/utils/number'
 
 const NONE: ReadonlySet<string> = new Set()
+// What a list that has only just appeared replaced: any item at all
+const ANYTHING = {has: () => true}
 
 // Rendered beyond the viewport on each side: a few rows, up to a viewport's
 // worth. Rows of big tiles get the pixels; at the small end a row holds
@@ -111,6 +114,15 @@ const MAX_FLIGHT_VIEWPORTS = 1.5
 // through their colour on the way in. Long enough for a bandful of cache
 // reads on a slow disk; a load past it is a genuine arrival and fades.
 const SEAM_WARM_MS = 1500
+// Scrolling faster than this many viewports a second is flying: a tile is on
+// screen for less time than its photograph takes to arrive, so nothing new
+// is asked for until the grid has gone this long without flying. It takes
+// two such movements this close together to count — a fling, a scrub along
+// the rail — because one on its own is a jump, and what it lands on should
+// start loading at once.
+const FLYING_VIEWPORTS = 4
+const FLYING_WITHIN_MS = 100
+const LANDED_MS = 120
 
 // What the DOM shows: a layout, the rows mounted from it and the scroll
 // position it was committed at. Adopted whole (see below), never piecemeal.
@@ -177,6 +189,7 @@ export function TimelineGrid({
 	total,
 	filter,
 	hasMore,
+	before,
 	loadMore,
 	frame,
 	inDeleted,
@@ -191,6 +204,9 @@ export function TimelineGrid({
 	// query, and the whole-library filter is the one the calendar describes
 	filter: ItemFilter
 	hasMore: boolean
+	// The items are the list's tail from this moment back, put on screen by
+	// the rail's seek (see use-seek.ts): the timeline has more above them
+	before?: number
 	loadMore: () => void
 	frame: Frame
 	inDeleted: boolean
@@ -209,7 +225,7 @@ export function TimelineGrid({
 	const isTouch = useIsTouchDevice()
 	const touchScrub = isMobile && isTouch
 	const reduceMotion = useReducedMotion() ?? false
-	const {zoom, tileSize: preferredTileSize, setTileSize, setGrid, setSection, pageSize} = usePhotosView()
+	const {zoom, tileSize: preferredTileSize, setTileSize, setGrid, setSection, pageSize, tail} = usePhotosView()
 	const fixed = fixedTileSize !== undefined
 	const tileSize = fixedTileSize ?? preferredTileSize
 	const selection = usePhotosSelection()
@@ -264,8 +280,8 @@ export function TimelineGrid({
 	// every zoom stop; the layout below is a running sum over its sections
 	const hasFooter = footer !== undefined
 	const timeline = useMemo(
-		() => groupItems({items, zoom: grouping, hasMore, language: i18n.language, footer: hasFooter}),
-		[items, grouping, hasMore, i18n.language, hasFooter],
+		() => groupItems({items, zoom: grouping, hasMore, before, language: i18n.language, footer: hasFooter}),
+		[items, grouping, hasMore, before, i18n.language, hasFooter],
 	)
 	// The first row is the current section's (empty) header: it sits in the
 	// faded band under the bar, so tiles start at the inset itself
@@ -283,11 +299,19 @@ export function TimelineGrid({
 	// seek. Its domain is the library calendar when
 	// this listing is the whole library — exact to the month before a single
 	// page beyond the first has loaded — and otherwise the loaded months plus
-	// a tail estimated from what remains, refining as pages land.
+	// a tail estimated from what remains, refining as pages land. Those are
+	// the months loaded from the top: while a seek has the list's tail on
+	// screen instead, the rail keeps the domain it had.
 	const {data: librarySummary, isError: summaryFailed} = useLibrarySummary()
 	const wholeLibrary = useMemo(() => isWholeLibrary(filter), [filter])
-	const seek = useSeek({filter, pageSize})
-	const loadedMonths = useMemo(() => monthsFromItems(items), [items])
+	const [thumbnailQueue] = useState(() => new ThumbnailQueue())
+	const thumbnailsIdle = useCallback(() => thumbnailQueue.idle(), [thumbnailQueue])
+	const seek = useSeek({filter, pageSize, scrollerRef, idle: thumbnailsIdle})
+	// A list the seek is putting on screen, and where to land on it (see Landing)
+	const landingRef = useRef<Landing | null>(null)
+	const [fromTop, setFromTop] = useState(items)
+	if (before === undefined && fromTop !== items) setFromTop(items)
+	const loadedMonths = useMemo(() => monthsFromItems(fromTop), [fromTop])
 	const railBuckets = useMemo(
 		() =>
 			railDomain({
@@ -359,20 +383,46 @@ export function TimelineGrid({
 	// pinch settles, the wave of arriving photographs should still start where
 	// the fingers were.
 	const eyeRef = useRef<{x: number; y: number} | null>(null)
-	const [thumbnailQueue] = useState(() => new ThumbnailQueue())
+	// Where the grid is scrolled to and whether it is flying (see
+	// FLYING_VIEWPORTS), kept from its scroll events: the thumbnail queue asks
+	// in the middle of commits and image loads, where reading the scroller
+	// itself would force a layout each time
+	const scrolled = useRef({top: 0, at: 0, far: false, flying: false, landing: 0})
 	useLayoutEffect(() => {
-		thumbnailQueue.priority = (index) => {
+		thumbnailQueue.visible = () => {
 			const current = viewRef.current
-			const scrollTop = scrollerRef.current?.scrollTop ?? 0
-			if (!current) return {tier: 0, distance: index}
-			const visible = visibleItems(current.layout, scrollTop, current.height, 0)
-			const middle = (visible.start + visible.end) / 2
-			return {
-				tier: index < visible.start || index > visible.end ? 1 : 0,
-				distance: Math.abs(index - middle),
-			}
+			if (scrolled.current.flying) return null
+			if (!current) return {start: 0, end: Infinity}
+			return visibleItems(current.layout, scrolled.current.top, current.height, 0)
 		}
 	}, [thumbnailQueue])
+	useEffect(() => {
+		const state = scrolled.current
+		return () => clearTimeout(state.landing)
+	}, [])
+	// One movement of the grid: a scroll, or (`jumped`) a list from somewhere
+	// else on the timeline landing under it
+	const noteMove = useCallback(
+		(top: number, jumped = false) => {
+			const was = scrolled.current
+			const now = performance.now()
+			const elapsed = now - was.at
+			const reach = (FLYING_VIEWPORTS * (viewRef.current?.height ?? 0) * Math.min(1000, elapsed)) / 1000
+			const far = jumped || Math.abs(top - was.top) > reach
+			if (far && was.far && elapsed < FLYING_WITHIN_MS) {
+				was.flying = true
+				clearTimeout(was.landing)
+				was.landing = window.setTimeout(() => {
+					was.flying = false
+					thumbnailQueue.resume()
+				}, LANDED_MS)
+			}
+			was.far = far
+			was.top = top
+			was.at = now
+		},
+		[thumbnailQueue],
+	)
 	// The tile the last reflow kept still, reused while reflows keep coming so
 	// one tile stays put through a whole gesture instead of drifting stop by stop
 	const anchorRef = useRef<Anchor | null>(null)
@@ -432,9 +482,18 @@ export function TimelineGrid({
 		const onScreen = lastAt !== undefined && Math.abs(lastAt - current) < 2
 		const inGesture =
 			last !== null && onScreen && sinceLast < GESTURE_MS && view?.width === width && layout.indexOf.has(last.id)
-		const anchor = inGesture ? last : view ? findAnchor(view.layout, current, focal) : undefined
+		// A list the rail's seek put on screen comes with its own place: there
+		// is no tile to keep still between one stretch of the timeline and
+		// another
+		const landing = landingRef.current
+		const lands = landing !== null && (landing.first === undefined || layout.items[0]?.id === landing.first)
+		if (lands) landingRef.current = null
+		const landed = lands ? landing.top({layout, height}) : undefined
+		if (lands) noteMove(landed ?? current, true)
+		const anchor =
+			landed !== undefined ? undefined : inGesture ? last : view ? findAnchor(view.layout, current, focal) : undefined
 		const anchored = anchor && anchoredScrollTop(layout, anchor)
-		const scrollTop = Math.max(0, Math.min(anchored ?? current, layout.total + endSpacer - height))
+		const scrollTop = Math.max(0, Math.min(landed ?? anchored ?? current, layout.total + endSpacer - height))
 		// Remember where the anchor actually ended up: the clamp may have moved it
 		anchorRef.current =
 			anchor && anchored !== undefined ? {id: anchor.id, top: anchored + anchor.top - scrollTop} : null
@@ -446,11 +505,11 @@ export function TimelineGrid({
 			height,
 			items: visibleItems(layout, scrollTop, height, overscanFor({layout, height, gpu})),
 			scrollTop,
-			animate: view !== null && view.width === width && !reduceMotion,
+			animate: view !== null && view.width === width && !reduceMotion && !lands,
 			gpu,
 			warmUntil: view?.gpu && !gpu ? now + SEAM_WARM_MS : 0,
 		})
-	}, [layout, width, height, endSpacer, view, reduceMotion, gpu, attempt])
+	}, [layout, width, height, endSpacer, view, reduceMotion, gpu, attempt, noteMove])
 
 	// Scrolling only moves the row window (and the current section); the
 	// geometry is untouched
@@ -461,13 +520,15 @@ export function TimelineGrid({
 		// settle is a scroll like any other.
 		if (gesture.live && viewRef.current?.gpu) return
 		const scrollTop = scrollerRef.current?.scrollTop ?? 0
+		// (the echo of a position the grid wrote itself is no movement)
+		if (scrollTop !== scrolled.current.top) noteMove(scrollTop)
 		if (viewRef.current) trackSection(viewRef.current.layout, scrollTop)
 		setView((current) => {
 			if (!current) return current
 			const items = visibleItems(current.layout, scrollTop, current.height, overscanFor(current))
 			return items.start === current.items.start && items.end === current.items.end ? current : {...current, items}
 		})
-	}, [gesture])
+	}, [gesture, noteMove])
 
 	const slots = useMemo(() => (view && !view.gpu ? slotsFor(view) : []), [view])
 	// The rendition the mounted tiles want, from the device pixels each covers.
@@ -508,9 +569,16 @@ export function TimelineGrid({
 		const previousLayout = appliedLayout.current
 		const changed = previousLayout !== view.layout
 		appliedLayout.current = view.layout
-		const before = scroller.scrollTop
-		if (changed) scroller.scrollTop = view.scrollTop
-		const after = scroller.scrollTop
+		// How far this commit moved the scroll. The scroller is only read when
+		// there is a layout to apply: this runs after every commit, and a read
+		// here lays the page out in the middle of each one.
+		let shift = 0
+		if (changed) {
+			const before = scroller.scrollTop
+			scroller.scrollTop = view.scrollTop
+			scrolled.current.top = scroller.scrollTop
+			shift = scrolled.current.top - before
+		}
 		const previous = rects.current
 		// What to animate from: the previous view, when this commit replaced it
 		// — or, where the canvas was moving, the last blend it drew, which is
@@ -527,7 +595,7 @@ export function TimelineGrid({
 			// previous layout if it only now entered the window
 			const old = from.tiles.get(slot.item.id) ?? tileRect(from.layout, slot.item.id)
 			if (!el || !old) continue
-			const dy = old.y - slot.y + (after - before)
+			const dy = old.y - slot.y + shift
 			if (Math.abs(dy) < MAX_FLIGHT_VIEWPORTS * view.height) motion.seed(el, old.x - slot.x, dy, old.size / slot.size)
 		}
 		const placed = new Map<string, Header>()
@@ -535,7 +603,7 @@ export function TimelineGrid({
 			placed.set(header.key, header)
 			const old = from?.headers.get(header.key)
 			const el = headerEls.get(header.key)
-			if (old && el) motion.seed(el, 0, old.top - before - (header.top - after))
+			if (old && el) motion.seed(el, 0, old.top - header.top + shift)
 		}
 		rects.current = {tiles, headers: placed}
 	})
@@ -560,18 +628,27 @@ export function TimelineGrid({
 	}, [selectedIds])
 	const itemIds = useMemo(() => new Set(items.map((item) => item.id)), [items])
 	// Items that left the list (deleted, or the list refetched) leave the
-	// selection — except while picking for an album, when the selection
-	// spans every view and this list is only part of it
+	// selection, and a grid that has only just mounted is a new list, which
+	// keeps nothing it doesn't hold. Otherwise only what left: a jump along
+	// the rail swaps one stretch of the timeline for another (see
+	// use-seek.ts), which is the list changing and nothing leaving the
+	// library. Nor while picking for an album, when the selection spans every
+	// view and this list is only part of it.
 	const picking = selection.pickingFor !== undefined
+	const listed = useRef<{ids: ReadonlySet<string>; tail: typeof tail} | null>(null)
 	useEffect(() => {
-		if (!picking) selection.retain(itemIds)
-	}, [itemIds, selection.retain, picking])
-	// … and for the same reason a marquee drag or ⌘A then replaces only this
-	// list's part of it: what was picked elsewhere is held
+		const was = listed.current
+		listed.current = {ids: itemIds, tail}
+		if (picking || (was && was.tail !== tail)) return
+		selection.retain(was?.ids ?? ANYTHING, itemIds)
+	}, [itemIds, tail, picking, selection.retain])
+	// … and for the same reason a marquee drag or ⌘A replaces only this
+	// list's part of it: what was selected elsewhere is held
 	const heldRef = useRef<ReadonlySet<string>>(NONE)
 	useLayoutEffect(() => {
-		heldRef.current = picking ? new Set([...selectedIds].filter((id) => !itemIds.has(id))) : NONE
-	}, [selectedIds, itemIds, picking])
+		const held = [...selectedIds].filter((id) => !itemIds.has(id))
+		heldRef.current = held.length > 0 ? new Set(held) : NONE
+	}, [selectedIds, itemIds])
 	// The tile last toggled by a click: where a shift-click's range starts
 	const rangeAnchor = useRef<string | null>(null)
 	const select = (item: Item, range: boolean) => {
@@ -1179,10 +1256,10 @@ export function TimelineGrid({
 						scrollerRef={scrollerRef}
 						contentRef={contentRef}
 						viewRef={viewRef}
+						landingRef={landingRef}
 						frame={frame}
 						height={height}
 						endSpacer={endSpacer}
-						hasMore={hasMore}
 						seek={seek}
 					/>
 				) : (
@@ -1191,10 +1268,10 @@ export function TimelineGrid({
 						scrollerRef={scrollerRef}
 						contentRef={contentRef}
 						viewRef={viewRef}
+						landingRef={landingRef}
 						frame={frame}
 						height={height}
 						endSpacer={endSpacer}
-						hasMore={hasMore}
 						seek={seek}
 					/>
 				))}

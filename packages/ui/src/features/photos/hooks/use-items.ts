@@ -25,6 +25,23 @@ export const itemsDownloadUrl = (ticket: string) => `/api/photos/download?ticket
 // tRPC's query-key prefix for every photos.items.list query (any filter, any cursor)
 export const ITEMS_LIST_KEY = [['photos', 'items', 'list']] as const
 
+// What names a list across the app: its filter, by value
+export const listKey = (filter: ItemFilter) => JSON.stringify(filter)
+
+// The oldest moment a date clause can name (the earliest a Date holds)
+const BEGINNING = -8.64e15
+
+// A list's tail: everything it holds that was taken before a moment. It is
+// the same list asked through the filter's own date clause, so it is one
+// request however far down the timeline that moment is — where the list from
+// the top, keyset-paginated, would have to walk every page in between.
+export const tailFilter = (filter: ItemFilter, before: number): ItemFilter => ({
+	...filter,
+	dates: (filter.dates ?? [{from: BEGINNING, to: before}])
+		.map(({from, to}) => ({from, to: Math.min(to, before)}))
+		.filter(({from, to}) => from < to),
+})
+
 // The timeline: one infinite query per filter, newest first, keyset-paginated.
 // The page size is the session's (see PhotosView.pageSize): it is part of the
 // query's identity, so every caller — the grid, the lightbox, the selection
@@ -32,23 +49,37 @@ export const ITEMS_LIST_KEY = [['photos', 'items', 'list']] as const
 // `keepPrevious` holds the last filter's list up while the next one loads —
 // for a search being refined, where the old results morphing into the new
 // beats a spinner between every keystroke.
+//
+// After a jump far down the timeline the list is its tail from there (see
+// PhotosView.tail) until the list from the top has been paged down to meet
+// it. Every caller gets the same one, so what the lightbox steps through and
+// the selection bar counts is what the grid shows.
 export function useItems(filter: ItemFilter, {enabled = true, keepPrevious = false} = {}) {
-	const {pageSize} = usePhotosView()
-	const query = trpcReact.photos.items.list.useInfiniteQuery(
+	const {pageSize, tail} = usePhotosView()
+	const paging = {getNextPageParam: (lastPage: ItemsPage) => lastPage.nextCursor, initialCursor: undefined}
+	const whole = trpcReact.photos.items.list.useInfiniteQuery(
 		{filter, limit: pageSize},
-		{
-			enabled,
-			getNextPageParam: (lastPage) => lastPage.nextCursor,
-			initialCursor: undefined,
-			placeholderData: keepPrevious ? keepPreviousData : undefined,
-		},
+		{...paging, enabled, placeholderData: keepPrevious ? keepPreviousData : undefined},
 	)
+	const key = useMemo(() => listKey(filter), [filter])
+	const before = tail?.list === key ? tail.before : undefined
+	const lower = useMemo(() => (before === undefined ? filter : tailFilter(filter, before)), [filter, before])
+	// The tail is fetched before it is opened: its pages are already here, and
+	// mounting it must not ask for them again
+	const tailed = trpcReact.photos.items.list.useInfiniteQuery(
+		{filter: lower, limit: pageSize},
+		{...paging, enabled: enabled && before !== undefined, refetchOnMount: false},
+	)
+	const isTail = before !== undefined && tailed.data !== undefined
+	const query = isTail ? tailed : whole
 	const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
 	return {
 		items,
+		// The moment the list runs back from, when it is a tail
+		before: isTail ? before : undefined,
 		// How many the filter matches in all, beyond the pages loaded so far
-		total: query.data?.pages[0]?.total,
-		isLoading: query.isLoading,
+		total: whole.data?.pages[0]?.total,
+		isLoading: whole.isLoading,
 		error: query.error,
 		hasMore: Boolean(query.hasNextPage),
 		isLoadingMore: query.isFetchingNextPage,

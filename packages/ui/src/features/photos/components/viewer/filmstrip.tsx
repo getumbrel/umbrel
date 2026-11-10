@@ -38,18 +38,28 @@ const REGULAR_HEIGHT = 88
 const FLICK_SPEED = 9
 
 // ── Motion ──
-// A released mouse drag carries on with the speed it was let go at, decaying
+// A released drag carries on with the speed it was let go at, decaying
 // exponentially (this time constant), and is aimed so it comes to rest
 // exactly on the slot its momentum would have reached — the way a native
-// fling with snapping lands. Settles (a click, ←/→, a wheel at rest) use the
-// same curve, quicker.
-const COAST_MS = 325
+// fling with snapping lands. A finger's fling decays the way the platform's
+// own scrolling does: an iOS scroll view sheds 0.2% of its speed every
+// millisecond, which is that time constant, so a flick carries as far here
+// as it does in Photos on the same phone. Settles (a click, ←/→, a wheel at
+// rest) use the same curve, quicker.
+const COAST_MS = {mouse: 325, touch: 500}
 const SETTLE_MS = 90
-// A press that travels further than this is a drag, not a click
-const DRAG_SLOP = 4
+// A glide stops once it has slowed to this (px/ms), as a scroll view's
+// deceleration does: an exponential never arrives, and a strip that looks
+// still must be one — the next touch on it is a tap on a thumb, not a catch
+const REST_SPEED = 0.012
+// A press that travels further than this is a drag, not a click — further
+// for a finger, which is never as still as a mouse
+const DRAG_SLOP = {mouse: 4, touch: 10}
 // Velocity is read from the drag's last moments; a finger held still this
 // long before letting go has no momentum
 const VELOCITY_WINDOW_MS = 80
+// How long after a finger lifts its click can still arrive
+const TAP_CLICK_MS = 400
 // The scroll velocity's smoothing time constant (frames arrive unevenly)
 const VELOCITY_MS = 50
 // How long the strip must be quiet after a user scroll before it is theirs
@@ -117,7 +127,16 @@ export function FilmstripPlaceholder() {
 }
 
 type Glide = {from: number; target: number; t0: number; tau: number; owner: 'user' | 'settle'}
-type Press = {pointerId: number; x0: number; s0: number; dragging: boolean; samples: {t: number; x: number}[]}
+type Press = {
+	pointerId: number
+	by: 'mouse' | 'touch'
+	x0: number
+	s0: number
+	dragging: boolean
+	// It stopped a coast: the press is a catch, not a click on a thumb
+	caught: boolean
+	samples: {t: number; x: number}[]
+}
 
 // A horizontally virtualized strip of thumbnails. On hover the pointed-at
 // thumb grows and everything to either side slides over by half the growth,
@@ -126,10 +145,14 @@ type Press = {pointerId: number; x0: number; s0: number; dragging: boolean; samp
 // passing the centre becomes the item on stage — cheap, because the viewer
 // keeps the item in local state and runs the stage on thumbnails until the
 // scrub rests.
-// Touch scrolls natively, with native momentum and scroll-snap, so it rests
-// exactly on an item and feels like the platform rather than an imitation of
-// it. A mouse drags it with momentum, a vertical wheel scrolls it, and a
-// click travels to a thumb. While the stage is being swiped the strip
+// A finger or a mouse drags it and lets it go with momentum, a vertical
+// wheel scrolls it, and a click travels to a thumb. The drag is the strip's
+// own rather than the browser's scrolling because nothing native lands a
+// fling on a thumb at the speed it was thrown: WebKit gives any scroller
+// with snap points its fast deceleration rate, so on an iPhone a flick that
+// should cross a dozen thumbs stopped on the next one, and without snap
+// points a native fling can't be steered to a thumb — a position written
+// under it doesn't stop it. While the stage is being swiped the strip
 // follows it frame by frame through `drive`.
 export function Filmstrip({
 	items,
@@ -144,7 +167,9 @@ export function Filmstrip({
 	currentId: string
 	hasMore: boolean
 	loadMore: () => void
-	onSelect: (id: string) => void
+	// `passing`: the strip is coasting and this is not the item it will land
+	// on — it goes on stage, but nobody is going to look at it
+	onSelect: (id: string, passing?: boolean) => void
 	// Hover growth (pointer only); off = a plain strip
 	grow?: boolean
 	// The stage's swipe travel, for the strip to follow (see StripDrive)
@@ -172,15 +197,14 @@ export function Filmstrip({
 	})
 
 	// The strip's moving parts, outside React. `owner` is who positions it:
-	// nobody (resting on the current item, snap on), the user (a touch, its
-	// native momentum, a mouse drag and its coast, a wheel — the item follows
-	// the strip), a settle of our own (travelling to the current item), or
-	// the stage's swipe (the drive). `expected` is the last scroll position
-	// we wrote, so its echo in a scroll event isn't mistaken for the user.
+	// nobody (resting on the current item, snap on), the user (a drag and its
+	// coast, a wheel, a trackpad's native scroll — the item follows the
+	// strip), a settle of our own (travelling to the current item), or the
+	// stage's swipe (the drive). `expected` is the last scroll position we
+	// wrote, so its echo in a scroll event isn't mistaken for the user.
 	const state = useRef({
 		owner: 'none' as 'none' | 'user' | 'settle' | 'drive',
 		expected: NaN,
-		touching: false,
 		wheeling: false,
 		press: null as Press | null,
 		glide: null as Glide | null,
@@ -197,8 +221,10 @@ export function Filmstrip({
 		velocity: 0,
 		raf: 0,
 		idle: undefined as ReturnType<typeof setTimeout> | undefined,
-		// The id the strip last showed as current, or chose itself, and when
+		// The id the strip last showed as current, or chose itself (and whether
+		// as one it was only passing), and when
 		selected: '',
+		passing: false,
 		selectedT: 0,
 	})
 
@@ -271,19 +297,25 @@ export function Filmstrip({
 		track.style.transform = Math.abs(offset) > 0.01 ? `translateX(${(-offset).toFixed(2)}px)` : ''
 	}, [placement])
 
-	// The item at the centre is the one on stage, while the user has the strip
-	const selectIndex = useCallback((index: number) => {
-		const st = state.current
-		const {items, onSelect} = live.current
-		const id = items[clamp(index, 0, items.length - 1)]?.id
-		if (!id || id === st.selected) return
-		st.selected = id
-		onSelect(id)
-	}, [])
 	const nearest = useCallback((left: number) => {
 		const {items} = live.current
 		return clamp(Math.round(left / SLOT), 0, items.length - 1)
 	}, [])
+	// The item at the centre is the one on stage, while the user has the strip
+	const selectIndex = useCallback(
+		(index: number) => {
+			const st = state.current
+			const {items, onSelect} = live.current
+			const at = clamp(index, 0, items.length - 1)
+			const id = items[at]?.id
+			const passing = st.glide?.owner === 'user' && at !== nearest(st.glide.target)
+			if (!id || (id === st.selected && passing === st.passing)) return
+			st.selected = id
+			st.passing = passing
+			onSelect(id, passing)
+		},
+		[nearest],
+	)
 
 	// The frame loop: carries a glide, paints, and follows the centre with the
 	// selection while the user has the strip. Runs only while something is
@@ -296,17 +328,19 @@ export function Filmstrip({
 		st.raf = requestAnimationFrame(() => frameRef.current())
 	}, [])
 
-	// The user is done with the strip: the item at the centre is the choice
+	// The user is done with the strip: the item at the centre is the choice.
+	// Not while a press has it — a drag, or a finger holding still what it
+	// caught mid-coast.
 	const release = useCallback(() => {
 		const st = state.current
 		const el = scrollerRef.current
-		if (!el || st.owner !== 'user' || st.touching || st.press?.dragging || st.glide) return
+		if (!el || st.owner !== 'user' || st.press || st.glide) return
 		const index = nearest(el.scrollLeft)
 		selectIndex(index)
 		st.owner = 'none'
 		st.wheeling = false
-		// Native snapping lands exactly on a slot; a wheel or a touch that
-		// interrupted a settle doesn't, and is eased onto the nearest
+		// Native snapping lands exactly on a slot; a wheel or a caught coast
+		// doesn't, and is eased onto the nearest
 		if (Math.abs(el.scrollLeft - index * SLOT) > 0.5) {
 			st.owner = 'settle'
 			st.glide = {from: el.scrollLeft, target: index * SLOT, t0: performance.now(), tau: SETTLE_MS, owner: 'settle'}
@@ -331,8 +365,12 @@ export function Filmstrip({
 		let landed: Glide | null = null
 		if (st.glide) {
 			const g = st.glide
-			let left = g.target + (g.from - g.target) * Math.exp(-Math.max(0, now - g.t0) / g.tau)
-			if (reduceMotion || Math.abs(left - g.target) < 0.5) {
+			// Aimed just past the target — by what the curve still has left in it
+			// at REST_SPEED — so the glide reaches the target at that speed
+			const span = g.target - g.from
+			const reach = span + Math.sign(span) * REST_SPEED * g.tau
+			let left = g.from + reach * (1 - Math.exp(-Math.max(0, now - g.t0) / g.tau))
+			if (reduceMotion || Math.abs(left - g.from) >= Math.abs(span)) {
 				left = g.target
 				landed = g
 				st.glide = null
@@ -425,6 +463,8 @@ export function Filmstrip({
 		if (!el || width === 0 || currentIndex < 0) return
 		const anchor = anchorRef.current
 		anchorRef.current = {id: currentId, index: currentIndex}
+		// (a current item that didn't come from the strip isn't one it is passing)
+		if (st.selected !== currentId) st.passing = false
 		st.selected = currentId
 		if (!anchor) {
 			// First layout: be there
@@ -499,47 +539,44 @@ export function Filmstrip({
 		wake()
 		// Our own write's echo, or a settle or the drive in flight
 		if (Math.abs(el.scrollLeft - st.expected) < 1 || st.owner === 'settle' || st.owner === 'drive') return
-		// The user's scroll (a touch's native momentum, a trackpad): where it is
-		// is where it is meant to be
+		// The user's scroll (a trackpad's): where it is is where it is meant to be
 		st.expected = NaN
 		claim()
 	}
 
-	// ── Touch ── native: just note the finger, so the strip stays the user's
-	// while it is down even if it holds still
-	const onTouchStart = () => {
-		state.current.touching = true
-		claim()
-	}
-	const onTouchEnd = () => {
-		state.current.touching = false
-		restartIdle()
-	}
-
-	// ── Mouse ── a drag past the slop takes the strip (pointer capture, so it
-	// carries on outside it), and its release coasts onto a slot
+	// ── Drag ── a finger's or a mouse's: past the slop it takes the strip
+	// (pointer capture, so it carries on outside it), and its release coasts
+	// onto a slot. A finger put down on a coasting strip catches it, as it
+	// would a native scroll.
 	const onPointerDown = (e: React.PointerEvent) => {
-		if (e.pointerType !== 'mouse' || e.button !== 0) return
 		const el = scrollerRef.current
-		if (!el) return
-		state.current.press = {
+		const st = state.current
+		if (!el || st.press || (e.pointerType === 'mouse' && e.button !== 0)) return
+		const by = e.pointerType === 'mouse' ? 'mouse' : 'touch'
+		const caught = by === 'touch' && st.glide?.owner === 'user'
+		if (caught) st.glide = null
+		st.press = {
 			pointerId: e.pointerId,
+			by,
 			x0: e.clientX,
 			s0: el.scrollLeft,
 			dragging: false,
+			caught,
 			samples: [{t: e.timeStamp, x: e.clientX}],
 		}
 	}
 	const onPointerMove = (e: React.PointerEvent) => {
 		const el = scrollerRef.current
-		if (!el || e.pointerType !== 'mouse') return
 		const st = state.current
 		const press = st.press
-		if (!press || press.pointerId !== e.pointerId) return
-		const dx = e.clientX - press.x0
+		if (!el || !press || press.pointerId !== e.pointerId) return
 		if (!press.dragging) {
-			if (Math.abs(dx) < DRAG_SLOP) return
+			if (Math.abs(e.clientX - press.x0) < DRAG_SLOP[press.by]) return
 			press.dragging = true
+			// The strip moves from where the drag began, not by the slop it took
+			// to tell it from a click
+			press.x0 = e.clientX
+			press.s0 = el.scrollLeft
 			;(bandRef.current ?? el).setPointerCapture(e.pointerId)
 			el.style.cursor = 'grabbing'
 			claim()
@@ -549,7 +586,7 @@ export function Filmstrip({
 		}
 		press.samples.push({t: e.timeStamp, x: e.clientX})
 		while (press.samples.length > 2 && e.timeStamp - press.samples[0]!.t > VELOCITY_WINDOW_MS) press.samples.shift()
-		writeScroll(clamp(press.s0 - dx, 0, el.scrollWidth - el.clientWidth))
+		writeScroll(clamp(press.s0 - (e.clientX - press.x0), 0, el.scrollWidth - el.clientWidth))
 		wake()
 	}
 	const onPointerUp = (e: React.PointerEvent) => {
@@ -558,17 +595,26 @@ export function Filmstrip({
 		const press = st.press
 		if (!el || !press || press.pointerId !== e.pointerId) return
 		st.press = null
-		if (!press.dragging) return
+		if (!press.dragging && !press.caught) {
+			// A press that held off the strip's release (see `release`) owes it one
+			if (st.owner === 'user') restartIdle()
+			return
+		}
 		el.style.cursor = ''
-		// The drag was not a click on whatever thumb it ended over
+		// Neither a drag nor a catch is a click on whatever thumb it ended over.
+		// A mouse's click follows its release at once; a finger's comes later,
+		// from the browser's own tap recognizer.
 		st.suppressClick = true
-		setTimeout(() => (st.suppressClick = false))
+		setTimeout(() => (st.suppressClick = false), press.by === 'touch' ? TAP_CLICK_MS : 0)
+		// A strip caught and let go where it was settles onto the nearest thumb
+		if (!press.dragging) return release()
 		const first = press.samples[0]!
 		const last = press.samples[press.samples.length - 1]!
 		const held = e.timeStamp - last.t > VELOCITY_WINDOW_MS
 		const velocity = held || last.t === first.t ? 0 : -(last.x - first.x) / (last.t - first.t)
-		const target = nearest(el.scrollLeft + velocity * COAST_MS) * SLOT
-		st.glide = {from: el.scrollLeft, target, t0: performance.now(), tau: COAST_MS, owner: 'user'}
+		const tau = COAST_MS[press.by]
+		const target = nearest(el.scrollLeft + velocity * tau) * SLOT
+		st.glide = {from: el.scrollLeft, target, t0: performance.now(), tau, owner: 'user'}
 		wake()
 	}
 
@@ -603,13 +649,16 @@ export function Filmstrip({
 	)
 
 	// A click is a destination, not a scrub: the strip travels to the chosen
-	// thumb once the viewer has it
+	// thumb once the viewer has it — from a coast too, which it ends
 	const select = useCallback(
 		(id: string) => {
 			const st = state.current
 			if (st.suppressClick) return
 			clearTimeout(st.idle)
-			if (st.owner === 'user' && !st.press?.dragging && !st.glide) st.owner = 'none'
+			if (st.owner === 'user' && !st.press?.dragging) {
+				st.owner = 'none'
+				st.glide = null
+			}
 			onSelect(id)
 		},
 		[onSelect],
@@ -642,9 +691,6 @@ export function Filmstrip({
 		<div
 			ref={scrollerRef}
 			onScroll={onScroll}
-			onTouchStart={onTouchStart}
-			onTouchEnd={onTouchEnd}
-			onTouchCancel={onTouchEnd}
 			onPointerDown={onPointerDown}
 			onPointerMove={onPointerMove}
 			onPointerUp={onPointerUp}
@@ -659,7 +705,7 @@ export function Filmstrip({
 				e.stopPropagation()
 			}}
 			className={cn(
-				'umbrel-hide-scrollbar relative w-full touch-pan-x overflow-x-auto overflow-y-hidden overscroll-x-contain',
+				'umbrel-hide-scrollbar relative w-full touch-none overflow-x-auto overflow-y-hidden overscroll-x-contain',
 				// A regular strip's headroom lies over the stage, so only its band
 				// takes hits (see REGULAR_HEIGHT). It also ends at the stage's
 				// edges, mid-window: it fades out there rather than cut thumbs in half.
