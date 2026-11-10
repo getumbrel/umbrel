@@ -21,20 +21,33 @@ import {MiniBrowser} from '@/features/files/components/mini-browser'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {useDeviceInfo} from '@/hooks/use-device-info'
+import {deviceInfoToHostEnvironment} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
+import {getGenericRaidOnboardingPath} from '@/routes/onboarding/storage-selection'
+import {trpcReact} from '@/trpc/trpc'
 
-// Routes to Umbrel Pro instructions or regular restore flow
+// Restoring during onboarding puts the backup on the boot drive. A device that keeps
+// its data on a storage pool has to create that pool first, which happens as part of
+// creating an account: always on Umbrel Pro, and on generic hardware when it has
+// internal drives to set up (the same check that sends account creation to storage
+// setup). Those devices are told to set up with a temporary account and restore from
+// Settings; everything else restores right here.
 export default function BackupsRestoreOnboarding() {
 	const {t} = useTranslation()
-	const {isLoading: isLoadingDeviceCheck, data: deviceInfo} = useDeviceInfo()
-	const isUmbrelPro = deviceInfo?.umbrelHostEnvironment === 'umbrel-pro'
+	const identityQ = trpcReact.systemNg.device.getIdentity.useQuery()
+	const host = deviceInfoToHostEnvironment(identityQ.data)
+	const internalStorageQ = trpcReact.hardware.internalStorage.getDevices.useQuery(undefined, {
+		enabled: host === 'unknown',
+	})
 
-	// Show loading state while checking device type
-	if (isLoadingDeviceCheck) {
+	// Only a check with no answer yet counts: a background refetch must not take the
+	// restore flow off screen
+	const checks = [identityQ, internalStorageQ]
+
+	if (checks.some((check) => check.isFetching && check.data === undefined)) {
 		return (
 			<Layout
 				title={t('backups-restore-header')}
@@ -48,34 +61,58 @@ export default function BackupsRestoreOnboarding() {
 		)
 	}
 
-	// Show Umbrel Pro specific instructions
-	if (isUmbrelPro) {
-		return <UmbrelProRestoreInstructions />
+	// Without an answer there's no telling where the restore would land, so don't guess
+	if (checks.some((check) => check.isLoadingError)) {
+		return (
+			<Layout
+				title={t('backups-restore-header')}
+				subTitle={t('storage-status.check-failed')}
+				subTitleMaxWidth={630}
+				footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
+			>
+				<button
+					type='button'
+					{...primaryButtonProps}
+					onClick={() => {
+						for (const check of checks) if (check.isLoadingError) void check.refetch()
+					}}
+				>
+					{t('storage-status.check-again')}
+				</button>
+			</Layout>
+		)
 	}
 
-	// Show regular restore flow for non-Pro devices
+	if (host === 'umbrel-pro') {
+		return <SetUpFirstInstructions subTitle={t('backups-restore-setup-first.subtitle-pro')} />
+	}
+
+	if (host === 'unknown' && internalStorageQ.data && getGenericRaidOnboardingPath(internalStorageQ.data)) {
+		return <SetUpFirstInstructions subTitle={t('backups-restore-setup-first.subtitle-internal-storage')} />
+	}
+
 	return <RegularRestoreFlow />
 }
 
-// Umbrel Pro restore instructions component
-// Umbrel Pro requires completing onboarding first, then restoring via Settings
-function UmbrelProRestoreInstructions() {
+// The way to restore on a device that has storage to set up: finish onboarding with a
+// temporary account, then restore from Settings
+function SetUpFirstInstructions({subTitle}: {subTitle: string}) {
 	const {t} = useTranslation()
 	const steps = [
-		t('backups-restore-pro.step1'),
+		t('backups-restore-setup-first.step1'),
 		<Trans
 			t={t}
 			key='step2'
-			i18nKey='backups-restore-pro.step2'
+			i18nKey='backups-restore-setup-first.step2'
 			components={[<span key='path' className='font-medium text-white' />]}
 		/>,
-		t('backups-restore-pro.step3'),
+		t('backups-restore-setup-first.step3'),
 	]
 
 	return (
 		<Layout
 			title={t('backups-restore-header')}
-			subTitle={t('backups-restore-pro.subtitle')}
+			subTitle={subTitle}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 		>
@@ -92,7 +129,7 @@ function UmbrelProRestoreInstructions() {
 					))}
 				</div>
 
-				<p className='mt-4 text-center text-13 text-white/50'>{t('backups-restore-pro.after-restore')}</p>
+				<p className='mt-4 text-center text-13 text-white/50'>{t('backups-restore-setup-first.after-restore')}</p>
 
 				{/* Action button */}
 				<div className='flex justify-center pt-6'>
@@ -105,7 +142,7 @@ function UmbrelProRestoreInstructions() {
 	)
 }
 
-// Regular restore flow for non-Pro devices
+// Restores straight from a backup, for devices with no storage to set up first
 function RegularRestoreFlow() {
 	const {t} = useTranslation()
 	const title = t('backups-restore-header')
