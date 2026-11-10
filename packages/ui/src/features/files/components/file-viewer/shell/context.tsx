@@ -1,5 +1,9 @@
-import {createContext, useContext, useEffect, useLayoutEffect, type ReactNode} from 'react'
+import {createContext, useContext, useEffect, useLayoutEffect, useRef, type ReactNode} from 'react'
 import {createPortal} from 'react-dom'
+
+import type {Viewer} from '@/features/files/components/file-viewer/viewers'
+import type {ViewerStep} from '@/features/files/store/slices/file-viewer-slice'
+import type {FileSystemItem} from '@/features/files/types'
 
 // What a viewer saves: the bytes, and the revision they were edited from — the
 // server refuses the save if the file has changed since (see saveFile)
@@ -13,6 +17,21 @@ export type ViewerSaveHandler = {
 // A picture's or a film's own size, in pixels
 export type ViewerSize = {width: number; height: number}
 
+// A file a viewer shows on the stage in the viewer's place (an archive's
+// entry): the shell titles the stage with it, Download calls `download`, the
+// arrows `step` through its neighbours, and the back button (named for `from`)
+// and Escape return to the viewer with `back`
+export type ViewerShown = {
+	item: FileSystemItem
+	// What draws it, when anything can
+	viewer: Viewer | undefined
+	// Undefined while it can't be downloaded yet
+	download: (() => void) | undefined
+	from: string
+	back: () => void
+	step: (direction: ViewerStep) => void
+}
+
 type ViewerShellContextValue = {
 	toolsSlot: HTMLElement | null
 	backdropSlot: HTMLElement | null
@@ -22,6 +41,7 @@ type ViewerShellContextValue = {
 	saveHandler: {current: ViewerSaveHandler | null}
 	escapeHandler: {current: (() => boolean) | null}
 	returnFocus: (event: Event) => void
+	setShown: (shown: ViewerShown | undefined) => void
 }
 
 export const ViewerShellContext = createContext<ViewerShellContextValue | null>(null)
@@ -101,4 +121,30 @@ export function useViewerEscape(handler: () => boolean) {
 		escapeHandler.current = handler
 	})
 	useLayoutEffect(() => () => void (escapeHandler.current = null), [escapeHandler])
+}
+
+// Has the stage show another file in the viewer's place (see ViewerShown),
+// until the caller goes. A quick look has no chrome for it: just the stage.
+export function useViewerShown(shown: ViewerShown) {
+	const {setShown} = useViewerShell()
+	// What the shell calls closes over the viewer's latest state: it calls it
+	// only from an event, after this has run, and renders again only for
+	// another file, or one that can now be downloaded
+	const latest = useRef(shown)
+	useLayoutEffect(() => {
+		latest.current = shown
+	})
+	const {item, viewer, from} = shown
+	const downloadable = shown.download !== undefined
+	useLayoutEffect(() => {
+		setShown({
+			item,
+			viewer,
+			download: downloadable ? () => latest.current.download?.() : undefined,
+			from,
+			back: () => latest.current.back(),
+			step: (direction) => latest.current.step(direction),
+		})
+	}, [item, viewer, downloadable, from, setShown])
+	useLayoutEffect(() => () => setShown(undefined), [setShown])
 }

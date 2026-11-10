@@ -11,7 +11,8 @@ vi.mock('react-i18next', () => ({useTranslation: () => ({t: (key: string) => key
 vi.mock('@/modules/auth/http-auth', () => ({useAuthorizedHttpUrl: (url?: string) => url}))
 vi.mock('@/features/files/components/shared/file-item-icon', () => ({FileItemIcon: () => null}))
 vi.mock('@/features/files/providers/files-capabilities-context', () => ({useIsFilesReadOnly: () => false}))
-vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', () => ({
+vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', async (importOriginal) => ({
+	...(await importOriginal()),
 	useFileBytes: () => ({status: 'ready', bytes: new ArrayBuffer(8), revision: '"r1"'}),
 }))
 // A legacy binary .ppt renamed .pptx: the engine finds an OLE file where a package should be

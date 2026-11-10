@@ -127,6 +127,8 @@ class Server {
 					// Also allow blob: URLs for images being uploaded in Files (since their thumbnails don't exist yet)
 					// and data: URLs for browser-rendered VM cursor images from noVNC.
 					imgSrc: ['*', 'blob:', 'data:'],
+					// Allow blob: URLs for videos Files plays from memory (a video inside a ZIP archive)
+					mediaSrc: ["'self'", 'blob:'],
 					// Allow fetching data from our apps API (e.g., for Discover page in App Store)
 					connectSrc: ["'self'", 'https://apps.umbrel.com'],
 					// Allow plain text access over the local network

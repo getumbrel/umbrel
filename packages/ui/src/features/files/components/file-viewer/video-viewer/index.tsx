@@ -10,13 +10,12 @@ import {
 	StageLoading,
 	StageMessage,
 } from '@/features/files/components/file-viewer/shell/stage-states'
-import {fileViewUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
+import {useFileUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import type {ViewerProps} from '@/features/files/components/file-viewer/viewers'
-import {useAuthorizedHttpUrlQuery} from '@/modules/auth/http-auth'
 
 export default function VideoViewer({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
-	const previewUrl = useAuthorizedHttpUrlQuery(fileViewUrl(item.path))
+	const previewUrl = useFileUrl(item)
 	const containerRef = useRef<HTMLDivElement>(null)
 
 	// Ensure video is fully stopped on unmount to prevent lingering audio

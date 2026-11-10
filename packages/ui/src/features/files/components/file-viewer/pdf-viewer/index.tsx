@@ -46,7 +46,7 @@ import {
 	StageMessage,
 } from '@/features/files/components/file-viewer/shell/stage-states'
 import {ToolPill} from '@/features/files/components/file-viewer/shell/tool-button'
-import {fileViewUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
+import {useFileSource, useFileUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import {listenForPinch, zoomStep} from '@/features/files/components/file-viewer/shell/zoom'
 import {ZoomPill, type ZoomPreset} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import type {ViewerProps} from '@/features/files/components/file-viewer/viewers'
@@ -54,7 +54,6 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {LightboxButton} from '@/features/photos/components/viewer/lightbox-button'
 import {cn} from '@/lib/utils'
-import {useAuthorizedHttpUrlQuery} from '@/modules/auth/http-auth'
 import {isBeneathModal} from '@/utils/is-beneath-modal'
 
 // A gesture's zoom is redrawn once it rests this long; until then the pages
@@ -86,7 +85,7 @@ export type PdfSession = {
 
 export default function PdfViewer({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
-	const query = useAuthorizedHttpUrlQuery(fileViewUrl(item.path))
+	const query = useFileUrl(item)
 	// pdf.js reads ranges from the URL it opened for as long as the document
 	// is open, so the viewer holds on to the first one
 	const [url, setUrl] = useState<string>()
@@ -112,6 +111,7 @@ function PdfDocument({item, mode, url, editable}: ViewerProps & {url: string; ed
 	const isTouch = useIsTouchDevice()
 	// Settled once: canvas limits and gestures are set up with pdf.js
 	const [touch] = useState(isTouch)
+	const source = useFileSource()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const findInputRef = useRef<HTMLInputElement>(null)
 	const [stage, setStage] = useState<HTMLDivElement | null>(null)
@@ -212,12 +212,19 @@ function PdfDocument({item, mode, url, editable}: ViewerProps & {url: string; ed
 		let attempts = 0
 		const open = async () => {
 			// The revision first: every byte pdf.js reads is then asked for as of
-			// that revision, so a save is checked against exactly what was shown
-			const probe = await fetch(url, {headers: {Range: 'bytes=0-0'}, signal})
-			void probe.body?.cancel()
-			if (!probe.ok) throw Object.assign(new Error(probe.statusText), {status: probe.status})
-			const revision = probe.headers.get('ETag') ?? undefined
-			task = openPdf(url, revision)
+			// that revision, so a save is checked against exactly what was shown.
+			// A file held in memory has none, and pdf.js is handed its bytes.
+			let revision: string | undefined
+			if (!source) {
+				const probe = await fetch(url, {headers: {Range: 'bytes=0-0'}, signal})
+				void probe.body?.cancel()
+				if (!probe.ok) throw Object.assign(new Error(probe.statusText), {status: probe.status})
+				revision = probe.headers.get('ETag') ?? undefined
+			}
+			const file = source ? new Uint8Array(await source.blob.arrayBuffer()) : url
+			// Let go of while its bytes were copied, it's never opened: nothing would close it
+			signal.throwIfAborted()
+			task = openPdf(file, revision)
 			task.onPassword = (submit: (password: string) => void, reason: number) =>
 				setLoad({
 					status: 'password',

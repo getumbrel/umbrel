@@ -6,6 +6,7 @@ import {createRoot} from 'react-dom/client'
 import {afterEach, expect, test, vi} from 'vitest'
 
 import ImageViewer from '@/features/files/components/file-viewer/image-viewer'
+import {FileSourceContext, type FileSource} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import type {FileSystemItem} from '@/features/files/types'
 
 const getThumbnail = vi.hoisted(() => vi.fn())
@@ -23,14 +24,16 @@ vi.mock('@/features/files/components/file-viewer/shell/context', () => ({
 
 afterEach(() => getThumbnail.mockReset())
 
-async function render(name: string, type: string) {
+async function render(name: string, type: string, source: FileSource | null = null) {
 	const item = {name, path: `/Home/${name}`, type, modified: 1, size: 2, operations: []} as unknown as FileSystemItem
 	const container = document.createElement('div')
 	const root = createRoot(container)
 	await act(async () =>
 		root.render(
 			<QueryClientProvider client={new QueryClient()}>
-				<ImageViewer item={item} mode='open' />
+				<FileSourceContext value={source}>
+					<ImageViewer item={item} mode='open' />
+				</FileSourceContext>
 			</QueryClientProvider>,
 		),
 	)
@@ -72,5 +75,21 @@ test('a rendition that can’t be made offers the download instead', async () =>
 	expect(container.querySelector('a[download]')?.getAttribute('href')).toBe(
 		'/api/files/download?path=%2FHome%2Fphoto.dng',
 	)
+	await unmount()
+})
+
+test('a picture held in memory is shown from it, never from the server', async () => {
+	const {container, unmount} = await render('photo.png', 'image/png', {blob: new Blob(['png']), url: 'blob:test/1'})
+	expect(container.querySelector('img')?.getAttribute('src')).toBe('blob:test/1')
+	expect(getThumbnail).not.toHaveBeenCalled()
+	await unmount()
+})
+
+test('an SVG held in memory is shown from a data: URL, never from its object URL, which has our origin', async () => {
+	const {container, unmount} = await render('logo.svg', 'image/svg+xml', {
+		blob: new Blob(['<svg/>']),
+		url: 'blob:test/1',
+	})
+	expect(container.querySelector('img')?.getAttribute('src')).toBe(`data:image/svg+xml;base64,${btoa('<svg/>')}`)
 	await unmount()
 })

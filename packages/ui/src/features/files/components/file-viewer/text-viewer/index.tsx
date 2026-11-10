@@ -30,7 +30,13 @@ import {
 	StageMessage,
 } from '@/features/files/components/file-viewer/shell/stage-states'
 import {ToolPill} from '@/features/files/components/file-viewer/shell/tool-button'
-import {fileViewUrl, useFileBytes} from '@/features/files/components/file-viewer/shell/use-file-bytes'
+import {
+	rangeReader,
+	useFileBytes,
+	useFileDownloadUrl,
+	useFileSource,
+	useFileUrl,
+} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import {
 	findMatches,
 	firstInView,
@@ -55,7 +61,6 @@ import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-siz
 import {isUncertainType} from '@/features/files/utils/get-file-viewer'
 import {LightboxButton} from '@/features/photos/components/viewer/lightbox-button'
 import {cn} from '@/lib/utils'
-import {useAuthorizedHttpUrl, useAuthorizedHttpUrlQuery} from '@/modules/auth/http-auth'
 import {useUserApp} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -149,7 +154,7 @@ function looksLikeBinary(text: string) {
 // A file's first bytes are text when they're UTF-8 that doesn't look like
 // binary. Decoded as a stream, a character the cut splits is left for a next
 // chunk, which never comes.
-export function isTextHead(head: ArrayBuffer) {
+export function isTextHead(head: AllowSharedBufferSource) {
 	try {
 		return !looksLikeBinary(new TextDecoder('utf-8', {fatal: true}).decode(head, {stream: true}))
 	} catch {
@@ -163,16 +168,16 @@ export function isTextHead(head: ArrayBuffer) {
 // which says why.
 export function useStartsAsText(item: FileSystemItem) {
 	const uncertain = isUncertainType(item)
-	const view = useAuthorizedHttpUrlQuery(uncertain ? fileViewUrl(item.path) : undefined)
+	const source = useFileSource()
+	const view = useFileUrl(uncertain ? item : undefined)
 	const [head, setHead] = useState<{url: string; text: boolean}>()
 
 	useEffect(() => {
 		if (view.status !== 'ready') return
 		const abort = new AbortController()
-		fetch(view.url, {headers: {Range: `bytes=0-${HEAD_BYTES - 1}`}, signal: abort.signal})
-			.then(async (response) => ({url: view.url, text: !response.ok || isTextHead(await response.arrayBuffer())}))
-			.catch(() => ({url: view.url, text: true}))
-			.then((head) => !abort.signal.aborted && setHead(head))
+		rangeReader(source?.blob ?? view.url, abort.signal)(0, HEAD_BYTES)
+			.then(isTextHead, () => true)
+			.then((text) => !abort.signal.aborted && setHead({url: view.url, text}))
 		return () => abort.abort()
 	}, [view.status, view.url])
 
@@ -182,7 +187,7 @@ export function useStartsAsText(item: FileSystemItem) {
 
 export default function TextViewer({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
-	const downloadUrl = useAuthorizedHttpUrl(`/api/files/download?path=${encodeURIComponent(item.path)}`)
+	const downloadUrl = useFileDownloadUrl(item)
 	const startsAsText = useStartsAsText(item)
 	const tooLarge = (item.size ?? 0) > MAX_EDITOR_FILE_SIZE
 

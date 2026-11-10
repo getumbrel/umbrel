@@ -1,16 +1,20 @@
 import {Info, X} from 'lucide-react'
-import {useState, type ReactNode} from 'react'
+import {Suspense, useState, type ReactNode} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 import {useMedia} from 'react-use'
 
+import {useFileDownloadUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import {floatingGlassClass} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import type {FileSystemItem} from '@/features/files/types'
 import {cn} from '@/lib/utils'
-import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {touchTargetClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
+
+// Stepping from one file to another on the stage: a quick fade of the stage alone, so the title is never in motion
+export const stageStep = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150`
 
 export const stageButtonClass = tw`umbrel-button inline-flex h-[30px] items-center rounded-full border-[0.5px] border-white/20 bg-white/10 px-4 text-13 font-medium text-white/90 shadow-button-highlight-soft-hpx transition-all duration-300 hover:bg-white/15 active:scale-[0.97] active:bg-white/6`
 
@@ -57,14 +61,31 @@ export function StageMessage({
 }
 
 // The way on from a file a viewer can't show: downloading it
-export function StageDownload({item}: {item: FileSystemItem}) {
+export function StageDownload({item, label}: {item: FileSystemItem; label?: string}) {
 	const {t} = useTranslation()
-	const url = useAuthorizedHttpUrl(`/api/files/download?path=${encodeURIComponent(item.path)}`)
+	const url = useFileDownloadUrl(item)
 	if (!url) return null
 	return (
 		<a href={url} download={item.name} className={stageButtonClass}>
-			{t('files-viewer.download')}
+			{label ?? t('files-viewer.download')}
 		</a>
+	)
+}
+
+// Where a viewer draws: while its code is on its way, the file's icon, and if
+// it fails, the download, so neither ever takes the stage with it
+export function StageBoundary({item, children}: {item: FileSystemItem; children: ReactNode}) {
+	const {t} = useTranslation()
+	return (
+		<ErrorBoundary
+			fallbackRender={() => (
+				<StageMessage item={item} title={t('files-viewer.error-title')} detail={t('files-viewer.error-detail')}>
+					<StageDownload item={item} />
+				</StageMessage>
+			)}
+		>
+			<Suspense fallback={<StageLoading item={item} />}>{children}</Suspense>
+		</ErrorBoundary>
 	)
 }
 

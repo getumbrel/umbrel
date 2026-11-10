@@ -124,6 +124,26 @@ export const VIDEO_EXTENSIONS_WITH_IMAGE_THUMBNAILS = new Set([
 	'.insv',
 ])
 
+// Formats a browser can't be counted on to decode (HEIC, TIFF, camera RAW)
+// are shown from the rendition umbreld makes of them for Photos: upright, 1280
+// pixels on the short side. Always, even where the browser could decode the
+// original (Safari reads HEIC and TIFF): a RAW or a TIFF runs to tens of
+// megabytes, and the rendition looks the same everywhere. Download still
+// gives the original.
+export const RENDERED_IMAGE_TYPES: ReadonlySet<string> = new Set([
+	'image/heic',
+	'image/heif',
+	'image/tiff',
+	'image/x-adobe-dng',
+	'image/x-canon-cr2',
+	'image/x-canon-cr3',
+	'image/x-nikon-nef',
+	'image/x-sony-arw',
+	'image/x-fuji-raf',
+	'image/x-olympus-orf',
+	'image/x-panasonic-rw2',
+])
+
 export const FILE_TYPE_MAP = {
 	// Folder
 	directory: {nameTKey: 'files-type.directory', thumbnail: null, viewer: null},

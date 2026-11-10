@@ -1,8 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {Check, Download, X} from 'lucide-react'
+import {Check, ChevronLeft, Download, X} from 'lucide-react'
 import {useReducedMotion} from 'motion/react'
-import {Suspense, useEffect, useRef, useState} from 'react'
-import {ErrorBoundary} from 'react-error-boundary'
+import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 import {useBlocker} from 'react-router-dom'
@@ -17,9 +16,19 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {ImmersiveDialog} from '@/components/ui/immersive-dialog'
-import {ViewerShellContext, type ViewerSaveHandler} from '@/features/files/components/file-viewer/shell/context'
-import {StageDownload, StageLoading, StageMessage} from '@/features/files/components/file-viewer/shell/stage-states'
+import {
+	ViewerShellContext,
+	type ViewerSaveHandler,
+	type ViewerShown,
+} from '@/features/files/components/file-viewer/shell/context'
+import {
+	StageBoundary,
+	StageDownload,
+	StageMessage,
+	stageStep,
+} from '@/features/files/components/file-viewer/shell/stage-states'
 import {toolHeightClass} from '@/features/files/components/file-viewer/shell/tool-button'
+import {useFileDownloadUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import {useViewerKeys} from '@/features/files/components/file-viewer/shell/use-viewer-keys'
 import {keepFocus} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import type {Viewer} from '@/features/files/components/file-viewer/viewers'
@@ -30,7 +39,7 @@ import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-siz
 import {LightboxButton, lightboxButtonClass} from '@/features/photos/components/viewer/lightbox-button'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
-import {dashboardAuthHeaders, useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
+import {dashboardAuthHeaders} from '@/modules/auth/http-auth'
 import {useWallpaper, WallpaperAvifSource} from '@/providers/wallpaper'
 import {trpcReact} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
@@ -38,7 +47,8 @@ import {tw} from '@/utils/tw'
 // How the viewer opens: the backdrop fades up over Files, the file settles in
 // from a touch smaller, and a beat later the chrome rises in from its edge.
 // Closing runs it backwards, the chrome leaving first. Stepping between files
-// animates only the stage, a quick fade, so the title is never in motion.
+// animates only the stage, a quick fade, so the title is never in motion (and
+// so does a viewer stepping between files it shows in its place).
 // Entering fills backwards only: held at its end, an animation would leave a
 // transform and a filter on the element for good, and a filter cuts the
 // frosted glass inside off from what's behind it.
@@ -51,7 +61,6 @@ const chromeLeave = tw`motion-safe:animate-out motion-safe:fade-out motion-safe:
 const backdropEnter = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300 motion-safe:fill-mode-backwards`
 const backdropLeave = tw`motion-safe:animate-out motion-safe:fade-out motion-safe:duration-250 motion-safe:fill-mode-forwards`
 const stageEnter = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.98] motion-safe:duration-300 motion-safe:fill-mode-backwards`
-const stageStep = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150`
 const stageLeave = tw`motion-safe:animate-out motion-safe:fade-out motion-safe:zoom-out-[0.98] motion-safe:duration-200 motion-safe:fill-mode-forwards`
 // Long enough for everything above to be gone
 const LEAVE_MS = 260
@@ -107,13 +116,20 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 	const setViewerItem = useFilesStore((s) => s.setViewerItem)
 	const setSelectedItems = useFilesStore((s) => s.setSelectedItems)
 	const setViewerNavigationGuard = useFilesStore((s) => s.setViewerNavigationGuard)
-	const downloadUrl = useAuthorizedHttpUrl(`/api/files/download?path=${encodeURIComponent(item.path)}`)
+	const downloadUrl = useFileDownloadUrl(item)
 
 	const contentRef = useRef<HTMLDivElement>(null)
 	const [toolsSlot, setToolsSlot] = useState<HTMLElement | null>(null)
 	const [backdropSlot, setBackdropSlot] = useState<HTMLElement | null>(null)
 	const [detail, setDetail] = useState<string>()
-	const [dirty, setDirty] = useState(false)
+	// What the stage shows: the file, or one the viewer shows in its place (see useViewerShown)
+	const [shown, setShown] = useState<ViewerShown>()
+	const file = shown?.item ?? item
+	const stageViewer = shown ? shown.viewer : viewer
+	// Saving writes the opened file, so the changes of one shown in its place (an archive's entry) are never saved,
+	// whatever its viewer says
+	const [stageDirty, setDirty] = useState(false)
+	const dirty = stageDirty && !shown
 	const saveHandler = useRef<ViewerSaveHandler | null>(null)
 	const escapeHandler = useRef<(() => boolean) | null>(null)
 	const [saveState, setSaveState] = useState<SaveState>('idle')
@@ -176,7 +192,7 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 
 	// Resolves to whether the file now holds the viewer's version
 	const save = async ({copy = false, overwrite = false} = {}) => {
-		const handler = saveHandler.current
+		const handler = shown ? null : saveHandler.current
 		if (!handler || savingRef.current) return false
 		savingRef.current = true
 		setSaveState('saving')
@@ -282,38 +298,36 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 		onSave: () => {
 			if (dirty) void save()
 		},
-		ownsArrows: viewer?.ownsArrows,
+		onStep: shown?.step,
+		ownsArrows: stageViewer?.ownsArrows,
 	})
 
 	const subtitle = [
-		fileTypeLabel(item, t),
+		fileTypeLabel(file, t),
 		detail,
-		savedSize?.path === item.path
+		savedSize?.path === file.path
 			? formatFilesystemSize(savedSize.size)
-			: item.size != null && item.type !== 'directory'
-				? formatFilesystemSize(item.size)
+			: file.size != null && file.type !== 'directory'
+				? formatFilesystemSize(file.size)
 				: undefined,
 	]
 		.filter(Boolean)
 		.join(' · ')
 	const chrome = (edge: 'top' | 'bottom') => (closing ? chromeLeave : cn(chromeEnter[edge], CHROME_DELAY))
 	const showSave = dirty || saveState !== 'idle'
+	// A link to the file on disk; for one shown in the viewer's place, what downloads it
+	const download = shown ? shown.download : downloadUrl
 
 	const actions = (
 		<div className={cn('flex shrink-0 items-center gap-1', isMobile && 'justify-center')}>
 			{/* The viewer's own tools (see ViewerTools) */}
 			<div ref={setToolsSlot} className='contents' />
-			{downloadUrl ? (
-				<a
-					href={downloadUrl}
-					download={item.name}
-					aria-label={t('files-viewer.download')}
-					className={lightboxButtonClass}
-				>
+			{typeof download === 'string' ? (
+				<a href={download} download={file.name} aria-label={t('files-viewer.download')} className={lightboxButtonClass}>
 					<Download className='size-5' />
 				</a>
 			) : (
-				<LightboxButton icon={Download} label={t('files-viewer.download')} disabled />
+				<LightboxButton icon={Download} label={t('files-viewer.download')} onClick={download} disabled={!download} />
 			)}
 		</div>
 	)
@@ -349,9 +363,9 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 						if (escapeHandler.current?.()) return
 						// Then a text field gives the keyboard back to the file (a page
 						// number half typed, a form's field), and only after that does
-						// the viewer close
+						// the viewer go back from a file it shows in its place, or close
 						const field = document.activeElement
-						if (!isField(field)) return requestClose()
+						if (!isField(field)) return shown ? shown.back() : requestClose()
 						field.blur()
 						refocus()
 					}}
@@ -361,7 +375,7 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 					onInteractOutside={(event) => event.preventDefault()}
 					className='fixed inset-0 z-50 flex h-dvh w-screen flex-col outline-hidden'
 				>
-					<DialogPrimitive.Title className='sr-only'>{item.name}</DialogPrimitive.Title>
+					<DialogPrimitive.Title className='sr-only'>{file.name}</DialogPrimitive.Title>
 					<DialogPrimitive.Description className='sr-only'>{subtitle}</DialogPrimitive.Description>
 
 					{/* Backdrop: the wallpaper, turned and blurred into a deep wash,
@@ -388,21 +402,40 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 					</div>
 
 					<ViewerShellContext
-						value={{toolsSlot, backdropSlot, setDetail, setSize, setDirty, saveHandler, escapeHandler, returnFocus}}
+						value={{
+							toolsSlot,
+							backdropSlot,
+							setDetail,
+							setSize,
+							setDirty,
+							saveHandler,
+							escapeHandler,
+							returnFocus,
+							setShown,
+						}}
 					>
 						<header className='relative flex items-center justify-between gap-4 px-4 pt-4 md:px-6 md:pt-5'>
-							<div className={cn('min-w-0', chrome('top'))}>
-								<p className='flex min-h-[1lh] items-center gap-2 text-15 font-semibold -tracking-2 text-white/95'>
-									<span className='min-w-0 truncate'>{item.name}</span>
-									{dirty && (
-										<span
-											role='img'
-											aria-label={t('files-viewer.unsaved-changes')}
-											className='size-1.5 shrink-0 rounded-full bg-amber-400 motion-safe:animate-in motion-safe:zoom-in'
-										/>
-									)}
-								</p>
-								<p className='min-h-[1lh] truncate text-12 text-white/50'>{subtitle}</p>
+							<div className={cn('flex min-w-0 items-center gap-3', chrome('top'))}>
+								{shown && (
+									<LightboxButton
+										icon={ChevronLeft}
+										label={t('files-viewer.back-to', {name: shown.from})}
+										onClick={shown.back}
+									/>
+								)}
+								<div className='min-w-0'>
+									<p className='flex min-h-[1lh] items-center gap-2 text-15 font-semibold -tracking-2 text-white/95'>
+										<span className='min-w-0 truncate'>{file.name}</span>
+										{dirty && (
+											<span
+												role='img'
+												aria-label={t('files-viewer.unsaved-changes')}
+												className='size-1.5 shrink-0 rounded-full bg-amber-400 motion-safe:animate-in motion-safe:zoom-in'
+											/>
+										)}
+									</p>
+									<p className='min-h-[1lh] truncate text-12 text-white/50'>{subtitle}</p>
+								</div>
 							</div>
 							<div className={cn('flex shrink-0 items-center gap-1', chrome('top'))}>
 								{showSave && <SaveButton state={saveState} onSave={() => void save()} />}
@@ -416,32 +449,20 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 								key={item.path}
 								className={cn('flex min-h-0 flex-1 flex-col', closing ? stageLeave : stepped ? stageStep : stageEnter)}
 							>
-								<ErrorBoundary
-									fallbackRender={() => (
+								<StageBoundary item={item}>
+									{viewer ? (
+										<viewer.Component item={item} mode='open' />
+									) : (
+										// Opening something Files has no viewer for offers the download
 										<StageMessage
 											item={item}
-											title={t('files-viewer.error-title')}
-											detail={t('files-viewer.error-detail')}
+											title={t('files-viewer.unsupported-title')}
+											detail={t('files-viewer.unsupported-detail')}
 										>
 											<StageDownload item={item} />
 										</StageMessage>
 									)}
-								>
-									<Suspense fallback={<StageLoading item={item} />}>
-										{viewer ? (
-											<viewer.Component item={item} mode='open' />
-										) : (
-											// Opening something Files has no viewer for offers the download
-											<StageMessage
-												item={item}
-												title={t('files-viewer.unsupported-title')}
-												detail={t('files-viewer.unsupported-detail')}
-											>
-												<StageDownload item={item} />
-											</StageMessage>
-										)}
-									</Suspense>
-								</ErrorBoundary>
+								</StageBoundary>
 							</div>
 						</main>
 
@@ -450,7 +471,7 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 						{isMobile ? (
 							<div className={cn('relative flex justify-center px-4 pt-3 pb-4', chrome('bottom'))}>{actions}</div>
 						) : (
-							!viewer?.bleeds && <div className='h-5' />
+							!stageViewer?.bleeds && <div className='h-5' />
 						)}
 					</ViewerShellContext>
 

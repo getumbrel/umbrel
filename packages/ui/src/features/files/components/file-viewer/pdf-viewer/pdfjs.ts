@@ -90,10 +90,11 @@ class BinaryDataFactory {
 }
 
 // Opens the file at `url`, streaming it and asking for ranges, so the first
-// page shows long before a large file has arrived
-export function openPdf(url: string, revision: string | undefined) {
+// page shows long before a large file has arrived; or the bytes of one held in
+// memory, which pdf.js takes for its own
+export function openPdf(file: string | Uint8Array, revision: string | undefined) {
 	return getDocument({
-		url,
+		...(typeof file === 'string' ? {url: file} : {data: file}),
 		// Every request is for the revision a save will be checked against: a
 		// file replaced while it loads fails (412) instead of mixing two
 		httpHeaders: revision ? {'If-Match': revision} : undefined,

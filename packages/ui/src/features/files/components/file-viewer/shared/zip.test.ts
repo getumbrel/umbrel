@@ -492,6 +492,22 @@ describe('ZipArchive.read', () => {
 		])
 	})
 
+	test('reads an entry with the signal it’s given, and called off, fails with its reason', async () => {
+		const zip = deck()
+		const {read} = remote(zip)
+		const signals: Array<AbortSignal | undefined> = []
+		const archive = await ZipArchive.read(zip.length, (start, end, signal) => {
+			signals.push(signal)
+			return read(start, end)
+		})
+		const abort = new AbortController()
+		expect(await archive.bytes('preview.jpg', abort.signal)).toEqual(preview)
+		expect(signals).toEqual([undefined, abort.signal, abort.signal])
+		const pending = archive.bytes('Data/movie-0.mov', abort.signal)
+		abort.abort()
+		await expect(pending).rejects.toBe(abort.signal.reason)
+	})
+
 	test('reads what the end it holds already has without asking again: a small archive in one read', async () => {
 		const zip = sample()
 		const {asked, read} = remote(zip)

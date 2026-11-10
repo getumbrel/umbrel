@@ -47,7 +47,8 @@ vi.mock('@/modules/auth/http-auth', () => ({useAuthorizedHttpUrl: (url?: string)
 vi.mock('@/features/files/components/shared/file-item-icon', () => ({FileItemIcon: () => null}))
 vi.mock('@/features/files/providers/files-capabilities-context', () => ({useIsFilesReadOnly: () => false}))
 vi.mock('@/features/files/hooks/use-is-touch-device', () => ({useIsTouchDevice: () => false}))
-vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', () => ({
+vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', async (importOriginal) => ({
+	...(await importOriginal()),
 	useFileBytes: () => ({status: 'ready', bytes: ui.bytes, revision: '"r1"'}),
 }))
 vi.mock('@/features/files/components/file-viewer/shell/context', () => ({

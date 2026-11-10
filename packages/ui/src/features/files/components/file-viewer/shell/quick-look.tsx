@@ -1,7 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {useReducedMotion} from 'motion/react'
-import {Suspense, useRef, useState, type CSSProperties} from 'react'
-import {ErrorBoundary} from 'react-error-boundary'
+import {useRef, useState, type CSSProperties} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
@@ -12,7 +11,7 @@ import {
 	type ViewerSaveHandler,
 	type ViewerSize,
 } from '@/features/files/components/file-viewer/shell/context'
-import {StageDownload, StageLoading, StageMessage} from '@/features/files/components/file-viewer/shell/stage-states'
+import {StageBoundary, stageStep} from '@/features/files/components/file-viewer/shell/stage-states'
 import {useViewerKeys} from '@/features/files/components/file-viewer/shell/use-viewer-keys'
 import type {Viewer} from '@/features/files/components/file-viewer/viewers'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
@@ -30,7 +29,6 @@ const panelEnter = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:zoo
 const panelLeave = tw`motion-safe:animate-out motion-safe:fade-out motion-safe:zoom-out-[0.96] motion-safe:duration-150 motion-safe:fill-mode-forwards`
 const scrimEnter = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 motion-safe:fill-mode-backwards`
 const scrimLeave = tw`motion-safe:animate-out motion-safe:fade-out motion-safe:duration-150 motion-safe:fill-mode-forwards`
-const stageStep = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150`
 // Long enough for the panel and the scrim to be gone
 const LEAVE_MS = 160
 
@@ -55,7 +53,7 @@ function panelSize(viewer: Viewer | undefined, fit: ViewerSize | undefined): CSS
 	}
 }
 
-// Nothing in a quick look is saved, or described beyond its name
+// Nothing in a quick look is saved, described beyond its name, or shown in its place
 const ignore = () => {}
 
 // A glance at a file without leaving the listing, which stays in view behind a
@@ -156,24 +154,13 @@ export function QuickLook({item, viewer}: {item: FileSystemItem; viewer?: Viewer
 							saveHandler,
 							escapeHandler,
 							returnFocus,
+							setShown: ignore,
 						}}
 					>
 						<div key={item.path} className={cn('relative flex min-h-0 flex-1 flex-col', stepped && stageStep)}>
-							<ErrorBoundary
-								fallbackRender={() => (
-									<StageMessage
-										item={item}
-										title={t('files-viewer.error-title')}
-										detail={t('files-viewer.error-detail')}
-									>
-										<StageDownload item={item} />
-									</StageMessage>
-								)}
-							>
-								<Suspense fallback={<StageLoading item={item} />}>
-									{viewer ? <viewer.Component item={item} mode='preview' /> : <InfoCard item={item} />}
-								</Suspense>
-							</ErrorBoundary>
+							<StageBoundary item={item}>
+								{viewer ? <viewer.Component item={item} mode='preview' /> : <InfoCard item={item} />}
+							</StageBoundary>
 						</div>
 					</ViewerShellContext>
 

@@ -1,43 +1,29 @@
 import {useQuery} from '@tanstack/react-query'
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {useViewerSize, ViewerBackdrop, type ViewerSize} from '@/features/files/components/file-viewer/shell/context'
 import {StageDownload, StageLoading, StageMessage} from '@/features/files/components/file-viewer/shell/stage-states'
-import {fileViewUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
+import {fileViewUrl, useFileSource} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import type {ViewerProps} from '@/features/files/components/file-viewer/viewers'
+import {RENDERED_IMAGE_TYPES} from '@/features/files/constants'
 import type {FileSystemItem} from '@/features/files/types'
 import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {trpcReact} from '@/trpc/trpc'
 
-// Formats a browser can't be counted on to decode (HEIC, TIFF, camera RAW)
-// are shown from the rendition umbreld makes of them for Photos: upright, 1280
-// pixels on the short side. Always, even where the browser could decode the
-// original (Safari reads HEIC and TIFF): a RAW or a TIFF runs to tens of
-// megabytes, and the rendition looks the same everywhere. Download still
-// gives the original.
-const RENDERED_TYPES = new Set([
-	'image/heic',
-	'image/heif',
-	'image/tiff',
-	'image/x-adobe-dng',
-	'image/x-canon-cr2',
-	'image/x-canon-cr3',
-	'image/x-nikon-nef',
-	'image/x-sony-arw',
-	'image/x-fuji-raf',
-	'image/x-olympus-orf',
-	'image/x-panasonic-rw2',
-])
-
-// Where the picture is read from: the file, or its rendition, which has no
-// URL while it's being made and fails if it can't be
+// Where the picture is read from: the file, or its rendition (see
+// RENDERED_IMAGE_TYPES), which has no URL while it's being made and fails if
+// it can't be. A file held in memory (an archive's entry) is shown from there,
+// as it is: none of the types that need a rendition is opened from memory.
 function usePicture(item: FileSystemItem) {
 	// The React client, as the listing's thumbnails ask: a request held open
 	// while the rendition is made stays out of the pool pictures load through
 	const {client: trpc} = trpcReact.useUtils()
-	const rendered = RENDERED_TYPES.has(item.type)
+	const source = useFileSource()
+	const svg = source && item.type === 'image/svg+xml' ? source.blob : undefined
+	const svgUrl = useSvgDataUrl(svg)
+	const rendered = !source && RENDERED_IMAGE_TYPES.has(item.type)
 	const rendition = useQuery({
 		// Under the file's revision, as the listing's thumbnails are
 		queryKey: ['files-viewer-rendition', item.path, item.modified, item.size],
@@ -49,8 +35,25 @@ function usePicture(item: FileSystemItem) {
 		retry: false,
 		refetchOnWindowFocus: false,
 	})
-	const url = useAuthorizedHttpUrl(rendered ? rendition.data : fileViewUrl(item.path))
+	const url = useAuthorizedHttpUrl(source ? undefined : rendered ? rendition.data : fileViewUrl(item.path))
+	if (source) return {url: svg ? svgUrl : source.url, failed: false}
 	return {url, failed: rendition.isError}
+}
+
+// An SVG held in memory, as a data: URL to show it from. Its object URL is
+// never typed as SVG, as a picture must be: that URL has our origin, and an
+// SVG opened from it as a page (in a new tab, say) could run script as us. A
+// data: URL has no origin of its own, and a browser won't open one as a page.
+function useSvgDataUrl(blob: Blob | undefined) {
+	const [url, setUrl] = useState<{blob: Blob; url: string}>()
+	useEffect(() => {
+		if (!blob) return
+		const reader = new FileReader()
+		reader.onload = () => setUrl({blob, url: reader.result as string})
+		reader.readAsDataURL(new Blob([blob], {type: 'image/svg+xml'}))
+		return () => reader.abort()
+	}, [blob])
+	return blob && url?.blob === blob ? url.url : undefined
 }
 
 export default function ImageViewer({item}: ViewerProps) {
