@@ -1500,6 +1500,13 @@ export default class Raid {
 	}
 
 	async #setup(deviceIds: string[], raidType: RaidType, acceleratorDeviceIds?: string[]): Promise<boolean> {
+		// Never build a new array while this install already has one in use. When the array failed to
+		// mount at boot no user exists, so registration is open, but its drives may only be missing or
+		// degraded and still hold the user's data.
+		if (await this.isRunningFromRaidData()) throw new Error('Cannot set up RAID while running from a RAID array')
+		if (await this.checkRaidMountFailure())
+			throw new Error('Cannot set up RAID because the existing storage failed to mount')
+
 		if (deviceIds.length === 0) throw new Error('At least one device is required')
 		if (raidType === 'failsafe' && deviceIds.length < 2) throw new Error('Failsafe mode requires at least two devices')
 		const currentPool = await this.getStatus()
