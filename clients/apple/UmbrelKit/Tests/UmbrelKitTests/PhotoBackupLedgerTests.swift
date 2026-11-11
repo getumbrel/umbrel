@@ -968,6 +968,28 @@ final class PhotoBackupLedgerTests: XCTestCase {
 		XCTAssertEqual(count, 1)
 	}
 
+	// The automatic retry used to count the ledger under its write lock, which iOS found
+	// held when it suspended the app after a large backup (0xdead10cc). With nothing to
+	// retry, the count takes no lock, so another writer holding it doesn't even make
+	// the call wait.
+	func testAutomaticRetryTakesNoWriteLockWhenNothingFailed() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory([candidate("photo", mediaType: 1)], deviceId: "device", changeToken: Data())
+		try prepare(ledger, "photo")
+		try ledger.recordResourceSucceeded(resourceKey: "photo", bytes: 10)
+
+		let writer = try openDatabase()
+		defer { sqlite3_close(writer) }
+		XCTAssertEqual(sqlite3_exec(writer, "BEGIN IMMEDIATE", nil, nil, nil), SQLITE_OK)
+		defer { sqlite3_exec(writer, "ROLLBACK", nil, nil, nil) }
+
+		let started = Date()
+		XCTAssertFalse(
+			try ledger.requeueFailedAssetsAfterProgress(deviceId: "device", includePhotos: true, includeVideos: true)
+		)
+		XCTAssertLessThan(Date().timeIntervalSince(started), 1, "The count must not wait for the write lock")
+	}
+
 	private func makeLedger() throws -> PhotoBackupLedger {
 		try XCTUnwrap(PhotoBackupLedger(url: databaseURL))
 	}

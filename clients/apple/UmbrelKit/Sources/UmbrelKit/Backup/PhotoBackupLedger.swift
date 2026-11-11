@@ -1111,23 +1111,32 @@ public final class PhotoBackupLedger {
 	// failed resources remain, retry them once in the same pass. Remembering the
 	// uploaded count at that retry means a resource that keeps failing is tried
 	// again only after other backups have made progress, never in a loop.
+	//
+	// Counting the ledger reads every asset and takes a while on a large library, so
+	// it runs before the write lock instead of under it. iOS ends an app it suspends
+	// while that lock is held (0xdead10cc), and most passes find nothing to retry, so
+	// they never take it. The progress check is repeated under the lock, so the app
+	// and the extension deciding to retry at the same count still retry once.
 	public func requeueFailedAssetsAfterProgress(
 		deviceId: String,
 		includePhotos: Bool,
 		includeVideos: Bool
 	) throws -> Bool {
 		return try queue.sync {
-			try transaction {
-				let statistics = try statisticsLocked(
-					deviceId: deviceId,
-					includePhotos: includePhotos,
-					includeVideos: includeVideos
-				)
-				guard statistics.failedCount > 0,
-					statistics.queuedCount == 0,
-					statistics.preparedCount == 0
-				else { return false }
-				let progress = Data(String(statistics.uploadedCount).utf8)
+			let statistics = try statisticsLocked(
+				deviceId: deviceId,
+				includePhotos: includePhotos,
+				includeVideos: includeVideos
+			)
+			guard statistics.failedCount > 0,
+				statistics.queuedCount == 0,
+				statistics.preparedCount == 0
+			else { return false }
+			let progress = Data(String(statistics.uploadedCount).utf8)
+			guard try metadataLocked(key: Self.automaticRetryProgressKey, deviceId: deviceId) != progress else {
+				return false
+			}
+			return try transaction {
 				guard try metadataLocked(key: Self.automaticRetryProgressKey, deviceId: deviceId) != progress else {
 					return false
 				}
