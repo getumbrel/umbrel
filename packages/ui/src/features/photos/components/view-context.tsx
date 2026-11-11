@@ -149,7 +149,8 @@ type PhotosView = {
 
 // A map stretch, in degrees: west is east of east across the antimeridian
 export type MapBounds = {west: number; south: number; east: number; north: number}
-export type MapArea = {bounds: MapBounds; count: number; place?: string}
+// (`spot`: it is one spot a marker was opened for, not all the map shows)
+export type MapArea = {bounds: MapBounds; count: number; place?: string; spot?: boolean}
 export type MapControls = {
 	map: MapLibreMap
 	showAll: () => void

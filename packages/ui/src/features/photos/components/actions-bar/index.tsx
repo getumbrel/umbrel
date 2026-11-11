@@ -129,7 +129,9 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 				<div
 					className={cn(
 						'flex min-w-0 flex-col self-end',
-						titleShadowClass,
+						// Over the map the title stands on the map itself, names and all,
+						// under a light shade: its own shadow is deeper there
+						isMap ? mapTitleShadowClass : titleShadowClass,
 						// On desktop the map runs beneath the sidebar's glass card, which
 						// reaches 8px past its column (the map's SIDEBAR_OVERHANG): the
 						// title stands 20px clear of it
@@ -315,6 +317,7 @@ const titleClass = tw`truncate font-semibold -tracking-2 text-white/90`
 // A soft shadow under the date and the view line: they sit where tiles have
 // all but faded back in, and a bright one would otherwise swallow them
 const titleShadowClass = tw`[text-shadow:0_1px_2px_rgb(0_0_0/0.45),0_0_16px_rgb(0_0_0/0.35)]`
+const mapTitleShadowClass = tw`[text-shadow:0_1px_2px_rgb(0_0_0/0.8),0_0_10px_rgb(0_0_0/0.7),0_0_24px_rgb(0_0_0/0.5)]`
 const riseClass = tw`motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in motion-safe:slide-in-from-bottom-1`
 const countClass = 'min-w-0 truncate text-17 font-semibold -tracking-2 text-white/75'
 

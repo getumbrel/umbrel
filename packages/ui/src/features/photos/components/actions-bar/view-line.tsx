@@ -10,6 +10,7 @@ import {isFilterSection, type FilterSection} from '@/features/photos/constants'
 import {useItems} from '@/features/photos/hooks/use-items'
 import {useAlbums, useLibrarySummary, type LibrarySummary} from '@/features/photos/hooks/use-library'
 import {usePhotoSource} from '@/features/photos/hooks/use-photo-sources'
+import {cn} from '@/lib/utils'
 import {formatNumberI18n} from '@/utils/number'
 
 // What the timeline is showing and how much of it there is — "Library / 429
@@ -39,8 +40,9 @@ export function ViewLine() {
 	// the summary doesn't split sizes any finer
 	let size: string | undefined
 	if (isMap) {
-		// "In view / 248 items" (the bar's title names the place)
-		name = t('photos-map.in-view')
+		// "In view / 248 items" (the bar's title names the place), or the one
+		// spot the list is narrowed to: "This spot / 70 items"
+		name = t(mapArea?.spot ? 'photos-map.this-spot' : 'photos-map.in-view')
 		count = total
 	} else if (albumId) {
 		const album = albums?.find((a) => a.id === albumId)
@@ -65,7 +67,13 @@ export function ViewLine() {
 		total === undefined ? '' : formatNumberI18n({n: total, showDecimals: false, locale: i18n.language})
 
 	return (
-		<p className='flex min-w-0 items-center gap-2 text-12 leading-tight -tracking-2 text-white/50'>
+		<p
+			className={cn(
+				'flex min-w-0 items-center gap-2 text-12 leading-tight -tracking-2',
+				// Over the map it is read against the map's own names: a step brighter
+				isMap ? 'text-white/75' : 'text-white/50',
+			)}
+		>
 			<span className='truncate'>{name}</span>
 			{search.active
 				? total !== undefined && (

@@ -47,6 +47,9 @@ const SIDEBAR_OVERHANG = 8
 const MAX_ZOOM = 18
 // Where a single place is looked at from: close enough to see the street
 const SPOT_ZOOM = 15
+// From here in, the map shows a part of town, and a village is a place to
+// name it after; further out it is the city's, or the town's
+const NEIGHBOURHOOD_ZOOM = 12
 // How much of the map the list's sheet takes at rest, on phones; drawn up,
 // it takes all the room under the bar
 const LIST_SHEET = 0.55
@@ -59,8 +62,9 @@ let lastCamera: {center: [number, number]; zoom: number} | undefined
 let listOpen = false
 // The globe, as the map opens: this much of the room the map has, across
 const GLOBE_FILL = 0.8
-// … and as far away as it goes: this much of the least room it is ever left,
-// with the list out, so the globe as it opens is never past the limit
+// … and as far away as it goes: this much of the room, or as small as fits
+// the least room it is ever left, with the list out, so the globe can always
+// be seen whole
 const GLOBE_AFAR = 0.42
 // It comes into sight a little way off and round, and turns — the way the
 // Earth does — to face the photos, which land on it as it settles. Seen once
@@ -118,10 +122,13 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 		if (!style || !containerRef.current) return
 		const {clientWidth: width, clientHeight: height} = containerRef.current
 		const room = Math.min(width, height)
-		const leastRoom = Math.min(
-			width - sidebarCard - (isMobile ? 0 : PANEL_WIDTH + PANEL_GAP * 2),
-			height - frame.inset - dockClearance,
-		)
+		// The room the map is seen in, and the least it is ever left: beside the
+		// list on desktop, above its sheet on phones
+		const seen = {width: width - sidebarCard, height: height - frame.inset - dockClearance}
+		const leastRoom = isMobile
+			? Math.min(seen.width, height * (1 - LIST_SHEET) - frame.inset)
+			: Math.min(seen.width - PANEL_WIDTH - PANEL_GAP * 2, seen.height)
+		const farthest = Math.min(GLOBE_AFAR * Math.min(seen.width, seen.height), GLOBE_FILL * leastRoom)
 		let instance: MapLibreMap
 		try {
 			instance = new MapLibreMap({
@@ -131,7 +138,7 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 				center: lastCamera?.center ?? [-30, 15],
 				zoom: lastCamera?.zoom ?? globeZoom(GLOBE_FILL * 0.6 * room, 15, height),
 				// (No zoom at all, in a window too small to leave it any room)
-				minZoom: Math.max(0, globeZoom(GLOBE_AFAR * leastRoom, 0, height)) || 0,
+				minZoom: Math.max(0, globeZoom(farthest, 0, height)) || 0,
 				maxZoom: MAX_ZOOM,
 				renderWorldCopies: false,
 				dragRotate: false,
@@ -214,14 +221,28 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 	const focused = useRef<string>(undefined)
 	useEffect(() => {
 		if (!map) return
-		const target = sheetShown ? {...padding, bottom: Math.round(viewSize(map).height * LIST_SHEET)} : padding
+		const {width, height} = viewSize(map)
+		const target = sheetShown ? {...padding, bottom: Math.round(height * LIST_SHEET)} : padding
 		const focus =
 			scope && focused.current !== scope.key && !inSight(map, scope.center, target) ? scope.center : undefined
 		focused.current = scope?.key
 		if (padded.current !== map || (map.isMoving() && !focus)) {
 			map.setPadding(target)
 			if (focus) map.setCenter(focus)
-		} else map.easeTo({padding: target, center: focus, duration: 300})
+		} else {
+			// The globe, seen whole in the room it had, steps back to be seen whole
+			// in the room it is left: the list coming out doesn't crop the world.
+			// And the globe as it opens, filling its room, fills the new one — so
+			// it comes forward again when the list is put away
+			const room = ({top = 0, right = 0, bottom = 0, left = 0}: PaddingOptions) =>
+				Math.min(width - left - right, height - top - bottom)
+			const [zoom, latitude] = [map.getZoom(), map.getCenter().lat]
+			const across = (share: number, padding: PaddingOptions) => globeZoom(share * room(padding), latitude, height)
+			const filling = Math.abs(zoom - across(GLOBE_FILL, map.getPadding())) < 0.02
+			const whole = zoom <= across(1, map.getPadding())
+			const fitted = filling ? across(GLOBE_FILL, target) : Math.min(zoom, across(GLOBE_FILL, target))
+			map.easeTo({padding: target, center: focus, zoom: whole ? fitted : undefined, duration: 300})
+		}
 		padded.current = map
 	}, [map, padding, sheetShown, scope])
 
@@ -340,7 +361,7 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 			if (!atlas || cover < 0 || zoom < 2.5) return undefined
 			const [lat, lng] = [points.lat[cover]!, points.lng[cover]!]
 			if (zoom < 6) return locationName(atlas, lat, lng, i18n.language, 'country') || undefined
-			const town = zoom >= 9 ? settlementNear(map, lng, lat, lang) : undefined
+			const town = zoom >= 9 ? settlementNear(map, lng, lat, lang, zoom < NEIGHBOURHOOD_ZOOM) : undefined
 			if (!town && zoom >= 9 && !map.areTilesLoaded()) return published?.place
 			if (!town) return locationName(atlas, lat, lng, i18n.language, 'city') || undefined
 			return [town, locationName(atlas, lat, lng, i18n.language, 'country')].filter(Boolean).join(', ')
@@ -350,7 +371,7 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 			clearTimeout(timer)
 			timer = setTimeout(() => {
 				const bounds = scope?.bounds ?? visibleBounds(map)
-				published = {bounds, count: countWithin(points, bounds), place: name(bounds)}
+				published = {bounds, count: countWithin(points, bounds), place: name(bounds), spot: scope !== undefined}
 				setMapArea(published)
 				// Just after the markers have settled: the biggest of them names it
 			}, SETTLE_RECLUSTER_MS + 20)
@@ -474,8 +495,8 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 			</div>
 			<div
 				aria-hidden
-				className='pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/55 via-black/20 to-transparent'
-				style={{height: frame.inset + 24}}
+				className='pointer-events-none absolute inset-x-0 top-0'
+				style={{height: frame.inset + SHADE.tail, background: shade(frame.inset)}}
 			/>
 			{map && points && !empty && phase === 'settled' && (
 				<MapMarkers
@@ -490,11 +511,11 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 				/>
 			)}
 
-			{/* The sidebar's card: glass over the map, which carries on beneath it */}
+			{/* The sidebar's card, over the map, which carries on beneath it */}
 			{!isMobile && (
 				<div
 					aria-hidden
-					className='umbrel-material absolute bg-black/35'
+					className='umbrel-material absolute'
 					style={{
 						top: PANEL_GAP,
 						bottom: PANEL_GAP,
@@ -551,6 +572,32 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 			)}
 		</div>
 	)
+}
+
+// What the title and the bar stand on: the map runs to the sheet's top edge
+// and is seen all the way, under one soft shade across the whole header. Even
+// from side to side: a darker patch behind the title alone reads as a smudge
+// on the map. (The title carries a shadow of its own over the map: see
+// ActionsBar.)
+//
+// The shade has no edge to it. It holds through the title and then eases out
+// well below the bar, along a curve that is level at both ends: a straight
+// ramp, however faint, starts and stops at a line the eye finds, and a short
+// one reads as a band laid over the map. The curve is drawn as stops close
+// enough together to pass for it.
+const SHADE = {deepest: 0.6, held: 44, tail: 150}
+const SHADE_STEPS = 14
+function shade(inset: number) {
+	// Held to here, a title's height above the bar's foot; gone by there
+	const [from, to] = [inset - SHADE.held, inset + SHADE.tail]
+	const stops = Array.from({length: SHADE_STEPS + 1}, (_, step) => {
+		const along = step / SHADE_STEPS
+		// Level, down, and level again (a smootherstep)
+		const eased = along * along * along * (along * (along * 6 - 15) + 10)
+		const alpha = Math.round(SHADE.deepest * (1 - eased) * 1000) / 1000
+		return `rgb(5 7 12 / ${alpha}) ${Math.round(from + (to - from) * along)}px`
+	})
+	return `linear-gradient(to bottom, ${stops.join(', ')})`
 }
 
 // Whether a place will be on screen clear of what covers the map's edges

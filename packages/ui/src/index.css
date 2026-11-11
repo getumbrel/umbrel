@@ -859,7 +859,9 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
    Chrome redraw that surface with every frame of the map, and the sheet's
    blurred wallpaper copy, which the map covers edge to edge, cost a full-window
    layer for nothing. So the copy is dropped, and the surfaces over the map
-   are a solid tint instead of a blur, as for reduced transparency. */
+   are solid instead of blurred: with no blur, all a see-through surface
+   shows of the map is the ghosts of its names and markers, running through
+   whatever is written on it. */
 body:has(.umbrel-photos-map) .umbrel-window-wallpaper {
 	display: none;
 }
@@ -869,10 +871,10 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	backdrop-filter: none;
 }
 .umbrel-photos-map .umbrel-material {
-	background-color: rgb(16 17 20 / 0.88);
+	background-color: rgb(16 17 20);
 }
 body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
-	background-color: rgb(30 31 36 / 0.86);
+	background-color: rgb(30 31 36);
 }
 
 /* The bar's rest and its pin. At rest it sits --umbrel-photos-drop below its
