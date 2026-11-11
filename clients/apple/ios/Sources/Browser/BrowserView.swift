@@ -24,7 +24,8 @@ struct BrowserView: View {
 							await UIApplication.shared.open(url)
 						}
 					},
-					onStatusBarChange: { browser.prefersLightStatusBar = $0 }
+					onStatusBarChange: { browser.prefersLightStatusBar = $0 },
+					onBarPlacementChange: { browser.isBarInSideColumn = $0 }
 				)
 				.id(page.id)
 				.transition(.opacity)
@@ -43,9 +44,11 @@ struct BrowserPageView: View {
 	var onClose: () -> Void
 	var onOpenInSafari: (() -> Void)?
 	var onStatusBarChange: (_ prefersLight: Bool) -> Void = { _ in }
+	var onBarPlacementChange: (_ inSideColumn: Bool) -> Void = { _ in }
 
 	@Environment(\.brandColor) private var brandColor
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
+	@State private var barInSideColumn = false
 	@State private var promptText = ""
 	@State private var username = ""
 	@State private var password = ""
@@ -74,6 +77,9 @@ struct BrowserPageView: View {
 			.animation(.easeInOut(duration: 0.25), value: pageColor)
 			.onChange(of: barIsLight, initial: true) { _, isLight in
 				onStatusBarChange(!isLight)
+			}
+			.onChange(of: barInSideColumn, initial: true) { _, inSideColumn in
+				onBarPlacementChange(inSideColumn)
 			}
 			.alert(
 				page.dialogTitle,
@@ -111,18 +117,30 @@ struct BrowserPageView: View {
 			}
 			.background(Color.black.ignoresSafeArea())
 		} else {
-			VStack(spacing: 0) {
-				bar
-				content
-			}
-			// The bar's color runs up behind the status bar; the page's own background
-			// runs down behind the home indicator, so the page looks edge to edge.
-			.background {
+			NavigationStack {
 				VStack(spacing: 0) {
-					barColor
-					pageColor
+					if !barInSideColumn { bar }
+					content
+						.overlay(alignment: .top) {
+							if barInSideColumn { progressLine }
+						}
 				}
-				.ignoresSafeArea()
+				// The bar's color runs up behind the status bar; the page's own background
+				// runs down behind the home indicator, so the page looks edge to edge.
+				.background {
+					VStack(spacing: 0) {
+						barInSideColumn ? pageColor : barColor
+						pageColor
+					}
+					.ignoresSafeArea()
+				}
+				.modifier(
+					BrowserSideColumnToolbar(
+						onClose: onClose,
+						foreground: foreground,
+						isInSideColumn: $barInSideColumn
+					) { menuItems }
+				)
 			}
 		}
 	}
@@ -229,25 +247,30 @@ struct BrowserPageView: View {
 
 	private var menu: some View {
 		Menu {
-			if page.canGoBack {
-				Button { page.goBack() } label: { Label("Back", systemImage: "chevron.backward") }
-			}
-			if page.canGoForward {
-				Button { page.goForward() } label: { Label("Forward", systemImage: "chevron.forward") }
-			}
-			Button { page.reload() } label: { Label("Reload", systemImage: "arrow.clockwise") }
-			Divider()
-			if let url = page.currentURL {
-				ShareLink(item: url) { Label("Share…", systemImage: "square.and.arrow.up") }
-			}
-			if let onOpenInSafari {
-				Button(action: onOpenInSafari) { Label("Open in Safari", systemImage: "safari") }
-			}
+			menuItems
 		} label: {
 			barGlyph("ellipsis")
 		}
 		.menuOrder(.fixed)
 		.accessibilityLabel("More")
+	}
+
+	@ViewBuilder
+	private var menuItems: some View {
+		if page.canGoBack {
+			Button { page.goBack() } label: { Label("Back", systemImage: "chevron.backward") }
+		}
+		if page.canGoForward {
+			Button { page.goForward() } label: { Label("Forward", systemImage: "chevron.forward") }
+		}
+		Button { page.reload() } label: { Label("Reload", systemImage: "arrow.clockwise") }
+		Divider()
+		if let url = page.currentURL {
+			ShareLink(item: url) { Label("Share…", systemImage: "square.and.arrow.up") }
+		}
+		if let onOpenInSafari {
+			Button(action: onOpenInSafari) { Label("Open in Safari", systemImage: "safari") }
+		}
 	}
 
 	// A hairline that fills as the page loads, then gets out of the way.
@@ -391,19 +414,36 @@ private struct LaunchScreen: View {
 // instance moves in and out of the hierarchy as the browser opens and closes.
 struct BrowserWebView: UIViewRepresentable {
 	let webView: WKWebView
+	// Called whenever the web view's place in the window may have changed
+	var onLayout: (() -> Void)?
 
-	func makeUIView(context: Context) -> UIView {
-		let container = UIView()
+	func makeUIView(context: Context) -> LayoutReportingView {
+		let container = LayoutReportingView()
 		container.backgroundColor = .clear
 		return container
 	}
 
-	func updateUIView(_ container: UIView, context: Context) {
+	func updateUIView(_ container: LayoutReportingView, context: Context) {
+		container.onLayout = onLayout
 		guard webView.superview !== container else { return }
 		webView.removeFromSuperview()
 		webView.frame = container.bounds
 		webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 		container.addSubview(webView)
+	}
+
+	final class LayoutReportingView: UIView {
+		var onLayout: (() -> Void)?
+
+		override func layoutSubviews() {
+			super.layoutSubviews()
+			onLayout?()
+		}
+
+		override func didMoveToWindow() {
+			super.didMoveToWindow()
+			onLayout?()
+		}
 	}
 }
 

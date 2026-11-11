@@ -11,51 +11,79 @@ struct AllDevicesView: View {
 	var onSelect: (SavedDevice) -> Void
 	var onAdd: () -> Void
 
+	// iPhone Duo puts the + in the side column, which would leave the mark alone in
+	// an empty top bar, so there it heads the list instead.
+	@State private var controlsInSideColumn = false
+	@State private var listWidth: CGFloat = 0
+	@State private var fold: FoldBand?
+
 	var body: some View {
+		NavigationStack {
+			list
+				.modifier(SideColumnReader(isInSideColumn: $controlsInSideColumn))
+				.toolbar {
+					if !controlsInSideColumn {
+						// The mark is a logo, not a control, so it sits in the bar without glass
+						ToolbarItem(placement: .topBarLeading) {
+							mark.padding(.leading, 8)
+						}
+						.sharedBackgroundVisibility(.hidden)
+					}
+					ToolbarItem(placement: .primaryAction) {
+						Button(action: onAdd) { Label("Add Umbrel", systemImage: "plus") }
+							.tint(.white)
+					}
+				}
+		}
+	}
+
+	// The bar sizes plain images down like symbols, so a fixed frame keeps the mark the
+	// same size in the bar and in the list.
+	private var mark: some View {
+		Image("UmbrelMark")
+			.resizable()
+			.scaledToFit()
+			.frame(width: 39, height: 19)
+			.fixedSize()
+			.foregroundStyle(.white)
+			.accessibilityHidden(true)
+	}
+
+	private var list: some View {
 		ZStack(alignment: .top) {
 			Color.black.ignoresSafeArea()
 
 			ScrollView(showsIndicators: false) {
 				VStack(spacing: 12) {
-					ForEach(devices, id: \.id) { device in
-						Button { onSelect(device) } label: {
-							DeviceCard(
-								device: device,
-								signedIn: isSignedIn(device),
-								connectionSnapshot: connectionSnapshot(for: device.id),
-								onConfigStorageIssue: onConfigStorageIssue
-							)
-						}
-						.buttonStyle(.plain)
+					if controlsInSideColumn {
+						mark
+							.padding(.leading, 8)
+							.frame(maxWidth: .infinity, alignment: .leading)
+							.padding(.bottom, 8)
 					}
+					// Cards keep their iPhone width: two columns on a wide window, with the gap
+					// on the fold while it's partly folded, so no card spans the crease.
+					FoldGrid(columns: listWidth >= WideLayout.twoColumnMinWidth ? 2 : 1, spacing: 12, fold: fold) {
+						ForEach(devices, id: \.id) { device in
+							Button { onSelect(device) } label: {
+								DeviceCard(
+									device: device,
+									signedIn: isSignedIn(device),
+									connectionSnapshot: connectionSnapshot(for: device.id),
+									onConfigStorageIssue: onConfigStorageIssue
+								)
+							}
+							.buttonStyle(.plain)
+						}
+					}
+					.trackingFold($fold)
+					.onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
 				}
 				.padding(.horizontal, Theme.contentInset)
-				.padding(.top, 56)
+				.padding(.top, 12)
 				.padding(.bottom, 32)
 			}
-
-			LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-				.frame(height: 120)
-				.frame(maxWidth: .infinity)
-				.ignoresSafeArea()
-				.allowsHitTesting(false)
-
-				header
 		}
-	}
-
-	private var header: some View {
-		HStack {
-			Image("UmbrelMark")
-				.resizable()
-				.scaledToFit()
-				.frame(height: 19)
-				.foregroundStyle(.white)
-			Spacer()
-			CircleIconButton(system: "plus", accessibilityLabel: "Add Umbrel", action: onAdd)
-		}
-		.padding(.leading, 28)
-		.padding(.trailing, Theme.contentInset)
 	}
 
 	private func isSignedIn(_ device: SavedDevice) -> Bool {

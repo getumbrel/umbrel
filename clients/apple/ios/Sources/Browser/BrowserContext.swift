@@ -107,8 +107,9 @@ final class BrowserContext {
 	// already showing that wallpaper, edge to edge, so umbrelOS's copy is made
 	// invisible and its page background cleared: one wallpaper, with umbrelOS's
 	// interface on top of it. The images stay in the page (umbrelOS samples them for
-	// its glass), they are simply not drawn. Wallpaper previews in Settings are
-	// positioned differently and are left alone. A video wallpaper is left alone
+	// its glass), they are simply not drawn, and the page pins them over the app's
+	// wallpaper so the glass matches what's behind it (see pinWallpaper). Wallpaper
+	// previews in Settings are positioned differently and are left alone. A video wallpaper is left alone
 	// too: the app only has a still of it, so umbrelOS keeps drawing its own, moving
 	// one within its page.
 	//
@@ -116,6 +117,11 @@ final class BrowserContext {
 	// reads as a dark flash when a window is the first thing shown. Here they arrive
 	// fully formed. The backing starts invisible and only the fade reveals it, so
 	// skipping the fade also has to show it.
+	//
+	// umbrelOS's sheets, drawers and full windows cast a large soft shadow across the
+	// wallpaper. umbrelOS's page stops short of the screen at the side column and under
+	// a toolbar along the top, where that shadow would end in a hard line, so in the app
+	// windows have none.
 	//
 	// This is the one place the app knows anything about umbrelOS's markup. If a
 	// future umbrelOS changes it, the only effect is that its own wallpaper shows
@@ -132,8 +138,26 @@ final class BrowserContext {
 					picture > img.fixed.inset-0:not(.absolute),
 					img[data-wallpaper-full]:not(.absolute) { opacity: 0 !important; }
 					.umbrel-window-wallpaper { animation: none !important; opacity: 1 !important; }
+					:root { --window-background-shadow-opacity: 0 !important; }
+					html[data-umbrel-app-wallpaper] img[data-wallpaper-full]:not(.absolute),
+					html[data-umbrel-app-wallpaper] img[data-wallpaper-static-source]:not(.absolute) {
+						position: fixed !important;
+						inset: auto !important;
+						left: var(--umbrel-app-wallpaper-left) !important;
+						top: var(--umbrel-app-wallpaper-top) !important;
+						width: var(--umbrel-app-wallpaper-width) !important;
+						height: var(--umbrel-app-wallpaper-height) !important;
+					}
 				`
 				document.documentElement.appendChild(style)
+				// Runs under the home indicator like a page in Safari, so umbrelOS's sheets
+				// reach the bottom, and the dock reads the safe area to keep clear of it
+				document.addEventListener('DOMContentLoaded', () => {
+					const viewport = document.querySelector('meta[name=viewport]')
+					if (viewport && !viewport.content.includes('viewport-fit')) {
+						viewport.content += ', viewport-fit=cover'
+					}
+				})
 			})()
 			"""
 		return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Self.world)

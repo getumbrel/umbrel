@@ -503,6 +503,12 @@ final class OnboardingModel {
 	}
 }
 
+extension OnboardingModel {
+	// Room above a step's title. While adding a device the Cancel bar already takes the
+	// top of the screen, so steps leave less and titles sit as high as in first-run setup.
+	var headerTopPadding: CGFloat { mode == .addDevice ? 36 : 90 }
+}
+
 #if DEBUG
 extension OnboardingModel {
 	// Canvas harness: scan results seeded on the results step, without discovery

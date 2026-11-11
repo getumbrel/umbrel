@@ -33,11 +33,18 @@ struct PhotoViewer: View {
 	}
 
 	var body: some View {
-		ZStack {
-			Color.black.ignoresSafeArea()
-			pager
-			controls
+		NavigationStack {
+			ZStack {
+				Color.black.ignoresSafeArea()
+				pager
+			}
+			.ignoresSafeArea()
+			.toolbar { toolbar }
+			.toolbar(showsControls ? .visible : .hidden, for: .navigationBar)
+			.toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+			.navigationBarTitleDisplayMode(.inline)
 		}
+		.environment(\.colorScheme, .dark)
 		.statusBarHidden(!showsControls)
 		.navigationTransition(.zoom(sourceID: visibleAssetIdentifier, in: transitionNamespace))
 		.background {
@@ -81,30 +88,29 @@ struct PhotoViewer: View {
 		.ignoresSafeArea()
 	}
 
-	@ViewBuilder
-	private var controls: some View {
-		if showsControls, let asset = selectedAsset {
-			VStack {
-				ZStack {
-					PhotoViewerBackupStatus(asset: asset)
-						.id(asset.localIdentifier)
-						.allowsHitTesting(false)
-
-					HStack {
-						CircleIconButton(system: "chevron.left", accessibilityLabel: "Back to Library") {
-							dismiss()
-						}
-						Spacer()
-						CircleIconButton(system: "info", accessibilityLabel: "Photo information") {
-							showsInfo = true
-						}
-					}
-				}
-				Spacer()
+	// System toolbar items, so on iPhone Duo they move into the side column like Photos'.
+	// The backup status stays at the top as the title, like Photos' date.
+	@ToolbarContentBuilder
+	private var toolbar: some ToolbarContent {
+		ToolbarItem(placement: .cancellationAction) {
+			Button { dismiss() } label: {
+				Label("Back to Library", systemImage: "chevron.left")
 			}
-			.padding(.horizontal, Theme.contentInset)
-			.safeAreaPadding(.top, 8)
-			.transition(.opacity)
+			.tint(.white)
+		}
+		if let asset = selectedAsset {
+			ToolbarItem(placement: .principal) {
+				PhotoViewerBackupStatus(asset: asset)
+					.id(asset.localIdentifier)
+					.allowsHitTesting(false)
+			}
+			.sharedBackgroundVisibility(.hidden)
+			ToolbarItem(placement: .primaryAction) {
+				Button { showsInfo = true } label: {
+					Label("Photo information", systemImage: "info")
+				}
+				.tint(.white)
+			}
 		}
 	}
 
@@ -378,6 +384,15 @@ private struct PhotoPageController: UIViewControllerRepresentable {
 
 		@available(*, unavailable)
 		required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
+
+		// Like Photos, a photo is centred on the whole screen, under the bars, the status
+		// bar and the side column on iPhone Duo, and stays put while the bars hide and show.
+		override func viewSafeAreaInsetsDidChange() {
+			super.viewSafeAreaInsetsDidChange()
+			guard let insets = parent?.view.safeAreaInsets else { return }
+			let ignored = UIEdgeInsets(top: -insets.top, left: -insets.left, bottom: -insets.bottom, right: -insets.right)
+			if additionalSafeAreaInsets != ignored { additionalSafeAreaInsets = ignored }
+		}
 	}
 }
 
@@ -541,6 +556,8 @@ private struct ZoomablePhoto: UIViewRepresentable {
 		scrollView.showsHorizontalScrollIndicator = false
 		scrollView.showsVerticalScrollIndicator = false
 		scrollView.panGestureRecognizer.isEnabled = false
+		// The photo runs under the bars on black, so it needs no edge effect behind them
+		scrollView.topEdgeEffect.isHidden = true
 
 		let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.didDoubleTap(_:)))
 		doubleTap.numberOfTapsRequired = 2
@@ -619,6 +636,7 @@ private struct ZoomablePhoto: UIViewRepresentable {
 private struct PhotoViewerInfoSheet: View {
 	let asset: PHAsset
 	let filename: String?
+	@Environment(\.dismiss) private var dismiss
 
 	init(asset: PHAsset) {
 		self.asset = asset
@@ -666,6 +684,9 @@ private struct PhotoViewerInfoSheet: View {
 			}
 			.navigationTitle("Info")
 			.navigationBarTitleDisplayMode(.inline)
+			.toolbar {
+				DrawerCloseToolbarItem(action: { dismiss() })
+			}
 		}
 		.presentationDetents([.medium])
 		.presentationDragIndicator(.visible)

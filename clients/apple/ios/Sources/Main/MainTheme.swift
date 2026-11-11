@@ -53,11 +53,12 @@ struct DrawerCloseToolbarItem: ToolbarContent {
 
 	var body: some ToolbarContent {
 		ToolbarItem(placement: .cancellationAction) {
+			// A title as well as the symbol, as Apple asks of toolbar items: overflow menus
+			// and VoiceOver use it, and only the symbol shows in the bar.
 			Button(action: action) {
-				Image(systemName: "xmark")
+				Label("Close", systemImage: "xmark")
 			}
 			.tint(.white)
-			.accessibilityLabel("Close")
 		}
 	}
 }
@@ -562,6 +563,8 @@ struct EmptyStateCard: View {
 	var buttonIcon: String? = nil
 	var buttonLoading = false
 	var learnMore: (() -> Void)? = nil
+	// Less room above and below when it shares a row with another card's height
+	var verticalPadding: CGFloat = 28
 	var action: () -> Void = {}
 
 	var body: some View {
@@ -578,6 +581,10 @@ struct EmptyStateCard: View {
 						.font(.footnote.weight(.medium))
 						.foregroundStyle(.white.opacity(0.5))
 						.multilineTextAlignment(.center)
+						// About its width on iPhone, so it doesn't run on in one line on wide screens
+						.frame(maxWidth: 360)
+						// Wraps rather than truncating in a card of set height
+						.fixedSize(horizontal: false, vertical: true)
 				}
 				VStack(spacing: 10) {
 					PillButton(
@@ -603,9 +610,10 @@ struct EmptyStateCard: View {
 					}
 				}
 			}
-			.frame(maxWidth: .infinity)
-			.padding(.top, 28)
-			.padding(.bottom, learnMore == nil ? 28 : 4)
+			// Fills a card given a set height, like Home's paired columns, centred in it
+			.frame(maxWidth: .infinity, maxHeight: .infinity)
+			.padding(.top, verticalPadding)
+			.padding(.bottom, learnMore == nil ? verticalPadding : 4)
 			.padding(.horizontal, 8)
 		}
 	}

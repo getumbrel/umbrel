@@ -13,75 +13,134 @@ struct HomeView: View {
 	@State private var isConfirmingReconnect = false
 	@State private var isReconnecting = false
 	@State private var showsConnectionProgress = false
+	@State private var fold: FoldBand?
+	// Heights of Apps and Files, which the sections beside them match in two columns
+	@State private var appsSectionHeight: CGFloat = 0
+	@State private var filesSectionHeight: CGFloat = 0
+	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
 	let onShowConnectionDetails: () -> Void
 
 	var body: some View {
-		ScrollView(showsIndicators: false) {
-			VStack(alignment: .leading, spacing: Theme.sectionGap) {
-				titleSection
-				connectionIssueCard
-				photoBackupIssueCard
-				AppsSection(model: model)
-				FilesSection(
-					paths: model.favoritePaths,
-					brandColor: BrandColor.color(model.wallpaperBrandColorHsl),
-					loaded: model.didLoad,
-					// /files resolves to the home of the signed-in umbrelOS account.
-					onViewAll: { openUmbrel(path: "/files") },
-					onOpenPath: { openUmbrel(path: "/files\($0)") }
-				)
-				LibraryPreviewSection()
-				StorageSection(
-					disk: model.disk,
-					brandColorHsl: model.wallpaperBrandColorHsl,
-					loaded: model.didLoad,
-					onViewLiveUsage: {
-						openUmbrel(
-							queryItems: [
-								URLQueryItem(name: "dialog", value: "live-usage"),
-								URLQueryItem(name: "live-usage-tab", value: "storage"),
-							]
-						)
+		GeometryReader { geometry in
+			let width = max(0, geometry.size.width - Theme.contentInset * 2)
+			ScrollView(showsIndicators: false) {
+				Group {
+					if horizontalSizeClass == .regular, width >= WideLayout.homeTwoColumnMinWidth {
+						twoColumnContent(width: width)
+					} else {
+						oneColumnContent(gridWidth: horizontalSizeClass == .regular ? width : nil)
 					}
-				)
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal, Theme.contentInset)
+				.modifier(TopClearancePadding())
+				.padding(.bottom, 32)
 			}
-			.frame(maxWidth: .infinity, alignment: .leading)
-			.padding(.horizontal, Theme.contentInset)
-			.padding(.top, 56)
-			.padding(.bottom, 32)
+			.refreshable {
+				await model.refreshVisibleData(for: .home, force: true)
+			}
+			// The wallpaper itself is drawn once, behind every tab and umbrelOS alike, by
+			// MainView. The frosting draws its own blurred copy aligned to it.
+			.background { SeeThroughTab() }
+			// The blurred wallpaper flows to every SectionCard for its frosted fill.
+			.environment(\.frostWallpaper, model.blurredWallpaper)
+			.alert(model.unreachableTitle, isPresented: $isShowingBrowserUnavailable) {
+				Button("OK", role: .cancel) {}
+			} message: {
+				Text(model.unreachableMessage)
+			}
+			.alert(IdentityChange.confirmTitle, isPresented: $isConfirmingReconnect) {
+				Button("Reconnect") {
+					isReconnecting = true
+					Task {
+						await model.onReconnect()
+						isReconnecting = false
+					}
+				}
+				Button("Cancel", role: .cancel) {}
+			} message: {
+				Text(IdentityChange.confirmMessage)
+			}
+			.task(id: model.connectionState == .unverified) {
+				showsConnectionProgress = false
+				guard model.connectionState == .unverified else { return }
+				try? await Task.sleep(for: .milliseconds(400))
+				guard !Task.isCancelled, model.connectionState == .unverified else { return }
+				showsConnectionProgress = true
+			}
 		}
-		.refreshable {
-			await model.refreshVisibleData(for: .home, force: true)
+	}
+
+	// The iPhone layout. In a regular-width window too narrow for two columns, its
+	// grids widen by adding tiles.
+	private func oneColumnContent(gridWidth: CGFloat?) -> some View {
+		VStack(alignment: .leading, spacing: Theme.sectionGap) {
+			titleSection
+			connectionIssueCard
+			photoBackupIssueCard
+			AppsSection(model: model, gridWidth: gridWidth)
+			filesSection(gridWidth: gridWidth)
+			LibraryPreviewSection(gridWidth: gridWidth)
+			storageSection()
 		}
-		// The wallpaper itself is drawn once, behind every tab and umbrelOS alike, by
-		// MainView. The frosting draws its own blurred copy aligned to it.
-		.background { SeeThroughTab() }
-		// The blurred wallpaper flows to every SectionCard for its frosted fill.
-		.environment(\.frostWallpaper, model.blurredWallpaper)
-		.alert(model.unreachableTitle, isPresented: $isShowingBrowserUnavailable) {
-			Button("OK", role: .cancel) {}
-		} message: {
-			Text(model.unreachableMessage)
-		}
-		.alert(IdentityChange.confirmTitle, isPresented: $isConfirmingReconnect) {
-			Button("Reconnect") {
-				isReconnecting = true
-				Task {
-					await model.onReconnect()
-					isReconnecting = false
+	}
+
+	// The inner display opened like a book: the iPhone's four sections as a 2×2, with
+	// the gutter on the fold while it's partly folded. Each section on the right takes
+	// the height of the one beside it, so both rows line up.
+	private func twoColumnContent(width: CGFloat) -> some View {
+		let columns = FoldColumns.columns(width: width, spacing: Theme.sectionGap, fold: fold)
+		return VStack(alignment: .leading, spacing: Theme.sectionGap) {
+			// The title belongs to the left page, so it shares that column's left edge
+			titleSection
+				.padding(.leading, columns[0].x)
+			connectionIssueCard
+			photoBackupIssueCard
+			FoldColumns(spacing: Theme.sectionGap, fold: fold) {
+				VStack(alignment: .leading, spacing: Theme.sectionGap) {
+					AppsSection(model: model, gridWidth: columns[0].width)
+						.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { appsSectionHeight = $0 }
+					filesSection(gridWidth: columns[0].width)
+						.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { filesSectionHeight = $0 }
+				}
+				VStack(alignment: .leading, spacing: Theme.sectionGap) {
+					LibraryPreviewSection(gridWidth: nil, fillsHeight: true)
+						.frame(height: appsSectionHeight > 0 ? appsSectionHeight : nil, alignment: .top)
+					storageSection(fillsHeight: true)
+						.frame(height: filesSectionHeight > 0 ? filesSectionHeight : nil, alignment: .top)
 				}
 			}
-			Button("Cancel", role: .cancel) {}
-		} message: {
-			Text(IdentityChange.confirmMessage)
+			.trackingFold($fold)
 		}
-		.task(id: model.connectionState == .unverified) {
-			showsConnectionProgress = false
-			guard model.connectionState == .unverified else { return }
-			try? await Task.sleep(for: .milliseconds(400))
-			guard !Task.isCancelled, model.connectionState == .unverified else { return }
-			showsConnectionProgress = true
-		}
+	}
+
+	private func filesSection(gridWidth: CGFloat?) -> some View {
+		FilesSection(
+			paths: model.favoritePaths,
+			brandColor: BrandColor.color(model.wallpaperBrandColorHsl),
+			loaded: model.didLoad,
+			gridWidth: gridWidth,
+			// /files resolves to the home of the signed-in umbrelOS account.
+			onViewAll: { openUmbrel(path: "/files") },
+			onOpenPath: { openUmbrel(path: "/files\($0)") }
+		)
+	}
+
+	private func storageSection(fillsHeight: Bool = false) -> some View {
+		StorageSection(
+			fillsHeight: fillsHeight,
+			disk: model.disk,
+			brandColorHsl: model.wallpaperBrandColorHsl,
+			loaded: model.didLoad,
+			onViewLiveUsage: {
+				openUmbrel(
+					queryItems: [
+						URLQueryItem(name: "dialog", value: "live-usage"),
+						URLQueryItem(name: "live-usage-tab", value: "storage"),
+					]
+				)
+			}
+		)
 	}
 
 	private func openUmbrel(path: String = "", queryItems: [URLQueryItem] = []) {
@@ -211,146 +270,28 @@ struct HomeView: View {
 	}
 }
 
-// The glass pill at the top-right of the main tabs and of umbrelOS. Its first button
-// opens umbrelOS and, once there, becomes the way out. Inside umbrelOS it also offers
-// what the page needs, the way an app's title bar does.
-struct HeaderAccessPill: View {
-	let model: MainModel
-	@Environment(Browser.self) private var browser
-	@State private var isShowingPageOptions = false
-	@State private var isOpeningBrowser = false
-	@State private var isShowingBrowserUnavailable = false
-
-	var body: some View {
-		HStack(spacing: 0) {
-			Button {
-				if browser.showsUmbrel { browser.closeUmbrel() } else { openDashboard() }
-			} label: {
-				// One glyph in one place. It changes on the spot, with nothing fading
-				// through it, so this never reads as one button uncovering another.
-				Image(systemName: browser.showsUmbrel ? "xmark" : "macwindow")
-					.font(.system(size: 18, weight: .medium))
-					.transaction { $0.animation = nil }
-					.frame(width: 44, height: 42)
-					.contentShape(Rectangle())
-			}
-			.buttonStyle(.plain)
-			.accessibilityLabel(browser.showsUmbrel ? "Close umbrelOS" : "Open umbrelOS")
-
-			if browser.showsUmbrel {
-				Button {
-					isShowingPageOptions = true
-				} label: {
-					Image(systemName: "ellipsis")
-						.font(.system(size: 20))
-						.frame(width: 44, height: 42)
-						.contentShape(Rectangle())
-				}
-				.buttonStyle(.plain)
-				.accessibilityLabel("More")
-				.transition(.opacity)
-				.confirmationDialog("umbrelOS", isPresented: $isShowingPageOptions) {
-					Button("Reload") { browser.umbrel?.reload() }
-					Button("Open in Safari") {
-						if let umbrel = browser.umbrel { openInSafari(umbrel) }
-					}
-				}
-			}
-		}
-		.foregroundStyle(.white.opacity(0.85))
-		.frame(height: 42)
-		.glassControl(in: Capsule())
-		.animation(.easeOut(duration: 0.2), value: browser.showsUmbrel)
-		.alert(model.unreachableTitle, isPresented: $isShowingBrowserUnavailable) {
-			Button("OK", role: .cancel) {}
-		} message: {
-			Text(model.unreachableMessage)
-		}
-	}
-
-	private func openDashboard() {
-		guard !isOpeningBrowser else { return }
-		isOpeningBrowser = true
-		Task {
-			defer { isOpeningBrowser = false }
-			if await !browser.openUmbrel() {
-				isShowingBrowserUnavailable = true
-			}
-		}
-	}
-
-	private func openInSafari(_ page: BrowserPage) {
-		Task {
-			guard let url = await browser.safariURL(for: page) else { return }
-			await UIApplication.shared.open(url)
-		}
-	}
-}
-
-// Fixed top gradient for status-bar legibility over the wallpaper (Home and Apps).
-struct WallpaperTopGradient: View {
-	var body: some View {
-		LinearGradient(colors: [.black.opacity(0.9), .clear], startPoint: .top, endPoint: .bottom)
-			.frame(height: 150)
-			.frame(maxWidth: .infinity)
-			.ignoresSafeArea()
-			.allowsHitTesting(false)
-	}
-}
-
-// A 42pt translucent circular icon button (header back / actions).
-struct CircleIconButton: View {
-	let system: String
-	let accessibilityLabel: LocalizedStringKey
-	var action: () -> Void
-	var body: some View {
-		Button(action: action) {
-			Image(systemName: system)
-				.font(.system(size: 17, weight: .medium))
-				.foregroundStyle(.white.opacity(0.85))
-				.frame(width: 42, height: 42)
-				.glassControl(in: Circle())
-		}
-		.accessibilityLabel(Text(accessibilityLabel))
-	}
-}
-
-// The way back to an app that opened umbrelOS, in the same glass as the header's
-// other controls.
-struct ReturnToAppButton: View {
-	let name: String
-	var action: () -> Void
-	var body: some View {
-		Button(action: action) {
-			HStack(spacing: 4) {
-				Image(systemName: "chevron.left")
-					.font(.system(size: 15, weight: .semibold))
-				// Capped so the name stays inside the header's fixed-height capsule
-				Text(name)
-					.font(.subheadline.weight(.medium))
-					.lineLimit(1)
-					.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-			}
-			.foregroundStyle(.white.opacity(0.85))
-			.padding(.leading, 12)
-			.padding(.trailing, 16)
-			.frame(height: 42)
-			.glassControl(in: Capsule())
-		}
-		.accessibilityLabel("Back to \(name)")
-	}
-}
-
 // MARK: - Apps
 
 private struct AppsSection: View {
 	let model: MainModel
+	// The card's width in a regular-width window; nil keeps the iPhone grid
+	var gridWidth: CGFloat?
 	@Environment(Browser.self) private var browser
 	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-	private var columnCount: Int { dynamicTypeSize.isAccessibilitySize ? 2 : 3 }
+	private var columnCount: Int {
+		if dynamicTypeSize.isAccessibilitySize { return 2 }
+		guard let gridWidth else { return 3 }
+		return WideLayout.columns(for: gridWidth - 16, iPhone: 3)
+	}
 	private var columns: [GridItem] {
 		Array(repeating: GridItem(.flexible(), spacing: 4), count: columnCount)
+	}
+	// Two rows of tiles, three of two at accessibility sizes, or one row when the grid
+	// has grown wide enough that a second would mostly be empty tiles.
+	private var tileCount: Int {
+		if columnCount == 2 { return 6 }
+		return columnCount > 3 ? columnCount : columnCount * 2
 	}
 
 	var body: some View {
@@ -375,7 +316,7 @@ private struct AppsSection: View {
 				}
 			} skeleton: {
 				SectionCard {
-					SkeletonTiles(rows: 6 / columnCount, cols: columnCount)
+					SkeletonTiles(rows: tileCount / columnCount, cols: columnCount)
 				}
 			}
 		}
@@ -383,12 +324,12 @@ private struct AppsSection: View {
 
 	private var grid: some View {
 		let apps = model.installedApps
-		let hasOverflow = apps.count > 6
-		let visible = hasOverflow ? Array(apps.prefix(5)) : Array(apps.prefix(6))
-		let overflow = Array(apps.dropFirst(5))
-		let rows = 6 / columnCount
+		let hasOverflow = apps.count > tileCount
+		let visible = hasOverflow ? Array(apps.prefix(tileCount - 1)) : Array(apps.prefix(tileCount))
+		let overflow = Array(apps.dropFirst(tileCount - 1))
+		let rows = tileCount / columnCount
 		return LazyVGrid(columns: columns, spacing: 4) {
-			ForEach(0..<6) { index in
+			ForEach(0..<tileCount, id: \.self) { index in
 				let shape = Bento.tile(
 					row: index / columnCount,
 					col: index % columnCount,
@@ -407,7 +348,7 @@ private struct AppsSection: View {
 
 	@ViewBuilder
 	private func cell(index: Int, visible: [Umbreld.AppSummary], hasOverflow: Bool, overflow: [Umbreld.AppSummary]) -> some View {
-		if hasOverflow && index == 5 {
+		if hasOverflow && index == tileCount - 1 {
 			Button(action: model.openApps) {
 				OverflowTile(count: overflow.count, sample: Array(overflow.prefix(3)))
 			}
@@ -732,6 +673,7 @@ private struct FilesSection: View {
 	let paths: [String]
 	let brandColor: Color
 	let loaded: Bool
+	var gridWidth: CGFloat?
 	let onViewAll: () -> Void
 	let onOpenPath: (String) -> Void
 
@@ -744,17 +686,24 @@ private struct FilesSection: View {
 				LoadReveal(loaded: loaded, order: 1) {
 					SectionCard { grid }
 				} skeleton: {
-					SectionCard { SkeletonTiles(rows: 2, cols: 2) }
+					SectionCard { SkeletonTiles(rows: fourAcross ? 1 : 2, cols: fourAcross ? 4 : 2) }
 				}
 			}
 		}
+	}
+
+	// Four folders sit in one row only where the card is wide enough for them to stay
+	// about as wide as Apps tiles; in a half-width column they keep the iPhone's 2×2
+	private var fourAcross: Bool {
+		guard let gridWidth else { return false }
+		return gridWidth - 16 >= 4 * 130
 	}
 
 	private var grid: some View {
 		// Four folders form a 2×2; fewer collapse to a single row. Guarded to 1 column
 		// because this view is also built (unused) while paths is still empty: LoadReveal
 		// constructs its content eagerly even when only the skeleton is shown.
-		let cols = paths.count == 4 ? 2 : max(1, paths.count)
+		let cols = paths.count == 4 ? (fourAcross ? 4 : 2) : max(1, paths.count)
 		let rows = Int(ceil(Double(paths.count) / Double(cols)))
 		let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: cols)
 		return LazyVGrid(columns: columns, spacing: 4) {
@@ -799,6 +748,9 @@ private struct FolderTile: View {
 
 private struct LibraryPreviewSection: View {
 	@Environment(MainModel.self) private var model
+	var gridWidth: CGFloat?
+	// Sizes the photo window to the height it's given rather than the iPhone's three rows
+	var fillsHeight = false
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 12) {
@@ -822,10 +774,8 @@ private struct LibraryPreviewSection: View {
 			} else {
 				SectionHeader("Library", showsChevron: true, action: model.openLibrary)
 					.accessibilityIdentifier("homeLibraryHeader")
-				PhotoBackupSetupCard()
+				PhotoBackupSetupCard(verticalPadding: fillsHeight ? 12 : 28)
 			}
-			ViewAllInPhotosButton()
-				.padding(.top, 4)
 		}
 	}
 }
@@ -874,9 +824,11 @@ private extension LibraryPreviewSection {
 	// boundary so the layout mirrors the tab exactly, ragged last row and all; with a
 	// small library the top shows plain frost instead of cropped photos.
 	private var mosaicCard: some View {
-		let cols = 3
-		let assets = Array(model.photoLibrary.assets.suffix(9))
-		let count = assets.isEmpty ? 9 : assets.count
+		let cols = gridWidth.map { WideLayout.columns(for: $0 - 16, iPhone: 3) } ?? 3
+		// Enough rows to fill a tall column; the iPhone card shows three
+		let tileCount = cols * (fillsHeight ? 8 : 3)
+		let assets = Array(model.photoLibrary.assets.suffix(tileCount))
+		let count = assets.isEmpty ? tileCount : assets.count
 		let rows = Int(ceil(Double(count) / Double(cols)))
 		return SectionCard(padding: 0) {
 			LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: cols), spacing: 4) {
@@ -906,7 +858,12 @@ private extension LibraryPreviewSection {
 			.padding(.horizontal, 8)
 			// The crop happens at the card border: the 8px gutter is sides
 			// and bottom only, so the clipped top row bleeds to the card's top edge
-			.frame(height: 252, alignment: .bottom)
+			.frame(
+				minHeight: fillsHeight ? 0 : 252,
+				idealHeight: 252,
+				maxHeight: fillsHeight ? .infinity : 252,
+				alignment: .bottom
+			)
 			.clipped()
 			.padding(.bottom, 8)
 		}
@@ -928,6 +885,8 @@ private extension LibraryPreviewSection {
 // MARK: - Storage
 
 private struct StorageSection: View {
+	// Stretches the card to the height it's given, centring its contents
+	var fillsHeight = false
 	let disk: Umbreld.DiskUsage?
 	let brandColorHsl: String?
 	let loaded: Bool
@@ -974,6 +933,7 @@ private struct StorageSection: View {
 						}
 						.frame(maxWidth: .infinity, alignment: .leading)
 					}
+					.frame(maxHeight: fillsHeight ? .infinity : nil)
 				}
 			} skeleton: {
 				SectionCard(padding: 24) {

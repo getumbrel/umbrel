@@ -78,11 +78,12 @@ struct BrowserPresenter: UIViewControllerRepresentable {
 		}
 
 		let options = UIViewController.Transition.ZoomOptions()
-		options.interactiveDismissShouldBegin = { [weak host] context in
+		options.interactiveDismissShouldBegin = { [weak host, weak browser] context in
 			// Only a drag that starts on the title bar closes the browser. Everything
 			// below it belongs to the page, and the bar's two buttons belong to
 			// themselves: a press that wobbles must still be a press.
-			guard let host else { return false }
+			// In iPhone Duo's side column there's no title bar, and the top of the view is page
+			guard let host, browser?.isBarInSideColumn != true else { return false }
 			let buttonZone: CGFloat = 64
 			return context.location.y <= BrowserView.barHeight + host.view.safeAreaInsets.top
 				&& context.location.x > buttonZone

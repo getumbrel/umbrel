@@ -700,13 +700,14 @@ jobs:
           }
       - run: sudo env "PATH=$PATH" npm run ${{ matrix.task }}
 
-  # Run the shared Apple client tests and compile both native apps. The macOS 26
-  # runner includes the iOS 26.5 SDK required by the generated iOS project.
+  # Run the shared Apple client tests and compile both native apps with Xcode 27,
+  # the version that builds the App Store releases. iPhone Duo support needs its
+  # iOS 27.1 SDK.
   apple:
     name: Apple client checks
     needs: detect-changes
     if: needs.detect-changes.outputs.apple-changed == 'true'
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - name: Checkout code
         uses: actions/checkout@v5

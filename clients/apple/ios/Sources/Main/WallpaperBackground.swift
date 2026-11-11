@@ -7,32 +7,43 @@ import UIKit
 // explicit screen size so both the backdrop and the card frost crop identically.
 struct WallpaperBackground: View {
 	let image: UIImage?
+	var isShaded = true
 	@Environment(\.wallpaperViewportSize) private var viewportSize
 
 	var body: some View {
-		ZStack {
-			Color.black
+		// Drawn from the window's own corner rather than centered in this view: the safe
+		// area can be uneven (status bar and tab bar down one side), so the center of this
+		// view isn't the center of the window. The frost relies on the same origin.
+		GeometryReader { proxy in
+			let origin = proxy.frame(in: .global).origin
+			ZStack {
+				Color.black
 
-			if let image {
-				Image(uiImage: image)
-					.resizable()
-					.scaledToFill()
-					.frame(width: viewportSize.width, height: viewportSize.height)
-					.clipped()
+				if let image {
+					Image(uiImage: image)
+						.resizable()
+						.scaledToFill()
+						.frame(width: viewportSize.width, height: viewportSize.height)
+						.clipped()
+				}
+
+				// Legibility: darken the top (status bar / header) and the bottom (dock),
+				// keeping the middle brightest so the frosting reads over the wallpaper.
+				LinearGradient(
+					stops: [
+						.init(color: .black.opacity(0.45), location: 0),
+						.init(color: .black.opacity(0.10), location: 0.28),
+						.init(color: .black.opacity(0.20), location: 0.7),
+						.init(color: .black.opacity(0.55), location: 1),
+					],
+					startPoint: .top,
+					endPoint: .bottom
+				)
+				.opacity(isShaded ? 1 : 0)
+				.animation(.easeOut(duration: 0.3), value: isShaded)
 			}
-
-			// Legibility: darken the top (status bar / header) and the bottom (dock),
-			// keeping the middle brightest so the frosting reads over the wallpaper.
-			LinearGradient(
-				stops: [
-					.init(color: .black.opacity(0.45), location: 0),
-					.init(color: .black.opacity(0.10), location: 0.28),
-					.init(color: .black.opacity(0.20), location: 0.7),
-					.init(color: .black.opacity(0.55), location: 1),
-				],
-				startPoint: .top,
-				endPoint: .bottom
-			)
+			.frame(width: viewportSize.width, height: viewportSize.height)
+			.offset(x: -origin.x, y: -origin.y)
 		}
 		.ignoresSafeArea()
 	}

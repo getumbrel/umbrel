@@ -2,43 +2,33 @@ import SwiftUI
 import UmbrelKit
 
 // umbrelOS, in place. The app and umbrelOS share one wallpaper, so opening umbrelOS
-// is not presented as a page at all: the wallpaper and the header hold perfectly
-// still, the native screen dissolves from between them, and umbrelOS's interface
-// arrives in its place.
+// is not presented as a page at all: the wallpaper holds perfectly still, the native
+// screen dissolves from above it, and umbrelOS's interface arrives in its place.
 struct UmbrelOSView: View {
 	let browser: Browser
 	@Bindable var page: BrowserPage
 	let isShown: Bool
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
 	@State private var showsProgress = false
-
-	static let headerHeight: CGFloat = 50
+	@State private var isInSideColumn = false
 
 	private var isReady: Bool { page.isRevealed && page.failure == nil }
 
 	var body: some View {
-		VStack(spacing: 0) {
-			// The app's header stays put above; umbrelOS begins beneath it.
-			Color.clear.frame(height: Self.headerHeight)
+		// umbrelOS runs from the top of the screen to the bottom, like a page under
+		// Safari's bars: WebKit is told what the toolbar covers and lays umbrelOS out
+		// clear of it, while its sheets and backdrops still reach the screen's edges.
+		// Like Safari on iPhone Duo, it stops at the side column. Running under the
+		// column needs umbrelOS itself to keep clear of the safe area.
+		GeometryReader { proxy in
 			ZStack {
-				BrowserWebView(webView: page.webView)
-					.opacity(isReady ? 1 : 0)
-					// umbrelOS stops above the home indicator. Its dock, and the room its
-					// pages leave for the dock, are laid out from the bottom of the page,
-					// so running the page under the home indicator would put the dock
-					// there. Its dimming and its sheets end at that edge too, so the page's
-					// top and bottom edges are feathered to fade them out instead of
-					// ending in a line. Reaching the bottom of the screen needs umbrelOS to
-					// keep its dock clear of the home indicator itself.
-					.mask {
-						VStack(spacing: 0) {
-							LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-								.frame(height: 14)
-							Color.black
-							LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-								.frame(height: 10)
-						}
+				BrowserWebView(webView: page.webView) { page.webViewDidLayout() }
+					// Moving without resizing, as when the side column changes sides
+					.onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { _ in
+						page.webViewDidLayout()
 					}
+					.opacity(isReady ? 1 : 0)
+					.ignoresSafeArea(edges: .vertical)
 				if let failure = page.failure {
 					failureCard(failure)
 				} else if !page.isRevealed, showsProgress {
@@ -46,9 +36,14 @@ struct UmbrelOSView: View {
 				}
 			}
 			.animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: isReady)
+			.onChange(of: coveredEdges(proxy.safeAreaInsets), initial: true) { _, edges in
+				page.keepClear(of: edges)
+			}
+			.modifier(SideColumnReader(isInSideColumn: $isInSideColumn))
 		}
-		// Arrives a touch larger than life and settles, the reverse of how it leaves.
-		.scaleEffect(isShown || reduceMotion ? 1 : 1.04)
+		// Only fades. Scaling the web view would push it past the screen's edges, and
+		// WebKit would hand umbrelOS a new viewport and safe area on every frame, so its
+		// dock would bounce as it arrived.
 		.opacity(isShown ? 1 : 0)
 		.allowsHitTesting(isShown)
 		.accessibilityHidden(!isShown)
@@ -107,6 +102,19 @@ struct UmbrelOSView: View {
 			page.externalURL = nil
 			presentSafariView(url)
 		}
+	}
+
+	// The safe area here includes the toolbar along the top. Where the toolbar is a side
+	// column there's no top bar, so umbrelOS runs to the top edge, as in Safari, and
+	// keeps its own room there. The bottom is left to umbrelOS where it can handle it:
+	// its sheets run to the screen's edge and its dock keeps clear of the home
+	// indicator through the page's safe area.
+	private func coveredEdges(_ insets: EdgeInsets) -> UIEdgeInsets {
+		UIEdgeInsets(
+			top: isInSideColumn ? 0 : insets.top,
+			left: 0,
+			bottom: page.keepsClearOfHomeIndicator ? 0 : insets.bottom,
+			right: 0)
 	}
 
 	private func answer(_ respond: () -> Void) {

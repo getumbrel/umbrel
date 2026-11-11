@@ -13,43 +13,22 @@ struct LibraryView: View {
 	@State private var isNearLatest = true
 	@State private var scrollToLatestRequest = 0
 	@State private var showsPhotoBackupInfo = false
+	@State private var fold: FoldBand?
+	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
+	@Environment(\.topClearance) private var topClearance
 	private var backupEnabled: Bool { model.backupPhotosEnabled || model.backupVideosEnabled }
 
 	var body: some View {
 		GeometryReader { geometry in
-			ScrollView(showsIndicators: false) {
-				VStack(alignment: .leading, spacing: 24) {
-					titleBlock
-					if model.showsPhotoLibrary, model.canSwitchPhotoBackupHere,
-						let destination = model.otherPhotoBackupDestinationName
-					{
-						PhotoBackupElsewhereNotice(destination: destination)
-					}
-					if let notice = model.photoBackupNotice {
-						PhotoBackupNoticeCard(
-							notice: notice,
-							setUpTailscale: model.presentTailscaleSetup,
-							dismissOffer: model.dismissBackUpAnywhereOffer,
-							retryStorage: model.retryPhotoBackupAfterInsufficientStorage,
-							retryBackup: model.retryPhotoBackupAfterError
-						)
-					}
-					if model.showsPhotoLibrary {
-						statTiles
-						ViewAllInPhotosButton()
-						photoGrid(gridWidth: max(geometry.size.width - (Theme.contentInset * 2) - 16, 0))
-					} else {
-						setupCard
-						if model.photoBackupIsConfiguredElsewhere {
-							// umbrelOS's Photos holds every device's backups, so it stays one tap away
-							ViewAllInPhotosButton()
-						}
-					}
+			let width = max(0, geometry.size.width - Theme.contentInset * 2)
+			Group {
+				// The library pairs with the backup details; without it there's one card, so
+				// it stays a single column
+				if horizontalSizeClass == .regular, width >= WideLayout.twoColumnMinWidth, model.showsPhotoLibrary {
+					twoColumnContent(width: width)
+				} else {
+					oneColumnContent(width: width)
 				}
-				.frame(maxWidth: .infinity, alignment: .leading)
-				.padding(.horizontal, Theme.contentInset)
-				.padding(.top, 56)
-				.padding(.bottom, 32)
 			}
 			.background { SeeThroughTab() }
 			.environment(\.frostWallpaper, model.blurredWallpaper)
@@ -65,6 +44,107 @@ struct LibraryView: View {
 			PhotoBackupInfoSheet(sourceName: model.photoBackupSourceName)
 				.task { await model.refreshPhotoBackupSourceName() }
 		}
+	}
+
+	private func oneColumnContent(width: CGFloat) -> some View {
+		ScrollView(showsIndicators: false) {
+			VStack(alignment: .leading, spacing: 24) {
+				summary
+				if model.showsPhotoLibrary {
+					photoGrid(
+						gridWidth: max(width - 16, 0),
+						columns: horizontalSizeClass == .regular ? WideLayout.columns(for: width - 16, iPhone: 3) : 3
+					)
+				}
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding(.horizontal, Theme.contentInset)
+			.modifier(TopClearancePadding())
+			.padding(.bottom, 32)
+		}
+	}
+
+	// The inner display opened like a book: backup on the left and the library on the
+	// right. As on Home, the title and any notice span both columns above them, so the
+	// stat tiles and the photo card start on one line, and partly folded the columns
+	// mirror around the hinge.
+	private func twoColumnContent(width: CGFloat) -> some View {
+		let columns = FoldColumns.columns(width: width, spacing: Theme.sectionGap, leadingFraction: 0.4, fold: fold)
+		return VStack(alignment: .leading, spacing: 24) {
+			VStack(alignment: .leading, spacing: 24) {
+				titleBlock
+				notices
+			}
+			.padding(.leading, columns[0].x)
+			FoldColumns(spacing: Theme.sectionGap, leadingFraction: 0.4, fold: fold) {
+				ScrollView(showsIndicators: false) {
+					backupDetails
+						.padding(.bottom, 32)
+				}
+				GeometryReader { pane in
+					if model.showsPhotoLibrary {
+						photoGrid(
+							gridWidth: max(columns[1].width - 16, 0),
+							columns: WideLayout.columns(for: columns[1].width - 16, iPhone: 3),
+							fillHeight: pane.size.height - 16
+						)
+					}
+				}
+			}
+			// Measured before the padding, in the columns' own coordinates
+			.trackingFold($fold)
+		}
+		.padding(.top, topClearance)
+		.padding(.horizontal, Theme.contentInset)
+	}
+
+	private var summary: some View {
+		VStack(alignment: .leading, spacing: 24) {
+			titleBlock
+			notices
+			backupDetails
+		}
+		.frame(maxWidth: .infinity, alignment: .leading)
+	}
+
+	@ViewBuilder
+	private var notices: some View {
+		if model.showsPhotoLibrary, model.canSwitchPhotoBackupHere,
+			let destination = model.otherPhotoBackupDestinationName
+		{
+			PhotoBackupElsewhereNotice(destination: destination)
+		}
+		if let notice = model.photoBackupNotice {
+			PhotoBackupNoticeCard(
+				notice: notice,
+				setUpTailscale: model.presentTailscaleSetup,
+				dismissOffer: model.dismissBackUpAnywhereOffer,
+				retryStorage: model.retryPhotoBackupAfterInsufficientStorage,
+				retryBackup: model.retryPhotoBackupAfterError
+			)
+		}
+	}
+
+	// The stats, or the setup card while backup isn't on here
+	@ViewBuilder
+	private var backupDetails: some View {
+		VStack(alignment: .leading, spacing: 24) {
+			if model.showsPhotoLibrary {
+				statTiles
+				ViewAllInPhotosButton()
+			} else {
+				// On its own on a wide screen, centred at a readable width like the
+				// system's empty states rather than stretched edge to edge
+				setupCard
+					.frame(maxWidth: 460)
+					.frame(maxWidth: .infinity)
+				if model.photoBackupIsConfiguredElsewhere {
+					// umbrelOS's Photos holds every device's backups, so it stays one tap away
+					ViewAllInPhotosButton()
+				}
+			}
+		}
+		.frame(maxWidth: .infinity, alignment: .leading)
 	}
 
 	// "Library", a sync status row, and a one-line explainer.
@@ -150,23 +230,25 @@ struct LibraryView: View {
 	// bleeding through the card's top edge, so the crop itself signals that older
 	// photos are a scroll away. Padding stays on the sides and bottom only; smaller
 	// libraries shrink to their exact height with the original padded layout.
-	private func photoGrid(gridWidth: CGFloat) -> some View {
-		let cols = 3
+	// `fillHeight` is the most a card may take, for a grid that fills its pane rather
+	// than showing 4.6 rows.
+	private func photoGrid(gridWidth: CGFloat, columns cols: Int, fillHeight: CGFloat? = nil) -> some View {
 		let assets = model.photoLibrary.assets
 		let count = assets.count
 		let rows = Int(ceil(Double(count) / Double(cols)))
-		let cellWidth = (gridWidth - 8) / CGFloat(cols)
+		let cellWidth = (gridWidth - CGFloat(cols - 1) * 4) / CGFloat(cols)
+		let contentHeight = (CGFloat(rows) * cellWidth) + (CGFloat(max(0, rows - 1)) * 4)
 		// Beyond four rows the card adopts the fixed-height bled layout:
 		// 4.6 rows of tile and four 4pt gaps, with the viewport pulled up through
 		// the card's top padding so the partial row crops at the card edge.
-		let bleeds = rows > 4
+		let bleeds = fillHeight.map { contentHeight > $0 - 16 } ?? (rows > 4)
 		let viewportShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 		// Bled viewport spans the card's full interior height, top edge to bottom
 		// edge; the 8pt at-rest gap below the newest row scrolls with the content.
 		let viewportHeight =
 			bleeds
-			? (4.6 * cellWidth) + 24
-			: (CGFloat(rows) * cellWidth) + (CGFloat(max(0, rows - 1)) * 4)
+			? fillHeight ?? (4.6 * cellWidth) + 24
+			: contentHeight
 
 		return Group {
 			if count == 0 {
@@ -380,6 +462,7 @@ struct PhotoBackupSetupCard: View {
 	@Environment(\.openURL) private var openURL
 	@State private var isConfirmingSwitch = false
 	var learnMore: (() -> Void)? = nil
+	var verticalPadding: CGFloat = 28
 
 	var body: some View {
 		Group {
@@ -390,6 +473,7 @@ struct PhotoBackupSetupCard: View {
 					subtitle: "This iPhone can back up to one Umbrel at a time.",
 					buttonTitle: model.photoBackupSetupInProgress ? "Switching backup\u{2026}" : "Back Up to This Umbrel",
 					buttonLoading: model.photoBackupSetupInProgress,
+					verticalPadding: verticalPadding,
 					action: { isConfirmingSwitch = true }
 				)
 				.photoBackupSwitchConfirmation(isPresented: $isConfirmingSwitch, destination: destination)
@@ -401,6 +485,7 @@ struct PhotoBackupSetupCard: View {
 					buttonTitle: buttonTitle,
 					buttonLoading: model.photoBackupSetupInProgress,
 					learnMore: learnMore,
+					verticalPadding: verticalPadding,
 					action: {
 						if needsSettings {
 							if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }

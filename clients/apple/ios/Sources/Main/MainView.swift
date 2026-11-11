@@ -55,6 +55,7 @@ struct MainView: View {
 									+ geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom
 							)
 						)
+						.environment(\.topClearance, max(0, WideLayout.minimumTopInset - geometry.safeAreaInsets.top))
 				}
 			} else {
 				Color.black.ignoresSafeArea()
@@ -92,24 +93,24 @@ struct MainView: View {
 					.easeOut(duration: showsUmbrel ? 0.18 : 0.3).delay(showsUmbrel ? 0 : 0.08),
 					value: showsUmbrel)
 			if let umbrel = browser.umbrel {
-				UmbrelOSView(browser: browser, page: umbrel, isShown: showsUmbrel)
-					.animation(
+				NavigationStack {
+					UmbrelOSView(browser: browser, page: umbrel, isShown: showsUmbrel)
+						.modifier(UmbrelOSToolbar(isShown: showsUmbrel))
+				}
+				.allowsHitTesting(showsUmbrel)
+				.animation(
 						showsUmbrel
 							? .spring(duration: 0.42, bounce: 0.12).delay(0.08)
 							: .easeIn(duration: 0.16),
 						value: showsUmbrel)
 			}
 		}
-		// The status-bar shading and the header belong to neither layer. They are
-		// shared by every tab and by umbrelOS, and stay exactly as they are while
-		// what's beneath them changes.
-		.overlay(alignment: .top) { WallpaperTopGradient() }
-		.overlay(alignment: .top) { headerBar(model, browser: browser) }
 		// A background, not a layer in the stack: it must not take part in layout, or
 		// its full-screen size would push the content out of the safe area.
 		// It is also the only wallpaper there is: every tab and umbrelOS show this one
 		// image, so nothing can be out of register with anything else.
-		.background { WallpaperBackground(image: model.wallpaperImage) }
+		// umbrelOS draws its wallpaper plain, so the tabs' shading goes while it shows
+		.background { WallpaperBackground(image: model.wallpaperImage, isShaded: !showsUmbrel) }
 		.environment(\.brandColor, BrandColor.color(model.wallpaperBrandColorHsl))
 		.environment(model)
 		.environment(browser)
@@ -124,15 +125,24 @@ struct MainView: View {
 
 	private func mainContent(_ model: MainModel, browser: Browser) -> some View {
 		TabView(selection: tabSelection) {
-			HomeView(onShowConnectionDetails: showConnectionDetails)
-				.tabItem { Label("Home", systemImage: "house.fill") }
-				.tag(Tab.home)
-			AppsView()
-				.tabItem { Label("Apps", systemImage: "circle.grid.cross.up.filled") }
-				.tag(Tab.apps)
-			LibraryView()
-				.tabItem { Label("Library", systemImage: "photo.fill.on.rectangle.fill") }
-				.tag(Tab.library)
+			NavigationStack {
+				HomeView(onShowConnectionDetails: showConnectionDetails)
+					.modifier(TabHeaderToolbar(showsBack: true))
+			}
+			.tabItem { Label("Home", systemImage: "house.fill") }
+			.tag(Tab.home)
+			NavigationStack {
+				AppsView()
+					.modifier(TabHeaderToolbar(showsBack: false))
+			}
+			.tabItem { Label("Apps", systemImage: "circle.grid.cross.up.filled") }
+			.tag(Tab.apps)
+			NavigationStack {
+				LibraryView()
+					.modifier(TabHeaderToolbar(showsBack: false))
+			}
+			.tabItem { Label("Library", systemImage: "photo.fill.on.rectangle.fill") }
+			.tag(Tab.library)
 			Color.clear
 				.tabItem { Label("Profile", systemImage: "person.fill") }
 				.tag(Tab.profile)
@@ -272,33 +282,6 @@ struct MainView: View {
 				dismissButton: .default(Text("OK"))
 			)
 		}
-	}
-
-	private func headerBar(_ model: MainModel, browser: Browser) -> some View {
-		// Back leads from Home out to the list of Umbrels. umbrelOS has its own navigation,
-		// and the pill's X closes it. When an app opened umbrelOS with a link, the same
-		// corner leads back to that app, like the system's own way back to the previous app.
-		let showsBack = selection == .home && !browser.showsUmbrel
-		let returnTarget = browser.showsUmbrel ? browser.returnTarget : nil
-		return HStack {
-			ZStack(alignment: .leading) {
-				// Keep the glass compositor alive across tab changes, like the browser pill.
-				// Elsewhere the control is hidden without being removed from the hierarchy.
-				CircleIconButton(system: "chevron.left", accessibilityLabel: "All Umbrels") { model.onBack() }
-					.opacity(showsBack ? 1 : 0)
-					.allowsHitTesting(showsBack)
-					.accessibilityHidden(!showsBack)
-				if let returnTarget {
-					ReturnToAppButton(name: returnTarget.identity.name) { browser.returnToApp() }
-						.transition(.opacity)
-				}
-			}
-			Spacer()
-			HeaderAccessPill(model: model)
-		}
-		.padding(.horizontal, Theme.contentInset)
-		.animation(.easeOut(duration: 0.2), value: showsBack)
-		.animation(.easeOut(duration: 0.2), value: returnTarget)
 	}
 
 	private var tabSelection: Binding<Tab> {

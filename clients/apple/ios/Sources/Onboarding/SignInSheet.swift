@@ -108,6 +108,7 @@ struct UmbrelSignInForm: View {
 	}
 
 	@State private var step: Step = .loadingAccounts
+	@State private var usesSideColumn = false
 	@State private var accounts: [Umbreld.Account] = []
 	@State private var selectedAccount: Umbreld.Account?
 	@State private var password = ""
@@ -159,10 +160,13 @@ struct UmbrelSignInForm: View {
 			.toolbar {
 				DrawerCloseToolbarItem(action: onCancel)
 			}
+			.modifier(SideColumnReader(isInSideColumn: $usesSideColumn))
 			.toolbarBackground(Color(hex: 0x1C1C1E), for: .navigationBar)
 			.toolbarBackground(.visible, for: .navigationBar)
 		}
-		.presentationDetents([dynamicTypeSize.isAccessibilitySize ? .large : .height(540)])
+		// With iPhone Duo's side column the sheet runs full height, like the system's own
+		// sheets there, so its bar meets the status bar instead of stopping just below it.
+		.presentationDetents([dynamicTypeSize.isAccessibilitySize || usesSideColumn ? .large : .height(540)])
 		.presentationDragIndicator(.visible)
 		.presentationCornerRadius(38)
 		.presentationBackground(Color(hex: 0x1C1C1E))
