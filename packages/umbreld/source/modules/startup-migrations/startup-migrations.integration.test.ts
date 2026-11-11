@@ -128,6 +128,77 @@ test('Back That Mac Up app port is migrated from 445 to 1445', async () => {
 	expect(notifications.includes('migrated-back-that-mac-up')).toBe(true)
 })
 
+// Write a minimal Umbrel install: a user named after the install and a marker file
+async function writeInstall(directory: string, name: string) {
+	await fse.ensureDir(directory)
+	await fse.writeFile(`${directory}/umbrel.yaml`, yaml.dump({user: {name}}))
+	await fse.writeFile(`${directory}/${name}-marker`, name)
+}
+
+// Check the imported install replaced the current one and nothing was left behind
+async function expectImportedInstallActive(dataDirectory: string) {
+	await expect(umbreld.instance.user.get()).resolves.toMatchObject({name: 'imported'})
+	await expect(fse.pathExists(`${dataDirectory}/imported-marker`)).resolves.toBe(true)
+	await expect(fse.pathExists(`${dataDirectory}/current-marker`)).resolves.toBe(false)
+	await expect(fse.pathExists(`${dataDirectory}/import`)).resolves.toBe(false)
+	await expect(fse.pathExists(`${dataDirectory}-import-temp`)).resolves.toBe(false)
+}
+
+test('imported data directory is activated', async () => {
+	const {dataDirectory} = umbreld.instance
+
+	// Migration and backup restore leave the install to activate in data/import
+	await writeInstall(dataDirectory, 'current')
+	await writeInstall(`${dataDirectory}/import`, 'imported')
+
+	await umbreld.instance.start()
+
+	await expectImportedInstallActive(dataDirectory)
+})
+
+test('old data left behind by an interrupted activation is deleted on the next start', async () => {
+	const {dataDirectory} = umbreld.instance
+
+	// The imported install is swapped in before the old data is deleted. Stopping during the
+	// delete leaves the old data in the temporary directory with the imported install live.
+	await writeInstall(dataDirectory, 'imported')
+	await writeInstall(`${dataDirectory}-import-temp`, 'current')
+
+	await umbreld.instance.start()
+
+	await expectImportedInstallActive(dataDirectory)
+})
+
+test('an import that was never swapped in is not activated later', async () => {
+	const {dataDirectory} = umbreld.instance
+
+	// Stopping after the import was moved alongside the data directory but before the swap leaves
+	// it in the temporary directory. We can't tell that apart from old data, and it may have been
+	// left there long ago, so the install that's running is kept.
+	await writeInstall(dataDirectory, 'current')
+	await writeInstall(`${dataDirectory}-import-temp`, 'imported')
+
+	await umbreld.instance.start()
+
+	await expect(umbreld.instance.user.get()).resolves.toMatchObject({name: 'current'})
+	await expect(fse.pathExists(`${dataDirectory}/current-marker`)).resolves.toBe(true)
+	await expect(fse.pathExists(`${dataDirectory}/imported-marker`)).resolves.toBe(false)
+	await expect(fse.pathExists(`${dataDirectory}-import-temp`)).resolves.toBe(false)
+})
+
+test('a new import replaces a temporary directory left by an interrupted activation', async () => {
+	const {dataDirectory} = umbreld.instance
+
+	await writeInstall(dataDirectory, 'current')
+	await writeInstall(`${dataDirectory}-import-temp`, 'stale')
+	await writeInstall(`${dataDirectory}/import`, 'imported')
+
+	await umbreld.instance.start()
+
+	await expectImportedInstallActive(dataDirectory)
+	await expect(fse.pathExists(`${dataDirectory}/stale-marker`)).resolves.toBe(false)
+})
+
 test('first run writes version without adding a notification', async () => {
 	// Ensure no version is set on first run
 	const versionBefore = await umbreld.instance.store.get('version')
