@@ -990,6 +990,333 @@ final class PhotoBackupLedgerTests: XCTestCase {
 		XCTAssertLessThan(Date().timeIntervalSince(started), 1, "The count must not wait for the write lock")
 	}
 
+	// Releasing orphaned uploads used to scan every resource under the write lock, which
+	// iOS found held when it suspended the app (0xdead10cc). With nothing orphaned, it
+	// takes no lock, so another writer holding it doesn't even make the call wait.
+	func testReleasingOrphansTakesNoWriteLockWhenNoneAreOrphaned() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory([candidate("photo", mediaType: 1)], deviceId: "device", changeToken: Data())
+		try prepare(ledger, "photo")
+		try ledger.markResourcesRegistered(["photo"])
+
+		let writer = try openDatabase()
+		defer { sqlite3_close(writer) }
+		XCTAssertEqual(sqlite3_exec(writer, "BEGIN IMMEDIATE", nil, nil, nil), SQLITE_OK)
+		defer { sqlite3_exec(writer, "ROLLBACK", nil, nil, nil) }
+
+		let started = Date()
+		try ledger.releaseOrphanedRegisteredResources(
+			deviceId: "device",
+			activeResourceKeys: ["photo"],
+			includePhotos: true,
+			includeVideos: true
+		)
+		XCTAssertLessThan(Date().timeIntervalSince(started), 1, "The search must not wait for the write lock")
+	}
+
+	func testReleasingOrphansLeavesActiveAndOtherMediaRegistered() throws {
+		let ledger = try makeLedger()
+		let identifiers = (0..<600).map { "photo\($0)" }
+		try ledger.seedInventory(
+			identifiers.map { candidate($0, mediaType: 1) } + [candidate("video", mediaType: 2)],
+			deviceId: "device",
+			changeToken: Data()
+		)
+		for identifier in identifiers + ["video"] { try prepare(ledger, identifier) }
+		try ledger.markResourcesRegistered(Set(identifiers + ["video"]))
+
+		try ledger.releaseOrphanedRegisteredResources(
+			deviceId: "device",
+			activeResourceKeys: ["photo0"],
+			includePhotos: true,
+			includeVideos: false
+		)
+
+		func state(_ identifier: String) throws -> Int64? {
+			try ledger.resources(deviceId: "device", localIdentifier: identifier, revision: 1).first?.state
+		}
+		XCTAssertEqual(try state("photo0"), PhotoBackupLedger.resourceRegistered)
+		XCTAssertEqual(try state("photo1"), PhotoBackupLedger.resourcePending)
+		// Either side of the batch boundary
+		XCTAssertEqual(try state("photo499"), PhotoBackupLedger.resourcePending)
+		XCTAssertEqual(try state("photo500"), PhotoBackupLedger.resourcePending)
+		XCTAssertEqual(try state("photo599"), PhotoBackupLedger.resourcePending)
+		XCTAssertEqual(try state("video"), PhotoBackupLedger.resourceRegistered)
+	}
+
+	// Finishing an inventory scan used to mark the assets it didn't see with one statement
+	// that reads every asset under the write lock. They're found first, then marked by
+	// key in batches.
+	func testFinishingInventoryScanDeletesEveryAssetItDidNotSee() throws {
+		let ledger = try makeLedger()
+		let identifiers = (0..<600).map { "photo\($0)" }
+		let first = try ledger.startInventoryScan(deviceId: "device", changeToken: Data("first".utf8))
+		try ledger.recordInventoryBatch(
+			identifiers.map { candidate($0, mediaType: 1) },
+			deviceId: "device",
+			generation: first.generation
+		)
+		try ledger.finishInventoryScan(deviceId: "device", generation: first.generation)
+		try ledger.clearChangeToken(deviceId: "device")
+
+		let second = try ledger.startInventoryScan(deviceId: "device", changeToken: Data("second".utf8))
+		try ledger.recordInventoryBatch([candidate("photo0", mediaType: 1)], deviceId: "device", generation: second.generation)
+		try ledger.finishInventoryScan(deviceId: "device", generation: second.generation)
+
+		let states = try ledger.assetStates(deviceId: "device")
+		XCTAssertEqual(states, ["photo0": .pending])
+		XCTAssertEqual(try ledger.changeToken(deviceId: "device"), Data("second".utf8))
+	}
+
+	// Try Again used to update every resource of the library under the write lock, which
+	// iOS found held when it suspended the app (0xdead10cc). The failed assets are found
+	// first, and with none there's no lock to wait for.
+	func testRequeueingFailedAssetsTakesNoWriteLockWhenNothingFailed() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory([candidate("photo", mediaType: 1)], deviceId: "device", changeToken: Data())
+		try prepare(ledger, "photo")
+		try ledger.recordResourceSucceeded(resourceKey: "photo", bytes: 10)
+
+		let writer = try openDatabase()
+		defer { sqlite3_close(writer) }
+		XCTAssertEqual(sqlite3_exec(writer, "BEGIN IMMEDIATE", nil, nil, nil), SQLITE_OK)
+		defer { sqlite3_exec(writer, "ROLLBACK", nil, nil, nil) }
+
+		let started = Date()
+		try ledger.requeueFailedAssets(deviceId: "device", includePhotos: true, includeVideos: true)
+		XCTAssertLessThan(Date().timeIntervalSince(started), 1, "The search must not wait for the write lock")
+		XCTAssertEqual(try ledger.statistics(deviceId: "device").uploadedCount, 1)
+	}
+
+	func testRequeueingFailedAssetsRetriesEveryFailedAssetOfTheEnabledMedia() throws {
+		let ledger = try makeLedger()
+		let photos = (0..<600).map { "photo\($0)" }
+		try ledger.seedInventory(
+			photos.map { candidate($0, mediaType: 1) }
+				+ [candidate("video", mediaType: 2), candidate("uploaded", mediaType: 1), candidate("live", mediaType: 1)],
+			deviceId: "device",
+			changeToken: Data()
+		)
+		for identifier in photos + ["video", "uploaded"] {
+			try prepare(ledger, identifier)
+		}
+		for identifier in photos + ["video"] {
+			try ledger.recordResourceFailed(resourceKey: identifier, message: "server error")
+		}
+		try ledger.recordResourceSucceeded(resourceKey: "uploaded", bytes: 10)
+		try ledger.prepareAsset(
+			deviceId: "device",
+			localIdentifier: "live",
+			revision: 1,
+			resources: [
+				.init(resourceKey: "still", filename: "live.heic", destinationPath: "/Photos/live.heic"),
+				.init(resourceKey: "motion", filename: "live.mov", destinationPath: "/Photos/live.mov"),
+			]
+		)
+		try ledger.recordResourceSucceeded(resourceKey: "still", bytes: 10)
+		try ledger.recordResourceFailed(resourceKey: "motion", message: "server error")
+
+		try ledger.requeueFailedAssets(deviceId: "device", includePhotos: true, includeVideos: false)
+
+		let states = try ledger.assetStates(deviceId: "device")
+		// Either side of the batch boundary
+		for identifier in ["photo0", "photo499", "photo500", "photo599", "live"] {
+			XCTAssertEqual(states[identifier], .pending, identifier)
+		}
+		XCTAssertEqual(states["video"], .failed, "Disabled media stays as it was")
+		XCTAssertEqual(states["uploaded"], .uploaded)
+		func resourceState(_ identifier: String, _ key: String) throws -> Int64? {
+			try ledger.resources(deviceId: "device", localIdentifier: identifier, revision: 1)
+				.first { $0.resourceKey == key }?.state
+		}
+		XCTAssertEqual(try resourceState("photo500", "photo500"), PhotoBackupLedger.resourcePending)
+		XCTAssertEqual(try resourceState("video", "video"), PhotoBackupLedger.resourceFailed)
+		XCTAssertEqual(try resourceState("live", "still"), PhotoBackupLedger.resourceSucceeded)
+		XCTAssertEqual(try resourceState("live", "motion"), PhotoBackupLedger.resourcePending)
+		let stats = try ledger.statistics(deviceId: "device")
+		XCTAssertEqual(stats.queuedCount, 601)
+		XCTAssertEqual(stats.failedCount, 1)
+	}
+
+	// A history replay used to be one transaction however many assets it touched. It's
+	// written a few hundred changes at a time, with the token in the last one.
+	func testApplyingChangesWritesEveryBatchAndThenTheToken() throws {
+		let ledger = try makeLedger()
+		let old = (0..<600).map { "old\($0)" }
+		try ledger.seedInventory(old.map { candidate($0, mediaType: 1) }, deviceId: "device", changeToken: Data("first".utf8))
+		try prepare(ledger, "old0")
+		try ledger.recordResourceSucceeded(resourceKey: "old0", bytes: 10)
+
+		try ledger.applyChanges(
+			inserted: (0..<1_100).map { candidate("new\($0)", mediaType: 1) },
+			updated: [candidate("old0", mediaType: 1, modificationTime: 2)],
+			deleted: Set(old.dropFirst()),
+			deviceId: "device",
+			changeToken: Data("second".utf8)
+		)
+
+		let states = try ledger.assetStates(deviceId: "device")
+		XCTAssertEqual(states.count, 1_101)
+		// Either side of each batch boundary
+		for identifier in ["new0", "new499", "new500", "new999", "new1000", "new1099"] {
+			XCTAssertEqual(states[identifier], .pending, identifier)
+		}
+		XCTAssertEqual(states["old0"], .pending, "The edit queued a new revision")
+		XCTAssertNil(states["old1"])
+		XCTAssertNil(states["old599"])
+		XCTAssertEqual(try ledger.changeToken(deviceId: "device"), Data("second".utf8))
+
+		// History that changed nothing still advances the token
+		try ledger.applyChanges(inserted: [], updated: [], deleted: [], deviceId: "device", changeToken: Data("third".utf8))
+		XCTAssertEqual(try ledger.changeToken(deviceId: "device"), Data("third".utf8))
+	}
+
+	// As when iOS takes the app's time back part way through a long replay. The next
+	// pass starts from the old token, and the changes already committed apply again
+	// without effect.
+	func testInterruptedChangeReplayKeepsTheOldTokenAndReplaysIdempotently() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory([candidate("removed", mediaType: 1)], deviceId: "device", changeToken: Data("first".utf8))
+		let inserted = (0..<50_000).map { candidate("new\($0)", mediaType: 1) }
+		let returned = expectation(description: "The write returned")
+		var writeError: Error?
+		DispatchQueue.global().async {
+			do {
+				try ledger.applyChanges(
+					inserted: inserted,
+					updated: [],
+					deleted: ["removed"],
+					deviceId: "device",
+					changeToken: Data("second".utf8)
+				)
+			} catch {
+				writeError = error
+			}
+			returned.fulfill()
+		}
+		Thread.sleep(forTimeInterval: 0.1)
+
+		ledger.stop()
+
+		wait(for: [returned], timeout: 10)
+		XCTAssertEqual((writeError as? PhotoBackupLedger.DatabaseError)?.code, SQLITE_INTERRUPT)
+		let other = try makeLedger()
+		XCTAssertEqual(try other.changeToken(deviceId: "device"), Data("first".utf8), "The token is committed last")
+		XCTAssertEqual(try other.assetRecord(deviceId: "device", localIdentifier: "removed")?.state, .pending)
+
+		try other.applyChanges(
+			inserted: inserted,
+			updated: [],
+			deleted: ["removed"],
+			deviceId: "device",
+			changeToken: Data("second".utf8)
+		)
+		XCTAssertEqual(try other.changeToken(deviceId: "device"), Data("second".utf8))
+		XCTAssertEqual(try other.statistics(deviceId: "device").queuedCount, 50_000)
+		XCTAssertNil(try other.assetRecord(deviceId: "device", localIdentifier: "removed"))
+	}
+
+	// A large iCloud sync is observed as thousands of changes at once. They're written a
+	// few hundred at a time, and a change in any batch counts.
+	func testObservedChangesAreWrittenInBatchesAndAChangeInAnyBatchCounts() throws {
+		let ledger = try makeLedger()
+		let known = (0..<1_000).map { candidate("photo\($0)", mediaType: 1) }
+		try ledger.seedInventory(known, deviceId: "device", changeToken: Data())
+
+		XCTAssertTrue(try ledger.recordObservedChanges(
+			inserted: known + [candidate("new", mediaType: 1)],
+			contentChanged: [],
+			metadataChanged: [],
+			deviceId: "device"
+		), "The only new asset is in the last batch")
+		XCTAssertEqual(try ledger.statistics(deviceId: "device").queuedCount, 1_001)
+
+		XCTAssertFalse(try ledger.recordObservedChanges(
+			inserted: [],
+			contentChanged: known,
+			metadataChanged: known,
+			deviceId: "device"
+		), "Nothing changed")
+		XCTAssertTrue(try ledger.recordObservedChanges(
+			inserted: [],
+			contentChanged: known.map { candidate($0.localIdentifier, mediaType: 1, modificationTime: 2) },
+			metadataChanged: [],
+			deviceId: "device"
+		))
+		XCTAssertEqual(try ledger.statistics(deviceId: "device").queuedCount, 1_001)
+		XCTAssertEqual(
+			try ledger.nextAssets(deviceId: "device", includePhotos: true, includeVideos: true, limit: 2_000)
+				.filter { $0.revision == 2 }.count,
+			1_000
+		)
+	}
+
+	// Starting an inventory used to find the highest generation by reading every asset
+	// under the write lock. It's a counter in the metadata, read from the assets once
+	// for a ledger written before the counter existed.
+	func testInventoryGenerationCountsUpFromTheAssetsOfAnOlderLedger() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory([candidate("photo", mediaType: 1)], deviceId: "device", changeToken: Data())
+		try ledger.seedInventory([candidate("photo", mediaType: 1)], deviceId: "device", changeToken: Data())
+		// As the ledger of an app that didn't keep the counter
+		let database = try openDatabase()
+		defer { sqlite3_close(database) }
+		XCTAssertEqual(
+			sqlite3_exec(database, "DELETE FROM photo_metadata WHERE key = 'inventoryGeneration'", nil, nil, nil),
+			SQLITE_OK
+		)
+
+		try ledger.clearChangeToken(deviceId: "device")
+		let resumed = try ledger.startInventoryScan(deviceId: "device", changeToken: Data())
+		XCTAssertEqual(resumed.generation, 3, "Follows the generations the assets already carry")
+		try ledger.finishInventoryScan(deviceId: "device", generation: resumed.generation)
+
+		// With no asset left to read it from, the counter alone keeps it going up
+		XCTAssertEqual(sqlite3_exec(database, "DELETE FROM photo_assets", nil, nil, nil), SQLITE_OK)
+		try ledger.clearChangeToken(deviceId: "device")
+		let next = try ledger.startInventoryScan(deviceId: "device", changeToken: Data())
+		XCTAssertEqual(next.generation, 4)
+		XCTAssertEqual(try ledger.recordInventoryBatch(
+			[candidate("photo", mediaType: 1)],
+			deviceId: "device",
+			generation: next.generation
+		), 1)
+		try ledger.finishInventoryScan(deviceId: "device", generation: next.generation)
+		XCTAssertEqual(try ledger.assetStates(deviceId: "device"), ["photo": .pending])
+		XCTAssertEqual(try ledger.startInventoryScan(deviceId: "other", changeToken: Data()).generation, 1)
+	}
+
+	// A build without the counter, run after one with it, scans with generations the
+	// stored counter never saw. Reusing one would leave an asset restored since then
+	// looking already scanned and still deleted.
+	func testInventoryGenerationStaysAboveTheAssetsWhenTheCounterFallsBehind() throws {
+		let ledger = try makeLedger()
+		let first = try ledger.startInventoryScan(deviceId: "device", changeToken: Data())
+		_ = try ledger.recordInventoryBatch([candidate("photo", mediaType: 1)], deviceId: "device", generation: first.generation)
+		try ledger.finishInventoryScan(deviceId: "device", generation: first.generation)
+
+		// As an older build scanning twice more without updating the counter, then the
+		// photo being deleted
+		let database = try openDatabase()
+		defer { sqlite3_close(database) }
+		XCTAssertEqual(
+			sqlite3_exec(
+				database,
+				"UPDATE photo_assets SET inventoryGeneration = 3, state = \(PhotoBackupLedger.assetDeleted)",
+				nil, nil, nil
+			),
+			SQLITE_OK
+		)
+
+		try ledger.clearChangeToken(deviceId: "device")
+		let next = try ledger.startInventoryScan(deviceId: "device", changeToken: Data())
+		XCTAssertEqual(next.generation, 4)
+		// The photo, restored, is seen again and goes back to the queue
+		_ = try ledger.recordInventoryBatch([candidate("photo", mediaType: 1)], deviceId: "device", generation: next.generation)
+		try ledger.finishInventoryScan(deviceId: "device", generation: next.generation)
+		XCTAssertEqual(try ledger.assetStates(deviceId: "device"), ["photo": .pending])
+	}
+
 	private func makeLedger() throws -> PhotoBackupLedger {
 		try XCTUnwrap(PhotoBackupLedger(url: databaseURL))
 	}
