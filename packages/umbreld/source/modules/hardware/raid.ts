@@ -746,11 +746,24 @@ export default class Raid {
 		const name = await this.configStore.get('raid.poolName')
 		const status = await this.getPoolStatus(name)
 
+		// A mirror FailSafe transition that stopped part way leaves a storage array with some of its drives, or
+		// only its accelerator, unmirrored. The transition's own error is only kept in memory, so report it from
+		// the layout instead, which survives restarts.
+		const unfinishedFailsafeTransitionStatus: FailsafeTransitionStatus | undefined =
+			!this.isTransitioningToFailsafe && status.raidType === 'storage' && status.topology === 'mirror'
+				? {
+						state: 'error',
+						progress: 0,
+						error:
+							"FailSafe was only partly enabled. Part of this array isn't mirrored, so your data isn't protected against a drive failure.",
+					}
+				: undefined
+
 		return {
 			name,
 			...status,
 			replace: this.replaceStatus,
-			failsafeTransitionStatus: this.failsafeTransitionStatus,
+			failsafeTransitionStatus: this.failsafeTransitionStatus ?? unfinishedFailsafeTransitionStatus,
 			// Supress degraded state when performing failsafe transition
 			status:
 				this.failsafeTransitionStatus?.state === 'rebuilding' && status.status === 'DEGRADED'
@@ -804,14 +817,19 @@ export default class Raid {
 		const rootVdev = dataVdevs.find((v) => v.vdev_type === 'root')
 		if (!rootVdev) return {exists: false}
 
-		// Determine RAID type from data topology only, ignoring accelerator vdev classes.
+		// Determine the topology from the data vdevs only, ignoring accelerator vdev classes.
 		const isRaidz = dataVdevs.some((v) => v.vdev_type === 'raidz')
 		const isMirror = dataVdevs.some((v) => v.vdev_type === 'mirror')
 		// A partial HDD transition can contain a mirror alongside unprotected root-level disks.
 		const hasUnprotectedDataVdev = dataVdevs.some(
 			(v) => v.parent === rootVdev.name && v.vdev_type !== 'raidz' && v.vdev_type !== 'mirror',
 		)
-		const raidType = (isRaidz || isMirror) && !hasUnprotectedDataVdev ? 'failsafe' : 'storage'
+		// It can also leave the accelerator's special vdev on a single SSD. The special vdev holds the only
+		// copy of the pool's metadata, so losing that SSD loses the whole pool however the data is protected.
+		// Top-level special vdevs have no parent in the flattened vdev list.
+		const hasUnprotectedSpecialVdev = vdevs.some((v) => v.class === 'special' && !v.parent && v.vdev_type !== 'mirror')
+		const raidType =
+			(isRaidz || isMirror) && !hasUnprotectedDataVdev && !hasUnprotectedSpecialVdev ? 'failsafe' : 'storage'
 		let topology: Topology = 'stripe'
 		if (isRaidz) topology = 'raidz'
 		if (isMirror) topology = 'mirror'

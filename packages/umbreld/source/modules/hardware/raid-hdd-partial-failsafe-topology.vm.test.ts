@@ -72,6 +72,8 @@ describe.each(driveBuses)('Partially mirrored HDD RAID status (%s)', (bus) => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.raidType).toBe('storage')
 		expect(status.topology).toBe('stripe')
+		// A healthy storage array has no transition to report
+		expect(status.failsafeTransitionStatus).toBeUndefined()
 		expect(status.devices?.map((device) => device.id).sort()).toEqual([firstDeviceId, secondDeviceId].sort())
 		poolName = status.name
 	})
@@ -111,5 +113,21 @@ zpool attach -f '${poolName}' '/dev/disk/by-umbrel-id/${firstDeviceId}-part2' "$
 	test('does not report the partially mirrored pool as failsafe', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.raidType).toBe('storage')
+	})
+
+	test('reports the unfinished FailSafe transition as an error that survives a restart', async () => {
+		const expected = {
+			state: 'error',
+			progress: 0,
+			error:
+				"FailSafe was only partly enabled. Part of this array isn't mirrored, so your data isn't protected against a drive failure.",
+		}
+		expect((await umbreld.client.hardware.raid.getStatus.query()).failsafeTransitionStatus).toEqual(expected)
+
+		// The error comes from the pool layout, so it's still there after umbreld restarts
+		await umbreld.vm.sshAsRoot('systemctl restart umbrel')
+		await umbreld.waitForStartup({waitForUser: true})
+		await umbreld.login()
+		expect((await umbreld.client.hardware.raid.getStatus.query()).failsafeTransitionStatus).toEqual(expected)
 	})
 })
