@@ -927,9 +927,12 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 
 /* Photos timeline. The actions bar (and a source's strip) floats over the
    scroller's top edge. Tiles scrolling up under it dissolve into the window:
-   gone from --umbrel-photos-fade-from (the last bar-height of the chrome) up, easing in from there — an
-   S-curve, so neither end of the fall-off reads as an edge — to fully there
-   where the first row starts (--umbrel-photos-fade-to). A classic scrollbar (the rightmost
+   gone from --umbrel-photos-fade-from (the last bar-height of the chrome) up, easing in from there
+   to fully there where the first row starts (--umbrel-photos-fade-to). Most of
+   the way they stay faint, and come up in the last stretch: the bar's title
+   and the line under it are read over this band, and the line stands in its
+   lower half, where an even fall-off had the tiles all but whole behind 12px
+   of half-white text. A classic scrollbar (the rightmost
    --umbrel-photos-scrollbar px, reserved by the gutter so it can't resize the grid as
    content comes and goes) is left out of the fade.
 
@@ -943,10 +946,10 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	--umbrel-photos-fade: linear-gradient(
 		to bottom,
 		transparent var(--umbrel-photos-fade-from, 0px),
-		rgb(0 0 0 / 0.1) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.2),
-		rgb(0 0 0 / 0.35) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.4),
-		rgb(0 0 0 / 0.65) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.6),
-		rgb(0 0 0 / 0.9) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.8),
+		rgb(0 0 0 / 0.03) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.2),
+		rgb(0 0 0 / 0.09) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.4),
+		rgb(0 0 0 / 0.2) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.6),
+		rgb(0 0 0 / 0.45) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.8),
 		black var(--umbrel-photos-fade-to, 0px)
 	);
 	mask-image: var(--umbrel-photos-fade);

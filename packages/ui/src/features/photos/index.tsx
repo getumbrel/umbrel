@@ -1,5 +1,5 @@
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
-import {lazy, Suspense, useEffect, useState} from 'react'
+import {lazy, Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
 import {HiMenuAlt2} from 'react-icons/hi'
@@ -29,7 +29,6 @@ import {trpcReact} from '@/trpc/trpc'
 // can't move what's below. A phone on its side gives the row to the grid
 // (the actions bar takes its controls) until a search needs it.
 function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () => void}) {
-	const {t} = useTranslation()
 	const searching = useSearchEngaged() && isMobile
 	const reduceMotion = useReducedMotion() ?? false
 	const swap = (direction: 1 | -1) =>
@@ -55,11 +54,13 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 					) : (
 						<motion.div key='title' className='flex min-w-0 flex-1 items-center gap-4' {...swap(-1)}>
 							{isMobile ? (
-								<HiMenuAlt2 role='button' className='h-5 w-5 text-white/90 phone-side:hidden' onClick={openSidebar} />
+								<HiMenuAlt2
+									role='button'
+									className='h-5 w-5 shrink-0 text-white/90 phone-side:hidden'
+									onClick={openSidebar}
+								/>
 							) : null}
-							<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36 panes:text-36 phone-side:sr-only'>
-								{t('photos')}
-							</SheetTitle>
+							<Title />
 							{/* Phones and tablets: the page's controls, clear of the sheet's close button */}
 							<MobileActions className='mr-5 ml-auto lg:hidden phone-side:hidden' />
 						</motion.div>
@@ -67,6 +68,43 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 				</AnimatePresence>
 			</div>
 		</SheetHeader>
+	)
+}
+
+// The sheet's title, at its own size where it fits and as much smaller as it
+// takes where it doesn't: of everything in its row, it is what gives. The
+// word for Photos is twice as long in some languages as in English. Greek's
+// ran past the sidebar's column into the bar's title on desktop, and on a
+// phone it squeezed the menu button out of the row. On desktop its box is the
+// sidebar's column, less a gap before the bar's own title, which stands right
+// after it. Fitted when it mounts (it comes and goes with a phone's search)
+// and again whenever its row changes size.
+function Title() {
+	const {t} = useTranslation()
+	const title = t('photos')
+	const ref = useRef<HTMLHeadingElement>(null)
+	useLayoutEffect(() => {
+		const element = ref.current
+		if (!element?.parentElement) return
+		const fit = () => {
+			element.style.fontSize = ''
+			const [room, needed] = [element.clientWidth, element.scrollWidth]
+			// (Next to no room is the title read out but not shown: a phone on its side)
+			if (room < 16 || needed <= room) return
+			element.style.fontSize = `${(parseFloat(getComputedStyle(element).fontSize) * room) / needed}px`
+		}
+		fit()
+		const observer = new ResizeObserver(fit)
+		observer.observe(element.parentElement)
+		return () => observer.disconnect()
+	}, [title])
+	return (
+		<SheetTitle
+			ref={ref}
+			className='mr-2 min-w-0 leading-none whitespace-nowrap lg:mr-3 lg:w-[212px] lg:text-36 panes:text-36 phone-side:sr-only'
+		>
+			{title}
+		</SheetTitle>
 	)
 }
 

@@ -153,7 +153,8 @@ export function InfoPanel({
 						</div>
 						<p className='mt-1.5 text-12 text-white/55 tabular-nums'>
 							{[
-								t('photos-item.megapixels', {value: megapixels}),
+								// Megapixels are a photograph's measure: a video is its frame size
+								item.kind === 'photo' && t('photos-item.megapixels', {value: megapixels}),
 								`${item.width} × ${item.height}`,
 								item.durationMs !== undefined && formatDuration(item.durationMs),
 								formatFilesystemSize(item.sizeBytes),
@@ -252,8 +253,13 @@ export function InfoPanel({
 						<img src='/assets/dock/dock-files.webp' alt='' className='size-7 shrink-0 rounded-[7px]' />
 						<div className='min-w-0 flex-1'>
 							<span className='block text-12 text-white/55'>{t('photos-item.show-in-files')}</span>
-							<div className='mt-0.5 text-13'>
-								<Suspense fallback={<span className='block truncate'>{folder}</span>}>
+							{/* The breadcrumbs' scroller pads itself by 4px for its icons'
+							    badges. Taken back here, the folder stands under the label
+							    rather than a step in from it, and the plain path that holds
+							    its place while Files' icons load is given the same box, so
+							    the card is one height before and after */}
+							<div className='-m-1 -mt-0.5 text-13'>
+								<Suspense fallback={<span className='block truncate p-1 leading-5'>{folder}</span>}>
 									<FolderBreadcrumbs path={folder} homePath={homePath} />
 								</Suspense>
 							</div>
