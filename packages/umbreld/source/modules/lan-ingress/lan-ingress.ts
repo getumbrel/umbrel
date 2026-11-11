@@ -1100,10 +1100,16 @@ export default class LanIngress {
 			// lines include each request's URL, and so any token in the query string.
 			// The error handler below logs failures without it.
 			on: {
-				proxyRes: (proxyResponse) => {
+				proxyRes: (proxyResponse, request) => {
 					// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
 					// and HTTP fallback paths that are important for private local certs.
 					delete proxyResponse.headers['strict-transport-security']
+					// The upstream only answers Connection: close because agent: false asks it to,
+					// which says nothing about the browser's connection. Don't pass it on, so the
+					// browser can reuse its TLS connection instead of handshaking for every request.
+					// A response sent before the request body has arrived still closes, so that the
+					// browser stops uploading a body that was rejected.
+					if (originalProtocol === 'https' && request.complete) delete proxyResponse.headers.connection
 				},
 				error: (error, _request, response) => {
 					// Destroy the connection instead of answering with an error body. An
