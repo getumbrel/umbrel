@@ -16,6 +16,7 @@ import type Umbreld from '../../index.ts'
 import randomToken from '../utilities/random-token.ts'
 import {getHostname, getIpAddresses} from '../system/system.ts'
 import runEvery from '../utilities/run-every.ts'
+import readBeforeFailedWrite from '../utilities/read-before-failed-write.ts'
 import {forwardTcp} from './forward-tcp.ts'
 import {readNativeTlsPrelude} from './native-tls-preread.ts'
 import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.ts'
@@ -1125,6 +1126,11 @@ export default class LanIngress {
 					const clientFailed = response instanceof net.Socket && response.errored
 					this.logger[clientFailed ? 'verbose' : 'error'](`LAN ingress proxy error to ${upstreamPort}: ${error}`)
 					response.destroy()
+				},
+				proxyReq: ({socket}) => {
+					// An app or umbreld itself can answer an upload and close without
+					// reading the rest of it
+					if (socket) readBeforeFailedWrite(socket)
 				},
 			},
 		})
