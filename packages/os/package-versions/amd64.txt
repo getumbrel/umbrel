@@ -997,7 +997,7 @@ tor d4effb3a04f77d366dc47165247ec5a38469c2c289d97ad2081730fe5fec2703
 ## Other software
 
 kopia 0.23.1
-node 26.12.1
+node 26.13.1
 npm 11.20.0
 rclone 1.75.2
 yq 4.54.1
