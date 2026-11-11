@@ -1,4 +1,5 @@
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu'
+import {Slot} from '@radix-ui/react-slot'
 import {Check, ChevronRight, Circle} from 'lucide-react'
 import * as React from 'react'
 
@@ -9,20 +10,54 @@ import {contextMenuClasses} from './shared/menu'
 
 const ContextMenu = ContextMenuPrimitive.Root
 
+// Radix's trigger answers every right-click and touch press that React bubbles up to it. That includes presses on
+// a trigger nested inside it (an app icon on the desktop) and inside whatever is portalled out of it (an open menu,
+// a dialog), so a long-press there opened the outer menu as well. Only the innermost trigger around a press should
+// answer, so this sits between Radix and the element and passes on just the presses on the trigger's own surface.
+function TriggerSurface({
+	asChild,
+	onPointerDown,
+	onContextMenu,
+	...props
+}: React.ComponentProps<'span'> & {asChild?: boolean}) {
+	const Comp = asChild ? Slot : 'span'
+	return (
+		<Comp
+			{...props}
+			data-context-menu-trigger
+			onPointerDown={(e) => {
+				if (isOnOwnSurface(e)) onPointerDown?.(e)
+			}}
+			onContextMenu={(e) => {
+				if (isOnOwnSurface(e)) onContextMenu?.(e)
+			}}
+		/>
+	)
+}
+
+function isOnOwnSurface(e: React.SyntheticEvent) {
+	return e.target instanceof Element && e.target.closest('[data-context-menu-trigger]') === e.currentTarget
+}
+
 function ContextMenuTrigger({
+	asChild,
+	children,
 	onContextMenuCapture,
 	...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Trigger>) {
 	return (
 		<ContextMenuPrimitive.Trigger
 			{...props}
+			asChild
 			onContextMenuCapture={(e) => {
 				onContextMenuCapture?.(e)
 				// A text field inside the trigger (a rename, the Files path) gets the browser's text menu: stopping
 				// the event on its way down keeps it from the trigger and from the document's blocker
 				if (allowsNativeContextMenu(e.target)) e.stopPropagation()
 			}}
-		/>
+		>
+			<TriggerSurface asChild={asChild}>{children}</TriggerSurface>
+		</ContextMenuPrimitive.Trigger>
 	)
 }
 
