@@ -541,6 +541,18 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 		animation-duration: 0.01ms !important;
 	}
 
+	/* The wallpaper's zoom-and-unblur on load (an inline style, which this
+	   outranks). Collapsed rather than removed: its animationend reveals the
+	   full-resolution image */
+	[data-wallpaper-layer] {
+		animation-duration: 0.01ms !important;
+	}
+
+	/* An input error still appears, just without the shake */
+	.animate-shake {
+		animation: none;
+	}
+
 	.umbrel-sheet-zoom[data-state='open'],
 	.umbrel-sheet-zoom[data-state='closed'],
 	.umbrel-dock-bounce {

@@ -6,6 +6,8 @@ import {TbCircleCheckFilled, TbInfoCircle, TbServer} from 'react-icons/tb'
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {cn} from '@/lib/utils'
+import {focusDialogContent} from '@/utils/dialog'
+import {focusRingClass} from '@/utils/element-classes'
 
 import {RaidType} from '../hooks/use-storage'
 
@@ -107,7 +109,8 @@ export function StorageModeDisplay({
 							type='button'
 							onClick={() => setInfoDialogOption(option)}
 							className={cn(
-								'flex flex-1 items-center justify-center gap-2 rounded-17 border px-3 py-2.5 outline-hidden transition-colors',
+								'flex flex-1 items-center justify-center gap-2 rounded-17 border px-3 py-2.5 transition-colors',
+								focusRingClass,
 								isSelected ? 'border-brand bg-brand/15' : 'border-transparent',
 							)}
 						>
@@ -137,7 +140,8 @@ export function StorageModeDisplay({
 								aria-haspopup={isSelected ? undefined : 'dialog'}
 								onClick={isSelected ? undefined : () => setInfoDialogOption(option)}
 								className={cn(
-									'flex flex-col gap-2 rounded-17 border px-4 py-3 text-left outline-hidden',
+									'flex flex-col gap-2 rounded-17 border px-4 py-3 text-left',
+									focusRingClass,
 									isSelected ? 'border-brand bg-brand/15' : 'border-transparent',
 									!isSelected && 'cursor-pointer',
 								)}
@@ -153,7 +157,10 @@ export function StorageModeDisplay({
 											aria-label={t(option.infoTitleKey)}
 											aria-haspopup='dialog'
 											onClick={() => setInfoDialogOption(option)}
-											className='-ml-1 text-white/40 outline-hidden transition-colors hover:text-white/60'
+											className={cn(
+												'-ml-1 rounded-full text-white/40 transition-colors hover:text-white/60',
+												focusRingClass,
+											)}
 										>
 											<TbInfoCircle className='size-4' />
 										</button>
@@ -171,7 +178,7 @@ export function StorageModeDisplay({
 
 			{/* Info Dialog */}
 			<Dialog open={infoDialogOption !== null} onOpenChange={(open) => !open && setInfoDialogOption(null)}>
-				<DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+				<DialogContent onOpenAutoFocus={focusDialogContent}>
 					<DialogHeader>
 						<div className='flex items-center gap-2'>
 							{infoDialogOption?.icon}

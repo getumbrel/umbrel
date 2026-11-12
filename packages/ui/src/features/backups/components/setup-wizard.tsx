@@ -14,7 +14,7 @@ import {ErrorAlert, WarningAlert} from '@/components/ui/alert'
 import {Button} from '@/components/ui/button'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form'
-import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialogSeparator, ImmersiveDialogTitle} from '@/components/ui/immersive-dialog'
 import {Input, PasswordInput} from '@/components/ui/input'
 import umbrelPrivateCloudIcon from '@/features/backups/assets/umbrel-private-cloud-icon.png'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
@@ -41,7 +41,9 @@ import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation'
+import {focusRingClass} from '@/utils/element-classes'
 
 // ---------------------------------------------
 // Types & Schema
@@ -289,7 +291,9 @@ export function BackupsSetupWizard() {
 						return (
 							<>
 								{/* Like immersive dialog titles, wraps short of the window's close button */}
-								<h2 className='pe-4 text-24 font-medium text-white'>{h.title}</h2>
+								<ImmersiveDialogTitle asChild>
+									<h2 className='pe-4 text-24 font-medium text-white'>{h.title}</h2>
+								</ImmersiveDialogTitle>
 								{h.subtitle ? <span className='text-13 text-white/60'>{h.subtitle}</span> : null}
 							</>
 						)
@@ -592,7 +596,6 @@ function DestinationStep({
 										return (
 											<ServerCard
 												key={`${disk.id}-requires-format`}
-												selected={false}
 												onClick={() => {
 													if (disk.isFormatting) return
 													navigate(`/files/Home?dialog=files-format-drive&deviceId=${disk.id}`)
@@ -870,24 +873,34 @@ function ReviewStep({values}: {values: FormValues}) {
 									type={showPw ? 'text' : 'text'}
 									className='flex h-6 w-auto max-w-[120px] min-w-0 items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
 								/>
-								<span
-									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+								<button
+									type='button'
+									className={cn(
+										'group inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-4',
+										focusRingClass,
+									)}
 									onClick={() => setShowPw((s) => !s)}
 									title={showPw ? t('backups.hide') : t('backups.show')}
+									aria-label={showPw ? t('backups.hide') : t('backups.show')}
 								>
 									{showPw ? (
 										<EyeOff className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
 									) : (
 										<Eye className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
 									)}
-								</span>
-								<span
-									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+								</button>
+								<button
+									type='button'
+									className={cn(
+										'group inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-4',
+										focusRingClass,
+									)}
 									onClick={() => copyToClipboard(plainPw)}
 									title={t('backups.copy')}
+									aria-label={t('backups.copy')}
 								>
 									<Copy className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
-								</span>
+								</button>
 							</span>
 						</>
 					) : (

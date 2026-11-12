@@ -29,30 +29,29 @@ export function SourceItem({
 }) {
 	const {t} = useTranslation()
 	return (
+		// The row and its options are sibling buttons, so Enter on "⋯" opens the options
 		<div
-			role='button'
-			tabIndex={0}
-			onClick={onClick}
-			onKeyDown={(e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault()
-					onClick()
-				}
-			}}
-			aria-current={isActive ? 'page' : undefined}
 			className={cn(
-				'group flex w-full cursor-default items-center gap-2 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
+				'group flex w-full items-center gap-2 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] pr-2 text-12 hover:bg-linear-to-b',
 				isActive ? selectedClass : 'text-white/60 hover:bg-white/10 hover:text-white',
 			)}
 		>
-			<span className='flex h-5 w-5 shrink-0 items-center justify-center'>{icon}</span>
-			<span className='min-w-0 flex-1 truncate'>{label}</span>
 			<button
+				type='button'
+				onClick={onClick}
+				aria-current={isActive ? 'page' : undefined}
+				className={cn(
+					'flex min-w-0 flex-1 cursor-default items-center gap-2 rounded-lg py-1.5 pl-2 text-left',
+					focusRingClass,
+				)}
+			>
+				<span className='flex h-5 w-5 shrink-0 items-center justify-center'>{icon}</span>
+				<span className='min-w-0 flex-1 truncate'>{label}</span>
+			</button>
+			<button
+				type='button'
 				aria-label={t('photos-sidebar.source-options', {name: label})}
-				onClick={(e) => {
-					e.stopPropagation()
-					onOptions()
-				}}
+				onClick={onOptions}
 				className={cn(
 					'-my-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 transition-colors hover:bg-white/20 hover:text-white',
 					// Hover-only on desktop; mobile has no hover so keep it visible

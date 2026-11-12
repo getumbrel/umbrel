@@ -65,7 +65,7 @@ export function SegmentedControl<T extends string>({
 						'group relative flex-grow rounded-full leading-inter-trimmed outline-hidden transition-[box-shadow,background]',
 						value === tab.id && variant === 'primary' && 'focus-visible:ring-2 focus-visible:ring-brand/40',
 						value === tab.id && variant === 'muted-primary' && 'focus-visible:ring-2 focus-visible:ring-white/25',
-						value !== tab.id && 'outline-1 -outline-offset-2 outline-transparent focus-visible:outline-white/10',
+						value !== tab.id && 'focus-visible:ring-2 focus-visible:ring-white/25',
 						size === 'sm' && 'px-2',
 						size === 'default' && 'px-2.5',
 						size === 'lg' && 'px-[14px]',

@@ -332,6 +332,7 @@ export function Wallpaper({
 				<FadeInImg
 					key={wallpaper.url + '-loading'}
 					src={wallpaper.url}
+					alt=''
 					// Stays fixed under Safari's bar on Home (see index.css): scaled up, it would make the page wider than the window
 					className={cn(
 						'pointer-events-none fixed inset-0 w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-700',
@@ -444,6 +445,7 @@ function FullWallpaperImage({
 				key={loadAttempt}
 				ref={setImageRef}
 				src={wallpaper.url}
+				alt=''
 				data-wallpaper-full=''
 				data-wallpaper-layer={isPreview ? undefined : ''}
 				className={cn(

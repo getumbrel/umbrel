@@ -97,7 +97,7 @@ function Inner({
 			</div>
 			<Separator />
 			<p className='text-center text-sm leading-tight font-normal -tracking-2'>{t('2fa.enter-code')}</p>
-			<PinInput length={6} onCodeCheck={onCodeCheck} />
+			<PinInput label={t('2fa.enter-code')} length={6} onCodeCheck={onCodeCheck} />
 		</>
 	)
 }

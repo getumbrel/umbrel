@@ -1,5 +1,6 @@
 import {cva} from 'class-variance-authority'
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import CaretRight from '@/components/caret-right'
 import {cn} from '@/lib/utils'
@@ -82,8 +83,15 @@ export function ArrowButton({
 	disabled?: boolean
 	onClick?: () => void
 }) {
+	const {t} = useTranslation()
 	return (
-		<button className={cn(glassButtonCva(), disabled && 'pointer-events-none')} onClick={onClick} disabled={disabled}>
+		<button
+			type='button'
+			aria-label={direction === 'left' ? t('paginator.previous') : t('paginator.next')}
+			className={cn(glassButtonCva(), disabled && 'pointer-events-none')}
+			onClick={onClick}
+			disabled={disabled}
+		>
 			<CaretRight className={cn(direction === 'left' && 'rotate-180')} />
 		</button>
 	)
@@ -98,10 +106,14 @@ const glassButtonCva = cva(
 
 // ---
 
-function PaginatorPill({active, onClick}: {active?: boolean; onClick: () => void}) {
+function PaginatorPill({number, active, onClick}: {number: number; active?: boolean; onClick: () => void}) {
+	const {t} = useTranslation()
 	return (
 		// Adding padding and negative margin to make click target bigger
 		<button
+			type='button'
+			aria-label={t('paginator.page', {number})}
+			aria-current={active ? 'page' : undefined}
 			onClick={onClick}
 			// z-10 to make sure it's above peer elements so click target is bigger
 			className={cn('group z-10 -my-3 rounded-full py-3 outline-hidden', active && 'pointer-events-none')}
@@ -131,7 +143,7 @@ export function PaginatorPills({
 	return (
 		<div className={cn('flex gap-1', total === 1 && 'invisible')}>
 			{Array.from({length: total}).map((_, i) => (
-				<PaginatorPill onClick={() => onCurrentChange(i)} key={i} active={i === current} />
+				<PaginatorPill onClick={() => onCurrentChange(i)} key={i} number={i + 1} active={i === current} />
 			))}
 		</div>
 	)

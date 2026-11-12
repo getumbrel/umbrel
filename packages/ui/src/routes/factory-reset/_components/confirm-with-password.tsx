@@ -53,6 +53,7 @@ export function ConfirmWithPassword({
 				<label>
 					<PasswordInput
 						autoFocus
+						aria-label={t('password')}
 						inputRef={passwordRef}
 						sizeVariant='short'
 						value={password}

@@ -5,7 +5,7 @@ import {Link, type To} from 'react-router-dom'
 import {AppIcon} from '@/components/app-icon'
 import {ChevronDown} from '@/components/chevron-down'
 import {Button} from '@/components/ui/button'
-import {ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialogContent, ImmersiveDialogTitle, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {SearchablePicker} from '@/components/ui/searchable-picker'
 import {LOADING_DASH} from '@/constants'
 import {cn} from '@/lib/utils'
@@ -21,7 +21,9 @@ export const immersivePickerDialogTitleClass = cn(immersiveDialogTitleClass, '-m
 export function ImmersivePickerDialogContentInit({title, children}: {title: string; children: React.ReactNode}) {
 	return (
 		<ImmersiveDialogContent short>
-			<h1 className={immersivePickerDialogTitleClass}>{title}</h1>
+			<ImmersiveDialogTitle asChild>
+				<h1 className={immersivePickerDialogTitleClass}>{title}</h1>
+			</ImmersiveDialogTitle>
 			<div className='flex flex-col gap-2.5'>{children}</div>
 		</ImmersiveDialogContent>
 	)
@@ -69,7 +71,9 @@ export function BackLink({to, children}: {to: To; children: React.ReactNode}) {
 			className='flex items-center justify-center rounded-full pr-2 decoration-white/20 underline-offset-4 outline-hidden focus-visible:underline'
 		>
 			<TbChevronLeft className='size-6 opacity-50' />
-			<h1 className={cn(immersiveDialogTitleClass, 'text-19')}>{children}</h1>
+			<ImmersiveDialogTitle asChild>
+				<h1 className={cn(immersiveDialogTitleClass, 'text-19')}>{children}</h1>
+			</ImmersiveDialogTitle>
 		</Link>
 	)
 }

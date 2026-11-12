@@ -6,6 +6,7 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {ItemThumbnail} from '@/features/photos/components/listing/item-thumbnail'
 import type {StripDrive} from '@/features/photos/components/viewer/viewer-channels'
 import type {Item} from '@/features/photos/hooks/use-items'
+import {itemLabel} from '@/features/photos/utils/item-label'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
@@ -786,7 +787,7 @@ const Thumb = memo(function Thumb({
 			type='button'
 			onClick={() => onSelect(item.id)}
 			onPointerEnter={(e) => e.pointerType === 'mouse' && onHover?.()}
-			aria-label={item.kind}
+			aria-label={itemLabel(item)}
 			aria-current={current ? 'true' : undefined}
 			// One tab stop, on the current item: ←/→ walk the rest
 			tabIndex={current ? 0 : -1}

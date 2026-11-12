@@ -358,6 +358,7 @@ export default function MachineSettings() {
 												type='button'
 												disabled={disabled || (machine.arch === 'arm64' && option === 'bios')}
 												onClick={() => setFirmwareChoice(option)}
+												aria-pressed={firmware === option}
 												className={machineSegmentButtonClass(firmware === option)}
 											>
 												{option.toUpperCase()}
@@ -373,6 +374,7 @@ export default function MachineSettings() {
 												type='button'
 												disabled={disabled || (machine.arch === 'arm64' && option === 'sata')}
 												onClick={() => setDiskBusChoice(option)}
+												aria-pressed={diskBus === option}
 												className={machineSegmentButtonClass(diskBus === option)}
 											>
 												{option.toUpperCase()}

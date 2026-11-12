@@ -373,11 +373,14 @@ function HostnameSection() {
 							}}
 							onKeyDown={handleKeyDown}
 							autoFocus
+							aria-label={t('network.hostname')}
 							className='w-[140px]'
 						/>
 						<button
+							type='button'
 							onClick={handleSave}
 							disabled={isPending}
+							aria-label={t('network.hostname-confirm-continue')}
 							className='rounded-full p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white'
 						>
 							{isPending ? (

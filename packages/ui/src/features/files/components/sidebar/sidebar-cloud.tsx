@@ -20,6 +20,7 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {useCloudActivity} from '@/providers/cloud'
 import {trpcReact} from '@/trpc/trpc'
+import {focusRingClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 const selectedClass = tw`
@@ -201,7 +202,8 @@ export function SidebarCloud() {
 						onFocus={() => setFocusedTreeItem(treeItemId)}
 						onClick={() => navigateToDirectory(openPath)}
 						className={cn(
-							'flex w-full items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-12 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-hidden',
+							'flex w-full items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-12',
+							focusRingClass,
 							isSelected ? selectedClass : 'text-white/60 hover:bg-white/10 hover:text-white',
 						)}
 					>
@@ -304,7 +306,8 @@ export function SidebarCloud() {
 										onFocus={() => setFocusedTreeItem(treeItemId)}
 										onClick={() => toggleProvider(providerId)}
 										className={cn(
-											'flex w-full items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-12 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-hidden',
+											'flex w-full items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-left text-12',
+											focusRingClass,
 											!expanded && containsSelection
 												? selectedClass
 												: 'text-white/60 hover:bg-white/10 hover:text-white',
@@ -374,7 +377,8 @@ function CloudRootItem({hasAccounts}: {hasAccounts: boolean}) {
 					else navigate({search: addLinkSearchParams({dialog: 'files-cloud-add'})})
 				}}
 				className={cn(
-					'flex flex-1 items-center gap-1.5 rounded-l-lg border border-r-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-left text-white/60 group-hover:bg-white/10 group-hover:bg-linear-to-b group-hover:text-white focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-hidden',
+					'flex flex-1 items-center gap-1.5 rounded-l-lg border border-r-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-left text-white/60 group-hover:bg-white/10 group-hover:bg-linear-to-b group-hover:text-white',
+					focusRingClass,
 					isActive && 'border-white/6 bg-linear-to-b text-white shadow-button-highlight-soft-hpx',
 				)}
 			>
@@ -387,7 +391,8 @@ function CloudRootItem({hasAccounts}: {hasAccounts: boolean}) {
 				aria-label={t('files-cloud.add-cloud')}
 				onClick={() => navigate({search: addLinkSearchParams({dialog: 'files-cloud-add'})})}
 				className={cn(
-					'group/plus flex items-center justify-center rounded-r-lg border border-l-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-white/10 group-hover:bg-linear-to-b focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-hidden',
+					'group/plus flex items-center justify-center rounded-r-lg border border-l-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-white/10 group-hover:bg-linear-to-b',
+					focusRingClass,
 					isActive && 'border-white/6 bg-linear-to-b shadow-button-highlight-soft-hpx',
 				)}
 			>

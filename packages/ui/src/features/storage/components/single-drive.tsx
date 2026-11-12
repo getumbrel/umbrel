@@ -9,7 +9,9 @@ import {
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
 import {deviceInfoToHostEnvironment} from '@/hooks/use-device-info'
+import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {focusRingClass} from '@/utils/element-classes'
 
 import {getDeviceHealth, StorageDevice} from '../hooks/use-storage'
 import {formatStorageSize} from '../utils'
@@ -104,27 +106,36 @@ export default function SingleDriveStorageManager({devices}: {devices: StorageDe
 		<SsdChip sizeLabel={storageSizeLabel} />
 	)
 
-	const driveCard = (
-		<div
-			onClick={bootDrive ? () => healthDialog.openDialog(bootDrive) : undefined}
-			className={
-				bootDrive
-					? 'flex w-full cursor-pointer items-center gap-4 rounded-12 bg-white/5 p-4 text-left transition-colors hover:bg-white/10'
-					: 'flex w-full items-center gap-4 rounded-12 bg-white/5 p-4 text-left'
-			}
-		>
+	const driveCardContent = (
+		<>
 			{artwork}
 			<div className='min-w-0 flex-1'>
 				<div className='truncate text-15 font-medium text-white'>
 					{bootDrive ? bootDrive.name : t('storage-manager.boot-storage')}
 				</div>
 				{/* The drive's own size, like every drive card, and the same size as its chip.
-				    The usable capacity is in the stats below. */}
+			    The usable capacity is in the stats below. */}
 				<div className='truncate text-13 text-white/50'>
 					{bootDrive ? `${formatStorageSize(bootDrive.size)} · ${bootDrive.serial}` : storageSizeLabel}
 				</div>
 			</div>
-		</div>
+		</>
+	)
+	// With a drive to show, the card opens its health details
+	const driveCard = bootDrive ? (
+		<button
+			type='button'
+			onClick={() => healthDialog.openDialog(bootDrive)}
+			aria-label={t('storage-status.drive-details', {name: bootDrive.name})}
+			className={cn(
+				'flex w-full cursor-pointer items-center gap-4 rounded-12 bg-white/5 p-4 text-left transition-colors hover:bg-white/10',
+				focusRingClass,
+			)}
+		>
+			{driveCardContent}
+		</button>
+	) : (
+		<div className='flex w-full items-center gap-4 rounded-12 bg-white/5 p-4 text-left'>{driveCardContent}</div>
 	)
 
 	return (

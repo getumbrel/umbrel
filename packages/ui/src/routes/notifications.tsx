@@ -133,12 +133,13 @@ function getBackupFailingContent(
 	// Name the drive or NAS if we know where the repository is
 	const deviceName = repository?.path ? describeBackupLocation(repository.path).name : null
 
+	// Both buttons are in the Tab order; the primary one takes the initial focus
 	const actionButtons = (
 		<>
-			<Button variant='default' size='dialog' onClick={onClearNotification} tabIndex={-1}>
+			<Button variant='default' size='dialog' onClick={onClearNotification}>
 				{t('ok')}
 			</Button>
-			<AlertDialogAction variant='primary' onClick={onGoToBackups} tabIndex={0}>
+			<AlertDialogAction variant='primary' onClick={onGoToBackups} autoFocus>
 				{t('notifications.backups-failing.go-to-backups')}
 			</AlertDialogAction>
 		</>
@@ -312,10 +313,10 @@ export function Notifications() {
 				description: t('notifications.raid.issue.description'),
 				action: (
 					<>
-						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)} tabIndex={-1}>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
 							{t('notifications.dismiss')}
 						</Button>
-						<AlertDialogAction variant='primary' onClick={onGoToStorageManager} tabIndex={0}>
+						<AlertDialogAction variant='primary' onClick={onGoToStorageManager} autoFocus>
 							{t('notifications.raid.issue.action')}
 						</AlertDialogAction>
 					</>
@@ -360,10 +361,10 @@ export function Notifications() {
 					: t('notifications.cloud-auth.description-generic'),
 				action: (
 					<>
-						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)} tabIndex={-1}>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
 							{t('ok')}
 						</Button>
-						<AlertDialogAction variant='primary' onClick={onSignIn} tabIndex={0}>
+						<AlertDialogAction variant='primary' onClick={onSignIn} autoFocus>
 							{t('notifications.cloud-auth.sign-in')}
 						</AlertDialogAction>
 					</>
@@ -423,7 +424,7 @@ export function Notifications() {
 				description: t('notifications.app-storage-settings-changed.description', {app: appName}),
 				action: (
 					<>
-						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)} tabIndex={-1}>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
 							{t('ok')}
 						</Button>
 						<AlertDialogAction
@@ -432,7 +433,7 @@ export function Notifications() {
 								clearNotification(notification)
 								navigate(linkToDialog('app-settings', {for: appId, view: 'storage'}))
 							}}
-							tabIndex={0}
+							autoFocus
 						>
 							{t('notifications.app-storage-settings-changed.review')}
 						</AlertDialogAction>

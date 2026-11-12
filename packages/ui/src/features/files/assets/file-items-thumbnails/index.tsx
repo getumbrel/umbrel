@@ -21,53 +21,54 @@ import unknownWebp from './unknown.svg?w=120&format=webp&imagetools'
 import videoWebp from './video.svg?w=120&format=webp&imagetools'
 import zipWebp from './zip.svg?w=120&format=webp&imagetools'
 
+// Decorative by default: the file's name is next to its icon
 type ThumbnailProps = React.ImgHTMLAttributes<HTMLImageElement>
 
 export const AiThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={aiWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={aiWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const AudioThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={audioWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={audioWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const CsvThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={csvWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={csvWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const DmgThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={dmgWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={dmgWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const DocxThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={docxWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={docxWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const EbookThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={ebookWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={ebookWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const ExeThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={exeWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={exeWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const ImageThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={imageWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={imageWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const IsoThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={isoWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={isoWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const PdfThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={pdfWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={pdfWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const PptThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={pptWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={pptWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const PsdThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={psdWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={psdWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const TxtThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={txtWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={txtWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const UnknownThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={unknownWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={unknownWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const VideoThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={videoWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={videoWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )
 export const ZipThumbnail: React.FC<ThumbnailProps> = (props) => (
-	<img src={zipWebp} {...props} style={{objectFit: 'contain'}} />
+	<img src={zipWebp} alt='' {...props} style={{objectFit: 'contain'}} />
 )

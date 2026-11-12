@@ -248,7 +248,11 @@ export function RewindOverlay() {
 			<Dialog open={overlayOpen} onOpenChange={handleOpenChange}>
 				<DialogPrimitive.Portal>
 					<DialogPrimitive.Overlay className='fixed inset-0 z-50 bg-black' />
-					<DialogPrimitive.Content className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 outline-hidden'>
+					<DialogPrimitive.Content
+						aria-describedby={undefined}
+						className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 outline-hidden'
+					>
+						<DialogPrimitive.Title className='sr-only'>{t('rewind')}</DialogPrimitive.Title>
 						<div className='flex size-full flex-col'>
 							{/* Upper area with centered card */}
 							<div className='flex flex-[2] items-center justify-center px-2 py-4 md:px-4 md:py-10'>
@@ -352,6 +356,8 @@ export function RewindOverlay() {
 											return (
 												<>
 													<button
+														type='button'
+														aria-label={t('rewind.previous-backup')}
 														className='inline-flex h-8 items-center justify-center rounded-full bg-white/10 px-3 text-white shadow-[inset_0.5px_0.5px_1px_0px_#FFFFFF3D,inset_-0.5px_-0.5px_1px_0px_#FFFFFF1F] hover:bg-white/20 disabled:opacity-40'
 														disabled={isSwitching || isRestoring || !canPrev}
 														onClick={() => {
@@ -363,6 +369,8 @@ export function RewindOverlay() {
 														<ChevronLeftIcon className='size-4' />
 													</button>
 													<button
+														type='button'
+														aria-label={t('rewind.next-backup')}
 														className='inline-flex h-8 items-center justify-center rounded-full bg-white/10 px-3 text-white shadow-[inset_0.5px_0.5px_1px_0px_#FFFFFF3D,inset_-0.5px_-0.5px_1px_0px_#FFFFFF1F] hover:bg-white/20 disabled:opacity-40'
 														disabled={isSwitching || isRestoring || !canNext}
 														onClick={() => {

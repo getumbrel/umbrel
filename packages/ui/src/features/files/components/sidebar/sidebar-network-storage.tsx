@@ -94,13 +94,15 @@ function NetworkRootItem() {
 		<Droppable
 			id={`sidebar-${NETWORK_STORAGE_PATH}`}
 			path={NETWORK_STORAGE_PATH}
-			onClick={() => navigateToDirectory(NETWORK_STORAGE_PATH)}
 			className='group flex items-stretch gap-0.5 rounded-lg text-12'
-			role='button'
 		>
-			<div
+			<button
+				type='button'
+				aria-current={isActive ? 'page' : undefined}
+				onClick={() => navigateToDirectory(NETWORK_STORAGE_PATH)}
 				className={cn(
-					'flex flex-1 items-center gap-1.5 rounded-l-lg border border-r-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-linear-to-b',
+					'flex flex-1 items-center gap-1.5 rounded-l-lg border border-r-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-left group-hover:bg-linear-to-b',
+					focusRingClass,
 					isActive ? selectedClass : 'text-white/60 group-hover:bg-white/10 group-hover:text-white',
 				)}
 			>
@@ -108,30 +110,21 @@ function NetworkRootItem() {
 				<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'>
 					{t('files-sidebar.network-sidebar')}
 				</span>
-			</div>
-			<div
+			</button>
+			<button
+				type='button'
+				aria-label={t('files-add-network-share.title')}
+				onClick={() => navigate({search: addLinkSearchParams({dialog: 'files-add-network-share'})})}
 				className={cn(
 					'group/plus flex items-center justify-center rounded-r-lg border border-l-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-linear-to-b',
+					focusRingClass,
 					isActive ? selectedClass : 'group-hover:bg-white/10',
 				)}
-				onClick={(e) => {
-					// prevent navigating into /Network
-					e.stopPropagation()
-
-					// open the add network share dialog
-					navigate({search: addLinkSearchParams({dialog: 'files-add-network-share'})})
-				}}
 			>
-				<button
-					aria-label={t('files-add-network-share.title')}
-					className={cn(
-						'-m-0.5 flex items-center justify-center rounded-full p-0.5 text-white/60 group-hover/plus:text-white',
-						focusRingClass,
-					)}
-				>
+				<span className='flex items-center justify-center text-white/60 group-hover/plus:text-white'>
 					<FaPlus className='size-3' strokeWidth={5} />
-				</button>
-			</div>
+				</span>
+			</button>
 		</Droppable>
 	)
 }

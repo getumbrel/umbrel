@@ -232,6 +232,7 @@ function ModeCard({
 			type='button'
 			onClick={onSelect}
 			disabled={disabled}
+			aria-pressed={selected}
 			className={cn(
 				'flex flex-col gap-2 rounded-17 border px-4 py-3 text-left transition-colors',
 				selected ? 'border-brand bg-brand/15' : 'border-transparent',
@@ -766,6 +767,7 @@ export default function HddRaidOnboarding() {
 								key={device.id}
 								type='button'
 								onClick={() => setSsdChoice(selected ? [] : [device.id!])}
+								aria-pressed={selected}
 								className={cn(
 									'mx-auto w-full max-w-[400px] rounded-xl text-left transition-opacity',
 									!selected && 'opacity-80 hover:opacity-100',

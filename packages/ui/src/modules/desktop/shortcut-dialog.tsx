@@ -289,6 +289,7 @@ export function ShortcutPopover({
 				align='start'
 				sideOffset={8}
 				className='w-[280px] p-2'
+				aria-label={t('desktop.context-menu.add-shortcut')}
 				onOpenAutoFocus={(e) => e.preventDefault()}
 			>
 				<div>
@@ -324,6 +325,7 @@ export function ShortcutPopover({
 								value={urlInput}
 								onChange={(e) => handleUrlInputChange(e.target.value)}
 								placeholder={t(PROTOCOL_OPTIONS.find((p) => p.value === protocol)?.placeholderTKey ?? '')}
+								aria-label={t('url')}
 								autoFocus
 								onFocus={() => setShowProtocolMenu(false)}
 								onKeyDown={(e) => {
@@ -410,6 +412,7 @@ export function ShortcutPopover({
 											transition={{duration: 0.15}}
 											disabled={!canSubmit}
 											onClick={handleSubmit}
+											aria-label={t('desktop.context-menu.add-shortcut')}
 											className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white disabled:opacity-30 disabled:hover:bg-white/10'
 										>
 											<RiAddLine className='h-3.5 w-3.5' />

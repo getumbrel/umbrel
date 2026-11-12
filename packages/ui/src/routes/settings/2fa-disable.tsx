@@ -28,7 +28,7 @@ export default function TwoFactorDisableDialog({closeTo}: {closeTo?: string}) {
 						<DrawerDescription>{description}</DrawerDescription>
 					</DrawerHeader>
 					<div className='flex justify-center'>
-						<PinInput autoFocus length={6} onCodeCheck={disable} />
+						<PinInput label={t('2fa.enter-code')} autoFocus length={6} onCodeCheck={disable} />
 					</div>
 				</DrawerContent>
 			</Drawer>
@@ -42,7 +42,7 @@ export default function TwoFactorDisableDialog({closeTo}: {closeTo?: string}) {
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
-				<PinInput autoFocus length={6} onCodeCheck={disable} />
+				<PinInput label={t('2fa.enter-code')} autoFocus length={6} onCodeCheck={disable} />
 			</DialogContent>
 		</Dialog>
 	)

@@ -13,6 +13,7 @@ import {
 	dialogOverlayClass,
 	preventDialogDismissForToasts,
 } from './shared/dialog'
+import {useReturnFocus} from './shared/return-focus'
 
 const Dialog = DialogPrimitive.Root
 
@@ -37,6 +38,8 @@ function DialogContent({
 	slide = true,
 	closeButton = true,
 	onPointerDownOutside,
+	onOpenAutoFocus,
+	onCloseAutoFocus,
 	ref,
 	...props
 }: Omit<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>, 'asChild'> & {
@@ -44,6 +47,7 @@ function DialogContent({
 	closeButton?: boolean
 	ref?: React.Ref<React.ComponentRef<typeof DialogPrimitive.Content>>
 }) {
+	const returnFocus = useReturnFocus({onOpenAutoFocus, onCloseAutoFocus})
 	return (
 		<DialogPortal>
 			<DialogOverlay />
@@ -57,6 +61,7 @@ function DialogContent({
 					className,
 				)}
 				{...props}
+				{...returnFocus}
 				// Compose after the spread so a caller's handler adds to the toast
 				// guard instead of replacing it
 				onPointerDownOutside={(event) => {

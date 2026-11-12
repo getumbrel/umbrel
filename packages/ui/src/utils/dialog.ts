@@ -81,6 +81,16 @@ export function withDialog(
 /**
  * For use with dialogs and other Radix elements with an `onOpenChange` prop.
  */
+/**
+ * For a dialog's `onOpenAutoFocus`: focus the dialog itself rather than its first
+ * control, so the keyboard is inside the dialog (not left behind its overlay)
+ * without the first option looking chosen.
+ */
+export function focusDialogContent(event: Event) {
+	event.preventDefault()
+	;(event.currentTarget as HTMLElement).focus()
+}
+
 export function afterDelayedClose(cb?: () => void) {
 	return (open: boolean) => !open && sleep(EXIT_DURATION_MS).then(cb)
 }

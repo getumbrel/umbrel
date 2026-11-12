@@ -49,6 +49,9 @@ export function TimelineBar({
 								<button
 									style={{left: `${pct}%`}}
 									onClick={() => onSelect(b.id)}
+									// One stop per backup would put hundreds in the Tab order: the
+									// keyboard steps through them with the previous/next buttons
+									tabIndex={-1}
 									className={cn(
 										'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full p-2 md:p-0',
 										isSel ? 'z-10 hover:z-10 focus-visible:z-10' : 'hover:z-10 focus-visible:z-10',

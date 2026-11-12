@@ -29,7 +29,11 @@ interface DroppableProps {
 
 export const Draggable = ({id, children, className, item, disabled = false, ...props}: DraggableProps) => {
 	const isReadOnly = useIsFilesReadOnly()
-	const {attributes, listeners, setNodeRef} = useDraggable({
+	// dnd-kit's `attributes` (tabIndex, role, aria-describedby) are left off: only the
+	// pointer sensor is registered, so they'd make every item an invisible tab stop
+	// announcing keyboard dragging that doesn't exist. The listing's arrow keys
+	// move the selection instead (use-files-keyboard-shortcuts).
+	const {listeners, setNodeRef} = useDraggable({
 		id: id,
 		data: item,
 	})
@@ -39,13 +43,7 @@ export const Draggable = ({id, children, className, item, disabled = false, ...p
 	if (disabled || isTouchDevice || isReadOnly) return <div className={className}>{children}</div>
 
 	return (
-		<div
-			ref={setNodeRef}
-			{...listeners}
-			{...attributes}
-			{...props}
-			className={cn('touch-none outline-hidden', className)}
-		>
+		<div ref={setNodeRef} {...listeners} {...props} className={cn('touch-none outline-hidden', className)}>
 			{children}
 		</div>
 	)

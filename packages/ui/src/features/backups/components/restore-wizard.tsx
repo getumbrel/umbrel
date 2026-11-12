@@ -20,7 +20,7 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {Button} from '@/components/ui/button'
-import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialogSeparator, ImmersiveDialogTitle} from '@/components/ui/immersive-dialog'
 import {Input, PasswordInput} from '@/components/ui/input'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
@@ -77,6 +77,9 @@ const headerMetaForStep = (s: Step) => {
 			return {title: '', subtitle: ''}
 	}
 }
+
+// Inset, so the scrolling lists' edges don't clip it
+const rowFocusClass = 'outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
 
 // ---------------------------------------------
 // Main Component
@@ -229,7 +232,9 @@ export function BackupsRestoreWizard() {
 						const h = headerMetaForStep(step)
 						return (
 							<>
-								<div className='text-24 font-medium text-white'>{h.title}</div>
+								<ImmersiveDialogTitle asChild>
+									<h2 className='text-24 font-medium text-white'>{h.title}</h2>
+								</ImmersiveDialogTitle>
 								{h.subtitle ? <div className='text-15 text-white/60'>{h.subtitle}</div> : null}
 							</>
 						)
@@ -405,10 +410,12 @@ function RepositoryStep({
 										const location = describeBackupLocation(repo.path)
 										return (
 											// We do not allow continuing with a disconnected device. If not connected,the row is visually disabled and non-interactive.
-											<div
+											<button
+												type='button'
 												key={repo.id}
 												className={[
-													'flex w-full min-w-0 items-center gap-3 rounded-xl border p-4 transition-colors',
+													'flex w-full min-w-0 items-center gap-3 rounded-xl border p-4 text-left transition-colors',
+													rowFocusClass,
 													selected
 														? 'border-brand bg-brand/15'
 														: isConnected(repo.path)
@@ -419,8 +426,9 @@ function RepositoryStep({
 													if (!isConnected(repo.path)) return
 													onSelect(repo.id)
 												}}
+												aria-pressed={selected}
 												aria-disabled={!isConnected(repo.path)}
-												tabIndex={isConnected(repo.path) ? 0 : -1}
+												tabIndex={isConnected(repo.path) ? undefined : -1}
 												title={!isConnected(repo.path) ? t('backups-configure.not-connected') : undefined}
 											>
 												<div className='flex items-center gap-2'>
@@ -449,15 +457,16 @@ function RepositoryStep({
 															: t('backups-restore.no-backups-yet')}
 													</div>
 												</div>
-											</div>
+											</button>
 										)
 									})}
 								</div>
 							</div>
 						) : null}
 						{/* Manual add callout row (always shown in known mode) */}
-						<div
-							className='flex w-full min-w-0 items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 transition-colors hover:border-brand hover:bg-brand/15'
+						<button
+							type='button'
+							className={`flex w-full min-w-0 items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 text-left transition-colors hover:border-brand hover:bg-brand/15 ${rowFocusClass}`}
 							onClick={() => onModeChange('manual')}
 						>
 							<div className='flex h-10 w-10 shrink-0 items-center justify-center'>
@@ -471,7 +480,7 @@ function RepositoryStep({
 								<div className='text-sm font-medium'>{t('backups-restore.restore-from-unlisted')}</div>
 								<div className='text-12 text-white/60'>{t('backups-restore.browse-nas-or-external')}</div>
 							</div>
-						</div>
+						</button>
 					</>
 				) : (
 					<div className='space-y-4'>
@@ -479,6 +488,7 @@ function RepositoryStep({
 						<div className='mb-1 flex items-center gap-2'>
 							<button
 								type='button'
+								aria-label={t('back')}
 								className='inline-flex items-center justify-center text-white/70 hover:text-white'
 								onClick={() => onModeChange('known')}
 							>
@@ -618,16 +628,18 @@ function BackupsStep({
 								const isLast = i === backups.length - 1
 
 								return (
-									<div
+									<button
+										type='button'
 										key={id || Math.random()}
 										className={[
-											'group relative flex w-full items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
+											'group relative flex w-full items-center gap-4 rounded-12 px-3 py-2 text-left md:px-4 md:py-3.5',
+											rowFocusClass,
 											selected
 												? 'bg-linear-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
 												: 'hover:bg-white/[0.06]',
 										].join(' ')}
 										onClick={() => id && onSelect(id)}
-										title={id}
+										aria-pressed={selected}
 									>
 										{/* Selection indicator */}
 										<div className='relative flex size-10 shrink-0 items-center justify-center'>
@@ -702,7 +714,7 @@ function BackupsStep({
 												{t('backups-restore.latest')}
 											</div>
 										)}
-									</div>
+									</button>
 								)
 							})}
 						</div>

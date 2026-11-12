@@ -1,4 +1,12 @@
-import {Dialog, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogOverlay,
+	DialogPortal,
+	DialogTitle,
+	DialogTrigger,
+} from '@radix-ui/react-dialog'
 import {motion} from 'motion/react'
 import {Children, ComponentPropsWithoutRef, ReactNode, useEffect} from 'react'
 
@@ -16,6 +24,7 @@ import {useImmersiveDialogCounter} from '@/providers/immersive-dialog'
 import {tw} from '@/utils/tw'
 
 import {IconTypes} from './icon'
+import {useReturnFocus} from './shared/return-focus'
 
 // Phones are narrow enough for a title to reach the close button
 export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80 pe-4`
@@ -46,6 +55,8 @@ export function ImmersiveDialog({open, children, ...props}: ComponentPropsWithou
 	)
 }
 export const ImmersiveDialogTrigger = DialogTrigger
+// The dialog's accessible name, put on the caller's own heading with `asChild`
+export const ImmersiveDialogTitle = DialogTitle
 
 export function ImmersiveDialogContent({
 	children,
@@ -62,6 +73,7 @@ export function ImmersiveDialogContent({
 	showScroll?: boolean
 	ref?: React.Ref<HTMLDivElement>
 } & Omit<ComponentPropsWithoutRef<typeof DialogContent>, 'asChild'>) {
+	const returnFocus = useReturnFocus(contentProps)
 	return (
 		<DialogContent
 			ref={ref}
@@ -80,6 +92,7 @@ export function ImmersiveDialogContent({
 				className,
 			)}
 			{...contentProps}
+			{...returnFocus}
 			// Compose after the spread so a caller's handler adds to the toast guard
 			onPointerDownOutside={(event) => {
 				preventDialogDismissForToasts(event)
@@ -120,6 +133,7 @@ export function ImmersiveDialogSplitContent({
 	footer?: React.ReactNode
 	ref?: React.Ref<HTMLDivElement>
 } & Omit<ComponentPropsWithoutRef<typeof DialogContent>, 'asChild'>) {
+	const returnFocus = useReturnFocus(contentProps)
 	return (
 		<DialogPortal>
 			<ImmersiveDialogOverlay />
@@ -135,6 +149,7 @@ export function ImmersiveDialogSplitContent({
 					'flex flex-row justify-between gap-0 p-0',
 				)}
 				{...contentProps}
+				{...returnFocus}
 				// Compose after the spread so a caller's handler adds to the toast guard
 				onPointerDownOutside={(event) => {
 					preventDialogDismissForToasts(event)
@@ -186,8 +201,12 @@ export function ImmersiveDialogBody({
 	return (
 		<div className='flex h-full flex-col items-start gap-5'>
 			<div className='space-y-2'>
-				<h1 className={immersiveDialogTitleClass}>{title}</h1>
-				<p className={immersiveDialogDescriptionClass}>{description}</p>
+				<DialogTitle asChild>
+					<h1 className={immersiveDialogTitleClass}>{title}</h1>
+				</DialogTitle>
+				<DialogDescription asChild>
+					<p className={immersiveDialogDescriptionClass}>{description}</p>
+				</DialogDescription>
 			</div>
 			<ImmersiveDialogSeparator />
 			<div className='w-full space-y-2.5'>

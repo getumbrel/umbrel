@@ -41,7 +41,13 @@ export function ProgressStatCardContent({
 					{compactValue('ml-auto max-w-full')}
 				</div>
 			)}
-			<Progress value={progress * 100} size='thicker' variant='primary' trackClassName='bg-white/10' />
+			<Progress
+				value={progress * 100}
+				aria-label={title}
+				size='thicker'
+				variant='primary'
+				trackClassName='bg-white/10'
+			/>
 			{afterChildren}
 		</div>
 	)

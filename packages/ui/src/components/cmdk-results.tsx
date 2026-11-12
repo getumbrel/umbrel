@@ -61,6 +61,8 @@ function Section({section, first}: {section: CmdkSection; first: boolean}) {
 	const {t} = useTranslation()
 	return (
 		<section
+			// A group of options inside the results listbox, not a page region
+			role='group'
 			className={cn('cmdk-section flex flex-col', !first && 'mt-3 border-t border-white/6 pt-3')}
 			aria-label={section.title}
 		>

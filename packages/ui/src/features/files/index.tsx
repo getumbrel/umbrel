@@ -87,11 +87,14 @@ export default function FilesLayout() {
 						<SheetHeader className='flex flex-col gap-4 md:flex-row md:items-center md:gap-0 phone-side:absolute'>
 							<div className='flex items-center gap-4'>
 								{hasSidebarDrawer ? (
-									<HiMenuAlt2
-										role='button'
-										className='h-5 w-5 text-white/90 phone-side:hidden'
+									<button
+										type='button'
 										onClick={() => setIsMobileSidebarOpen(true)}
-									/>
+										aria-label={t('files-sidebar.navigation')}
+										className='phone-side:hidden'
+									>
+										<HiMenuAlt2 className='h-5 w-5 text-white/90' />
+									</button>
 								) : null}
 								<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36 panes:text-36 phone-side:sr-only'>
 									{t('files')}
@@ -108,7 +111,11 @@ export default function FilesLayout() {
 							<div className='mt-[-0.5rem] grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[224px_1fr] panes:grid-cols-[192px_minmax(0,1fr)] phone-side:mt-0 phone-side:grid-cols-1 phone-side:pb-2'>
 								{/* Sidebar */}
 								{hasSidebarDrawer ? (
-									<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
+									<MobileSidebarWrapper
+										isOpen={isMobileSidebarOpen}
+										onClose={() => setIsMobileSidebarOpen(false)}
+										label={t('files-sidebar.navigation')}
+									>
 										<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
 									</MobileSidebarWrapper>
 								) : (

@@ -82,6 +82,8 @@ export function SidebarTrash() {
 							layout
 							className={cn(
 								'flex flex-col items-center overflow-hidden',
+								// The row's own button is taller than the clipped row, so its focus ring is drawn here
+								'has-[>button:focus-visible]:ring-2 has-[>button:focus-visible]:ring-ring',
 								isExpanded
 									? 'rounded-xl border border-white/6 bg-linear-to-b from-white/[0.04] to-white/[0.08] p-3'
 									: 'h-[35px] rounded-lg',
@@ -89,15 +91,13 @@ export function SidebarTrash() {
 									'border-white/6 bg-linear-to-b !from-white/[0.04] !to-white/[0.08] shadow-button-highlight-soft-hpx',
 							)}
 							initial={false}
-							onClick={() => {
-								if (isMobile) {
-									navigateToDirectory(trashPath)
-								}
-							}}
 						>
-							<motion.div
+							<motion.button
+								type='button'
 								layout='position'
-								className={`flex justify-end ${isExpanded ? 'flex-col items-center' : 'w-full flex-row-reverse'}`}
+								onClick={() => navigateToDirectory(trashPath)}
+								aria-current={isTrash ? 'page' : undefined}
+								className={`flex justify-end outline-hidden ${isExpanded ? 'flex-col items-center' : 'w-full flex-row-reverse'}`}
 							>
 								{/* "Trash" text */}
 								<motion.div
@@ -133,7 +133,7 @@ export function SidebarTrash() {
 								>
 									<TrashCan items={items} />
 								</motion.div>
-							</motion.div>
+							</motion.button>
 
 							{isExpanded && (
 								<>
@@ -153,6 +153,7 @@ export function SidebarTrash() {
 												<Button
 													onClick={handleEmptyTrash}
 													variant='default'
+													aria-label={t('files-action.empty-trash')}
 													disabled={isTrashEmpty}
 													className={isTrashEmpty ? 'pointer-events-none opacity-50' : ''}
 												>

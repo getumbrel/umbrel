@@ -478,7 +478,12 @@ function AppSettingsDialogForApp({
 					tone={1}
 					control={
 						appProxyAuthSupported ? (
-							<Switch checked={authEnabled} disabled={setAuthMut.isPending} onCheckedChange={onAuthToggle} />
+							<Switch
+								aria-label={t('app-settings.auth.row-title')}
+								checked={authEnabled}
+								disabled={setAuthMut.isPending}
+								onCheckedChange={onAuthToggle}
+							/>
 						) : undefined
 					}
 				/>

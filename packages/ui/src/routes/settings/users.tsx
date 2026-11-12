@@ -1057,7 +1057,9 @@ export default function UsersDialog() {
 					<AlertDialogAction variant='destructive' disabled={isDeleting} onClick={handleDelete}>
 						{t('users.delete')}
 					</AlertDialogAction>
-					<AlertDialogCancel disabled={isDeleting}>{t('cancel')}</AlertDialogCancel>
+					<AlertDialogCancel autoFocus disabled={isDeleting}>
+						{t('cancel')}
+					</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

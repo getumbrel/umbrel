@@ -59,7 +59,10 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 			{mobilePrimaryAction ?? <SelectToggle />}
 
 			<DropdownMenu>
-				<DropdownMenuTrigger className={cn(touchTargetClass, '-m-0.5 rounded-full p-0.5', focusRingClass)}>
+				<DropdownMenuTrigger
+					aria-label={t('files-view.more')}
+					className={cn(touchTargetClass, '-m-0.5 rounded-full p-0.5', focusRingClass)}
+				>
 					<TbDots className='h-5 w-5' />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className='w-44' align='start'>

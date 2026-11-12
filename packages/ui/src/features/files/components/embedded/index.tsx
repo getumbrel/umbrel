@@ -3,6 +3,7 @@
 // We currently use it in Rewind feature with read-only mode and path aliasing.
 
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {HiMenuAlt2} from 'react-icons/hi'
 
 import {FileViewer} from '@/features/files/components/file-viewer'
@@ -32,6 +33,7 @@ export function EmbeddedFiles({
 	currentPath?: string
 	explorerScale?: number
 }) {
+	const {t} = useTranslation()
 	const [path, setPath] = useState(initialPath)
 	const isMobile = useIsMobile()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
@@ -63,7 +65,11 @@ export function EmbeddedFiles({
 				{/* We still render viewer so you can see past files easily (read-only safe) */}
 				<FileViewer />
 				{isMobile ? (
-					<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
+					<MobileSidebarWrapper
+						isOpen={isMobileSidebarOpen}
+						onClose={() => setIsMobileSidebarOpen(false)}
+						label={t('files-sidebar.navigation')}
+					>
 						<Sidebar className='h-[calc(100svh-140px)]' />
 					</MobileSidebarWrapper>
 				) : (
@@ -74,11 +80,13 @@ export function EmbeddedFiles({
 						{/* Mobile-only sidebar toggle */}
 						{isMobile ? (
 							<div className='flex items-center gap-3 px-2'>
-								<HiMenuAlt2
-									role='button'
-									className='h-5 w-5 text-white/90'
+								<button
+									type='button'
 									onClick={() => setIsMobileSidebarOpen(true)}
-								/>
+									aria-label={t('files-sidebar.navigation')}
+								>
+									<HiMenuAlt2 className='h-5 w-5 text-white/90' />
+								</button>
 							</div>
 						) : null}
 						<ActionsBar />

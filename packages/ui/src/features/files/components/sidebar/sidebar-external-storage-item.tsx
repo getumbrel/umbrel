@@ -14,6 +14,7 @@ import type {ExternalStorageDevice} from '@/features/files/types'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
+import {focusRingClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 const selectedClass = tw`
@@ -56,15 +57,8 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 	const displayName =
 		item.partitions.length === 1 ? item.partitions[0].label || item.partitions[0].mountpoints[0] : item.name
 
-	const ExternalStorageDisk = (
-		<div
-			onClick={handleClick}
-			role={!item.isMounted || item.partitions.length === 1 ? 'button' : undefined}
-			className={cn(
-				'flex w-full items-center gap-1.5 px-2 py-1.5',
-				item.isFormatting && 'cursor-not-allowed opacity-50',
-			)}
-		>
+	const diskContent = (
+		<>
 			<div className='relative'>
 				<FileItemIcon
 					item={{
@@ -81,30 +75,45 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 				{!item.isMounted && !item.isFormatting && (
 					<div className='absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-[#FF9500]'>
 						<RiErrorWarningFill className='size-3.5 text-black' />
+						<span className='sr-only'>{t('files-format.title-requires-format')}</span>
 					</div>
 				)}
 			</div>
 			<div className='flex min-w-0 flex-1 items-center justify-between gap-1'>
-				<div className='flex min-w-0 flex-1 flex-col'>
-					<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'>
-						{item.isFormatting ? t('files-format.formatting') : displayName}
-					</span>
-				</div>
-				<div className='flex flex-shrink-0 items-center gap-2'>
-					<span className='text-white/30'>{formatFilesystemSize(item.size)}</span>
-					{item.isMounted && (
-						<button
-							onClick={(e) => {
-								e.stopPropagation() // Prevent the click from triggering a navigation
-								ejectDisk({deviceId: item.id})
-							}}
-							aria-label={t('files-action.eject-disk')}
-						>
-							<FaEject className='text-white/60 hover:text-white' />
-						</button>
-					)}
-				</div>
+				<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'>
+					{item.isFormatting ? t('files-format.formatting') : displayName}
+				</span>
+				<span className='flex-shrink-0 text-white/30'>{formatFilesystemSize(item.size)}</span>
 			</div>
+		</>
+	)
+	const diskRowClass = 'flex min-w-0 flex-1 items-center gap-1.5 rounded-lg py-1.5 pl-2 text-left'
+
+	const ExternalStorageDisk = (
+		<div className={cn('flex w-full items-center gap-2 pr-2', item.isFormatting && 'cursor-not-allowed opacity-50')}>
+			{/* A disk with several partitions is just their heading: the partitions are the rows that open */}
+			{!item.isMounted || item.partitions.length === 1 ? (
+				<button
+					type='button'
+					onClick={handleClick}
+					disabled={item.isFormatting}
+					className={cn(diskRowClass, focusRingClass)}
+				>
+					{diskContent}
+				</button>
+			) : (
+				<div className={diskRowClass}>{diskContent}</div>
+			)}
+			{item.isMounted && (
+				<button
+					type='button'
+					onClick={() => ejectDisk({deviceId: item.id})}
+					aria-label={t('files-action.eject-disk')}
+					className={cn('rounded-full', focusRingClass)}
+				>
+					<FaEject className='text-white/60 hover:text-white' />
+				</button>
+			)}
 		</div>
 	)
 
@@ -126,27 +135,35 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 									<Droppable
 										id={`sidebar-${partition.mountpoints[0]}`}
 										path={partition.mountpoints[0]}
-										onClick={() => navigateToDirectory(partition.mountpoints[0])}
 										className={cn(
-											'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
+											'flex rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] text-12 hover:bg-linear-to-b',
 											currentPath === partition.mountpoints[0]
 												? selectedClass
 												: 'text-white/60 hover:bg-white/10 hover:text-white',
 										)}
-										role='button'
 									>
-										<div className='relative'>
-											<RiHardDrive2Fill className='h-3 w-3 flex-shrink-0' />
-											{isPathShared(partition.mountpoints[0]) && (
-												<div className='absolute -top-1 -left-1 flex size-3 items-center justify-center rounded-full border border-white/15 bg-linear-to-b from-brand to-[color-mix(in_srgb,hsl(var(--color-brand))_80%,black_20%)]'>
-													<SharedFolderBadge className='size-[80%]' />
-												</div>
+										<button
+											type='button'
+											onClick={() => navigateToDirectory(partition.mountpoints[0])}
+											aria-current={currentPath === partition.mountpoints[0] ? 'page' : undefined}
+											className={cn(
+												'flex w-full min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left',
+												focusRingClass,
 											)}
-										</div>
-										<span className='min-w-0 flex-1 overflow-hidden text-11 text-ellipsis whitespace-nowrap'>
-											{partition.label || partition.mountpoints[0]}
-										</span>
-										<span className='text-11 text-white/30'>{formatFilesystemSize(partition.size)}</span>
+										>
+											<div className='relative'>
+												<RiHardDrive2Fill className='h-3 w-3 flex-shrink-0' />
+												{isPathShared(partition.mountpoints[0]) && (
+													<div className='absolute -top-1 -left-1 flex size-3 items-center justify-center rounded-full border border-white/15 bg-linear-to-b from-brand to-[color-mix(in_srgb,hsl(var(--color-brand))_80%,black_20%)]'>
+														<SharedFolderBadge className='size-[80%]' />
+													</div>
+												)}
+											</div>
+											<span className='min-w-0 flex-1 overflow-hidden text-11 text-ellipsis whitespace-nowrap'>
+												{partition.label || partition.mountpoints[0]}
+											</span>
+											<span className='text-11 text-white/30'>{formatFilesystemSize(partition.size)}</span>
+										</button>
 									</Droppable>
 								</ContextMenuTrigger>
 								<ContextMenuContent>

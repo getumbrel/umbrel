@@ -52,6 +52,7 @@ export function SidebarItem({item, isActive, onClick, disabled = false, icon, ma
 					if (disabled) return
 					onClick()
 				}}
+				aria-current={isActive ? 'page' : undefined}
 				aria-disabled={disabled}
 				disabled={disabled}
 				className={cn(

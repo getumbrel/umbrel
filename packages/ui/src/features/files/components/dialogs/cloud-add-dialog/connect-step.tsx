@@ -1,6 +1,6 @@
 import {ArrowUpRight, Info, Loader2} from 'lucide-react'
 import {motion} from 'motion/react'
-import {useRef, useState} from 'react'
+import {cloneElement, useId, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {
@@ -248,11 +248,23 @@ function OAuthConnect({
 	)
 }
 
-function FieldRow({label, info, children}: {label: string; info?: string; children: React.ReactNode}) {
+// The caption is the field's <label>. Not wrapped around the field: a password
+// field's show/hide button would then be read as part of its name
+function FieldRow({
+	label,
+	info,
+	children,
+}: {
+	label: string
+	info?: string
+	// An Input or PasswordInput, given the label's id
+	children: React.ReactElement<{id?: string}>
+}) {
+	const id = useId()
 	return (
 		<div className='space-y-1.5'>
 			<p className='flex items-center gap-1.5 text-13 text-white/60'>
-				{label}
+				<label htmlFor={id}>{label}</label>
 				{info && (
 					<Tooltip>
 						<TooltipTrigger asChild>
@@ -264,7 +276,7 @@ function FieldRow({label, info, children}: {label: string; info?: string; childr
 					</Tooltip>
 				)}
 			</p>
-			{children}
+			{cloneElement(children, {id})}
 		</div>
 	)
 }
@@ -610,6 +622,7 @@ function ICloudConnect({
 						<>
 							<div className={cn(isChallengePending && 'pointer-events-none opacity-50')}>
 								<PinInput
+									label={t('files-cloud.icloud-2fa-prompt')}
 									length={6}
 									autoFocus
 									disabled={isChallengePending}

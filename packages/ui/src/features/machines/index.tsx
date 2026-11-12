@@ -188,7 +188,7 @@ function MachinesLayoutContent() {
 						}
 						transition={layoutMorphTransition.layout}
 						style={{pointerEvents: hideHeader ? 'none' : undefined}}
-						aria-hidden={hideHeader}
+						inert={hideHeader}
 						className='flex items-center justify-between'
 					>
 						<div className='flex items-center gap-3'>

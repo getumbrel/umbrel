@@ -43,10 +43,16 @@ function Progress({
 		/** Extra classes for the track only (not the filled indicator) */
 		trackClassName?: string
 	}) {
+	// The value reaches the root too, so the bar reports how far along it is
+	// rather than reading as indeterminate. Anything that isn't a number in range
+	// (some callers can pass NaN) is left indeterminate.
+	const ariaValue = typeof value === 'number' && Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : null
+
 	return (
 		<ProgressPrimitive.Root
 			ref={ref}
 			className={cn(progressVariants({className, size}), className, trackClassName)}
+			value={ariaValue}
 			{...props}
 		>
 			<ProgressPrimitive.Indicator

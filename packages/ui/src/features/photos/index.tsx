@@ -29,6 +29,7 @@ import {trpcReact} from '@/trpc/trpc'
 // can't move what's below. A phone on its side gives the row to the grid
 // (the actions bar takes its controls) until a search needs it.
 function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () => void}) {
+	const {t} = useTranslation()
 	const searching = useSearchEngaged() && isMobile
 	const reduceMotion = useReducedMotion() ?? false
 	const swap = (direction: 1 | -1) =>
@@ -54,11 +55,14 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 					) : (
 						<motion.div key='title' className='flex min-w-0 flex-1 items-center gap-4' {...swap(-1)}>
 							{isMobile ? (
-								<HiMenuAlt2
-									role='button'
-									className='h-5 w-5 shrink-0 text-white/90 phone-side:hidden'
+								<button
+									type='button'
 									onClick={openSidebar}
-								/>
+									aria-label={t('photos-sidebar.navigation')}
+									className='shrink-0 phone-side:hidden'
+								>
+									<HiMenuAlt2 className='h-5 w-5 text-white/90' />
+								</button>
 							) : null}
 							<Title />
 							{/* Phones and tablets: the page's controls, clear of the sheet's close button */}
@@ -127,6 +131,7 @@ const RenameAlbumDialog = lazy(() =>
 // Photos shell: mirrors the Files layout (title row, sidebar column, actions bar
 // above the listing outlet) so the two system apps feel like siblings.
 export default function PhotosLayout() {
+	const {t} = useTranslation()
 	const {pathname} = useLocation()
 	const isMobile = useIsMobile()
 	const barDrop = useBarDrop()
@@ -160,7 +165,11 @@ export default function PhotosLayout() {
 						<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_minmax(0,1fr)] phone-side:mt-0'>
 							{/* Sidebar */}
 							{isMobile ? (
-								<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
+								<MobileSidebarWrapper
+									isOpen={isMobileSidebarOpen}
+									onClose={() => setIsMobileSidebarOpen(false)}
+									label={t('photos-sidebar.navigation')}
+								>
 									<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
 								</MobileSidebarWrapper>
 							) : (

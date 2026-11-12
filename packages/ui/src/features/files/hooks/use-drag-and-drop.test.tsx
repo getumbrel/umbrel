@@ -101,8 +101,13 @@ async function pointer(target: EventTarget, type: string, x: number, y: number) 
 	})
 }
 
+// The Draggable wrapping the 'source' label (null once the listing has left /Home)
+function draggable() {
+	return [...container.querySelectorAll('span')].find((span) => span.textContent === 'source')?.parentElement ?? null
+}
+
 async function startDrag(expectedItems = [source]) {
-	await pointer(container.querySelector('[role="button"]')!, 'pointerdown', 20, 20)
+	await pointer(draggable()!, 'pointerdown', 20, 20)
 	await pointer(document, 'pointermove', 40, 20)
 	await pointer(document, 'pointermove', 240, 40)
 	expect(useFilesStore.getState().draggedItems).toEqual(expectedItems)
@@ -113,7 +118,7 @@ async function openFolder(path = '/Home/Target', expectedItems = [source]) {
 		await vi.advanceTimersByTimeAsync(1500)
 	})
 	expect(container.querySelector('output')?.textContent).toBe(path)
-	expect(container.querySelector('[role="button"]')).toBeNull()
+	expect(draggable()).toBeNull()
 	expect(useFilesStore.getState().selectedItems).toEqual([])
 	expect(useFilesStore.getState().draggedItems).toEqual(expectedItems)
 }

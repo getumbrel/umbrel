@@ -21,6 +21,7 @@ import externalStorageIcon from '@/features/files/assets/external-storage-icon.p
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {focusRingClass} from '@/utils/element-classes'
 
 import {defaultVolumeLabel, MAX_LABEL_LENGTH} from './default-label'
 
@@ -46,9 +47,10 @@ function FilesystemCard({
 			id={id}
 			onClick={onClick}
 			disabled={disabled}
-			tabIndex={-1}
+			aria-pressed={selected}
 			className={cn(
 				'flex min-h-[80px] flex-col items-start justify-between rounded-xl border p-3 text-left transition-colors duration-100 sm:min-h-[120px] sm:p-4',
+				focusRingClass,
 				selected ? 'border-brand bg-brand/15' : 'border-white/10 bg-white/5 hover:bg-white/10',
 				disabled && 'cursor-not-allowed opacity-50',
 			)}

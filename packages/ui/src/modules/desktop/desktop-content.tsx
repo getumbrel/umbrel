@@ -139,6 +139,9 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 		<>
 			<motion.div
 				className='flex h-full w-full flex-col items-center justify-between'
+				// Hidden under a sheet, Machines or the widget editor, so out of reach too:
+				// Tab would otherwise walk the invisible home screen
+				inert={variant !== 'default'}
 				variants={desktopVariants}
 				animate={variant}
 				initial={{opacity: 1}}

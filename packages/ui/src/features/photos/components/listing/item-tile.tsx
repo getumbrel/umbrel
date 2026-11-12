@@ -5,6 +5,7 @@ import {ItemThumbnail} from '@/features/photos/components/listing/item-thumbnail
 import type {ThumbnailQueue} from '@/features/photos/components/listing/thumbnail-queue'
 import {LivePhotoIcon} from '@/features/photos/components/live-photo-icon'
 import {itemLiveUrl, type Item, type ThumbSize} from '@/features/photos/hooks/use-items'
+import {itemLabel} from '@/features/photos/utils/item-label'
 import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {tw} from '@/utils/tw'
@@ -22,8 +23,9 @@ function formatDuration(ms: number) {
 export const SELECT_CIRCLE = {minTile: 72, hitSize: 36} as const
 
 // The tile's classes, one string per state so a render does no class work.
-// The hover wash and the empty circle are the button's pseudo-elements.
-const tileClass = tw`group relative aspect-square w-full overflow-hidden rounded-(--umbrel-photos-tile-radius) outline-hidden focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-inset before:pointer-events-none before:absolute before:inset-0 before:z-10 hover:before:bg-white/8 after:pointer-events-none after:absolute after:top-1.5 after:left-1.5 after:z-10 after:hidden after:size-[22px] after:rounded-full after:border-[1.5px] after:border-white/85 after:bg-black/20 after:shadow-[0_1px_3px_rgb(0_0_0/0.35)]`
+// The hover wash, the focus ring and the empty circle are the button's
+// pseudo-elements: the ring on the button itself would be painted under the photo.
+const tileClass = tw`group relative aspect-square w-full overflow-hidden rounded-(--umbrel-photos-tile-radius) outline-hidden focus-visible:before:ring-2 focus-visible:before:ring-white/60 focus-visible:before:ring-inset before:rounded-[inherit] before:pointer-events-none before:absolute before:inset-0 before:z-10 hover:before:bg-white/8 after:pointer-events-none after:absolute after:top-1.5 after:left-1.5 after:z-10 after:hidden after:size-[22px] after:rounded-full after:border-[1.5px] after:border-white/85 after:bg-black/20 after:shadow-[0_1px_3px_rgb(0_0_0/0.35)]`
 const tileClassByState = {
 	idle: `${tileClass} @min-[72px]:hover:after:block`,
 	selectable: `${tileClass} @min-[72px]:after:block`,
@@ -71,6 +73,7 @@ export const ItemTile = memo(function ItemTile({
 		<button
 			type='button'
 			data-item-id={item.id}
+			aria-label={itemLabel(item)}
 			aria-pressed={selectable ? selected : undefined}
 			className={tileClassByState[selected ? 'selected' : selectable ? 'selectable' : 'idle']}
 		>

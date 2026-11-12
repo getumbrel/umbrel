@@ -2,6 +2,7 @@ import {useTranslation} from 'react-i18next'
 import {TbPlus, TbRefreshDot} from 'react-icons/tb'
 
 import {cn} from '@/lib/utils'
+import {focusRingClass} from '@/utils/element-classes'
 
 import {getDeviceHealth, RaidDevice, RaidDeviceStatus, raidStatusLabels, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize, hasRaidErrors} from '../../utils'
@@ -137,14 +138,8 @@ export function DriveCard({
 export function SystemDriveCard({device, onClick}: {device: StorageDevice; onClick?: () => void}) {
 	const {t} = useTranslation()
 	const {hasWarning} = getDeviceHealth(device)
-	return (
-		<div
-			onClick={onClick}
-			className={cn(
-				'flex w-full items-center gap-4 rounded-12 bg-white/5 p-4 text-left transition-colors',
-				onClick && 'cursor-pointer hover:bg-white/10',
-			)}
-		>
+	const content = (
+		<>
 			{device.type === 'ssd' ? (
 				<SsdChip sizeLabel={formatStorageSize(device.size)} led={hasWarning ? 'red' : 'green'} />
 			) : (
@@ -159,7 +154,21 @@ export function SystemDriveCard({device, onClick}: {device: StorageDevice; onCli
 			<span className='rounded-full bg-white/10 px-2.5 py-0.5 text-12 font-medium text-white/60'>
 				{t('storage-manager.system-drive-pill')}
 			</span>
-		</div>
+		</>
+	)
+	const className = 'flex w-full items-center gap-4 rounded-12 bg-white/5 p-4 text-left transition-colors'
+	// With an action, the card opens the drive's health details
+	return onClick ? (
+		<button
+			type='button'
+			onClick={onClick}
+			aria-label={t('storage-status.drive-details', {name: device.name})}
+			className={cn(className, 'cursor-pointer hover:bg-white/10', focusRingClass)}
+		>
+			{content}
+		</button>
+	) : (
+		<div className={className}>{content}</div>
 	)
 }
 

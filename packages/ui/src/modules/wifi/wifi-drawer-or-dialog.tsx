@@ -60,6 +60,7 @@ export function WifiDrawerOrDialogContent() {
 					<>
 						<Switch
 							className='mt-0 disabled:pointer-events-none'
+							aria-label={t('wifi')}
 							checked={statusQ.data?.status === 'connected'}
 							onCheckedChange={(toCheck) => !toCheck && setDisableAlertOpen(true)}
 							disabled={disconnectMut.isPending || statusQ.isFetching || statusQ.data?.status !== 'connected'}
@@ -284,11 +285,16 @@ function Network({
 			layout='position'
 			key={network.ssid}
 			className={cn(wifiListItemClass, '!gap-0')}
-			onClick={() => setIsOpen(true)}
-			role={isOpen ? undefined : 'button'}
-			tabIndex={0}
 		>
-			<WifiListItemContent network={network} status={statusUi} error={otherError} />
+			{/* The row's header opens the connect form. It reaches over the row's padding so the whole row stays the target */}
+			<button
+				type='button'
+				aria-expanded={isOpen}
+				onClick={() => setIsOpen(true)}
+				className='-m-3 p-3 text-left outline-hidden'
+			>
+				<WifiListItemContent network={network} status={statusUi} error={otherError} />
+			</button>
 			<AnimatePresence>
 				{isOpen && !connectMut.isPending && (
 					<AnimateHeight>

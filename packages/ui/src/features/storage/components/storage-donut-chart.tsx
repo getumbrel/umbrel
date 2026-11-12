@@ -48,6 +48,8 @@ export function StorageDonutChart({
 			<div className='[&_*]:outline-hidden [&_*]:focus:outline-hidden' style={{pointerEvents: 'none'}} tabIndex={-1}>
 				<PieChart width={size} height={size} style={{cursor: 'default'}} tabIndex={-1}>
 					<Pie
+						// Recharts makes each pie a tab stop, here and below; nothing in the chart takes focus
+						rootTabIndex={-1}
 						data={[{name: 'loading', value: 1, color: 'rgba(255, 255, 255, 0.1)'}]}
 						cx='50%'
 						cy='50%'
@@ -125,6 +127,7 @@ export function StorageDonutChart({
 			<PieChart width={size} height={size} style={{cursor: 'default'}} tabIndex={-1}>
 				{/* Outer ring: capacity breakdown */}
 				<Pie
+					rootTabIndex={-1}
 					data={capacityData}
 					cx='50%'
 					cy='50%'
@@ -147,6 +150,7 @@ export function StorageDonutChart({
 
 				{/* Inner ring: "used" overlay on the available segment */}
 				<Pie
+					rootTabIndex={-1}
 					data={usedData}
 					cx='50%'
 					cy='50%'

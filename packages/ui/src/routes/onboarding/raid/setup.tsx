@@ -726,7 +726,11 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 						<div className='flex flex-col gap-4 rounded-xl bg-white/5 p-4'>
 							<div className='flex items-center justify-between'>
 								<div className='flex items-center gap-3'>
-									<Switch checked={failSafeEnabled} onCheckedChange={setFailSafeChoice} />
+									<Switch
+										checked={failSafeEnabled}
+										onCheckedChange={setFailSafeChoice}
+										aria-label={t('onboarding.raid.failsafe.enable')}
+									/>
 									<span className='text-[15px] text-white/85'>{t('onboarding.raid.failsafe.enable')}</span>
 								</div>
 								{allSameSize && <RecommendedBadge small />}

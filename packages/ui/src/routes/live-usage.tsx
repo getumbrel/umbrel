@@ -17,6 +17,7 @@ import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
 	ImmersiveDialogOverlay,
+	ImmersiveDialogTitle,
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
 import {SegmentedControl} from '@/components/ui/segmented-control'
@@ -53,7 +54,9 @@ export default function LiveUsageDialog() {
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
 				<ImmersiveDialogContent size='md' showScroll>
-					<h1 className={immersiveDialogTitleClass}>{title}</h1>
+					<ImmersiveDialogTitle asChild>
+						<h1 className={immersiveDialogTitleClass}>{title}</h1>
+					</ImmersiveDialogTitle>
 					<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 						<LiveUsageContent />
 					</ErrorBoundary>

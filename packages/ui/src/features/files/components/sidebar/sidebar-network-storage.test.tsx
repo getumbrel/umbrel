@@ -61,7 +61,8 @@ test('offline hosts stay visible, allow inspecting saved shares, and keep remova
 	expect(container.textContent).not.toContain('files-network-storage.disconnected')
 	const host = container.querySelector<HTMLElement>('[data-path="/Network/nas.local"]')!
 	expect(host.dataset.dropDisabled).toBe('true')
-	await act(() => host.click())
+	// The row's first button opens the host; the eject button follows it
+	await act(() => host.querySelector('button')!.click())
 	expect(mocks.navigateToDirectory).toHaveBeenCalledWith('/Network/nas.local')
 
 	const remove = container.querySelector<HTMLButtonElement>('button[aria-label="files-action.remove-network-host"]')!

@@ -130,16 +130,30 @@ function SkeletonListItem() {
 	)
 }
 
+// A recent file's row sits inside the widget's own button (which opens Files), so
+// it's a role=button that takes Enter and Space itself rather than a nested <button>
+function rowOpenProps(onOpen: () => void) {
+	return {
+		role: 'button',
+		tabIndex: 0,
+		onClick: (e: React.MouseEvent) => {
+			// The row opens the file, not Files
+			e.stopPropagation()
+			onOpen()
+		},
+		onKeyDown: (e: React.KeyboardEvent) => {
+			if (e.key !== 'Enter' && e.key !== ' ') return
+			e.preventDefault()
+			e.stopPropagation()
+			onOpen()
+		},
+	}
+}
+
 function ListItem({item, onOpen}: {item: FileSystemItem; onOpen: () => void}) {
 	return (
 		<div
-			role='button'
-			tabIndex={0}
-			onClick={(e) => {
-				// The row opens the file, not Files
-				e.stopPropagation()
-				onOpen()
-			}}
+			{...rowOpenProps(onOpen)}
 			className='flex min-w-0 items-center gap-1.5 rounded-lg px-1 py-1 transition-colors hover:bg-white/10 w-expanded:gap-2'
 		>
 			<FileItemIcon item={item} className='size-5 max-w-5 shrink-0 w-expanded:size-7 w-expanded:max-w-7' />
@@ -159,12 +173,7 @@ function CompactRecents({items, onOpen}: {items?: FileSystemItem[]; onOpen: (ite
 				? take(items, 3).map((item) => (
 						<div
 							key={item.path}
-							role='button'
-							tabIndex={0}
-							onClick={(e) => {
-								e.stopPropagation()
-								onOpen(item)
-							}}
+							{...rowOpenProps(() => onOpen(item))}
 							className='flex min-w-0 items-center gap-1 rounded-5 px-0.5 transition-colors hover:bg-white/10'
 						>
 							<FileItemIcon item={item} className='size-4 max-w-4 shrink-0' />

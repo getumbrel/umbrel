@@ -151,6 +151,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 							<button
 								type='button'
 								onClick={() => onHealthClick?.(i)}
+								aria-label={t('storage-status.drive-details', {name: t('onboarding.raid.ssd-label', {number: i + 1})})}
 								className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] transition-colors hover:bg-white/[0.12]'
 								style={{padding: 'clamp(2px, 0.8cqi, 4px)'}}
 							>
@@ -191,6 +192,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
  * brand color and the FailSafe drive white.
  */
 export function GenericSsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps) {
+	const {t} = useTranslation()
 	return (
 		<div className='mx-auto flex w-full max-w-[400px] flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/5 p-2.5'>
 			{slots.map((slot, index) => {
@@ -203,6 +205,7 @@ export function GenericSsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTra
 						variant={index === failsafeSlot ? 'failsafe' : 'storage'}
 						hasWarning={slot.hasWarning}
 						onInfoClick={onHealthClick ? () => onHealthClick(index) : undefined}
+						infoLabel={t('storage-status.drive-details', {name: t('onboarding.raid.ssd-label', {number: index + 1})})}
 					/>
 				)
 			})}

@@ -13,6 +13,7 @@ import {timeAgo} from '@/features/photos/components/sources/source-status'
 import {BASE_ROUTE_PATH, sectionPath, sourcePath} from '@/features/photos/constants'
 import type {ItemDetail} from '@/features/photos/hooks/use-items'
 import {usePhotoSource} from '@/features/photos/hooks/use-photo-sources'
+import {itemKindLabel} from '@/features/photos/utils/item-label'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
 import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
@@ -72,18 +73,7 @@ export function InfoPanel({
 	// When the photo was taken, at the wall clock it was taken by — the
 	// capture-time zone when the file carried it, the browser's otherwise
 	const clock = takenAtClock(item.takenAt, item.takenAtOffsetMinutes)
-	// The subKind is the finer truth about what this is, when there is one
-	const kindLabel = item.subKind
-		? {
-				live: t('photos-item.kind-live'),
-				panorama: t('photos-item.kind-panorama'),
-				screenshot: t('photos-item.kind-screenshot'),
-				spherical: t('photos-item.kind-spherical'),
-			}[item.subKind]
-		: {
-				photo: t('photos-item.kind-photo'),
-				video: t('photos-item.kind-video'),
-			}[item.kind]
+	const kindLabel = itemKindLabel(item, t)
 	const megapixels = formatNumberI18n({n: (item.width * item.height) / 1e6, showDecimals: true, locale: i18n.language})
 	const extension = item.fileName.slice(item.fileName.lastIndexOf('.') + 1).toUpperCase()
 	const folder = item.path.slice(0, item.path.lastIndexOf('/')) || '/'

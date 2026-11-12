@@ -14,6 +14,7 @@ import {
 	dialogFooterClass,
 	dialogOverlayClass,
 } from './shared/dialog'
+import {useReturnFocus} from './shared/return-focus'
 
 // https://github.com/radix-ui/primitives/issues/1281#issuecomment-1081767007
 const AlertDialogContext = React.createContext<{
@@ -68,11 +69,14 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
 	className,
+	onOpenAutoFocus,
+	onCloseAutoFocus,
 	ref,
 	...props
 }: React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {
 	ref?: React.Ref<React.ComponentRef<typeof AlertDialogPrimitive.Content>>
 }) {
+	const returnFocus = useReturnFocus({onOpenAutoFocus, onCloseAutoFocus})
 	return (
 		<AlertDialogPortal>
 			<AlertDialogOverlay />
@@ -86,6 +90,7 @@ function AlertDialogContent({
 					className,
 				)}
 				{...props}
+				{...returnFocus}
 			/>
 		</AlertDialogPortal>
 	)

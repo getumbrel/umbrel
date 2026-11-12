@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import {Button} from '@/components/ui/button'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
-import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialogSeparator, ImmersiveDialogTitle} from '@/components/ui/immersive-dialog'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {BackupsExclusions} from '@/features/backups/components/backups-exclusions'
 import {
@@ -91,7 +91,9 @@ export function BackupsConfigureWizard() {
 	return (
 		<div className='flex h-full flex-col gap-4'>
 			<div>
-				<h2 className='text-24 font-medium text-white'>{t('backups')}</h2>
+				<ImmersiveDialogTitle asChild>
+					<h2 className='text-24 font-medium text-white'>{t('backups')}</h2>
+				</ImmersiveDialogTitle>
 			</div>
 			<ImmersiveDialogSeparator />
 
@@ -426,15 +428,16 @@ function RepositoryDetails({
 						)}
 					</div>
 				</div>
-				<div
-					className={`flex items-center justify-between p-3 text-sm transition-colors ${
+				<button
+					type='button'
+					className={`flex w-full items-center justify-between p-3 text-left text-sm outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
 						isLoadingBackups || (backups?.length || 0) === 0
 							? ''
-							: `hover:bg-white/5 ${!showAllBackups ? 'hover:rounded-b-12' : ''}`
+							: `hover:bg-white/5 ${!showAllBackups ? 'rounded-b-12' : ''}`
 					}`}
-					onClick={
-						isLoadingBackups || (backups?.length || 0) === 0 ? undefined : () => setShowAllBackups(!showAllBackups)
-					}
+					disabled={isLoadingBackups || (backups?.length || 0) === 0}
+					aria-expanded={showAllBackups}
+					onClick={() => setShowAllBackups(!showAllBackups)}
 				>
 					<div className='text-white/60'>{t('backups-configure.total-backups')}</div>
 					<div className='flex items-center gap-2'>
@@ -451,7 +454,7 @@ function RepositoryDetails({
 							/>
 						)}
 					</div>
-				</div>
+				</button>
 				<AnimatePresence initial={false}>
 					{showAllBackups && (
 						<motion.div

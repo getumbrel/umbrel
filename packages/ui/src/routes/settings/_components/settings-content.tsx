@@ -73,6 +73,8 @@ function LiveUsageCardLink({
 		>
 			<motion.div
 				className='will-change-transform'
+				// Motion makes a tap target focusable; the link around it already is
+				tabIndex={-1}
 				whileHover={reduceMotion ? undefined : {scale: 1.02, filter: 'brightness(1.15)'}}
 				whileTap={reduceMotion ? undefined : {scale: 0.97}}
 				transition={{type: 'spring', duration: 0.2, bounce: 0.15}}

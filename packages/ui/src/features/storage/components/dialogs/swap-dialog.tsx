@@ -17,6 +17,7 @@ import {toast} from '@/components/ui/toast'
 import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {cn} from '@/lib/utils'
+import {focusDialogContent} from '@/utils/dialog'
 
 import {RaidStatus, StorageDevice} from '../../hooks/use-storage'
 import {canDisconnectPoolMember, formatStorageSize, hasPoolMutationInProgress} from '../../utils'
@@ -214,7 +215,7 @@ export function SwapDialog({
 
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
+				<DialogScrollableContent onOpenAutoFocus={focusDialogContent}>
 					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							<DialogTitle>{oldDeviceFailed ? replaceTitle : swapTitle}</DialogTitle>
@@ -380,7 +381,7 @@ export function SwapDialog({
 		return (
 			<>
 				<Dialog open={open} onOpenChange={onOpenChange}>
-					<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
+					<DialogScrollableContent onOpenAutoFocus={focusDialogContent}>
 						<div className='flex flex-col gap-5 p-5'>
 							<DialogHeader>
 								<DialogTitle>{oldDeviceFailed ? replaceTitle : swapTitle}</DialogTitle>
@@ -489,7 +490,7 @@ export function SwapDialog({
 
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+				<DialogContent onOpenAutoFocus={focusDialogContent}>
 					<DialogHeader>
 						{/* SSD wording even without a slot, like the steps below */}
 						<DialogTitle>

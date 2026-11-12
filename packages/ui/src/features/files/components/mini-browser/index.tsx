@@ -507,11 +507,20 @@ function Node({
 	const isSelectable = entry.type === 'directory' || selectionMode === 'files-and-folders'
 	const isFaded = !isSelectable && entry.type !== 'directory'
 
+	const canExpand = entry.type === 'directory' && !isRepositoryDir
+
 	return (
 		<div>
-			<div
+			{/* A button, so the picker works from the keyboard: Enter or Space picks the entry,
+			    → and ← open and close a folder (the chevron and a double-click do with a mouse) */}
+			<button
+				type='button'
+				aria-pressed={isSelected}
+				aria-expanded={canExpand ? expanded : undefined}
+				aria-disabled={!isSelectable || undefined}
 				className={cn(
-					'flex min-w-0 items-center gap-2 rounded-md p-2',
+					// Inset: the picker's scroll area clips anything outside the rows
+					'flex w-full min-w-0 items-center gap-2 rounded-md p-2 text-left outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
 					isSelected ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
 					isFaded && 'opacity-50',
 				)}
@@ -521,7 +530,13 @@ function Node({
 					onSelect(entry.path, entry.type === 'directory')
 				}}
 				onDoubleClick={() => {
-					if (isRepositoryDir || entry.type !== 'directory') return
+					if (!canExpand) return
+					toggle()
+				}}
+				onKeyDown={(e) => {
+					const opens = e.key === 'ArrowRight'
+					if (!canExpand || (!opens && e.key !== 'ArrowLeft') || opens === expanded) return
+					e.preventDefault()
 					toggle()
 				}}
 			>
@@ -541,7 +556,7 @@ function Node({
 				<span className='min-w-0 flex-1 truncate text-sm' title={entry.path}>
 					{depth > maxIndentLevels ? formatCompactPath(entry.path, PATH_ANCESTORS_TO_SHOW) : entry.name}
 				</span>
-			</div>
+			</button>
 			{expanded && entry.type === 'directory' && !isRepositoryDir && (
 				<Subtree
 					path={entry.path}

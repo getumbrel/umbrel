@@ -591,12 +591,16 @@ function SelectShareStep({
 						<ScrollArea className={cn('rounded-12 bg-white/6', shares.length > 4 && 'h-[200px]')}>
 							<div className='divide-y divide-white/6'>
 								{shares.map((s) => (
-									<div
+									<button
+										type='button'
 										key={s}
-										onClick={disabled ? undefined : () => onSelect(s)}
+										onClick={() => onSelect(s)}
+										disabled={disabled}
+										aria-pressed={selectedShare === s}
 										className={cn(
-											'flex h-[50px] items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
-											selectedShare === s ? 'text-white' : 'hover:bg-white/5',
+											// Inset: the list's scroll area clips anything outside the rows
+											'flex h-[50px] w-full items-center gap-2 px-3 text-left text-15 font-medium -tracking-3 outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+											selectedShare === s ? 'text-white' : 'enabled:hover:bg-white/5',
 											disabled && 'cursor-not-allowed opacity-50',
 										)}
 									>
@@ -607,7 +611,7 @@ function SelectShareStep({
 												<Check className='size-3 text-white' />
 											</div>
 										)}
-									</div>
+									</button>
 								))}
 							</div>
 						</ScrollArea>

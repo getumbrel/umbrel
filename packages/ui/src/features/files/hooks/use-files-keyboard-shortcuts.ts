@@ -21,6 +21,7 @@ import {
 	LISTING_FADE_BOTTOM_PX,
 	LISTING_FADE_TOP_PX,
 } from '@/features/files/utils/get-grid-column-count'
+import {isKeyForFocusedControl} from '@/features/files/utils/is-key-for-focused-control'
 import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -142,6 +143,8 @@ export function useFilesKeyboardShortcuts({
 			// opened over the listing too, where Cmd+C is for the text selected
 			// in it and Cmd+Backspace must not trash the files underneath
 			if (isBeneathModal(listingRef.current, e)) return
+			// A key the focused control already handled (the Cloud tree's arrows) isn't the listing's
+			if (e.defaultPrevented) return
 
 			const mod = e.metaKey || e.ctrlKey
 
@@ -225,6 +228,7 @@ export function useFilesKeyboardShortcuts({
 			if (e.key === ' ') {
 				if (
 					isInInput(e) ||
+					isKeyForFocusedControl(e) ||
 					mod ||
 					e.altKey ||
 					searchBuffer.current.length > 0 ||

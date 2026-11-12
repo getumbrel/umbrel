@@ -249,6 +249,7 @@ function RegularRestoreFlow() {
 									// Clears the Choose button, which grows with the text size
 									className='pr-[calc(7rem+var(--text-boost)*8)]'
 									title={repositoryPath || ''}
+									aria-label={t('backups-restore.backup-location')}
 									aria-disabled={!repositoryPath}
 									tabIndex={repositoryPath ? 0 : -1}
 									onClick={() => {
@@ -356,6 +357,7 @@ function RegularRestoreFlow() {
 						<button
 							type='button'
 							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-hidden'
+							aria-label={t('back')}
 							onClick={() => {
 								setPasswordError('')
 								setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))
@@ -467,31 +469,48 @@ function BackupSnapshot({
 	const size = backup.size
 	const sizeTxt = typeof size === 'number' ? formatFilesystemSize(size) : t('unknown')
 
+	const rowClass = [
+		'flex w-full items-center justify-between rounded-8 border px-4 py-3 text-left',
+		selected ? 'border-brand bg-brand/15' : 'border-white/10',
+		!noHover && !selected ? 'hover:bg-white/5' : '',
+	].join(' ')
+	const content = (
+		<>
+			<div className='min-w-0 flex-1'>
+				<div className='truncate text-sm'>{label}</div>
+			</div>
+			{isLatest && (
+				<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
+					{t('backups-restore.latest')}
+				</div>
+			)}
+			{sizeTxt && (
+				<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
+					{sizeTxt}
+				</div>
+			)}
+		</>
+	)
+
+	// A row to pick when it has an action; the Review step shows the picked one as plain text
 	return (
 		<div className='relative'>
-			<div
-				className={[
-					'flex w-full items-center justify-between rounded-8 border px-4 py-3',
-					selected ? 'border-brand bg-brand/15' : 'border-white/10',
-					!noHover && !selected ? 'hover:bg-white/5' : '',
-					'',
-				].join(' ')}
-				onClick={onClick}
-			>
-				<div className='min-w-0 flex-1'>
-					<div className='truncate text-sm'>{label}</div>
-				</div>
-				{isLatest && (
-					<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
-						{t('backups-restore.latest')}
-					</div>
-				)}
-				{sizeTxt && (
-					<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
-						{sizeTxt}
-					</div>
-				)}
-			</div>
+			{onClick ? (
+				<button
+					type='button'
+					onClick={onClick}
+					aria-pressed={selected}
+					// Inset: the list's scroller clips anything outside the rows
+					className={cn(
+						rowClass,
+						'outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+					)}
+				>
+					{content}
+				</button>
+			) : (
+				<div className={rowClass}>{content}</div>
+			)}
 		</div>
 	)
 }

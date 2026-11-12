@@ -1,10 +1,10 @@
 import {Globe} from 'lucide-react'
 import {useTranslation} from 'react-i18next'
 import {TbHistory, TbMessageCircle, TbUser} from 'react-icons/tb'
-import {Link} from 'react-router-dom'
 
 import {ChevronDown} from '@/components/chevron-down'
 import {IconButton} from '@/components/ui/icon-button'
+import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {links} from '@/constants/links'
 import {useLanguage} from '@/hooks/use-language'
 import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
@@ -31,25 +31,30 @@ export function OnboardingFooter({action}: OnboardingFooterProps) {
 
 	return (
 		<div className='flex flex-row flex-wrap items-center justify-center gap-3'>
-			<Link to={route} viewTransition>
+			{/* One link styled as a button (not a button inside a link, which made two tab stops) */}
+			<IconButtonLink to={route} viewTransition icon={Icon} size='default' className={footerButtonClass}>
 				{/* Small screens: with short text */}
-				<IconButton icon={Icon} size='default' className={`sm:hidden ${footerButtonClass}`}>
+				<span className='sm:hidden'>
 					{/* Using explicit conditionals instead of dynamic keys so GitHub Action for translations can detect translation keys */}
 					{isCreateAccount ? t('onboarding.create-instead-short') : t('onboarding.restore-short')}
-				</IconButton>
+				</span>
 				{/* Larger screens: with full text */}
-				<IconButton icon={Icon} size='default' className={`hidden sm:flex ${footerButtonClass}`}>
+				<span className='hidden sm:inline'>
 					{/* Using explicit conditionals instead of dynamic keys so GitHub Action for translations can detect translation keys */}
 					{isCreateAccount ? t('onboarding.create-instead-long') : t('onboarding.restore-long')}
-				</IconButton>
-			</Link>
+				</span>
+			</IconButtonLink>
 			{/* TODO: consider adding drawer on mobile */}
 			<OnboardingLanguageDropdown />
-			<Link to={links.support} target='_blank'>
-				<IconButton icon={TbMessageCircle} size='default' className={footerButtonClass}>
-					{t('onboarding.contact-support')}
-				</IconButton>
-			</Link>
+			<IconButtonLink
+				to={links.support}
+				target='_blank'
+				icon={TbMessageCircle}
+				size='default'
+				className={footerButtonClass}
+			>
+				{t('onboarding.contact-support')}
+			</IconButtonLink>
 		</div>
 	)
 }

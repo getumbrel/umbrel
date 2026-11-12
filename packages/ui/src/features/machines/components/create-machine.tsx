@@ -556,6 +556,7 @@ export default function CreateMachine() {
 												type='button'
 												disabled={isCreating}
 												onClick={() => setArch(option)}
+												aria-pressed={selectedArch === option}
 												className={machineSegmentButtonClass(selectedArch === option)}
 											>
 												{option === 'amd64' ? 'AMD64' : 'ARM64'}
@@ -579,6 +580,7 @@ export default function CreateMachine() {
 								type='button'
 								className='flex h-12 w-full items-center justify-between px-4 text-13 font-medium text-white/70 transition-colors hover:bg-white/5'
 								onClick={() => setAdvancedOpen((open) => !open)}
+								aria-expanded={advancedOpen}
 								disabled={isCreating}
 							>
 								{t('machines.advanced')}
@@ -625,6 +627,7 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'bios')}
 													onClick={() => setFirmware(option)}
+													aria-pressed={(selectedArch === 'arm64' ? 'uefi' : firmware) === option}
 													className={machineSegmentButtonClass(
 														(selectedArch === 'arm64' ? 'uefi' : firmware) === option,
 													)}
@@ -644,6 +647,7 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'sata')}
 													onClick={() => setDiskBus(option)}
+													aria-pressed={(selectedArch === 'arm64' ? 'virtio' : diskBus) === option}
 													className={machineSegmentButtonClass(
 														(selectedArch === 'arm64' ? 'virtio' : diskBus) === option,
 													)}

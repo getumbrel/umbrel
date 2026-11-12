@@ -1,6 +1,7 @@
 import {cva, VariantProps} from 'class-variance-authority'
 import {AnimatePresence, motion} from 'motion/react'
 import * as React from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbAlertCircle, TbEye, TbEyeOff} from 'react-icons/tb'
 import {usePreviousDistinct} from 'react-use'
 
@@ -79,6 +80,7 @@ export function PasswordInput({
 	sizeVariant,
 	inputRef,
 	className,
+	...inputProps
 }: {
 	value?: string
 	/** Calling it a label rather than a placeholder */
@@ -89,12 +91,19 @@ export function PasswordInput({
 	sizeVariant?: VariantProps<typeof inputVariants>['sizeVariant']
 	inputRef?: React.Ref<HTMLInputElement>
 	className?: string
-}) {
+} & Pick<
+	React.InputHTMLAttributes<HTMLInputElement>,
+	// What a label or form field hands its input (FormControl passes id and the aria
+	// attributes), so they reach the <input> rather than stopping at the wrapper
+	'id' | 'name' | 'autoComplete' | 'aria-label' | 'aria-describedby' | 'aria-invalid'
+>) {
+	const {t} = useTranslation()
 	const [showPassword, setShowPassword] = React.useState(false)
 	return (
 		<div className={className}>
 			<div className={cn(iconRightClasses.root)}>
 				<Input
+					{...inputProps}
 					ref={inputRef}
 					variant={error ? 'destructive' : undefined}
 					placeholder={label}
@@ -109,6 +118,7 @@ export function PasswordInput({
 					// Prevent tabbing to this button to prevent accidentally showing the password
 					tabIndex={-1}
 					type='button'
+					aria-label={showPassword ? t('hide-password') : t('show-password')}
 					className={iconRightClasses.button}
 					onClick={() => setShowPassword((prev) => !prev)}
 				>
@@ -158,8 +168,12 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 
 export function InputError({children}: {children: React.ReactNode}) {
 	return (
-		// Allow text selection for copying error messages
-		<div className='flex items-start gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest select-text'>
+		// Allow text selection for copying error messages. An alert, so an error that
+		// appears after submitting (Incorrect password) is announced, not just shown
+		<div
+			role='alert'
+			className='flex items-start gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest select-text'
+		>
 			<TbAlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
 			{children}
 		</div>

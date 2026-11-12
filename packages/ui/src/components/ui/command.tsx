@@ -12,6 +12,7 @@ import {Dialog} from '@/components/ui/dialog'
 import {cn} from '@/lib/utils'
 
 import {dialogOverlayClass, preventDialogDismissForToasts} from './shared/dialog'
+import {useReturnFocus} from './shared/return-focus'
 
 function Command({
 	className,
@@ -38,12 +39,14 @@ type CommandDialogProps = DialogProps & {
 // `.cmdk-stage` in index.css) gives the children time to leave.
 const CommandDialog = ({children, contentClassName, commandProps, onEscapeKeyDown, ...props}: CommandDialogProps) => {
 	const {className: commandClassName, ...restCommandProps} = commandProps ?? {}
+	const returnFocus = useReturnFocus({})
 	return (
 		<Dialog {...props}>
 			<BlurOverlay />
 			<DialogPrimitive.Content
 				onPointerDownOutside={preventDialogDismissForToasts}
 				onEscapeKeyDown={onEscapeKeyDown}
+				{...returnFocus}
 				aria-describedby={undefined}
 				className={cn(
 					'cmdk-stage fixed left-1/2 z-[999] flex -translate-x-1/2 flex-col items-center outline-hidden',
