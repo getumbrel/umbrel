@@ -284,7 +284,7 @@ export function SsdShape({
 						type='button'
 						onClick={onHealthClick}
 						aria-label={t('storage-status.drive-details', {name: device.name})}
-						className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1.5 transition-colors hover:bg-white/[0.12]'
+						className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1.5 transition-colors hover:bg-white/[0.12] contrast-more:border-white/40'
 					>
 						<TiInfoLarge className='size-4 text-white' />
 						{/* Warning dot - upper right of pill */}

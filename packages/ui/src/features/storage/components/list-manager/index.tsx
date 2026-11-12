@@ -437,6 +437,8 @@ export function ListStorageManager() {
 					aria-describedby={undefined}
 					size='md'
 					showScroll
+					// The inline glass outranks the window tint, which turns solid with Increase contrast
+					className='contrast-more:bg-black!'
 					style={{
 						backgroundColor: 'rgba(8, 8, 8, 0.5)',
 						backdropFilter: 'blur(80px)',
@@ -476,20 +478,20 @@ export function ListStorageManager() {
 							<div className='flex min-w-0 flex-1 flex-col gap-6'>
 								{/* Attached drives */}
 								<div className='flex flex-col gap-2.5'>
-									<div className='flex items-center justify-between'>
+									<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
 										<span className='text-13 font-semibold text-white/50'>{t('storage-manager.attached-drives')}</span>
 										<div className='flex items-center gap-2'>
 											{showEnableFailsafe && (
 												<button
 													type='button'
 													onClick={() => setIsEnableFailsafeOpen(true)}
-													className='flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-[12px] font-medium text-white transition-colors hover:bg-brand/90'
+													className='flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-12 font-medium text-white transition-colors hover:bg-brand/90'
 												>
 													<IoShieldHalf className='size-3.5' />
 													{t('storage-manager.add-to-raid.enable-failsafe')}
 												</button>
 											)}
-											<div className='hidden md:block'>
+											<div className='hidden shrink-0 md:block'>
 												<DriveActionButton icon={AddIcon} onClick={() => setIsInstallDrivesOpen(true)}>
 													{t('storage-manager.install-drives')}
 												</DriveActionButton>

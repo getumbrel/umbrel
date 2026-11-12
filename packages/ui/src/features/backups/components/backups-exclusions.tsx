@@ -237,14 +237,15 @@ function AppRow({
 
 	return (
 		<div className='p-3 text-sm'>
-			<div className='flex items-center justify-between gap-2'>
-				<div className='flex min-w-0 items-center gap-2'>
+			{/* The note moves under the name when both don't fit, rather than hiding it */}
+			<div className='flex flex-wrap items-center justify-between gap-x-2 gap-y-1'>
+				<div className='flex min-w-0 flex-1 basis-24 items-center gap-2'>
 					<AppIcon size={26} src={app.icon} className='rounded-md' />
 					<span className='truncate text-13' title={app.name || app.id}>
 						{app.name || app.id}
 					</span>
 				</div>
-				<div className='flex items-center gap-2'>
+				<div className='ms-auto flex items-center gap-2'>
 					{!isIgnored && hasExcludedData && (
 						<button
 							onClick={() => setOpen((v) => !v)}

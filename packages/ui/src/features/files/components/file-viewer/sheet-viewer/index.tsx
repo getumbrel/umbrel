@@ -770,8 +770,8 @@ function SheetStage({
 								'size-full transition-opacity duration-300 motion-reduce:transition-none',
 								painted ? 'opacity-100' : 'opacity-0',
 								// While find or the notice is up the grid starts below it, rather than hide its first rows
-								// (and find's match) under it; on a phone the notice takes three lines
-								find ? 'pt-20' : !short && 'group-has-[[role=status]]/area:pt-24',
+								// (and find's match) under it; on a phone the notice takes three lines, each taller with the text
+								find ? 'pt-20' : !short && 'group-has-[[role=status]]/area:pt-[calc(6rem+4*var(--text-boost))]',
 							)}
 						>
 							<Grid

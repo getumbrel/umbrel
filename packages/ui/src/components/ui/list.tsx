@@ -35,4 +35,4 @@ export function ListRadioItem({
 }
 
 export const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6`
-export const listItemClass = tw`flex items-center gap-3 px-3 h-[50px] text-15 font-medium -tracking-3 justify-between`
+export const listItemClass = tw`flex items-center gap-3 px-3 min-h-[50px] py-2 text-15 font-medium -tracking-3 justify-between`

@@ -21,6 +21,7 @@ import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-b
 import {CloudBreakDiagram} from '@/features/files/components/cloud-break-diagram'
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {cloudAccountBrand} from '@/features/files/utils/cloud'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {ONBOARDING_COMPLETE_NOTIFICATION, useNotifications} from '@/hooks/use-notifications'
 import {cn} from '@/lib/utils'
 import {SettingsListIcon} from '@/routes/settings/_components/list-row'
@@ -36,13 +37,15 @@ function NotificationContent({children}: {children: string}) {
 	const contentRef = useRef<HTMLDivElement>(null)
 	const [isExpanded, setIsExpanded] = useState(false)
 	const [showReadMore, setShowReadMore] = useState(false)
+	// Three lines of the description (text-13, leading-tight), which grow with the text size
+	const collapsedHeight = (13 + useLargerText()) * 1.25 * 3
 
 	useEffect(() => {
 		if (!contentRef.current) return
 		const el = contentRef.current
 		const WIGGLE_ROOM = 20
 		setShowReadMore(el.scrollHeight > el.clientHeight + WIGGLE_ROOM)
-	}, [children])
+	}, [children, collapsedHeight])
 
 	return (
 		<div className='flex flex-col gap-2'>
@@ -50,7 +53,7 @@ function NotificationContent({children}: {children: string}) {
 				ref={contentRef}
 				initial={false}
 				animate={{
-					height: isExpanded ? 'auto' : '3em',
+					height: isExpanded ? 'auto' : collapsedHeight,
 				}}
 				transition={{
 					duration: 0.4,

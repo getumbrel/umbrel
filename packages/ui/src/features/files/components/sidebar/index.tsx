@@ -227,7 +227,7 @@ function useHasMoreBelow(viewportRef: React.RefObject<HTMLDivElement | null>) {
 const SidebarSection = ({children, label = ''}: {children: React.ReactNode; label?: string}) => {
 	return (
 		<section className='flex flex-col pr-4' aria-label={label}>
-			{label && <div className='px-2 py-1 text-[11px] font-medium text-white/40'>{label}</div>}
+			{label && <div className='px-2 py-1 text-11 font-medium text-white/40'>{label}</div>}
 			{children}
 		</section>
 	)

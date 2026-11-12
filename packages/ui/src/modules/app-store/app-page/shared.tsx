@@ -13,7 +13,8 @@ import {immersiveDialogDescriptionClass, immersiveDialogTitleClass} from '@/comp
 import {cn} from '@/lib/utils'
 import {useWallpaper} from '@/providers/wallpaper'
 
-const settingsRowClass = 'flex w-full items-start gap-x-2.5 rounded-12 bg-white/6 p-4'
+const settingsRowClass =
+	'flex w-full items-start gap-x-2.5 rounded-12 bg-white/6 p-4 contrast-more:ring-1 contrast-more:ring-white/40 contrast-more:ring-inset'
 
 // The redesigned Settings page tints each row's icon tile with the
 // wallpaper's brand hue at a per-row lightness, lightest first
@@ -131,17 +132,19 @@ export function SettingsControlRow({
 	tone?: SettingsRowTone
 }) {
 	return (
-		<div className={cn(settingsRowClass, !control && 'opacity-60')}>
+		// A control too wide to sit beside the text (a long button label) drops
+		// below it, at the end of the row
+		<div className={cn(settingsRowClass, 'flex-wrap gap-y-3', !control && 'opacity-60')}>
 			{icon ? <SettingsRowIcon icon={icon} tone={tone} /> : null}
 			<CardText title={title} description={description} />
-			{control ? <div className='shrink-0 self-center'>{control}</div> : null}
+			{control ? <div className='ms-auto max-w-full shrink-0 self-center'>{control}</div> : null}
 		</div>
 	)
 }
 
 function CardText({title, description, modified}: {title: string; description: ReactNode; modified?: boolean}) {
 	return (
-		<div className='min-w-0 flex-1 space-y-0.5 self-center'>
+		<div className='min-w-0 flex-1 basis-40 space-y-0.5 self-center'>
 			<h3 className='flex items-center gap-1.5 text-14 leading-tight font-medium -tracking-2 text-white/90'>
 				{title}
 				{modified ? <span aria-hidden='true' className='size-1.5 shrink-0 rounded-full bg-brand' /> : null}

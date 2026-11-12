@@ -70,10 +70,9 @@ export function ProgressRing({
 					cx='56'
 					cy='56'
 					r={RADIUS}
-					stroke='currentColor'
 					strokeWidth='3'
 					fill='none'
-					className='text-white/10'
+					className='stroke-white/10 contrast-more:stroke-white/25'
 				/>
 				{/* Glow: a wider, blurred, dimmer twin of the arc */}
 				<circle

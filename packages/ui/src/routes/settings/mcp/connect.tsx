@@ -215,7 +215,7 @@ function AgentChip({
 			className={cn(
 				'flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-12 font-medium -tracking-2 transition-colors',
 				selected
-					? 'border-white/25 bg-white/12 text-white'
+					? 'border-white/25 bg-white/12 text-white contrast-more:border-white contrast-more:bg-white/30'
 					: 'border-white/6 bg-white/3 text-white/60 hover:bg-white/8 hover:text-white/90',
 			)}
 		>
@@ -303,8 +303,8 @@ function TailscaleTip({endpointUrl}: {endpointUrl: string}) {
 							rel='noopener noreferrer'
 							className='font-medium text-white/80 underline decoration-white/25 underline-offset-2 transition-colors hover:text-white'
 						/>,
-						<span key='tailscale-url' className='font-mono text-[11px] text-white/70' />,
-						<span key='current-url' className='font-mono text-[11px] text-white/70' />,
+						<span key='tailscale-url' className='font-mono text-11 text-white/70' />,
+						<span key='current-url' className='font-mono text-11 text-white/70' />,
 					]}
 				/>
 			</p>

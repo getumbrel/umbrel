@@ -1,14 +1,6 @@
-import React, {
-	createContext,
-	Fragment,
-	useContext,
-	useEffect,
-	useId,
-	useRef,
-	useState,
-	useSyncExternalStore,
-} from 'react'
+import React, {createContext, Fragment, useContext, useEffect, useId, useRef, useState} from 'react'
 
+import {useIncreaseContrast} from '@/hooks/use-accessibility'
 import {attachBackdropLens, resolveBevelPx, type GlassLensParams} from '@/lib/glass-webgl'
 import {cn} from '@/lib/utils'
 
@@ -26,15 +18,6 @@ const MAX_BEND = Math.cos(Math.asin(1 / IOR)) // bend at a 90° rim
 
 const REDUCED = window.matchMedia('(prefers-reduced-transparency: reduce)').matches
 
-// Matches the `contrast-more:` styles callers layer on: solid backgrounds, no
-// blur. Watched live (like the CSS variants it replaces), not snapshotted.
-const CONTRAST_QUERY = window.matchMedia('(prefers-contrast: more)')
-
-function subscribeContrast(onChange: () => void) {
-	CONTRAST_QUERY.addEventListener('change', onChange)
-	return () => CONTRAST_QUERY.removeEventListener('change', onChange)
-}
-
 /**
  * Whether WebGL lenses re-aim with their host's own transform. In Firefox a
  * lens redrawn on every frame of a widget's hover tilt and scale keeps the GPU
@@ -45,9 +28,7 @@ function subscribeContrast(onChange: () => void) {
 const LENS_FOLLOWS_HOST_TRANSFORM = !/\bFirefox\//.test(navigator.userAgent)
 
 const FROSTED =
-	(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)')) &&
-	!REDUCED &&
-	!CONTRAST_QUERY.matches
+	(CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)')) && !REDUCED
 
 /**
  * True where the lens refracts the real backdrop (Chromium). Elsewhere a
@@ -217,9 +198,12 @@ export function Glass({
 	const filterId = 'glass-' + useId().replace(/[^a-zA-Z0-9_-]/g, '')
 	const frosted = useContext(GlassFrostedContext)
 	const refractBackdrop = REFRACT && !forceRefractionTarget
+	// Matches the `contrast-more:` styles callers layer on: solid backgrounds, no
+	// blur. Followed live, like the CSS variant.
+	const [contrast] = useIncreaseContrast()
 
 	useEffect(() => {
-		if (!refractBackdrop || frosted) return
+		if (!refractBackdrop || frosted || contrast) return
 		const host = hostRef.current
 		if (!host) return
 		let frame = 0
@@ -290,15 +274,13 @@ export function Glass({
 			// blob URL instead of publishing after cleanup
 			verRef.current++
 		}
-	}, [bevel, frosted, refractBackdrop])
+	}, [bevel, contrast, frosted, refractBackdrop])
 
 	useEffect(() => {
 		return () => {
 			if (hrefRef.current) URL.revokeObjectURL(hrefRef.current)
 		}
 	}, [])
-
-	const contrast = useSyncExternalStore(subscribeContrast, () => CONTRAST_QUERY.matches)
 
 	// Refract a wallpaper target via WebGL on Safari/Firefox, or when a caller
 	// explicitly prefers a static target over Chromium's live backdrop. The

@@ -31,9 +31,9 @@ export function SoftwareUpdateDrawerOrDialog() {
 				<div className='flex flex-col items-center py-8'>
 					<FadeInImg src='/assets/umbrel-ios.png' className='h-[96px] w-[96px]' />
 					<div className='mb-4' />
-					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
+					<p className='text-12 -tracking-2 text-white/50'>{t('software-update.current-running')}</p>
 					<p className='text-15 -tracking-4'>{currentVersion?.name || `umbrelOS ${LOADING_DASH}`}</p>
-					<p className='text-12 -tracking-2 opacity-50'>
+					<p className='text-12 -tracking-2 text-white/50'>
 						<Trans
 							t={t}
 							i18nKey='software-update.see-whats-new'
@@ -78,4 +78,4 @@ export function SoftwareUpdateDrawerOrDialog() {
 	)
 }
 
-const versionMessageClass = tw`text-center text-14 font-semibold -tracking-2 py-4 leading-inter-trimmed`
+const versionMessageClass = tw`text-center text-14 font-semibold -tracking-2 py-3 leading-tight`

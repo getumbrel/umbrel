@@ -18,7 +18,7 @@ export function SortDropdown() {
 					<ArrowUpDown className='h-3 w-3' />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align='end' className='w-24'>
+			<DropdownMenuContent align='end'>
 				<span className='block px-2 pb-2 text-13 text-white/40'>{t('files-view.sort-by')}</span>
 				{SORT_BY_OPTIONS.map((option) => (
 					<DropdownMenuItem

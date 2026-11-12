@@ -93,6 +93,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 		exit: 'exit',
 	})
 	const {collection, isSources, isMap, inDeleted, isTimeline} = useBarRoute()
+	const timelineFace = isTimeline && !selection.coveringFor && !selection.pickingFor && !selection.selecting
 	const createAlbum = () => navigate(linkToDialog('photos-create-album'))
 	const addSource = () => navigate(linkToDialog('photos-add-source'))
 
@@ -164,11 +165,14 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			    below (with room for focus rings), not at the sides: menus and
 			    tooltips are portaled, and the wider face must not be cut while it rolls.
 			    While picking, the album's name in Add can give way, so this side
-			    narrows with the title instead of squeezing it to a sliver */}
+			    narrows with the title instead of squeezing it to a sliver. On a
+			    timeline's own face (from md, where it has the grouping) this side
+			    takes the squeeze first: the grouping scrolls so the date stays whole */}
 			<div
 				className={cn(
 					'relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5',
 					selection.pickingFor && 'min-w-0',
+					timelineFace && 'md:min-w-0 md:shrink-[999]',
 				)}
 			>
 				<AnimatePresence mode='popLayout' initial={false} custom={direction}>
@@ -184,7 +188,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 					) : selection.pickingFor ? (
 						<motion.div key='picking' className='flex min-w-0 items-center gap-2' {...faceProps(pillsRoll)}>
 							{isTimeline && (
-								<div className='hidden items-center gap-2 md:flex'>
+								<div className='hidden min-w-0 items-center gap-2 md:flex'>
 									<TimelineZoom slider={!pinchZooms} />
 								</div>
 							)}
@@ -195,24 +199,24 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 							<SelectionActions inDeleted={inDeleted} />
 						</motion.div>
 					) : (
-						<motion.div key='page' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
+						<motion.div key='page' className='flex min-w-0 items-center gap-2' {...faceProps(pillsRoll)}>
 							{/* Phones and tablets: the page's controls live in the title row,
 							    so the date's row carries only what sizes the grid beneath it —
 							    the grouping where there's room, and the zoom steps for a mouse
 							    (the slider folds to − / + below xl): on a touch screen the
 							    date has the row. A phone on its side has no title row, so the
 							    controls come here */}
-							<div className='flex items-center gap-2 lg:hidden'>
+							<div className='flex min-w-0 items-center gap-2 lg:hidden'>
 								{isTimeline && (
-									<div className='hidden md:flex'>
+									<div className='hidden min-w-0 md:flex'>
 										<GroupingPills />
 									</div>
 								)}
 								{isTimeline && !pinchZooms && <ZoomSlider />}
 								{/* While a search is on, the title row is back with its field */}
-								{!searchEngaged && <MobileActions className='hidden phone-side:flex' />}
+								{!searchEngaged && <MobileActions className='hidden shrink-0 phone-side:flex' />}
 							</div>
-							<div className='hidden items-center gap-2 lg:flex'>
+							<div className='hidden min-w-0 items-center gap-2 lg:flex'>
 								{/* Most of the page's controls step aside while the search has
 								    the stage; the zoom stays — narrowing the grid and resizing
 								    its tiles go together — and everything returns when the
@@ -234,7 +238,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 								{isTimeline && (
 									<>
 										{!pinchZooms && <ZoomSlider />}
-										<CollapseAside hidden={searchEngaged}>
+										<CollapseAside hidden={searchEngaged} className='shrink-0'>
 											{albumId && (
 												<PillButton icon={Plus} onClick={() => selection.pickFor(albumId)}>
 													{t('photos-album.add')}
@@ -263,10 +267,18 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 // collapsed negative margin swallows one flex gap, so the neighbours close
 // ranks to their usual spacing rather than leaving a double gap around a
 // zero-width box.
-function CollapseAside({hidden, children}: {hidden: boolean; children: React.ReactNode}) {
+function CollapseAside({
+	hidden,
+	className,
+	children,
+}: {
+	hidden: boolean
+	className?: string
+	children: React.ReactNode
+}) {
 	return (
 		<motion.div
-			className='flex items-center gap-2 overflow-hidden'
+			className={cn('flex items-center gap-2 overflow-hidden', className)}
 			initial={false}
 			animate={hidden ? {width: 0, opacity: 0, marginLeft: -8} : {width: 'auto', opacity: 1, marginLeft: 0}}
 			transition={ROLL}
@@ -316,7 +328,7 @@ function TimelineZoom({slider}: {slider: boolean}) {
 const titleClass = tw`truncate font-semibold -tracking-2 text-white/90`
 // A soft shadow under the date and the view line: they sit where tiles have
 // all but faded back in, and a bright one would otherwise swallow them
-const titleShadowClass = tw`[text-shadow:0_1px_2px_rgb(0_0_0/0.45),0_0_16px_rgb(0_0_0/0.35)]`
+const titleShadowClass = tw`[text-shadow:0_1px_2px_rgb(0_0_0/0.45),0_0_16px_rgb(0_0_0/0.35)] contrast-more:[text-shadow:0_0_2px_rgb(0_0_0),0_1px_3px_rgb(0_0_0/0.9),0_0_16px_rgb(0_0_0/0.8)]`
 const mapTitleShadowClass = tw`[text-shadow:0_1px_2px_rgb(0_0_0/0.8),0_0_10px_rgb(0_0_0/0.7),0_0_24px_rgb(0_0_0/0.5)]`
 const riseClass = tw`motion-safe:animate-in motion-safe:duration-200 motion-safe:fade-in motion-safe:slide-in-from-bottom-1`
 const countClass = 'min-w-0 truncate text-17 font-semibold -tracking-2 text-white/75'
@@ -347,12 +359,28 @@ function SelectionCount({count}: {count: number}) {
 			</span>
 		)
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
+	const text = t('photos-selection.count', {count, formattedCount})
+	const at = text.indexOf(formattedCount)
+	if (at === -1)
+		return (
+			<span key='count' className={cn('block truncate', riseClass)}>
+				{text}
+			</span>
+		)
+	// Short of room the words give way, before or after the number by
+	// language, and the number always shows whole
 	return (
-		<span key='count' className={cn('block truncate', riseClass)}>
-			<CountText text={t('photos-selection.count', {count, formattedCount})} number={formattedCount} />
+		<span key='count' className={cn('flex min-w-0', riseClass)}>
+			<span className={countWordsClass}>{text.slice(0, at)}</span>
+			<span className='shrink-0'>
+				<CountText text={formattedCount} number={formattedCount} />
+			</span>
+			<span className={countWordsClass}>{text.slice(at + formattedCount.length)}</span>
 		</span>
 	)
 }
+// whitespace-pre, not truncate, so the space beside the number is kept
+const countWordsClass = tw`min-w-0 overflow-hidden text-ellipsis whitespace-pre`
 
 // "7 albums" — nothing until the list is known. (People and Locations counts
 // — photos-actions.people-count / location-count — return with those pages.)

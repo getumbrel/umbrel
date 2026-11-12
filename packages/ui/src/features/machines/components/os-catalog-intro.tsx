@@ -217,7 +217,7 @@ export function CatalogIntro({entries, onCommit}: {entries: IntroWallEntry[]; on
 					initial={{opacity: 0, y: 8}}
 					animate={copyState}
 					transition={enter(0)}
-					className='low:text-20 text-[28px] font-semibold -tracking-2 text-white md:text-[32px]'
+					className='low:text-20 text-28 font-semibold -tracking-2 text-white md:text-32'
 				>
 					{t('machines.intro-title')}
 				</motion.h1>

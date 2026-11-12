@@ -137,7 +137,7 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 			<div className='flex flex-1 flex-col items-center justify-center gap-4'>
 				{/* Same spinner as the Files listing loading state */}
 				<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-xs' />
-				<span className='text-[15px] text-white/85'>{t('onboarding.ssd-raid.scanning')}</span>
+				<span className='text-15 text-white/85'>{t('onboarding.ssd-raid.scanning')}</span>
 			</div>
 		)
 	}
@@ -170,7 +170,7 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 			</div>
 
 			<span
-				className='text-[15px] text-white/85'
+				className='text-15 text-white/85'
 				style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 			>
 				{t('onboarding.raid.scanning')}

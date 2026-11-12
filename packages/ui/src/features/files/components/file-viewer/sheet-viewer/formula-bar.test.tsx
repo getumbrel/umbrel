@@ -43,7 +43,7 @@ function mount(value: string, props: Partial<ComponentProps<typeof FormulaBar>> 
 test('a value of several lines shows its first, marked, and all of them while it has the keyboard', () => {
 	const {field, mark} = mount('Line one\nLine two\nLine three')
 	// Exactly one line high, so the second's top doesn't show under the first
-	expect(field.className).toContain('h-[18px]')
+	expect(field.className).toContain('h-[1lh]')
 	expect(field.className).toContain('py-0')
 	expect(mark()).not.toBeNull()
 	act(() => field.focus())

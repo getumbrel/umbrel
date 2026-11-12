@@ -11,6 +11,7 @@ import {
 	PiClockCounterClockwiseFill,
 	PiDevicesFill,
 	PiKeyFill,
+	PiPersonArmsSpreadFill,
 	PiShareNetworkFill,
 	PiUsersThreeFill,
 	PiWrenchFill,
@@ -31,6 +32,7 @@ export type SettingsItemId =
 	| '2fa'
 	| 'users'
 	| 'language'
+	| 'accessibility'
 	| 'wifi'
 	| 'storage'
 	| 'apps'
@@ -69,6 +71,7 @@ const SETTINGS_PAGE_ITEM_ORDER: SettingsItemId[] = [
 	'widgets',
 	'sessions',
 	'language',
+	'accessibility',
 	'storage',
 	'apps',
 	'file-sharing',
@@ -219,6 +222,21 @@ export function createSettingsCatalog(
 			description: t('settings.language-description'),
 			to: '/settings/language',
 			keywords: [t('language'), t('language-description')],
+		},
+		{
+			kind: 'page',
+			id: 'accessibility',
+			category: 'account',
+			command: {},
+			icon: PiPersonArmsSpreadFill,
+			title: t('accessibility'),
+			description: t('accessibility-description'),
+			to: '/settings/accessibility',
+			keywords: [
+				t('accessibility.text-size'),
+				t('accessibility.increase-contrast'),
+				t('accessibility.increase-contrast-description'),
+			],
 		},
 		{
 			kind: 'page',
@@ -715,7 +733,8 @@ export function createSettingsCatalog(
 		},
 	]
 
-	const memberPreferenceItems = pageItems.filter(({id}) => id === 'wallpaper' || id === 'widgets' || id === 'language')
+	const memberPreferenceIds: SettingsItemId[] = ['wallpaper', 'widgets', 'language', 'accessibility']
+	const memberPreferenceItems = pageItems.filter(({id}) => memberPreferenceIds.includes(id))
 	// Members get the File sharing row in their single account section, right below Widgets
 	const memberFileSharingItems = sambaEnabled
 		? pageItems

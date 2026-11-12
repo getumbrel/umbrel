@@ -160,7 +160,8 @@ export const Island = ({
 				// phones; overflow-hidden keeps content inside the pill while the
 				// expand/minimize spring is still in flight
 				className={cn(
-					'relative max-w-[calc(100vw-16px)] overflow-hidden bg-black text-white shadow-floating-island',
+					// An island's sizes are fixed, so its text keeps its size whatever the text size setting
+					'relative max-w-[calc(100vw-16px)] overflow-hidden bg-black text-white shadow-floating-island [--text-boost:0px]',
 					effectiveExpanded && expandedClassName,
 				)}
 				style={{

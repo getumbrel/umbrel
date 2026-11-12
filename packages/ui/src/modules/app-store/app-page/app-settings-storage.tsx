@@ -451,10 +451,14 @@ export function StorageSettingsView({
 		setNewSourcePath(null)
 	}
 
+	// The long labels give way to an ellipsis on a narrow row. Their own leading,
+	// as the button's trimmed one would clip the descenders.
 	const dataRootControl = dataRoot ? (
 		dataRootOperationInProgress ? (
-			<Button size='input-short' disabled>
-				{resetDataRootMut.isPending ? t('app-settings.storage.starting-fresh') : t('app-settings.storage.moving')}
+			<Button size='input-short' className='max-w-full' disabled>
+				<span className='truncate leading-normal'>
+					{resetDataRootMut.isPending ? t('app-settings.storage.starting-fresh') : t('app-settings.storage.moving')}
+				</span>
 			</Button>
 		) : dataRoot.status === 'storage-unavailable' || dataRoot.status === 'data-missing' ? (
 			<Button size='input-short' variant='destructive' onClick={() => setResetDataRootOpen(true)}>
@@ -465,8 +469,8 @@ export function StorageSettingsView({
 				{t('app-settings.storage.checking')}
 			</Button>
 		) : dataRoot.location && !dataRoot.canMoveExternally ? (
-			<Button size='input-short' onClick={() => setPendingDataRootParentPath(null)}>
-				{t('app-settings.storage.move-to-internal')}
+			<Button size='input-short' className='max-w-full' onClick={() => setPendingDataRootParentPath(null)}>
+				<span className='truncate leading-normal'>{t('app-settings.storage.move-to-internal')}</span>
 			</Button>
 		) : dataRoot.location ? (
 			<DropdownMenu>

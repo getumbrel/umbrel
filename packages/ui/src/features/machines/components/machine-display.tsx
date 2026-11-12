@@ -93,7 +93,7 @@ function ConsoleScreen({machine}: {machine: Machine}) {
 				/>
 			)}
 			{machine.state === 'stopping' && (
-				<div className='absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 backdrop-blur-sm'>
+				<div className='absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 backdrop-blur-sm contrast-more:bg-black/90 contrast-more:backdrop-blur-none'>
 					<Loader2 className='size-6 animate-spin text-white/70' />
 					<span className='text-13 text-white/70'>{t('machines.shutting-down')}</span>
 				</div>
@@ -134,7 +134,7 @@ export function FirstBootSetupOverlay({
 	onOpenConsole: () => void
 }) {
 	return (
-		<div className='absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 px-6 text-center backdrop-blur-sm'>
+		<div className='absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 px-6 text-center backdrop-blur-sm contrast-more:bg-black/90 contrast-more:backdrop-blur-none'>
 			<Loader2 className='size-6 animate-spin text-white/70' />
 			{delayed ? (
 				<>

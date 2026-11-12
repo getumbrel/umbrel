@@ -36,6 +36,7 @@ import {
 	type Landing,
 } from '@/features/photos/components/listing/time-rail/use-landing'
 import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {cn} from '@/lib/utils'
 import {capitalizeDate} from '@/utils/date-time'
 import {formatNumberI18n} from '@/utils/number'
@@ -63,7 +64,8 @@ const RAIL_WIDTH = 72
 const STRIP_WIDTH = 24
 const TRACK_PAD = 14
 const THUMB_HEIGHT = 28
-// Year labels keep at least this far apart; decades win the crowding
+// Year labels keep at least this far apart, plus what larger text adds to
+// their height; decades win the crowding
 const LABEL_MIN_GAP = 18
 // A month gets its own hairline tick only with this much rail to its name
 const MONTH_TICK_MIN_SPAN = 8
@@ -132,8 +134,12 @@ export function TimeRail({
 	// label carry the year (see labelUnit)
 	const unit = labelUnit(buckets)
 	const spanMonths = monthSpan(buckets)
-	const yearLabels = useMemo(() => (unit === 'years' ? pickYearLabels(marks, LABEL_MIN_GAP) : []), [unit, marks])
-	const monthLabels = useMemo(() => (unit === 'months' ? pickMonthLabels(scale, LABEL_MIN_GAP) : []), [unit, scale])
+	const labelGap = LABEL_MIN_GAP + useLargerText()
+	const yearLabels = useMemo(() => (unit === 'years' ? pickYearLabels(marks, labelGap) : []), [unit, marks, labelGap])
+	const monthLabels = useMemo(
+		() => (unit === 'months' ? pickMonthLabels(scale, labelGap) : []),
+		[unit, scale, labelGap],
+	)
 	// Month hairlines, where there is room — skipping each year's first month,
 	// whose line is the year tick itself
 	const monthTicks = useMemo(() => {
@@ -485,13 +491,17 @@ export function TimeRail({
 			className='pointer-events-none absolute right-0 z-30 animate-in duration-300 select-none fade-in'
 			style={{top: frame.inset, height: trackHeight + TRACK_PAD * 2, width: RAIL_WIDTH}}
 		>
-			{/* A whisper of scrim so labels read over bright photographs. Masked
-			    so it breathes out at both ends — without it the band stops in a
-			    hard horizontal line across whatever photo sits at the edge. */}
+			{/* A whisper of scrim so labels read over bright photographs (more
+			    than a whisper under increased contrast). Masked so it breathes
+			    out at both ends — without it the band stops in a hard horizontal
+			    line across whatever photo sits at the edge. */}
 			<div
-				className={cn('absolute inset-0 transition-opacity duration-300', engaged ? 'opacity-100' : 'opacity-0')}
+				className={cn(
+					'absolute inset-0 transition-opacity duration-300 [--scrim:0.45] contrast-more:[--scrim:0.8]',
+					engaged ? 'opacity-100' : 'opacity-0',
+				)}
 				style={{
-					background: 'linear-gradient(to left, rgba(0, 0, 0, 0.45), transparent)',
+					background: 'linear-gradient(to left, rgb(0 0 0 / var(--scrim)), transparent)',
 					maskImage: 'linear-gradient(to bottom, transparent, black 72px, black calc(100% - 72px), transparent)',
 					WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 72px, black calc(100% - 72px), transparent)',
 				}}
@@ -502,7 +512,7 @@ export function TimeRail({
 						<div
 							key={key}
 							data-rail-y={TRACK_PAD + top}
-							className='absolute right-[9px] h-px w-1.5 origin-right bg-white/25'
+							className='absolute right-[9px] h-px w-1.5 origin-right bg-white/25 contrast-more:bg-white/60'
 							style={{top: TRACK_PAD + top}}
 						/>
 					))}
@@ -512,7 +522,7 @@ export function TimeRail({
 						<div
 							key={year}
 							data-rail-y={TRACK_PAD + y}
-							className='absolute right-[7px] h-px w-2.5 origin-right bg-white/45'
+							className='absolute right-[7px] h-px w-2.5 origin-right bg-white/45 contrast-more:bg-white/80'
 							style={{top: TRACK_PAD + y}}
 						/>
 					))}
@@ -525,7 +535,7 @@ export function TimeRail({
 							key={year}
 							data-rail-y={TRACK_PAD + y}
 							data-rail-lens='label'
-							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]'
+							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] contrast-more:[text-shadow:0_0_3px_rgb(0_0_0),0_1px_2px_rgb(0_0_0)]'
 							style={{top: TRACK_PAD + y}}
 						>
 							{year}
@@ -536,7 +546,7 @@ export function TimeRail({
 							key={key}
 							data-rail-y={TRACK_PAD + y}
 							data-rail-lens='label'
-							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide whitespace-nowrap text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]'
+							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide whitespace-nowrap text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] contrast-more:[text-shadow:0_0_3px_rgb(0_0_0),0_1px_2px_rgb(0_0_0)]'
 							style={{top: TRACK_PAD + y}}
 						>
 							{monthMarkLabel(key, index === 0 || (((key % 12) + 12) % 12 === 0 && spanMonths > 1))}
@@ -547,7 +557,7 @@ export function TimeRail({
 			<div
 				ref={thumbRef}
 				className={cn(
-					'absolute top-0 right-1 w-[3px] rounded-full bg-white/60 transition-opacity duration-300',
+					'absolute top-0 right-1 w-[3px] rounded-full bg-white/60 transition-opacity duration-300 contrast-more:bg-white',
 					presence,
 				)}
 				style={{height: THUMB_HEIGHT}}

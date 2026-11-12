@@ -113,7 +113,16 @@ describe('settings catalog search', () => {
 		expect(page.items.every(({category}) => category === 'account')).toBe(true)
 		expect(page.items.find(({id}) => id === 'change-name')?.description).toBe('Alice Member')
 		expect(pageIds).toEqual(
-			expect.arrayContaining(['change-name', 'change-password', '2fa', 'sessions', 'wallpaper', 'widgets', 'language']),
+			expect.arrayContaining([
+				'change-name',
+				'change-password',
+				'2fa',
+				'sessions',
+				'wallpaper',
+				'widgets',
+				'language',
+				'accessibility',
+			]),
 		)
 		expect(pageIds).not.toContain('avatar')
 		expect(getSettingsCommandTarget(accountCommand)).toEqual({

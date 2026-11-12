@@ -44,7 +44,7 @@ export function SsdRow({
 			onInfoClick={onHealthClick}
 			infoLabel={t('storage-status.drive-details', {name: device.name})}
 			status={
-				<span className='flex min-w-0 items-center gap-2 text-[12px] font-semibold whitespace-nowrap'>
+				<span className='flex min-w-0 items-center gap-2 text-12 font-semibold whitespace-nowrap'>
 					{wastedBytes > 0 && <span className='text-white/40 line-through'>{formatStorageSize(device.size)}</span>}
 					{isReadyToAdd && (
 						<span className='min-w-0 truncate text-[#2DD4BF]'>

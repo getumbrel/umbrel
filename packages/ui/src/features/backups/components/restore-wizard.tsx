@@ -308,7 +308,7 @@ export function BackupsRestoreWizard() {
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<div className='mt-2'>
-							<span className='mb-2 block text-left text-13 opacity-60'>
+							<span className='mb-2 block text-left text-13 text-white/60'>
 								{t('backups-restore.enter-password-to-confirm')}
 							</span>
 							<PasswordInput
@@ -441,7 +441,7 @@ function RepositoryStep({
 														<span className='font-medium'>{location.name}</span>
 														<span> · {location.folder}</span>
 													</div>
-													<div className='text-[12px] opacity-60'>
+													<div className='text-12 text-white/60'>
 														{repo.lastBackup
 															? t('backups-restore.last-backup', {
 																	date: formatFilesystemDate(Number(repo.lastBackup), lang),
@@ -469,7 +469,7 @@ function RepositoryStep({
 							</div>
 							<div className='min-w-0 flex-1'>
 								<div className='text-sm font-medium'>{t('backups-restore.restore-from-unlisted')}</div>
-								<div className='text-[12px] opacity-60'>{t('backups-restore.browse-nas-or-external')}</div>
+								<div className='text-12 text-white/60'>{t('backups-restore.browse-nas-or-external')}</div>
 							</div>
 						</div>
 					</>
@@ -493,7 +493,7 @@ function RepositoryStep({
 									type='text'
 									value={manualPath}
 									readOnly
-									className='pr-28'
+									className='pr-[calc(7.5rem+10*var(--text-boost))]'
 									title={manualPath || ''}
 									aria-disabled={!manualPath}
 									tabIndex={manualPath ? 0 : -1}
@@ -695,7 +695,7 @@ function BackupsStep({
 										{isFirst && (
 											<div
 												className={[
-													'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase transition-all duration-200',
+													'shrink-0 rounded-full px-2 py-0.5 text-10 font-medium tracking-wider uppercase transition-all duration-200',
 													selected ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60',
 												].join(' ')}
 											>

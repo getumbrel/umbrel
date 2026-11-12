@@ -29,7 +29,7 @@ export function PickingActions({albumId}: {albumId: string}) {
 		album && (breakpoint === 'xl' || breakpoint === '2xl') ? (
 			<AddToAlbumLabel name={album.name} />
 		) : (
-			t('photos-album.add')
+			<span className='min-w-0 truncate'>{t('photos-album.add')}</span>
 		)
 
 	const finish = () => {

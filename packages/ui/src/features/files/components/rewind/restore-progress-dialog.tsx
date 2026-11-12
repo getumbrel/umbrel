@@ -132,7 +132,7 @@ function RestoringItems({
 								</div>
 								<div className='min-w-0 flex-1'>
 									<div className='mb-1 flex items-center justify-between gap-2'>
-										<span className='block max-w-[16rem] text-xs whitespace-nowrap text-white/90'>
+										<span className='min-w-0 flex-1 truncate text-xs text-white/90'>
 											<span className='text-white/60'>
 												{t('files-operations-island.restoring', {
 													from: formatItemName({name: operation.file.name, maxLength: 12}),

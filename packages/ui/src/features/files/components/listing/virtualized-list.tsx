@@ -8,14 +8,16 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {
 	getGridColumnCount,
+	getGridItemHeight,
 	getGridItemWidth,
 	getGridScrollerPadding,
-	GRID_ITEM_HEIGHT,
+	getListRowHeight,
 	GRID_ROW_GAP,
 	LISTING_FADE_BOTTOM_PX,
 	LISTING_FADE_TOP_PX,
 } from '@/features/files/utils/get-grid-column-count'
 import {getItemKey} from '@/features/files/utils/get-item-key'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useHomeFit} from '@/modules/desktop/home-fit'
@@ -175,6 +177,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 }) => {
 	const infiniteLoaderRef = useRef<InfiniteLoader>(null)
 	const isMobile = useIsMobile()
+	const largerText = useLargerText()
 	const {containerRef, isScrolled} = useScrollFade()
 	const {width, height} = useContainerSize(containerRef)
 	// Bring a programmatically-selected item into view: type-ahead search, a
@@ -212,7 +215,8 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 		// Row geometry mirrors the List/Grid props below. Scroll only when the
 		// item sits outside the clearly-visible band, padded by the edge fades so
 		// the selection never lands half-hidden under them.
-		const rowHeight = view === 'list' ? (isMobile ? 50 : 40) : GRID_ITEM_HEIGHT + GRID_ROW_GAP
+		const rowHeight =
+			view === 'list' ? getListRowHeight(isMobile, largerText) : getGridItemHeight(largerText) + GRID_ROW_GAP
 		const row = view === 'list' ? index : Math.floor(index / getGridColumnCount(width, getGridItemWidth(isMobile)))
 		const itemTop = row * rowHeight
 		const itemBottom = itemTop + rowHeight
@@ -233,6 +237,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 		view,
 		width,
 		isMobile,
+		largerText,
 		scrollAreaRef,
 	])
 
@@ -334,7 +339,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 			// The item boxes fill the cell (h-full) so every box in a row is equal-height;
 			// the cell must therefore fully contain a 2-line-filename item: 12px cell top
 			// padding + 134px content (icon + two name lines + type/size label + paddings)
-			const itemHeight = GRID_ITEM_HEIGHT
+			const itemHeight = getGridItemHeight(largerText)
 			const rowHeight = itemHeight + verticalGap // Row height includes vertical gap
 
 			return {
@@ -349,7 +354,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 				borderAllowance,
 			}
 		},
-		[isMobile],
+		[isMobile, largerText],
 	)
 
 	// Render cell for grid view
@@ -446,7 +451,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 					width={width + getGridScrollerPadding(isMobile)} // Push scrollbar into parent padding (px-3 mobile / px-6 desktop)
 					innerElementType={InnerElementWithEndSpacer}
 					itemCount={itemCount}
-					itemSize={isMobile ? 50 : 40}
+					itemSize={getListRowHeight(isMobile, largerText)}
 					itemData={width} // Pass the actual width for fixed row width
 					onItemsRendered={onItemsRendered}
 					outerRef={scrollAreaRef} // For marquee selection

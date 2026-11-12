@@ -53,7 +53,8 @@ function MapActions({controls: {showAll, listOpen, setListOpen}}: {controls: Map
 				icon={List}
 				aria-label={t(listOpen ? 'photos-map.hide-list' : 'photos-map.show-list')}
 				aria-pressed={listOpen}
-				className={listOpen ? 'bg-white/12' : undefined}
+				// Under increased contrast a hover is as strong as this fill, so a ring tells it apart
+				className={listOpen ? 'bg-white/12 contrast-more:ring-1 contrast-more:ring-white' : undefined}
 				onClick={() => setListOpen(!listOpen)}
 			/>
 		</>

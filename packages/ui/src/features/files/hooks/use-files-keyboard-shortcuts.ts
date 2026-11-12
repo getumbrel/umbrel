@@ -13,13 +13,15 @@ import {canPerformFileOperation} from '@/features/files/utils/file-capabilities'
 import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {
 	getGridColumnCount,
+	getGridItemHeight,
 	getGridItemWidth,
 	getGridScrollerPadding,
-	GRID_ITEM_HEIGHT,
+	getListRowHeight,
 	GRID_ROW_GAP,
 	LISTING_FADE_BOTTOM_PX,
 	LISTING_FADE_TOP_PX,
 } from '@/features/files/utils/get-grid-column-count'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLinkToDialog} from '@/utils/dialog'
 import {isBeneathModal} from '@/utils/is-beneath-modal'
@@ -58,6 +60,7 @@ export function useFilesKeyboardShortcuts({
 	const setViewerStepper = useFilesStore((s: FilesStore) => s.setViewerStepper)
 	const {pasteItemsFromClipboard, trashSelectedItems} = useFilesOperations()
 	const isMobile = useIsMobile()
+	const largerText = useLargerText()
 
 	// Search functionality
 	const searchBuffer = useRef('')
@@ -379,7 +382,7 @@ export function useFilesKeyboardShortcuts({
 			let itemBottom: number
 
 			if (currentView === 'list') {
-				const itemHeight = isMobile ? 50 : 40
+				const itemHeight = getListRowHeight(isMobile, largerText)
 				itemTop = index * itemHeight
 				itemBottom = itemTop + itemHeight
 			} else {
@@ -388,7 +391,7 @@ export function useFilesKeyboardShortcuts({
 					getGridItemWidth(isMobile),
 				)
 				const row = Math.floor(index / columnCount)
-				const rowHeight = GRID_ITEM_HEIGHT + GRID_ROW_GAP
+				const rowHeight = getGridItemHeight(largerText) + GRID_ROW_GAP
 				itemTop = row * rowHeight
 				itemBottom = itemTop + rowHeight
 			}
@@ -413,6 +416,7 @@ export function useFilesKeyboardShortcuts({
 		currentPath,
 		items,
 		isMobile,
+		largerText,
 		copyItemsToClipboard,
 		cutItemsToClipboard,
 		setSelectedItems,

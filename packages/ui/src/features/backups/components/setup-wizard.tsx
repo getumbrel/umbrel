@@ -519,7 +519,7 @@ function DestinationStep({
 										onClick={() => onChangeDestination({type: 'nas', rootPath})}
 									>
 										<BackupDeviceIcon path={rootPath} connected className='mb-2 size-12' />
-										<span className='w-full truncate text-center text-[12px]' title={host}>
+										<span className='w-full truncate text-center text-12' title={host}>
 											{host}
 										</span>
 									</ServerCard>
@@ -576,8 +576,8 @@ function DestinationStep({
 													<div className='mb-2 flex h-12 w-12 items-center justify-center'>
 														<BackupDeviceIcon path={firstMount} connected className='size-11' />
 													</div>
-													<div className='w-full truncate text-center text-[12px]'>{label}</div>
-													<div className='w-full truncate text-center text-[11px] text-white/40'>
+													<div className='w-full truncate text-center text-12'>{label}</div>
+													<div className='w-full truncate text-center text-11 text-white/40'>
 														{formatFilesystemSize(p.size)}
 													</div>
 												</ServerCard>,
@@ -601,8 +601,8 @@ function DestinationStep({
 												<div className='mb-2 flex h-12 w-12 items-center justify-center'>
 													<BackupDeviceIcon path='' connected={false} className='size-11' />
 												</div>
-												<div className='w-full truncate text-center text-[12px]'>{label}</div>
-												<div className='w-full truncate text-center text-[11px] text-white/40'>
+												<div className='w-full truncate text-center text-12'>{label}</div>
+												<div className='w-full truncate text-center text-11 text-white/40'>
 													{disk.isFormatting ? t('files-format.formatting') : t('files-format.title-requires-format')}
 												</div>
 											</ServerCard>
@@ -702,13 +702,14 @@ function FolderPickerStep({
 					/>
 				</div>
 
-				{/* Input with inline "Browse" button */}
+				{/* Input with inline "Browse" button; the path stops short of the
+				    button, which widens with the text size */}
 				<div className='relative'>
 					<Input
 						type='text'
 						value={shownValue}
 						readOnly
-						className='pr-28 text-white/90'
+						className='pr-[calc(7.5rem+10*var(--text-boost))] text-white/90'
 						title={shownValue}
 						onClick={() => setBrowserOpen(true)}
 					/>
@@ -765,7 +766,7 @@ function EncryptionStep() {
 						name='encryption.password'
 						render={({field}) => (
 							<FormItem>
-								<FormLabel className='text-13 opacity-60'>{t('password')}</FormLabel>
+								<FormLabel className='text-13 text-white/60'>{t('password')}</FormLabel>
 								<FormControl>
 									<PasswordInput
 										value={field.value}
@@ -777,8 +778,10 @@ function EncryptionStep() {
 										}}
 									/>
 								</FormControl>
-								<div className='relative'>
-									<FormMessage className='absolute -top-1 left-0 text-xs' />
+								{/* In flow, so a message pushes the next field down rather than
+								    covering it; the row is there with or without one */}
+								<div>
+									<FormMessage className='-mt-1 text-xs' />
 								</div>
 							</FormItem>
 						)}
@@ -789,12 +792,12 @@ function EncryptionStep() {
 						name='encryption.confirm'
 						render={({field}) => (
 							<FormItem>
-								<FormLabel className='text-13 opacity-60'>{t('backups.confirm-password')}</FormLabel>
+								<FormLabel className='text-13 text-white/60'>{t('backups.confirm-password')}</FormLabel>
 								<FormControl>
 									<PasswordInput value={field.value} onValueChange={field.onChange} />
 								</FormControl>
-								<div className='relative'>
-									<FormMessage className='absolute -top-1 left-0 text-xs' />
+								<div>
+									<FormMessage className='-mt-1 text-xs' />
 								</div>
 							</FormItem>
 						)}
@@ -888,7 +891,7 @@ function ReviewStep({values}: {values: FormValues}) {
 							</span>
 						</>
 					) : (
-						<span className='opacity-60'>{t('backups.no-password-set')}</span>
+						<span className='text-white/60'>{t('backups.no-password-set')}</span>
 					)}
 				</div>
 			</ReviewCard>

@@ -13,8 +13,9 @@ export const dialogContentAnimationSlideClass = tw``
 // One button order for every dialog. Put the primary action first in the markup:
 // stacked on phones it sits on top, and from md up the row reverses so Cancel
 // comes first and the primary action sits on the trailing edge, as on macOS.
-// Keyboard focus still lands on the primary action first.
-export const dialogFooterClass = tw`flex flex-col gap-2.5 md:flex-row-reverse`
+// Keyboard focus still lands on the primary action first. A pair too wide for
+// the row wraps, primary first, instead of running out of the dialog.
+export const dialogFooterClass = tw`flex flex-col gap-2.5 md:flex-row-reverse md:flex-wrap`
 
 /**
  * Radix modals treat any pointerdown outside their content as a dismiss

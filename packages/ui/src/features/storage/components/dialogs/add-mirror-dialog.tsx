@@ -90,7 +90,7 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 												)}
 											</>
 										)}
-										<span className='text-[13px] font-medium text-white/60'>
+										<span className='text-13 font-medium text-white/60'>
 											<Highlight>{formatStorageSize(device.size)}</Highlight> · {device.model}
 										</span>
 									</div>
@@ -101,7 +101,7 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 
 					{/* Capacity info */}
 					<div className='flex flex-col gap-2 rounded-12 bg-white/6 p-4'>
-						<p className='text-[13px] text-white/50'>
+						<p className='text-13 text-white/50'>
 							<Trans
 								t={t}
 								i18nKey='storage-manager.add-mirror.info-capacity'
@@ -110,14 +110,14 @@ export function AddMirrorDialog({open, onOpenChange, devices, addMirrorAsync}: A
 							/>
 						</p>
 						{sizesDiffer && (
-							<p className='text-[13px] text-yellow-500'>
+							<p className='text-13 text-yellow-500'>
 								<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 								{t('storage-manager.add-mirror.sizes-differ', {
 									size: formatStorageSize(usableSize),
 								})}
 							</p>
 						)}
-						<p className='text-[13px] text-yellow-500'>
+						<p className='text-13 text-yellow-500'>
 							<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 							{t('storage-manager.add-drives-erase-warning')}
 						</p>

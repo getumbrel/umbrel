@@ -19,8 +19,9 @@ interface OnboardingFooterProps {
 	action: OnboardingAction
 }
 
-// Custom footer button class for onboarding - override default border from buttonVariants
-const footerButtonClass = 'bg-white/[0.06] border-0'
+// Custom footer button class for onboarding - override default border from buttonVariants,
+// which Increase contrast brings back as the buttons' edge
+const footerButtonClass = 'bg-white/[0.06] border-0 contrast-more:border'
 
 export function OnboardingFooter({action}: OnboardingFooterProps) {
 	const {t} = useTranslation()

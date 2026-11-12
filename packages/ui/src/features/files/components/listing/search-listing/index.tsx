@@ -62,7 +62,7 @@ export function SearchListing() {
 function EmptySearchView({query}: {query: string}) {
 	const {t} = useTranslation()
 	return (
-		<div className='flex h-full items-center justify-center text-xs text-neutral-500'>
+		<div className='flex h-full items-center justify-center text-xs text-white/45'>
 			{query === '' ? t('files-search.default') : t('files-search.no-results', {query})}
 		</div>
 	)

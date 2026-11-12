@@ -43,7 +43,7 @@ export function OtherDrives({
 						/>
 					)}
 					<span className='min-w-0 flex-1'>
-						<span className='block truncate text-[15px] font-medium text-white'>{device.name}</span>
+						<span className='block truncate text-15 font-medium text-white'>{device.name}</span>
 						<span className='block truncate text-13 text-white/50'>
 							{formatStorageSize(device.size)} · {device.serial}
 						</span>

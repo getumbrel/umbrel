@@ -23,7 +23,7 @@ function ScopeOption({
 		<button
 			type='button'
 			onClick={onClick}
-			className='flex w-full items-center gap-3.5 rounded-xl bg-white/5 p-4 text-left transition-colors hover:bg-white/10'
+			className='flex w-full items-center gap-3.5 rounded-xl border border-transparent bg-white/5 p-4 text-left transition-colors hover:bg-white/10 contrast-more:border-white/40'
 		>
 			<Icon className='size-5 shrink-0 text-brand-lighter' />
 			<span className='min-w-0 flex-1'>

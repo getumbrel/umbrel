@@ -46,7 +46,7 @@ export function Attribution({map}: {map: MapLibreMap}) {
 					credited = true
 					setOpen(!open)
 				}}
-				className='rounded-full p-1 transition-colors hover:text-white/75 focus-visible:text-white/75'
+				className='rounded-full p-1 transition-colors hover:text-white/75 focus-visible:text-white/75 contrast-more:bg-black/70 contrast-more:text-white'
 			>
 				<Info className='size-3.5' />
 			</button>

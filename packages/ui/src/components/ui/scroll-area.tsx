@@ -78,7 +78,7 @@ function ScrollBar({
 			)}
 			{...props}
 		>
-			<ScrollAreaPrimitive.ScrollAreaThumb className='relative flex-1 rounded-full bg-white/10 group-hover:bg-white/50' />
+			<ScrollAreaPrimitive.ScrollAreaThumb className='relative flex-1 rounded-full bg-white/10 group-hover:bg-white/50 contrast-more:bg-white/50 contrast-more:group-hover:bg-white/80' />
 		</ScrollAreaPrimitive.ScrollAreaScrollbar>
 	)
 }

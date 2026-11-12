@@ -66,7 +66,7 @@ function Section({section, first}: {section: CmdkSection; first: boolean}) {
 		>
 			<SectionItems section={section} />
 			{section.title && (
-				<div className='order-first mb-1 flex h-7 items-center gap-2 pr-1 pl-2'>
+				<div className='order-first mb-1 flex min-h-7 items-center gap-2 pr-1 pl-2'>
 					{section.icon && <AppIcon src={section.icon} size={22} className='rounded-[22%] border-0 bg-transparent' />}
 					<span className='text-13 font-medium -tracking-2 text-white/75'>{section.title}</span>
 					{section.more && (
@@ -103,7 +103,7 @@ function SectionItems({section}: {section: CmdkSection}) {
 						{/* One flex item, so the subtitle sits a text space away rather than a flex gap */}
 						<span className='truncate'>
 							{item.title}
-							{item.subtitle && <span className='opacity-50'> {item.subtitle}</span>}
+							{item.subtitle && <span className='text-white/50'> {item.subtitle}</span>}
 						</span>
 					</CommandItem>
 				))}

@@ -36,10 +36,10 @@ export function StorageStats({
 		<div className='flex w-full flex-col items-center'>
 			{/* Total capacity */}
 			<div className='py-2.5 text-center'>
-				<div className={cn('text-[16px] font-semibold text-white', isLoading && 'animate-pulse text-white/30')}>
+				<div className={cn('text-16 font-semibold text-white', isLoading && 'animate-pulse text-white/30')}>
 					{isLoading ? '—' : formatStorageSize(totalCapacityBytes)}
 				</div>
-				<div className='text-[13px] font-semibold text-white/50'>
+				<div className='text-13 font-semibold text-white/50'>
 					{totalLabel ?? t('storage-manager.total-capacity-added')}
 				</div>
 			</div>
@@ -48,12 +48,12 @@ export function StorageStats({
 
 			{/* Available storage */}
 			<div className='py-2.5 text-center'>
-				<div className={cn('text-[16px] font-semibold text-white', isLoading && 'animate-pulse text-white/30')}>
+				<div className={cn('text-16 font-semibold text-white', isLoading && 'animate-pulse text-white/30')}>
 					{isLoading ? '—' : formatStorageSize(availableBytes)}
 				</div>
 				<div className='flex items-center justify-center gap-1.5'>
 					<span className='size-2 rounded-full bg-brand' />
-					<span className='text-[13px] font-semibold text-white/50'>
+					<span className='text-13 font-semibold text-white/50'>
 						{availableLabel ?? t('storage-manager.available-storage')}
 					</span>
 				</div>
@@ -64,13 +64,13 @@ export function StorageStats({
 				<>
 					<StorageDivider />
 					<div className='py-2.5 text-center'>
-						<div className='text-[16px] font-semibold text-white'>{formatStorageSize(failsafeOverheadBytes)}</div>
+						<div className='text-16 font-semibold text-white'>{formatStorageSize(failsafeOverheadBytes)}</div>
 						<div className='flex items-center justify-center gap-1.5'>
 							<span
 								className='size-2 rounded-full'
 								style={{backgroundColor: 'color-mix(in srgb, hsl(var(--color-brand)), white 60%)'}}
 							/>
-							<span className='text-[13px] font-semibold text-white/50'>{t('storage-manager.for-failsafe')}</span>
+							<span className='text-13 font-semibold text-white/50'>{t('storage-manager.for-failsafe')}</span>
 						</div>
 					</div>
 				</>
@@ -81,10 +81,10 @@ export function StorageStats({
 				<>
 					<StorageDivider />
 					<div className='py-2.5 text-center'>
-						<div className='text-[16px] font-semibold text-white'>{formatStorageSize(wastedBytes)}</div>
+						<div className='text-16 font-semibold text-white'>{formatStorageSize(wastedBytes)}</div>
 						<div className='flex items-center justify-center gap-1.5'>
 							<TbAlertTriangleFilled className='size-3.5 text-[#F5A623]' />
-							<span className='text-[13px] font-semibold text-white/50'>{t('storage-manager.wasted')}</span>
+							<span className='text-13 font-semibold text-white/50'>{t('storage-manager.wasted')}</span>
 						</div>
 					</div>
 				</>
@@ -95,12 +95,10 @@ export function StorageStats({
 				<>
 					<StorageDivider />
 					<div className='py-2.5 text-center'>
-						<div className='text-[16px] font-semibold text-white'>{formatStorageSize(inactiveBytes)}</div>
+						<div className='text-16 font-semibold text-white'>{formatStorageSize(inactiveBytes)}</div>
 						<div className='flex items-center justify-center gap-1.5'>
 							<TbAlertTriangleFilled className='size-3.5 text-[#FF3434]' />
-							<span className='text-[13px] font-semibold text-white/50'>
-								{t('storage-manager.inactive-and-unused')}
-							</span>
+							<span className='text-13 font-semibold text-white/50'>{t('storage-manager.inactive-and-unused')}</span>
 						</div>
 					</div>
 				</>

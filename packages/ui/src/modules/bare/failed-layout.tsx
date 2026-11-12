@@ -33,7 +33,7 @@ export default function FailedLayout({
 				</Link>
 			)}
 			{!to && (
-				<div className='flex flex-row gap-2.5'>
+				<div className='flex flex-wrap justify-center gap-2.5'>
 					<a href='/' className={buttonClass}>
 						{t('not-found-404.home')}
 					</a>

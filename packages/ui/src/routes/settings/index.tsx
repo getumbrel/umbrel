@@ -28,6 +28,7 @@ const SettingsContentMobile = React.lazy(() =>
 	import('./_components/settings-content-mobile').then((m) => ({default: m.SettingsContentMobile})),
 )
 
+const AccessibilityDrawerOrDialog = React.lazy(() => import('@/routes/settings/accessibility'))
 const FileSharingDrawerOrDialog = React.lazy(() => import('@/routes/settings/file-sharing'))
 const AppSettingsListDrawerOrDialog = React.lazy(() => import('@/routes/settings/app-settings'))
 const McpDialog = React.lazy(() => import('@/routes/settings/mcp'))
@@ -155,6 +156,7 @@ export function Settings() {
 							<Route path='/account/:accountTab' Component={isMember ? AccountDrawerOrDialog : OwnerAccountRedirect} />
 							{isMobile && <Route path='/wallpaper' Component={WallpaperDrawerOrDialog} />}
 							{isMobile && <Route path='/language' Component={LanguageDrawerOrDialog} />}
+							<Route path='/accessibility' Component={AccessibilityDrawerOrDialog} />
 							<Route path='/troubleshoot/*' element={<PickerDialogRedirect dialogKey='troubleshoot' />} />
 							<Route path='/terminal/*' element={<PickerDialogRedirect dialogKey='terminal' />} />
 							{(!isMember || userQ.data?.sambaEnabled === true) && (

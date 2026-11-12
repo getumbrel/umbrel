@@ -180,7 +180,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 						<div className={listClass}>
 							<div className={listItemClass}>
 								<span>{t('storage-manager.health.health-status')}</span>
-								<span className='flex items-center gap-2 font-normal'>
+								<span className='flex shrink-0 items-center gap-2 font-normal'>
 									<span
 										className='size-[5px] rounded-full ring-3'
 										style={
@@ -206,7 +206,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 							{lifeRemaining !== undefined && (
 								<div className={listItemClass}>
 									<span>{t('storage-manager.health.estimated-life')}</span>
-									<span className='flex items-center gap-2 font-normal'>
+									<span className='flex shrink-0 items-center gap-2 font-normal'>
 										{lifeWarning && (
 											<span
 												className='size-[5px] rounded-full ring-3'
@@ -234,7 +234,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 							<div className={listClass}>
 								<div className={listItemClass}>
 									<span>{t('storage-manager.health.current-temperature')}</span>
-									<span className='flex items-center gap-2 font-normal'>
+									<span className='flex shrink-0 items-center gap-2 font-normal'>
 										<span
 											className='size-[5px] rounded-full ring-3'
 											style={
@@ -256,13 +256,15 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 								{isSsd && device.temperatureWarning !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.warning-threshold')}</span>
-										<span className='font-normal'>{formatTemperature(device.temperatureWarning, temperatureUnit)}</span>
+										<span className='shrink-0 font-normal'>
+											{formatTemperature(device.temperatureWarning, temperatureUnit)}
+										</span>
 									</div>
 								)}
 								{isSsd && device.temperatureCritical !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.critical-threshold')}</span>
-										<span className='font-normal'>
+										<span className='shrink-0 font-normal'>
 											{formatTemperature(device.temperatureCritical, temperatureUnit)}
 										</span>
 									</div>
@@ -277,7 +279,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 }
 
 const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6`
-const listItemClass = tw`flex items-center gap-3 px-3 h-[42px] text-14 font-medium -tracking-3 justify-between text-white/90`
+const listItemClass = tw`flex items-center gap-3 px-3 min-h-[42px] py-2.5 text-14 font-medium -tracking-3 justify-between text-white/90`
 
 // Hook to manage SSD health dialog state
 export function useSsdHealthDialog() {

@@ -300,5 +300,5 @@ const dockTuckSpring = {type: 'spring' as const, stiffness: 400, damping: 40}
 // Clearer glass than the widget defaults: barely any blur or tint, hard refraction
 const dockGlassProps = {blur: 1.5, saturate: 1.4, brightness: 0.9, scale: 70, chroma: 0.24, bevel: 1.0} as const
 
-const dockClass = tw`mx-auto flex items-end rounded-2xl contrast-more:bg-neutral-700 px-3 shadow-dock-drop shrink-0`
+const dockClass = tw`mx-auto flex items-end rounded-2xl contrast-more:bg-neutral-900 px-3 shadow-dock-drop shrink-0`
 const dockPreviewClass = tw`mx-auto flex items-end gap-4 rounded-2xl px-3 shadow-dock-drop shrink-0`

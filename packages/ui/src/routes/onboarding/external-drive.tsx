@@ -63,7 +63,7 @@ export default function ExternalDriveChoice() {
 			<Layout
 				title={t('onboarding.external-drive.steps.title', {drive: driveName})}
 				// Drive names run long; keep this heading a size down from the rest of onboarding
-				titleClassName='sm:text-[24px]'
+				titleClassName='sm:text-24'
 				subTitle=''
 				subTitleMaxWidth={630}
 				showLogo={false}

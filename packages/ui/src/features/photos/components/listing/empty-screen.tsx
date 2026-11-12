@@ -68,7 +68,7 @@ export function EmptyScreen({
 			<GhostGrid />
 			<p className='text-15 font-medium text-white/80'>{title}</p>
 			{description && <p className='max-w-sm text-13 text-white/50'>{description}</p>}
-			{actions && <div className='mt-3 flex items-center gap-2'>{actions}</div>}
+			{actions && <div className='mt-3 flex flex-wrap items-center justify-center gap-2'>{actions}</div>}
 		</div>
 	)
 }

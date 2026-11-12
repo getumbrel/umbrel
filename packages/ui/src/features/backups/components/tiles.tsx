@@ -84,7 +84,7 @@ export function RadioTile({
 			<RadioGroupItem id={`radio-${value}`} value={value} />
 			<div className='flex-1'>
 				<div className='text-sm font-medium'>{title}</div>
-				<div className='text-[12px] opacity-60'>{children}</div>
+				<div className='text-12 text-white/60'>{children}</div>
 			</div>
 		</div>
 	)

@@ -30,7 +30,7 @@ function getDriveLed({
 export function ReadyToReplacePill() {
 	const {t} = useTranslation()
 	return (
-		<span className='rounded-full bg-[#1CBFAB]/15 px-2.5 py-0.5 text-[12px] font-medium text-[#2DD4BF]'>
+		<span className='rounded-full bg-[#1CBFAB]/15 px-2.5 py-0.5 text-12 font-medium text-[#2DD4BF]'>
 			{t('storage-manager.ready-to-replace')}
 		</span>
 	)
@@ -61,11 +61,11 @@ export function DriveActionButton({
 				onClick()
 			}}
 			className={cn(
-				'flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[12px] font-medium transition-colors disabled:opacity-50',
+				'flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-12 font-medium transition-colors disabled:opacity-50',
 				// Teal matches the freshly detected drive this action belongs to (see SsdShape)
 				variant === 'primary' && 'animate-pulse bg-[#1CBFAB] text-white hover:bg-[#1CBFAB]/90',
 				variant === 'destructive' && 'bg-[#FF3434] text-white hover:bg-[#FF3434]/90',
-				variant === 'default' && 'border border-white/[0.08] bg-white/[0.06] text-white/80 hover:bg-white/10',
+				variant === 'default' && 'border border-white/8 bg-white/6 text-white/80 hover:bg-white/10',
 				className,
 			)}
 		>
@@ -120,7 +120,7 @@ export function DriveCard({
 				<SsdChip sizeLabel={formatStorageSize(device.size)} led={led} />
 			)}
 			<div className='min-w-0 flex-1'>
-				<div className='truncate text-[15px] font-medium text-white'>{device.name}</div>
+				<div className='truncate text-15 font-medium text-white'>{device.name}</div>
 				<div className='truncate text-13 text-white/50'>
 					{formatStorageSize(device.size)} · {device.serial}
 				</div>
@@ -151,12 +151,12 @@ export function SystemDriveCard({device, onClick}: {device: StorageDevice; onCli
 				<HardDriveIcon led={hasWarning ? 'red' : 'green'} />
 			)}
 			<div className='min-w-0 flex-1'>
-				<div className='truncate text-[15px] font-medium text-white'>{device.name}</div>
+				<div className='truncate text-15 font-medium text-white'>{device.name}</div>
 				<div className='truncate text-13 text-white/50'>
 					{formatStorageSize(device.size)} · {device.serial}
 				</div>
 			</div>
-			<span className='rounded-full bg-white/10 px-2.5 py-0.5 text-[12px] font-medium text-white/60'>
+			<span className='rounded-full bg-white/10 px-2.5 py-0.5 text-12 font-medium text-white/60'>
 				{t('storage-manager.system-drive-pill')}
 			</span>
 		</div>
@@ -186,10 +186,10 @@ export function MissingDriveCard({
 				<SsdChip sizeLabel='—' led='red' className='opacity-40' />
 			)}
 			<div className='min-w-0 flex-1'>
-				<div className='truncate text-[15px] font-medium text-white'>{t('storage-manager.missing-drive')}</div>
+				<div className='truncate text-15 font-medium text-white'>{t('storage-manager.missing-drive')}</div>
 				<div className='truncate text-13 text-white/50'>{id}</div>
 			</div>
-			<span className='rounded-full bg-[#FF3434]/15 px-2.5 py-0.5 text-[12px] font-medium text-[#FF3434]'>
+			<span className='rounded-full bg-[#FF3434]/15 px-2.5 py-0.5 text-12 font-medium text-[#FF3434]'>
 				{status && raidStatusLabels[status] ? t(raidStatusLabels[status]) : t('storage-manager.raid-status.removed')}
 			</span>
 			{action}

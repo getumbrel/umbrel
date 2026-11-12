@@ -34,11 +34,14 @@ import {tw} from '@/utils/tw'
 const IMAGE_SLIDE_MS = 10000
 
 /** Glass control floating over the media: the lightbox's rail button, tinted for bright footage */
-const mediaButtonClass = cn(lightboxButtonClass, 'bg-black/25 backdrop-blur-md hover:bg-black/40')
+const mediaButtonClass = cn(
+	lightboxButtonClass,
+	'bg-black/25 backdrop-blur-md hover:bg-black/40 contrast-more:bg-black/85 contrast-more:backdrop-blur-none contrast-more:hover:bg-black',
+)
 
 /** A link floating over the media in the same glass. Built on its own, because the rail button's
  * responsive sizes would square the pill off */
-const mediaPillClass = tw`settings-edge-material flex h-12 shrink-0 items-center gap-2 rounded-full bg-black/25 pr-5 pl-4 text-sm font-medium text-white backdrop-blur-md transition-[background-color,transform] duration-200 hover:bg-black/40 focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white/20 active:scale-90`
+const mediaPillClass = tw`settings-edge-material flex h-12 max-w-[calc(100%-2rem)] items-center gap-2 rounded-full bg-black/25 pr-5 pl-4 text-sm font-medium text-white backdrop-blur-md transition-[background-color,transform] duration-200 hover:bg-black/40 focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white/20 active:scale-90 contrast-more:bg-black/85 contrast-more:backdrop-blur-none contrast-more:hover:bg-black`
 
 /** Beside the media, under 500px tall, the footer's buttons stay compact and side by side as on desktop,
  * leaving the text the room that stacked phone buttons would take */
@@ -295,12 +298,13 @@ export default function WhatsNewModal() {
 
 					{/* Bleeds to the dialog's edges, the media curving with its corners. The media takes the height
 					    the text and buttons leave, up to 4:3 (75cqw), so a short window crops it rather than
-					    leaving a gap. Under 500px tall it moves beside them instead, where the text scrolls. */}
+					    leaving a gap, and no less than 40cqw, so long or large text scrolls rather than squeezing
+					    it shut. Under 500px tall it moves beside them instead, where the text scrolls. */}
 					<div className='@container relative -mx-6 -my-4 flex flex-1 flex-col overflow-hidden md:-m-8 low:grid low:grid-cols-2 low:grid-rows-[auto_minmax(0,1fr)_auto]'>
 						{/* Media Carousel */}
 						<Carousel
 							setApi={setApi}
-							className='group max-h-[75cqw] min-h-0 w-full flex-1 overflow-hidden rounded-t-[var(--window-radius)] low:row-span-3 low:max-h-none low:rounded-none low:rounded-s-[var(--window-radius)]'
+							className='group max-h-[75cqw] min-h-[40cqw] w-full flex-1 overflow-hidden rounded-t-[var(--window-radius)] low:row-span-3 low:max-h-none low:min-h-0 low:rounded-none low:rounded-s-[var(--window-radius)]'
 							onPointerEnter={() => setHovered(true)}
 							onPointerLeave={() => setHovered(false)}
 						>
@@ -333,8 +337,8 @@ export default function WhatsNewModal() {
 														draggable={false}
 														className={mediaPillClass}
 													>
-														<feature.link.icon className='size-4' />
-														{t(feature.link.labelTKey)}
+														<feature.link.icon className='size-4 shrink-0' />
+														<span className='min-w-0 truncate'>{t(feature.link.labelTKey)}</span>
 														{feature.link.overlayDuration && (
 															<span className='text-white/50 tabular-nums'>{feature.link.overlayDuration}</span>
 														)}

@@ -112,7 +112,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 			<TbChevronRight className='pointer-events-auto mt-0.5 size-4.5 shrink-0 self-center text-white/30' />
 		</button>
 	) : (
-		<div className={cn(cardClass, 'opacity-50')}>
+		<div className={cn(cardClass, 'opacity-50 contrast-more:opacity-100')}>
 			<CardText
 				title={t('thunderbolt-settings.title')}
 				description={t('thunderbolt-settings.unsupported-description')}
@@ -241,7 +241,7 @@ function CardText({title, description, trailingIcon}: {title: string; descriptio
 				{title}
 				{trailingIcon && <Icon component={trailingIcon} className='ml-2 inline-block opacity-50' />}
 			</h3>
-			<p className='text-13 leading-tight opacity-45'>{description}</p>
+			<p className='text-13 leading-tight text-white/45'>{description}</p>
 		</div>
 	)
 }

@@ -106,7 +106,7 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 							draggable={false}
 							className='w-64 md:w-96'
 						/>
-						<p className='-mt-4 text-[13px] font-medium text-white/30'>{t('storage-manager.umbrel-pro')}</p>
+						<p className='-mt-4 text-13 font-medium text-white/30'>{t('storage-manager.umbrel-pro')}</p>
 					</>
 				)}
 				<div className='mt-4 w-full max-w-sm'>
@@ -153,12 +153,12 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 			<div className='flex min-w-0 flex-1 flex-col justify-center gap-5 px-4 py-6 md:pr-0 md:pl-6'>
 				<div className='flex flex-col gap-1 md:gap-2'>
 					<h1
-						className='text-[20px] font-bold text-white/85 md:text-[24px]'
+						className='text-[20px] font-bold text-white/85 md:text-24'
 						style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 					>
 						{t('onboarding.raid.recovery.found.title')}
 					</h1>
-					<p className='max-w-[500px] text-[14px] text-white/50 md:text-[16px]'>
+					<p className='max-w-[500px] text-14 text-white/50 md:text-16'>
 						{t('onboarding.raid.recovery.found.subtitle')}
 					</p>
 				</div>

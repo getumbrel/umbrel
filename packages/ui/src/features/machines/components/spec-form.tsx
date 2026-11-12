@@ -40,7 +40,9 @@ export function Stepper({
 				<Minus className='size-3.5' aria-hidden />
 			</button>
 			{middle ?? (
-				<span className='w-24 text-center text-15 font-medium -tracking-2 text-white tabular-nums'>{display}</span>
+				<span className='min-w-24 text-center text-15 font-medium -tracking-2 whitespace-nowrap text-white tabular-nums'>
+					{display}
+				</span>
 			)}
 			<button
 				type='button'

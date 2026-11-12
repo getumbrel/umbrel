@@ -82,7 +82,7 @@ export function LocationCard({
 						) : (
 							place !== null && <p className='truncate text-13 font-medium text-white'>{place}</p>
 						)}
-						<p className='truncate text-[10px] text-white/55 tabular-nums'>{details}</p>
+						<p className='truncate text-10 text-white/55 tabular-nums'>{details}</p>
 					</div>
 					<ChevronRight className='size-4 shrink-0 text-white/50 transition-colors group-hover:text-white' />
 				</div>

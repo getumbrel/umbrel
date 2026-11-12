@@ -299,9 +299,9 @@ export function ShortcutPopover({
 						    would make its own backdrop blur sample an empty region. */}
 						<DropdownMenu open={showProtocolMenu} onOpenChange={setShowProtocolMenu} modal={false}>
 							<DropdownMenuTrigger asChild>
-								<button className='flex items-center gap-0.5 rounded-6 py-1.5 pr-1 pl-1.5 text-12 font-medium -tracking-2 text-white/80 transition-colors hover:bg-white/5 hover:text-white'>
-									<span className='whitespace-nowrap'>{currentProtocolLabel}</span>
-									<RiArrowDownSLine className='h-3 w-3' />
+								<button className='flex max-w-1/2 items-center gap-0.5 rounded-6 py-1.5 pr-1 pl-1.5 text-12 font-medium -tracking-2 text-white/80 transition-colors hover:bg-white/5 hover:text-white'>
+									<span className='truncate'>{currentProtocolLabel}</span>
+									<RiArrowDownSLine className='h-3 w-3 shrink-0' />
 								</button>
 							</DropdownMenuTrigger>
 							{/* onCloseAutoFocus prevented so handleProtocolChange can keep focus on the URL input */}

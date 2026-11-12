@@ -31,14 +31,14 @@ export function FourStatsWidget({
 					)}
 				>
 					<p
-						className='truncate text-[10px] leading-tight font-semibold -tracking-2 opacity-60 w-tall:text-11'
+						className='truncate text-10 leading-tight font-semibold -tracking-2 text-white/60 w-tall:text-11'
 						title={item?.title}
 					>
 						{item?.title ?? LOADING_DASH}
 					</p>
 					<p className='truncate text-12 leading-tight font-semibold -tracking-2 tabular-nums opacity-90 w-tall:text-13'>
 						{item?.text ?? LOADING_DASH}
-						{item?.subtext && <span className='opacity-50'> {item.subtext}</span>}
+						{item?.subtext && <span className='text-white/50'> {item.subtext}</span>}
 					</p>
 				</div>
 			))}
@@ -56,10 +56,10 @@ function Compact({items}: FourStatsWidgetProps) {
 				rowClassName={cn('flex min-w-0 flex-col justify-center gap-0.5 rounded-10 px-1.5', glassCellClass)}
 				renderRow={(item) => (
 					<>
-						<p className={cn(compactStatClass, 'text-[10px] opacity-50')}>{item?.title ?? LOADING_DASH}</p>
+						<p className={cn(compactStatClass, 'text-10 text-white/50')}>{item?.title ?? LOADING_DASH}</p>
 						<p className={compactStatClass}>
 							{item?.text ?? LOADING_DASH}
-							{item?.subtext && <span className='opacity-50'> {item.subtext}</span>}
+							{item?.subtext && <span className='text-white/50'> {item.subtext}</span>}
 						</p>
 					</>
 				)}

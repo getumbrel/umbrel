@@ -29,7 +29,13 @@ export function LightboxButton({
 				type='button'
 				aria-label={label}
 				aria-pressed={active || undefined}
-				className={cn(lightboxButtonClass, active && 'bg-white/20 hover:bg-white/25', className)}
+				// With contrast on a hover is as strong as this fill, so on also takes a white ring
+				className={cn(
+					lightboxButtonClass,
+					active &&
+						'bg-white/20 hover:bg-white/25 contrast-more:bg-white/30 contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
+					className,
+				)}
 				{...props}
 			>
 				<Icon className='size-5' />
@@ -58,7 +64,7 @@ export function StageArrow({
 			disabled={disabled}
 			onClick={onClick}
 			className={cn(
-				'absolute top-1/2 z-[5] flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white/80 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:text-white focus-visible:opacity-100 disabled:!opacity-0',
+				'absolute top-1/2 z-[5] flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white/80 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:text-white focus-visible:opacity-100 disabled:!opacity-0 contrast-more:bg-black/80 contrast-more:backdrop-blur-none',
 				side === 'left' ? 'left-3' : 'right-3',
 			)}
 		>

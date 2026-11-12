@@ -13,15 +13,15 @@ export const WidgetMorphContext = createContext<WidgetMorph | null>(null)
 
 // The type scale every widget shares, so sizes read as one family
 export const widgetCaptionClass =
-	'truncate text-11 leading-tight font-semibold -tracking-2 opacity-50 w-expanded:text-13'
+	'truncate text-11 leading-tight font-semibold -tracking-2 text-white/50 w-expanded:text-13'
 export const widgetValueClass =
 	'min-w-0 truncate text-15 leading-none font-semibold -tracking-3 tabular-nums opacity-90 w-regular:text-17 w-tall:text-20 w-expanded:text-24'
 export const widgetValueUnitClass =
-	'min-w-0 shrink-[2] truncate text-12 font-semibold -tracking-2 opacity-45 w-expanded:text-13'
+	'min-w-0 shrink-[2] truncate text-12 font-semibold -tracking-2 text-white/45 w-expanded:text-13'
 
 // Compact layouts (under 140px wide) use their own, tighter scale
 export const compactContainerClass = 'flex h-full w-full flex-col gap-1 p-2.5'
-export const compactLabelClass = 'truncate text-[10px] leading-tight font-semibold -tracking-2 opacity-50'
+export const compactLabelClass = 'truncate text-10 leading-tight font-semibold -tracking-2 text-white/50'
 export const compactValueClass = 'truncate text-15 leading-none font-semibold -tracking-3 tabular-nums opacity-90'
 export const compactStatClass = 'truncate text-11 leading-snug font-semibold -tracking-2'
 

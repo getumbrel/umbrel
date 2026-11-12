@@ -375,7 +375,8 @@ function Deck({
 				className={cn('relative flex min-h-0 flex-1 outline-hidden', short ? 'flex-row' : 'flex-col')}
 			>
 				{/* While the notice, find or the edit hint is up the slide starts below it, rather than hide its top
-				    under it, and grows back once it's gone */}
+				    under it, and grows back once it's gone. The room kept grows with the text, as the notice's lines
+				    do. */}
 				<div
 					ref={regionRef}
 					onPointerDown={onPointerDown}
@@ -384,7 +385,7 @@ function Deck({
 					onPointerCancel={(event) => release(event, true)}
 					className={cn(
 						'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 pt-1 pb-3 transition-[padding] duration-300 ease-out motion-reduce:transition-none md:px-6',
-						!short && cn('has-[[role=status]]:pt-20', find.open && 'pt-20'),
+						!short && cn('has-[[role=status]]:pt-[calc(5rem+4*var(--text-boost))]', find.open && 'pt-20'),
 						!editing && 'touch-pan-y',
 					)}
 				>

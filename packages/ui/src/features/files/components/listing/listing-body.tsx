@@ -61,15 +61,15 @@ export const ListingBody = ({
 												className={cn(
 													'flex items-center justify-between overflow-hidden p-2.5 text-12 text-ellipsis whitespace-nowrap text-white/70',
 													option.sortBy === 'name' && 'flex-[5]',
-													option.sortBy === 'modified' && 'flex-[2]',
-													option.sortBy === 'size' && 'flex-[1]',
+													option.sortBy === 'modified' && 'min-w-[12em] flex-[2]',
+													option.sortBy === 'size' && 'min-w-[6.5em] flex-[1]',
 													// TODO: Add this back in when we have a file system index in umbreld. The name column was previously flex-[3]
 													// option.sortBy === 'created' && 'flex-[2] lg:hidden xl:flex',
 													option.sortBy === 'type' && 'flex-[2]',
 												)}
 												onClick={() => setSortBy(option.sortBy)}
 											>
-												{t(option.labelTKey)}
+												<span className='min-w-0 truncate'>{t(option.labelTKey)}</span>
 												{option.sortBy === preferences.sortBy && preferences.sortOrder === 'ascending' && (
 													<RiArrowDropUpLine className='h-5 w-5' />
 												)}

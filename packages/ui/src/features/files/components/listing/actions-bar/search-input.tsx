@@ -97,12 +97,14 @@ export function SearchInput() {
 	}
 
 	return (
+		// On a phone the open field leaves room for the controls beside it, part of it in ems for
+		// the labels that grow with the text size
 		<div className='relative rounded-full focus-within:border-1 focus-within:border-neutral-600 focus-within:border-white/20 lg:border-[0.5px] lg:border-neutral-800 lg:border-white/6 lg:bg-white/5 lg:shadow-button-highlight-soft-hpx lg:ring-white/6 lg:focus-within:bg-white/10'>
 			<Input
 				className={cn(
-					'h-7 w-0 !border-none !bg-transparent px-4 text-xs !ring-0 !outline-hidden transition-all duration-300 focus:w-[calc(100vw-11rem)] focus:pl-8 lg:w-28 lg:pr-0 lg:pl-8 lg:focus:w-36 panes:focus:w-52 phone-side:focus:w-52',
+					'h-7 w-0 !border-none !bg-transparent px-4 text-xs !ring-0 !outline-hidden transition-all duration-300 focus:w-[calc(100vw-8rem-4em)] focus:pl-8 lg:w-28 lg:pr-0 lg:pl-8 lg:focus:w-36 panes:focus:w-52 phone-side:focus:w-52',
 					{
-						'w-[calc(100vw-11rem)] pr-7 pl-8 lg:w-36 lg:pr-7 panes:w-52 phone-side:w-52': query.length > 0,
+						'w-[calc(100vw-8rem-4em)] pr-7 pl-8 lg:w-36 lg:pr-7 panes:w-52 phone-side:w-52': query.length > 0,
 					},
 				)}
 				ref={inputRef}
@@ -114,7 +116,7 @@ export function SearchInput() {
 				}}
 			/>
 			<SearchIcon
-				className='absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 transform cursor-text text-neutral-500'
+				className='absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 transform cursor-text text-white/45'
 				onClick={() => inputRef.current?.focus()}
 			/>
 			{query.length > 0 && (
@@ -123,7 +125,7 @@ export function SearchInput() {
 					aria-label={t('files-search.exit')}
 					onPointerDown={(e) => e.preventDefault()}
 					onClick={exitSearch}
-					className='absolute top-1/2 right-2 -translate-y-1/2 text-neutral-500 outline-hidden transition-colors hover:text-white focus-visible:text-white'
+					className='absolute top-1/2 right-2 -translate-y-1/2 text-white/45 outline-hidden transition-colors hover:text-white focus-visible:text-white'
 				>
 					<RiCloseCircleFill className='h-4 w-4' />
 				</button>

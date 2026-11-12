@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react'
 
 import {useSearchEngaged} from '@/features/photos/components/search'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 
@@ -32,7 +33,9 @@ export function useBarDrop() {
 // the two lines coincide. That is when the header row's top is this far
 // above the bar's bottom — the bar's title ends 16px above it (the view line
 // is beneath), a header's 8px above its row's bottom, 30px into its
-// HEADER_HEIGHT (38px) row: 16 + 30.
+// HEADER_HEIGHT (38px) row: 16 + 30. Larger text raises the bar's title by
+// its view line's growth (leading-tight: 1.25 × the boost) and its own
+// half-leading (0.125 ×); a header's leading-none title stays where it is.
 const TITLE_HANDOFF = 46
 
 // Where a listing's content sits under the bar floating over it, in the
@@ -54,6 +57,7 @@ export type Frame = {inset: number; fadeFrom: number; fadeTo: number; handoff: n
 // can't collapse through.
 export function ListingSurface({bleed = false, children}: {bleed?: boolean; children: (frame: Frame) => ReactNode}) {
 	const isMobile = useIsMobile()
+	const largerText = useLargerText()
 	const drop = useBarDrop()
 	// A phone on its side gives the title row to the listing, until a search takes it back
 	const searching = useSearchEngaged()
@@ -66,7 +70,7 @@ export function ListingSurface({bleed = false, children}: {bleed?: boolean; chil
 		fadeFrom: barBottom - BAR_HEIGHT,
 		fadeTo,
 		inset: fadeTo + drop,
-		handoff: barBottom - TITLE_HANDOFF,
+		handoff: barBottom - (TITLE_HANDOFF + Math.round(largerText * 1.375)),
 	}
 
 	return (

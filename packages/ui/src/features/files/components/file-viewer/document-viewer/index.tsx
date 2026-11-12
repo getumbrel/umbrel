@@ -466,12 +466,14 @@ function Pages({
 					>
 						{/* The engine's pages, centred inside the gutters a fit leaves (a page wider than that starts at
 						    the left one). While the notice is up the first page starts below it, rather than under it:
-						    there from the start, and easing back up once the notice is dismissed. */}
+						    there from the start, and easing back up once the notice is dismissed. The room kept grows with
+						    the text, as the notice's lines do. */}
 						<div
 							ref={hostRef}
 							className={cn(
 								'px-4 pt-4 pb-14 transition-[opacity,padding] duration-300 ease-out motion-reduce:!transition-none @3xl:px-6 @3xl:pt-6',
-								!short && 'group-has-[[role=status]]/area:!pt-20 group-has-[[role=status]]/area:transition-opacity',
+								!short &&
+									'group-has-[[role=status]]/area:!pt-[calc(5rem+4*var(--text-boost))] group-has-[[role=status]]/area:transition-opacity',
 								!painted && 'opacity-0',
 							)}
 						/>

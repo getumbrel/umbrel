@@ -51,7 +51,7 @@ export function StorageDeviceCard({
 				<DriveIcon className='opacity-50 grayscale' />
 			)}
 			<div className='min-w-0 flex-1'>
-				<div className='truncate text-[15px] font-medium text-white' title={label}>
+				<div className='truncate text-15 font-medium text-white' title={label}>
 					{label}
 				</div>
 				{metadata && (

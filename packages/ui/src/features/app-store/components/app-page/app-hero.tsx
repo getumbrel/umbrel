@@ -8,6 +8,7 @@ import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {storeRevealDelay, storeRevealSoftClass} from '@/features/app-store/constants'
 import {useStickyCollapse} from '@/features/app-store/hooks/use-sticky-collapse'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {SheetFixedContent} from '@/modules/sheet-top-fixed'
@@ -61,6 +62,7 @@ function DesktopAppHero({app, renderActions}: HeroProps) {
 	const [anchor, setAnchor] = useState<HTMLDivElement | null>(null)
 	const {progress, wrapperY, pinned, settled} = useStickyCollapse(anchor, COLLAPSE_DISTANCE)
 	const reduceMotion = Boolean(useReducedMotion())
+	const textBoost = useLargerText()
 	const reducedProgress = useTransform(progress, (value): number => (value > 0 ? 1 : 0))
 	const collapseProgress = reduceMotion ? reducedProgress : progress
 
@@ -94,7 +96,8 @@ function DesktopAppHero({app, renderActions}: HeroProps) {
 	const nameY = useTransform(collapseProgress, [0, 1], [18, 25])
 	const nameScale = useTransform(collapseProgress, [0, 1], [1, 19 / 32])
 	const metaOpacity = useTransform(collapseProgress, [0, 0.5], [1, 0])
-	const metaY = useTransform(collapseProgress, [0, 1], [54, BAR_CENTER + 24])
+	// The name grows with the text size; the tagline below it moves down to match
+	const metaY = useTransform(collapseProgress, [0, 1], [54 + textBoost, BAR_CENTER + 24])
 	const actionsX = useTransform(collapseProgress, [0, 1], [0, -compactInsetAdjustment])
 	const actionsY = useTransform(collapseProgress, [0, 1], [40, BAR_CENTER - 20])
 
@@ -137,7 +140,7 @@ function DesktopAppHero({app, renderActions}: HeroProps) {
 								className='absolute top-0 right-[300px] left-0'
 							>
 								<div className={cn('flex flex-col gap-1.5', storeRevealSoftClass)} style={storeRevealDelay(130)}>
-									<p className='truncate text-15 leading-tight opacity-50'>{app.tagline}</p>
+									<p className='truncate text-15 leading-tight text-white/50'>{app.tagline}</p>
 									<p className='truncate text-13 text-white/35'>{app.developer}</p>
 								</div>
 							</motion.div>
@@ -171,8 +174,9 @@ function MobileAppHero({app, renderActions}: HeroProps) {
 				<div className='flex min-w-0 flex-1 items-center gap-3 sm:gap-4'>
 					<AppIcon src={app.icon} className='size-16 rounded-15 border-white/5 sm:size-24 sm:rounded-24' />
 					<div className='flex min-w-0 flex-col items-start gap-1 py-1 sm:gap-1.5'>
-						<h1 className='text-16 leading-inter-trimmed font-semibold sm:text-24'>{app.name}</h1>
-						<p className='line-clamp-2 w-full text-12 leading-tight opacity-50 sm:text-15'>{app.tagline}</p>
+						{/* Trimmed to the one-line box it had with the trimmed leading, which a wrapped name overprinted */}
+						<h1 className='-my-[0.26em] text-16 leading-tight font-semibold sm:text-24'>{app.name}</h1>
+						<p className='line-clamp-2 w-full text-12 leading-tight text-white/50 sm:text-15'>{app.tagline}</p>
 						<p className='hidden truncate text-13 text-white/35 sm:block'>{app.developer}</p>
 					</div>
 				</div>

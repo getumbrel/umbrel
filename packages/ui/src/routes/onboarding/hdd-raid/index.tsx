@@ -77,19 +77,20 @@ function ColumnDrive({device, subtitle}: {device: StorageDevice; subtitle: strin
 		>
 			<HardDriveIcon led='green' />
 			<div className='flex w-full flex-col items-center gap-0.5 text-center'>
-				<span className='max-w-full truncate text-[15px] font-medium text-white'>{device.name}</span>
+				<span className='max-w-full truncate text-15 font-medium text-white'>{device.name}</span>
 				<span className='max-w-full truncate text-13 text-white/40'>{subtitle}</span>
 			</div>
 		</motion.div>
 	)
 }
 
-// Pill sitting on the divider between the two halves of a column
+// Pill sitting on the divider between the two halves of a column. A label too long for
+// the column wraps inside it, and the radius keeps one line a pill and two a rounded box.
 function DividerPill({tone, children}: {tone: 'brand' | 'red'; children: React.ReactNode}) {
 	return (
 		<span
 			className={cn(
-				'absolute top-1/2 left-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-white shadow-md',
+				'absolute top-1/2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-2xl px-2.5 py-1 text-center text-11 font-medium text-balance text-white shadow-md',
 				tone === 'brand' ? 'bg-brand' : 'bg-[#FF3434]',
 			)}
 		>
@@ -129,7 +130,8 @@ function Column({
 		<motion.div
 			layout={layoutBox}
 			transition={layoutSpring}
-			className={cn('flex shrink-0 flex-col gap-2.5', width === 'narrow' ? 'w-[130px]' : 'w-[200px]')}
+			// The narrow legend widens only for a word longer than it, which a label can't wrap
+			className={cn('flex shrink-0 flex-col gap-2.5', width === 'narrow' ? 'w-min min-w-[130px]' : 'w-[200px]')}
 		>
 			<motion.div
 				layout={layoutPosition}
@@ -196,7 +198,7 @@ function Column({
 function PermanentWarning({single}: {single?: boolean}) {
 	const {t} = useTranslation()
 	return (
-		<p className='mx-auto text-[13px] text-white/50'>
+		<p className='mx-auto text-13 text-white/50'>
 			{single
 				? t('onboarding.hdd-raid.accelerate.permanent-warning-single')
 				: t('onboarding.hdd-raid.accelerate.permanent-warning')}
@@ -236,14 +238,14 @@ function ModeCard({
 				!selected && !disabled && 'hover:bg-white/4',
 			)}
 		>
-			<div className='flex w-full items-center gap-2'>
+			<div className='flex w-full flex-wrap items-center gap-2'>
 				<span className={selected ? 'text-white' : 'text-white/80'}>{icon}</span>
 				<span className={cn('text-15 font-semibold', selected ? 'text-white' : 'text-white/80')}>{title}</span>
 				<span className='ml-auto flex items-center gap-2'>
 					{badge}
 					{selected && <TbCircleCheckFilled className='size-5 text-brand' />}
 					{disabled && (
-						<span className='rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-white/50'>
+						<span className='rounded-2xl bg-white/10 px-2.5 py-1 text-11 font-medium text-balance text-white/50'>
 							{disabledReason}
 						</span>
 					)}
@@ -269,21 +271,21 @@ function NoSsdCard({pair, onPowerOff}: {pair: boolean; onPowerOff: () => void}) 
 					<SsdChip key={number} sizeLabel={sizeLabel} className='h-12 w-20' />
 				))}
 			</div>
-			<span className='max-w-[560px] text-[15px] font-medium text-white'>
+			<span className='max-w-[560px] text-15 font-medium text-white'>
 				{pair
 					? t('onboarding.hdd-raid.accelerate.none-title-pair', {size: sizeLabel})
 					: t('onboarding.hdd-raid.accelerate.none-title-single', {size: sizeLabel})}
 			</span>
-			<span className='max-w-[560px] text-[12px] leading-relaxed text-white/40'>
+			<span className='max-w-[560px] text-12 leading-relaxed text-white/40'>
 				{t('onboarding.hdd-raid.accelerate.none-hint')}
 			</span>
-			<span className='mt-2 max-w-[560px] text-[12px] leading-relaxed text-white/40'>
+			<span className='mt-2 max-w-[560px] text-12 leading-relaxed text-white/40'>
 				{t('onboarding.hdd-raid.accelerate.none-hint-later')}
 			</span>
 			<button
 				type='button'
 				onClick={onPowerOff}
-				className='mt-4 rounded-full bg-white/10 px-4 py-1.5 text-[13px] font-medium text-white/80 transition-colors hover:bg-white/15'
+				className='mt-4 rounded-full bg-white/10 px-4 py-1.5 text-13 font-medium text-white/80 transition-colors hover:bg-white/15'
 			>
 				{t('onboarding.hdd-raid.accelerate.power-off')}
 			</button>
@@ -370,7 +372,7 @@ export default function HddRaidOnboarding() {
 			<div className='flex flex-1 flex-col items-center justify-center gap-4'>
 				{/* Same spinner as the Files listing loading state */}
 				<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-xs' />
-				<span className='text-[15px] text-white/85'>{t('onboarding.hdd-raid.scanning')}</span>
+				<span className='text-15 text-white/85'>{t('onboarding.hdd-raid.scanning')}</span>
 			</div>
 		)
 	}
@@ -444,7 +446,7 @@ export default function HddRaidOnboarding() {
 
 	const storageStats = (
 		<div className='flex flex-col gap-0.5'>
-			<span className='text-[17px] font-semibold text-white/85'>
+			<span className='text-17 font-semibold text-white/85'>
 				{t('onboarding.raid.available-storage')} <span className='text-brand'>{formatSize(availableBytes)}</span>
 			</span>
 			<span className='text-13 text-white/50'>
@@ -471,7 +473,7 @@ export default function HddRaidOnboarding() {
 					<>
 						{/* Empty span keeps the justify-between footer's actions on the right */}
 						{hasDetectedDrives ? (
-							<span className='text-[17px] font-semibold text-white/85'>
+							<span className='text-17 font-semibold text-white/85'>
 								{t('onboarding.hdd-raid.total-detected')}{' '}
 								<span className='text-brand'>{formatSize(totalDetectedBytes)}</span>
 							</span>
@@ -498,7 +500,7 @@ export default function HddRaidOnboarding() {
 				/>
 				{hdds.length === 0 && ssds.length === 0 ? (
 					<div className='flex flex-col items-center gap-1 rounded-2xl bg-white/4 px-6 py-14 text-center'>
-						<span className='text-[15px] font-medium text-white'>{t('onboarding.hdd-raid.no-drives')}</span>
+						<span className='text-15 font-medium text-white'>{t('onboarding.hdd-raid.no-drives')}</span>
 						<span className='text-13 text-white/40'>{t('onboarding.hdd-raid.no-drives-instructions')}</span>
 					</div>
 				) : (
@@ -567,7 +569,7 @@ export default function HddRaidOnboarding() {
 								top={
 									<>
 										<TbDeviceFloppy className='size-5 text-white/80' />
-										<span className='text-center text-[15px] font-medium text-white/85'>
+										<span className='text-center text-15 font-medium text-white/85'>
 											{t('onboarding.hdd-raid.failsafe.usable-storage')}
 										</span>
 										<span className='text-13 text-white/40'>{formatSize(availableBytes)}</span>
@@ -576,7 +578,7 @@ export default function HddRaidOnboarding() {
 								bottom={
 									<>
 										<TbShield className='size-5 text-white/80' />
-										<span className='text-[15px] font-medium text-white/85'>{t('onboarding.raid.failsafe')}</span>
+										<span className='text-15 font-medium text-white/85'>{t('onboarding.raid.failsafe')}</span>
 										<span className='text-13 text-white/40'>{formatSizeWithUnit(failsafeBytes, availableBytes)}</span>
 									</>
 								}
@@ -590,7 +592,7 @@ export default function HddRaidOnboarding() {
 											header={
 												<>
 													<TbCircleCheckFilled className='size-4 text-brand' />
-													<span className='text-[15px] font-semibold text-white/90'>{formatSize(top.roundedSize)}</span>
+													<span className='text-15 font-semibold text-white/90'>{formatSize(top.roundedSize)}</span>
 												</>
 											}
 											top={<ColumnDrive device={top} subtitle={top.serial} />}
@@ -610,18 +612,16 @@ export default function HddRaidOnboarding() {
 											header={
 												<>
 													<TbAlertCircleFilled className='size-4 text-[#FF3434]' />
-													<span className='text-[15px] font-semibold text-white/90'>
-														{formatSize(device.roundedSize)}
-													</span>
+													<span className='text-15 font-semibold text-white/90'>{formatSize(device.roundedSize)}</span>
 												</>
 											}
 											top={<ColumnDrive device={device} subtitle={device.serial} />}
 											bottom={
 												<>
-													<span className='text-[15px] font-medium text-white'>
+													<span className='text-15 font-medium text-white'>
 														{t('storage-manager.pair-placeholder', {size: formatSize(device.roundedSize)})}
 													</span>
-													<span className='text-[12px] leading-snug text-white/40'>
+													<span className='text-12 leading-snug text-white/40'>
 														{t('onboarding.hdd-raid.failsafe.above-inactive')}
 													</span>
 												</>
@@ -643,7 +643,7 @@ export default function HddRaidOnboarding() {
 										top={
 											<ColumnDrive device={device} subtitle={`${formatSize(device.roundedSize)} · ${device.serial}`} />
 										}
-										bottom={<span className='text-[15px] text-white/40'>{t('onboarding.hdd-raid.failsafe.none')}</span>}
+										bottom={<span className='text-15 text-white/40'>{t('onboarding.hdd-raid.failsafe.none')}</span>}
 										divider={
 											<span className='absolute top-1/2 left-1/2 z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#39393B]'>
 												<TbShieldOff className='size-3.5 text-white/60' />
@@ -740,10 +740,10 @@ export default function HddRaidOnboarding() {
 							</DividerPill>
 						</div>
 						<div className='flex flex-col items-center gap-1.5 rounded-xl bg-[#3C1C1C]/30 px-6 py-10 text-center'>
-							<span className='text-[15px] font-medium text-white'>
+							<span className='text-15 font-medium text-white'>
 								{t('onboarding.hdd-raid.accelerate.add-matching-ssd')}
 							</span>
-							<span className='text-[12px] leading-relaxed text-white/40'>
+							<span className='text-12 leading-relaxed text-white/40'>
 								{t('onboarding.hdd-raid.accelerate.no-pair-note-mirrored')}
 								<br />
 								{t('onboarding.hdd-raid.accelerate.no-pair-note-larger')}
@@ -757,7 +757,7 @@ export default function HddRaidOnboarding() {
 			ssds.length > 0 ? (
 				// Vertically centered in the step's free space
 				<div className='flex flex-1 flex-col justify-center gap-4'>
-					<p className='text-center text-[14px] text-white/85'>{t('onboarding.hdd-raid.accelerate.select-single')}</p>
+					<p className='text-center text-14 text-white/85'>{t('onboarding.hdd-raid.accelerate.select-single')}</p>
 					{/* Selection via the SSD RAID flow's cards: the brand plate tint marks the chosen SSD */}
 					{ssds.map((device) => {
 						const selected = selectedSsdIds.includes(device.id!)

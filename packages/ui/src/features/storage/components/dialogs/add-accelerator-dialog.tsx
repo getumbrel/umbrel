@@ -89,7 +89,7 @@ export function AddAcceleratorDialog({open, onOpenChange, devices, addAccelerato
 												)}
 											</>
 										)}
-										<span className='text-[13px] font-medium text-white/60'>
+										<span className='text-13 font-medium text-white/60'>
 											<Highlight>{formatStorageSize(device.size)}</Highlight> · {device.model}
 										</span>
 									</div>
@@ -100,18 +100,18 @@ export function AddAcceleratorDialog({open, onOpenChange, devices, addAccelerato
 
 					{/* Notes */}
 					<div className='flex flex-col gap-2 rounded-12 bg-white/6 p-4'>
-						<p className='text-[13px] text-white/50'>
+						<p className='text-13 text-white/50'>
 							{isPair
 								? t('storage-manager.add-accelerator.info-pair')
 								: t('storage-manager.add-accelerator.info-single')}
 						</p>
 						{sizesDiffer && (
-							<p className='text-[13px] text-yellow-500'>
+							<p className='text-13 text-yellow-500'>
 								<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 								{t('storage-manager.add-accelerator.sizes-differ', {size: formatStorageSize(smallestSize)})}
 							</p>
 						)}
-						<p className='text-[13px] text-yellow-500'>
+						<p className='text-13 text-yellow-500'>
 							<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 							{isPair ? t('storage-manager.add-drives-erase-warning') : t('storage-manager.add-drive-erase-warning')}
 						</p>

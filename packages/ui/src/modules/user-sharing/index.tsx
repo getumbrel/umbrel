@@ -47,7 +47,7 @@ export function ShareAllToggle({
 	// otherwise only respond to hover, which reads as broken on touch
 	const [tooltipOpen, setTooltipOpen] = useState(false)
 	return (
-		<div className={cn('flex h-[25px] items-center gap-1.5', className)}>
+		<div className={cn('flex min-h-[25px] items-center gap-1.5', className)}>
 			<label className='flex cursor-pointer items-center gap-2'>
 				<Switch className='scale-90' checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
 				<span className='text-13 font-medium -tracking-2 whitespace-nowrap text-white/90'>{label}</span>
@@ -119,16 +119,16 @@ export function GrantSummary({
 }) {
 	const isMobile = useIsMobile()
 	return (
-		<span className='flex shrink-0 items-center gap-1.25 text-12 text-white/60'>
-			{!isMobile && folder && <FolderIcon className='h-6 w-7' />}
+		<span className='flex min-w-0 items-center gap-1.25 text-12 text-white/60'>
+			{!isMobile && folder && <FolderIcon className='h-6 w-7 shrink-0' />}
 			{!isMobile && !!icons?.length && (
-				<span className='flex -space-x-3'>
+				<span className='flex shrink-0 -space-x-3'>
 					{icons.slice(0, 3).map((src, index) => (
 						<AppIcon key={index} size={24} src={src} className='relative rounded-6' style={{zIndex: 3 - index}} />
 					))}
 				</span>
 			)}
-			{label}
+			<span className='truncate'>{label}</span>
 		</span>
 	)
 }

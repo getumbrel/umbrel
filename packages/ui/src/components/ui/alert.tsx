@@ -22,25 +22,26 @@ export function ErrorAlert({
 	return (
 		<div
 			className={cn(
-				'flex items-center gap-2 rounded-8 bg-[#3C1C1C] p-2.5 text-13 leading-tight -tracking-2 text-[#FF3434]',
+				'flex items-center gap-2 rounded-8 bg-[#3C1C1C] p-2.5 text-13 leading-tight -tracking-2 text-[#FF3434] contrast-more:text-[#ff8f8f]',
 				selectable && 'select-text',
 				className,
 			)}
 		>
 			{IconComponent && <IconComponent className='h-5 w-5 shrink-0' />}
-			<span className='opacity-90'>{description}</span>
+			<span className='opacity-90 contrast-more:opacity-100'>{description}</span>
 		</div>
 	)
 }
 
+// A pill while its message fits on one line, a rounded card once it wraps
 const alertVariants = cva(
-	'relative rounded-lg py-2 px-3 gap-[5px] text-14 leading-tight -tracking-2 rounded-full truncate flex items-center',
+	'relative rounded-20 py-2 px-3 gap-[5px] text-14 leading-tight -tracking-2 flex items-center',
 	{
 		variants: {
 			variant: {
 				default: 'bg-white/10',
-				warning: 'bg-[#4B2D00] text-[#F27400]',
-				destructive: 'bg-[#3C1C1C] text-[#F23737]',
+				warning: 'bg-[#4B2D00] text-[#F27400] contrast-more:text-[#ffb866]',
+				destructive: 'bg-[#3C1C1C] text-[#F23737] contrast-more:text-[#ff8f8f]',
 				success: 'bg-[#142F14] text-[#18CE15]',
 			},
 		},
@@ -88,7 +89,7 @@ export function WarningAlert({
 			)}
 		>
 			{IconComponent && <IconComponent className='h-5 w-5 shrink-0' />}
-			<span className='opacity-90'>{description}</span>
+			<span className='opacity-90 contrast-more:opacity-100'>{description}</span>
 		</div>
 	)
 }
@@ -112,7 +113,7 @@ export function InfoAlert({
 			)}
 		>
 			{IconComponent && <IconComponent className='h-5 w-5 shrink-0' />}
-			<span className='opacity-90'>{description}</span>
+			<span className='opacity-90 contrast-more:opacity-100'>{description}</span>
 		</div>
 	)
 }

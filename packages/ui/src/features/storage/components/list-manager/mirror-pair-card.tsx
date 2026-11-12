@@ -48,24 +48,26 @@ export function PairDriveCell({
 			onClick={onClick}
 			className={cn(
 				'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-2.5 px-4 py-5 sm:px-10 sm:py-6',
+				// A narrow cell keeps the badge in its top padding, clear of the drive
+				inactive && 'pt-10',
 				onClick && 'cursor-pointer transition-colors hover:bg-white/5',
 			)}
 		>
 			{inactive && (
-				<span className='absolute top-2 left-2 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/60'>
+				<span className='absolute top-2 left-2 rounded-full bg-white/10 px-2 py-0.5 text-11 font-medium text-white/60'>
 					{t('storage-manager.inactive')}
 				</span>
 			)}
 			<HardDriveIcon led={led} />
 			<div className='flex w-full min-w-0 flex-col items-center gap-0.5 text-center'>
-				<span className='max-w-full truncate text-[15px] font-medium text-white' title={device.name}>
+				<span className='max-w-full truncate text-15 font-medium text-white' title={device.name}>
 					{device.name}
 				</span>
 				<span className='max-w-full truncate text-13 text-white/50' title={device.serial}>
 					{formatStorageSize(device.size)} · {device.serial}
 				</span>
 				{isFailed && raidDevice && (
-					<span className='text-[12px] font-medium text-[#FF3434]'>
+					<span className='text-12 font-medium text-[#FF3434]'>
 						{raidStatusLabels[raidDevice.raidStatus]
 							? t(raidStatusLabels[raidDevice.raidStatus])
 							: raidDevice.raidStatus}
@@ -92,16 +94,14 @@ export function PairMissingCell({
 		<div className='relative flex min-w-0 flex-1 flex-col items-center justify-center gap-2.5 px-4 py-5 sm:px-10 sm:py-6'>
 			<HardDriveIcon led='red' className='opacity-40' />
 			<div className='flex w-full min-w-0 flex-col items-center gap-0.5 text-center'>
-				<span className='max-w-full truncate text-[15px] font-medium text-white'>
-					{t('storage-manager.missing-drive')}
-				</span>
+				<span className='max-w-full truncate text-15 font-medium text-white'>{t('storage-manager.missing-drive')}</span>
 				{/* Device ids are MODEL_SERIAL and can get long; cap the width like a healthy cell's
 				    subtitle and truncate from the start so the serial (the part that identifies the
 				    physical drive) stays visible */}
 				<span dir='rtl' className='max-w-full truncate text-13 text-white/50' title={id}>
 					{id}
 				</span>
-				<span className='text-[12px] font-medium text-[#FF3434]'>
+				<span className='text-12 font-medium text-[#FF3434]'>
 					{status && raidStatusLabels[status] ? t(raidStatusLabels[status]) : t('storage-manager.raid-status.removed')}
 				</span>
 			</div>
@@ -118,8 +118,8 @@ export function PairPlaceholderCell({title, description}: {title: string; descri
 				<TbPlus className='size-4 text-white/80' strokeWidth={2.5} />
 			</div>
 			<div className='flex flex-col gap-0.5'>
-				<span className='text-[14px] font-medium text-balance text-white'>{title}</span>
-				<span className='text-[12px] leading-snug text-white/50'>{description}</span>
+				<span className='text-14 font-medium text-balance text-white'>{title}</span>
+				<span className='text-12 leading-snug text-white/50'>{description}</span>
 			</div>
 		</div>
 	)

@@ -232,10 +232,12 @@ test('the grid starts below the notice and the find pill, and a phone on its sid
 	const stage = await show('book.xlsx', XLSX, bytes)
 	const padding = () => {
 		const classes = stage.querySelector('[data-grid]')!.parentElement!.classList
-		return ['pt-20', 'group-has-[[role=status]]/area:pt-24'].filter((name) => classes.contains(name))
+		return ['pt-20', 'group-has-[[role=status]]/area:pt-[calc(6rem+4*var(--text-boost))]'].filter((name) =>
+			classes.contains(name),
+		)
 	}
 	await until(() => !!stage.querySelector('[role="status"]'))
-	expect(padding()).toEqual(['group-has-[[role=status]]/area:pt-24'])
+	expect(padding()).toEqual(['group-has-[[role=status]]/area:pt-[calc(6rem+4*var(--text-boost))]'])
 	await act(async () => stage.querySelector<HTMLButtonElement>('button[aria-label="files-viewer.find"]')!.click())
 	expect(padding()).toEqual(['pt-20'])
 
@@ -245,7 +247,9 @@ test('the grid starts below the notice and the find pill, and a phone on its sid
 	await until(() => !!short.querySelector('[role="status"]'))
 	expect(short.querySelector('[role="status"]')!.closest('.hidden')).not.toBeNull()
 	expect(
-		short.querySelector('[data-grid]')!.parentElement!.classList.contains('group-has-[[role=status]]/area:pt-24'),
+		short
+			.querySelector('[data-grid]')!
+			.parentElement!.classList.contains('group-has-[[role=status]]/area:pt-[calc(6rem+4*var(--text-boost))]'),
 	).toBe(false)
 })
 

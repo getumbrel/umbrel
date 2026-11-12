@@ -114,7 +114,7 @@ export default function OnboardingStart() {
 					{handOffToArtwork && (
 						<motion.div variants={item} className='col-start-1 row-start-1 flex flex-col items-center gap-1'>
 							<img src={device.image!} alt='' className={device.imageClassName} />
-							<p className='text-[13px] font-medium text-white/30'>{device.name}</p>
+							<p className='text-13 font-medium text-white/30'>{device.name}</p>
 						</motion.div>
 					)}
 				</div>

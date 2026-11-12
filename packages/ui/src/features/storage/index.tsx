@@ -278,9 +278,9 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 		const {device, isReadyToAdd, isInRaid, isFailedDrive} = state
 		const fullWidth = size !== 'compact'
 		const sizeClass = {
-			compact: 'px-2 py-1 text-[11px]',
-			wide: 'w-full justify-center py-1 text-[12px]',
-			regular: 'justify-center px-3 py-1 text-[12px]',
+			compact: 'max-w-full px-2 py-1 text-11',
+			wide: 'w-full justify-center py-1 text-12',
+			regular: 'justify-center px-3 py-1 text-12',
 		}[size]
 
 		if (isInRaid && device) {
@@ -293,7 +293,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 					className={cn(fullWidth ? 'gap-1' : 'gap-0.5', sizeClass)}
 					onClick={() => openMemberAction(member, device)}
 				>
-					{isFailedDrive ? t('storage-manager.replace') : t('storage-manager.swap')}
+					<span className='truncate'>{isFailedDrive ? t('storage-manager.replace') : t('storage-manager.swap')}</span>
 				</DriveActionButton>
 			)
 		}
@@ -320,11 +320,11 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 					{fullWidth ? (
 						<TbPlus className='size-3' strokeWidth={3} />
 					) : (
-						<span className='flex size-3 items-center justify-center rounded-full bg-white/30'>
+						<span className='flex size-3 shrink-0 items-center justify-center rounded-full bg-white/30'>
 							<TbPlus className='size-2 text-white' strokeWidth={3} />
 						</span>
 					)}
-					{t('storage-manager.add')}
+					<span className='truncate'>{t('storage-manager.add')}</span>
 				</button>
 			)
 		}
@@ -342,11 +342,11 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 				{fullWidth ? (
 					<TbPlus className='size-3' strokeWidth={3} />
 				) : (
-					<span className='flex size-3 items-center justify-center rounded-full bg-white'>
+					<span className='flex size-3 shrink-0 items-center justify-center rounded-full bg-white'>
 						<TbPlus className='size-2 text-brand' strokeWidth={3} />
 					</span>
 				)}
-				{t('storage-manager.add')}
+				<span className='truncate'>{t('storage-manager.add')}</span>
 			</button>
 		)
 	}
@@ -367,6 +367,8 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 					size='md'
 					short={!isUmbrelPro}
 					showScroll
+					// The inline glass outranks the window tint, which turns solid with Increase contrast
+					className='contrast-more:bg-black!'
 					style={{
 						backgroundColor: 'rgba(8, 8, 8, 0.5)',
 						backdropFilter: 'blur(80px)',
@@ -423,12 +425,12 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 													model={member.id}
 													variant='critical'
 													status={
-														<span className='flex items-center gap-1 text-[12px] font-semibold whitespace-nowrap text-white'>
-															<TbAlertTriangleFilled className='size-3.5' />
-															{t('storage-status.not-detected')}
+														<span className='flex min-w-0 items-center gap-1 text-12 font-semibold whitespace-nowrap text-white'>
+															<TbAlertTriangleFilled className='size-3.5 shrink-0' />
+															<span className='truncate'>{t('storage-status.not-detected')}</span>
 														</span>
 													}
-													action={renderUnplacedAction(member, undefined, 'justify-center gap-1 px-3 py-1 text-[12px]')}
+													action={renderUnplacedAction(member, undefined, 'justify-center gap-1 px-3 py-1 text-12')}
 												/>
 											)
 										})}
@@ -453,7 +455,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 															<TbCircleCheckFilled className='size-5 shrink-0 text-brand' />
 														)
 													) : isReadyToAdd ? (
-														<span className='shrink-0 rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[#2DD4BF] uppercase'>
+														<span className='shrink-0 rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-10 font-bold tracking-wide text-[#2DD4BF] uppercase'>
 															{t('storage-manager.new')}
 														</span>
 													) : (
@@ -461,7 +463,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 													)}
 													<div className='min-w-0'>
 														{/* Only a model name truncates, so the size after it stays in view */}
-														<div className='flex text-[14px] font-medium text-white/60'>
+														<div className='flex text-14 font-medium text-white/60'>
 															<span className='truncate'>{slotNumber ? `SSD ${slotNumber}` : device?.name}</span>
 															<span className='shrink-0 whitespace-pre'>
 																{device ? (
@@ -478,7 +480,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 														    action of its own (that's on the failed drive's row), so its row
 														    gives the name the action's room too, and the words fit on one line */}
 														{replacementCandidate && device?.id === replacementCandidate.id && (
-															<span className='mt-0.5 inline-block max-w-full truncate rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-[10px] font-medium text-[#2DD4BF]'>
+															<span className='mt-0.5 inline-block max-w-full truncate rounded-full bg-[#1CBFAB]/15 px-1.5 py-0.5 text-10 font-medium text-[#2DD4BF]'>
 																{t('storage-manager.ready-to-replace')}
 															</span>
 														)}
@@ -493,7 +495,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 															type='button'
 															onClick={() => healthDialog.openDialog(device, slotNumber)}
 															aria-label={t('storage-status.drive-details', {name: device.name})}
-															className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1'
+															className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1 contrast-more:border-white/40'
 														>
 															<TiInfoLarge className='size-4 text-white/60' />
 															{hasWarning && (
@@ -515,7 +517,7 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 											<button
 												type='button'
 												onClick={() => setIsInstallSsdDialogOpen(true)}
-												className='mx-2 mt-1 flex items-center justify-center gap-1 rounded-full bg-brand py-1 text-[12px] font-medium text-white transition-colors hover:bg-brand/90'
+												className='mx-2 mt-1 flex items-center justify-center gap-1 rounded-full bg-brand py-1 text-12 font-medium text-white transition-colors hover:bg-brand/90'
 											>
 												<TbPlus className='size-3' strokeWidth={3} />
 												{t('storage-manager.add')}
@@ -625,15 +627,16 @@ function SsdStorageManager({isUmbrelPro}: {isUmbrelPro: boolean}) {
 												)
 											})}
 
-											{/* Action buttons below each slot */}
+											{/* Action buttons below each slot, centered on it. They may be wider than the
+											    slot, up to most of the gap to the next one, before a label truncates */}
 											{ssdStates.map((state, i) => (
 												<div
 													key={`button-${i}`}
 													className='absolute flex justify-center'
 													style={{
-														left: `${12 + i * 20}%`,
+														left: `${10.5 + i * 20}%`,
 														bottom: '4%',
-														width: '15%',
+														width: '18%',
 													}}
 												>
 													{renderSsdAction(state, 'compact')}

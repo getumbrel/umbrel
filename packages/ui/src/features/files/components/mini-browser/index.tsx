@@ -650,7 +650,7 @@ function Subtree({
 					{isLoadingMore ? <Loader2 className='size-3 animate-spin opacity-70' /> : null}
 					<span>
 						{isLoadingMore ? t('mini-browser.loading-more') : t('mini-browser.load-more')}
-						<span className='opacity-60'> · {folderName}</span>
+						<span className='text-white/60'> · {folderName}</span>
 					</span>
 				</button>
 			)}

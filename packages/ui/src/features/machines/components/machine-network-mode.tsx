@@ -119,7 +119,7 @@ function NetworkModeCard({
 				disabled && unavailableReason === undefined && !selected && 'opacity-50',
 			)}
 		>
-			<span className='flex w-full items-center gap-2'>
+			<span className='flex w-full flex-wrap items-center gap-2 gap-y-1'>
 				<Icon className={cn('size-5 shrink-0', selected ? 'text-white' : 'text-white/80')} />
 				<span className={cn('text-15 font-semibold -tracking-2', selected ? 'text-white' : 'text-white/80')}>
 					{title}
@@ -127,7 +127,7 @@ function NetworkModeCard({
 				<span className='ml-auto flex shrink-0 items-center'>
 					{selected && <TbCircleCheckFilled className='size-5 text-brand' />}
 					{unavailableReason && (
-						<span className='rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium whitespace-nowrap text-white/50'>
+						<span className='rounded-full bg-white/10 px-2.5 py-1 text-11 font-medium whitespace-nowrap text-white/50'>
 							{unavailableReason}
 						</span>
 					)}

@@ -104,7 +104,7 @@ export function SsdCard({
 				<div className='flex min-w-0 flex-col'>
 					<div className='flex min-w-0 items-baseline gap-2'>
 						<span
-							className='shrink-0 text-[17px] leading-tight font-bold text-white'
+							className='shrink-0 text-17 leading-tight font-bold text-white'
 							style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2)'}}
 						>
 							{size}
@@ -112,7 +112,7 @@ export function SsdCard({
 						{status}
 					</div>
 					{model && (
-						<span className='truncate text-[12px] text-white/50' title={model}>
+						<span className='truncate text-12 text-white/50' title={model}>
 							{model}
 						</span>
 					)}
@@ -126,7 +126,7 @@ export function SsdCard({
 							type='button'
 							onClick={onInfoClick}
 							aria-label={infoLabel}
-							className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1 transition-colors hover:bg-white/[0.12] focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-hidden'
+							className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1 transition-colors hover:bg-white/[0.12] focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-hidden contrast-more:border-white/40'
 						>
 							<TiInfoLarge className='size-4 text-white/60' />
 							{hasWarning && (

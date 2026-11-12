@@ -152,7 +152,7 @@ export function AlbumCard({
 					</span>
 					{dates && (
 						<span
-							className='text-[clamp(11px,5cqw,13px)] leading-tight font-medium opacity-60 transition-colors duration-300'
+							className='text-[clamp(11px,5cqw,13px)] leading-tight font-medium opacity-60 transition-colors duration-300 contrast-more:opacity-90'
 							style={{color: tone.tint ?? 'white'}}
 						>
 							{dates}

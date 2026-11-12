@@ -388,7 +388,17 @@ export function Wallpaper({
 					/>
 				</picture>
 			)}
-			{/* {isLoading && <div className='fixed left-0 top-0 '>Loading...</div>} */}
+			{/* Increase contrast dims the wallpaper, so text set straight on it stays readable */}
+			<div
+				aria-hidden='true'
+				data-wallpaper-layer={isPreview ? undefined : ''}
+				className={cn(
+					'pointer-events-none fixed inset-0 hidden w-full bg-black/50 contrast-more:block',
+					isPreview && 'absolute h-full',
+					!isPreview && 'h-(--wallpaper-height)',
+					className,
+				)}
+			/>
 		</>
 	)
 }

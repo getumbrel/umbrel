@@ -115,7 +115,7 @@ export default function SingleDriveStorageManager({devices}: {devices: StorageDe
 		>
 			{artwork}
 			<div className='min-w-0 flex-1'>
-				<div className='truncate text-[15px] font-medium text-white'>
+				<div className='truncate text-15 font-medium text-white'>
 					{bootDrive ? bootDrive.name : t('storage-manager.boot-storage')}
 				</div>
 				{/* The drive's own size, like every drive card, and the same size as its chip.
@@ -143,6 +143,8 @@ export default function SingleDriveStorageManager({devices}: {devices: StorageDe
 					size='md'
 					short
 					showScroll
+					// The inline glass outranks the window tint, which turns solid with Increase contrast
+					className='contrast-more:bg-black!'
 					style={{
 						backgroundColor: 'rgba(8, 8, 8, 0.5)',
 						backdropFilter: 'blur(80px)',

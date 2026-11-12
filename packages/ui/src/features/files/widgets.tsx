@@ -105,7 +105,7 @@ export function FilesListWidget({
 
 			{/* Empty state */}
 			{items?.length === 0 ? (
-				<p className='grid flex-1 place-items-center px-1 pb-4 text-center text-11 opacity-50'>{t(noItemsText)}</p>
+				<p className='grid flex-1 place-items-center px-1 pb-4 text-center text-11 text-white/50'>{t(noItemsText)}</p>
 			) : (
 				(items ?? [undefined, undefined, undefined])
 					.slice(0, 3)
@@ -212,7 +212,7 @@ export function FilesGridWidget({
 		>
 			{/* Empty state */}
 			{gridItems?.length === 0 ? (
-				<p className='grid h-full place-items-center px-1 text-center text-11 opacity-50'>{t(noItemsText)}</p>
+				<p className='grid h-full place-items-center px-1 text-center text-11 text-white/50'>{t(noItemsText)}</p>
 			) : (
 				(gridItems ?? [undefined, undefined, undefined, undefined]).map((item, i) => (
 					<button
@@ -239,7 +239,7 @@ export function FilesGridWidget({
 						<span
 							className={cn(
 								'min-w-0 truncate text-11 leading-tight font-medium text-white/90',
-								count >= 4 && 'max-w-full text-[10px] w-tall:text-11',
+								count >= 4 && 'max-w-full text-10 w-tall:text-11',
 							)}
 							title={item?.name}
 						>
@@ -265,7 +265,7 @@ function CompactFavorites({
 	const {t} = useTranslation()
 	if (paths?.length === 0) {
 		return (
-			<div className={cn(compactContainerClass, 'items-center justify-center text-center text-[10px] opacity-60')}>
+			<div className={cn(compactContainerClass, 'items-center justify-center text-center text-10 text-white/60')}>
 				{t(noItemsText)}
 			</div>
 		)

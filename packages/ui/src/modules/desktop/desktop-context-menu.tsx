@@ -86,7 +86,7 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 const CloseButton = ({className}: {className: string}) => (
 	<PopoverClose
 		className={cn(
-			'rounded-full opacity-30 ring-white/60 outline-hidden transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2',
+			'rounded-full opacity-30 ring-white/60 outline-hidden transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2 contrast-more:opacity-80 contrast-more:hover:opacity-100 contrast-more:focus-visible:opacity-100',
 			className,
 		)}
 	>

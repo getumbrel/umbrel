@@ -193,8 +193,11 @@ function AccountTile({
 function EmptyState({providers, onConnect}: {providers?: CloudProvider[]; onConnect: () => void}) {
 	const {t} = useTranslation()
 	return (
-		<div className='flex h-full flex-col items-center justify-center gap-5 p-4 pt-0 text-center'>
-			<CloudIcon className='size-14' />
+		// Centered by the auto margins on its first and last items rather than by the
+		// container, so when the pitch is taller than the card (larger text, a longer
+		// language, a short phone) it scrolls from the top instead of losing both ends
+		<div className='umbrel-hide-scrollbar flex h-full flex-col items-center gap-5 overflow-y-auto p-4 pt-0 text-center'>
+			<CloudIcon className='mt-auto size-14 shrink-0' />
 			<p className='text-19 font-semibold -tracking-2'>{t('files-cloud.pitch-title')}</p>
 			<CloudPitchPoints />
 			<div className='flex items-center gap-3 py-1'>
@@ -209,7 +212,7 @@ function EmptyState({providers, onConnect}: {providers?: CloudProvider[]; onConn
 					/>
 				))}
 			</div>
-			<Button variant='primary' size='dialog' onClick={onConnect}>
+			<Button variant='primary' size='dialog' className='mb-auto shrink-0' onClick={onConnect}>
 				{t('files-cloud.pitch-cta')}
 			</Button>
 		</div>

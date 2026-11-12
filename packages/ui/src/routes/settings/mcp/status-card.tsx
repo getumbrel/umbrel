@@ -67,7 +67,7 @@ export function McpStatusCard({
 						    disappears into it while still quieting the rings underneath */}
 						<div
 							aria-hidden
-							className='absolute inset-0 bg-dialog-content/70 [mask-image:radial-gradient(closest-side,black_40%,transparent_100%)]'
+							className='absolute inset-0 bg-dialog-content/70 [mask-image:radial-gradient(closest-side,black_40%,transparent_100%)] contrast-more:bg-dialog-content'
 						/>
 						<div className='relative flex flex-col items-center'>
 							<AnimatePresence mode='wait' initial={false}>

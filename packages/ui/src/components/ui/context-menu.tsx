@@ -239,12 +239,7 @@ function ContextMenuSeparator({
 }
 
 const ContextMenuShortcut = ({className, ...props}: React.HTMLAttributes<HTMLSpanElement>) => {
-	return (
-		<span
-			className={cn('ml-auto text-xs tracking-widest text-neutral-500 dark:text-neutral-400', className)}
-			{...props}
-		/>
-	)
+	return <span className={cn('ml-auto text-xs tracking-widest text-white/60', className)} {...props} />
 }
 
 export {

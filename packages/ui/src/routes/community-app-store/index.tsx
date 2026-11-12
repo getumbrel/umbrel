@@ -100,7 +100,7 @@ export default function CommunityAppStoreHome() {
 							<AppGridSection
 								title={
 									<>
-										<span className='opacity-50'>{t('app-store.search.results-for')}</span> {search.deferredQuery}
+										<span className='text-white/50'>{t('app-store.search.results-for')}</span> {search.deferredQuery}
 									</>
 								}
 								rightChildren={

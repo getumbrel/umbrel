@@ -201,7 +201,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 
 	const inputStyles = cn(
 		'bg-transparent outline-hidden ring-1 ring-transparent',
-		'p-0 m-0 box-border leading-[16px] tracking-[-0.04em]',
+		'p-0 m-0 box-border leading-[1.33] tracking-[-0.04em]',
 		// Show ring outline only on touch devices so that it is obvious that the input is focused
 		isTouchDevice && 'focus:ring-[hsl(var(--color-brand))]',
 		// icons view specific styles

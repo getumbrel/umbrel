@@ -365,7 +365,7 @@ function SuggestionChip({
 			{...optionProps({id, highlighted, onHighlight, onPick})}
 			className={cn(
 				'flex h-8 max-w-full min-w-0 cursor-default items-center gap-1.5 rounded-full bg-white/8 px-3 text-12 font-medium text-white/90 transition-colors',
-				highlighted && 'bg-white/17 text-white',
+				highlighted && 'bg-white/17 text-white contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
 			)}
 		>
 			<TokenIcon token={suggestion.token} />
@@ -401,7 +401,7 @@ function SuggestionRow({
 			{...optionProps({id, highlighted, onHighlight, onPick})}
 			className={cn(
 				'flex h-10 cursor-default items-center gap-2.5 rounded-12 px-2.5 text-13 text-white/90',
-				highlighted && 'bg-white/10 text-white',
+				highlighted && 'bg-white/10 text-white contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
 			)}
 		>
 			<TokenIcon token={suggestion.token} className='size-4' sourceSize={18} />

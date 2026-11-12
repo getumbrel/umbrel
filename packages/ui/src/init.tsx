@@ -1,6 +1,7 @@
 import 'inter-ui/inter.css'
 import './index.css'
 import './utils/i18n'
+import './hooks/use-accessibility'
 
 import i18next from 'i18next'
 import React, {Suspense} from 'react'

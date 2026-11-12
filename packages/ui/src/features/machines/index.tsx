@@ -184,7 +184,7 @@ function MachinesLayoutContent() {
 						animate={
 							hideHeader
 								? {height: 0, marginBottom: -20, y: -16, opacity: 0}
-								: {height: 50, marginBottom: 0, y: 0, opacity: 1}
+								: {height: 'auto', marginBottom: 0, y: 0, opacity: 1}
 						}
 						transition={layoutMorphTransition.layout}
 						style={{pointerEvents: hideHeader ? 'none' : undefined}}
@@ -200,7 +200,7 @@ function MachinesLayoutContent() {
 							/>
 							<div className='flex flex-col gap-1.5'>
 								<h1 className='text-17 leading-none font-semibold -tracking-2 text-white'>{t('machines')}</h1>
-								<p className='text-15 leading-none -tracking-2 text-white/50'>{t('machines.tagline')}</p>
+								<p className='text-15 leading-tight -tracking-2 text-white/50'>{t('machines.tagline')}</p>
 							</div>
 						</div>
 						<DarkTooltip label={t('close')} side='left'>

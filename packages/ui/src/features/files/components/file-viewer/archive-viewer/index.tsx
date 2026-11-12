@@ -298,7 +298,7 @@ function Listing({
 					shown ? 'invisible' : returnTo && stageStep,
 				)}
 			>
-				<div className='flex h-12 shrink-0 items-center gap-1 border-b border-white/6 px-2'>
+				<div className='flex h-12 shrink-0 items-center gap-1 border-b border-white/[0.06] px-2 contrast-more:border-white/25'>
 					<button
 						type='button'
 						aria-label={t('back')}

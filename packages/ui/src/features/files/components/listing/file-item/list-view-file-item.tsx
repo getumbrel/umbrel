@@ -85,7 +85,7 @@ export function ListViewFileItem({
 										: '—'}
 						</span>
 					</div>
-					<span className='shrink-0 pl-2 text-right text-11 whitespace-nowrap text-white/40'>
+					<span className='max-w-[45%] min-w-0 truncate pl-2 text-right text-11 text-white/40'>
 						{item.type === 'directory'
 							? isDirectoryAnExternalDrivePartition(item.path)
 								? t('files-type.external-drive')
@@ -104,7 +104,8 @@ export function ListViewFileItem({
 		)
 	}
 
-	// Desktop view
+	// Desktop view. Columns share the row's width, but the date and size keep a floor that fits
+	// them, in ems so it follows the text size. The header's columns match
 	const tableStyles = 'text-12 p-2.5 whitespace-nowrap overflow-hidden text-ellipsis'
 
 	return (
@@ -132,7 +133,7 @@ export function ListViewFileItem({
 				</div>
 			</div>
 
-			<div className={cn(`flex-[2] ${tableStyles} text-white/60`, fadedContent && 'opacity-50')}>
+			<div className={cn(`flex-[2] ${tableStyles} min-w-[12em] text-white/60`, fadedContent && 'opacity-50')}>
 				{item.isDisconnected ? (
 					t('files-network-storage.disconnected')
 				) : isUploading ? (
@@ -144,7 +145,7 @@ export function ListViewFileItem({
 				)}
 			</div>
 
-			<div className={cn(`flex-1 ${tableStyles} text-white/60`, fadedContent && 'opacity-50')}>
+			<div className={cn(`flex-1 ${tableStyles} min-w-[6.5em] text-white/60`, fadedContent && 'opacity-50')}>
 				{isUploading
 					? `${formatFilesystemSize(
 							((item.size ?? 0) * (uploadingProgress ?? 0)) / 100,

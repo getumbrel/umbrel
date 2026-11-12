@@ -15,6 +15,7 @@ import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-n
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import type {Machine} from '@/features/machines/types'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
 import {cn} from '@/lib/utils'
@@ -43,9 +44,12 @@ export const IconsViewFileItem = ({
 	const {getFolderStorageApps} = useAppStorageFolderTags()
 	const folderApps = getFolderStorageApps(item)
 	// Middle-truncation budgets for the name's two lines: about 30 characters fill a
-	// 112px tile and 26 the 100px ones below lg, and the app stack takes the room of 6
+	// 112px tile and 26 the 100px ones below lg, and the app stack takes the room of 6.
+	// Fewer fit as the 12px name grows with the text size setting, and a little
+	// under in proportion, since a shorter line loses more of itself to where it breaks.
 	const isMobile = useIsMobile()
-	const nameMaxLength = (isMobile ? 26 : 30) - (folderApps ? 6 : 0)
+	const largerText = useLargerText()
+	const nameMaxLength = Math.floor((((isMobile ? 26 : 30) - (folderApps ? 6 : 0)) * 12) / (12 + largerText * 1.5))
 
 	const [isHovered, setIsHovered] = useState(false)
 

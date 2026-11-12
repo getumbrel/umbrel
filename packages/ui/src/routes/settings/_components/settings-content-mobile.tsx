@@ -179,7 +179,7 @@ export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) 
 					</div>
 					{/* Wraps instead of truncating, so a language that puts a long phrase
 					    around the name ("Umbrel пользователя …") still shows the name */}
-					<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-[30px] font-semibold -tracking-4 text-balance break-words text-white/45'>
+					<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-tight font-semibold -tracking-4 text-balance break-words text-white/45'>
 						{ownerFirstName ? (
 							<Trans
 								t={t}
@@ -198,7 +198,7 @@ export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) 
 
 				<SettingsSummary />
 
-				<div className='flex items-center gap-2'>
+				<div className='flex flex-wrap items-center gap-2'>
 					<ButtonLink to={{search: addLinkSearchParams({dialog: 'logout'})}} className={mobileActionButtonClass}>
 						{t('logout')}
 					</ButtonLink>

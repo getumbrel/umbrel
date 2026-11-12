@@ -37,7 +37,7 @@ export function UmbrelOSInstructions({username, password, sharename}: Props) {
 				<InstructionItem>
 					<Trans t={t} i18nKey='files-share.instructions.umbrelos.select-device' />
 					{sharename ? (
-						<div className='mt-1 text-[11px] text-white/60'>
+						<div className='mt-1 text-11 text-white/60'>
 							<Trans t={t} i18nKey='files-share.instructions.umbrelos.cant-find-note' />
 						</div>
 					) : null}

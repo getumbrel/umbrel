@@ -323,7 +323,7 @@ export function RewindOverlay() {
 												{t('backups-rewind')}
 											</div>
 										</div>
-										<div className='mt-1 hidden min-w-0 items-center gap-1 text-xs text-white/70 md:block md:h-8'>
+										<div className='mt-1 hidden min-w-0 items-center gap-1 text-xs text-white/70 md:block md:min-h-8'>
 											<div className='flex flex-col'>
 												<span className={backupsLoading ? 'opacity-50' : ''}>{countLabel}</span>
 												{snapshotsCount > 0 && earliestDateLabel && !backupsLoading ? (

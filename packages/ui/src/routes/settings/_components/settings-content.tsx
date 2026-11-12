@@ -408,7 +408,7 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								</div>
 								{/* Wraps instead of truncating, so a language that puts a long phrase
 								    around the name ("Umbrel пользователя …") still shows the name */}
-								<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-[30px] font-semibold -tracking-4 text-balance break-words text-white/45'>
+								<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-tight font-semibold -tracking-4 text-balance break-words text-white/45'>
 									{ownerFirstName ? (
 										<Trans
 											t={t}
@@ -427,7 +427,7 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 
 							<SettingsSummary />
 
-							<div className='mt-1.5 mb-3 flex shrink-0 gap-2'>
+							<div className='mt-1.5 mb-3 flex shrink-0 flex-wrap gap-2'>
 								<ButtonLink to={linkToDialog('logout')} className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 									{t('logout')}
 								</ButtonLink>
@@ -488,7 +488,7 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 					<div
 						data-testid='settings-controls-rail'
 						className={cn(
-							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2 panes:flex-wrap panes:pt-0',
+							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2 lg:flex-wrap panes:flex-wrap panes:pt-0',
 							isMember && 'justify-end',
 						)}
 					>
@@ -498,15 +498,16 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								labels={filterLabels}
 								ariaLabel={t('settings.filters-label')}
 								onSelect={handleFilterSelect}
-								className='lg:shrink-0 low:hidden'
+								className='low:hidden'
 							/>
 						)}
-						{/* The pills are the row's fixed part from lg, the search takes what's left */}
+						{/* From lg the search keeps its width and moves under the pills, at the
+						    end, when they need the row; pills wider than the row scroll */}
 						<SearchField
 							value={searchQuery}
 							onChange={handleSearchChange}
 							label={t('search')}
-							className='lg:min-w-0 lg:shrink panes:w-full'
+							className='lg:ml-auto panes:w-full'
 						/>
 					</div>
 

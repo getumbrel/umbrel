@@ -16,7 +16,7 @@ import {tw} from '@/utils/tw'
 // Stepping from one file to another on the stage: a quick fade of the stage alone, so the title is never in motion
 export const stageStep = tw`motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150`
 
-export const stageButtonClass = tw`umbrel-button inline-flex h-[30px] items-center rounded-full border-[0.5px] border-white/20 bg-white/10 px-4 text-13 font-medium text-white/90 shadow-button-highlight-soft-hpx transition-all duration-300 hover:bg-white/15 active:scale-[0.97] active:bg-white/6`
+export const stageButtonClass = tw`umbrel-button inline-flex min-h-[30px] items-center rounded-full border-[0.5px] border-white/20 bg-white/10 px-4 py-1 text-center text-13 font-medium wrap-anywhere text-white/90 shadow-button-highlight-soft-hpx transition-all duration-300 hover:bg-white/15 active:scale-[0.97] active:bg-white/6`
 
 // While a file is on its way: its icon, never an empty stage. The spinner
 // only joins after a beat, so a quick open doesn't flash it.

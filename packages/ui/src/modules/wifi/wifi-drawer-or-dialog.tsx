@@ -459,7 +459,7 @@ export function Connect({
 export function Message({children}: {children?: React.ReactNode}) {
 	return (
 		<div className='grid h-32 place-items-center rounded-12 bg-white/6 p-4'>
-			<div className='text-center text-14 font-medium -tracking-2 opacity-60'>{children}</div>
+			<div className='text-center text-14 font-medium -tracking-2 text-white/60'>{children}</div>
 		</div>
 	)
 }

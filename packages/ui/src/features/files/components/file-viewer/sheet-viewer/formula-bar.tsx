@@ -3,6 +3,7 @@ import {useState, type Ref} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {cn} from '@/lib/utils'
 import {touchTargetClass} from '@/utils/element-classes'
 
@@ -41,6 +42,8 @@ export function FormulaBar({
 }) {
 	const {t} = useTranslation()
 	const [focused, setFocused] = useState(false)
+	// Its leading, as the field's class has it
+	const lineHeight = 18 + useLargerText()
 	// A value of several lines shows its first, marked as having more, and all of them, over the grid, while it has
 	// the keyboard
 	const lines = value.split('\n').length
@@ -84,13 +87,17 @@ export function FormulaBar({
 							onCommit({rows: 0, cols: event.shiftKey ? -1 : 1})
 						}
 					}}
-					style={open ? {height: (Math.min(lines, MAX_LINES) + 1) * 18} : undefined}
+					// Its lines, and padding that keeps the first where it sat in the 36px bar
+					style={open ? {height: (Math.min(lines, MAX_LINES) - 1) * lineHeight + 36} : undefined}
 					className={cn(
-						'absolute right-0 resize-none leading-[18px] whitespace-pre text-white/90 outline-none',
+						'absolute right-0 resize-none leading-[calc(18px+var(--text-boost))] whitespace-pre text-white/90 outline-none',
 						// Exactly one line, so the next one's top never shows under it
 						open
-							? 'top-0 -left-2 z-20 overflow-y-auto rounded-b-xl bg-[#1c1c20] py-[9px] pr-3 pl-2 shadow-[0_8px_24px_rgb(0_0_0/0.4)]'
-							: cn('top-[9px] left-0 h-[18px] overflow-hidden bg-transparent py-0', lines > 1 ? 'pr-9' : 'pr-3'),
+							? 'top-0 -left-2 z-20 overflow-y-auto rounded-b-xl bg-[#1c1c20] py-[calc(9px_-_var(--text-boost)/2)] pr-3 pl-2 shadow-[0_8px_24px_rgb(0_0_0/0.4)]'
+							: cn(
+									'top-[calc(9px_-_var(--text-boost)/2)] left-0 h-[1lh] overflow-hidden bg-transparent py-0',
+									lines > 1 ? 'pr-9' : 'pr-3',
+								),
 						!editable && 'text-white/70',
 					)}
 				/>
@@ -182,7 +189,8 @@ function NameBox({reference, onGo}: {reference: string; onGo: (reference: string
 				event.currentTarget.select()
 			}}
 			className={cn(
-				'h-7 w-24 shrink-0 truncate rounded-8 bg-transparent px-3 text-center text-white/80 tabular-nums transition-colors outline-none hover:bg-white/6 focus:bg-white/10 max-md:w-20 max-md:px-2',
+				// Wider as the text grows, by about what a range's eight characters do
+				'h-7 w-[calc(6rem+5*var(--text-boost))] shrink-0 truncate rounded-8 bg-transparent px-3 text-center text-white/80 tabular-nums transition-colors outline-none hover:bg-white/6 focus:bg-white/10 contrast-more:ring-1 contrast-more:ring-white/40 contrast-more:ring-inset max-md:w-[calc(5rem+5*var(--text-boost))] max-md:px-2',
 				invalid && 'text-red-300',
 			)}
 		/>

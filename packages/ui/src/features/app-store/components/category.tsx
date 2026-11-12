@@ -161,7 +161,7 @@ function FeaturedAppCard({
 				'group relative flex h-[280px] flex-col justify-end overflow-hidden p-4 transition-colors duration-300 hover:bg-white/6',
 				// Hairline over the card edge — the material's own border sits under
 				// the artwork, so it needs to be an overlay to show at the top
-				'after:pointer-events-none after:absolute after:inset-0 after:rounded-24 after:ring-1 after:ring-white/8 after:ring-inset',
+				'after:pointer-events-none after:absolute after:inset-0 after:rounded-24 after:ring-1 after:ring-white/8 after:ring-inset contrast-more:after:ring-white/40',
 				className,
 			)}
 		>
@@ -204,7 +204,7 @@ function FeaturedAppCard({
 				<AppIcon src={app.icon} size={56} className='shrink-0 rounded-12' />
 				<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
 					<h3 className='truncate text-15 leading-tight font-semibold -tracking-3'>{app.name}</h3>
-					<p className='line-clamp-2 w-full min-w-0 text-12 leading-tight opacity-40'>{app.tagline}</p>
+					<p className='line-clamp-2 w-full min-w-0 text-12 leading-tight text-white/40'>{app.tagline}</p>
 				</div>
 				<span className='pointer-events-auto'>
 					<AppCardAction app={app} status={status} lifecycleState={lifecycleState} progress={progress} />

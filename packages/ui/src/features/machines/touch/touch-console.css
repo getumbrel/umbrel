@@ -78,6 +78,17 @@ html.machine-console-open body {
 	background: rgb(30 30 33 / 0.72);
 }
 
+/* Increase contrast: the glass turns solid with a visible edge, as menus do,
+   so whatever the machine shows can't show through */
+[data-increase-contrast] .console-glass {
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+	box-shadow:
+		0 8px 28px rgb(0 0 0 / 0.42),
+		0 0 0 1px rgb(255 255 255 / 0.4) inset;
+	background: rgb(30 30 33 / 0.96);
+}
+
 /* Keycaps. In a layer, or Tailwind's utilities can't touch them. */
 @layer components {
 	.console-key {
@@ -137,6 +148,15 @@ html.machine-console-open body {
 			--cap-on-text: #fff;
 			box-shadow: 0 1px 0 rgb(0 0 0 / 0.28);
 			color: #000;
+		}
+	}
+
+	[data-increase-contrast] .console-composer::placeholder {
+		color: rgb(255 255 255 / 0.7);
+	}
+	@media (prefers-color-scheme: light) {
+		[data-increase-contrast] .console-composer::placeholder {
+			color: rgb(0 0 0 / 0.6);
 		}
 	}
 }

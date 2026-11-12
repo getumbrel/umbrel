@@ -41,7 +41,7 @@ const WHEEL_IDLE_MS = 200
 
 // The slider's look, which the map's zoom shares
 export const sliderRootClass = tw`relative hidden h-8 w-24 touch-none items-center px-1.5 select-none data-disabled:opacity-50 xl:flex`
-export const sliderTrackClass = tw`relative h-1 grow rounded-full bg-white/15`
+export const sliderTrackClass = tw`relative h-1 grow rounded-full bg-white/15 contrast-more:bg-white/45`
 export const sliderThumbClass = tw`block size-3.5 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0/0.45)] outline-hidden transition-transform duration-150 ease-out hover:scale-110 focus-visible:ring-2 focus-visible:ring-white/40 active:scale-110`
 
 // No grid, no live zoom to hear

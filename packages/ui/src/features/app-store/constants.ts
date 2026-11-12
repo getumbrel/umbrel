@@ -94,7 +94,11 @@ export const storeCardPaddedClass = tw`settings-edge-material rounded-24 bg-whit
 
 // The single phone column is declared too: an implicit one grows to fit the
 // longest app name, which ran its card off the screen instead of truncating.
-export const appGridClass = tw`grid grid-cols-1 min-[560px]:grid-cols-2 xl:grid-cols-3 gap-x-2.5 gap-y-1.5`
+// Two columns from 560px and three from xl, but only while each card keeps
+// room for its name beside the action at the chosen text size: a track is the
+// larger of an even share (a little under it, so rounding never drops a
+// column) and that minimum, so a larger text size fits fewer.
+export const appGridClass = tw`grid grid-cols-1 min-[560px]:grid-cols-[repeat(auto-fill,minmax(max(calc(50%-6px),calc(240px+20*var(--text-boost))),1fr))] xl:grid-cols-[repeat(auto-fill,minmax(max(calc(33.33%-8px),calc(240px+20*var(--text-boost))),1fr))] gap-x-2.5 gap-y-1.5`
 
 // Bleeds a horizontally scrolling rail through the sheet's responsive padding
 // (layouts/sheet.tsx) so cards scroll edge-to-edge — keep the two in sync.

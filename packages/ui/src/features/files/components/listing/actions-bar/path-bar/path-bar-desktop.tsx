@@ -354,13 +354,13 @@ const PathSegmentContent = ({
 			>
 				<FileItemIcon
 					item={segmentIconItem({path, type, segment})}
-					className='h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100'
+					className='h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100 contrast-more:opacity-100'
 					machine={machine ?? null}
 				/>
 				<span
 					className={cn(
 						'group-hover:[mask-image:none] [.has-overflow_&]:[mask-image:linear-gradient(to_left,transparent_0%,black_40px)]',
-						'overflow-hidden text-xs opacity-70 transition-opacity group-hover:opacity-100',
+						'overflow-hidden text-xs opacity-70 transition-opacity group-hover:opacity-100 contrast-more:opacity-100',
 						label && 'ml-1',
 					)}
 				>

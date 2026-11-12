@@ -59,7 +59,7 @@ export function MachineAgentOverlay({
 			<MachineAgentPresence control={agentControl} takenOver={takenOver} animateArrival={animateArrival} />
 
 			{agentOwned && takeOverPrompt && (
-				<div className='absolute inset-0 z-30 flex cursor-auto items-center justify-center bg-black/60 backdrop-blur-sm'>
+				<div className='absolute inset-0 z-30 flex cursor-auto items-center justify-center bg-black/60 backdrop-blur-sm contrast-more:bg-black/90 contrast-more:backdrop-blur-none'>
 					<div className='flex max-w-sm flex-col items-center gap-4 px-6 text-center text-white'>
 						<AgentLogoPlate agent={agentVisualFor(agentControl)} size={40} />
 						<p className='text-15 font-medium'>{t('machines.console-agent-take-over-title', {agent: agentName})}</p>
@@ -67,7 +67,7 @@ export function MachineAgentOverlay({
 						<div className='flex gap-2'>
 							<button
 								type='button'
-								className='rounded-full bg-white/10 px-4 py-2 text-13 font-medium text-white transition-opacity hover:opacity-80'
+								className='rounded-full bg-white/10 px-4 py-2 text-13 font-medium text-white transition-opacity hover:opacity-80 contrast-more:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]'
 								onClick={() => setTakeOverPrompt(false)}
 							>
 								{t('machines.console-agent-keep-watching')}

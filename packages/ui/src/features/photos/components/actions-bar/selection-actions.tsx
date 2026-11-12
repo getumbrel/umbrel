@@ -17,6 +17,7 @@ import {useRouteFilter} from '@/features/photos/components/listing'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {useDownloadItems, useItemActions, useItems} from '@/features/photos/hooks/use-items'
 import {useAlbumActions, useAlbums} from '@/features/photos/hooks/use-library'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation/use-confirmation'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -30,14 +31,15 @@ import {useBreakpoint} from '@/utils/tw'
 // download) keep the selection — Done ends it — while the others end it
 // themselves. Below xl the actions share one pill as icons with tooltips
 // (with labels they only just fit a 1100px window, and not a 1024px one,
-// and on a phone they would crowd the count out).
+// and on a phone they would crowd the count out); with larger text, below 2xl.
 export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 	const {t, i18n} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const confirm = useConfirmation()
 	const breakpoint = useBreakpoint()
-	const iconOnly = breakpoint !== 'xl' && breakpoint !== '2xl'
+	const largerText = useLargerText()
+	const iconOnly = !(breakpoint === '2xl' || (breakpoint === 'xl' && largerText === 0))
 	const {ids, done} = usePhotosSelection()
 	const {albumId} = useParams()
 	const {setFavorite, deleteItems, restoreItems, deletePermanently} = useItemActions()

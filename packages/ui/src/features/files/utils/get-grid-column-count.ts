@@ -9,11 +9,20 @@ export function getGridItemWidth(isMobile: boolean): number {
 }
 
 /**
- * Height of an icons-view grid cell and the gap between rows. Shared between
- * VirtualizedList (cell layout) and keyboard navigation (scroll-into-view math)
- * so the two can't drift apart.
+ * Heights of a list-view row and an icons-view grid cell, and the gap between
+ * the grid's rows. Shared between VirtualizedList (layout) and keyboard
+ * navigation (scroll-into-view math) so the two can't drift apart.
+ *
+ * Both make room for larger text (`largerText` is useLargerText(), the pixels
+ * every text size has gained): a list row holds one line of text at line height
+ * 1.5, two on mobile, and a grid cell two name lines at 1.25 and a label at 1.5.
  */
-export const GRID_ITEM_HEIGHT = 146
+export function getListRowHeight(isMobile: boolean, largerText: number): number {
+	return isMobile ? 50 + largerText * 3 : 40 + largerText * 1.5
+}
+export function getGridItemHeight(largerText: number): number {
+	return 146 + largerText * 4
+}
 export const GRID_ROW_GAP = 8
 
 /**

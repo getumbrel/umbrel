@@ -24,7 +24,7 @@ export function UsbDrives() {
 					</h2>
 					<Link
 						to='/files/External'
-						className='flex shrink-0 items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.06] px-3 py-1 text-12 font-medium text-white/80 transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-hidden'
+						className='flex shrink-0 items-center gap-1 rounded-full border border-white/8 bg-white/6 px-3 py-1 text-12 font-medium text-white/80 transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-hidden'
 					>
 						<img
 							src='/assets/dock/dock-files.webp'
@@ -68,7 +68,7 @@ export function UsbDrives() {
 					<div key={drive.id} className='flex w-full items-center gap-4 rounded-12 bg-white/5 p-4'>
 						<img src={externalStorageIcon} alt='' draggable={false} className='size-12 shrink-0 object-contain' />
 						<div className='min-w-0 flex-1'>
-							<div className='truncate text-[15px] font-medium text-white' title={name}>
+							<div className='truncate text-15 font-medium text-white' title={name}>
 								{name}
 							</div>
 							<div className='truncate text-13 text-white/50' title={detail}>

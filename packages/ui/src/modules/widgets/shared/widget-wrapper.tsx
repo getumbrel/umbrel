@@ -16,7 +16,8 @@ export function WidgetWrapper({label, children}: {label: string; children?: Reac
 			{children}
 			{label && (
 				<div
-					className='desktop relative z-0 max-w-full truncate text-center text-13 leading-normal drop-shadow-desktop-label contrast-more:bg-black contrast-more:px-1'
+					// Keeps its size like an app's name, whatever the text size setting
+					className='desktop relative z-0 max-w-full truncate text-center text-13 leading-normal drop-shadow-desktop-label [--text-boost:0px] contrast-more:rounded-4 contrast-more:bg-black contrast-more:px-1'
 					style={{display: 'var(--widget-names, block)'}}
 				>
 					{label}

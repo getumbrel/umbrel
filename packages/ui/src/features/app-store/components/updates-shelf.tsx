@@ -57,9 +57,9 @@ export function UpdatesShelf() {
 				))}
 			</div>
 			<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
-				<h2 className='flex items-center gap-1 truncate text-14 leading-tight font-semibold -tracking-3 sm:gap-1.5 sm:text-15'>
+				<h2 className='flex items-center gap-1 text-14 leading-tight font-semibold -tracking-3 sm:gap-1.5 sm:text-15'>
 					<TbCircleArrowUp className='h-4.5 w-4.5 shrink-0 text-brand-lightest' />
-					{shelfLabel}
+					<span className='min-w-0'>{shelfLabel}</span>
 				</h2>
 				{/* Names beyond the fanned icons collapse into "…, and more" */}
 				<p className='truncate text-13 leading-tight text-white/40'>

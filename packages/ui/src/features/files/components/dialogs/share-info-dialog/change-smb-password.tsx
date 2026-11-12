@@ -61,10 +61,10 @@ export function ChangeSmbPassword({toastArea}: {toastArea: ToastArea}) {
 					>
 						<form onSubmit={handleSubmit} className='flex flex-col gap-3 px-1 pb-1'>
 							<p className='text-12 leading-tight text-white/40'>{t('settings.file-sharing.password-description')}</p>
-							<div className='flex items-start gap-2'>
+							<div className='flex flex-wrap items-start gap-2'>
 								<PasswordInput
 									sizeVariant='short'
-									className='flex-1'
+									className='min-w-[12rem] flex-1'
 									label={t('settings.file-sharing.new-password')}
 									value={newPassword}
 									error={passwordError}

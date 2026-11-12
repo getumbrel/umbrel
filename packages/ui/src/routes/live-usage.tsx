@@ -299,10 +299,13 @@ function LiveUsageContent() {
 				)}
 			</div>
 
-			{/* Shown only on mobile */}
-			<div className='sm:hidden'>
+			{/* Shown only on mobile. min-w-0 so tabs that scroll don't widen the grid instead */}
+			<div className='min-w-0 sm:hidden'>
 				<SegmentedControl
 					size='lg'
+					// Scrolls sideways when the labels outgrow a phone (long languages, larger text)
+					className='umbrel-hide-scrollbar overflow-x-auto'
+					tabClassName='shrink-0'
 					tabs={[
 						{id: 'cpu', label: t('cpu')},
 						{id: 'memory', label: t('memory')},
@@ -408,7 +411,7 @@ type GpuDevice = RouterOutput['system']['gpuUsage']['devices'][number]
 
 function GpuVendorBadge({vendor}: {vendor: string}) {
 	return (
-		<span className='shrink-0 rounded-4 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white/50'>
+		<span className='shrink-0 rounded-4 bg-white/10 px-1.5 py-0.5 text-10 font-semibold tracking-wide text-white/50'>
 			{gpuVendorShortName(vendor)}
 		</span>
 	)
@@ -474,12 +477,12 @@ function GpuVramFooter({device, detailed}: {device: GpuDevice; detailed?: boolea
 	return (
 		<>
 			<div className='flex items-baseline justify-between gap-2 text-13 -tracking-2'>
-				<span className='font-medium whitespace-nowrap text-white/40'>
+				<span className='min-w-0 truncate font-medium text-white/40'>
 					{dedicated ? t('live-usage.vram') : t('live-usage.gpu-shared-memory')}
 				</span>
 				<span
 					className={cn(
-						'truncate text-white/45 tabular-nums transition-[max-width,opacity] duration-300 motion-reduce:transition-none',
+						'shrink-0 truncate text-white/45 tabular-nums transition-[max-width,opacity] duration-300 motion-reduce:transition-none',
 						detailed ? 'max-w-40 opacity-100' : 'max-w-0 opacity-0',
 					)}
 				>
@@ -501,7 +504,7 @@ function GpuVramFooter({device, detailed}: {device: GpuDevice; detailed?: boolea
 						'truncate text-12 -tracking-2 text-white/25',
 						'overflow-hidden transition-[max-height,opacity,margin] duration-300 motion-reduce:transition-none',
 						// -mt-2 swallows the footer's gap while hidden
-						detailed ? 'max-h-5 opacity-100' : '-mt-2 max-h-0 opacity-0',
+						detailed ? 'max-h-8 opacity-100' : '-mt-2 max-h-0 opacity-0',
 					)}
 				>
 					{t('live-usage.gpu-shared-with-system', {amount: maybePrettyBytes(shared.used, i18n.language)})}
@@ -632,13 +635,13 @@ function GpuSection({colors, chart}: {colors: UsageColors; chart?: Array<{value:
 									className={cn(
 										'flex items-center gap-2 rounded-full border px-3 py-1.5 text-13 -tracking-2 outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-white/20',
 										isSelected
-											? 'border-brand/40 bg-brand/15 text-white/90'
+											? 'border-brand/40 bg-brand/15 text-white/90 contrast-more:border-brand'
 											: 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10',
 									)}
 								>
 									<GpuRing
 										fraction={(device.totalUsed ?? 0) / 100}
-										className={isSelected ? 'stroke-brand' : 'stroke-white/50'}
+										className={isSelected ? 'stroke-brand' : 'stroke-white/50 contrast-more:stroke-white/70'}
 									/>
 									<span className='font-medium'>{cleanGpuName(device.model)}</span>
 								</button>
@@ -965,7 +968,7 @@ function UsageCard({
 					{valueSub && (
 						<span
 							className={cn(
-								'min-w-0 truncate text-13 font-semibold text-white/45',
+								'min-w-0 shrink-[999] truncate text-13 font-semibold text-white/45',
 								condensed && 'transition-[max-width,opacity] duration-300 motion-reduce:transition-none',
 								condensed && (hideExtras ? 'max-w-0 opacity-0' : 'max-w-24'),
 							)}
@@ -996,7 +999,7 @@ function UsageCard({
 							'flex flex-col gap-2 overflow-hidden transition-all duration-300 motion-reduce:transition-none',
 							// -mt-3 swallows the wrapper's gap while collapsed so inactive
 							// cards keep their exact height
-							active ? 'max-h-16 opacity-100' : '-mt-3 max-h-0 opacity-0',
+							active ? 'max-h-24 opacity-100' : '-mt-3 max-h-0 opacity-0',
 						)}
 					>
 						{footer}
@@ -1005,7 +1008,7 @@ function UsageCard({
 			</div>
 			<div
 				className={cn(
-					'pointer-events-none absolute inset-0 rounded-24 border border-brand/40 transition-opacity duration-300',
+					'pointer-events-none absolute inset-0 rounded-24 border border-brand/40 transition-opacity duration-300 contrast-more:border-2 contrast-more:border-brand',
 					active ? 'opacity-100' : 'opacity-0',
 				)}
 			/>
@@ -1018,7 +1021,7 @@ function ErrorMessage({children}: {children?: ReactNode}) {
 	return (
 		<div className='flex shrink-[999] items-center gap-2 text-[#F45A5A]'>
 			<div className='h-[5px] w-[5px] animate-pulse rounded-full bg-current ring-3 ring-[#F45A5A]/20'></div>
-			<div className={cn('text-13 font-medium -tracking-2', 'leading-inter-trimmed')}>{children}</div>
+			<div className='text-13 leading-tight font-medium -tracking-2'>{children}</div>
 		</div>
 	)
 }
@@ -1377,9 +1380,11 @@ function AppListRow({
 			layout={reduceMotion ? false : 'position'}
 			transition={listSpring}
 			// Rows carry their own separator so it travels with them when they
-			// re-sort; a container divide-y would stay pinned to the old positions
+			// re-sort; a container divide-y would stay pinned to the old positions.
+			// The arbitrary alpha keeps it out of the contrast remap, so it steps up
+			// only to the 25% that divided lists use
 			className={cn(
-				'flex min-w-0 items-center gap-2 border-b border-white/6 p-3 last:border-b-0',
+				'flex min-w-0 items-center gap-2 border-b border-white/[0.06] p-3 last:border-b-0 contrast-more:border-white/25',
 				disabled && 'opacity-50',
 			)}
 		>
@@ -1394,14 +1399,16 @@ function AppListRow({
 			)}
 			{/* The name comes first. On a phone the status goes under it, and on wider
 			    screens the status is what truncates when the two don't fit */}
-			<div className='flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:gap-1.5'>
+			<div className='flex min-w-0 grow flex-col sm:flex-row sm:items-center sm:gap-1.5'>
 				<span className='min-w-0 truncate text-15 leading-tight font-medium -tracking-4 opacity-90'>{title}</span>
 				<span className='min-w-0 shrink-[999] truncate text-13 leading-tight -tracking-2 text-white/40 empty:hidden'>
 					{status}
 				</span>
 			</div>
 			{barShare !== undefined && (
-				<span className='h-1 w-14 shrink-0 overflow-hidden rounded-full bg-white/10 sm:w-24'>
+				// Takes the room the name leaves, up to its full width, so a long name
+				// or larger text shortens the bar before it cuts the name
+				<span className='h-1 max-w-14 min-w-0 grow-[999] basis-0 overflow-hidden rounded-full bg-white/10 sm:max-w-24'>
 					<span
 						className='block h-full w-full rounded-full transition-[transform,background-color] duration-700 [transition-timing-function:steps(14),ease]'
 						style={{
@@ -1412,7 +1419,10 @@ function AppListRow({
 				</span>
 			)}
 			{note ? (
-				<span className='shrink-0 text-right text-13 font-normal -tracking-2 text-white/30'>{note}</span>
+				// Wraps rather than taking the row from the name beside it
+				<span className='max-w-1/2 shrink-0 text-right text-13 leading-tight font-normal -tracking-2 text-white/30'>
+					{note}
+				</span>
 			) : (
 				<span className='shrink-0 text-right text-15 font-normal -tracking-3 text-white/45 uppercase tabular-nums sm:min-w-[76px]'>
 					{value}

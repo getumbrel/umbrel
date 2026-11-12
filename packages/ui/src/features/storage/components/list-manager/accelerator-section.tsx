@@ -54,11 +54,13 @@ function AcceleratorCell({
 			onClick={onClick}
 			className={cn(
 				'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-2.5 px-4 py-5 sm:px-10 sm:py-6',
+				// A narrow cell keeps the badge in its top padding, clear of the drive
+				inactiveDevice && 'pt-10',
 				onClick && 'cursor-pointer transition-colors hover:bg-white/5',
 			)}
 		>
 			{inactiveDevice && (
-				<span className='absolute top-2 left-2 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/60'>
+				<span className='absolute top-2 left-2 rounded-full bg-white/10 px-2 py-0.5 text-11 font-medium text-white/60'>
 					{t('storage-manager.inactive')}
 				</span>
 			)}
@@ -68,7 +70,7 @@ function AcceleratorCell({
 				led={getAcceleratorLed(member)}
 			/>
 			<div className='flex w-full min-w-0 flex-col items-center gap-0.5 text-center'>
-				<span className='max-w-full truncate text-[15px] font-medium text-white' title={device?.name}>
+				<span className='max-w-full truncate text-15 font-medium text-white' title={device?.name}>
 					{device ? device.name : t('storage-manager.missing-drive')}
 				</span>
 				{/* Missing members show their id truncated from the start so the serial stays visible */}
@@ -80,7 +82,7 @@ function AcceleratorCell({
 					{device ? device.serial : member?.id}
 				</span>
 				{isFailed && member && (
-					<span className='text-[12px] font-medium text-[#FF3434]'>
+					<span className='text-12 font-medium text-[#FF3434]'>
 						{raidStatusLabels[member.status] ? t(raidStatusLabels[member.status]) : member.status}
 					</span>
 				)}
@@ -117,11 +119,11 @@ function AcceleratorRow({
 		>
 			<SsdChip sizeLabel={formatStorageSize(device.size)} led={led} />
 			<div className='min-w-0 flex-1'>
-				<div className='truncate text-[15px] font-medium text-white'>{device.name}</div>
+				<div className='truncate text-15 font-medium text-white'>{device.name}</div>
 				<div className='truncate text-13 text-white/50'>{subtitle ?? device.serial}</div>
 			</div>
 			{inactive && (
-				<span className='rounded-full bg-white/10 px-2.5 py-0.5 text-[12px] font-medium text-white/60'>
+				<span className='rounded-full bg-white/10 px-2.5 py-0.5 text-12 font-medium text-white/60'>
 					{t('storage-manager.inactive')}
 				</span>
 			)}
@@ -246,7 +248,7 @@ export function AcceleratorSection({
 			<div className='flex w-full items-center gap-4 rounded-12 border border-[#FF3434]/40 bg-[#FF3434]/10 p-4'>
 				<SsdChip sizeLabel='—' className='opacity-40' />
 				<div className='min-w-0 flex-1'>
-					<div className='truncate text-[15px] font-medium text-white'>{t('storage-manager.missing-drive')}</div>
+					<div className='truncate text-15 font-medium text-white'>{t('storage-manager.missing-drive')}</div>
 					<div className='truncate text-13 text-white/50'>{member.id}</div>
 				</div>
 				{replaceAction(member)}

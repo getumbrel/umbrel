@@ -291,7 +291,7 @@ export function ImmersiveDialogIconMessageKeyValue({
 				<IconComponent className={cn('h-5 w-5', iconClassName)} />
 			</div>
 			<div className='flex flex-1 text-14'>
-				<div className='flex-1 leading-tight font-normal -tracking-2 opacity-60'>{k}</div>
+				<div className='flex-1 leading-tight font-normal -tracking-2 text-white/60'>{k}</div>
 				<div className='leading-tight font-medium -tracking-2'>{v}</div>
 			</div>
 		</div>

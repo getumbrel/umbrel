@@ -74,7 +74,7 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro, isHdd = false
 							<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
 								{steps.map((step, index) => (
 									<div key={index} className='flex items-center gap-3 p-3 text-12 font-medium -tracking-3'>
-										<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold'>
+										<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-10 font-semibold'>
 											{index + 1}
 										</span>
 										<span>{step}</span>

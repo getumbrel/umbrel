@@ -176,12 +176,14 @@ export function InfoPanel({
 								</div>
 							</div>
 							{exposure.length > 0 && (
-								<dl className='mt-3 grid grid-cols-4 gap-2'>
+								// Even columns while they fit, wrapping to another row before
+								// a term or value would be cut
+								<dl className='mt-3 flex flex-wrap gap-2'>
 									{/* Term first for the reader, value first for the eye */}
 									{exposure.map(({value, label}) => (
-										<div key={label} className='flex min-w-0 flex-col-reverse'>
-											<dt className='truncate text-11 text-white/45'>{label}</dt>
-											<dd className='truncate text-13 font-medium tabular-nums'>{value}</dd>
+										<div key={label} className='flex flex-1 flex-col-reverse'>
+											<dt className='text-11 whitespace-nowrap text-white/45'>{label}</dt>
+											<dd className='text-13 font-medium whitespace-nowrap tabular-nums'>{value}</dd>
 										</div>
 									))}
 								</dl>
@@ -247,7 +249,7 @@ export function InfoPanel({
 								.then(revealItem)
 								.catch(() => navigateToDirectory(folder))
 						}
-						className='flex w-full items-center gap-2.5 rounded-xl bg-white/6 px-3 py-2.5 text-left transition-colors hover:bg-white/10'
+						className='flex w-full items-center gap-2.5 rounded-xl bg-white/6 px-3 py-2.5 text-left transition-colors hover:bg-white/10 contrast-more:ring-1 contrast-more:ring-white/40 contrast-more:ring-inset'
 					>
 						{/* The Files app's own icon, as in the dock */}
 						<img src='/assets/dock/dock-files.webp' alt='' className='size-7 shrink-0 rounded-[7px]' />
@@ -298,7 +300,7 @@ function Chip({
 			type='button'
 			title={title}
 			onClick={onClick}
-			className='flex max-w-full items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-1 text-12 text-white/90 transition-colors hover:bg-white/14'
+			className='flex max-w-full items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-1 text-12 text-white/90 transition-colors hover:bg-white/14 contrast-more:ring-1 contrast-more:ring-white/40 contrast-more:ring-inset'
 		>
 			{icon}
 			<span className='truncate'>{children}</span>

@@ -95,7 +95,9 @@ function ButtonContentForState({
 			return (
 				<>
 					{t('app.install')}{' '}
-					<span className='-tracking-normal whitespace-nowrap uppercase opacity-40'>{installSize}</span>
+					<span className='-tracking-normal whitespace-nowrap uppercase opacity-40 contrast-more:opacity-75'>
+						{installSize}
+					</span>
 				</>
 			)
 		case 'installing':
@@ -105,7 +107,7 @@ function ButtonContentForState({
 				<>
 					{text} {/*  */}
 					{/* 4ch to fit text "100%" */}
-					<span className='inline-block w-[4ch] text-right -tracking-[0.08em] opacity-40'>
+					<span className='inline-block w-[4ch] text-right -tracking-[0.08em] opacity-40 contrast-more:opacity-75'>
 						{progress === undefined ? UNKNOWN() : <AnimatedNumber to={progress} />}%
 					</span>
 				</>

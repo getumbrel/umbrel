@@ -17,7 +17,7 @@ export function ListEmojiWidget({
 	onClick?: (link?: string) => void
 }) {
 	// Older rows recede
-	const fades = ['opacity-100', 'opacity-70', 'opacity-45']
+	const fades = ['opacity-100', 'opacity-70 contrast-more:opacity-90', 'opacity-45 contrast-more:opacity-80']
 	return (
 		<WidgetShell
 			onClick={() => onClick?.(link)}
@@ -29,13 +29,13 @@ export function ListEmojiWidget({
 					<span className='w-4 shrink-0 text-center text-12 leading-none w-expanded:w-5 w-expanded:text-15'>
 						{limitToOneEmoji(item.emoji ?? '')}
 					</span>
-					<span className='min-w-0 truncate text-12 leading-tight font-semibold -tracking-2 opacity-85 w-expanded:text-13'>
+					<span className='min-w-0 truncate text-12 leading-tight font-semibold -tracking-2 text-white/85 w-expanded:text-13'>
 						{item.text}
 					</span>
 				</div>
 			))}
 			<div className='flex-1' />
-			<p className='max-w-full self-end truncate text-24 leading-none font-semibold -tracking-3 tabular-nums opacity-20 w-expanded:text-[33px]'>
+			<p className='max-w-full self-end truncate text-24 leading-none font-semibold -tracking-3 text-white/20 tabular-nums w-expanded:text-[33px]'>
 				{count ?? LOADING_DASH}
 			</p>
 		</WidgetShell>
@@ -44,7 +44,7 @@ export function ListEmojiWidget({
 
 // Three rows, one line each, over the count
 function Compact({items, count}: ListEmojiWidgetProps) {
-	const fades = ['opacity-100', 'opacity-70', 'opacity-40']
+	const fades = ['opacity-100', 'opacity-70 contrast-more:opacity-90', 'opacity-40 contrast-more:opacity-80']
 	return (
 		<div className={cn(compactContainerClass, 'gap-1.5')}>
 			{(items ? take(items, 3) : [loadingItem]).map((item, i) => (
@@ -54,7 +54,7 @@ function Compact({items, count}: ListEmojiWidgetProps) {
 				</div>
 			))}
 			<div className='flex-1' />
-			<div className='max-w-full self-end truncate text-15 leading-none font-semibold -tracking-3 tabular-nums opacity-30'>
+			<div className='max-w-full self-end truncate text-15 leading-none font-semibold -tracking-3 text-white/30 tabular-nums'>
 				{count ?? LOADING_DASH}
 			</div>
 		</div>

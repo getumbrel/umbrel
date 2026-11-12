@@ -273,7 +273,11 @@ export function SwapDialog({
 											<div
 												className={cn(
 													'flex size-5 items-center justify-center rounded-full border-2',
-													isTooSmall ? 'border-white/20' : isSelected ? 'border-brand bg-brand' : 'border-white/30',
+													isTooSmall
+														? 'border-white/20'
+														: isSelected
+															? 'border-brand bg-brand'
+															: 'border-white/30 contrast-more:border-white/70',
 												)}
 											>
 												{isSelected && !isTooSmall && <div className='size-2 rounded-full bg-white' />}
@@ -311,7 +315,7 @@ export function SwapDialog({
 
 						{/* Erase warning for devices without physical slots (the drive may have been used elsewhere before) */}
 						{selectedDevice && !selectedDevice.slot && (
-							<p className='text-[13px] text-yellow-500'>
+							<p className='text-13 text-yellow-500'>
 								<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 								{t('storage-manager.add-drive-erase-warning')}
 							</p>
@@ -327,7 +331,7 @@ export function SwapDialog({
 									t('storage-manager.swap.step-remove-old', {ssd: swappedLabelDefinite}),
 								].map((step, index) => (
 									<div key={index} className='flex items-center gap-3 p-3 text-12 font-medium -tracking-3'>
-										<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold'>
+										<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-10 font-semibold'>
 											{index + 1}
 										</span>
 										<span>{step}</span>
@@ -426,7 +430,7 @@ export function SwapDialog({
 								<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
 									{steps.map((step, index) => (
 										<div key={index} className='flex items-center gap-3 p-3 text-12 font-medium -tracking-3'>
-											<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold'>
+											<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-10 font-semibold'>
 												{index + 1}
 											</span>
 											<span>{step}</span>
@@ -511,7 +515,7 @@ export function SwapDialog({
 					<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
 						{steps.map((step, index) => (
 							<div key={index} className='flex items-start gap-3 p-3'>
-								<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold'>
+								<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-10 font-semibold'>
 									{index + 1}
 								</span>
 								<div className='flex flex-col gap-0.5'>
@@ -603,7 +607,7 @@ export function SwapDialog({
 							<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
 								{steps.map((step, index) => (
 									<div key={index} className='flex items-center gap-3 p-3 text-12 font-medium -tracking-3'>
-										<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold'>
+										<span className='flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-10 font-semibold'>
 											{index + 1}
 										</span>
 										<span>{step}</span>

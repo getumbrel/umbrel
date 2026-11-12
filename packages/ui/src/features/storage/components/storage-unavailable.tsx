@@ -68,6 +68,8 @@ export function StorageUnavailable({
 					size='md'
 					showScroll
 					aria-describedby={undefined}
+					// The inline glass outranks the window tint, which turns solid with Increase contrast
+					className='contrast-more:bg-black!'
 					style={{
 						backgroundColor: 'rgba(8, 8, 8, 0.5)',
 						backdropFilter: 'blur(80px)',

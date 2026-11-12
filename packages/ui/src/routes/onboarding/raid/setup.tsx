@@ -91,7 +91,7 @@ function FailSafeInfo({
 	// Mixed-size drives - show explanation and tip
 	if (unusedSize > 0) {
 		return (
-			<div className='flex flex-col gap-2 text-[13px] text-white/50'>
+			<div className='flex flex-col gap-2 text-13 text-white/50'>
 				<p>{t('onboarding.raid.failsafe.mixed-sizes', {smallest: smallestStr, wasted: unusedStr})}</p>
 				<p>
 					<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
@@ -106,7 +106,7 @@ function FailSafeInfo({
 	// The numbered ladders below assume the Umbrel Pro's 4 slots.
 	if (isGeneric) {
 		return (
-			<span className='text-[13px] text-white/50'>
+			<span className='text-13 text-white/50'>
 				{t('onboarding.raid.failsafe.protection-info-generic', {protection: protectionStr})}
 			</span>
 		)
@@ -117,7 +117,7 @@ function FailSafeInfo({
 		const futureWith3 = formatSize(smallestSize * 2)
 		const futureWith4 = formatSize(smallestSize * 3)
 		return (
-			<span className='text-[13px] text-white/50'>
+			<span className='text-13 text-white/50'>
 				{t('onboarding.raid.failsafe.protection-info-2ssds', {
 					protection: protectionStr,
 					smallest: smallestStr,
@@ -131,7 +131,7 @@ function FailSafeInfo({
 	if (deviceCount === 3) {
 		const futureWith4 = formatSize(smallestSize * 3)
 		return (
-			<span className='text-[13px] text-white/50'>
+			<span className='text-13 text-white/50'>
 				{t('onboarding.raid.failsafe.protection-info-3ssds', {
 					protection: protectionStr,
 					smallest: smallestStr,
@@ -170,7 +170,7 @@ function SsdSummaryList({
 								) : (
 									<TbCircleCheckFilled className='size-5 text-brand' />
 								)}
-								<span className='text-[14px] font-medium text-white/60 md:text-[15px]'>
+								<span className='text-14 font-medium text-white/60 md:text-15'>
 									{showSlotNumbers ? (
 										<Trans
 											t={t}
@@ -187,10 +187,10 @@ function SsdSummaryList({
 									)}
 								</span>
 							</div>
-							{warning && <p className='ml-7 text-[12px] text-[#F5A623]/80 md:text-[13px]'>{warning}</p>}
+							{warning && <p className='ml-7 text-12 text-[#F5A623]/80 md:text-13'>{warning}</p>}
 						</div>
 						{onHealthClick && (
-							<div className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1 md:hidden'>
+							<div className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] p-1 contrast-more:border-white/40 md:hidden'>
 								<TiInfoLarge className='size-4 text-white/60' />
 								{hasWarning && (
 									<span className='absolute -top-0.5 right-1.5 translate-x-1/3 -translate-y-1/3'>
@@ -570,7 +570,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 							draggable={false}
 							className='w-64 md:w-96'
 						/>
-						<p className='-mt-4 text-[13px] font-medium text-white/30'>{t('storage-manager.umbrel-pro')}</p>
+						<p className='-mt-4 text-13 font-medium text-white/30'>{t('storage-manager.umbrel-pro')}</p>
 					</>
 				)}
 				{/* Progress bar */}
@@ -643,7 +643,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 				)}
 				{/* They just chose this setup; only the Pro shows its stats line under the device photo */}
 				{!isGeneric && (
-					<p className='-mt-5 text-[14px] font-medium text-white/50'>
+					<p className='-mt-5 text-14 font-medium text-white/50'>
 						{failSafeEnabled
 							? t('onboarding.raid.success.storage-info-failsafe', {
 									available: availableStorage,
@@ -682,12 +682,12 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 			<div className='flex flex-1 flex-col justify-start gap-4 px-4 py-6 md:pt-10 md:pr-0 md:pb-0 md:pl-6'>
 				<div className='flex flex-col gap-1 md:gap-2'>
 					<h1
-						className='text-[20px] font-bold text-white/85 md:text-[24px]'
+						className='text-[20px] font-bold text-white/85 md:text-24'
 						style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 					>
 						{t('onboarding.raid.storage')}
 					</h1>
-					<p className='text-[14px] text-white/50 md:text-[16px]'>
+					<p className='text-14 text-white/50 md:text-16'>
 						{isGeneric ? t('onboarding.ssd-raid.ssds-found') : t('onboarding.raid.ssds-found')}
 					</p>
 				</div>
@@ -701,7 +701,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 				{/* Shut down link */}
 				<button
 					onClick={() => setShowShutdownDialog(true)}
-					className='w-fit text-[13px] text-white/50 underline-offset-2 transition-colors hover:text-white/70 hover:underline'
+					className='w-fit text-13 text-white/50 underline-offset-2 transition-colors hover:text-white/70 hover:underline'
 				>
 					{t('onboarding.raid.change-drives-link')}
 				</button>
@@ -718,7 +718,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 						>
 							{t('onboarding.raid.failsafe')}
 						</h2>
-						<p className='text-[14px] text-white/50 md:text-[16px]'>{t('onboarding.raid.failsafe.subtitle')}</p>
+						<p className='text-14 text-white/50 md:text-16'>{t('onboarding.raid.failsafe.subtitle')}</p>
 					</div>
 
 					{canEnableFailSafe ? (
@@ -740,21 +740,29 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 									    longest word: the label then keeps that width, and wraps its
 									    size under its name, while the others give way, instead of
 									    overprinting the next one */}
-									<div className='flex text-[14px] *:min-w-min *:pr-3'>
+									<div className='flex text-14 *:min-w-min *:pr-3'>
 										<span style={{width: `${(availableBytes / totalRoundedBytes) * 100}%`}}>
 											<span className='text-brand'>{t('onboarding.raid.storage-label')}</span>{' '}
-											<span className='font-medium text-brand opacity-60'>{availableStorage}</span>
+											<span className='font-medium text-brand opacity-60 contrast-more:opacity-100'>
+												{availableStorage}
+											</span>
 										</span>
 										<span style={{width: `${(failsafeBytes / totalRoundedBytes) * 100}%`}}>
 											<span style={{color: FAILSAFE_COLOR}}>{t('onboarding.raid.failsafe')}</span>{' '}
-											<span className='font-medium opacity-60' style={{color: FAILSAFE_COLOR}}>
+											<span
+												className='font-medium opacity-60 contrast-more:opacity-100'
+												style={{color: FAILSAFE_COLOR}}
+											>
 												{failsafeStorage}
 											</span>
 										</span>
 										{unusedBytes > 0 && (
 											<span style={{width: `${(unusedBytes / totalRoundedBytes) * 100}%`}}>
 												<span style={{color: WASTED_COLOR}}>{t('onboarding.raid.wasted')}</span>{' '}
-												<span className='font-medium opacity-60' style={{color: WASTED_COLOR}}>
+												<span
+													className='font-medium opacity-60 contrast-more:opacity-100'
+													style={{color: WASTED_COLOR}}
+												>
 													{unusedStorage}
 												</span>
 											</span>
@@ -795,7 +803,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 									isGeneric={isGeneric}
 								/>
 							) : (
-								<p className='text-[13px] text-white/50'>
+								<p className='text-13 text-white/50'>
 									<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 									{t('onboarding.raid.failsafe.warning-now-only')}
 								</p>
@@ -804,7 +812,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 					) : (
 						/* Info card - shown when only 1 SSD. Not a warning: continuing with one
 						   SSD is a fine setup, FailSafe just isn't applicable yet. */
-						<div className='rounded-xl bg-white/5 p-4 text-[14px] text-white/50'>
+						<div className='rounded-xl bg-white/5 p-4 text-14 text-white/50'>
 							{t('onboarding.raid.failsafe.single-ssd-info', {size: devices[0] ? formatSize(devices[0].size) : ''})}
 						</div>
 					)}
@@ -820,7 +828,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 
 					{/* Generic hardware gets an explicit erase confirmation dialog instead */}
 					{!isGeneric && (
-						<p className='-mt-1 text-[12px] text-white/40'>
+						<p className='-mt-1 text-12 text-white/40'>
 							{t('onboarding.raid.erase-footnote', {count: devices.length})}
 						</p>
 					)}
@@ -869,7 +877,7 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 					</p>
 					{/* With a single SSD FailSafe isn't available at all, so a "FailSafe 0TB" line would only confuse */}
 					{canEnableFailSafe && (
-						<p className='text-[14px] text-white/50'>
+						<p className='text-14 text-white/50'>
 							{t('onboarding.raid.failsafe')} <span style={{color: FAILSAFE_COLOR}}>{failsafeStorage}</span>
 							{unusedBytes > 0 && (
 								<>

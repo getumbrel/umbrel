@@ -376,7 +376,7 @@ export function MachineConsole({
 				<div className={cn(statusPillClass, 'px-4')}>
 					<div
 						className={cn(
-							'flex items-center gap-3 rounded-full bg-black/70 py-1 pl-3.5 text-12 text-white/60 backdrop-blur',
+							'flex items-center gap-3 rounded-full bg-black/70 py-1 pl-3.5 text-12 text-white/60 backdrop-blur contrast-more:bg-black/90 contrast-more:backdrop-blur-none',
 							notice.action ? 'pr-1' : 'pr-3.5',
 						)}
 					>
@@ -384,7 +384,7 @@ export function MachineConsole({
 						{notice.action && (
 							<button
 								type='button'
-								className='rounded-full bg-white/12 px-3 py-1 font-medium text-white transition-colors hover:bg-white/20'
+								className='rounded-full bg-white/12 px-3 py-1 font-medium text-white transition-colors hover:bg-white/20 contrast-more:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]'
 								onClick={notice.onAction}
 							>
 								{notice.action}
@@ -395,13 +395,13 @@ export function MachineConsole({
 			)}
 			{connectionState === 'disconnected' && (
 				<div className={cn(statusPillClass, 'pointer-events-none')}>
-					<span className='rounded-full bg-black/70 px-3 py-1.5 text-12 text-white/60 backdrop-blur'>
+					<span className='rounded-full bg-black/70 px-3 py-1.5 text-12 text-white/60 backdrop-blur contrast-more:bg-black/90 contrast-more:backdrop-blur-none'>
 						{t('machines.console-disconnected')}
 					</span>
 				</div>
 			)}
 			{connectionState === 'superseded' && (
-				<div className='absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm'>
+				<div className='absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm contrast-more:bg-black/90 contrast-more:backdrop-blur-none'>
 					<div className='flex max-w-sm flex-col items-center gap-4 px-6 text-center text-white'>
 						<p className='text-15 font-medium'>{t('machines.console-controlled-elsewhere')}</p>
 						<button

@@ -320,7 +320,8 @@ export default function CreateMachine() {
 							<span className='-mt-2 text-12 -tracking-2 text-destructive2-lightest'>{t('machines.name-taken')}</span>
 						)}
 						<span className='-mt-3 text-13 -tracking-2 text-white/40'>{sourceVersion}</span>
-						<span className='mt-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-12 -tracking-2 text-white/50 tabular-nums'>
+						{/* A pill on one line, and a rounded box rather than a lozenge if it wraps */}
+						<span className='mt-2 rounded-[1.25em] border border-white/10 bg-white/5 px-3 py-1.5 text-center text-12 -tracking-2 text-balance text-white/50 tabular-nums'>
 							{t('machines.cores-count', {count: effectiveCores})} ·{' '}
 							{t('machines.gb', {value: fixedMemoryGb ?? memoryGb})} ·{' '}
 							{diskSizeValid ? t('machines.gb', {value: diskSizeGb}) : '—'}
@@ -399,7 +400,8 @@ export default function CreateMachine() {
 							<div className='flex flex-col items-end gap-1.5'>
 								<Stepper
 									middle={
-										<div className='relative w-24'>
+										// Sized in em, so the digits keep their room as the text grows
+										<div className='relative w-[6.4em] text-15'>
 											{/* The digits-only handler lets us avoid native number-input spinners. */}
 											<Input
 												type='text'
@@ -411,7 +413,7 @@ export default function CreateMachine() {
 												aria-label={t('machines.disk-size')}
 												aria-invalid={diskInvalid || undefined}
 												aria-describedby={diskInvalid ? diskMinimumErrorId : undefined}
-												className='pr-9 text-right text-white tabular-nums'
+												className='pr-[2.4em] text-right text-white tabular-nums'
 											/>
 											<span className='pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-13 text-white'>
 												GB
@@ -496,7 +498,7 @@ export default function CreateMachine() {
 													>
 														<p className='px-1 pt-2 text-center text-12 leading-snug font-medium -tracking-2'>
 															<FaLock className='mr-1.5 inline-block size-[11px] align-[-0.1em] text-white/40' />
-															<span className='animate-text-shine bg-[linear-gradient(90deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.45)_40%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.45)_60%,rgba(255,255,255,0.45)_100%)] bg-[length:300%_100%] bg-clip-text bg-no-repeat text-transparent'>
+															<span className='animate-text-shine bg-[linear-gradient(90deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.45)_40%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.45)_60%,rgba(255,255,255,0.45)_100%)] bg-[length:300%_100%] bg-clip-text bg-no-repeat text-transparent contrast-more:animate-none contrast-more:bg-none contrast-more:text-white/85'>
 																{t('machines.configure-sign-in-save-note', {name: trimmedName || sourceName})}
 															</span>
 														</p>
@@ -545,8 +547,8 @@ export default function CreateMachine() {
 						<MachineNetworkModeRow value={networkMode} onChange={setNetworkMode} disabled={isCreating} />
 						{/* Custom images may target either supported guest architecture */}
 						{isCustomSource && (
-							<SpecRow label={t('machines.architecture')}>
-								<div className='flex flex-col items-end gap-2'>
+							<SpecRow label={t('machines.architecture')} wide>
+								<div className='flex flex-col items-start gap-2 @[30rem]:items-end'>
 									<div className='flex gap-2'>
 										{(['amd64', 'arm64'] as const).map((option) => (
 											<button

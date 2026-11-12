@@ -24,6 +24,10 @@ const defaultMonoFonts = [
 	'monospace',
 ]
 
+// Every text size grows by --text-boost, which Settings > Accessibility > Text size
+// sets (see index.css). Sizes written as arbitrary values (`text-[13px]`) stay fixed.
+const textSize = (px: number) => `calc(${px}px + var(--text-boost))`
+
 export default {
 	theme: {
 		fontFamily: {
@@ -117,22 +121,9 @@ export default {
 				4: '0.04',
 				6: '0.06',
 			},
-			fontSize: {
-				9: '9px',
-				11: '11px',
-				12: '12px',
-				13: '13px',
-				14: '14px',
-				15: '15px',
-				16: '16px',
-				17: '17px',
-				19: '19px',
-				24: '24px',
-				32: '32px',
-				36: '36px',
-				48: '48px',
-				56: '56px',
-			},
+			fontSize: Object.fromEntries(
+				[9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 24, 28, 32, 36, 48, 56].map((px) => [px, textSize(px)]),
+			),
 			backdropBlur: {
 				'4xl': '180px',
 			},
@@ -219,6 +210,8 @@ export default {
 				'text-shine': 'text-shine 2.8s cubic-bezier(0.33, 0, 0.15, 1) 0.2s 1',
 			},
 			typography: () => ({
+				// Markdown's own sizes are in em, so its base size carries the setting
+				sm: {css: {fontSize: 'calc(0.875rem + var(--text-boost))'}},
 				neutral: {
 					css: {
 						'--tw-prose-invert-bullets': 'rgb(255 255 255 / 50%)',

@@ -94,7 +94,7 @@ export function SheetTabs({
 							className={cn(
 								'h-8 max-w-56 shrink-0 truncate rounded-full px-3.5 text-13 font-medium -tracking-2 transition-[background-color,color] duration-200 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-hidden focus-visible:ring-inset',
 								index === active
-									? 'bg-white/20 text-white'
+									? 'bg-white/20 text-white contrast-more:bg-white/30 contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset'
 									: 'text-white/65 hover:bg-white/10 hover:text-white focus-visible:bg-white/10',
 							)}
 						>

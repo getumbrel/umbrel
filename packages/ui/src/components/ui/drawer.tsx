@@ -95,7 +95,7 @@ function DrawerDescription({
 	return (
 		<DrawerPrimitive.Description
 			ref={ref}
-			className={cn('text-12 leading-tight -tracking-2 opacity-50', className)}
+			className={cn('text-12 leading-tight -tracking-2 text-white/50', className)}
 			{...props}
 		/>
 	)

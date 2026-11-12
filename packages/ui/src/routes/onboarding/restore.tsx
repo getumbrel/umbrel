@@ -246,7 +246,8 @@ function RegularRestoreFlow() {
 									type='text'
 									value={repositoryPath}
 									readOnly
-									className='pr-28'
+									// Clears the Choose button, which grows with the text size
+									className='pr-[calc(7rem+var(--text-boost)*8)]'
 									title={repositoryPath || ''}
 									aria-disabled={!repositoryPath}
 									tabIndex={repositoryPath ? 0 : -1}
@@ -304,7 +305,7 @@ function RegularRestoreFlow() {
 									<span>{t('files-listing.loading')}</span>
 								</div>
 							) : backups.length === 0 ? (
-								<div className='text-center text-xs opacity-60'>{t('backups-restore.no-backups-found')}</div>
+								<div className='text-center text-xs text-white/60'>{t('backups-restore.no-backups-found')}</div>
 							) : (
 								<FadeScroller direction='y' className='umbrel-stable-gutter max-h-[45vh] overflow-y-auto'>
 									<div className='space-y-2'>

@@ -196,8 +196,9 @@ export function PitchReplay() {
 			{/* The stage clips at a fixed height with a fade-out mask at the top, so
 			    long exchanges scroll away upward like a real conversation. Scenes
 			    are keyed by step: the finished one slides up and out while the next
-			    starts from silence. */}
-			<div className='flex h-[210px] flex-col justify-end overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_32px)]'>
+			    starts from silence. It grows with larger text, so about as much of
+			    an exchange shows as at the default size. */}
+			<div className='flex h-[calc(210px+var(--text-boost)*12)] flex-col justify-end overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_32px)]'>
 				<AnimatePresence initial={false}>
 					<motion.div
 						key={playhead.step}
@@ -375,7 +376,7 @@ function AgentNameplate({agent}: {agent: McpAgent}) {
 			className='mt-1 flex items-center gap-1.5 self-start ps-0.5'
 		>
 			<AgentLogoPlate agent={agent} size={16} />
-			<span className='text-[11px] text-white/40'>{agent.name}</span>
+			<span className='text-11 text-white/40'>{agent.name}</span>
 		</motion.div>
 	)
 }

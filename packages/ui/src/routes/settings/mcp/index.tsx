@@ -878,10 +878,10 @@ function TokenConnectionRow({
 						)}
 					/>
 				</span>
-				{/* On narrow screens the line breaks between its two halves, never
-				    inside one */}
+				{/* On narrow screens the line breaks between its two halves, and inside
+				    one only when that half alone is wider than the line */}
 				<span className='block text-12 leading-tight text-white/40'>
-					<span className='whitespace-nowrap'>{added} ·</span> <span className='whitespace-nowrap'>{activity}</span>
+					<span className='inline-block'>{added} ·</span> <span className='inline-block'>{activity}</span>
 				</span>
 			</span>
 			<RowRemoveButton label={t('mcp-remove-agent', {name: token.label})} disabled={revoking} onClick={onRevoke} />

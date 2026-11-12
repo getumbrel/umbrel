@@ -264,7 +264,12 @@ const FileItemContent = ({item, items, machine}: FileItemProps & {machine: Machi
 						role='button'
 					>
 						{/* If the item is a dotfile, we decrease the brightness and opacity for the icon and text for a faded look */}
-						<div className={cn(isDotfile(item.name) && 'opacity-50 brightness-75')}>
+						<div
+							className={cn(
+								isDotfile(item.name) &&
+									'opacity-50 brightness-75 contrast-more:opacity-80 contrast-more:brightness-100',
+							)}
+						>
 							{view === 'icons' ? (
 								<IconsViewFileItem
 									item={item}
