@@ -2491,12 +2491,36 @@ export default class Raid {
 		if (raidState !== 'transitioning-to-failsafe') return
 
 		const pool = await this.getStatus()
+
+		// Everything below acts on the array or on the pool it was switched from, so do nothing unless
+		// we know we're running from the array
+		if (!pool.exists || !(await this.isRunningFromRaidData())) {
+			this.logger.error('Config indicates transition in progress but the array is not mounted')
+			return
+		}
+
 		const previousPoolName = `${pool.name}-previous-migration`
 
 		// Verify the previous pool exists (should always exist if config says transitioning)
 		const previousPool = await this.getPoolStatus(previousPoolName)
 		if (!previousPool.exists) {
 			this.logger.error('Config indicates transition in progress but previous pool not found')
+
+			// The new pool is a raidz, so if we're not running from one the boot script couldn't switch to
+			// it and booted the existing pool. Make the array a normal storage array again, so the switch
+			// isn't tried on every boot, and tell the user why FailSafe isn't on.
+			if (pool.topology !== 'raidz') {
+				await $`zfs destroy -r ${pool.name}@migration`.catch(() => {})
+				await $`zfs destroy -r ${pool.name}@migration-final`.catch(() => {})
+				await this.configStore.set('raid.state', 'normal')
+
+				this.failsafeTransitionStatus = {
+					state: 'error',
+					progress: 0,
+					error: "FailSafe wasn't enabled. Your existing array is still in use. Enable FailSafe again to retry.",
+				}
+				this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+			}
 			return
 		}
 

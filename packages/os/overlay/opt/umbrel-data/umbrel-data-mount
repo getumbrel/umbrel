@@ -90,20 +90,28 @@ handle_failsafe_transition() {
 
     echo ">>> Migration pool detected, performing final sync"
 
+    # We're called as a condition, where bash ignores errexit, so every step up to the first rename
+    # returns on failure explicitly. Until then the old pool is untouched and we boot back into it.
+
     # Import both pools
     echo ">>> Importing ${pool_name} pool"
-    zpool_import -f "$pool_name"
+    zpool_import -f "$pool_name" || return 1
 
     echo ">>> Importing ${migration_pool} pool"
-    zpool_import -f "$migration_pool"
+    zpool_import -f "$migration_pool" || return 1
+
+    # Remove the final snapshot of an earlier boot that didn't get as far as renaming the pools,
+    # so this one copies everything written since
+    zfs destroy -r "${pool_name}@migration-final" 2>/dev/null || true
+    zfs destroy -r "${migration_pool}@migration-final" 2>/dev/null || true
 
     # Create final snapshot and sync incrementally
     # Using --raw to preserve encryption (sends encrypted blocks without needing key loaded)
     echo ">>> Creating final snapshot"
-    zfs snapshot -r "${pool_name}@migration-final"
+    zfs snapshot -r "${pool_name}@migration-final" || return 1
 
     echo ">>> Sending incremental changes to migration pool"
-    zfs send --raw --replicate --large-block --compressed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
+    zfs send --raw --replicate --large-block --compressed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool" || return 1
 
     # Rename pools
     # umbrelos > umbrelos-previous-migration
@@ -112,9 +120,9 @@ handle_failsafe_transition() {
     # After the first rename succeeds, if the second rename fails, we rollback
     # by renaming umbrelos-previous-migration back to umbrelos.
     echo ">>> Renaming pools for migration"
-    zpool export "$pool_name"
-    zpool export "$migration_pool"
-    zpool_import "$pool_name" "$previous_pool"
+    zpool export "$pool_name" || return 1
+    zpool export "$migration_pool" || return 1
+    zpool_import "$pool_name" "$previous_pool" || return 1
     if zpool_import "$migration_pool" "$pool_name"; then
         echo ">>> Pool rename complete, umbreld will finish migration after boot"
     else
@@ -155,7 +163,12 @@ if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
 
     # Check if we're in the middle of a failsafe transition
     if [ "$RAID_STATE" = "transitioning-to-failsafe" ]; then
-        handle_failsafe_transition "$POOL_NAME" || true
+        if ! handle_failsafe_transition "$POOL_NAME"; then
+            # Export whatever was imported so we can import the old pool again in the usual mount process
+            echo ">>> ERROR: Failed to switch to the migration pool, booting the existing pool"
+            zpool export "${POOL_NAME}-migration" 2>/dev/null || true
+            zpool export "$POOL_NAME" 2>/dev/null || true
+        fi
     fi
 
     # Import the pool normally
