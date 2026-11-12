@@ -155,6 +155,15 @@ data class SavedDevice(
 
 		fun isValidLocalEndpointHost(host: String): Boolean = isIPv4Address(host) || isBonjourHostname(host)
 
+		/**
+		 * A .local name, or an IPv4 address on an ordinary LAN, IPv4 link-local or in Tailscale's
+		 * range. Public certificate authorities issue certificates for none of these, so whatever
+		 * answers there can pass a check against the Umbrel's own CA but never the phone's system
+		 * trust. The in-app browser opens the Umbrel only at these, because WebView applies system
+		 * trust before the app is asked.
+		 */
+		fun isPrivateEndpointHost(host: String): Boolean = isSupportedManualIPv4Address(host) || isBonjourHostname(host)
+
 		private fun isAsciiLetterOrDigit(c: Char): Boolean = c in '0'..'9' || c in 'A'..'Z' || c in 'a'..'z'
 
 		private fun uniqueAddresses(values: List<String>): List<String> {

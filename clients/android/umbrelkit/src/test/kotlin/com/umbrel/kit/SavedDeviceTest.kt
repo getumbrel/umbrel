@@ -38,6 +38,25 @@ class SavedDeviceTest {
 	}
 
 	@Test
+	fun privateEndpointHostsAreLocalNamesAndLanLinkLocalAndTailscaleAddresses() {
+		assertTrue(SavedDevice.isPrivateEndpointHost("umbrel.local"))
+		assertTrue(SavedDevice.isPrivateEndpointHost("192.168.1.5"))
+		assertTrue(SavedDevice.isPrivateEndpointHost("10.0.0.1"))
+		assertTrue(SavedDevice.isPrivateEndpointHost("172.31.255.254"))
+		assertTrue(SavedDevice.isPrivateEndpointHost("169.254.10.10"))
+		assertTrue(SavedDevice.isPrivateEndpointHost("100.64.0.1"))
+		// Nothing else, least of all an address or name a public authority can certify.
+		assertFalse(SavedDevice.isPrivateEndpointHost("8.8.8.8"))
+		assertFalse(SavedDevice.isPrivateEndpointHost("100.128.0.1"))
+		assertFalse(SavedDevice.isPrivateEndpointHost("172.32.0.1"))
+		assertFalse(SavedDevice.isPrivateEndpointHost("umbrel.example.com"))
+		assertFalse(SavedDevice.isPrivateEndpointHost("umbrel.my-tailnet.ts.net"))
+		assertFalse(SavedDevice.isPrivateEndpointHost("umbrel"))
+		assertFalse(SavedDevice.isPrivateEndpointHost("127.0.0.1"))
+		assertFalse(SavedDevice.isPrivateEndpointHost(""))
+	}
+
+	@Test
 	fun connectionHostsDeduplicateCaseInsensitively() {
 		val device = SavedDevice(id = "id", name = "Umbrel", host = "umbrel.local", addresses = listOf("192.168.1.5", "UMBREL.LOCAL", "", "192.168.1.5"))
 		assertEquals(listOf("umbrel.local", "192.168.1.5"), device.connectionHosts)

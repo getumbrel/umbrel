@@ -808,7 +808,8 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	// identity. Every page is therefore a secure context with no certificate warning, and
 	// apps that need HTTPS simply work.
 
-	val browserHosts: List<String> get() = BrowserRouting.addressOptions(_state.value.device)
+	/** The saved addresses the browser counts as the Umbrel; see [BrowserContext.isUmbrelHost]. */
+	val browserHosts: List<String> get() = BrowserRouting.addressOptions(_state.value.device).filter(BrowserContext::isUmbrelHost)
 
 	suspend fun browserUrl(path: String = "", query: List<Pair<String, String>> = emptyList()): Uri? {
 		val host = browserHostForOpening() ?: return null
@@ -820,8 +821,13 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		return BrowserRouting.appUrl(app, BrowserContext.bracketed(host), "https")?.let(Uri::parse)
 	}
 
-	/** umbrelOS and its apps use the same connection as the rest of the app. */
-	private suspend fun browserHostForOpening(): String? = attempt { Umbreld.resolvedHost(_state.value.device.nativeTarget) }
+	/**
+	 * umbrelOS and its apps use the same connection as the rest of the app, at an address the
+	 * browser counts as the Umbrel.
+	 */
+	private suspend fun browserHostForOpening(): String? = attempt {
+		Umbreld.resolvedHost(Umbreld.Target(_state.value.device.id, browserHosts))
+	}
 
 	/**
 	 * Opens umbrelOS at [path], in the app. With [reportUnavailable], repeated taps are ignored

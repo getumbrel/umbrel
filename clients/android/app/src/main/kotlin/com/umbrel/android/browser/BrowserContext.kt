@@ -17,6 +17,7 @@ import com.umbrel.android.BuildConfig
 import com.umbrel.android.R
 import com.umbrel.kit.BrowserSession
 import com.umbrel.kit.BrowserSessionStatus
+import com.umbrel.kit.SavedDevice
 import com.umbrel.kit.SecretStore
 import com.umbrel.kit.Umbreld
 import com.umbrel.kit.browserSessionAccountId
@@ -49,7 +50,7 @@ internal class BrowserContext private constructor(
 	session: BrowserSession?,
 	private val scope: CoroutineScope,
 ) {
-	var hosts: Set<String> = hosts.map(::normalized).toSet()
+	var hosts: Set<String> = umbrelHosts(hosts)
 		private set
 
 	var session: BrowserSession? = session
@@ -78,7 +79,7 @@ internal class BrowserContext private constructor(
 	private val target: Umbreld.Target get() = Umbreld.Target(deviceId, hosts.toList())
 
 	fun updateHosts(hosts: Collection<String>) {
-		val updated = this.hosts + hosts.map(::normalized)
+		val updated = this.hosts + umbrelHosts(hosts)
 		if (updated == this.hosts) return
 		this.hosts = updated
 		replaceScripts()
@@ -383,6 +384,20 @@ internal class BrowserContext private constructor(
 		fun offscreenContext(context: Context): Context = ContextThemeWrapper(context.applicationContext, R.style.Theme_Umbrel)
 
 		fun normalized(host: String): String = host.removePrefix("[").removeSuffix("]").trimEnd('.').lowercase()
+
+		/**
+		 * Whether a page at a saved address counts as the Umbrel. WebView checks a page's
+		 * certificate against the system's certificate authorities first, asks the app only when
+		 * that fails, and gives the app no way to refuse a certificate that check accepted. So the
+		 * Umbrel's pinned CA decides alone only where no public authority issues certificates:
+		 * .local names, and private, link-local and Tailscale IPv4 addresses. Any other saved
+		 * address, a public one for example, is another website here: its pages get no session
+		 * and show their own address.
+		 */
+		fun isUmbrelHost(host: String): Boolean = SavedDevice.isPrivateEndpointHost(normalized(host))
+
+		/** The addresses among [hosts] that count as the Umbrel, as [isUmbrel] compares them. */
+		fun umbrelHosts(hosts: Collection<String>): Set<String> = hosts.filter(::isUmbrelHost).map(::normalized).toSet()
 
 		/** An IPv6 literal in the brackets a URL needs. */
 		fun bracketed(host: String): String =

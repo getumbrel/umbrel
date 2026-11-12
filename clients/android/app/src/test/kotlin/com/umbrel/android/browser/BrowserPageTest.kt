@@ -3,6 +3,8 @@ package com.umbrel.android.browser
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import androidx.compose.ui.graphics.Color
+import com.umbrel.android.main.BrowserRouting
+import com.umbrel.kit.SavedDevice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -56,5 +58,26 @@ class BrowserPageTest {
 		assertEquals("umbrel.local:8080", BrowserContext.bracketed("umbrel.local:8080"))
 		assertEquals("umbrel.local", BrowserContext.normalized("UMBREL.local."))
 		assertEquals("fd7a::1", BrowserContext.normalized("[fd7a::1]"))
+	}
+
+	@Test
+	fun onlyAddressesNoPublicAuthorityCertifiesCountAsTheUmbrel() {
+		val saved = listOf(
+			"UMBREL.local.", "192.168.1.5", "100.64.0.7", "169.254.3.4", "10.0.0.2",
+			"8.8.8.8", "umbrel.example.com", "umbrel.my-tailnet.ts.net", "fd7a:115c:a1e0::1", "",
+		)
+		assertEquals(setOf("umbrel.local", "192.168.1.5", "100.64.0.7", "169.254.3.4", "10.0.0.2"), BrowserContext.umbrelHosts(saved))
+	}
+
+	@Test
+	fun aSavedPublicAddressIsNotTheUmbrel() {
+		val device = SavedDevice(id = "device", name = "Umbrel", host = "umbrel.local", addresses = listOf("192.168.1.20", "8.8.8.8"))
+		val hosts = BrowserContext.umbrelHosts(BrowserRouting.addressOptions(device))
+		assertEquals(setOf("umbrel.local", "192.168.1.20"), hosts)
+		// So it isn't one of a page's own origins either.
+		assertEquals(
+			setOf("https://umbrel.local:2000", "https://192.168.1.20:2000"),
+			PageDownloads.originRules(Uri.parse("https://umbrel.local:2000"), hosts),
+		)
 	}
 }
