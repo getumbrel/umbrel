@@ -25,7 +25,13 @@ export function SheetLayout() {
 	const navigate = useNavigate()
 	const location = useLocation()
 
-	const [open, setOpen] = useState(true)
+	// A close belongs to the location it was asked on. The layout persists
+	// between its routes, so a plain boolean would outlive a navigation that
+	// lands mid-close (say, a dock click) and leave the next window shut.
+	const [closedLocationKey, setClosedLocationKey] = useState<string>()
+	if (closedLocationKey !== undefined && closedLocationKey !== location.key) setClosedLocationKey(undefined)
+	const open = closedLocationKey === undefined
+	const setOpen = (nextOpen: boolean) => setClosedLocationKey(nextOpen ? undefined : location.key)
 
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
@@ -55,7 +61,10 @@ export function SheetLayout() {
 	useAfterDelayedClose(
 		open,
 		() => {
-			navigate('/')
+			// Navigations render as transitions, so one that started during the exit
+			// animation may not be on screen yet. It still wins over going home.
+			// React Router keeps the newest entry's key in history.state.
+			if ((window.history.state?.key ?? 'default') === location.key) navigate('/')
 		},
 		SHEET_EXIT_DURATION_MS,
 	)
