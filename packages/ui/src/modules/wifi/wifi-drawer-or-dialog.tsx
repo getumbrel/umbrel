@@ -253,13 +253,16 @@ function Network({
 		passwordInputRef.current?.focus()
 	}, [connectMut.isError])
 
+	// Reset error and password once the network is collapsed. Resetting re-renders
+	// and the mutation object is new on every render, so only its stable `reset`
+	// can be a dependency: depending on the object loops forever.
+	const {reset: resetConnect} = connectMut
 	useEffect(() => {
-		// Reset error and password
 		if (!isOpen) {
-			connectMut.reset()
+			resetConnect()
 			setPassword('')
 		}
-	}, [isOpen, connectMut])
+	}, [isOpen, resetConnect])
 
 	const connect = ({ssid, password}: {ssid: string; password?: string}) => {
 		connectMut.mutate({ssid, password})
