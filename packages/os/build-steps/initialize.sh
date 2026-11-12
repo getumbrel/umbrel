@@ -36,6 +36,12 @@ echo 'Acquire::Retries "10";' | tee /etc/apt/apt.conf.d/90snapshot-retries
 
 apt-get update --yes
 
+# Upgrade the packages that come with the Debian base image to the versions in
+# the apt snapshot. Packages we install come from the snapshot, but without this
+# the base image's own packages keep the versions from the image's date and
+# miss any security updates released after it.
+apt-get upgrade --yes
+
 # Install systemd
 #
 # We do this here as the Rasperry Pi setup requires Systemd. Without it, it will not
