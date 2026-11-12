@@ -586,11 +586,12 @@ export default function MachineSettings() {
 			</div>
 
 			{/* Footer: context on the left, commitment on the right */}
-			<div className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 sm:flex-row sm:items-center'>
+			<div className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 md:flex-row md:items-center'>
 				<span className='text-13 -tracking-2 text-white/35'>
 					{isInstalling ? t('machines.settings-unavailable-installing') : ''}
 				</span>
-				<div className='flex shrink-0 flex-col-reverse gap-2.5 sm:flex-row sm:items-center'>
+				{/* Stacked below md, where dialog-size buttons are full-width */}
+				<div className='flex shrink-0 flex-col-reverse gap-2.5 md:flex-row md:items-center'>
 					<Button size='dialog' onClick={() => navigate(machinePath(machine.id))} disabled={isSaving}>
 						{t('cancel')}
 					</Button>

@@ -696,14 +696,14 @@ export default function CreateMachine() {
 				initial={{opacity: 0}}
 				animate={{opacity: 1}}
 				transition={{delay: 0.2, duration: 0.35, ease: 'easeOut'}}
-				className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 sm:flex-row sm:items-center'
+				className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 md:flex-row md:items-center'
 			>
-				<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-sm:hidden'}`}>
+				<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-md:hidden'}`}>
 					{t('machines.configure-installs-itself', {os: sourceName})}
 				</span>
-				{/* Stacked with the primary on top below sm (dialog-size buttons are
-				    full-width there), a Cancel→Create row from sm up */}
-				<div className='flex shrink-0 flex-col-reverse gap-2.5 sm:flex-row sm:items-center'>
+				{/* Stacked with the primary on top below md (dialog-size buttons are
+				    full-width there), a Cancel→Create row from md up */}
+				<div className='flex shrink-0 flex-col-reverse gap-2.5 md:flex-row md:items-center'>
 					<Button size='dialog' onClick={() => navigate(MACHINES_ADD_PATH)} disabled={isCreating}>
 						{t('cancel')}
 					</Button>
