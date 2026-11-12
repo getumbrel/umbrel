@@ -99,6 +99,9 @@ export function PasswordInput({
 >) {
 	const {t} = useTranslation()
 	const [showPassword, setShowPassword] = React.useState(false)
+	const errorId = React.useId()
+	// Its own error adds to what a form field already says describes it
+	const describedBy = [inputProps['aria-describedby'], error && errorId].filter(Boolean).join(' ') || undefined
 	return (
 		<div className={className}>
 			<div className={cn(iconRightClasses.root)}>
@@ -106,6 +109,8 @@ export function PasswordInput({
 					{...inputProps}
 					ref={inputRef}
 					variant={error ? 'destructive' : undefined}
+					aria-invalid={error ? true : inputProps['aria-invalid']}
+					aria-describedby={describedBy}
 					placeholder={label}
 					type={showPassword ? 'text' : 'password'}
 					className={iconRightClasses.input}
@@ -125,12 +130,12 @@ export function PasswordInput({
 					{showPassword ? <TbEyeOff className={iconRightClasses.icon} /> : <TbEye className={iconRightClasses.icon} />}
 				</button>
 			</div>
-			<AnimatedInputError>{error}</AnimatedInputError>
+			<AnimatedInputError id={errorId}>{error}</AnimatedInputError>
 		</div>
 	)
 }
 
-export function AnimatedInputError({children}: {children: React.ReactNode}) {
+export function AnimatedInputError({children, id}: {children: React.ReactNode; id?: string}) {
 	const [showShake, setShowShake] = React.useState(false)
 	const prev = usePreviousDistinct(children)
 
@@ -144,6 +149,7 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 		<AnimatePresence>
 			{children && (
 				<motion.div
+					id={id}
 					className={showShake ? 'mt-1 animate-shake' : 'mt-1'}
 					onAnimationEnd={() => setShowShake(false)}
 					initial={{

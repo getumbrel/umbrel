@@ -226,7 +226,8 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 				}}
 			>
 				{/* prevent clicks inside the drawer from triggering actions */}
-				<DrawerContent onClick={preventClickPropagation} onDoubleClick={preventClickPropagation}>
+				{/* Scrolls, for a phone short on room with its keyboard up */}
+				<DrawerContent withScroll onClick={preventClickPropagation} onDoubleClick={preventClickPropagation}>
 					<DrawerHeader>
 						<DrawerTitle>{drawerTitle}</DrawerTitle>
 						<DrawerDescription>{drawerDescription}</DrawerDescription>

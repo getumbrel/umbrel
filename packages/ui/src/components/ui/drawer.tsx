@@ -1,12 +1,16 @@
 import * as React from 'react'
+import {mergeRefs} from 'react-merge-refs'
 import {Drawer as DrawerPrimitive} from 'vaul'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {preventDialogDismissForToasts} from '@/components/ui/shared/dialog'
+import {useStayAboveKeyboard} from '@/hooks/use-stay-above-keyboard'
 import {cn} from '@/lib/utils'
 
+// The keyboard is DrawerContent's to make room for (see useStayAboveKeyboard),
+// so vaul's own attempt at it is off
 const Drawer = ({shouldScaleBackground = false, ...props}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-	<DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
+	<DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} repositionInputs={false} {...props} />
 )
 
 const DrawerTrigger = DrawerPrimitive.Trigger
@@ -38,14 +42,20 @@ function DrawerContent({
 	withScroll?: boolean
 	ref?: React.Ref<React.ComponentRef<typeof DrawerPrimitive.Content>>
 }) {
+	const [drawer, setDrawer] = React.useState<HTMLDivElement | null>(null)
+	useStayAboveKeyboard(drawer)
+
 	return (
 		<DrawerPortal>
 			<DrawerOverlay />
 			<DrawerPrimitive.Content
-				ref={ref}
+				ref={mergeRefs([ref, setDrawer])}
 				className={cn(
 					'umbrel-window-shadow umbrel-window-surface-top fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col gap-5 bg-[#0A0A0A] p-5 outline-hidden low:mt-3 low:max-h-[calc(100%-12px)]',
-					fullHeight && 'top-0',
+					// With the keyboard up it ends where the keyboard starts, and has what's
+					// left above it to fit in
+					'data-keyboard:bottom-(--visible-bottom) data-keyboard:max-h-[calc(100%-var(--visible-top)-var(--visible-bottom)-12px)] data-low:mt-3',
+					fullHeight && 'top-0 data-keyboard:top-(--visible-top)',
 					className,
 				)}
 				{...props}
