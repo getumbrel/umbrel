@@ -1,4 +1,5 @@
 import {Search as SearchIcon} from 'lucide-react'
+import {motion, useReducedMotion} from 'motion/react'
 import {
 	createContext,
 	useCallback,
@@ -93,6 +94,10 @@ const EXIT_HOLD_MS = 240
 const NAVIGATION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'])
 // How long after the last keystroke the orb settles
 const STIR_SETTLE_MS = 450
+// A press squeezes the orb; letting go kicks it back out past where it was,
+// and it settles
+const ORB_SQUEEZE = {scale: 0.88, transition: {type: 'spring', visualDuration: 0.15, bounce: 0}} as const
+const ORB_RELEASE = {type: 'spring', visualDuration: 0.45, bounce: 0.55, velocity: 1.5} as const
 
 export function CmdkMenu() {
 	const {t} = useTranslation()
@@ -233,6 +238,7 @@ export function CmdkMenu() {
 				energy={energy}
 				pressed={pressed}
 				pulseKey={pulseKey}
+				onPress={stir}
 			/>
 			<CmdkCard>
 				<CommandInput
@@ -301,20 +307,25 @@ export function CmdkMenu() {
 }
 
 // The orb and its glow. It rises into place as the palette opens and sinks
-// away as it closes (keyframes in index.css); keys press it, a space flashes it.
+// away as it closes (keyframes in index.css); keys press it, a space flashes
+// it. It's the one thing on the stage besides the card that a press doesn't
+// dismiss: the orb squeezes under it, stirs, and pops back when let go.
 function CmdkOrbStage({
 	size,
 	palette,
 	energy,
 	pressed,
 	pulseKey,
+	onPress,
 }: {
 	size: number
 	palette: OrbPalette
 	energy: number
 	pressed: boolean
 	pulseKey: number
+	onPress: () => void
 }) {
+	const reduceMotion = useReducedMotion()
 	return (
 		<div className='cmdk-orb-stage relative mb-4 shrink-0 sm:mb-5' style={{width: size, height: size}}>
 			<div
@@ -325,7 +336,16 @@ function CmdkOrbStage({
 				}}
 			/>
 			<div className='cmdk-orb-body relative' data-pressed={pressed ? '' : undefined}>
-				<Orb size={size} palette={palette} energy={energy} pulseKey={pulseKey} />
+				<motion.div
+					className='pointer-events-auto rounded-full [-webkit-tap-highlight-color:transparent]'
+					whileTap={reduceMotion ? undefined : ORB_SQUEEZE}
+					transition={ORB_RELEASE}
+					onTapStart={onPress}
+					// Keep the caret in the field
+					onMouseDown={(event) => event.preventDefault()}
+				>
+					<Orb size={size} palette={palette} energy={energy} pulseKey={pulseKey} />
+				</motion.div>
 			</div>
 		</div>
 	)
@@ -360,7 +380,10 @@ function CmdkCard({children}: {children: React.ReactNode}) {
 	}, [])
 
 	return (
-		<div ref={outerRef} className={cn(materialSurfaceClasses.modal, 'cmdk-card w-full overflow-hidden')}>
+		<div
+			ref={outerRef}
+			className={cn(materialSurfaceClasses.modal, 'cmdk-card pointer-events-auto w-full overflow-hidden')}
+		>
 			<div ref={innerRef} className='p-3'>
 				{children}
 			</div>

@@ -37,6 +37,10 @@ type CommandDialogProps = DialogProps & {
 // results card) paints and animates itself. Radix keeps the stage mounted for
 // as long as an animation runs on it, so a no-op hold on close (see
 // `.cmdk-stage` in index.css) gives the children time to leave.
+//
+// The stage is transparent to the pointer too: a press anywhere it shows
+// through lands on the overlay and dismisses, like any press outside. What it
+// holds takes the pointer back with `pointer-events-auto`.
 const CommandDialog = ({children, contentClassName, commandProps, onEscapeKeyDown, ...props}: CommandDialogProps) => {
 	const {className: commandClassName, ...restCommandProps} = commandProps ?? {}
 	const returnFocus = useReturnFocus({})
@@ -48,6 +52,8 @@ const CommandDialog = ({children, contentClassName, commandProps, onEscapeKeyDow
 				onEscapeKeyDown={onEscapeKeyDown}
 				{...returnFocus}
 				aria-describedby={undefined}
+				// Inline, to win over the `pointer-events: auto` Radix sets on the content
+				style={{pointerEvents: 'none'}}
 				className={cn(
 					'cmdk-stage fixed left-1/2 z-[999] flex -translate-x-1/2 flex-col items-center outline-hidden',
 					'top-4 max-h-[calc(100dvh-32px)] w-full max-w-[calc(100%-32px)] sm:max-w-[720px] lg:top-[8%] lg:max-h-[84dvh]',
