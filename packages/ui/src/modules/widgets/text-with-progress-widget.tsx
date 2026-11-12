@@ -45,10 +45,9 @@ export function TextWithProgressWidget({
 				{progressLabel || (progress ? t('widget.progress.in-progress') : LOADING_DASH)}
 			</p>
 			<Progress
-				className='mt-1.5 w-expanded:mt-2'
+				className='mt-1.5 shadow-glass-track w-expanded:mt-2'
 				value={Number(progress) * 100}
 				aria-label={title}
-				trackClassName='shadow-glass-track'
 			/>
 		</WidgetShell>
 	)
@@ -62,7 +61,7 @@ function Compact({title, text, progress = 0}: TextWithProgressWidgetProps) {
 			<div className={compactValueClass}>{text ?? LOADING_DASH}</div>
 			<div className='flex-1' />
 			<div className={compactLabelClass}>{Math.round(Number(progress) * 100)}%</div>
-			<Progress value={Number(progress) * 100} aria-label={title} trackClassName='shadow-glass-track' />
+			<Progress className='shadow-glass-track' value={Number(progress) * 100} aria-label={title} />
 		</div>
 	)
 }
