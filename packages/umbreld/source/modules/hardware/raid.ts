@@ -612,6 +612,16 @@ export default class Raid {
 			this.logger.error('Failed to complete FailSafe transition:', error)
 		})
 
+		// Apply the current special_small_blocks value to pools with an accelerator. The value is
+		// set when an accelerator is added, so this migrates accelerators added before we changed it.
+		// Only newly written blocks are affected.
+		try {
+			const pool = await this.getStatus()
+			if (pool.exists && pool.accelerator?.exists) await this.#setSpecialSmallBlocks(pool.name)
+		} catch (error) {
+			this.logger.error('Failed to set special_small_blocks', error)
+		}
+
 		// Check daily for a due scrub. The persisted deadline survives Umbreld restarts,
 		// and a new/legacy pool gets its first scrub deadline 30 days from now.
 		if (await this.configStore.get('raid.poolName')) {
@@ -1766,6 +1776,12 @@ export default class Raid {
 		return true
 	}
 
+	// Set special_small_blocks on a pool with an accelerator. See addAccelerator for why we use 64k.
+	async #setSpecialSmallBlocks(poolName: string): Promise<void> {
+		await $`zfs set special_small_blocks=64K ${poolName}`
+		this.logger.log(`Set special_small_blocks to 64K on pool '${poolName}'`)
+	}
+
 	// Add SSD accelerator device to an HDD pool.
 	//
 	// The SSD is partitioned into L2Arc (read cache) and special vdev (metadata + small blocks) partitions.
@@ -1777,10 +1793,14 @@ export default class Raid {
 	// addressing from consuming too much L1Arc (RAM). At 128k block size, the 10x total cap results
 	// in ~1% of memory dedicated to L2Arc addressing. The remainder of each device goes to the special vdev.
 	//
-	// We set special_small_blocks=32k so any block that compresses to ≤32k (or any file ≤32k total) lands
-	// on the special vdev. This captures most OS/app files (configs, logs, container layers) while keeping
-	// bulk data on HDDs. On a 2TB Umbrel dataset this is ~15GB. 64k would jump to ~150GB which is
-	// unpredictable on larger/different workloads, so we stay conservative.
+	// We set special_small_blocks=64k so any block that compresses to ≤64k lands on the special vdev.
+	// That's every file ≤64k, plus any 128k block of a larger file that compresses to half size or better.
+	// This captures most OS/app files (configs, logs, container layers, thumbnails) while keeping bulk
+	// data on HDDs.
+	//
+	// On a real 2TB Umbrel dataset (mostly incompressible data) blocks ≤64k total ~31GB (~1.6% of data),
+	// vs ~9GB (~0.5%) for ≤32k. If the special vdev does fill up, ZFS stops sending small blocks to it at
+	// 75% full and keeps the rest for metadata, so the worst case is that new small blocks go to the HDDs.
 	async addAccelerator(deviceIds: string[]): Promise<boolean> {
 		return this.#withPoolMutation('RAID accelerator addition', () => this.#addAccelerator(deviceIds))
 	}
@@ -1838,8 +1858,7 @@ export default class Raid {
 		}
 
 		// Store not only metadata but also small blocks on the special vdev
-		// 32k is very safe but we could consider 64k for users with very large special vdevs.
-		await $`zfs set special_small_blocks=32K ${pool.name}`
+		await this.#setSpecialSmallBlocks(pool.name)
 
 		await this.configStore.set('raid.accelerator', {
 			devices: acceleratorDevices,

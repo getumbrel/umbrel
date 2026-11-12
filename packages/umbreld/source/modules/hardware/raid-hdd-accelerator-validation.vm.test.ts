@@ -116,7 +116,7 @@ describe.each(driveBuses)('RAID HDD accelerator validation in storage mode (%s)'
 	test('sets special_small_blocks on the pool', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		const value = (await umbreld.vm.ssh(`zfs get -H -o value special_small_blocks ${status.name}`)).trim()
-		expect(value).toBe('32K')
+		expect(value).toBe('64K')
 	})
 
 	test('reports the accelerator after setup', async () => {
@@ -129,6 +129,10 @@ describe.each(driveBuses)('RAID HDD accelerator validation in storage mode (%s)'
 	})
 
 	test('preserves the accelerator across reboot', async () => {
+		// Simulate an accelerator added by an older release that used 32K
+		const {name} = await umbreld.client.hardware.raid.getStatus.query()
+		await umbreld.vm.ssh(`zfs set special_small_blocks=32K ${name}`)
+
 		await umbreld.vm.powerOff()
 		await umbreld.vm.powerOn()
 		await umbreld.waitForStartup({waitForUser: true})
@@ -140,6 +144,12 @@ describe.each(driveBuses)('RAID HDD accelerator validation in storage mode (%s)'
 		expect(status.accelerator?.devices?.[0]).toMatchObject({id: acceleratorDeviceId1})
 		expectSizeToBeWithinTenPercentOfGb(status.accelerator?.l2arcSize, expectedSingleAcceleratorL2arcSizeGb)
 		expectSizeToBeWithinTenPercentOfGb(status.accelerator?.specialSize, expectedSingleAcceleratorSpecialSizeGb)
+	})
+
+	test('migrates special_small_blocks on startup', async () => {
+		const status = await umbreld.client.hardware.raid.getStatus.query()
+		const value = (await umbreld.vm.ssh(`zfs get -H -o value special_small_blocks ${status.name}`)).trim()
+		expect(value).toBe('64K')
 	})
 
 	test('rejects replacing a healthy accelerator with itself', async () => {
