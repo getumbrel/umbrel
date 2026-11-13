@@ -1292,7 +1292,6 @@ build_usb_serial_args() {
 # Build QEMU HDD arguments for connected devices (SATA via AHCI)
 build_hdd_args() {
   local hdd_args=""
-  local has_hdd=false
 
   for (( slot=1; slot<=MAX_HDD_SLOTS; slot++ )); do
     local exists connected
@@ -1313,14 +1312,19 @@ build_hdd_args() {
         rotation_rate=1
       fi
 
-      # Add AHCI controller on first HDD
-      if [[ "$has_hdd" == "false" ]]; then
-        hdd_args="$hdd_args -device ahci,id=ahci"
-        has_hdd=true
+      # QEMU's AHCI controller has six ports, so slots 7 and up go on a second one.
+      # Add each controller on its first HDD.
+      local controller="ahci" port=$(( slot - 1 ))
+      if (( slot > 6 )); then
+        controller="ahci2"
+        port=$(( slot - 7 ))
+      fi
+      if [[ "$hdd_args" != *"id=${controller} "* ]]; then
+        hdd_args="$hdd_args -device ahci,id=${controller} "
       fi
 
       hdd_args="$hdd_args -drive file=${disk_path},format=qcow2,if=none,id=hdd${slot},cache=none,discard=unmap,aio=threads"
-      hdd_args="$hdd_args -device ide-hd,drive=hdd${slot},bus=ahci.$(( slot - 1 )),serial=${serial},rotation_rate=${rotation_rate}"
+      hdd_args="$hdd_args -device ide-hd,drive=hdd${slot},bus=${controller}.${port},serial=${serial},rotation_rate=${rotation_rate}"
     fi
   done
 
