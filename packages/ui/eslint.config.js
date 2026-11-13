@@ -97,6 +97,37 @@ export default [
 			],
 		},
 	},
+	// A file is shown by drawing what's parsed out of it. Nothing in it reaches the browser as markup to parse or as
+	// script to run, which is what keeps a file from acting as the dashboard it's opened in.
+	{
+		files: ['src/features/files/components/file-viewer/**/*.{ts,tsx}'],
+		ignores: ['**/*.test.{ts,tsx}'],
+		rules: {
+			'no-eval': 'error',
+			'no-implied-eval': 'error',
+			'no-new-func': 'error',
+			'react/no-danger': 'error',
+			'react/forbid-dom-props': ['error', {forbid: ['srcDoc']}],
+			'no-restricted-globals': ['error', {name: 'DOMParser', message: 'Parse a file with the parsers in shared.'}],
+			'no-restricted-properties': [
+				'error',
+				...[
+					'innerHTML',
+					'outerHTML',
+					'insertAdjacentHTML',
+					'createContextualFragment',
+					'setHTMLUnsafe',
+					'parseHTMLUnsafe',
+					'srcdoc',
+				].map((property) => ({property, message: 'Build the nodes instead: a file is never parsed as markup.'})),
+				...['write', 'writeln'].map((property) => ({
+					object: 'document',
+					property,
+					message: 'Build the nodes instead: a file is never parsed as markup.',
+				})),
+			],
+		},
+	},
 	{
 		files: ['scripts/**/*.{js,mjs,cjs}'],
 		languageOptions: {

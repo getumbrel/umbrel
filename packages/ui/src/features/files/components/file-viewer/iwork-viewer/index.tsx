@@ -17,6 +17,9 @@ import {cn} from '@/lib/utils'
 // with every Apple release) have no faithful open renderer, so the preview
 // is what's shown, and said to be one.
 const PREVIEWS = ['preview.jpg', 'preview-web.jpg', 'QuickLook/Thumbnail.jpg']
+// A preview is inflated whole to be shown, and Apple's are small pictures: what a crafted package calls its preview
+// can unpack to a thousand times the file's size, so one far bigger than any real preview isn't read at all.
+const MAX_PREVIEW_SIZE = 32 * 2 ** 20
 
 type Preview = {status: 'loading'} | {status: 'ready'; url: string} | {status: 'missing'} | {status: 'not-zip'}
 
@@ -38,10 +41,10 @@ export default function IworkViewer({item, mode}: ViewerProps) {
 		const read = rangeReader(source?.blob ?? view.url, abort.signal)
 		let url: string | undefined
 		void (async () => {
-			const archive = await ZipArchive.read(item.size ?? 0, read)
-			const name = PREVIEWS.find((candidate) => archive.has(candidate))
+			const archive = await ZipArchive.read(item.size ?? 0, read, {maxEntrySize: MAX_PREVIEW_SIZE})
+			const name = PREVIEWS.find((candidate) => !archive.refusal(candidate))
 			if (!name) return setPreview({status: 'missing'})
-			const jpeg = await archive.bytes(name)
+			const jpeg = await archive.bytes(name, abort.signal)
 			if (abort.signal.aborted) return
 			url = URL.createObjectURL(new Blob([jpeg], {type: 'image/jpeg'}))
 			setPreview({status: 'ready', url})

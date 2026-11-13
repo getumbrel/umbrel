@@ -39,13 +39,18 @@ import {useSlideFind} from '@/features/files/components/file-viewer/slides-viewe
 import {Presenter, visibleFrom} from '@/features/files/components/file-viewer/slides-viewer/presenter'
 import {SlidePill, SlideView} from '@/features/files/components/file-viewer/slides-viewer/slide'
 import type {ViewerProps} from '@/features/files/components/file-viewer/viewers'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
+import type {FileSystemItem} from '@/features/files/types'
 import {LightboxButton} from '@/features/photos/components/viewer/lightbox-button'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {isBeneathModal} from '@/utils/is-beneath-modal'
 
+// What a presentation may weigh before it's downloaded to be shown: the file is held whole while open, and a phone
+// has far less room for it
+const MAX_BYTES = {desktop: 512 * 2 ** 20, touch: 128 * 2 ** 20}
 // How long the first slide may wait for its fonts before it's shown anyway
 const FONT_WAIT_MS = 800
 // How far a finger has to travel sideways, or how fast (px/ms), to turn the slide; the dark between a dragged
@@ -59,6 +64,12 @@ const NOTES_KEY = 'files:slides-notes'
 type Opened = {deck: Presentation} | {error: PresentationErrorCode}
 
 export default function SlidesViewer({item, mode}: ViewerProps) {
+	const isTouch = useIsTouchDevice()
+	if ((item.size ?? 0) > MAX_BYTES[isTouch ? 'touch' : 'desktop']) return <CantOpen item={item} error='limits' />
+	return <SlidesFile item={item} mode={mode} />
+}
+
+function SlidesFile({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
 	const file = useFileBytes(item)
 	const readOnly = useIsFilesReadOnly()
@@ -103,20 +114,7 @@ export default function SlidesViewer({item, mode}: ViewerProps) {
 			</StageMessage>
 		)
 	}
-	if (opened && 'error' in opened) {
-		const [title, detail] = {
-			encrypted: ['files-slides.encrypted-title', 'files-slides.encrypted-detail'],
-			// A presentation in the older format can't be opened either, for a reason of its own
-			unsupported: ['files-slides.damaged-title', 'files-slides.legacy-detail'],
-			limits: ['files-slides.too-large-title', 'files-viewer.too-large-detail'],
-			corrupt: ['files-slides.damaged-title', 'files-slides.damaged-detail'],
-		}[opened.error]
-		return (
-			<StageMessage item={item} title={t(title)} detail={t(detail)}>
-				<StageDownload item={item} />
-			</StageMessage>
-		)
-	}
+	if (opened && 'error' in opened) return <CantOpen item={item} error={opened.error} />
 	if (!opened || !source) return <StageLoading item={item} />
 	return (
 		<Deck
@@ -126,6 +124,23 @@ export default function SlidesViewer({item, mode}: ViewerProps) {
 			revision={source.revision}
 			editable={mode === 'open' && !readOnly && item.operations.includes('writable')}
 		/>
+	)
+}
+
+// Why the presentation can't be shown, with the file to download instead
+function CantOpen({item, error}: {item: FileSystemItem; error: PresentationErrorCode}) {
+	const {t} = useTranslation()
+	const [title, detail] = {
+		encrypted: ['files-slides.encrypted-title', 'files-slides.encrypted-detail'],
+		// A presentation in the older format can't be opened either, for a reason of its own
+		unsupported: ['files-slides.damaged-title', 'files-slides.legacy-detail'],
+		limits: ['files-slides.too-large-title', 'files-viewer.too-large-detail'],
+		corrupt: ['files-slides.damaged-title', 'files-slides.damaged-detail'],
+	}[error]
+	return (
+		<StageMessage item={item} title={t(title)} detail={t(detail)}>
+			<StageDownload item={item} />
+		</StageMessage>
 	)
 }
 

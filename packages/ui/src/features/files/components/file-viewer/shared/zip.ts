@@ -109,6 +109,9 @@ export class ZipArchive {
 		// that could be most of the file
 		const {offset} = directoryOf(new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), base, resolved)
 		if (offset < 0) {
+			// A directory ends where its end record begins, so no more of it is missing than it may measure. One said
+			// to start further back isn't where the file says, and reading from there would fetch all that lies between
+			if (-offset > resolved.maxDirectorySize) throw corrupt('Central directory is out of bounds')
 			const whole = new Uint8Array(bytes.length - offset)
 			whole.set(await read(base + offset, base))
 			whole.set(bytes, -offset)

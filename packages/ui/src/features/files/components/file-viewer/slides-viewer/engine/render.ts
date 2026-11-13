@@ -656,11 +656,16 @@ const round = (value: number) => Math.round(value * 100) / 100
 // isn't one: as a blob: URL on our origin it would be a document that can run script, so it's left out like EMF.
 export const PICTURE_TYPES = /^image\/(png|jpe?g|gif|bmp|webp|avif|x-icon|vnd\.microsoft\.icon)$/
 
+// What a deck's pictures may take in all, in bytes read: a crafted file can make many parts out of one compressed
+// stream, each as large as a part may be. Pictures past it aren't drawn.
+const BUDGET = 256 * 2 ** 20
+
 // Pictures are read from the package only when a slide that shows them is drawn, and each becomes one blob: URL
 // shared by every slide using it. Formats no browser decodes (EMF, WMF, PDF…) are skipped.
 export class Images {
 	private urls = new Map<string, Promise<string | undefined>>()
 	private created: string[] = []
+	private spent = 0
 	private revoked = false
 
 	constructor(private pkg: Package) {}
@@ -676,7 +681,11 @@ export class Images {
 
 	private async read(part: string): Promise<string | undefined> {
 		const type = this.pkg.contentType(part)
-		if (!(PICTURE_TYPES.test(type) || type === 'image/tiff') || this.pkg.size(part) > MAX_PART) return undefined
+		const size = this.pkg.size(part)
+		if (!(PICTURE_TYPES.test(type) || type === 'image/tiff') || size > MAX_PART) return undefined
+		// Its size is what its entry declares, which inflating is held to
+		if (this.spent + size > BUDGET) return undefined
+		this.spent += size
 		const bytes = await this.pkg.archive.bytes(part)
 		if (this.revoked) return undefined
 		const url = URL.createObjectURL(new Blob([bytes], {type}))

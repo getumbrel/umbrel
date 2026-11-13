@@ -199,6 +199,17 @@ describe('An opened archive’s files', () => {
 		}
 	})
 
+	test('a row’s Download hands over the file from memory, typed as a download whatever it holds', async () => {
+		await press(
+			rowButton('notes.txt')!.parentElement!.querySelector<HTMLElement>('[aria-label="files-archive.download"]'),
+		)
+		await until(() => downloads.length)
+		expect(downloads).toEqual([{href: 'blob:test/1', download: 'notes.txt'}])
+		// Bytes with no type would leave a browser asked to open them to guess, and they have Umbrel's origin
+		const [[blob]] = vi.mocked(URL.createObjectURL).mock.calls
+		expect((blob as Blob).type).toBe('application/octet-stream')
+	})
+
 	test('one opens in the listing’s place from memory, under its own name, and is never saved', async () => {
 		await open('notes.txt')
 		expect(text()?.textContent).toBe('hello')

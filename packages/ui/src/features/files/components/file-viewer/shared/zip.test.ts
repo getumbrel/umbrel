@@ -562,6 +562,22 @@ describe('ZipArchive.read', () => {
 		expect(outOfBounds.asked).toHaveLength(1)
 	})
 
+	test('refuses a central directory far from its end record, before fetching what lies between them', async () => {
+		// A small directory right behind its one entry, then padding, then the end record: reading from where the
+		// directory starts to the end read first would fetch the padding, however much of the file that is
+		const zip = buildZip([{name: 'a.txt', data: 'hello', method: 0}])
+		const end = zip.length - 22
+		const padded = concat(zip.subarray(0, end), new Uint8Array(200_000), zip.subarray(end))
+		const far = remote(padded)
+		expect(await asyncError(ZipArchive.read(padded.length, far.read, {maxDirectorySize: 100_000}))).toBe('corrupt')
+		expect(far.asked).toEqual([[padded.length - 65557, padded.length]])
+
+		// No further back than a directory may reach, it's read as before; and held whole, the padding costs nothing
+		const near = await ZipArchive.read(padded.length, remote(padded).read, {maxDirectorySize: 300_000})
+		expect(await near.text('a.txt')).toBe('hello')
+		expect(await ZipArchive.open(padded).text('a.txt')).toBe('hello')
+	})
+
 	test('reads zip64 archives', async () => {
 		const zip = buildZip(
 			[

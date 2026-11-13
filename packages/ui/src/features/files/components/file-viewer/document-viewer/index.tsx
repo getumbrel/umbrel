@@ -42,6 +42,9 @@ import {LightboxButton} from '@/features/photos/components/viewer/lightbox-butto
 import {cn} from '@/lib/utils'
 import {isBeneathModal} from '@/utils/is-beneath-modal'
 
+// What a document may weigh before it's downloaded to be shown: the file is held whole while open, and a phone has
+// far less room for it
+const MAX_BYTES = {desktop: 512 * 2 ** 20, touch: 128 * 2 ** 20}
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 5
 // The space around and between pages on a narrow stage and a wide one (the host's padding follows the same 768px
@@ -57,6 +60,12 @@ const spaceFor = (stage: Stage) => (stage.width < 768 ? SPACE.narrow : SPACE.wid
 const stageOf = (scroller: HTMLElement): Stage => ({width: scroller.clientWidth, height: scroller.offsetHeight})
 
 export default function DocumentViewer({item, mode}: ViewerProps) {
+	const isTouch = useIsTouchDevice()
+	if ((item.size ?? 0) > MAX_BYTES[isTouch ? 'touch' : 'desktop']) return <CantOpen item={item} error='limits' />
+	return <DocumentFile item={item} mode={mode} />
+}
+
+function DocumentFile({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
 	const file = useFileBytes(item)
 	const readOnly = useIsFilesReadOnly() || !item.operations.includes('writable')

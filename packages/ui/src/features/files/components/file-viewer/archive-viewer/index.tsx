@@ -244,7 +244,10 @@ function Listing({
 	const download = async (entry: ZipEntry, name: string) => {
 		setDownloading((busy) => new Set(busy).add(entry))
 		try {
-			const url = URL.createObjectURL(new Blob([await archive.bytes(entry.name)]))
+			// Bytes to save, typed as umbreld serves a download: an object URL has our origin, and one without a type
+			// leaves a browser that's asked to open it to guess what the bytes are
+			const bytes = await archive.bytes(entry.name)
+			const url = URL.createObjectURL(new Blob([bytes], {type: 'application/octet-stream'}))
 			offerDownload(url, name)
 			// Long enough for the browser to have taken the download from it
 			setTimeout(() => URL.revokeObjectURL(url), 60_000)
