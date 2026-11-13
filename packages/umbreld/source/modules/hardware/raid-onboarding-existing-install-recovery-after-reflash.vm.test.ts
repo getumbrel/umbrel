@@ -1,9 +1,9 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 
-describe('Degraded RAID onboarding recovery after boot disk reflash', () => {
+describe.each(raidzDrives)('Degraded RAID onboarding recovery after boot disk reflash ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
@@ -12,7 +12,7 @@ describe('Degraded RAID onboarding recovery after boot disk reflash', () => {
 	const markerPath = '/data/umbrel/home/raid-recovery-marker.txt'
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -28,20 +28,24 @@ describe('Degraded RAID onboarding recovery after boot disk reflash', () => {
 	})
 
 	test('adds two NVMe devices and boots VM', async () => {
-		await umbreld.vm.addNvme({slot: 1})
-		await umbreld.vm.addNvme({slot: 2})
+		await drive.add(umbreld.vm, {slot: 1})
+		await drive.add(umbreld.vm, {slot: 2})
 		await umbreld.vm.powerOn()
 	})
 
 	test('detects both NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(2)
-		firstDeviceId = devices.find((d) => d.slot === 1)!.id!
-		secondDeviceId = devices.find((d) => d.slot === 2)!.id!
+		firstDeviceId = devices.find(drive.inSlot(1))!.id!
+		secondDeviceId = devices.find(drive.inSlot(2))!.id!
 	})
 
 	test('registers user with failsafe RAID config', async () => {
-		await umbreld.signup({raidDevices: [firstDeviceId, secondDeviceId], raidType: 'failsafe'})
+		await umbreld.signup({
+			raidDevices: [firstDeviceId, secondDeviceId],
+			raidType: 'failsafe',
+			failsafeLayout: drive.failsafeLayout,
+		})
 	})
 
 	test('waits for RAID setup to complete and logs in', async () => {
@@ -67,7 +71,7 @@ describe('Degraded RAID onboarding recovery after boot disk reflash', () => {
 	test('reflashes the boot disk with one RAID member disconnected', async () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.reflash()
-		await umbreld.vm.disconnectNvme({slot: 2})
+		await drive.disconnect(umbreld.vm, {slot: 2})
 		await umbreld.vm.powerOn()
 	})
 
@@ -100,6 +104,7 @@ describe('Degraded RAID onboarding recovery after boot disk reflash', () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.exists).toBe(true)
 		expect(status.raidType).toBe('failsafe')
+		expect(status.topology).toBe('raidz')
 		expect(status.status).toBe('DEGRADED')
 		expect(status.devices?.map((device) => device.id).sort()).toEqual([firstDeviceId, secondDeviceId].sort())
 

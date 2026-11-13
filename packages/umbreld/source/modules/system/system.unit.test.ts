@@ -76,7 +76,10 @@ describe('getDiskUsage', () => {
 		const storageResourceUsage = vi.fn(async () => [{id: 'machine', name: 'Machine', osId: 'linux', used: 110}])
 		const umbreld = {
 			dataDirectory: '/data',
-			hardware: {umbrelPro: {isUmbrelPro: vi.fn(async () => false)}},
+			hardware: {
+				umbrelPro: {isUmbrelPro: vi.fn(async () => false)},
+				raid: {getStatus: vi.fn(async () => ({exists: false}))},
+			},
 			apps: {instances: [{id: 'app', getDiskUsage: getAppDiskUsage}]},
 			machines: {storageResourceUsage},
 			files: {getStorageUsage},

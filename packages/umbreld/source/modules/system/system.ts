@@ -55,14 +55,17 @@ export async function getSystemDiskUsage(
 	umbreld: Umbreld,
 ): Promise<{size: number; totalUsed: number; available: number}> {
 	// TODO: Do this a cleaner way
-	if (await umbreld.hardware.umbrelPro.isUmbrelPro()) {
-		const pool = await umbreld.hardware.raid.getStatus()
-		if (pool.exists) {
-			return {
-				size: pool.usableSpace ?? 0,
-				totalUsed: pool.usedSpace ?? 0,
-				available: pool.freeSpace ?? 0,
-			}
+	// The filesystem misreports a raidz array's space once it has been expanded, so those always use
+	// the array's own values
+	const pool = await umbreld.hardware.raid.getStatus()
+	if (pool.exists && (pool.topology === 'raidz' || (await umbreld.hardware.umbrelPro.isUmbrelPro()))) {
+		// Only metadata and small files are stored on an accelerator, so its free space isn't available to
+		// most data and is left out, like it is from the filesystem's values
+		const acceleratorFreeSpace = pool.accelerator?.specialFreeSpace ?? 0
+		return {
+			size: (pool.usableSpace ?? 0) - acceleratorFreeSpace,
+			totalUsed: pool.usedSpace ?? 0,
+			available: (pool.freeSpace ?? 0) - acceleratorFreeSpace,
 		}
 	}
 	return await getDiskUsageByPath(umbreld.dataDirectory)

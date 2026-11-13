@@ -2,7 +2,7 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 import type {ExpansionStatus} from './raid.ts'
 
 const toGB = (bytes?: number) => (bytes != null ? `${(bytes / 1e9).toFixed(2)} GB` : 'N/A')
@@ -17,7 +17,7 @@ const logSpace = (
 		freeSpace: toGB(s.freeSpace),
 	})
 
-describe('RAID failsafe space reporting consistency', () => {
+describe.each(raidzDrives)('RAID failsafe space reporting consistency ($name)', (drive) => {
 	const SSD_SIZE = '4G'
 
 	// Expected results
@@ -245,7 +245,7 @@ describe('RAID failsafe space reporting consistency', () => {
 		let failed = false
 
 		beforeAll(async () => {
-			umbreld = await createTestVm()
+			umbreld = await createTestVm({device: drive.device})
 		})
 
 		afterAll(async () => {
@@ -263,7 +263,7 @@ describe('RAID failsafe space reporting consistency', () => {
 		// --- Setup: 1 SSD in storage mode ---
 
 		test('adds 1 NVMe device and boots VM', async () => {
-			await umbreld.vm.addNvme({slot: 1, size: SSD_SIZE})
+			await drive.add(umbreld.vm, {slot: 1, size: SSD_SIZE})
 			await umbreld.vm.powerOn()
 		})
 
@@ -313,7 +313,7 @@ describe('RAID failsafe space reporting consistency', () => {
 
 		test('shuts down and adds second NVMe device', async () => {
 			await umbreld.vm.powerOff()
-			await umbreld.vm.addNvme({slot: 2, size: SSD_SIZE})
+			await drive.add(umbreld.vm, {slot: 2, size: SSD_SIZE})
 			await umbreld.vm.powerOn()
 		})
 
@@ -325,7 +325,7 @@ describe('RAID failsafe space reporting consistency', () => {
 		test('detects both NVMe devices', async () => {
 			const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
 			expect(devices).toHaveLength(2)
-			secondDeviceId = devices.find((d) => d.slot === 2)!.id!
+			secondDeviceId = devices.find(drive.inSlot(2))!.id!
 			expect(secondDeviceId).toBeDefined()
 		})
 
@@ -391,7 +391,7 @@ describe('RAID failsafe space reporting consistency', () => {
 
 		test('shuts down and adds third NVMe device', async () => {
 			await umbreld.vm.powerOff()
-			await umbreld.vm.addNvme({slot: 3, size: SSD_SIZE})
+			await drive.add(umbreld.vm, {slot: 3, size: SSD_SIZE})
 			await umbreld.vm.powerOn()
 		})
 
@@ -403,7 +403,7 @@ describe('RAID failsafe space reporting consistency', () => {
 		test('detects third NVMe device', async () => {
 			const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
 			expect(devices).toHaveLength(3)
-			thirdDeviceId = devices.find((d) => d.slot === 3)!.id!
+			thirdDeviceId = devices.find(drive.inSlot(3))!.id!
 			expect(thirdDeviceId).toBeDefined()
 		})
 
@@ -455,7 +455,7 @@ describe('RAID failsafe space reporting consistency', () => {
 
 		test('shuts down and adds fourth NVMe device', async () => {
 			await umbreld.vm.powerOff()
-			await umbreld.vm.addNvme({slot: 4, size: SSD_SIZE})
+			await drive.add(umbreld.vm, {slot: 4, size: SSD_SIZE})
 			await umbreld.vm.powerOn()
 		})
 
@@ -467,7 +467,7 @@ describe('RAID failsafe space reporting consistency', () => {
 		test('detects fourth NVMe device', async () => {
 			const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
 			expect(devices).toHaveLength(4)
-			fourthDeviceId = devices.find((d) => d.slot === 4)!.id!
+			fourthDeviceId = devices.find(drive.inSlot(4))!.id!
 			expect(fourthDeviceId).toBeDefined()
 		})
 
@@ -519,8 +519,8 @@ describe('RAID failsafe space reporting consistency', () => {
 
 		test('shuts down and removes fourth NVMe device', async () => {
 			await umbreld.vm.powerOff()
-			await umbreld.vm.removeNvme({slot: 4})
-			await umbreld.vm.addNvme({slot: 4, size: SSD_SIZE})
+			await drive.remove(umbreld.vm, {slot: 4})
+			await drive.add(umbreld.vm, {slot: 4, size: SSD_SIZE})
 			await umbreld.vm.powerOn()
 		})
 
@@ -541,7 +541,7 @@ describe('RAID failsafe space reporting consistency', () => {
 		test('detects new 4th NVMe device', async () => {
 			const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
 			expect(devices).toHaveLength(4)
-			fourthDeviceId = devices.find((d) => d.slot === 4)!.id!
+			fourthDeviceId = devices.find(drive.inSlot(4))!.id!
 			expect(fourthDeviceId).toBeDefined()
 		})
 

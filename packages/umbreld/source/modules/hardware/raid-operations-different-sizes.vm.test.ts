@@ -2,7 +2,7 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 
 // Size validation rules for RAID operations:
 //
@@ -20,7 +20,7 @@ import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
 // Note: "replace with larger" cases are tested in raid-replace-larger-capacity.vm.test.ts
 // so they are not duplicated here.
 
-describe('RAID size validation', () => {
+describe.each(raidzDrives)('RAID size validation ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let smallDeviceId: string
 	let mediumDeviceId: string
@@ -29,7 +29,7 @@ describe('RAID size validation', () => {
 	let failed = false
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -46,20 +46,20 @@ describe('RAID size validation', () => {
 
 	test('adds four NVMe devices of different sizes and boots VM', async () => {
 		// Small: 32GB, Medium: 64GB, Large: 128GB, Extra Large: 256GB
-		await umbreld.vm.addNvme({slot: 1, size: '32G'})
-		await umbreld.vm.addNvme({slot: 2, size: '64G'})
-		await umbreld.vm.addNvme({slot: 3, size: '128G'})
-		await umbreld.vm.addNvme({slot: 4, size: '256G'})
+		await drive.add(umbreld.vm, {slot: 1, size: '32G'})
+		await drive.add(umbreld.vm, {slot: 2, size: '64G'})
+		await drive.add(umbreld.vm, {slot: 3, size: '128G'})
+		await drive.add(umbreld.vm, {slot: 4, size: '256G'})
 		await umbreld.vm.powerOn()
 	})
 
 	test('detects all four NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(4)
-		smallDeviceId = devices.find((d) => d.slot === 1)!.id!
-		mediumDeviceId = devices.find((d) => d.slot === 2)!.id!
-		largeDeviceId = devices.find((d) => d.slot === 3)!.id!
-		extraLargeDeviceId = devices.find((d) => d.slot === 4)!.id!
+		smallDeviceId = devices.find(drive.inSlot(1))!.id!
+		mediumDeviceId = devices.find(drive.inSlot(2))!.id!
+		largeDeviceId = devices.find(drive.inSlot(3))!.id!
+		extraLargeDeviceId = devices.find(drive.inSlot(4))!.id!
 	})
 
 	// ==================== STORAGE MODE TESTS ====================
@@ -123,14 +123,18 @@ describe('RAID size validation', () => {
 	test('re-detects all four NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(4)
-		smallDeviceId = devices.find((d) => d.slot === 1)!.id!
-		mediumDeviceId = devices.find((d) => d.slot === 2)!.id!
-		largeDeviceId = devices.find((d) => d.slot === 3)!.id!
-		extraLargeDeviceId = devices.find((d) => d.slot === 4)!.id!
+		smallDeviceId = devices.find(drive.inSlot(1))!.id!
+		mediumDeviceId = devices.find(drive.inSlot(2))!.id!
+		largeDeviceId = devices.find(drive.inSlot(3))!.id!
+		extraLargeDeviceId = devices.find(drive.inSlot(4))!.id!
 	})
 
 	test('registers user with failsafe RAID using medium and large devices', async () => {
-		await umbreld.signup({raidDevices: [mediumDeviceId, largeDeviceId], raidType: 'failsafe'})
+		await umbreld.signup({
+			raidDevices: [mediumDeviceId, largeDeviceId],
+			raidType: 'failsafe',
+			failsafeLayout: drive.failsafeLayout,
+		})
 	})
 
 	test('waits for failsafe mode RAID setup to complete', async () => {

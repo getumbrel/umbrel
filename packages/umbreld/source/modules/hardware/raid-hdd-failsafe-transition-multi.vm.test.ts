@@ -138,10 +138,10 @@ describe.each(driveBuses)('RAID HDD multi-disk storage to failsafe mirror transi
 		).rejects.toThrow('addMirror is only supported for mirror failsafe mode')
 	})
 
-	test('rejects SSD raidz transition endpoint for HDD arrays', async () => {
+	test('rejects raidz transition endpoint for multi-disk arrays', async () => {
 		await expect(
 			umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({newDeviceId: hddDeviceId3}),
-		).rejects.toThrow('transitionToFailsafeRaidz is only supported for SSD arrays')
+		).rejects.toThrow('Can only transition single-disk arrays')
 	})
 
 	test('rejects transition with wrong number of devices (1 instead of 2)', async () => {

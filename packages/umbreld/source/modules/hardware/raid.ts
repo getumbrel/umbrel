@@ -37,6 +37,14 @@ export function getRoundedDeviceSize(sizeInBytes: number): number {
 
 export type RaidType = 'storage' | 'failsafe'
 export type Topology = 'stripe' | 'raidz' | 'mirror'
+// How a failsafe array protects its data. SSD arrays always use raidz1, HDD arrays use mirrors
+// unless raidz1 is asked for.
+export type FailsafeLayout = 'raidz1' | 'mirror'
+
+// The most drives an HDD raidz1 array can have. A raidz1 array has no protection from the moment a
+// drive fails until its replacement has been rebuilt, which takes days on HDDs, and the chance of
+// a second drive failing in that window grows with roughly the square of the drive count.
+export const maxHddRaidz1Devices = 6
 
 const defaultEncryptionPassword = 'umbrelumbrel'
 const configPartition = '/run/rugix/mounts/config'
@@ -805,6 +813,7 @@ export default class Raid {
 			exists: boolean
 			l2arcSize?: number
 			specialSize?: number
+			specialFreeSpace?: number
 			devices?: Array<{
 				id: string
 				status: State
@@ -996,6 +1005,15 @@ export default class Raid {
 		let totalSpace = rootVdev.total_space
 		let usableSpace = rootVdev.def_space
 		let usedSpace = rootVdev.alloc_space
+		// The root vdev's values include an accelerator's special vdev, which isn't raidz. The raidz fixes
+		// below only apply to the raidz vdev's share, so the special vdev's share is added back as it is.
+		// Top-level special vdevs have no parent in the flattened vdev list, and zpool leaves out a value
+		// that is zero, like the allocation of a special vdev that has only just been added.
+		const specialVdevs = vdevs.filter((v) => v.class === 'special' && !v.parent)
+		const specialTotalSpace = specialVdevs.reduce((sum, v) => sum + (v.total_space ?? 0), 0)
+		const specialUsableSpace = specialVdevs.reduce((sum, v) => sum + (v.def_space ?? 0), 0)
+		const specialUsedSpace = specialVdevs.reduce((sum, v) => sum + (v.alloc_space ?? 0), 0)
+		const raidzUsedSpace = rootVdev.alloc_space - specialUsedSpace
 		// Fix raidz fs usage calculations after raidz expansion.
 		// Only run this logic with more than 2 devices so we don't run it during the transition which does lots of
 		// complex file vdev replace weirdness which makes the below calculations very complex. We don't need this
@@ -1013,7 +1031,8 @@ export default class Raid {
 
 			// Calculate usable space based on the smallest device size and accounting for a single parity device
 			const smallestDeviceSize = Math.min(...devices.map((d) => d.size).filter((size) => size !== undefined))
-			usableSpace = smallestDeviceSize * (numberOfDevices - 1)
+			const raidzUsableSpace = smallestDeviceSize * (numberOfDevices - 1)
+			usableSpace = raidzUsableSpace + specialUsableSpace
 
 			// ZFS doesn't update total space until the end of a raidz1 expansion which breaks our calculations.
 			// We need to calculate it as soon as we start a resize by summing all the devices.
@@ -1021,9 +1040,10 @@ export default class Raid {
 			// However sometimes on missing devices phys_space doesn't exist but rep_dev_size does, and in those
 			// situations it's stable so we can rely on it.
 			// If we're replacing a device we skip the missing one so we don't count it twice.
-			totalSpace = [...diskVdevs, ...fileVdevs]
+			const raidzTotalSpace = [...diskVdevs, ...fileVdevs]
 				.filter((vdev) => !(vdev.state === 'CANT_OPEN' && vdev.parent?.includes('replacing')))
 				.reduce((sum, vdev) => sum + (vdev.phys_space || vdev.rep_dev_size || 0), 0)
+			totalSpace = raidzTotalSpace + specialTotalSpace
 
 			// Now we need to also fix usedSpace calculations otherwise we'll go negative
 			// with the smaller usable space value.
@@ -1031,8 +1051,8 @@ export default class Raid {
 			// so we can multiply usableSpace by the percentage.
 			// raidz only allocates as much of each device as the smallest one has, so that is the total
 			// the allocated space is a fraction of, not the sum of mixed size devices.
-			const usedPercentage = rootVdev.alloc_space / (smallestDeviceSize * numberOfDevices)
-			usedSpace = Math.ceil(usableSpace * usedPercentage)
+			const usedPercentage = raidzUsedSpace / (smallestDeviceSize * numberOfDevices)
+			usedSpace = Math.ceil(raidzUsableSpace * usedPercentage) + specialUsedSpace
 
 			// TODO: Handle FailSafe replace with old devices online. totalSpace still counts both the
 			// old and the new device until the replace has finished.
@@ -1040,7 +1060,7 @@ export default class Raid {
 
 		// Handle raidz failsafe mode with 2 disks (or 1 disk and 1 file) reporting double usage due to
 		// the parity device being included in the total space.
-		if (isRaidz && diskVdevs.length <= 2) usedSpace /= 2
+		if (isRaidz && diskVdevs.length <= 2) usedSpace = raidzUsedSpace / 2 + specialUsedSpace
 
 		// Fix mirror space reporting. ZFS reports total_space and def_space as the usable capacity
 		// (already accounting for mirror redundancy), so totalSpace needs to be calculated from
@@ -1063,6 +1083,7 @@ export default class Raid {
 				exists: hasAccelerator,
 				l2arcSize: accelerator.totalL2arcSize,
 				specialSize: accelerator.totalSpecialUsableSize,
+				specialFreeSpace: specialUsableSpace - specialUsedSpace,
 				devices: acceleratorDevices,
 			},
 			expansion,
@@ -1155,6 +1176,7 @@ export default class Raid {
 		raidDevices: string[],
 		raidType: RaidType,
 		acceleratorDevices: string[] | undefined,
+		failsafeLayout: FailsafeLayout | undefined,
 		user: {name: string; password: string; language: string},
 	) {
 		if (this.isInitialSetupInProgress) throw new Error('Initial RAID setup is already in progress')
@@ -1162,7 +1184,7 @@ export default class Raid {
 
 		try {
 			// Setup the RAID array and optional accelerator before rebooting into it.
-			await this.setup(raidDevices, raidType, acceleratorDevices)
+			await this.setup(raidDevices, raidType, acceleratorDevices, failsafeLayout)
 
 			// Temporarily store the user setup details. We create the user on the next boot.
 			await this.configStore.set('user', user)
@@ -1524,11 +1546,23 @@ export default class Raid {
 	// 1. Partition each device with a state partition and data partition (remaining space)
 	// 2. Create a ZFS pool from all data partitions
 	// 3. Write RAID config to boot partition to signal the boot process to mount the array
-	async setup(deviceIds: string[], raidType: RaidType, acceleratorDeviceIds?: string[]): Promise<boolean> {
-		return this.#withPoolMutation('RAID setup', () => this.#setup(deviceIds, raidType, acceleratorDeviceIds))
+	async setup(
+		deviceIds: string[],
+		raidType: RaidType,
+		acceleratorDeviceIds?: string[],
+		failsafeLayout?: FailsafeLayout,
+	): Promise<boolean> {
+		return this.#withPoolMutation('RAID setup', () =>
+			this.#setup(deviceIds, raidType, acceleratorDeviceIds, failsafeLayout),
+		)
 	}
 
-	async #setup(deviceIds: string[], raidType: RaidType, acceleratorDeviceIds?: string[]): Promise<boolean> {
+	async #setup(
+		deviceIds: string[],
+		raidType: RaidType,
+		acceleratorDeviceIds?: string[],
+		failsafeLayout?: FailsafeLayout,
+	): Promise<boolean> {
 		// Never build a new array while this install already has one in use. When the array failed to
 		// mount at boot no user exists, so registration is open, but its drives may only be missing or
 		// degraded and still hold the user's data.
@@ -1558,9 +1592,19 @@ export default class Raid {
 		const [deviceType] = uniqueDeviceTypes
 		if (!deviceType) throw new Error('Could not determine device type for selected devices')
 
-		// HDD failsafe uses mirrors which require an even number of devices (one per mirror pair)
-		if (raidType === 'failsafe' && deviceType === 'hdd' && deviceIds.length % 2 !== 0)
-			throw new Error('HDD failsafe mode requires an even number of devices')
+		// Determine pool topology based on raid type, device type and the requested failsafe layout
+		let topology: Topology = 'stripe'
+		if (raidType === 'failsafe') {
+			const layout = failsafeLayout ?? (deviceType === 'hdd' ? 'mirror' : 'raidz1')
+			topology = layout === 'mirror' ? 'mirror' : 'raidz'
+		}
+		if (topology === 'mirror') {
+			if (deviceType !== 'hdd') throw new Error('The mirror layout is only supported for HDD RAID arrays')
+			// Mirrors require an even number of devices (one per mirror pair)
+			if (deviceIds.length % 2 !== 0) throw new Error('HDD failsafe mode requires an even number of devices')
+		}
+		if (topology === 'raidz' && deviceType === 'hdd' && deviceIds.length > maxHddRaidz1Devices)
+			throw new Error(`HDD raidz1 arrays are limited to ${maxHddRaidz1Devices} devices`)
 
 		if (acceleratorDeviceIds?.length) {
 			if (deviceType !== 'hdd') throw new Error('Accelerators are only supported for HDD RAID arrays')
@@ -1595,11 +1639,6 @@ export default class Raid {
 		const partitionResults = await Promise.all(devices.map((device) => this.#partitionDevice(device)))
 		const dataPartitions = partitionResults.map((result) => result.dataPartition)
 		this.logger.log(`All devices partitioned successfully`)
-
-		// Determine pool topology based on raid type and device type
-		let topology: Topology = 'stripe'
-		if (raidType === 'failsafe' && deviceType === 'ssd') topology = 'raidz'
-		if (raidType === 'failsafe' && deviceType === 'hdd') topology = 'mirror'
 
 		// Create ZFS pool and data dataset
 		await this.#createPool(poolName, dataPartitions, topology)
@@ -1676,7 +1715,7 @@ export default class Raid {
 		}
 	}
 
-	// Add one device to a stripe (storage) or raidz (failsafe SSD) array.
+	// Add one device to a stripe (storage) or raidz (failsafe) array.
 	// Mirror failsafe arrays must use addMirror().
 	async addDevice(deviceId: string): Promise<boolean> {
 		return this.#withPoolMutation('RAID device addition', () => this.#addDevice(deviceId))
@@ -1703,6 +1742,13 @@ export default class Raid {
 		if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
 		if (poolDeviceIds.includes(deviceId)) throw new Error('Cannot add a device that is already in the RAID array')
 		await this.#assertDeviceTypeMatchesPool(deviceId)
+		// The new device is the same type as the array's, so it tells us if this is an HDD array
+		if (
+			pool.topology === 'raidz' &&
+			poolDeviceIds.length >= maxHddRaidz1Devices &&
+			(await this.#getDeviceInfo(deviceId)).type === 'hdd'
+		)
+			throw new Error(`HDD raidz1 arrays are limited to ${maxHddRaidz1Devices} devices`)
 
 		this.logger.log(`Adding device to RAID array: ${device}`)
 
@@ -2082,14 +2128,48 @@ export default class Raid {
 		}
 	}
 
-	// Transition an SSD storage array to a failsafe (raidz1) array.
-	// This creates a degraded raidz1 pool with the new disk and syncs data from the old pool.
-	async transitionToFailsafeRaidz(newDeviceId: string): Promise<boolean> {
-		return this.#withPoolMutation('FailSafe transition', () => this.#transitionToFailsafeRaidz(newDeviceId))
+	// Check the SSD a failsafe transition is given to mirror the storage array's accelerator. The live
+	// pool status says whether there is one to mirror, not the config.
+	async #assertValidAcceleratorMirrorDevice(
+		pool: Awaited<ReturnType<Raid['getStatus']>>,
+		acceleratorDeviceId: string | undefined,
+		newDeviceIds: string[],
+	): Promise<void> {
+		const existingAcceleratorDeviceIds = pool.accelerator?.devices?.map((device) => device.id) ?? []
+		if (existingAcceleratorDeviceIds.length === 0) {
+			if (acceleratorDeviceId) throw new Error('Cannot supply an accelerator mirror SSD when no accelerator exists')
+			return
+		}
+		if (!acceleratorDeviceId)
+			throw new Error(
+				'Transitioning to failsafe with an accelerator requires an additional SSD for the accelerator mirror',
+			)
+		const poolDeviceIds = pool.devices?.map((device) => device.id) ?? []
+		if ([...poolDeviceIds, ...newDeviceIds, ...existingAcceleratorDeviceIds].includes(acceleratorDeviceId))
+			throw new Error('Cannot reuse a RAID device as the accelerator mirror')
+
+		const acceleratorDevice = `/dev/disk/by-umbrel-id/${acceleratorDeviceId}`
+		if (!(await fse.pathExists(acceleratorDevice))) throw new Error(`Device not found: ${acceleratorDevice}`)
+		await this.#assertAcceleratorDeviceType(acceleratorDeviceId)
+
+		// Use the same rounded size check as normal RAID devices.
+		const existingAcceleratorSize = await getDeviceSize(`/dev/disk/by-umbrel-id/${existingAcceleratorDeviceIds[0]}`)
+		const newAcceleratorSize = await getDeviceSize(acceleratorDevice)
+		if (getRoundedDeviceSize(newAcceleratorSize) < getRoundedDeviceSize(existingAcceleratorSize))
+			throw new Error('Cannot transition with an accelerator device smaller than the existing accelerator')
 	}
 
-	async #transitionToFailsafeRaidz(newDeviceId: string): Promise<boolean> {
-		await this.#assertNotSystemDrives([newDeviceId])
+	// Transition a single-drive storage array to a failsafe (raidz1) array.
+	// This creates a degraded raidz1 pool with the new disk and syncs data from the old pool.
+	// If the array has an accelerator, acceleratorDeviceId supplies the SSD used to mirror it.
+	async transitionToFailsafeRaidz(newDeviceId: string, acceleratorDeviceId?: string): Promise<boolean> {
+		return this.#withPoolMutation('FailSafe transition', () =>
+			this.#transitionToFailsafeRaidz(newDeviceId, acceleratorDeviceId),
+		)
+	}
+
+	async #transitionToFailsafeRaidz(newDeviceId: string, acceleratorDeviceId?: string): Promise<boolean> {
+		await this.#assertNotSystemDrives([newDeviceId, acceleratorDeviceId])
 
 		// Verify we're in a state that can be migrated
 		const pool = await this.getStatus()
@@ -2097,10 +2177,9 @@ export default class Raid {
 		this.#assertNoScrubInProgress(pool, 'start a FailSafe transition')
 		if (pool.raidType !== 'storage') throw new Error('Can only transition from storage mode')
 
-		// Raidz transition only supports SSD arrays with a single existing device
-		const deviceType = await this.#getPoolDeviceType()
-		if (deviceType !== 'ssd') throw new Error('transitionToFailsafeRaidz is only supported for SSD arrays')
-		if (pool.devices?.length !== 1) throw new Error('Can only transition single-disk SSD arrays')
+		// Raidz transition only supports arrays with a single existing device
+		if (pool.devices?.length !== 1) throw new Error('Can only transition single-disk arrays')
+		await this.#assertValidAcceleratorMirrorDevice(pool, acceleratorDeviceId, [newDeviceId])
 
 		// Validate new device exists, isn't in the pool, and matches pool type
 		const newDevice = `/dev/disk/by-umbrel-id/${newDeviceId}`
@@ -2146,6 +2225,23 @@ export default class Raid {
 			this.logger.log(`Removing temp device from pool to create degraded raidz1`)
 			await $`zpool offline ${migrationPoolName} ${this.temporaryDevicePath}`
 			await fse.remove(this.temporaryDevicePath)
+
+			// Give the new pool the new SSD as its accelerator, partitioned like the existing one. The existing
+			// accelerator SSD joins it after the reboot, the same way the existing data disk does.
+			const existingAcceleratorDeviceId = pool.accelerator?.devices?.[0]?.id
+			if (existingAcceleratorDeviceId && acceleratorDeviceId) {
+				const existingAcceleratorDevice = `/dev/disk/by-umbrel-id/${existingAcceleratorDeviceId}`
+				const {l2arcPartition, specialPartition} = await this.#partitionAcceleratorDevice(
+					`/dev/disk/by-umbrel-id/${acceleratorDeviceId}`,
+					{
+						l2arcSizeBytes: await getDeviceSize(`${existingAcceleratorDevice}-part2`),
+						specialSizeBytes: await getDeviceSize(`${existingAcceleratorDevice}-part3`),
+					},
+				)
+				await $`zpool add -f ${migrationPoolName} cache ${l2arcPartition}`
+				await $`zpool add -f ${migrationPoolName} special ${specialPartition}`
+				await this.#setSpecialSmallBlocks(migrationPoolName)
+			}
 
 			// Create a snapshot of the active pool, clearing one left behind by a transition that lost power
 			const baseSnapshot = 'migration'
@@ -2336,33 +2432,7 @@ export default class Raid {
 		const existingAccelerator = pool.accelerator
 		const existingAcceleratorDeviceIds = existingAccelerator?.devices?.map((device) => device.id) ?? []
 		const existingAcceleratorDevices = existingAcceleratorDeviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`)
-		// Check the live pool status instead of config.
-		if (existingAcceleratorDeviceIds.length > 0) {
-			if (!acceleratorDeviceId)
-				throw new Error(
-					'Transitioning to failsafe with an accelerator requires an additional SSD for the accelerator mirror',
-				)
-			const existingAcceleratorIds = new Set(existingAcceleratorDeviceIds)
-			if (
-				existingPoolDeviceIds.has(acceleratorDeviceId) ||
-				seenNew.has(acceleratorDeviceId) ||
-				existingAcceleratorIds.has(acceleratorDeviceId)
-			)
-				throw new Error('Cannot reuse a RAID device as the accelerator mirror')
-
-			const acceleratorDevice = `/dev/disk/by-umbrel-id/${acceleratorDeviceId}`
-			if (!(await fse.pathExists(acceleratorDevice))) throw new Error(`Device not found: ${acceleratorDevice}`)
-			await this.#assertAcceleratorDeviceType(acceleratorDeviceId)
-
-			// Use the same rounded size check as normal RAID devices.
-			const existingAcceleratorDevicePath = existingAcceleratorDevices[0]
-			const existingAcceleratorSize = await getDeviceSize(existingAcceleratorDevicePath)
-			const newAcceleratorSize = await getDeviceSize(acceleratorDevice)
-			if (getRoundedDeviceSize(newAcceleratorSize) < getRoundedDeviceSize(existingAcceleratorSize))
-				throw new Error('Cannot transition with an accelerator device smaller than the existing accelerator')
-		} else if (acceleratorDeviceId) {
-			throw new Error('Cannot supply an accelerator mirror SSD when no accelerator exists')
-		}
+		await this.#assertValidAcceleratorMirrorDevice(pool, acceleratorDeviceId, [...seenNew])
 
 		if (this.isTransitioningToFailsafe) throw new Error('Already transitioning to failsafe mode')
 		this.isTransitioningToFailsafe = true
@@ -2569,20 +2639,50 @@ export default class Raid {
 			this.logger.log(`Partitioning old device: ${oldDevice}`)
 			const {dataPartition: oldDataPartition} = await this.#partitionDevice(oldDevicePath)
 
+			// Partition the old pool's accelerator SSD like the new pool's, so it can mirror it
+			const oldAcceleratorDeviceId = previousPool.accelerator?.devices?.[0]?.id
+			const newAcceleratorDeviceId = pool.accelerator?.devices?.[0]?.id
+			const newAcceleratorDevice = `/dev/disk/by-umbrel-id/${newAcceleratorDeviceId}`
+			const oldAcceleratorPartitions =
+				oldAcceleratorDeviceId && newAcceleratorDeviceId
+					? await this.#partitionAcceleratorDevice(`/dev/disk/by-umbrel-id/${oldAcceleratorDeviceId}`, {
+							l2arcSizeBytes: await getDeviceSize(`${newAcceleratorDevice}-part2`),
+							specialSizeBytes: await getDeviceSize(`${newAcceleratorDevice}-part3`),
+						})
+					: undefined
+
+			// Mirror the new pool's accelerator with the old pool's accelerator SSD. This comes first because
+			// losing an unmirrored accelerator loses the pool, and nothing else can mirror it later.
+			if (oldAcceleratorPartitions) {
+				this.logger.log(`Mirroring accelerator with old accelerator device: ${oldAcceleratorDeviceId}`)
+				await $`zpool attach -f ${pool.name} ${newAcceleratorDevice}-part3 ${oldAcceleratorPartitions.specialPartition}`
+				await $`zpool add -f ${pool.name} cache ${oldAcceleratorPartitions.l2arcPartition}`
+			}
+
 			// Replace the temp device with the old device partition in the new pool
 			this.logger.log('Replacing temp device with old device in pool')
 			await $`zpool replace -f ${pool.name} ${this.temporaryDevicePath} ${oldDataPartition}`
+
+			// ZFS puts the data disk's rebuild off until the accelerator's has finished, and each one reads the
+			// whole pool. Restart the rebuild so that a single pass covers both.
+			if (oldAcceleratorPartitions) {
+				await $`zpool resilver ${pool.name}`.catch((error) =>
+					this.logger.error('Failed to restart the rebuild to cover both devices', error),
+				)
+			}
 
 			// Update config with new RAID configuration
 			this.logger.log('Updating RAID config')
 			await this.configStore.getWriteLock(async ({set}) => {
 				const pool = await this.getStatus()
 				const devices = pool.devices!.map((device) => `/dev/disk/by-umbrel-id/${device.id}`)
+				const acceleratorDevices = pool.accelerator?.devices?.map((device) => `/dev/disk/by-umbrel-id/${device.id}`)
 				const raid = await this.configStore.get('raid')
 				await set('raid', {
 					...raid,
 					raidType: 'failsafe',
 					devices,
+					...(acceleratorDevices?.length ? {accelerator: {devices: acceleratorDevices}} : {}),
 					state: 'normal',
 				})
 			})

@@ -77,10 +77,13 @@ const raid = router({
 	// Manually scrub the RAID pool
 	scrub: privateProcedure.mutation(async ({ctx}) => ctx.umbreld.hardware.raid.scrub()),
 
-	// Transition an SSD storage array to failsafe (raidz) mode
+	// Transition a single-drive storage array to failsafe (raidz) mode
+	// If a single accelerator already exists, acceleratorDeviceId supplies the SSD used to mirror it.
 	transitionToFailsafeRaidz: privateProcedure
-		.input(z.object({newDeviceId: z.string()}))
-		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.transitionToFailsafeRaidz(input.newDeviceId)),
+		.input(z.object({newDeviceId: z.string(), acceleratorDeviceId: z.string().optional()}))
+		.mutation(async ({ctx, input}) =>
+			ctx.umbreld.hardware.raid.transitionToFailsafeRaidz(input.newDeviceId, input.acceleratorDeviceId),
+		),
 
 	// Transition an HDD storage array to failsafe (mirror) mode
 	// Each existing storage device must be paired with a new mirror device.

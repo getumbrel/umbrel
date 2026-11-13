@@ -2,10 +2,10 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 import type {FailsafeTransitionStatus} from './raid.ts'
 
-describe('RAID storage to failsafe transition', () => {
+describe.each(raidzDrives)('RAID storage to failsafe transition ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
@@ -16,7 +16,7 @@ describe('RAID storage to failsafe transition', () => {
 	let failed = false
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -32,14 +32,14 @@ describe('RAID storage to failsafe transition', () => {
 	})
 
 	test('adds one NVMe device and boots VM', async () => {
-		await umbreld.vm.addNvme({slot: 1})
+		await drive.add(umbreld.vm, {slot: 1})
 		await umbreld.vm.powerOn()
 	})
 
 	test('detects NVMe device', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(1)
-		expect(devices[0].slot).toBe(1)
+		expect(drive.inSlot(1)(devices[0])).toBe(true)
 		firstDeviceId = devices[0].id!
 		expect(firstDeviceId).toBeDefined()
 	})
@@ -75,7 +75,7 @@ describe('RAID storage to failsafe transition', () => {
 
 	test('shuts down and adds second NVMe device', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.addNvme({slot: 2})
+		await drive.add(umbreld.vm, {slot: 2})
 		await umbreld.vm.powerOn()
 	})
 
@@ -87,7 +87,7 @@ describe('RAID storage to failsafe transition', () => {
 	test('detects both NVMe devices', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(2)
-		const secondDevice = devices.find((d) => d.slot === 2)
+		const secondDevice = devices.find(drive.inSlot(2))
 		expect(secondDevice).toBeDefined()
 		secondDeviceId = secondDevice!.id!
 		expect(secondDeviceId).toBeDefined()

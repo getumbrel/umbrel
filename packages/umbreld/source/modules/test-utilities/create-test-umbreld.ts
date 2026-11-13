@@ -176,16 +176,19 @@ function createTestHelpers(port: number | (() => number)) {
 		raidDevices,
 		raidType,
 		acceleratorDevices,
+		failsafeLayout,
 	}: {
 		raidDevices?: string[]
 		raidType?: 'storage' | 'failsafe'
 		acceleratorDevices?: string[]
+		failsafeLayout?: 'raidz1' | 'mirror'
 	} = {}) {
 		await unauthenticatedClient.user.register.mutate({
 			...userCredentials,
 			raidDevices,
 			raidType,
 			acceleratorDevices,
+			failsafeLayout,
 		})
 	}
 
@@ -371,6 +374,39 @@ export default async function createTestUmbreld({
 // or a SAS HBA. HDD tests run against both via describe.each(driveBuses).
 export type DriveBus = 'sata' | 'sas'
 export const driveBuses: DriveBus[] = ['sata', 'sas']
+
+type TestVm = Awaited<ReturnType<typeof createTestVm>>['vm']
+
+// The kinds of drive a raidz failsafe array can be built from. Raidz tests run against all of
+// them via describe.each(raidzDrives), so HDD raidz arrays get the same coverage as SSD ones.
+// Each kind knows which VM to boot, how to fit and pull its drives, how to pick a drive out of
+// getDevices() by the slot it was fitted in, and which failsafe layout to register with.
+export const raidzDrives = [
+	{
+		name: 'NVMe SSD',
+		type: 'ssd' as const,
+		device: 'umbrel-pro' as const,
+		// SSD arrays are raidz1 without asking
+		failsafeLayout: undefined,
+		add: (vm: TestVm, options: {slot: number; size?: string}) => vm.addNvme(options),
+		remove: (vm: TestVm, options: {slot: number}) => vm.removeNvme(options),
+		disconnect: (vm: TestVm, options: {slot: number}) => vm.disconnectNvme(options),
+		inSlot: (slot: number) => (device: {serial: string}) => device.serial.startsWith(`nvme${slot}-`),
+	},
+	...driveBuses.map((bus) => ({
+		name: `${bus.toUpperCase()} HDD`,
+		type: 'hdd' as const,
+		device: 'nas' as const,
+		// HDD arrays are mirrors unless raidz1 is asked for
+		failsafeLayout: 'raidz1' as const,
+		// VM HDDs default to 1T, so default to the NVMe size to keep sizes the same for every kind
+		add: (vm: TestVm, {slot, size = '64G'}: {slot: number; size?: string}) => vm.addHdd({slot, size, bus}),
+		remove: (vm: TestVm, {slot}: {slot: number}) => vm.removeHdd({slot, bus}),
+		disconnect: (vm: TestVm, {slot}: {slot: number}) => vm.disconnectHdd({slot, bus}),
+		inSlot: (slot: number) => (device: {serial: string}) =>
+			device.serial.startsWith(`${bus === 'sas' ? 'sashdd' : 'hdd'}${slot}-`),
+	})),
+]
 
 export async function createTestVm({
 	device,
