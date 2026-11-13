@@ -58,7 +58,7 @@ data class SavedDevice(
 	 * discarded, and current IP candidates remain as fallbacks.
 	 */
 	fun mergeVerifiedDiscovery(discovered: IdentifiedDevice): SavedDevice {
-		if (discovered.id != id) return this
+		if (discovered.id != id || !isValidLocalEndpointHost(discovered.host)) return this
 		return copy(
 			host = discovered.host,
 			addresses = uniqueAddresses(addresses.filterNot(::isBonjourHostname) + discovered.addresses),
@@ -168,7 +168,10 @@ data class SavedDevice(
 
 		private fun uniqueAddresses(values: List<String>): List<String> {
 			val seen = HashSet<String>()
-			return values.filter { it.isNotEmpty() && seen.add(it.lowercase()) }
+			// Stored routes become request URLs and browser links. Keep only literal IPv4
+			// addresses and .local names, so an advertised or server-reported value can never
+			// name another kind of host.
+			return values.filter { isValidLocalEndpointHost(it) && seen.add(it.lowercase()) }
 		}
 	}
 }

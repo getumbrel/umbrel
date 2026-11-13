@@ -29,6 +29,46 @@ class SavedDeviceDiscoveryTest {
 	}
 
 	@Test
+	fun bonjourCandidateAcceptsOnlyLocalHosts() {
+		val rejected = listOf(
+			"umbrel.example.com",
+			"attacker.example.com/trpc?x=",
+			"user@umbrel.local",
+			"umbrel.local:8080",
+			"192.168.1.20:8080",
+			// The shape NSD hands over for a name that carries a port and a query
+			"192.168.1.20:8080?x=.local",
+			"umbrel",
+			// Literal addresses outside the ranges a local network uses
+			"203.0.113.7",
+			"127.0.0.1",
+		)
+		for (host in rejected) {
+			assertNull(host, Umbreld.localDiscoveryCandidate(Candidate(host = host, name = "Umbrel")))
+			val filtered = Umbreld.localDiscoveryCandidate(Candidate("umbrel.local", listOf(host, "192.168.1.20"), "Umbrel"))
+			assertEquals(host, listOf("192.168.1.20"), filtered?.addresses)
+		}
+
+		val local = Candidate("192.168.1.20", listOf("10.0.0.5", "172.16.4.2", "169.254.7.9"), "Umbrel")
+		assertEquals(local, Umbreld.localDiscoveryCandidate(local))
+	}
+
+	@Test
+	fun advertisedAddressOutsideTheLocalNetworkNeverReachesASavedDevice() = runBlocking {
+		val saved = SavedDevice(id = "device", name = "Umbrel", host = "umbrel.local")
+		val candidate = Candidate("umbrel.local", listOf("192.168.1.20", "203.0.113.7"), "Umbrel", id = "device")
+
+		// Only the name is asked, and it proves the saved identity
+		val probe = Umbreld.IdentityProbe { host, _ ->
+			if (host == "umbrel.local") Umbreld.IdentityProbeResult(Umbreld.DiscoveryInfo("device", "Umbrel Home", true), null) else null
+		}
+		val discovered = Umbreld.identifyCandidate(candidate, setOf("device"), probe = probe)
+
+		assertNotNull(discovered)
+		assertEquals(listOf("umbrel.local", "192.168.1.20"), saved.mergeVerifiedDiscovery(discovered!!).connectionHosts)
+	}
+
+	@Test
 	fun manualDiscoveryAddressAcceptsDirectIpsAndLocalHostnames() {
 		assertEquals("10.0.0.1", Umbreld.manualDiscoveryHostValue("10.0.0.1"))
 		assertEquals("172.16.0.1", Umbreld.manualDiscoveryHostValue("172.16.0.1"))

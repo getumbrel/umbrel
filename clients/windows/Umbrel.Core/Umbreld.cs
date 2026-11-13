@@ -742,9 +742,10 @@ public static partial class Umbreld
 
 	/// <summary>
 	/// DNS-SD is an unauthenticated source of local connection candidates: any LAN peer
-	/// can advertise any target. Accept only literal IPv4 addresses and .local names, and
-	/// never let it introduce a Tailscale-range endpoint; those come only from the
-	/// authenticated system.getIpAddresses response after sign-in.
+	/// can advertise any target and any addresses. Accept only .local names and literal
+	/// addresses in the ranges a local network uses, and never let it introduce a
+	/// Tailscale-range endpoint; those come only from the authenticated
+	/// system.getIpAddresses response after sign-in.
 	/// </summary>
 	internal static Candidate? LocalDiscoveryCandidate(Candidate candidate)
 	{
@@ -753,7 +754,8 @@ public static partial class Umbreld
 	}
 
 	private static bool IsLocalDiscoveryHost(string host) =>
-		SavedDevice.IsValidLocalEndpointHost(host) && !SavedDevice.IsTailscaleAddress(host);
+		SavedDevice.IsBonjourHostname(host)
+		|| (SavedDevice.IsSupportedManualIPv4Address(host) && !SavedDevice.IsTailscaleAddress(host));
 
 	/// <summary>
 	/// Probe a discovery snapshot concurrently and collapse duplicate advertisements of the

@@ -2,6 +2,7 @@ package com.umbrel.kit
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,7 +63,34 @@ class SavedDeviceTest {
 		assertEquals(listOf("umbrel.local", "192.168.1.5"), device.connectionHosts)
 	}
 
+	@Test
+	fun storedRoutesKeepOnlyLocalHosts() {
+		val device = SavedDevice(id = "id", name = "Umbrel", host = "umbrel.local")
+		val reported = listOf(
+			"192.168.1.5", "fe80::1", "umbrel.example.com", "100.64.0.1", "umbrel.local", "user@host.local", "192.168.1.5:8080", "",
+		)
+		assertEquals(listOf("192.168.1.5", "100.64.0.1", "umbrel.local"), device.replaceAvailableAddresses(reported).addresses)
+		assertEquals(listOf("192.168.1.5", "100.64.0.1", "umbrel.local"), device.rememberConnectionCandidates(reported).addresses)
 
+		// A route that isn't a local host is skipped even if an earlier build saved it
+		val stored = SavedDevice(id = "id", name = "Umbrel", host = "127.0.0.1:8080?x=", addresses = listOf("192.168.1.5", "umbrel.example.com"))
+		assertEquals(listOf("192.168.1.5"), stored.connectionHosts)
+
+		// Discovery that answered anywhere else changes nothing
+		val discovered = IdentifiedDevice(
+			host = "umbrel.example.com",
+			discoveryHost = "umbrel.local",
+			addresses = listOf("192.168.1.9"),
+			name = "Other",
+			id = "id",
+			model = "Umbrel Home",
+			onboarded = true,
+		)
+		assertSame(device, device.mergeVerifiedDiscovery(discovered))
+		val merged = device.mergeVerifiedDiscovery(discovered.copy(host = "192.168.1.9", addresses = listOf("192.168.1.9", "evil.example.com")))
+		assertEquals("192.168.1.9", merged.host)
+		assertEquals(listOf("192.168.1.9"), merged.addresses)
+	}
 
 	@Test
 	fun saveAccountProfileCachesPresentation() {

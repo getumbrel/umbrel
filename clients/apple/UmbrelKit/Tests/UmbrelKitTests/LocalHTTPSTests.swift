@@ -138,6 +138,29 @@ final class LocalHTTPSTests: XCTestCase {
 		XCTAssertEqual(calls, [.init(host: "100.90.0.1", expectedDeviceId: nil)])
 	}
 
+	func testIdentificationNeverProbesNonLocalHosts() async throws {
+		let recorder = IdentityProbeRecorder()
+		let candidate = Candidate(
+			host: "umbrel.example.com",
+			addresses: ["192.168.1.20", "127.0.0.1:8080/path?x=", "evil.example.com"],
+			name: "Umbrel"
+		)
+
+		let result = await Umbreld.identifyCandidate(
+			candidate,
+			knownDeviceIds: [],
+			allowsTailscaleHost: true,
+			probe: { host, expectedDeviceId in
+				await recorder.record(host: host, expectedDeviceId: expectedDeviceId)
+				return nil
+			}
+		)
+		let calls = await recorder.recordedCalls()
+
+		XCTAssertNil(result)
+		XCTAssertEqual(calls, [.init(host: "192.168.1.20", expectedDeviceId: nil)])
+	}
+
 	func testReidentifyReportsFinishedSetupOverTheScannedAnchor() async throws {
 		let device = IdentifiedDevice(
 			host: "192.168.4.23",

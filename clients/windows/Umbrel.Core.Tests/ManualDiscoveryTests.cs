@@ -80,12 +80,25 @@ public class ManualDiscoveryTests
 	[InlineData("attacker.example.com/trpc?x=")]
 	[InlineData("user@umbrel.local")]
 	[InlineData("umbrel.local:8080")]
+	[InlineData("192.168.1.20:8080?x=.local")]
 	[InlineData("umbrel")]
+	// Literal addresses outside the ranges a local network uses
+	[InlineData("203.0.113.7")]
+	[InlineData("127.0.0.1")]
 	public void PassiveDiscoveryAcceptsOnlyLocalHosts(string host)
 	{
 		Assert.Null(Umbreld.LocalDiscoveryCandidate(new Candidate(host, "x")));
 		var local = Umbreld.LocalDiscoveryCandidate(new Candidate("umbrel.local", [host, "192.168.1.5"], "x"));
 		Assert.Equal(["192.168.1.5"], local!.Addresses);
+	}
+
+	[Fact]
+	public void PassiveDiscoveryKeepsLocalNetworkAddresses()
+	{
+		var candidate = new Candidate("192.168.1.20", ["10.0.0.5", "172.16.4.2", "169.254.7.9"], "x");
+		var local = Umbreld.LocalDiscoveryCandidate(candidate);
+		Assert.Equal(candidate.Host, local!.Host);
+		Assert.Equal(candidate.Addresses, local.Addresses);
 	}
 
 	[Fact]

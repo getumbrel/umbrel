@@ -21,7 +21,7 @@ import kotlin.concurrent.thread
  * An Umbrel on loopback: plain HTTP and pinned HTTPS on one port, like umbreld's LAN
  * ingress. Each connection goes to an HTTP or an HTTPS MockWebServer by its first byte
  * (0x16 starts a TLS handshake). [host] includes the port, which the kit's URL builders
- * accept.
+ * accept. A discovery candidate can't carry a port, so it goes by [discoveryHost].
  */
 class FakeUmbrel(
 	val deviceId: String = "device",
@@ -44,6 +44,9 @@ class FakeUmbrel(
 	val requests: MutableList<RecordedRequest> = Collections.synchronizedList(mutableListOf())
 
 	val host: String get() = "localhost:${listener.localPort}"
+
+	/** The name a discovery candidate has for this Umbrel; a test sends its identity checks on to [host]. */
+	val discoveryHost: String get() = "umbrel-${listener.localPort}.local"
 	val caCertificate: ByteArray get() = ca.certificate.encoded
 
 	init {

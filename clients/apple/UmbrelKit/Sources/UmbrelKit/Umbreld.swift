@@ -681,6 +681,10 @@ public enum Umbreld {
 			?? acceptedCandidate.id.flatMap { knownDeviceIds.contains($0) ? $0 : nil }
 		var attemptedHosts = Set<String>()
 		for host in [acceptedCandidate.host] + acceptedCandidate.addresses where attemptedHosts.insert(host).inserted {
+			// Only a literal IPv4 address or .local name is ever probed, so a candidate
+			// can't aim the plaintext bootstrap at an internet name or splice extra URL
+			// syntax into the request.
+			guard SavedDevice.isValidLocalEndpointHost(host) else { continue }
 			guard !Task.isCancelled else { return nil }
 			guard var verified = await probe(host, hintedDeviceId) else { continue }
 			var identity = verified.discoveryInfo
@@ -709,14 +713,21 @@ public enum Umbreld {
 		return nil
 	}
 
-	// Bonjour is an unauthenticated source of local connection candidates. Never let
-	// it introduce a Tailscale-range endpoint; those come only from the authenticated
+	// Bonjour is an unauthenticated source of local connection candidates: any device on
+	// the network can advertise any target and any addresses. Accept only .local names
+	// and literal addresses in the ranges a local network uses, and never let it
+	// introduce a Tailscale-range endpoint; those come only from the authenticated
 	// system.getIpAddresses response after sign-in.
 	static func localDiscoveryCandidate(_ candidate: Candidate) -> Candidate? {
-		guard !SavedDevice.isTailscaleAddress(candidate.host) else { return nil }
+		guard isLocalDiscoveryHost(candidate.host) else { return nil }
 		var candidate = candidate
-		candidate.addresses.removeAll(where: SavedDevice.isTailscaleAddress)
+		candidate.addresses.removeAll { !isLocalDiscoveryHost($0) }
 		return candidate
+	}
+
+	private static func isLocalDiscoveryHost(_ host: String) -> Bool {
+		SavedDevice.isBonjourHostname(host)
+			|| (SavedDevice.isSupportedManualIPv4Address(host) && !SavedDevice.isTailscaleAddress(host))
 	}
 
 	// Probe a discovery snapshot concurrently and collapse duplicate advertisements

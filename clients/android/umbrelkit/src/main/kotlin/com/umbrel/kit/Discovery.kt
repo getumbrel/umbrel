@@ -276,6 +276,9 @@ class Discovery(context: Context) {
 			val byHost = HashMap<String, Candidate>()
 			for (entry in entries.values) {
 				val host = entry.host ?: continue // not resolved yet
+				// Any device on the network can advertise any hostname. Skip anything that isn't
+				// a literal IPv4 address or .local name before it reaches identification.
+				if (!SavedDevice.isValidLocalEndpointHost(host)) continue
 				var candidate = Candidate(host, entry.addresses, entry.serviceName, entry.id, entry.model, entry.onboarded)
 				byHost[host.lowercase()]?.let { existing ->
 					candidate = candidate.copy(addresses = (existing.addresses + candidate.addresses).distinct().sorted())

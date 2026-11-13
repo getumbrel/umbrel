@@ -369,7 +369,7 @@ object Umbreld {
 		null
 	}
 
-	private suspend fun verifiedLocalHttpsIdentity(host: String, expectedDeviceId: String?): IdentityProbeResult {
+	internal suspend fun verifiedLocalHttpsIdentity(host: String, expectedDeviceId: String?): IdentityProbeResult {
 		// A saved Umbrel must validate directly against its existing pin.
 		if (expectedDeviceId != null) {
 			return when (storedLocalHttpsCa(expectedDeviceId)) {
@@ -662,7 +662,10 @@ object Umbreld {
 		val hintedDeviceId = requiredDeviceId ?: accepted.id?.takeIf { it in knownDeviceIds }
 		val attempted = HashSet<String>()
 		for (host in listOf(accepted.host) + accepted.addresses) {
-			if (!attempted.add(host)) continue
+			// Only a literal IPv4 address or .local name is ever probed, so a candidate can't
+			// aim the plaintext bootstrap at an internet name or splice extra URL syntax into
+			// the request.
+			if (!SavedDevice.isValidLocalEndpointHost(host) || !attempted.add(host)) continue
 			coroutineContext.ensureActive()
 			var verified = prober.probe(host, hintedDeviceId) ?: continue
 			var identity = verified.discoveryInfo
@@ -691,14 +694,20 @@ object Umbreld {
 	}
 
 	/**
-	 * mDNS is an unauthenticated source of local connection candidates. Never let it
-	 * introduce a Tailscale-range endpoint; those come only from the authenticated
-	 * system.getIpAddresses response after sign-in.
+	 * mDNS is an unauthenticated source of local connection candidates: any device on the
+	 * network can advertise any hostname and any addresses. Accept only .local names and
+	 * literal addresses in the ranges a local network uses, and never let it introduce a
+	 * Tailscale-range endpoint; those come only from the authenticated system.getIpAddresses
+	 * response after sign-in.
 	 */
 	internal fun localDiscoveryCandidate(candidate: Candidate): Candidate? {
-		if (SavedDevice.isTailscaleAddress(candidate.host)) return null
-		return candidate.copy(addresses = candidate.addresses.filterNot(SavedDevice::isTailscaleAddress))
+		if (!isLocalDiscoveryHost(candidate.host)) return null
+		return candidate.copy(addresses = candidate.addresses.filter(::isLocalDiscoveryHost))
 	}
+
+	private fun isLocalDiscoveryHost(host: String): Boolean =
+		SavedDevice.isBonjourHostname(host) ||
+			(SavedDevice.isSupportedManualIPv4Address(host) && !SavedDevice.isTailscaleAddress(host))
 
 	/** Probe a discovery snapshot concurrently and collapse duplicate records of one Umbrel. */
 	suspend fun identify(candidates: List<Candidate>, knownDeviceIds: Set<String> = emptySet()): List<IdentifiedDevice> =

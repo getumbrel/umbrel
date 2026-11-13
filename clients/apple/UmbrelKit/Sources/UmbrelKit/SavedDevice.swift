@@ -68,9 +68,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 	// HTTPS CA before use. Tailscale additionally encrypts the route between peers.
 	// It remains one Umbrel account with multiple possible routes.
 	public var connectionHosts: [String] {
-		var seen = Set<String>()
-		return ([host] + addresses)
-			.filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+		Self.uniqueAddresses([host] + addresses)
 	}
 
 	public var nativeTarget: Umbreld.Target {
@@ -157,7 +155,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 	// Umbrel's HTTPS identity. Its answering endpoint becomes primary, while stale
 	// Bonjour names are discarded and current IP candidates remain as fallbacks.
 	public mutating func mergeVerifiedDiscovery(_ discovered: IdentifiedDevice) {
-		guard discovered.id == id else { return }
+		guard discovered.id == id, Self.isValidLocalEndpointHost(discovered.host) else { return }
 		host = discovered.host
 		addresses.removeAll(where: Self.isBonjourHostname)
 		rememberConnectionCandidates(discovered.addresses)
@@ -178,9 +176,12 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		addresses = Self.uniqueAddresses(current)
 	}
 
+	// Stored routes become request URLs, browser links and Finder mount targets. Keep
+	// only literal IPv4 addresses and .local names, so an advertised or server-reported
+	// value can never name another kind of host.
 	private static func uniqueAddresses(_ values: [String]) -> [String] {
 		var seen = Set<String>()
-		return values.filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+		return values.filter { isValidLocalEndpointHost($0) && seen.insert($0.lowercased()).inserted }
 	}
 
 	public mutating func saveAccountProfile(
