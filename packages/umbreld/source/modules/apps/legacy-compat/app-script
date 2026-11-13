@@ -761,6 +761,12 @@ fi
 # when storage is unavailable, and for the final teardown during uninstall.
 # Image removal belongs to umbreld's sweep, which protects stopped apps too.
 if [[ "$command" = "force-stop" ]]; then
+  # If the app's files are missing from app-data, Compose can still find the
+  # project's containers and networks by their labels, so uninstall can finish.
+  if [[ ! -f "${app_data_dir}/docker-compose.yml" ]]; then
+    docker compose --project-name "${app}" down --remove-orphans
+    exit
+  fi
   compose "${app}" down --remove-orphans
   exit
 fi
