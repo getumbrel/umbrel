@@ -11,15 +11,16 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {SsdHealthDialog} from '@/features/storage/components/dialogs/ssd-health-dialog'
 import {StorageDeviceCard} from '@/features/storage/components/storage-device-card'
 import {Layout, primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {Progress} from '@/modules/bare/progress'
 import {RaidError} from '@/routes/onboarding/raid/raid-error'
 import {ReturnToStart} from '@/routes/onboarding/raid/return-to-start'
 
-import {SsdHealthDialog, useSsdHealthDialog} from '../raid/ssd-health-dialog'
 import {StorageDevice} from '../raid/use-raid-setup'
 import {useRecoverExistingInstall} from '../raid/use-recover-existing-install'
+import {useSsdHealthDialog} from '../raid/use-ssd-health-dialog'
 import {ModalShell, StepHeader} from './components'
 
 // HDD-flow variant of the Pro recovery screen: same backend flow and copy, rendered in

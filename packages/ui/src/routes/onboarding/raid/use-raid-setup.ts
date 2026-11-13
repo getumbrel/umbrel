@@ -27,7 +27,6 @@ export const formatSize = (bytes: number) => {
 }
 
 // Threshold % for lifetime usage warning (100 = the rated endurance being fully used)
-// Used by both ssd-tray.tsx (indicator dots) and ssd-health-dialog.tsx (warning display)
 export const LIFETIME_WARNING_THRESHOLD = 80
 
 // Color for FailSafe storage visualization (white to contrast with brand color)
@@ -36,8 +35,8 @@ export const FAILSAFE_COLOR = '#FFFFFF'
 // Color for wasted storage visualization (red to indicate inefficiency)
 export const WASTED_COLOR = '#FF2F63'
 
-// Get device health status - single source of truth for all health checks
-// Used by setup.tsx (warning indicators) and ssd-health-dialog.tsx (detailed display)
+// Get device health status for the warning indicators on the onboarding and RAID error drive lists.
+// Matches getDeviceHealth in Storage Manager's use-storage.ts, which the health dialog uses
 export function getDeviceHealth(device: StorageDevice) {
 	const isSsd = device.type === 'ssd'
 

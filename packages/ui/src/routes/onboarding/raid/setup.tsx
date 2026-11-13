@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import {Switch} from '@/components/ui/switch'
 import {links} from '@/constants/links'
+import {SsdHealthDialog} from '@/features/storage/components/dialogs/ssd-health-dialog'
 import {footerLinkClass, Layout, primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {Progress} from '@/modules/bare/progress'
@@ -34,7 +35,6 @@ import {linkClass} from '@/utils/element-classes'
 import type {RaidOnboardingVariant} from './index'
 import {RaidError} from './raid-error'
 import {RecoverExistingInstall} from './recover-existing-install'
-import {SsdHealthDialog, useSsdHealthDialog} from './ssd-health-dialog'
 import {GenericSsdTray, SsdSlot, SsdTray} from './ssd-tray'
 import {
 	FAILSAFE_COLOR,
@@ -45,6 +45,7 @@ import {
 	useDetectStorageDevices,
 	WASTED_COLOR,
 } from './use-raid-setup'
+import {useSsdHealthDialog} from './use-ssd-health-dialog'
 
 // ============================================================================
 // Helper Functions

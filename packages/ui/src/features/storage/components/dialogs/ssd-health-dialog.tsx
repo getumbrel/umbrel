@@ -120,7 +120,8 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 						>
 							{/* Decorative - the size, slot, and model are overlaid as real text below */}
 							<img src='/assets/onboarding/ssd-info.webp' alt='' draggable={false} className='ml-auto w-[95%]' />
-							<div className='absolute flex flex-col' style={{left: '20%', top: '50%', transform: 'translateY(-50%)'}}>
+							{/* One block, so a long model truncates instead of running into the slot label */}
+							<div className='absolute inset-y-0 right-[5%] left-[20%] flex flex-col justify-center'>
 								<span
 									className='leading-tight font-bold'
 									style={{
@@ -130,16 +131,18 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 								>
 									{formatStorageSize(device.size)}
 								</span>
-								<span className='text-white/50' style={{fontSize: 'clamp(12px, 2.5vw, 14px)'}}>
-									SSD {slotNumber}
-								</span>
+								<div className='flex items-baseline justify-between gap-3'>
+									<span className='shrink-0 text-white/50' style={{fontSize: 'clamp(12px, 2.5vw, 14px)'}}>
+										SSD {slotNumber}
+									</span>
+									<span
+										className='min-w-0 truncate font-medium text-white/90'
+										style={{fontSize: 'clamp(12px, 2.5vw, 15px)'}}
+									>
+										{device.model}
+									</span>
+								</div>
 							</div>
-							<span
-								className='absolute font-medium text-white/90'
-								style={{right: '5%', top: '70%', transform: 'translateY(-50%)', fontSize: 'clamp(12px, 2.5vw, 15px)'}}
-							>
-								{device.model}
-							</span>
 						</div>
 					)}
 

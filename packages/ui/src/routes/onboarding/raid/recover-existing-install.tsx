@@ -11,6 +11,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {SsdHealthDialog} from '@/features/storage/components/dialogs/ssd-health-dialog'
 import {StorageDeviceCard} from '@/features/storage/components/storage-device-card'
 import {Layout, primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {Progress} from '@/modules/bare/progress'
@@ -18,10 +19,10 @@ import {RaidError} from '@/routes/onboarding/raid/raid-error'
 import {ReturnToStart} from '@/routes/onboarding/raid/return-to-start'
 
 import type {RaidOnboardingVariant} from './index'
-import {SsdHealthDialog, useSsdHealthDialog} from './ssd-health-dialog'
 import {GenericSsdTray, SsdSlot, SsdTray} from './ssd-tray'
 import {formatSize, getDeviceHealth, StorageDevice} from './use-raid-setup'
 import {useRecoverExistingInstall} from './use-recover-existing-install'
+import {useSsdHealthDialog} from './use-ssd-health-dialog'
 
 type RecoverExistingInstallProps = {
 	devices: StorageDevice[]
