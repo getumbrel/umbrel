@@ -254,8 +254,9 @@ export function useWallpaperCssVars(wallpaperId?: WallpaperId) {
 }
 
 // Safari on an iPhone can show the wallpaper under its bottom bar (see
-// useWallpaperUnderBrowserBar), so there the wallpaper is as tall as the screen.
-// Everywhere else it covers the viewport with the browser's bars tucked away.
+// useWallpaperUnderBrowserBar), so there the wallpaper reaches for the screen's
+// height. It only ever adds to the viewport's (see --wallpaper-height in
+// index.css): a folding iPhone opened out still reports its outer display here.
 function useWallpaperHeight() {
 	useLayoutEffect(() => {
 		if (!IS_IPHONE_BROWSER) return
@@ -264,13 +265,13 @@ function useWallpaperHeight() {
 			// The screen's sides stay put when the phone turns
 			const sideways = window.innerWidth > window.innerHeight
 			const height = sideways ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height)
-			el.style.setProperty('--wallpaper-height', `${height}px`)
+			el.style.setProperty('--screen-height', `${height}px`)
 		}
 		update()
 		window.addEventListener('resize', update)
 		return () => {
 			window.removeEventListener('resize', update)
-			el.style.removeProperty('--wallpaper-height')
+			el.style.removeProperty('--screen-height')
 		}
 	}, [])
 }

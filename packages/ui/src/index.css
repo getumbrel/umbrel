@@ -188,8 +188,9 @@ html {
 	/* Space above the sheet. Putting here because it's used in multiple places for calculations */
 	--sheet-top: 2vh;
 	--wallpaper-blur: 12px;
-	/* An iPhone sets the screen's height (see useWallpaperHeight) */
-	--wallpaper-height: 100lvh;
+	/* Covers the viewport with the browser's bars tucked away, and reaches further
+	   on an iPhone, which sets the screen's height (see useWallpaperHeight) */
+	--wallpaper-height: max(100lvh, var(--screen-height, 0px));
 
 	/* Keyboard focus ring. Single source of truth: consumed by the `:focus-visible`
 	   rule above and by the `ring` colour in tailwind.config.ts, which backs the
@@ -373,6 +374,18 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 
 	.umbrel-window-tint {
 		background-color: rgb(var(--window-background-tint-rgb) / var(--window-background-tint-opacity));
+	}
+
+	/* The one colour a sheet settles into along its bottom edge (see SheetContent).
+	   It arrives with the wallpaper it's taken from, and goes as the sheet closes. */
+	.umbrel-window-floor {
+		opacity: 0;
+		mask-image: linear-gradient(to bottom, transparent, black 16px);
+		animation: fade-in 700ms ease-out 200ms both;
+	}
+
+	[data-state='closed'] + .umbrel-window-floor {
+		animation: none;
 	}
 
 	.umbrel-material.umbrel-window-surface-all {

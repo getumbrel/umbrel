@@ -22,7 +22,8 @@ import {useDockTuck} from './dock-tuck'
 import {homeFit} from './home-fit'
 import {prefetchRouteChunks} from './prefetch-route-chunks'
 
-// Safari's bar floats just below the window on an iPhone, so the dock can sit lower there
+// Safari's bar floats just below the window on an iPhone, so the dock can sit lower
+// there. No lower than this, though: Safari reads the band's colour 4px up from the edge
 const DOCK_BOTTOM_PADDING_PX = IS_IPHONE_BROWSER ? 4 : 10
 const DOCK_SIDE_PADDING_PX = 12
 // The most items it holds, and the least space it leaves either side of the window
@@ -288,7 +289,10 @@ export function DockSpacer({className}: {className?: string}) {
 export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 	const {bottom} = useDockDimensions()
 	return (
-		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: bottom}}>
+		// Held off the edge rather than padded down to it: Safari on an iPhone reads the
+		// colour for the band under its bar from the layer it finds in that gap, and a
+		// sheet has one there for it (see SheetContent)
+		<div className='fixed left-1/2 z-50 -translate-x-1/2' style={{bottom}}>
 			{children}
 		</div>
 	)
