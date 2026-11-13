@@ -2143,8 +2143,9 @@ export default class Raid {
 			await $`zpool offline ${migrationPoolName} ${this.temporaryDevicePath}`
 			await fse.remove(this.temporaryDevicePath)
 
-			// Create a snapshot of the active pool
+			// Create a snapshot of the active pool, clearing one left behind by a transition that lost power
 			const baseSnapshot = 'migration'
+			await $`zfs destroy -r ${pool.name}@${baseSnapshot}`.catch(() => {})
 			this.logger.log(`Creating snapshot: ${pool.name}@${baseSnapshot}`)
 			await $`zfs snapshot -r ${pool.name}@${baseSnapshot}`
 
