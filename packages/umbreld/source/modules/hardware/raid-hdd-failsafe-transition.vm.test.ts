@@ -152,6 +152,12 @@ describe.each(driveBuses)('RAID HDD storage to failsafe mirror transition (%s)',
 		expect(status.exists).toBe(true)
 	})
 
+	test('rejects adding an accelerator while the transition is rebuilding', async () => {
+		await expect(umbreld.client.hardware.raid.addAccelerator.mutate({deviceIds: [ssdDeviceId]})).rejects.toThrow(
+			'Cannot add an accelerator while a FailSafe transition is in progress',
+		)
+	})
+
 	test('reports mirror failsafe mode immediately after transition', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.exists).toBe(true)

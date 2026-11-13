@@ -1817,6 +1817,10 @@ export default class Raid {
 		this.#assertNoScrubInProgress(pool, 'add a RAID accelerator')
 		if (pool.raidType === 'storage' && pool.topology !== 'stripe')
 			throw new Error('Cannot add an accelerator while the storage array is only partially protected')
+		// A transition works out what to do with the array's accelerator when it starts, so one can't be
+		// added until it has finished
+		if (this.isTransitioningToFailsafe)
+			throw new Error('Cannot add an accelerator while a FailSafe transition is in progress')
 		if ((await this.#getPoolDeviceType()) !== 'hdd')
 			throw new Error('Accelerators are only supported for HDD RAID arrays')
 		if (pool.accelerator?.exists) throw new Error('RAID array already has an accelerator')
