@@ -1689,6 +1689,8 @@ export default class Raid {
 		const pool = await this.getStatus()
 		if (!pool.exists) throw new Error("RAID array doesn't exist")
 		this.#assertNoScrubInProgress(pool, 'add a RAID device')
+		if (pool.expansion?.state === 'expanding')
+			throw new Error('Cannot add a RAID device while a RAID expansion is in progress')
 		if (pool.topology === 'mirror')
 			throw new Error('addDevice is not supported for mirror failsafe mode, use addMirror')
 		if (pool.topology !== 'stripe' && pool.topology !== 'raidz')

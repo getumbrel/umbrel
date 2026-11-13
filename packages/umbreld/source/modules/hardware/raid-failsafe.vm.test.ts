@@ -9,6 +9,7 @@ describe('RAID failsafe mode', () => {
 	let firstDeviceId: string
 	let secondDeviceId: string
 	let thirdDeviceId: string
+	let fourthDeviceId: string
 	let initialUsableSpace: number
 	let expansionSubscription: ReturnType<typeof umbreld.subscribeToEvents<ExpansionStatus>>
 	let failed = false
@@ -97,9 +98,14 @@ describe('RAID failsafe mode', () => {
 		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
 	})
 
-	test('shuts down and adds third SSD', async () => {
+	test('writes data so the expansion takes a while', async () => {
+		await umbreld.vm.ssh('dd if=/dev/urandom of=~/data.bin bs=1M count=1000 && sync')
+	})
+
+	test('shuts down and adds third and fourth SSDs', async () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.addNvme({slot: 3})
+		await umbreld.vm.addNvme({slot: 4})
 		await umbreld.vm.powerOn()
 	})
 
@@ -109,13 +115,15 @@ describe('RAID failsafe mode', () => {
 		await umbreld.login()
 	})
 
-	test('detects all three NVMe devices after reboot', async () => {
+	test('detects all four NVMe devices after reboot', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
-		expect(devices).toHaveLength(3)
+		expect(devices).toHaveLength(4)
 		const thirdDevice = devices.find((d) => d.slot === 3)
 		expect(thirdDevice).toBeDefined()
 		thirdDeviceId = thirdDevice!.id!
 		expect(thirdDeviceId).toBeDefined()
+		fourthDeviceId = devices.find((d) => d.slot === 4)!.id!
+		expect(fourthDeviceId).toBeDefined()
 	})
 
 	test('adds third SSD to RAID array and subscribes to expansion events', async () => {
@@ -124,6 +132,12 @@ describe('RAID failsafe mode', () => {
 		await expansionSubscription.started
 
 		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: thirdDeviceId})
+	})
+
+	test('rejects adding fourth SSD while the array is still expanding', async () => {
+		await expect(umbreld.client.hardware.raid.addDevice.mutate({deviceId: fourthDeviceId})).rejects.toThrow(
+			'Cannot add a RAID device while a RAID expansion is in progress',
+		)
 	})
 
 	test('reports correct RAID status with three devices', async () => {
