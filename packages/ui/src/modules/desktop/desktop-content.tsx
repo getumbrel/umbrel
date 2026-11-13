@@ -16,6 +16,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected, AppLabel} from './app-icon'
 import {Search} from './desktop-misc'
+import {useDesktopRevealing} from './desktop-reveal'
 import {DockSpacer} from './dock'
 import {Header} from './header'
 import {useHomeFit} from './home-fit'
@@ -24,7 +25,8 @@ import {ShortcutIcon} from './shortcut-icon'
 
 // How the desktop presents for the current route: shown on the homescreen,
 // lifted away under the widget editor, and hidden outright (no transition)
-// under a sheet. Shared with the welcome desktop so both behave the same.
+// everywhere else, until the window there starts to close. Shared with the
+// welcome desktop so both behave the same.
 type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
 
 export const desktopVariants: Record<DesktopVariant, Variant> = {
@@ -46,7 +48,9 @@ export const desktopVariants: Record<DesktopVariant, Variant> = {
 
 export function useDesktopVariant(): DesktopVariant {
 	const {pathname} = useLocation()
-	return pathname === '/' ? 'default' : pathname.startsWith('/edit-widgets') ? 'edit-widgets' : 'overlayed'
+	const revealing = useDesktopRevealing()
+	if (pathname.startsWith('/edit-widgets')) return 'edit-widgets'
+	return pathname === '/' || revealing ? 'default' : 'overlayed'
 }
 
 // One of the account's enabled widgets as it appears in the homescreen row:

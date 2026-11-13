@@ -1,11 +1,8 @@
 // TODO: move to misc.ts
-import {useEffect, useState} from 'react'
-import {useSearchParams, type To} from 'react-router-dom'
+import {useEffect, useRef, useState} from 'react'
+import {useLocation, useNavigate, useSearchParams, type Location, type To} from 'react-router-dom'
 
 import {SettingsDialogKey} from '@/routes/settings'
-import {sleep} from '@/utils/misc'
-
-export const EXIT_DURATION_MS = 100
 
 export type GlobalDialogKey =
 	| 'logout'
@@ -79,9 +76,6 @@ export function withDialog(
 // TODO: make dialog query params typesafe
 
 /**
- * For use with dialogs and other Radix elements with an `onOpenChange` prop.
- */
-/**
  * For a dialog's `onOpenAutoFocus`: focus the dialog itself rather than its first
  * control, so the keyboard is inside the dialog (not left behind its overlay)
  * without the first option looking chosen.
@@ -91,37 +85,91 @@ export function focusDialogContent(event: Event) {
 	;(event.currentTarget as HTMLElement).focus()
 }
 
-export function afterDelayedClose(cb?: () => void) {
-	return (open: boolean) => !open && sleep(EXIT_DURATION_MS).then(cb)
+/**
+ * Runs `onExited` once `closed` is true and whatever closed with it has
+ * finished animating out. Closed content stays mounted for its exit, which
+ * ends when the animation does, so this is the moment to let go of what that
+ * content still needs: its route, its place in the URL. The animations are
+ * asked directly, so there is no duration here to keep in step with the CSS.
+ */
+export function useAfterExit(closed: boolean, onExited: () => void) {
+	// The callback of the last render to reach the screen. A navigation renders in
+	// the background first, and its callback must not run for the page still showing.
+	const committedOnExited = useRef(onExited)
+	useEffect(() => {
+		committedOnExited.current = onExited
+	})
+
+	useEffect(() => {
+		if (!closed) return
+		let cancelled = false
+		// Found once the closed state is in a frame. Safari can report an exit as
+		// finished before drawing any of it, and by then it is back to be played
+		// (see animation-start.ts).
+		const frame = requestAnimationFrame(() => {
+			const exits = document.getAnimations().filter(({effect}) => {
+				const target = effect instanceof KeyframeEffect ? effect.target : null
+				// Loops inside closed content, a spinner say, never finish
+				return target?.matches('[data-state="closed"]') && Number.isFinite(effect?.getComputedTiming().endTime)
+			})
+			// One that gets cancelled has left as well
+			Promise.allSettled(exits.map((exit) => exit.finished)).then(() => {
+				if (!cancelled) committedOnExited.current()
+			})
+		})
+		return () => {
+			cancelled = true
+			cancelAnimationFrame(frame)
+		}
+	}, [closed])
 }
 
-export function useAfterDelayedClose(open: boolean, cb: () => void, delayMs: number = EXIT_DURATION_MS) {
-	useEffect(() => {
-		const id = setTimeout(() => {
-			if (!open) cb()
-		}, delayMs)
+/**
+ * Whether no navigation has started since `location` rendered. Navigations
+ * render as transitions, so a newer one may not be on screen yet: React Router
+ * keeps the newest entry's key in history.state.
+ */
+function isNewestLocation(location: Location) {
+	const newestKey = window.history.state?.key
+	return newestKey === undefined || newestKey === location.key
+}
 
-		// Cancel the timeout if the component unmounts or the `open` prop changes.
-		return () => clearTimeout(id)
-	}, [open, cb, delayMs])
+/**
+ * Leaves for `to` once `closed` is true and the dialog or window has animated
+ * out. A navigation that started in the meantime wins.
+ */
+export function useNavigateAfterExit(closed: boolean, to: To) {
+	const navigate = useNavigate()
+	const location = useLocation()
+
+	useAfterExit(closed, () => {
+		if (isNewestLocation(location)) navigate(to)
+	})
 }
 
 /** Allow controlling dialog from query params */
 export function useDialogOpenProps(dialogKey: DialogKey) {
 	const [searchParams, setSearchParams] = useSearchParams()
+	const location = useLocation()
 	const [open, setOpen] = useState(false)
+	const [closing, setClosing] = useState(false)
 
 	// Update open state when url is changed from the outside
 	useEffect(() => {
 		setOpen(searchParams.get('dialog') === dialogKey)
+		setClosing(false)
 	}, [searchParams, dialogKey])
+
+	// The params outlive the close so the exit animation can play
+	useAfterExit(closing, () => {
+		if (isNewestLocation(location)) setSearchParams(withoutDialog(searchParams))
+	})
 
 	const onOpenChange = (open: boolean) => {
 		// Keeping this here despite `useEffect` to change open state immediately
 		setOpen(open)
+		setClosing(!open)
 		if (open) setSearchParams(withDialog(searchParams, dialogKey))
-		// The params outlive the close so the exit animation can play
-		else sleep(EXIT_DURATION_MS).then(() => setSearchParams(withoutDialog(searchParams)))
 	}
 
 	return {open, onOpenChange}

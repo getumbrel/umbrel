@@ -13,10 +13,12 @@ import {CoverMessageTarget} from '@/components/ui/cover-message'
 import {RootErrorFallback} from '@/components/ui/root-error-fallback'
 import {Toaster} from '@/components/ui/toast'
 import {TooltipProvider} from '@/components/ui/tooltip'
+import {startAnimationsOnFirstFrame} from '@/utils/animation-start'
 import {monkeyPatchConsoleLog} from '@/utils/logs'
 import {allowsNativeContextMenu} from '@/utils/native-context-menu'
 
 monkeyPatchConsoleLog()
+startAnimationsOnFirstFrame()
 
 // Disable the browser context menu for a native OS feel, except on text fields and opted-in surfaces
 document.addEventListener(

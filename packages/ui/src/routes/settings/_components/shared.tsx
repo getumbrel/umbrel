@@ -3,12 +3,11 @@ import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {TbChevronLeft} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {cn} from '@/lib/utils'
 import {AccountAvatarEditor, type AccountAvatarControlsVisibility} from '@/modules/auth/account-avatar-editor'
-import {afterDelayedClose} from '@/utils/dialog'
+import {useNavigateAfterExit} from '@/utils/dialog'
 import {focusRingClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
@@ -79,15 +78,8 @@ export function Divider() {
 }
 
 export function useSettingsDialogProps({closeTo = '/settings'}: {closeTo?: string} = {}) {
-	const navigate = useNavigate()
-
 	const [open, setOpen] = useState(true)
+	useNavigateAfterExit(!open, closeTo)
 
-	return {
-		open,
-		onOpenChange: (open: boolean) => {
-			setOpen(open)
-			afterDelayedClose(() => navigate(closeTo))(open)
-		},
-	}
+	return {open, onOpenChange: setOpen}
 }

@@ -4,6 +4,38 @@
 
 @config '../tailwind.config.ts';
 
+/* tw-animate's enter and exit keyframes without their `filter: blur()`. Nothing
+   here blurs in or out, and the channel is not free: with it Chrome animates on
+   the main thread, so an entrance freezes for as long as the content behind it
+   takes to mount, and anything with a filter of its own (the blurred backdrops)
+   animates that filter up from nothing. */
+@theme inline {
+	--animate-in: umbrel-enter var(--tw-animation-duration, var(--tw-duration, 0.15s)) var(--tw-ease, ease)
+		var(--tw-animation-delay, 0s) var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
+		var(--tw-animation-fill-mode, none);
+	--animate-out: umbrel-exit var(--tw-animation-duration, var(--tw-duration, 0.15s)) var(--tw-ease, ease)
+		var(--tw-animation-delay, 0s) var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
+		var(--tw-animation-fill-mode, none);
+
+	@keyframes umbrel-enter {
+		from {
+			transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+				scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1))
+				rotate(var(--tw-enter-rotate, 0));
+			opacity: var(--tw-enter-opacity, 1);
+		}
+	}
+
+	@keyframes umbrel-exit {
+		to {
+			transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+				scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1))
+				rotate(var(--tw-exit-rotate, 0));
+			opacity: var(--tw-exit-opacity, 1);
+		}
+	}
+}
+
 /* Increase contrast, from Settings > Accessibility or the device's own setting
    (see hooks/use-accessibility.ts) */
 @custom-variant contrast-more (&:where([data-increase-contrast], [data-increase-contrast] *));
@@ -414,9 +446,7 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	   sits on the bottom edge and the travel is a rise/sink, so the sheet grows
 	   out of the dock that opened it and settles back toward it. The ease-out
 	   quint's punchy start keeps the response feeling instant; its long tail is
-	   what reads as the settle. The close duration must match
-	   SHEET_EXIT_DURATION_MS in layouts/sheet.tsx, which navigates away
-	   (unmounting the route) once the animation lands. */
+	   what reads as the settle. */
 	.umbrel-sheet-zoom {
 		transform-origin: 50% 100%;
 	}
@@ -427,6 +457,8 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 
 	.umbrel-sheet-zoom[data-state='closed'] {
 		animation: umbrel-sheet-out 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+		/* The desktop is coming back underneath, and taps are meant for it */
+		pointer-events: none;
 	}
 
 	/* Compositor-driven so it can't stutter while the sheet's route mounts on the

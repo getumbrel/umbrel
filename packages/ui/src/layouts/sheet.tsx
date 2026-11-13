@@ -1,28 +1,24 @@
 import {Suspense, useCallback, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {Outlet, useLocation, useNavigate} from 'react-router-dom'
+import {Outlet, useLocation} from 'react-router-dom'
 
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {Sheet, SheetContent, SheetTitle} from '@/components/ui/sheet'
 import {ScrollArea} from '@/components/ui/sheet-scroll-area'
 import {useScrollRestoration} from '@/hooks/use-scroll-restoration'
 import {cn} from '@/lib/utils'
+import {useRevealDesktop} from '@/modules/desktop/desktop-reveal'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {useTuckDockOnScroll} from '@/modules/desktop/dock-tuck'
 import {SheetFixedTarget} from '@/modules/sheet-top-fixed'
 import {SheetStickyHeaderProvider, SheetStickyHeaderTarget, useSheetStickyHeader} from '@/providers/sheet-sticky-header'
 import {usePauseWallpaperVideo} from '@/providers/wallpaper'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useNavigateAfterExit} from '@/utils/dialog'
 
 import {getSheetScrollRestorationAction} from './sheet-scroll-restoration'
 
-// Matches the umbrel-sheet-out duration in index.css, so the route unmounts
-// (and the desktop takes back over) right as the close animation lands
-const SHEET_EXIT_DURATION_MS = 200
-
 export function SheetLayout() {
 	const {t} = useTranslation()
-	const navigate = useNavigate()
 	const location = useLocation()
 
 	// A close belongs to the location it was asked on. The layout persists
@@ -58,16 +54,10 @@ export function SheetLayout() {
 		if (isSettingsRoute) scrollRef.current?.scrollTo(0, 0)
 	}, [isSettingsRoute])
 
-	useAfterDelayedClose(
-		open,
-		() => {
-			// Navigations render as transitions, so one that started during the exit
-			// animation may not be on screen yet. It still wins over going home.
-			// React Router keeps the newest entry's key in history.state.
-			if ((window.history.state?.key ?? 'default') === location.key) navigate('/')
-		},
-		SHEET_EXIT_DURATION_MS,
-	)
+	// The desktop comes back in as the sheet leaves, and takes over once it has
+	// gone: the route unmounts right as the close animation lands
+	useRevealDesktop(!open)
+	useNavigateAfterExit(!open, '/')
 
 	// Only the wallpaper's margins show around the sheet. Keyed on `open` rather
 	// than mount so motion is back before the close animation reveals the desktop.

@@ -59,6 +59,8 @@ describe('app launch dialog', () => {
 
 	beforeEach(() => {
 		vi.useFakeTimers()
+		// jsdom plays no animations, so a close has no exit to wait for
+		document.getAnimations = () => []
 		vi.spyOn(window, 'open').mockReturnValue({focus: vi.fn()} as unknown as Window)
 		fixtures.app = {
 			id: 'demo',
