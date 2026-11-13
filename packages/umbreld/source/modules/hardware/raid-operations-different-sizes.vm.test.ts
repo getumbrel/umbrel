@@ -199,4 +199,27 @@ describe('RAID size validation', () => {
 			{interval: 1000, timeout: 600_000},
 		)
 	})
+
+	test('failsafe mode: reports data on mixed size devices at its size', async () => {
+		// Wait for the expansion and the scrub that follows it
+		await pWaitFor(
+			async () => {
+				const status = await umbreld.client.hardware.raid.getStatus.query()
+				return status.expansion?.state !== 'expanding' && status.scrub?.state !== 'scrubbing'
+			},
+			{interval: 1000, timeout: 600_000},
+		)
+		const usedSpaceBefore = (await umbreld.client.hardware.raid.getStatus.query()).usedSpace!
+		await umbreld.vm.ssh('dd if=/dev/urandom of=~/data.bin bs=1M count=2000 && sync')
+
+		// raidz only uses as much of each device as the smallest one has. The 3.1GB this data takes with
+		// parity is a share of that, not of the 64GB, 128GB and 256GB devices' combined size, which
+		// would report it as 0.9GB.
+		await pWaitFor(
+			async () => (await umbreld.client.hardware.raid.getStatus.query()).usedSpace! - usedSpaceBefore > 1.95e9,
+			{interval: 1000, timeout: 120_000},
+		)
+		const status = await umbreld.client.hardware.raid.getStatus.query()
+		expect(status.usedSpace! - usedSpaceBefore).toBeLessThan(2.3e9)
+	})
 })

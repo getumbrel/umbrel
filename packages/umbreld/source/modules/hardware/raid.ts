@@ -1028,13 +1028,14 @@ export default class Raid {
 			// Now we need to also fix usedSpace calculations otherwise we'll go negative
 			// with the smaller usable space value.
 			// The used space percentage is reliable from (alloc / total)
-			// so we can multiply usableSpace by the percentage
-			const usedPercentage = rootVdev.alloc_space / totalSpace
+			// so we can multiply usableSpace by the percentage.
+			// raidz only allocates as much of each device as the smallest one has, so that is the total
+			// the allocated space is a fraction of, not the sum of mixed size devices.
+			const usedPercentage = rootVdev.alloc_space / (smallestDeviceSize * numberOfDevices)
 			usedSpace = Math.ceil(usableSpace * usedPercentage)
 
-			// TODO: Handle FailSafe replace with old devices online
-
-			// TODO: Handle mixed size devices
+			// TODO: Handle FailSafe replace with old devices online. totalSpace still counts both the
+			// old and the new device until the replace has finished.
 		}
 
 		// Handle raidz failsafe mode with 2 disks (or 1 disk and 1 file) reporting double usage due to
