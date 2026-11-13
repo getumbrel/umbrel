@@ -2535,6 +2535,20 @@ export default class Raid {
 		this.failsafeTransitionStatus = {state: 'rebuilding', progress: 50}
 		this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
+		const finishTransition = async () => {
+			// Clean up leftover snapshots
+			this.logger.log('Cleaning up leftover snapshots')
+			await $`zfs destroy -r ${pool.name}@migration`.catch((error) =>
+				this.logger.error('Failed to destroy migration snapshot', error),
+			)
+			await $`zfs destroy -r ${pool.name}@migration-final`.catch((error) =>
+				this.logger.error('Failed to destroy migration final snapshot', error),
+			)
+
+			// Reset state
+			this.isTransitioningToFailsafe = false
+		}
+
 		try {
 			// Get the old device from the previous pool
 			// We just grab the first device since the pool should only have one
@@ -2569,62 +2583,63 @@ export default class Raid {
 				})
 			})
 
-			// Monitor rebuild progress until complete
+			// Monitor rebuild progress until complete. The rebuild can take a long time and the rest of
+			// umbreld starts after RAID has, so this carries on in the background.
 			this.logger.log('Monitoring rebuild progress...')
-			while (true) {
-				let status: Awaited<ReturnType<Raid['getPoolStatus']>>
-				try {
-					status = await this.getPoolStatus(pool.name)
-				} catch (error) {
-					this.logger.error('Error polling rebuild progress', error)
-					await setTimeout(1000)
-					continue
-				}
-
-				if (status.rebuild?.state === 'canceled') {
-					throw new Error('Failsafe transition rebuild was canceled')
-				}
-
-				if (status.rebuild) {
-					// Scale rebuild progress to 51-99% (second half of transition)
-					const scaledProgress = floorToTenthPercent(51 + (status.rebuild.progress / 100) * 48)
-					const cappedProgress = Math.min(scaledProgress, 99)
-					const previousProgress = this.failsafeTransitionStatus?.progress ?? 0
-					if (cappedProgress > previousProgress) {
-						this.failsafeTransitionStatus = {state: 'rebuilding', progress: cappedProgress}
-						if (Math.floor(cappedProgress) > Math.floor(previousProgress)) {
-							this.logger.log(`Rebuild progress: ${Math.floor(cappedProgress)}%`)
+			Promise.resolve()
+				.then(async () => {
+					while (true) {
+						let status: Awaited<ReturnType<Raid['getPoolStatus']>>
+						try {
+							status = await this.getPoolStatus(pool.name)
+						} catch (error) {
+							this.logger.error('Error polling rebuild progress', error)
+							await setTimeout(1000)
+							continue
 						}
-						this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+
+						if (status.rebuild?.state === 'canceled') {
+							throw new Error('Failsafe transition rebuild was canceled')
+						}
+
+						if (status.rebuild) {
+							// Scale rebuild progress to 51-99% (second half of transition)
+							const scaledProgress = floorToTenthPercent(51 + (status.rebuild.progress / 100) * 48)
+							const cappedProgress = Math.min(scaledProgress, 99)
+							const previousProgress = this.failsafeTransitionStatus?.progress ?? 0
+							if (cappedProgress > previousProgress) {
+								this.failsafeTransitionStatus = {state: 'rebuilding', progress: cappedProgress}
+								if (Math.floor(cappedProgress) > Math.floor(previousProgress)) {
+									this.logger.log(`Rebuild progress: ${Math.floor(cappedProgress)}%`)
+								}
+								this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+							}
+						}
+
+						if (isFailsafeRebuildComplete(status)) {
+							this.failsafeTransitionStatus = {state: 'complete', progress: 100}
+							this.logger.log(
+								status.rebuild ? 'Rebuild progress: 100%' : 'Rebuild completed before the first status poll',
+							)
+							this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+							break
+						}
+						await setTimeout(1000)
 					}
-				}
 
-				if (isFailsafeRebuildComplete(status)) {
-					this.failsafeTransitionStatus = {state: 'complete', progress: 100}
-					this.logger.log(status.rebuild ? 'Rebuild progress: 100%' : 'Rebuild completed before the first status poll')
+					this.logger.log('Migration to failsafe mode complete')
+				})
+				.catch((error) => {
+					this.failsafeTransitionStatus = {state: 'error', progress: 0, error: (error as Error).message}
 					this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
-					break
-				}
-				await setTimeout(1000)
-			}
-
-			this.logger.log('Migration to failsafe mode complete')
+					this.logger.error('Failed to complete FailSafe transition:', error)
+				})
+				.finally(finishTransition)
 		} catch (error) {
 			this.failsafeTransitionStatus = {state: 'error', progress: 0, error: (error as Error).message}
 			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+			await finishTransition()
 			throw error
-		} finally {
-			// Clean up leftover snapshots
-			this.logger.log('Cleaning up leftover snapshots')
-			await $`zfs destroy -r ${pool.name}@migration`.catch((error) =>
-				this.logger.error('Failed to destroy migration snapshot', error),
-			)
-			await $`zfs destroy -r ${pool.name}@migration-final`.catch((error) =>
-				this.logger.error('Failed to destroy migration final snapshot', error),
-			)
-
-			// Reset state
-			this.isTransitioningToFailsafe = false
 		}
 	}
 }
