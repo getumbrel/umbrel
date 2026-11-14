@@ -2561,7 +2561,17 @@ export default class Raid {
 	async #completeFailsafeTransition(): Promise<void> {
 		// Check config state first - this is the source of truth for transition status
 		const raidState = await this.configStore.get('raid.state')
-		if (raidState !== 'transitioning-to-failsafe') return
+		if (raidState !== 'transitioning-to-failsafe') {
+			// A transition that lost power, while syncing or after the config was updated but before the rebuild
+			// had finished, never got to destroy its snapshots. They'd keep hold of everything that was on the
+			// array at the time, so space freed since then would never come back.
+			const poolName = await this.configStore.get('raid.poolName')
+			if (poolName) {
+				await $`zfs destroy -r ${poolName}@migration`.catch(() => {})
+				await $`zfs destroy -r ${poolName}@migration-final`.catch(() => {})
+			}
+			return
+		}
 
 		const pool = await this.getStatus()
 
