@@ -2111,6 +2111,9 @@ export default class Raid {
 		}
 
 		if (this.isReplacing) throw new Error('Already replacing device')
+		// isReplacing is forgotten when umbreld restarts but the rebuild carries on, so ask ZFS as well
+		if (pool.rebuild?.state === 'rebuilding')
+			throw new Error('Cannot replace a device while a RAID rebuild is in progress')
 		await this.#cancelScrubForRepair(pool)
 		this.isReplacing = true
 
