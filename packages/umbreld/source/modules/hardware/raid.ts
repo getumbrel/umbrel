@@ -2558,6 +2558,20 @@ export default class Raid {
 		}
 	}
 
+	// Remove what a failsafe transition leaves behind when it's interrupted
+	async #cleanUpInterruptedFailsafeTransition(poolName: string): Promise<void> {
+		// The snapshots keep hold of everything that was on the array at the time, so space freed since then
+		// would never come back
+		await $`zfs destroy -r ${poolName}@migration`.catch(() => {})
+		await $`zfs destroy -r ${poolName}@migration-final`.catch(() => {})
+
+		// The migration pool stays on the device it was built on. The next transition's pool gets the same
+		// name, and the boot script can't import a pool by name when there are two of them.
+		const migrationPoolName = `${poolName}-migration`
+		await $`zpool import -N -f -d /dev/disk/by-umbrel-id -o cachefile=none ${migrationPoolName}`.catch(() => {})
+		await $`zpool destroy ${migrationPoolName}`.catch(() => {})
+	}
+
 	// We run this on boot to check if there's an in progress transition and complete it.
 	// The boot script does the minimum: final sync and pool rename
 	// We complete the migration here: destroy old pool, re-partition old device, add it to the new pool
@@ -2566,13 +2580,9 @@ export default class Raid {
 		const raidState = await this.configStore.get('raid.state')
 		if (raidState !== 'transitioning-to-failsafe') {
 			// A transition that lost power, while syncing or after the config was updated but before the rebuild
-			// had finished, never got to destroy its snapshots. They'd keep hold of everything that was on the
-			// array at the time, so space freed since then would never come back.
+			// had finished, never got to clean up after itself
 			const poolName = await this.configStore.get('raid.poolName')
-			if (poolName) {
-				await $`zfs destroy -r ${poolName}@migration`.catch(() => {})
-				await $`zfs destroy -r ${poolName}@migration-final`.catch(() => {})
-			}
+			if (poolName) await this.#cleanUpInterruptedFailsafeTransition(poolName)
 			return
 		}
 
@@ -2596,8 +2606,7 @@ export default class Raid {
 			// it and booted the existing pool. Make the array a normal storage array again, so the switch
 			// isn't tried on every boot, and tell the user why FailSafe isn't on.
 			if (pool.topology !== 'raidz') {
-				await $`zfs destroy -r ${pool.name}@migration`.catch(() => {})
-				await $`zfs destroy -r ${pool.name}@migration-final`.catch(() => {})
+				await this.#cleanUpInterruptedFailsafeTransition(pool.name)
 				await this.configStore.set('raid.state', 'normal')
 
 				this.failsafeTransitionStatus = {
