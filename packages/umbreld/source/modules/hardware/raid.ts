@@ -1663,25 +1663,20 @@ export default class Raid {
 
 	// Assert that a device matches the type (SSD or HDD) of the RAID array
 	async #assertDeviceTypeMatchesPool(deviceId: string): Promise<void> {
-		const devices = await this.#umbreld.hardware.internalStorage.getDevices()
-		const pool = await this.getStatus()
-		const poolDeviceId = pool.devices?.[0]?.id
-		if (!poolDeviceId) throw new Error("RAID array doesn't exist or has no devices")
-		const newDevice = devices.find((d) => d.id === deviceId)
-		const poolDevice = devices.find((d) => d.id === poolDeviceId)
-		if (!newDevice) throw new Error(`Device not found: ${deviceId}`)
-		if (!poolDevice) throw new Error(`Device not found: ${poolDeviceId}`)
-		if (newDevice.type !== poolDevice.type) throw new Error(`Cannot mix SSDs and HDDs in the same RAID array`)
+		const poolDeviceType = await this.#getPoolDeviceType()
+		const newDevice = await this.#getDeviceInfo(deviceId)
+		if (newDevice.type !== poolDeviceType) throw new Error(`Cannot mix SSDs and HDDs in the same RAID array`)
 	}
 
-	// Get the device type (SSD or HDD) of the RAID array based on its first device
+	// Get the device type (SSD or HDD) of the RAID array from any of its devices that is present. One that is
+	// missing, like a failed drive that has been pulled out, can't tell us.
 	async #getPoolDeviceType(): Promise<'ssd' | 'hdd'> {
 		const pool = await this.getStatus()
-		const poolDeviceId = pool.devices?.[0]?.id
-		if (!poolDeviceId) throw new Error("RAID array doesn't exist or has no devices")
+		const poolDeviceIds = pool.devices?.map((device) => device.id) ?? []
+		if (poolDeviceIds.length === 0) throw new Error("RAID array doesn't exist or has no devices")
 		const devices = await this.#umbreld.hardware.internalStorage.getDevices()
-		const device = devices.find((d) => d.id === poolDeviceId)
-		if (!device) throw new Error(`Device not found: ${poolDeviceId}`)
+		const device = devices.find((d) => poolDeviceIds.includes(d.id!))
+		if (!device) throw new Error(`Device not found: ${poolDeviceIds[0]}`)
 		return device.type
 	}
 
