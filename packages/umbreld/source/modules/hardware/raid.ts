@@ -2764,6 +2764,15 @@ export default class Raid {
 			this.logger.log('Monitoring rebuild progress...')
 			Promise.resolve()
 				.then(async () => {
+					// The restart only happens the next time ZFS writes the pool out. Until then its status still
+					// describes the accelerator's rebuild, which may already have finished, so wait for that write
+					// before reading the rebuild's progress.
+					if (oldAcceleratorPartitions) {
+						await $`zpool sync ${pool.name}`.catch((error) =>
+							this.logger.error('Failed to wait for the rebuild to restart', error),
+						)
+					}
+
 					while (true) {
 						let status: Awaited<ReturnType<Raid['getPoolStatus']>>
 						try {
