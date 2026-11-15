@@ -2597,8 +2597,15 @@ export default class Raid {
 
 		const previousPoolName = `${pool.name}-previous-migration`
 
-		// Verify the previous pool exists (should always exist if config says transitioning)
-		const previousPool = await this.getPoolStatus(previousPoolName)
+		let previousPool = await this.getPoolStatus(previousPoolName)
+
+		// The boot script only imports the previous pool on the boot that switches pools. If power was lost
+		// before we destroyed it, it's still on its device and we're running from the new pool without it.
+		if (!previousPool.exists && pool.topology === 'raidz') {
+			await $`zpool import -N -f -d /dev/disk/by-umbrel-id -o cachefile=none ${previousPoolName}`.catch(() => {})
+			previousPool = await this.getPoolStatus(previousPoolName)
+		}
+
 		if (!previousPool.exists) {
 			this.logger.error('Config indicates transition in progress but previous pool not found')
 
