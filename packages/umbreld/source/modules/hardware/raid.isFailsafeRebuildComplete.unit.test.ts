@@ -23,6 +23,12 @@ describe('isFailsafeRebuildComplete', () => {
 		).toBe(true)
 	})
 
+	test('expects every device of a wider array when given its device count', () => {
+		const healthy = {raidType: 'failsafe' as const, status: 'ONLINE' as const}
+		expect(isFailsafeRebuildComplete({...healthy, devices: [onlineDevice, onlineDevice, onlineDevice]}, 3)).toBe(true)
+		expect(isFailsafeRebuildComplete({...healthy, devices: [onlineDevice, onlineDevice]}, 3)).toBe(false)
+	})
+
 	test('rejects incomplete or unhealthy states', () => {
 		expect(
 			isFailsafeRebuildComplete({

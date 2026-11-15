@@ -64,7 +64,7 @@ export default router({
 				raidDevices: z.array(z.string()).optional(),
 				raidType: z.enum(['storage', 'failsafe']).optional(),
 				acceleratorDevices: z.array(z.string()).optional(),
-				failsafeLayout: z.enum(['raidz1', 'mirror']).optional(),
+				failsafeLayout: z.enum(['raidz1', 'raidz2', 'mirror']).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {

@@ -78,11 +78,24 @@ const raid = router({
 	scrub: privateProcedure.mutation(async ({ctx}) => ctx.umbreld.hardware.raid.scrub()),
 
 	// Transition a single-drive storage array to failsafe (raidz) mode
+	// The raidz1 layout, the default, takes one new device. HDD arrays can ask for the raidz2 layout, which also
+	// needs secondNewDeviceId.
 	// If a single accelerator already exists, acceleratorDeviceId supplies the SSD used to mirror it.
 	transitionToFailsafeRaidz: privateProcedure
-		.input(z.object({newDeviceId: z.string(), acceleratorDeviceId: z.string().optional()}))
+		.input(
+			z.object({
+				newDeviceId: z.string(),
+				secondNewDeviceId: z.string().optional(),
+				failsafeLayout: z.enum(['raidz1', 'raidz2']).optional(),
+				acceleratorDeviceId: z.string().optional(),
+			}),
+		)
 		.mutation(async ({ctx, input}) =>
-			ctx.umbreld.hardware.raid.transitionToFailsafeRaidz(input.newDeviceId, input.acceleratorDeviceId),
+			ctx.umbreld.hardware.raid.transitionToFailsafeRaidz(
+				input.secondNewDeviceId ? [input.newDeviceId, input.secondNewDeviceId] : [input.newDeviceId],
+				input.acceleratorDeviceId,
+				input.failsafeLayout,
+			),
 		),
 
 	// Transition an HDD storage array to failsafe (mirror) mode

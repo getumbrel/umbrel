@@ -181,7 +181,7 @@ function createTestHelpers(port: number | (() => number)) {
 		raidDevices?: string[]
 		raidType?: 'storage' | 'failsafe'
 		acceleratorDevices?: string[]
-		failsafeLayout?: 'raidz1' | 'mirror'
+		failsafeLayout?: 'raidz1' | 'raidz2' | 'mirror'
 	} = {}) {
 		await unauthenticatedClient.user.register.mutate({
 			...userCredentials,
