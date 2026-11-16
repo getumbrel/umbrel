@@ -221,6 +221,10 @@ public static class LocalHttpsTransport
 					CustomTrustStore = { pinnedAnchor },
 					RevocationMode = X509RevocationMode.NoCheck,
 					VerificationFlags = X509VerificationFlags.NoFlag,
+					// The Umbrel's CA signs its server certificate directly, so there is never
+					// an issuer to fetch. Left on, Windows downloads a missing issuer from
+					// whatever URL the answering server's certificate names for it.
+					DisableCertificateDownloads = true,
 				},
 				RemoteCertificateValidationCallback = (_, certificate, chain, errors) =>
 				{
@@ -276,6 +280,7 @@ public static class LocalHttpsTransport
 		chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
 		chain.ChainPolicy.CustomTrustStore.Add(anchor);
 		chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+		chain.ChainPolicy.DisableCertificateDownloads = true;
 		if (presented is not null)
 		{
 			foreach (var element in presented.ChainElements) chain.ChainPolicy.ExtraStore.Add(element.Certificate);

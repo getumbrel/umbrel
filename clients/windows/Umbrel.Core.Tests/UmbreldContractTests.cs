@@ -99,6 +99,15 @@ public class UmbreldContractTests
 	}
 
 	[Fact]
+	public void SessionTextLeavesOutTheTokens()
+	{
+		var session = new Umbreld.Session("dev", "0", "access-token", 123, "device-token");
+		var text = $"{session} {new SecretStore.SessionReadResult.Found(session)}";
+		Assert.DoesNotContain("access-token", text);
+		Assert.DoesNotContain("device-token", text);
+	}
+
+	[Fact]
 	public void FallbackVersionRequiresAnUmbrelOsName()
 	{
 		Umbreld.ValidateFallbackSystemVersion(Result(200, """{"result":{"data":{"version":"1.4.0","name":"umbrelOS 1.4.0"}}}"""));

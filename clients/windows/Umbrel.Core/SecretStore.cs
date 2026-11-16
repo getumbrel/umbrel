@@ -287,8 +287,18 @@ public static class SecretStore
 			var sealedData = ProtectedData.Protect(plaintext, Entropy(service, account), DataProtectionScope.CurrentUser);
 			var path = FilePath(service, account);
 			var tempPath = Path.Combine(_directory, $".{Guid.NewGuid():N}.tmp");
-			File.WriteAllBytes(tempPath, sealedData);
-			File.Move(tempPath, path, overwrite: true);
+			try
+			{
+				File.WriteAllBytes(tempPath, sealedData);
+				File.Move(tempPath, path, overwrite: true);
+			}
+			catch
+			{
+				// Nothing reads or deletes a temporary file later, so a failed save must not
+				// leave its sealed copy of the secret behind.
+				File.Delete(tempPath);
+				throw;
+			}
 			return true;
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException)

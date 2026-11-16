@@ -1218,6 +1218,9 @@ public sealed class AppState : ObservableObject, IDisposable
 
 	public async Task ForgetAsync(string id)
 	{
+		// DisconnectAsync returns at once while a disconnect is already running. Forgetting
+		// under it would remove the pin and the saved Umbrel it still needs to sign out.
+		while (_disconnecting.Contains(id)) await Task.Delay(100);
 		await DisconnectAsync(id);
 		Umbreld.ForgetLocalHttpsIdentity(id);
 		try
