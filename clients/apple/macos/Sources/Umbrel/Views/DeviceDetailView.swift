@@ -349,6 +349,10 @@ struct DeviceDetailView: View {
 		}
 	}
 
+	// A row is a link to the address it shows. Don't swap in another route: the user
+	// picked this one, and the browser is outside the app's pin either way. A row's
+	// dimming comes from the app's own pinned check of that route, so it says whether
+	// the app reaches the Umbrel there, not what the browser will reach.
 	private func accessBox(_ device: Device) -> some View {
 		let methods = accessMethods(for: device)
 		return SectionBox {

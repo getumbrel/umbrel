@@ -1429,7 +1429,8 @@ final class AppState {
 		let connectionHost: String
 		do {
 			// API calls may have moved from a stale LAN route to Tailscale (or vice
-			// versa). Resolve after them so Finder mounts the same verified endpoint.
+			// versa). Resolve after them so Finder mounts the route the app is using now.
+			// The pin covers the app's check only: macOS resolves the host again by itself.
 			connectionHost = try await Umbreld.resolvedHost(for: target)
 			connectionHosts[deviceId] = connectionHost
 		} catch {

@@ -696,9 +696,11 @@ object Umbreld {
 	/**
 	 * mDNS is an unauthenticated source of local connection candidates: any device on the
 	 * network can advertise any hostname and any addresses. Accept only .local names and
-	 * literal addresses in the ranges a local network uses, and never let it introduce a
-	 * Tailscale-range endpoint; those come only from the authenticated system.getIpAddresses
-	 * response after sign-in.
+	 * literal addresses in the ranges a local network uses, so a host that discovery adds
+	 * only works for someone on the same network. That matters because a saved host is also
+	 * handed to the browser, where the pin doesn't apply. A Tailscale-range endpoint is
+	 * refused too; those come only from the authenticated system.getIpAddresses response
+	 * after sign-in.
 	 */
 	internal fun localDiscoveryCandidate(candidate: Candidate): Candidate? {
 		if (!isLocalDiscoveryHost(candidate.host)) return null
@@ -1424,12 +1426,14 @@ object Umbreld {
 	}
 
 	/**
-	 * Browser routing has more hostname choices than native transport, but keeps the same
-	 * identity rule: a name or address is usable only when the public identity endpoint
-	 * reports the saved device id. No session or other secret is sent here. Over HTTPS it
-	 * trusts only the certificates the phone's browser trusts. system.localHttpsIdentity
-	 * answers over HTTP and HTTPS on every umbrelOS 2.0 and does no work beyond reading the
-	 * id, so these short timeouts don't cut off a busy Umbrel.
+	 * A reachability test before the browser is sent to a route, not an identity check: the
+	 * id is public, so anything on the network can report it. It only keeps the browser off
+	 * an address that now belongs to something else, such as another Umbrel. The browser is
+	 * outside the app's pin whatever this returns, so nothing secret may depend on the
+	 * answer, and no session or other secret is sent here. Over HTTPS it trusts only the
+	 * certificates the phone's browser trusts. system.localHttpsIdentity answers over HTTP
+	 * and HTTPS on every umbrelOS 2.0 and does no work beyond reading the id, so these short
+	 * timeouts don't cut off a busy Umbrel.
 	 */
 	suspend fun isBrowserEndpoint(
 		host: String,

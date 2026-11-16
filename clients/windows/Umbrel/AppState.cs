@@ -1422,7 +1422,8 @@ public sealed class AppState : ObservableObject, IDisposable
 		_sambaCredentials[id] = credential;
 
 		// API calls may have moved from a stale LAN route to Tailscale (or back). Resolve
-		// after them so drives map to the endpoint that just proved the pinned identity.
+		// after them so drives map to the route the app is using now. The pin covers the
+		// app's check only: Windows resolves the host again by itself.
 		string connectionHost;
 		try
 		{

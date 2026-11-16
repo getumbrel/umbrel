@@ -743,8 +743,10 @@ public static partial class Umbreld
 	/// <summary>
 	/// DNS-SD is an unauthenticated source of local connection candidates: any LAN peer
 	/// can advertise any target and any addresses. Accept only .local names and literal
-	/// addresses in the ranges a local network uses, and never let it introduce a
-	/// Tailscale-range endpoint; those come only from the authenticated
+	/// addresses in the ranges a local network uses, so a host that discovery adds only
+	/// works for someone on the same network. That matters because a saved host is also
+	/// handed to the browser and to share mounts, where the pin doesn't apply. A
+	/// Tailscale-range endpoint is refused too; those come only from the authenticated
 	/// system.getIpAddresses response after sign-in.
 	/// </summary>
 	internal static Candidate? LocalDiscoveryCandidate(Candidate candidate)

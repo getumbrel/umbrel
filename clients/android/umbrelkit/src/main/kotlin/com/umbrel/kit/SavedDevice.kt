@@ -56,6 +56,11 @@ data class SavedDevice(
 	 * Only an [IdentifiedDevice] has proved the stable discovery id through the saved
 	 * Umbrel's HTTPS identity. Its answering endpoint becomes primary, stale mDNS names are
 	 * discarded, and current IP candidates remain as fallbacks.
+	 *
+	 * The pin proved the endpoint that answered, not its name: a .local name can point
+	 * somewhere else a moment later. That is fine for the app's own requests, which check
+	 * the pin on every connection. A browser handed this host gets no such check, so a saved
+	 * host is a place to look for the Umbrel, never proof of it.
 	 */
 	fun mergeVerifiedDiscovery(discovered: IdentifiedDevice): SavedDevice {
 		if (discovered.id != id || !isValidLocalEndpointHost(discovered.host)) return this

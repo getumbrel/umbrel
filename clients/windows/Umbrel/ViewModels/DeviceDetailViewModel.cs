@@ -554,6 +554,10 @@ public sealed class DeviceDetailViewModel : ObservableObject, IDisposable
 
 	// macOS accessBox: the host and its addresses, deduplicated. Saved devices probe each
 	// address once per address set; until then the verified connection host counts as up.
+	// A row is a link to the address it shows. Don't swap in another route: the user picked
+	// this one, and the browser is outside the app's pin either way. A row's dimming comes
+	// from the app's own pinned check of that route, so it says whether the app reaches the
+	// Umbrel there, not what the browser will reach.
 	private void UpdateAccessRows(Device device)
 	{
 		if (Mode is not (DetailMode.Setup or DetailMode.Connected))
