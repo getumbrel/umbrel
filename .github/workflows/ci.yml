@@ -24,7 +24,7 @@ jobs:
           DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
 
           # On default branch, always run all tests
-          if [[ "${{ github.ref }}" == "refs/heads/${DEFAULT_BRANCH}" || "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$GITHUB_REF" == "refs/heads/${DEFAULT_BRANCH}" || "$GITHUB_REF" == refs/tags/* ]]; then
             echo "ui-only=false" >> $GITHUB_OUTPUT
             echo "ui-changed=true" >> $GITHUB_OUTPUT
             echo "apple-changed=true" >> $GITHUB_OUTPUT
@@ -37,8 +37,8 @@ jobs:
           # branches against their merge base with the default branch. If the
           # workflow is later run on pull_request events, use the PR base/head.
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
-            DIFF_BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+            git fetch origin "${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+            DIFF_BASE=$(git merge-base "origin/${GITHUB_BASE_REF}" HEAD)
             DIFF_HEAD=HEAD
           else
             git fetch origin "${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
@@ -111,12 +111,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.ref }}" == "refs/heads/master" || "${{ github.ref }}" == "refs/heads/staging" || "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$GITHUB_REF" == "refs/heads/master" || "$GITHUB_REF" == "refs/heads/staging" || "$GITHUB_REF" == refs/tags/* ]]; then
             echo "run-pi-tests=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          labels=$(gh pr list --repo "${{ github.repository }}" --head "${{ github.ref_name }}" --state open --json labels --jq '.[].labels[].name' || true)
+          labels=$(gh pr list --repo "${{ github.repository }}" --head "$GITHUB_REF_NAME" --state open --json labels --jq '.[].labels[].name' || true)
           if grep --quiet --line-regexp 'pi-tests' <<< "$labels"; then
             echo "run-pi-tests=true" >> $GITHUB_OUTPUT
           else
@@ -832,10 +832,19 @@ jobs:
       - name: Expose GitHub Actions runtime for Docker cache
         uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      # The tag name goes into image names, file paths and the release manifest, so only release plain names.
+      # The steps below read it through the shell, never through an expression, which would paste it into
+      # the script as code.
+      - name: Check tag name
+        run: |
+          if [[ ! "${VERSION}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "A release tag can only contain letters, digits, '.', '-' and '_'" >&2
+            exit 1
+          fi
       # We need this to namespace Docker images on forks
-      - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
+      - run: echo "VERSION_IS_SEMVER=$(if [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
       - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
-      - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
+      - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${VERSION}" >> $GITHUB_ENV
       # create-release-manifest.sh refuses a version tag without its release notes, so fail before the build
       # rather than after it
       - name: Check release notes
@@ -847,9 +856,9 @@ jobs:
       # timestamps and no provenance attestation, which would otherwise make
       # the digest differ on every build.
       - name: Build and push Docker image
-        run: SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true DOCKER_IMAGE_OUTPUT="type=image,name=ghcr.io/${{ env.TAG }},push=true" ./build.sh
+        run: SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true DOCKER_IMAGE_OUTPUT="type=image,name=ghcr.io/${TAG},push=true" ./build.sh
       # The image index's digest pins the image for every platform, and the release manifest signs it
-      - run: echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos@$(docker buildx imagetools inspect ghcr.io/${{ env.TAG }} --format '{{json .Manifest}}' | jq --raw-output .digest)" >> $GITHUB_ENV
+      - run: echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos@$(docker buildx imagetools inspect "ghcr.io/${TAG}" --format '{{json .Manifest}}' | jq --raw-output .digest)" >> $GITHUB_ENV
       # Build OS images
       - uses: actions/setup-node@v5
         with:
@@ -860,9 +869,9 @@ jobs:
         # in ~90s, so we build it concurrently (hidden under the much longer OS
         # builds) and inject the OS image into it at the end.
         run: |
-          npm run build:amd64 "${{ env.VERSION }}" &
+          npm run build:amd64 "${VERSION}" &
           pid1=$!
-          npm run build:pi "${{ env.VERSION }}" &
+          npm run build:pi "${VERSION}" &
           pid2=$!
           npm run build:amd64:usb-installer:base &
           pid3=$!
@@ -898,7 +907,7 @@ jobs:
       # The manifest pins every file in the release and gets timestamped here. Release signers sign it
       # and the release notes separately.
       - name: Create release manifest
-        run: RELEASE_TAG="${{ env.VERSION }}" ./create-release-manifest.sh release && cat release/manifest.txt
+        run: RELEASE_TAG="${VERSION}" ./create-release-manifest.sh release && cat release/manifest.txt
       - name: OpenTimestamps
         run: npm ci && npx ots-cli.js stamp release/manifest.txt
       - name: Nuke uncompressed images (we just wanted them covered by the manifest)
