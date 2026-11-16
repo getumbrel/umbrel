@@ -390,6 +390,24 @@ class PageDownloadsTest {
 	}
 
 	@Test
+	fun capturesFromEarlierRunsAreClearedAndThisRunsAreKeptUntilDeleted() = runTest {
+		val earlier = File(folder.root, "earlier-run/old.jpg").apply { parentFile!!.mkdirs(); writeText("old") }
+		// A photo left by a version that kept them in the folder itself.
+		val loose = File(folder.root, "loose.jpg").apply { writeText("old") }
+		val captures = CapturesFolder(folder.root, backgroundScope)
+		val first = captures.newFile().apply { writeText("1") }
+		val second = captures.newFile().apply { writeText("2") }
+		runCurrent()
+		assertFalse(earlier.exists())
+		assertFalse(loose.exists())
+		assertTrue(first.exists())
+		captures.delete(listOf(first))
+		runCurrent()
+		assertFalse(first.exists())
+		assertTrue(second.exists())
+	}
+
+	@Test
 	fun aDiscardedBlobStopsAtOnceAndIsRemovedWhenCleanedUp() {
 		val file = BlobFile(File(folder.root, "0b3c"), null, "text/plain", limit = 10)
 		assertTrue(file.begin(10, "notes.txt", null))

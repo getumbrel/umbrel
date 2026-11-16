@@ -696,6 +696,8 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		val session = state.session
 		// The backup preference survives sign-out so a deliberate sign-in resumes it.
 		backup.disableLocally(device.id)
+		// Deleted before the Umbrel is told, so nothing usable stays on the phone if it can't be
+		// reached. The log-out below isn't retried: that would mean keeping the token.
 		SecretStore.deleteSession(device.id)
 		_state.update { it.copy(session = null) }
 		onDone()

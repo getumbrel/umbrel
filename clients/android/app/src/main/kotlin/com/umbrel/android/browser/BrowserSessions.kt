@@ -6,6 +6,7 @@ import android.webkit.CookieManager
 import android.webkit.WebStorage
 import androidx.core.content.edit
 import androidx.webkit.ProfileStore
+import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewFeature
 import com.umbrel.kit.BrowserSession
 import com.umbrel.kit.BrowserSessionStatus
@@ -16,8 +17,11 @@ import com.umbrel.kit.logoutBrowser
 import com.umbrel.kit.renewBrowserSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.security.MessageDigest
+import kotlin.coroutines.resume
 
 /**
  * The in-app browser's umbrelOS sign-in for each Umbrel, and the web data its pages keep.
@@ -28,6 +32,7 @@ import java.security.MessageDigest
 internal object BrowserSessions {
 	private const val VALIDATION_INTERVAL_MS = 12 * 60 * 60 * 1000L
 	private const val PROFILE_PREFIX = "umbrel-"
+	private const val DELETE_TIMEOUT_MS = 10_000L
 
 	@Volatile
 	private var preferences: SharedPreferences? = null
@@ -159,15 +164,31 @@ internal object BrowserSessions {
 			if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
 				val profile = ProfileStore.getInstance().getProfile(profileName(deviceId, accountId)) ?: return@withContext
 				profile.cookieManager.removeAllCookies(null)
-				profile.webStorage.deleteAllData()
+				deleteWebData(profile.webStorage)
 			} else {
 				// Without profiles every account shares one store, so all of it goes.
 				CookieManager.getInstance().removeAllCookies(null)
-				WebStorage.getInstance().deleteAllData()
+				deleteWebData(WebStorage.getInstance())
 			}
+		} catch (cancelled: CancellationException) {
+			throw cancelled
 		} catch (unavailable: RuntimeException) {
 			// WebView is missing or being updated. Its data stays until the next launch removes
 			// web data of accounts no longer signed in.
+		}
+	}
+
+	/**
+	 * Everything pages kept, cached pages and service workers included, where this WebView can
+	 * delete it; an older one deletes what pages stored. Waits until it's gone, so a sign-in that
+	 * follows doesn't lose what its pages store.
+	 */
+	private suspend fun deleteWebData(storage: WebStorage) {
+		if (!WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)) return storage.deleteAllData()
+		withTimeoutOrNull(DELETE_TIMEOUT_MS) {
+			suspendCancellableCoroutine { waiting ->
+				WebStorageCompat.deleteBrowsingData(storage) { if (waiting.isActive) waiting.resume(Unit) }
+			}
 		}
 	}
 

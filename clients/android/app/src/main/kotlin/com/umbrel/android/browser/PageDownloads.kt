@@ -207,6 +207,50 @@ internal class DownloadsFolder(root: File, private val scope: CoroutineScope) {
 }
 
 /**
+ * Where photos taken for a page's file input are kept: a folder for this run of the app inside
+ * cache/Captures, the folder FileProvider lends to the camera. A page can read its photo for as
+ * long as it stays open, so each one is deleted when its page is released, and earlier runs'
+ * photos are cleared when the app starts.
+ */
+internal class CapturesFolder(root: File, private val scope: CoroutineScope) {
+	private val run = File(root, UUID.randomUUID().toString())
+
+	init {
+		// Only earlier runs' folders: this run's photos may still be read by their pages.
+		cleanUp { root.listFiles()?.filter { it != run }?.forEach { it.deleteRecursively() } }
+	}
+
+	/** A file for the camera to write one photo to. */
+	fun newFile(): File = File(run, "${UUID.randomUUID()}.jpg").apply { parentFile?.mkdirs() }
+
+	/** Deletes photos no page can read any more, off the main thread. */
+	fun delete(files: List<File>) {
+		if (files.isNotEmpty()) cleanUp { files.forEach(File::delete) }
+	}
+
+	private fun cleanUp(work: () -> Unit) {
+		scope.launch {
+			try {
+				work()
+			} catch (error: Exception) {
+				// What can't be removed now goes with the next run's clearing.
+			}
+		}
+	}
+
+	companion object {
+		private var shared: CapturesFolder? = null
+
+		/** The app's one folder, cleared of earlier runs' photos the first time it is asked for. */
+		@MainThread
+		fun of(context: Context): CapturesFolder = shared ?: CapturesFolder(
+			File(context.applicationContext.cacheDir, "Captures"),
+			CoroutineScope(SupervisorJob() + Dispatchers.IO),
+		).also { shared = it }
+	}
+}
+
+/**
  * Downloads a page makes from data only it holds. A blob's bytes exist only inside the page, and
  * the name its link gave a blob: or data: download isn't passed on by WebView, so a script in the
  * page ([SCRIPT]) hands them over, through a channel WebView gives only to the page's own origin.

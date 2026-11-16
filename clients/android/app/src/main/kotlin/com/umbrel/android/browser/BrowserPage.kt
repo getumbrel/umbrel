@@ -183,6 +183,8 @@ internal class BrowserPage(
 	private var colorsJob: Job? = null
 	private val downloadsFolder = DownloadsFolder.of(webView.context)
 	private val pageDownloads = PageDownloads(scope, downloadsFolder, ::offer)
+	private val capturesFolder = CapturesFolder.of(webView.context)
+	private val captures = mutableListOf<File>()
 
 	// The web view the page downloads channel is installed in, and its script.
 	private var downloadsChannel: Pair<WebView, ScriptHandler>? = null
@@ -358,6 +360,8 @@ internal class BrowserPage(
 		fileChooser?.answer(null)
 		fileChooser = null
 		pageDownloads.reset()
+		capturesFolder.delete(captures.toList())
+		captures.clear()
 		release(webView)
 	}
 
@@ -942,6 +946,15 @@ internal class BrowserPage(
 	fun finishFileChooser(uris: List<Uri>?) {
 		fileChooser?.answer(uris)
 		fileChooser = null
+	}
+
+	/** A file for a photo the page's file input asked the camera for, deleted when the page is released. */
+	fun newCapture(): File = capturesFolder.newFile().also { captures += it }
+
+	/** The photo wasn't taken, so the page never gets its file. */
+	fun discardCapture(file: File) {
+		captures -= file
+		capturesFolder.delete(listOf(file))
 	}
 
 	/** Leaves full-screen video, as the system back gesture does. */

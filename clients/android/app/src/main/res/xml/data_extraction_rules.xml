@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 12 and higher. photo_backup_identity.xml is deliberately left in: it holds the
      photo backup's id, so a phone set up from this one, or this app installed again, can carry
-     on the backup. -->
+     on the backup. The list of saved Umbrels (names and addresses, no secrets) is left in too,
+     so a restored phone only needs signing in. Sealed secrets live under no_backup, and
+     WebView's storage, which holds each signed-in Umbrel's browser cookie and token, is
+     excluded. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="database" path="photo-backup.sqlite" />

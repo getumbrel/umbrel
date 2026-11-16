@@ -321,7 +321,8 @@ object SecretStore {
 			.setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
 			.setKeySize(256)
 			// Background uploads must read the grant while the device is locked, so the key
-			// is deliberately not gated on user authentication.
+			// is deliberately not gated on user authentication or on the device being unlocked,
+			// as on iOS. It can be used once the phone has been unlocked after starting up.
 			.setUserAuthenticationRequired(false)
 			// Not StrongBox: it is slower, and every request decrypts the session.
 			.build()
