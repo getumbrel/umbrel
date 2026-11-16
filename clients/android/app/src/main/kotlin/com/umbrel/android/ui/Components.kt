@@ -176,7 +176,7 @@ fun Modifier.frostBackground(shape: Shape): Modifier = frost(shape, LocalFrostWa
  * tint, with the glint rim.
  */
 @Composable
-fun SectionCard(modifier: Modifier = Modifier, padding: Dp = 8.dp, content: @Composable () -> Unit) {
+fun SectionCard(modifier: Modifier = Modifier, padding: Dp = 8.dp, contentAlignment: Alignment = Alignment.TopStart, content: @Composable () -> Unit) {
 	val shape = RoundedCornerShape(MainTheme.cardRadius)
 	Box(
 		modifier
@@ -184,6 +184,8 @@ fun SectionCard(modifier: Modifier = Modifier, padding: Dp = 8.dp, content: @Com
 			.frostBackground(shape)
 			.glassGlint(shape)
 			.padding(padding),
+		// Where the content sits in a card stretched to match the one beside it
+		contentAlignment = contentAlignment,
 	) {
 		content()
 	}
@@ -359,7 +361,7 @@ fun EmptyStateCard(
 	iconSize: Dp = 26.dp,
 	onClick: () -> Unit,
 ) {
-	SectionCard(modifier) {
+	SectionCard(modifier, contentAlignment = Alignment.Center) {
 		Column(
 			Modifier
 				.fillMaxWidth()
@@ -430,8 +432,8 @@ fun Pulsing(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
  * staggers the swap top to bottom, about 60 ms apart, so Home reveals as one cascade.
  */
 @Composable
-fun LoadReveal(loaded: Boolean, order: Int = 0, content: @Composable () -> Unit, skeleton: @Composable () -> Unit) {
-	Crossfade(loaded, animationSpec = tween(350, delayMillis = order * 60, easing = AppleEaseOut), label = "loadReveal") { isLoaded ->
+fun LoadReveal(loaded: Boolean, order: Int = 0, modifier: Modifier = Modifier, content: @Composable () -> Unit, skeleton: @Composable () -> Unit) {
+	Crossfade(loaded, modifier, animationSpec = tween(350, delayMillis = order * 60, easing = AppleEaseOut), label = "loadReveal") { isLoaded ->
 		if (isLoaded) content() else skeleton()
 	}
 }

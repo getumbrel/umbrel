@@ -9,6 +9,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,15 +34,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import com.umbrel.android.ui.AppleType
 import com.umbrel.android.ui.BentoGrid
 import com.umbrel.android.ui.MainTheme
 import com.umbrel.android.ui.PillButton
 import com.umbrel.android.ui.PullToRefresh
 import com.umbrel.android.ui.Symbols
+import com.umbrel.android.ui.WideLayout
 import com.umbrel.android.ui.frostBackground
 import com.umbrel.android.ui.glassGlint
 import com.umbrel.android.ui.isAccessibilityTextSize
+import com.umbrel.android.ui.isWideWindow
 
 /**
  * The Apps tab: every installed app over the wallpaper, an app and update count, and links
@@ -50,29 +54,36 @@ import com.umbrel.android.ui.isAccessibilityTextSize
 @Composable
 fun AppsTab(model: MainViewModel, state: MainUiState, contentPadding: PaddingValues) {
 	val accessibility = isAccessibilityTextSize()
+	val wide = isWideWindow()
 	PullToRefresh(onRefresh = { model.refreshVisibleData(RefreshScope.APPS, force = true) }, indicatorTop = contentPadding.calculateTopPadding() - 8.dp) {
-		Column(
-			Modifier
-				.fillMaxSize()
-				.verticalScroll(rememberScrollState())
-				.padding(contentPadding)
-				.padding(horizontal = MainTheme.contentInset),
-			verticalArrangement = Arrangement.spacedBy(24.dp),
-		) {
-			Header(model, state, accessibility)
-			val apps = state.installedApps
-			val columns = if (accessibility) 2 else 4
-			BentoGrid(apps.size, columns) { index, cellModifier ->
-				val app = apps[index]
-				AppTileButton(
-					app,
-					preparing = app.id in state.preparingAppIds,
-					onClick = { source -> model.launchApp(app, source) },
-					modifier = cellModifier.height(100.dp).clip(RoundedCornerShape(MainTheme.tileRadius)),
-					labelColor = Color.White,
-				)
+		BoxWithConstraints(Modifier.fillMaxSize()) {
+			val width = max(0.dp, maxWidth - MainTheme.contentInset * 2)
+			Column(
+				Modifier
+					.fillMaxSize()
+					.verticalScroll(rememberScrollState())
+					.padding(contentPadding)
+					.padding(horizontal = MainTheme.contentInset),
+				verticalArrangement = Arrangement.spacedBy(24.dp),
+			) {
+				Header(model, state, accessibility)
+				val apps = state.installedApps
+				// A wide window fits more apps per row at the same size; the even count keeps a
+				// foldable's hinge between two columns. Accessibility text sizes use tiles twice as wide.
+				val phoneColumns = if (accessibility) 2 else 4
+				val columns = if (wide) WideLayout.columns(width, phoneColumns, tileWidth = WideLayout.tileWidth * 4 / phoneColumns) else phoneColumns
+				BentoGrid(apps.size, columns) { index, cellModifier ->
+					val app = apps[index]
+					AppTileButton(
+						app,
+						preparing = app.id in state.preparingAppIds,
+						onClick = { source -> model.launchApp(app, source) },
+						modifier = cellModifier.height(100.dp).clip(RoundedCornerShape(MainTheme.tileRadius)),
+						labelColor = Color.White,
+					)
+				}
+				if (state.canManageApps) StoreButton { model.openDashboard("/app-store") }
 			}
-			if (state.canManageApps) StoreButton { model.openDashboard("/app-store") }
 		}
 	}
 }

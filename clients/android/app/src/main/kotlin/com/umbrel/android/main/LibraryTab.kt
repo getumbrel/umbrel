@@ -1,12 +1,15 @@
 package com.umbrel.android.main
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -56,7 +60,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.umbrel.android.ui.AppleType
@@ -72,10 +78,13 @@ import com.umbrel.android.ui.SectionCard
 import com.umbrel.android.ui.SheetToolbar
 import com.umbrel.android.ui.StatusDot
 import com.umbrel.android.ui.Symbols
+import com.umbrel.android.ui.WideLayout
 import com.umbrel.android.ui.bentoShape
 import com.umbrel.android.ui.formatStorageSize
 import com.umbrel.android.ui.frostBackground
 import com.umbrel.android.ui.glassGlint
+import com.umbrel.android.ui.isWideWindow
+import com.umbrel.android.ui.rememberFoldTracker
 import com.umbrel.kit.backup.PhotoBackupStatistics
 import com.umbrel.kit.backup.PhotoLibraryAccess
 import java.util.Locale
@@ -100,46 +109,70 @@ fun LibraryTab(model: MainViewModel, library: PhotoLibraryViewModel, state: Main
 	val skippedFolders = skippedFolders(state, libraryState.folders).size
 	val destination = state.otherBackupDeviceName
 
-	Column(
-		Modifier
-			.fillMaxSize()
-			.verticalScroll(rememberScrollState())
-			.padding(contentPadding)
-			.padding(horizontal = MainTheme.contentInset),
-		verticalArrangement = Arrangement.spacedBy(24.dp),
-	) {
-		TitleBlock(state, showsLibrary, skippedFolders, onShowFolders = { showsFolders = true }, onLearnMore = { showsPhotoBackupInfo = true })
+	// One scroll position for both layouts, so it survives a fold, unfold or resize
+	val scroll = rememberScrollState()
+	val title = @Composable { TitleBlock(state, showsLibrary, skippedFolders, onShowFolders = { showsFolders = true }, onLearnMore = { showsPhotoBackupInfo = true }) }
+	val notices = @Composable {
 		if (showsLibrary && destination != null) PhotoBackupElsewhereNotice(model, state, destination)
 		PhotoBackupNoticeCard(model, state)
-		if (showsLibrary) {
-			PauseIfUnusedCard(model, state)
-			if (libraryState.access == PhotoLibraryAccess.SELECTED) SelectedPhotosCard(model, state)
-			StatTiles(state.backupStatistics)
-			ViewAllInPhotosButton(model)
-			LoadReveal(
-				libraryState.loaded,
-				content = {
-					if (libraryState.assets.size == 0) {
-						SectionCard {
-							Text(
-								"No photos or videos",
-								style = AppleType.footnote,
-								fontWeight = FontWeight.Medium,
-								color = Color.White.copy(alpha = 0.6f),
-								textAlign = TextAlign.Center,
-								modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-							)
-						}
-					} else {
-						PhotoGridCard(libraryState.assets, library.receipts, gridState, tiles, onOpen = { viewerItem = it.localIdentifier })
+	}
+	val backupDetails = @Composable {
+		PauseIfUnusedCard(model, state)
+		if (libraryState.access == PhotoLibraryAccess.SELECTED) SelectedPhotosCard(model, state)
+		StatTiles(state.backupStatistics)
+		ViewAllInPhotosButton(model)
+	}
+	val photoGrid = @Composable { columns: Int, fillHeight: Dp? ->
+		LoadReveal(
+			libraryState.loaded,
+			content = {
+				if (libraryState.assets.size == 0) {
+					SectionCard {
+						Text(
+							"No photos or videos",
+							style = AppleType.footnote,
+							fontWeight = FontWeight.Medium,
+							color = Color.White.copy(alpha = 0.6f),
+							textAlign = TextAlign.Center,
+							modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+						)
 					}
-				},
-				skeleton = { GridSkeleton() },
-			)
+				} else {
+					PhotoGridCard(libraryState.assets, library.receipts, gridState, tiles, onOpen = { viewerItem = it.localIdentifier }, columns, fillHeight)
+				}
+			},
+			skeleton = { GridSkeleton() },
+		)
+	}
+
+	BoxWithConstraints(Modifier.fillMaxSize()) {
+		val width = max(0.dp, maxWidth - MainTheme.contentInset * 2)
+		val wide = isWideWindow()
+		// The library pairs with the backup details; without it there's one card, so it stays
+		// a single column. So does a short window, like a tablet split top and bottom, where
+		// the grid beside the details would be a sliver.
+		if (wide && width >= WideLayout.twoColumnMinWidth && maxHeight >= TwoColumnMinHeight && showsLibrary) {
+			TwoColumnLibrary(width, contentPadding, scroll, title, notices, backupDetails, photoGrid)
 		} else {
-			PhotoBackupSetupCard(model, state, learnMore = { showsPhotoBackupInfo = true })
-			// umbrelOS's Photos holds every device's backups, so it stays one tap away
-			if (destination != null) ViewAllInPhotosButton(model)
+			Column(
+				Modifier
+					.fillMaxSize()
+					.verticalScroll(scroll)
+					.padding(contentPadding)
+					.padding(horizontal = MainTheme.contentInset),
+				verticalArrangement = Arrangement.spacedBy(24.dp),
+			) {
+				title()
+				notices()
+				if (showsLibrary) {
+					backupDetails()
+					photoGrid(if (wide) WideLayout.columns(width - 16.dp, phone = 3) else 3, null)
+				} else {
+					PhotoBackupSetupCard(model, state, learnMore = { showsPhotoBackupInfo = true })
+					// umbrelOS's Photos holds every device's backups, so it stays one tap away
+					if (destination != null) ViewAllInPhotosButton(model)
+				}
+			}
 		}
 	}
 
@@ -163,6 +196,53 @@ fun LibraryTab(model: MainViewModel, library: PhotoLibraryViewModel, state: Main
 	}
 	if (showsPhotoBackupInfo) PhotoBackupInfoSheet(state.backupSourceName, onDismiss = { showsPhotoBackupInfo = false })
 	if (showsFolders) FoldersSheet(model, state, libraryState.folders, onDismiss = { showsFolders = false })
+}
+
+private val TwoColumnMinHeight = 560.dp
+
+/**
+ * A wide window: the backup details on the left and the library filling the pane on the
+ * right. The title and any notice span both columns above them, so the stat tiles and the
+ * photo card start on one line. With a foldable half open, the columns sit either side of
+ * the hinge.
+ */
+@Composable
+private fun TwoColumnLibrary(
+	width: Dp,
+	contentPadding: PaddingValues,
+	scroll: ScrollState,
+	title: @Composable () -> Unit,
+	notices: @Composable () -> Unit,
+	backupDetails: @Composable () -> Unit,
+	photoGrid: @Composable (columns: Int, fillHeight: Dp?) -> Unit,
+) {
+	val fold = rememberFoldTracker()
+	val columns = WideLayout.twoColumns(width, MainTheme.sectionGap, leadingFraction = 0.4f, fold = fold.band())
+	Column(
+		Modifier
+			.fillMaxSize()
+			.padding(contentPadding)
+			.padding(horizontal = MainTheme.contentInset),
+		verticalArrangement = Arrangement.spacedBy(24.dp),
+	) {
+		Column(Modifier.padding(start = columns[0].x), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+			title()
+			notices()
+		}
+		Row(fold.modifier.fillMaxWidth().weight(1f)) {
+			Spacer(Modifier.width(columns[0].x))
+			Column(
+				Modifier.width(columns[0].width).fillMaxHeight().verticalScroll(scroll),
+				verticalArrangement = Arrangement.spacedBy(24.dp),
+			) {
+				backupDetails()
+			}
+			Spacer(Modifier.width(columns[1].x - columns[0].x - columns[0].width))
+			BoxWithConstraints(Modifier.width(columns[1].width).fillMaxHeight()) {
+				photoGrid(WideLayout.columns(columns[1].width - 16.dp, phone = 3), maxHeight)
+			}
+		}
+	}
 }
 
 /** "Photos", the backup status row, and a one-line explainer that opens the info sheet. */

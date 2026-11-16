@@ -38,6 +38,31 @@ class PhotoGridGeometryTest {
 	}
 
 	@Test
+	fun wideWindowsAddColumnsOfTheSameKind() {
+		val layout = PhotoGridLayout.of(count = 13, width = width, spacing = spacing, bleedExtra = bleedExtra, columns = 6)
+		assertEquals(158f, layout.cell) // floor((1011 - 60) / 6)
+		assertEquals(3, layout.rows)
+		assertFalse(layout.bleeds)
+		// Item 7 is in the second row of six
+		assertEquals(layout.cell + spacing, PhotoGridGeometry(13, layout.cell, spacing, layout.viewport, 0f, columns = 6).offset(7, 0))
+		assertEquals(3, PhotoGridGeometry(13, layout.cell, spacing, layout.viewport, 0f, columns = 6).rows)
+	}
+
+	@Test
+	fun aPaneHeightReplacesFourPointSixRows() {
+		val pane = 1500f
+		val padding = 16 * density
+		// Rows that fit inside the card's padding keep their exact height
+		val small = PhotoGridLayout.of(count = 12, width = width, spacing = spacing, bleedExtra = bleedExtra, fillHeight = pane, padding = padding)
+		assertFalse(small.bleeds)
+		assertEquals(4 * 329f + 3 * spacing, small.viewport)
+		// Taller libraries fill the pane
+		val large = PhotoGridLayout.of(count = 15, width = width, spacing = spacing, bleedExtra = bleedExtra, fillHeight = pane, padding = padding)
+		assertTrue(large.bleeds)
+		assertEquals(pane, large.viewport)
+	}
+
+	@Test
 	fun emptyLibraryHasNoHeight() {
 		assertEquals(0f, PhotoGridLayout.of(0, width, spacing, bleedExtra).viewport)
 	}

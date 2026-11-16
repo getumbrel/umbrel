@@ -34,6 +34,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -68,6 +69,7 @@ import androidx.compose.ui.platform.LocalAutofillManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -94,6 +96,7 @@ import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.interFor
 import com.umbrel.android.ui.isAccessibilityTextSize
 import com.umbrel.android.ui.openUrl
+import com.umbrel.android.ui.windowFoldBand
 import com.umbrel.kit.Config
 import com.umbrel.kit.Umbreld
 import kotlinx.coroutines.CancellationException
@@ -216,10 +219,20 @@ fun SignInSheet(
 
 	val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 	val accessibilitySize = isAccessibilityTextSize()
+	// Half open like a book, the sheet takes the left half, where onboarding moves too,
+	// rather than sitting across the hinge
+	val fold = windowFoldBand()
+	val windowWidth = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() }
+	val beforeFold = fold?.let { windowWidth - it.start } ?: 0.dp
 	ModalBottomSheet(
 		onDismissRequest = onDismiss,
-		modifier = if (accessibilitySize) Modifier else Modifier.padding(start = SheetInset, end = SheetInset, bottom = SheetInset),
+		modifier = if (accessibilitySize) {
+			Modifier.padding(end = beforeFold)
+		} else {
+			Modifier.padding(start = SheetInset, end = SheetInset + beforeFold, bottom = SheetInset)
+		},
 		sheetState = sheetState,
+		sheetMaxWidth = if (fold != null) Dp.Unspecified else BottomSheetDefaults.SheetMaxWidth,
 		shape = if (accessibilitySize) {
 			RoundedCornerShape(topStart = SheetCornerRadius, topEnd = SheetCornerRadius)
 		} else {

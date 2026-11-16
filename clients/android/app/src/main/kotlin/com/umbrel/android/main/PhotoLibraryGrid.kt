@@ -79,6 +79,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -114,23 +115,39 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+// The phone grid's columns; a wide window adds more at the same size
 private const val COLUMNS = 3
 private val Spacing = 4.dp
 
 /**
- * The Library card's grid size, in pixels: three columns of whole-pixel square cells with
- * 4 gaps. Beyond four rows the card has a fixed height of 4.6 rows plus 24 (the bled layout,
- * where the cropped row signals that older photos are a scroll away); smaller libraries
- * shrink to their exact height.
+ * The Library card's grid size, in pixels: [columns] columns (three on a phone) of
+ * whole-pixel square cells with 4 gaps. Beyond four rows the card has a fixed height of 4.6
+ * rows plus 24 (the bled layout, where the cropped row signals that older photos are a
+ * scroll away); smaller libraries shrink to their exact height. With [fillHeight], the
+ * height of a wide window's pane, the card fills the pane instead once the rows and the
+ * card's [padding] outgrow it.
  */
-internal data class PhotoGridLayout(val cell: Float, val rows: Int, val bleeds: Boolean, val viewport: Float) {
+internal data class PhotoGridLayout(val cell: Float, val rows: Int, val bleeds: Boolean, val viewport: Float, val columns: Int = COLUMNS) {
 	companion object {
-		fun of(count: Int, width: Float, spacing: Float, bleedExtra: Float): PhotoGridLayout {
-			val cell = max(1f, floor((width - spacing * (COLUMNS - 1)) / COLUMNS))
-			val rows = ceil(count / COLUMNS.toDouble()).toInt()
-			val bleeds = rows > 4
-			val viewport = if (bleeds) 4.6f * cell + bleedExtra else rows * cell + max(0, rows - 1) * spacing
-			return PhotoGridLayout(cell, rows, bleeds, viewport)
+		fun of(
+			count: Int,
+			width: Float,
+			spacing: Float,
+			bleedExtra: Float,
+			columns: Int = COLUMNS,
+			fillHeight: Float? = null,
+			padding: Float = 0f,
+		): PhotoGridLayout {
+			val cell = max(1f, floor((width - spacing * (columns - 1)) / columns))
+			val rows = ceil(count / columns.toDouble()).toInt()
+			val contentHeight = rows * cell + max(0, rows - 1) * spacing
+			val bleeds = if (fillHeight != null) contentHeight + padding > fillHeight else rows > 4
+			val viewport = when {
+				!bleeds -> contentHeight
+				fillHeight != null -> fillHeight
+				else -> 4.6f * cell + bleedExtra
+			}
+			return PhotoGridLayout(cell, rows, bleeds, viewport, columns)
 		}
 	}
 }
@@ -145,8 +162,9 @@ internal data class PhotoGridGeometry(
 	val spacing: Float,
 	val viewport: Float,
 	val bottomInset: Float,
+	val columns: Int = COLUMNS,
 ) {
-	val rows: Int get() = ceil(count / COLUMNS.toDouble()).toInt()
+	val rows: Int get() = ceil(count / columns.toDouble()).toInt()
 	private val pitch: Float get() = cell + spacing
 
 	// The rows alone, without the bottom inset.
@@ -155,7 +173,7 @@ internal data class PhotoGridGeometry(
 	val isScrollable: Boolean get() = maxOffset > 1f
 
 	fun offset(firstVisibleItemIndex: Int, firstVisibleItemScrollOffset: Int): Float =
-		(firstVisibleItemIndex / COLUMNS) * pitch + firstVisibleItemScrollOffset
+		(firstVisibleItemIndex / columns) * pitch + firstVisibleItemScrollOffset
 
 	fun progress(offset: Float): Float = if (maxOffset > 0f) (offset / maxOffset).coerceIn(0f, 1f) else 1f
 
@@ -163,7 +181,7 @@ internal data class PhotoGridGeometry(
 	fun position(offset: Float): Pair<Int, Int> {
 		val clamped = offset.coerceIn(0f, maxOffset)
 		val row = min(floor(clamped / pitch).toInt(), max(0, rows - 1))
-		return row * COLUMNS to (clamped - row * pitch).roundToInt()
+		return row * columns to (clamped - row * pitch).roundToInt()
 	}
 
 	/** Within three quarters of a screen (at least [minimum]) of the newest row: hides Jump to Latest. */
@@ -204,7 +222,8 @@ class PhotoTileLocator(private val gridState: LazyGridState) {
 
 /**
  * The whole library in chronological order inside the Library card, opened at the newest
- * row. Lazy layout composes only the visible cells however large the library grows.
+ * row. Lazy layout composes only the visible cells however large the library grows. A wide
+ * window passes more [columns] and, beside the backup details, the [fillHeight] of its pane.
  */
 @Composable
 internal fun PhotoGridCard(
@@ -213,13 +232,17 @@ internal fun PhotoGridCard(
 	gridState: LazyGridState,
 	tiles: PhotoTileLocator,
 	onOpen: (LocalMediaItem) -> Unit,
+	columns: Int = COLUMNS,
+	fillHeight: Dp? = null,
 ) {
 	val density = LocalDensity.current
 	BoxWithConstraints(Modifier.fillMaxWidth()) {
 		val spacing = with(density) { Spacing.toPx() }
-		val layout = PhotoGridLayout.of(assets.size, constraints.maxWidth - with(density) { 16.dp.toPx() }, spacing, with(density) { 24.dp.toPx() })
+		val layout = with(density) {
+			PhotoGridLayout.of(assets.size, constraints.maxWidth - 16.dp.toPx(), spacing, 24.dp.toPx(), columns, fillHeight?.toPx(), padding = 16.dp.toPx())
+		}
 		val bottomInset = if (layout.bleeds) 8.dp else 0.dp
-		val geometry = PhotoGridGeometry(assets.size, layout.cell, spacing, layout.viewport, with(density) { bottomInset.toPx() })
+		val geometry = PhotoGridGeometry(assets.size, layout.cell, spacing, layout.viewport, with(density) { bottomInset.toPx() }, columns)
 		FollowLatest(assets, gridState, geometry)
 		// Bled: the viewport reaches through the card's top and bottom padding so rows crop
 		// at the card's edges, while the sides keep the card's 8 insets.
@@ -233,7 +256,7 @@ internal fun PhotoGridCard(
 					.onGloballyPositioned { tiles.viewport = Rect(it.positionOnScreen(), it.size.toSize()) },
 			) {
 				LazyVerticalGrid(
-					columns = PixelCells(layout.cell.roundToInt()),
+					columns = PixelCells(layout.cell.roundToInt(), columns),
 					state = gridState,
 					modifier = Modifier.fillMaxSize().onGloballyPositioned { tiles.origin = it.positionOnScreen() },
 					contentPadding = PaddingValues(bottom = bottomInset),
@@ -244,7 +267,7 @@ internal fun PhotoGridCard(
 						val item = assets.items[index]
 						AssetThumbnail(
 							item,
-							bentoShape(index / COLUMNS, index % COLUMNS, layout.rows, COLUMNS, outer = if (layout.bleeds) 16.dp else 2.dp),
+							bentoShape(index / columns, index % columns, layout.rows, columns, outer = if (layout.bleeds) 16.dp else 2.dp),
 							receipts,
 							Modifier
 								.animateItem()
@@ -284,9 +307,9 @@ private fun FollowLatest(assets: PhotoLibraryAssets, gridState: LazyGridState, g
 	}
 }
 
-/** Three columns of the given whole-pixel width, like UICollectionView's pixel-floored items. */
-private data class PixelCells(private val cell: Int) : GridCells {
-	override fun Density.calculateCrossAxisCellSizes(availableSize: Int, spacing: Int): List<Int> = List(COLUMNS) { cell }
+/** Columns of the given whole-pixel width, like UICollectionView's pixel-floored items. */
+private data class PixelCells(private val cell: Int, private val columns: Int) : GridCells {
+	override fun Density.calculateCrossAxisCellSizes(availableSize: Int, spacing: Int): List<Int> = List(columns) { cell }
 }
 
 /**

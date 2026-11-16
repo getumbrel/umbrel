@@ -25,11 +25,14 @@ import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,11 +46,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -62,11 +67,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -78,6 +88,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -94,6 +105,7 @@ import com.umbrel.android.ui.glassGlint
 import com.umbrel.android.ui.CircleIconButton
 import com.umbrel.android.ui.interFor
 import com.umbrel.android.ui.openUrl
+import com.umbrel.android.ui.rememberFoldTracker
 import com.umbrel.kit.IdentifiedDevice
 import com.umbrel.kit.Umbreld
 import kotlinx.coroutines.CancellationException
@@ -120,44 +132,59 @@ fun OnboardingFlow(mode: OnboardingMode, onFinished: (String) -> Unit, onCancel:
 	BackHandler(enabled = mode == OnboardingMode.ADD_DEVICE && state.step != OnboardingStep.CONNECTED, onBack = onCancel)
 	BackHandler(enabled = state.step == OnboardingStep.MANUAL_ADDRESS, onBack = model::closeManualAddress)
 
+	val fold = rememberFoldTracker()
+	val foldBand = fold.band()
 	Box(Modifier.fillMaxSize()) {
 		Crossfade(state.step == OnboardingStep.NO_DEVICE, animationSpec = tween(400, easing = EaseOut), label = "background") { noDevice ->
 			if (noDevice) OnboardingBackground(tint = Palette.error, secondaryTint = Palette.error) else OnboardingBackground()
 		}
-		AnimatedContent(
-			targetState = state.step,
-			// Sign-in opens a sheet over the device-found screen without changing the screen.
-			contentKey = { if (it == OnboardingStep.SIGN_IN) OnboardingStep.DEVICE_FOUND else it },
-			transitionSpec = {
-				val forward = state.movingForward
-				val offset = tween<IntOffset>(400, easing = EaseOut)
-				val fade = tween<Float>(400, easing = EaseOut)
-				(fadeIn(fade) + slideInHorizontally(offset) { if (forward) push else -push }) togetherWith
-					(fadeOut(fade) + slideOutHorizontally(offset) { if (forward) -push else push }) using
-					SizeTransform(clip = false)
-			},
-			label = "onboarding",
-		) { step ->
-			when (step) {
-				OnboardingStep.SPLASH -> SplashScreen()
-				OnboardingStep.WELCOME -> WelcomeScreen { model.advance(OnboardingStep.FINDING) }
-				OnboardingStep.FINDING -> FindingScreen()
-				OnboardingStep.NO_DEVICE -> NoDeviceScreen(onScanAgain = model::scanAgain, onManual = model::openManualAddress)
-				OnboardingStep.DEVICE_FOUND, OnboardingStep.SIGN_IN -> DeviceFoundScreen(
-					state,
-					onConnect = model::selectDevice,
-					onRetry = model::retry,
-					onManual = model::openManualAddress,
-				)
-				OnboardingStep.MANUAL_ADDRESS -> ManualAddressScreen(
-					savedIds = state.savedIds,
-					signingIn = state.selectedDevice != null,
-					discover = model::discoverManually,
-					onBack = model::closeManualAddress,
-					onFound = model::manualDeviceFound,
-				)
-				OnboardingStep.CONNECTED -> ConnectedScreen(state.selectedDevice) {
-					model.finish()?.let(onFinished) ?: onCancel()
+		BoxWithConstraints(fold.modifier.fillMaxSize()) {
+			// Half open like a book, the steps move left of the hinge, so nothing sits across it
+			val beforeFold = foldBand?.let { maxWidth - it.start + 20.dp } ?: 0.dp
+			AnimatedContent(
+				targetState = state.step,
+				modifier = Modifier.padding(end = beforeFold),
+				// Sign-in opens a sheet over the device-found screen without changing the screen.
+				contentKey = { if (it == OnboardingStep.SIGN_IN) OnboardingStep.DEVICE_FOUND else it },
+				transitionSpec = {
+					val forward = state.movingForward
+					val offset = tween<IntOffset>(400, easing = EaseOut)
+					val fade = tween<Float>(400, easing = EaseOut)
+					(fadeIn(fade) + slideInHorizontally(offset) { if (forward) push else -push }) togetherWith
+						(fadeOut(fade) + slideOutHorizontally(offset) { if (forward) -push else push }) using
+						SizeTransform(clip = false)
+				},
+				label = "onboarding",
+			) { step ->
+				// The steps are designed for a phone-width column, centered in wider windows. The
+				// device list runs edge to edge, as on a phone.
+				val fullWidth = step == OnboardingStep.SPLASH || step == OnboardingStep.DEVICE_FOUND || step == OnboardingStep.SIGN_IN
+				Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+					Box(if (fullWidth) Modifier.fillMaxSize() else Modifier.fillMaxHeight().widthIn(max = 460.dp).fillMaxWidth()) {
+						when (step) {
+							OnboardingStep.SPLASH -> SplashScreen()
+							OnboardingStep.WELCOME -> WelcomeScreen { model.advance(OnboardingStep.FINDING) }
+							OnboardingStep.FINDING -> FindingScreen()
+							OnboardingStep.NO_DEVICE -> NoDeviceScreen(onScanAgain = model::scanAgain, onManual = model::openManualAddress)
+							OnboardingStep.DEVICE_FOUND, OnboardingStep.SIGN_IN -> DeviceFoundScreen(
+								state,
+								onConnect = model::selectDevice,
+								onRetry = model::retry,
+								onManual = model::openManualAddress,
+								endsAtFold = foldBand != null,
+							)
+							OnboardingStep.MANUAL_ADDRESS -> ManualAddressScreen(
+								savedIds = state.savedIds,
+								signingIn = state.selectedDevice != null,
+								discover = model::discoverManually,
+								onBack = model::closeManualAddress,
+								onFound = model::manualDeviceFound,
+							)
+							OnboardingStep.CONNECTED -> ConnectedScreen(state.selectedDevice) {
+								model.finish()?.let(onFinished) ?: onCancel()
+							}
+						}
+					}
 				}
 			}
 		}
@@ -225,7 +252,7 @@ private fun SplashScreen() {
 @Composable
 private fun WelcomeScreen(onContinue: () -> Unit) {
 	val entrance by rememberEntrance()
-	Column(Modifier.fillMaxSize().systemBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+	StepColumn(horizontalAlignment = Alignment.CenterHorizontally) {
 		OnboardingHeader(
 			title = "Your Umbrel.\nIn your pocket.",
 			subtitle = "Manage your Umbrel, launch apps, and keep your photos backed up automatically.",
@@ -252,7 +279,7 @@ private fun WelcomeScreen(onContinue: () -> Unit) {
 @Composable
 private fun FindingScreen() {
 	val entrance by rememberEntrance()
-	Column(Modifier.fillMaxSize().systemBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+	StepColumn(horizontalAlignment = Alignment.CenterHorizontally) {
 		OnboardingHeader(
 			title = "Finding your Umbrel",
 			subtitle = "Make sure your phone and Umbrel are on the same Wi-Fi network.",
@@ -289,7 +316,7 @@ private fun NoDeviceScreen(onScanAgain: () -> Unit, onManual: () -> Unit) {
 		launch { umbrellaScale.animateTo(1f, landing) }
 		umbrellaAlpha.animateTo(1f, landing)
 	}
-	Column(Modifier.fillMaxSize().systemBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+	StepColumn(horizontalAlignment = Alignment.CenterHorizontally) {
 		Column(Modifier.padding(top = 90.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
 			OnboardingHeader(title = "No device found", subtitle = "Make sure your phone and Umbrel are on the same Wi-Fi network.")
 			ManualAddressPrompt(onManual)
@@ -353,6 +380,7 @@ private fun DeviceFoundScreen(
 	onConnect: (IdentifiedDevice) -> Unit,
 	onRetry: (Umbreld.UnverifiedDevice) -> Unit,
 	onManual: () -> Unit,
+	endsAtFold: Boolean,
 ) {
 	// The list needs unique keys, and a LAN device repeating an Umbrel's id at the same host
 	// under its own CA would give two records the same one.
@@ -363,29 +391,47 @@ private fun DeviceFoundScreen(
 		).distinctBy { it.key }
 	val entrance by rememberEntrance()
 	if (results.size > 1) {
-		Column(Modifier.fillMaxSize().systemBarsPadding()) {
-			Column(Modifier.padding(horizontal = 33.dp).padding(top = 120.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-				Text("Found ${results.size} devices", color = Palette.textMuted, fontSize = 20.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold)
-				ManualAddressPrompt(onManual, leading = true)
-			}
-			Spacer(Modifier.height(24.dp))
-			val listState = rememberLazyListState()
-			LazyRow(
-				state = listState,
-				modifier = Modifier.graphicsLayer { alpha = entrance },
-				contentPadding = PaddingValues(horizontal = 20.dp),
-				horizontalArrangement = Arrangement.spacedBy(20.dp),
-				flingBehavior = rememberSnapFlingBehavior(listState, SnapPosition.Start),
-			) {
-				items(results, key = { it.key }) { result ->
-					DeviceCard(result, state, onConnect, onRetry)
+		BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
+			val density = LocalDensity.current
+			var headerHeight by remember { mutableStateOf(52.dp) }
+			// The carousel sits a fixed 24 below the title. Short windows, like a foldable or
+			// tablet held sideways, take the room from the space above the title first, then
+			// from the cards' height, so the whole card always fits.
+			val cardHeight = (maxHeight - headerHeight - 24.dp - 48.dp).coerceIn(380.dp, 513.dp)
+			val topPadding = (maxHeight - headerHeight - 24.dp - cardHeight - 24.dp).coerceIn(24.dp, 120.dp)
+			// Stopping at the fold leaves a narrow space, so the cards narrow to keep about 40 of
+			// the next one in view, a sign that they scroll.
+			val cardWidth = if (endsAtFold && maxWidth - 20.dp - 20.dp - 340.dp < 20.dp) maxWidth - 80.dp else 340.dp
+			Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+				Column(
+					Modifier
+						.padding(top = topPadding)
+						.onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
+						.padding(horizontal = 33.dp),
+					verticalArrangement = Arrangement.spacedBy(2.dp),
+				) {
+					Text("Found ${results.size} devices", color = Palette.textMuted, fontSize = 20.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold)
+					ManualAddressPrompt(onManual, leading = true)
+				}
+				Spacer(Modifier.height(24.dp))
+				val listState = rememberLazyListState()
+				LazyRow(
+					state = listState,
+					// The cards have buttons, so at the fold they fade out rather than run across it
+					modifier = Modifier.graphicsLayer { alpha = entrance }.then(if (endsAtFold) Modifier.fadingEnd(24.dp) else Modifier),
+					contentPadding = PaddingValues(horizontal = 20.dp),
+					horizontalArrangement = Arrangement.spacedBy(20.dp),
+					flingBehavior = rememberSnapFlingBehavior(listState, SnapPosition.Start),
+				) {
+					items(results, key = { it.key }) { result ->
+						DeviceCard(result, state, onConnect, onRetry, Modifier.size(cardWidth, cardHeight))
+					}
 				}
 			}
-			Spacer(Modifier.weight(1f))
 		}
 	} else {
 		val result = results.firstOrNull()
-		Column(Modifier.fillMaxSize().systemBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+		StepColumn(horizontalAlignment = Alignment.CenterHorizontally) {
 			Spacer(Modifier.weight(1f))
 			Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
 				Text("Found 1 device", color = Palette.textMuted, fontSize = CalloutSize, lineHeight = CalloutLineHeight, fontWeight = FontWeight.SemiBold)
@@ -409,6 +455,7 @@ private fun DeviceCard(
 	state: OnboardingState,
 	onConnect: (IdentifiedDevice) -> Unit,
 	onRetry: (Umbreld.UnverifiedDevice) -> Unit,
+	modifier: Modifier,
 ) {
 	val shape = RoundedCornerShape(42.dp)
 	// The fixed card has room for the "Couldn't connect" explanation and two actions only up
@@ -421,8 +468,7 @@ private fun DeviceCard(
 	}
 	CompositionLocalProvider(LocalDensity provides cardDensity) {
 		Column(
-			Modifier
-				.size(width = 340.dp, height = 513.dp)
+			modifier
 				.clip(shape)
 				.background(Color.White.copy(alpha = 0.04f))
 				.glassGlint(shape)
@@ -604,7 +650,7 @@ private fun ManualAddressScreen(
 		}
 	}
 
-	Column(Modifier.fillMaxSize().systemBarsPadding().imePadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+	StepColumn(Modifier.imePadding(), horizontalAlignment = Alignment.CenterHorizontally) {
 		Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp)) {
 			CircleIconButton(Symbols.ArrowBackIosNewMedium, contentDescription = "Back", iconSize = 18.dp, onClick = onBack)
 		}
@@ -695,7 +741,7 @@ private val PlaceholderGray = Color(0x4DEBEBF5)
 @Composable
 private fun ConnectedScreen(device: IdentifiedDevice?, onContinue: () -> Unit) {
 	val entrance by rememberEntrance()
-	Column(Modifier.fillMaxSize().systemBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+	StepColumn(horizontalAlignment = Alignment.CenterHorizontally) {
 		Spacer(Modifier.weight(1f))
 		UmbrelDeviceRender(device?.model, UmbrelRenderPlacement.HERO, shadow = RenderShadow.Hero)
 		Spacer(Modifier.height(31.dp))
@@ -712,5 +758,31 @@ private fun ConnectedScreen(device: IdentifiedDevice?, onContinue: () -> Unit) {
 	}
 }
 
-/** The bottom action inset every onboarding screen uses: 31 from the sides, 8 above the safe area. */
-private fun Modifier.bottomAction(): Modifier = padding(horizontal = 31.dp).padding(bottom = 8.dp)
+/**
+ * The bottom action inset every onboarding screen uses: 31 from the sides, 8 above the safe
+ * area, and no wider than 400 so it doesn't stretch across a tablet.
+ */
+private fun Modifier.bottomAction(): Modifier = padding(horizontal = 31.dp).padding(bottom = 8.dp).widthIn(max = 400.dp)
+
+/** Fades the last [width] of the content out to transparent. */
+private fun Modifier.fadingEnd(width: Dp): Modifier =
+	graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen).drawWithContent {
+		drawContent()
+		drawRect(Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = size.width - width.toPx(), endX = size.width), blendMode = BlendMode.DstIn)
+	}
+
+/**
+ * A step's full-screen column. In a window shorter than the step, like a tablet or an
+ * unfolded foldable held sideways, the step scrolls instead of clipping; otherwise its
+ * weighted spacers place everything as on a phone.
+ */
+@Composable
+private fun StepColumn(modifier: Modifier = Modifier, horizontalAlignment: Alignment.Horizontal = Alignment.Start, content: @Composable ColumnScope.() -> Unit) {
+	BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding().then(modifier)) {
+		Column(
+			Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
+			horizontalAlignment = horizontalAlignment,
+			content = content,
+		)
+	}
+}

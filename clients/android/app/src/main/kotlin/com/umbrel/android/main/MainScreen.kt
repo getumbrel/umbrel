@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -137,6 +138,7 @@ enum class MainTab(val title: String, val icon: ImageVector, val scope: RefreshS
 
 // The floating tab bar's height. Tab content scrolls underneath it.
 private val TabBarHeight = 62.dp
+private val TabBarMaxWidth = 480.dp
 
 /**
  * One connected Umbrel: Home, Apps and Library tabs plus the Profile sheet, over the
@@ -425,6 +427,9 @@ private fun TabBar(
 		modifier
 			.navigationBarsPadding()
 			.padding(horizontal = MainTheme.contentInset)
+			// Four tabs need no more than a phone's width, so a wide window centers the bar
+			// rather than stretching it
+			.widthIn(max = TabBarMaxWidth)
 			.fillMaxWidth()
 			.height(TabBarHeight),
 		contentAlignment = Alignment.CenterStart,

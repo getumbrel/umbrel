@@ -8,14 +8,17 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +49,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -55,7 +60,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
+import androidx.compose.ui.unit.min
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.umbrel.android.IdentityChange
 import com.umbrel.android.ui.AppleEaseOut
@@ -74,9 +82,12 @@ import com.umbrel.android.ui.SkeletonTiles
 import com.umbrel.android.ui.StatusDot
 import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.TrailingLabel
+import com.umbrel.android.ui.WideLayout
 import com.umbrel.android.ui.bentoShape
 import com.umbrel.android.ui.formatStorageSize
 import com.umbrel.android.ui.isAccessibilityTextSize
+import com.umbrel.android.ui.isWideWindow
+import com.umbrel.android.ui.rememberFoldTracker
 import com.umbrel.kit.Umbreld
 import com.umbrel.kit.backup.PhotoBackupStatus
 import kotlin.math.ceil
@@ -100,33 +111,75 @@ fun HomeTab(
 	onReconnect: suspend () -> Unit,
 ) {
 	PullToRefresh(onRefresh = { model.refreshVisibleData(RefreshScope.HOME, force = true) }, indicatorTop = contentPadding.calculateTopPadding() - 8.dp) {
-		Column(
-			Modifier
-				.fillMaxSize()
-				.verticalScroll(rememberScrollState())
-				.padding(contentPadding)
-				.padding(horizontal = MainTheme.contentInset),
-			verticalArrangement = Arrangement.spacedBy(MainTheme.sectionGap),
-		) {
-			TitleSection(state, onShowConnectionDetails)
+		BoxWithConstraints(Modifier.fillMaxSize()) {
+			val width = max(0.dp, maxWidth - MainTheme.contentInset * 2)
+			Column(
+				Modifier
+					.fillMaxSize()
+					.verticalScroll(rememberScrollState())
+					.padding(contentPadding)
+					.padding(horizontal = MainTheme.contentInset),
+				verticalArrangement = Arrangement.spacedBy(MainTheme.sectionGap),
+			) {
+				if (isWideWindow() && width >= WideLayout.homeTwoColumnMinWidth) {
+					TwoColumnHome(model, library, state, width, onShowApps, onShowLibrary, onShowConnectionDetails, onReconnect)
+				} else {
+					TitleSection(state, onShowConnectionDetails)
+					ConnectionIssueCard(state, onReconnect)
+					PhotoBackupNoticeCard(model, state)
+					AppsSection(model, state, onShowApps)
+					FilesSection(model, state)
+					LibraryPreviewSection(model, library, state, onShowLibrary)
+					StorageSection(model, state)
+				}
+			}
+		}
+	}
+}
+
+/**
+ * A wide window, like a foldable's inner screen or a tablet: the phone's four sections as a
+ * 2×2, Apps and Files on the left and Photos and Storage beside them. Each card on the right
+ * takes the height of the one beside it, so both rows line up, and with a foldable half open
+ * the gutter sits on the hinge. Very wide windows center it at [WideLayout.homeMaxWidth].
+ */
+@Composable
+private fun TwoColumnHome(
+	model: MainViewModel,
+	library: PhotoLibraryViewModel,
+	state: MainUiState,
+	availableWidth: Dp,
+	onShowApps: () -> Unit,
+	onShowLibrary: () -> Unit,
+	onShowConnectionDetails: () -> Unit,
+	onReconnect: suspend () -> Unit,
+) {
+	val density = LocalDensity.current
+	val width = min(availableWidth, WideLayout.homeMaxWidth)
+	val fold = rememberFoldTracker()
+	val columns = WideLayout.twoColumns(width, MainTheme.sectionGap, fold = fold.band())
+	// The left cards' heights, which the cards beside them match
+	var appsCardHeight by remember { mutableStateOf<Dp?>(null) }
+	var filesCardHeight by remember { mutableStateOf<Dp?>(null) }
+	Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+		Column(Modifier.width(width), verticalArrangement = Arrangement.spacedBy(MainTheme.sectionGap)) {
+			// The title belongs to the left column, so it shares that column's leading edge
+			Box(Modifier.padding(start = columns[0].x)) { TitleSection(state, onShowConnectionDetails) }
 			ConnectionIssueCard(state, onReconnect)
 			PhotoBackupNoticeCard(model, state)
-			AppsSection(model, state, onShowApps)
-			FilesSection(
-				paths = state.favoritePaths,
-				brandColor = state.brandColor,
-				loaded = state.didLoad,
-				// /files resolves to the home of whichever umbrelOS account the browser uses.
-				onViewAll = { model.openDashboard("/files") },
-				onOpenPath = { model.openDashboard("/files$it") },
-			)
-			LibraryPreviewSection(model, library, state, onShowLibrary)
-			StorageSection(
-				disk = state.disk,
-				brandColorHsl = state.brandColorHsl,
-				loaded = state.didLoad,
-				onViewLiveUsage = { model.openDashboard(query = listOf("dialog" to "live-usage", "live-usage-tab" to "storage")) },
-			)
+			Row(fold.modifier.fillMaxWidth()) {
+				Spacer(Modifier.width(columns[0].x))
+				Column(Modifier.width(columns[0].width), verticalArrangement = Arrangement.spacedBy(MainTheme.sectionGap)) {
+					AppsSection(model, state, onShowApps, Modifier.onSizeChanged { appsCardHeight = with(density) { it.height.toDp() } })
+					FilesSection(model, state, Modifier.onSizeChanged { filesCardHeight = with(density) { it.height.toDp() } })
+				}
+				Spacer(Modifier.width(columns[1].x - columns[0].x - columns[0].width))
+				Column(Modifier.width(columns[1].width), verticalArrangement = Arrangement.spacedBy(MainTheme.sectionGap)) {
+					LibraryPreviewSection(model, library, state, onShowLibrary, wide = true, cardHeight = appsCardHeight)
+					// Without favorites there's no Files card, and Storage keeps its own height
+					StorageSection(model, state, filesCardHeight?.takeIf { showsFilesSection(state) }?.let { Modifier.heightIn(min = it) } ?: Modifier)
+				}
+			}
 		}
 	}
 }
@@ -254,8 +307,9 @@ private fun ReconnectCard(onReconnect: suspend () -> Unit) {
 
 // ── Apps ──
 
+/** [cardModifier] measures the card, for the one beside it in a wide window to match. */
 @Composable
-private fun AppsSection(model: MainViewModel, state: MainUiState, onShowApps: () -> Unit) {
+private fun AppsSection(model: MainViewModel, state: MainUiState, onShowApps: () -> Unit, cardModifier: Modifier = Modifier) {
 	val columns = if (isAccessibilityTextSize()) 2 else 3
 	Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 		SectionHeader("Apps", showsChevron = true, onClick = onShowApps) {
@@ -265,6 +319,7 @@ private fun AppsSection(model: MainViewModel, state: MainUiState, onShowApps: ()
 		LoadReveal(
 			state.didLoad,
 			order = 0,
+			modifier = cardModifier,
 			content = {
 				if (state.installedApps.isEmpty()) {
 					EmptyStateCard(
@@ -319,19 +374,29 @@ private fun AppsGrid(model: MainViewModel, state: MainUiState, columns: Int, onS
 // ── Files ──
 
 /**
+ * Reserve the Files section while loading; collapse it only once the load confirms there are
+ * no favorites, which is rare since umbrelOS defaults to four.
+ */
+private fun showsFilesSection(state: MainUiState): Boolean = !(state.didLoad && state.favoritePaths.isEmpty())
+
+/**
  * The umbrelOS files-favorites widget: the first four favorite folders, 2 by 2 when there
  * are four and a single row with fewer.
  */
 @Composable
-private fun FilesSection(paths: List<String>, brandColor: Color, loaded: Boolean, onViewAll: () -> Unit, onOpenPath: (String) -> Unit) {
-	// Reserve the section while loading; collapse it only once the load confirms there are
-	// no favorites, which is rare since umbrelOS defaults to four.
-	if (loaded && paths.isEmpty()) return
+private fun FilesSection(model: MainViewModel, state: MainUiState, cardModifier: Modifier = Modifier) {
+	if (!showsFilesSection(state)) return
+	val paths = state.favoritePaths
+	val brandColor = state.brandColor
+	// /files resolves to the home of whichever umbrelOS account the browser uses.
+	val onViewAll = { model.openDashboard("/files") }
+	val onOpenPath = { path: String -> model.openDashboard("/files$path") }
 	Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 		SectionHeader("Files", onClick = onViewAll) { TrailingLabel("View all") }
 		LoadReveal(
-			loaded,
+			state.didLoad,
 			order = 1,
+			modifier = cardModifier,
 			content = {
 				SectionCard {
 					val columns = if (paths.size == 4) 2 else max(1, paths.size)
@@ -380,8 +445,19 @@ fun statusColor(status: PhotoBackupStatus): Color = when (status.tone) {
 	PhotoBackupStatus.Tone.PROBLEM -> MainTheme.red
 }
 
+/**
+ * In a wide window ([wide]) the card takes [cardHeight], the height of the Apps card beside it,
+ * and View All in Photos stays on the Library tab, as on iOS.
+ */
 @Composable
-private fun LibraryPreviewSection(model: MainViewModel, library: PhotoLibraryViewModel, state: MainUiState, onShowLibrary: () -> Unit) {
+private fun LibraryPreviewSection(
+	model: MainViewModel,
+	library: PhotoLibraryViewModel,
+	state: MainUiState,
+	onShowLibrary: () -> Unit,
+	wide: Boolean = false,
+	cardHeight: Dp? = null,
+) {
 	val libraryState by library.state.collectAsStateWithLifecycle()
 	Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 		// As in the Library tab: the photos, or the setup card in their place
@@ -397,28 +473,29 @@ private fun LibraryPreviewSection(model: MainViewModel, library: PhotoLibraryVie
 					val status = state.backupStatus
 					TrailingLabel(if (other) "On another Umbrel" else status.text, dot = if (other) MainTheme.gray else statusColor(status))
 				}
-				LibraryMosaic(libraryState.assets, library.receipts)
+				LibraryMosaic(libraryState.assets, library.receipts, cardHeight)
 			}
 		} else {
 			SectionHeader("Photos", showsChevron = true, onClick = onShowLibrary)
-			PhotoBackupSetupCard(model, state)
+			PhotoBackupSetupCard(model, state, modifier = cardHeight?.let { Modifier.heightIn(min = it) } ?: Modifier)
 		}
-		ViewAllInPhotosButton(model, Modifier.padding(top = 4.dp))
+		if (!wide) ViewAllInPhotosButton(model, Modifier.padding(top = 4.dp))
 	}
 }
 
 /**
  * A window onto the newest rows of the phone's library, bottom-aligned in a fixed-height
- * card that crops at the top edge. With a small library the top shows plain frost.
+ * card that crops at the top edge. With a small library the top shows plain frost. In a wide
+ * window the card takes [cardHeight] instead.
  */
 @Composable
-private fun LibraryMosaic(assets: PhotoLibraryAssets, receipts: PhotoBackupReceipts) {
+private fun LibraryMosaic(assets: PhotoLibraryAssets, receipts: PhotoBackupReceipts, cardHeight: Dp?) {
 	val columns = 3
 	val items = assets.items.takeLast(9)
 	val count = if (items.isEmpty()) 9 else items.size
 	val rows = ceil(count / columns.toDouble()).toInt()
 	SectionCard(Modifier.clip(RoundedCornerShape(MainTheme.cardRadius)), padding = 0.dp) {
-		Box(Modifier.fillMaxWidth().padding(bottom = 8.dp).height(252.dp).clipToBounds()) {
+		Box(Modifier.fillMaxWidth().padding(bottom = 8.dp).height(cardHeight?.minus(8.dp) ?: 252.dp).clipToBounds()) {
 			BentoGrid(
 				count,
 				columns,
@@ -444,7 +521,10 @@ private fun LibraryMosaic(assets: PhotoLibraryAssets, receipts: PhotoBackupRecei
 // ── Storage ──
 
 @Composable
-private fun StorageSection(disk: Umbreld.DiskUsage?, brandColorHsl: String?, loaded: Boolean, onViewLiveUsage: () -> Unit) {
+private fun StorageSection(model: MainViewModel, state: MainUiState, cardModifier: Modifier = Modifier) {
+	val disk = state.disk
+	val brandColorHsl = state.brandColorHsl
+	val onViewLiveUsage = { model.openDashboard(query = listOf("dialog" to "live-usage", "live-usage-tab" to "storage")) }
 	// Apps is the brand color; the other categories are successively whiter tints, so the
 	// breakdown reads as one wallpaper-derived hue.
 	val colors = listOf(0.0, 0.32, 0.58, 0.82).map { BrandColor.color(brandColorHsl, mixWhite = it) }
@@ -452,10 +532,10 @@ private fun StorageSection(disk: Umbreld.DiskUsage?, brandColorHsl: String?, loa
 	Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 		SectionHeader("Storage", onClick = onViewLiveUsage) { TrailingLabel("View Live Usage") }
 		LoadReveal(
-			loaded,
+			state.didLoad,
 			order = 2,
 			content = {
-				SectionCard(padding = 24.dp) {
+				SectionCard(cardModifier, padding = 24.dp, contentAlignment = Alignment.CenterStart) {
 					StorageLayout(accessibility, chart = { DonutChart(disk, colors) }) {
 						Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 							val used = disk?.let { formatStorageSize(it.totalUsed) } ?: "—"
@@ -480,7 +560,7 @@ private fun StorageSection(disk: Umbreld.DiskUsage?, brandColorHsl: String?, loa
 				}
 			},
 			skeleton = {
-				SectionCard(padding = 24.dp) {
+				SectionCard(cardModifier, padding = 24.dp, contentAlignment = Alignment.CenterStart) {
 					Pulsing {
 						StorageLayout(accessibility, chart = {
 							Canvas(Modifier.size(103.dp)) {

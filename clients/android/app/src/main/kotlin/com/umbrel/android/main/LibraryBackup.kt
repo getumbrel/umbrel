@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
@@ -242,7 +243,7 @@ private fun noticeIconSize(notice: PhotoBackupNotice): Dp = when (notice) {
  * lost and backup is paused: the card asks for access back, and backup resumes on its own.
  */
 @Composable
-fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: (() -> Unit)? = null) {
+fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: (() -> Unit)? = null, modifier: Modifier = Modifier) {
 	val requests = rememberPhotoAccessRequests(model, state)
 	val other = state.otherBackupDeviceName
 	when (photoBackupSetupCardKind(state, requests.access)) {
@@ -251,6 +252,7 @@ fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: ((
 			val switching = backupSwitchInProgress(state)
 			PhotoBackupSwitchConfirmation(model, other.orEmpty(), requests.access) { confirm ->
 				EmptyStateCard(
+					modifier = modifier,
 					icon = Symbols.PhotoLibrary,
 					title = "Photo Backup is on for $other",
 					subtitle = "This phone can back up to one Umbrel at a time.",
@@ -263,6 +265,7 @@ fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: ((
 		}
 		PhotoBackupSetupCardKind.SWITCH_NEEDS_SETTINGS -> {
 			EmptyStateCard(
+				modifier = modifier,
 				icon = Symbols.PhotoLibrary,
 				title = "Photo Backup is on for $other",
 				subtitle = "This phone can back up to one Umbrel at a time. Allow photo access to back up to this Umbrel instead.",
@@ -275,6 +278,7 @@ fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: ((
 	val needsSettings = requests.access == PhotoAccess.BLOCKED
 	val paused = state.backupPreference.isEnabled
 	EmptyStateCard(
+		modifier = modifier,
 		icon = Symbols.PhotoLibrary,
 		title = when {
 			needsSettings -> "Full Photos access required"
