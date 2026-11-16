@@ -298,9 +298,16 @@ function build_rugix_artifacts() {
     # Hard link the root filesystems previously built with Docker. Copying them
     # takes a while, they're several GB each, and Rugix Bakery only reads them.
     ln -f build/*.tar rugix/build/umbrelos-root
-    # Copy `/etc/hostname` and `/etc/hosts` such that Rugix can fix them.
-    cp overlay/etc/{hostname,hosts} rugix/recipes/fix-overlay/files
-    
+    # Copy `/etc/hostname` and `/etc/hosts` such that Rugix can fix them. Leave
+    # them alone if they're already there. Rugix Bakery rebuilds a layer when a
+    # recipe's files are newer than it, so writing them again from a parallel
+    # build in this directory would make the other build's layer stale.
+    local file
+    for file in hostname hosts; do
+        cmp -s "overlay/etc/${file}" "rugix/recipes/fix-overlay/files/${file}" \
+            || cp "overlay/etc/${file}" rugix/recipes/fix-overlay/files
+    done
+
     local compression="compression = { type = \"xz\", level = 9 }"
     if [ "$dev" == "true" ]; then
         compression=""
