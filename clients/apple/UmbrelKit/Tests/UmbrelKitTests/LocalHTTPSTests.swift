@@ -328,6 +328,18 @@ final class LocalHTTPSTests: XCTestCase {
 		XCTAssertFalse(evaluateServerTrust(try challengeTrust([expired], host: "umbrel.local"), anchor: caA))
 	}
 
+	func testPinnedTrustTurnsOffIssuerFetching() throws {
+		let caA = try certificate(fromPEM: testUmbrelCAAPEM)
+		let current = try certificate(fromPEM: testUmbrelCurrentLeafPEM)
+		let trust = try challengeTrust([current], host: "umbrel.local")
+
+		XCTAssertTrue(evaluateServerTrust(trust, anchor: caA))
+
+		var fetchAllowed: DarwinBoolean = true
+		XCTAssertEqual(SecTrustGetNetworkFetchAllowed(trust, &fetchAllowed), errSecSuccess)
+		XCTAssertFalse(fetchAllowed.boolValue)
+	}
+
 	// Asked as the in-app browser asks it: after the pinned credential was refused for the
 	// same challenge.
 	func testRefusedIdentityDiffersOnlyForAnotherAuthoritysCertificate() throws {

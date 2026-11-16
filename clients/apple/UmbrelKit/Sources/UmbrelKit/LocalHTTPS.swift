@@ -391,6 +391,11 @@ func chainsToAnchor(_ certificates: [SecCertificate], anchor: SecCertificate) ->
 func evaluateServerTrust(_ trust: SecTrust, anchor: SecCertificate) -> Bool {
 	let policy = SecPolicyCreateSSL(true, nil)
 	guard SecTrustSetPolicies(trust, policy) == errSecSuccess,
+		// The Umbrel's CA signs its server certificate directly, so there is never an
+		// issuer to fetch. Left on, the system downloads a missing issuer from whatever
+		// URL the answering server's certificate names for it. Setting the policies
+		// turns fetching back on, so this has to come after SecTrustSetPolicies.
+		SecTrustSetNetworkFetchAllowed(trust, false) == errSecSuccess,
 		SecTrustSetAnchorCertificates(trust, [anchor] as CFArray) == errSecSuccess,
 		SecTrustSetAnchorCertificatesOnly(trust, true) == errSecSuccess
 	else { return false }
