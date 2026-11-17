@@ -10,10 +10,6 @@ import NetFS
 //  - NetFSMountURLSync: no sudo, auto-manages /Volumes/, and returns the ACTUAL mount
 //    path. That matters because macOS appends "-1", "-2" etc. on name conflicts (two
 //    Umbrels both sharing "Documents" mount at /Volumes/Documents and /Volumes/Documents-1).
-//
-// On the first mount to a new host macOS shows a one-time "connect to server" dialog;
-// after the user approves, a Keychain entry makes all future mounts silent. Background
-// (health check) mounts pass silent=true so failures never pop dialogs.
 enum Mounter {
 	private static let blockingQueue = DispatchQueue(
 		label: "com.umbrel.app.smb-filesystem",
@@ -38,8 +34,7 @@ enum Mounter {
 		sharename: String,
 		username: String,
 		password: String,
-		forceNewSession: Bool,
-		silent: Bool
+		forceNewSession: Bool
 	) async throws -> String {
 		try validate(sharename: sharename)
 
@@ -61,11 +56,9 @@ enum Mounter {
 				if forceNewSession {
 					openOptions["ForceNewSession"] = true
 				}
-				// The kNAUIOptionNoUI constant can't be looked up via the Swift bridge
-				// on modern macOS, so the raw key/value are used
-				if silent {
-					openOptions["UIOption"] = "NoUI"
-				}
+				// The app supplies the share's login itself, so if the server rejects it
+				// macOS must not ask the user for one.
+				openOptions[kNAUIOptionKey] = kNAUIOptionNoUI
 
 				var mountpoints: Unmanaged<CFArray>?
 				let status = NetFSMountURLSync(

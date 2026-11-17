@@ -817,8 +817,8 @@ final class AppState {
 	}
 
 	// True while a user-initiated connect/disconnect/mount is running. The popup
-	// suppresses its click-away auto-hide during these: first-mount system dialogs
-	// (SMB trust, network-volume permission) briefly take key status, which would
+	// suppresses its click-away auto-hide during these: the first mount's system
+	// dialog (network-volume permission) briefly takes key status, which would
 	// otherwise read as "clicked elsewhere" and close the popup mid-flow.
 	var hasForegroundActivity: Bool {
 		!connecting.isEmpty || !disconnecting.isEmpty || !foregroundMounts.isEmpty
@@ -1528,8 +1528,7 @@ final class AppState {
 					sharename: share.sharename,
 					username: credential.username,
 					password: sharePassword,
-					forceNewSession: needsFreshSession,
-					silent: silent
+					forceNewSession: needsFreshSession
 				)
 				remember(
 					Mounter.MountedShare(host: connectionHost, sharename: share.sharename, path: path),
