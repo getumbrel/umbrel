@@ -646,6 +646,24 @@ export default class App {
 		}
 	}
 
+	// Starting fresh should match a new install, which also copies the package's
+	// committed data/ files (default config, seed databases) from the app store.
+	async #restorePackageData() {
+		let templatePath
+		try {
+			templatePath = await this.#umbreld.appStore.getAppTemplateFilePath(this.id)
+		} catch (error) {
+			this.logger.error(`Could not find ${this.id} in the app store, starting with an empty data folder`, error)
+			return
+		}
+		// The store's copy is briefly missing while the store refreshes
+		if (!(await fse.pathExists(templatePath))) {
+			this.logger.error(`${this.id}'s app store files are missing, starting with an empty data folder`)
+			return
+		}
+		await $`rsync --archive --include=/data/*** --exclude=* ${templatePath}/. ${this.dataDirectory}`
+	}
+
 	async #ensureAppDataRootBindSources(dataRootSystemPath: string) {
 		const manifest = await this.readManifest()
 		if (manifest.storage?.dataRoot !== 'data') return
@@ -1204,6 +1222,7 @@ export default class App {
 			await removeDurably(internalSystemPath)
 			await fse.ensureDir(internalSystemPath)
 			await fse.chown(internalSystemPath, this.#umbreld.files.fileOwner.userId, this.#umbreld.files.fileOwner.groupId)
+			await this.#restorePackageData()
 
 			// Commit the new authority before starting anything. If umbreld stops
 			// here, the pending flag makes the next start retry full initialization.
