@@ -7,6 +7,7 @@ import {toast} from '@/components/ui/toast'
 import {BackupsIsland} from '@/features/backups/components/floating-island'
 import {useBackupProgress, useBackupProgressLiveUpdates} from '@/features/backups/hooks/use-backups'
 import {AudioIsland} from '@/features/files/components/floating-islands/audio-island'
+import {ClipboardIsland, useShowClipboardIsland} from '@/features/files/components/floating-islands/clipboard-island'
 import {CloudIsland} from '@/features/files/components/floating-islands/cloud-island'
 import {FormattingIsland} from '@/features/files/components/floating-islands/formatting-island'
 import {OperationsIsland} from '@/features/files/components/floating-islands/operations-island'
@@ -99,6 +100,8 @@ export function FloatingIslandContainer() {
 	const showCloud = cloudActivities.some(cloudActivityHasWork)
 	// Show machines island only while a machine is installing
 	const showMachinesInstall = installingMachines.length > 0
+	// Show the clipboard island while Files is open with something copied or cut
+	const showClipboard = useShowClipboardIsland()
 	const raidOperationType = raidProgress?.type
 	const raidOperationState = raidProgress?.state
 	const raidScrubErrors = raidProgress?.errors
@@ -129,6 +132,7 @@ export function FloatingIslandContainer() {
 
 	// Home's Search shrinks to its orb when the shared row gets crowded
 	const islandCount = [
+		showClipboard,
 		showTransfers,
 		showPhotosUploads,
 		showOperations,
@@ -196,6 +200,11 @@ export function FloatingIslandContainer() {
 	const zIndex = isImmersiveDialogOpen ? 'z-[60]' : 'z-50'
 	const islands = (
 		<AnimatePresence>
+			{showClipboard && (
+				<motion.div key='clipboard-island' layout='position' {...commonProps}>
+					<ClipboardIsland />
+				</motion.div>
+			)}
 			{showTransfers && (
 				<motion.div key='transfers-island' layout='position' {...commonProps}>
 					<TransfersIsland view={transfersView} />

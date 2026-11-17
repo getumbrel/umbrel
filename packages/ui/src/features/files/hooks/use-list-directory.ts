@@ -1,4 +1,4 @@
-import {keepPreviousData} from '@tanstack/react-query'
+import {keepPreviousData, replaceEqualDeep} from '@tanstack/react-query'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {CLOUD_PATH, RECENTS_PATH, SEARCH_PATH, USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
@@ -12,6 +12,61 @@ import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-n
 import {getNetworkDirectoryListing} from '@/features/files/utils/network-directory-listing'
 import {compareFilesystemItems, sortFilesystemItems} from '@/features/files/utils/sort-filesystem-items'
 import {trpcReact} from '@/trpc/trpc'
+
+// How many items a request for more of a folder may ask for. The server reads
+// and sorts the whole folder for every request, however few items it hands
+// back, so what a long folder costs is round trips, not rows. Scrolling asks
+// for as many items as are already loaded (250, then 250, 500, 1,000 …), up to
+// a size that keeps one response to a few hundred KB. Loading the rest of a
+// folder in one go (Select all, a typed name that isn't loaded yet) and
+// reading loaded pages again after a change ask in the largest steps.
+const MAX_SCROLL_PAGE_ITEMS = 2_500
+const MAX_BULK_PAGE_ITEMS = 5_000
+
+// The pages a listing has loaded beyond its first, and the listing (folder
+// and sort order) they belong to: pages from another one are never shown
+type ExtraPages = {key: string; items: FileSystemItem[]; hasMore: boolean | null}
+const NO_EXTRA_PAGES: ExtraPages = {key: '', items: [], hasMore: null}
+
+// Folders that a mounted listing has loaded beyond the first page. Several
+// hooks list the folder on screen (the listing itself, the actions, the new
+// folder flow), each from its first page, but only the listing loads more,
+// so only it can tell whether an item past the first page is really gone.
+// While there is one, clearing optimistic state is left to it (see below).
+const listingsWithExtraPages = new Map<string, number>()
+
+const nameOf = (item: FileSystemItem | undefined) => item?.path.split('/').pop()
+
+// Items read again, with every one that came back as it was still the object
+// it was (and the array itself, if nothing changed at all): whatever is drawn
+// from them is then left alone, as the first page's own query does for it
+function keepUnchanged(previous: FileSystemItem[], next: FileSystemItem[]) {
+	const known = new Map(previous.map((item) => [item.path, item]))
+	const kept = next.map((item) => {
+		const before = known.get(item.path)
+		return before ? replaceEqualDeep(before, item) : item
+	})
+	return kept.length === previous.length && kept.every((item, index) => item === previous[index]) ? previous : kept
+}
+
+// Optimistic state the server has caught up with, for a folder whose loaded
+// items have just been read again. A removal is over when its item is gone
+// from them: one still there is either in flight or its path was reused
+// (e.g. trash then upload same name), and stays masked. An arrival is over
+// when the server lists it.
+function settleOptimisticState(path: string, loaded: readonly FileSystemItem[]) {
+	const serverPaths = new Set(loaded.map((item) => item.path))
+	const {pendingPaths, incomingItems, removePendingPaths, removeIncomingItems} = useFilesStore.getState()
+	const completedRemovals = [...pendingPaths.entries()]
+		.filter(
+			([itemPath, type]) =>
+				type === 'removing' && itemPath.substring(0, itemPath.lastIndexOf('/')) === path && !serverPaths.has(itemPath),
+		)
+		.map(([itemPath]) => itemPath)
+	if (completedRemovals.length > 0) removePendingPaths(completedRemovals)
+	const arrived = incomingItems.filter((item) => serverPaths.has(item.path)).map((item) => item.path)
+	if (arrived.length > 0) removeIncomingItems(arrived)
+}
 
 interface UseListDirectoryOptions {
 	itemsOnScrollEnd?: number
@@ -47,9 +102,17 @@ export function useListDirectory(
 
 	// Extra paginated items beyond the first page. The first page comes
 	// directly from the query's `data.files` so we don't duplicate it in state.
-	const [extraItems, setExtraItems] = useState<FileSystemItem[]>([])
-	const [extraHasMore, setExtraHasMore] = useState<boolean | null>(null)
-	const [isFetchingMore, setIsFetchingMore] = useState(false)
+	// The ref holds the same pages for requests that outlive a render: a
+	// request reads what is loaded when it starts and again when it lands.
+	const listingKey = `${path}\n${sortBy}\n${sortOrder}`
+	const [extraPages, setExtraPagesState] = useState<ExtraPages>(NO_EXTRA_PAGES)
+	const extraPagesRef = useRef<ExtraPages>(NO_EXTRA_PAGES)
+	const setExtraPages = useCallback((pages: ExtraPages) => {
+		extraPagesRef.current = pages
+		setExtraPagesState(pages)
+	}, [])
+	const extraItems = extraPages.key === listingKey ? extraPages.items : NO_EXTRA_PAGES.items
+	const extraHasMore = extraPages.key === listingKey ? extraPages.hasMore : null
 	const [, setPaginationError] = useState<unknown>(null)
 
 	// Skip refetch when all items are loaded and only the sort changed (we can re-sort locally)
@@ -212,14 +275,37 @@ export function useListDirectory(
 	// Sort changes produce a new first page from the query, so extras
 	// from the previous sort order must be cleared to avoid mixing.
 	useEffect(() => {
-		setExtraItems([])
-		setExtraHasMore(null)
+		setExtraPages({key: listingKey, items: [], hasMore: null})
 		setPaginationError(null)
 		fullyLoadedRef.current = false
-	}, [path, sortBy, sortOrder])
+	}, [listingKey, setExtraPages])
 
-	// Guard against late responses landing in the wrong directory
-	const requestIdRef = useRef(0)
+	// Everything a request for more reads, as of the latest render. A request
+	// is for one listing (folder and sort order): by the time it lands the
+	// listing may be another, and its answer is then dropped.
+	const canPage = enabled && !!data && !isLoading && !isStaleDirectory && !isUiOnlyPath && !hasConfiguredListing
+	const latestRef = useRef({listingKey, path, sortBy, sortOrder, itemsOnScrollEnd, canPage, firstPage: data})
+	latestRef.current = {listingKey, path, sortBy, sortOrder, itemsOnScrollEnd, canPage, firstPage: data}
+	const loadedExtraPages = useCallback(
+		() => (extraPagesRef.current.key === latestRef.current.listingKey ? extraPagesRef.current : NO_EXTRA_PAGES),
+		[],
+	)
+	const stillHasMore = useCallback(() => {
+		const {canPage, firstPage} = latestRef.current
+		return canPage && (loadedExtraPages().hasMore ?? firstPage?.hasMore ?? true)
+	}, [loadedExtraPages])
+
+	// Requests for more run one at a time, in the order they were asked for:
+	// each starts from the last item the one before it loaded
+	const queueRef = useRef<Promise<unknown>>(Promise.resolve())
+	const enqueue = useCallback(<T>(task: () => Promise<T>): Promise<T> => {
+		const run = queueRef.current.then(task, task)
+		queueRef.current = run.catch(() => {})
+		return run
+	}, [])
+	// Raised when what is loaded has changed under a request in flight, whose
+	// answer would bring back what was just taken out (see the move below)
+	const generationRef = useRef(0)
 
 	useEffect(
 		() =>
@@ -232,61 +318,151 @@ export function useListDirectory(
 					(item.sourcePath.slice(0, item.sourcePath.lastIndexOf('/')) || '/') !== path
 				)
 					return
-				// The first-page refresh cannot remove a stale row held in later
-				// pages. Prune it only once the move has actually succeeded.
-				requestIdRef.current++
-				setIsFetchingMore(false)
-				setExtraItems((items) => items.filter((entry) => entry.path !== item.sourcePath))
+				// Take the moved row out of the later pages at once, rather than
+				// when they are next read again, and only once the move has
+				// actually succeeded. A page still on its way was read before it.
+				generationRef.current++
+				const pages = extraPagesRef.current
+				setExtraPages({...pages, items: pages.items.filter((entry) => entry.path !== item.sourcePath)})
 			}),
-		[path],
+		[path, setExtraPages],
 	)
 
-	const fetchMoreItems = useCallback(async (): Promise<boolean> => {
-		if (isLoading || isFetchingMore || !hasMore) return false
+	// One request for more of the folder, from the last item loaded. True when it brought some.
+	const requestMore = useCallback(
+		(limit: (loaded: number) => number): Promise<boolean> =>
+			enqueue(async () => {
+				const {listingKey: key, path, sortBy, sortOrder, firstPage} = latestRef.current
+				if (!stillHasMore()) return false
+				const generation = generationRef.current
+				const isCurrent = () => key === latestRef.current.listingKey && generation === generationRef.current
+				const loaded = loadedExtraPages().items
+				const lastFile = nameOf(loaded.at(-1) ?? firstPage?.files.at(-1))
+				setPaginationError(null)
+				try {
+					// Reusing a cached page could bring back a file that has since moved.
+					const result = await utils.files.list.fetch(
+						{path, lastFile, limit: limit((firstPage?.files.length ?? 0) + loaded.length), sortBy, sortOrder},
+						{staleTime: 0},
+					)
+					// Not for a listing that is no longer on screen, nor over a row taken out meanwhile
+					if (!isCurrent()) return false
+					if (!result?.files?.length) {
+						setExtraPages({key, items: loaded, hasMore: false})
+						return false
+					}
+					// O( n ) dedupe — append to extra items
+					const map = new Map(loaded.map((f) => [f.path, f]))
+					result.files.forEach((f: FileSystemItem) => map.set(f.path, f))
+					setExtraPages({key, items: Array.from(map.values()), hasMore: result.hasMore})
+					return true
+				} catch (e) {
+					if (isCurrent()) setPaginationError(e)
+					return false
+				}
+			}),
+		[enqueue, loadedExtraPages, stillHasMore, setExtraPages, utils.files.list],
+	)
 
-		setIsFetchingMore(true)
-		setPaginationError(null)
-		const thisRequest = ++requestIdRef.current
+	// The next page, as scrolling nears the end of what is loaded. One at a
+	// time: asked again while a page is on its way, it answers with that page.
+	const nextPageRef = useRef<Promise<boolean> | null>(null)
+	const fetchMoreItems = useCallback((): Promise<boolean> => {
+		if (!stillHasMore()) return Promise.resolve(false)
+		nextPageRef.current ??= requestMore((loaded) =>
+			Math.min(MAX_SCROLL_PAGE_ITEMS, Math.max(latestRef.current.itemsOnScrollEnd, loaded)),
+		).finally(() => {
+			nextPageRef.current = null
+		})
+		return nextPageRef.current
+	}, [requestMore, stillHasMore])
 
-		const lastItem = items[items.length - 1]
-		const lastFileName = lastItem?.path.split('/').pop()
-
-		try {
-			// Reusing a cached page could bring back a file that has since moved.
-			const result = await utils.files.list.fetch(
-				{path, lastFile: lastFileName, limit: itemsOnScrollEnd, sortBy, sortOrder},
-				{staleTime: 0},
-			)
-
-			// Ignore responses that belong to an outdated directory
-			if (thisRequest !== requestIdRef.current) return false
-
-			if (!result?.files?.length) {
-				setExtraHasMore(false)
-				return false
-			}
-
-			// O( n ) dedupe — append to extra items
-			setExtraItems((prev) => {
-				const map = new Map(prev.map((f) => [f.path, f]))
-				result.files.forEach((f: FileSystemItem) => map.set(f.path, f))
-				return Array.from(map.values())
-			})
-			setExtraHasMore(result.hasMore)
-			return true
-		} catch (e) {
-			if (thisRequest === requestIdRef.current) setPaginationError(e)
-			return false
-		} finally {
-			if (thisRequest === requestIdRef.current) setIsFetchingMore(false)
+	// The rest of the folder, for what has to know all of it (Select all, a
+	// typed name that isn't among the loaded items). True once nothing is left
+	// to load.
+	const fetchAllItems = useCallback(async (): Promise<boolean> => {
+		const key = latestRef.current.listingKey
+		const isCurrent = () => key === latestRef.current.listingKey
+		for (let failures = 0; isCurrent() && stillHasMore(); ) {
+			// A page already on its way counts: it is waited for, and the rest asked for after it
+			const loaded = await (nextPageRef.current ?? requestMore(() => MAX_BULK_PAGE_ITEMS))
+			// An answer can be dropped (a row moved out under it) and is asked for again; one that keeps failing is not
+			if (!loaded && isCurrent() && stillHasMore() && ++failures > 2) return false
 		}
-	}, [items, path, itemsOnScrollEnd, sortBy, sortOrder, isLoading, isFetchingMore, hasMore, utils.files.list])
+		return isCurrent() && latestRef.current.canPage && !stillHasMore()
+	}, [requestMore, stillHasMore])
+
+	// The first page is read again whenever something changes (the watcher, an
+	// operation finishing), and nothing else reads the later pages again: left
+	// alone they keep rows that have gone and miss the ones that moved into
+	// their range. So each time the first page has been read, what is loaded
+	// beyond it is read again too, from that page's new last item, and swapped
+	// in whole. Reads that pile up while one is in flight collapse into one.
+	const rereadQueuedRef = useRef(false)
+	const rereadExtraPages = useCallback(() => {
+		if (rereadQueuedRef.current) return
+		rereadQueuedRef.current = true
+		void enqueue(async () => {
+			rereadQueuedRef.current = false
+			const {listingKey: key, path, sortBy, sortOrder, firstPage, canPage} = latestRef.current
+			const count = loadedExtraPages().items.length
+			if (!canPage || !firstPage || count === 0) return
+			// The folder now fits in its first page
+			if (!firstPage.hasMore || firstPage.files.length === 0) {
+				setExtraPages({key, items: [], hasMore: null})
+				settleOptimisticState(path, firstPage.files)
+				return
+			}
+			const generation = generationRef.current
+			const reread: FileSystemItem[] = []
+			let hasMore = true
+			try {
+				while (hasMore && reread.length < count) {
+					const result = await utils.files.list.fetch(
+						{
+							path,
+							lastFile: nameOf(reread.at(-1) ?? firstPage.files.at(-1)),
+							limit: Math.min(MAX_BULK_PAGE_ITEMS, count - reread.length),
+							sortBy,
+							sortOrder,
+						},
+						{staleTime: 0},
+					)
+					if (key !== latestRef.current.listingKey || generation !== generationRef.current) return
+					reread.push(...result.files)
+					hasMore = result.hasMore && result.files.length > 0
+				}
+			} catch {
+				// What is loaded stays as it was: the next read gets another go
+				return
+			}
+			const before = loadedExtraPages()
+			const items = keepUnchanged(before.items, reread)
+			if (items !== before.items || hasMore !== before.hasMore) setExtraPages({key, items, hasMore})
+			settleOptimisticState(path, [...firstPage.files, ...items])
+		})
+	}, [enqueue, loadedExtraPages, setExtraPages, utils.files.list])
+	const firstPageReadAt = isDirectoryQueryEnabled ? directoryQuery.dataUpdatedAt : undefined
+	useEffect(() => {
+		if (firstPageReadAt) rereadExtraPages()
+	}, [firstPageReadAt, rereadExtraPages])
+
+	// While this listing holds pages beyond the first, it is the one that says when optimistic state is over
+	const hasExtraPages = extraItems.length > 0
+	useEffect(() => {
+		if (!hasExtraPages) return
+		listingsWithExtraPages.set(path, (listingsWithExtraPages.get(path) ?? 0) + 1)
+		return () => {
+			const count = (listingsWithExtraPages.get(path) ?? 1) - 1
+			if (count > 0) listingsWithExtraPages.set(path, count)
+			else listingsWithExtraPages.delete(path)
+		}
+	}, [hasExtraPages, path])
 
 	// Items pending removal are filtered out for instant optimistic feedback.
 	const pendingPaths = useFilesStore((s) => s.pendingPaths)
 	// Items arriving via move/paste appear immediately before the server confirms.
 	const incomingItems = useFilesStore((s) => s.incomingItems)
-	const removeIncomingItems = useFilesStore((s) => s.removeIncomingItems)
 
 	// Merge optimistic uploading items & *always* sort locally
 	const {directoryItems, hiddenRenamedPaths} = useMemo(() => {
@@ -332,36 +508,16 @@ export function useListDirectory(
 		}
 	}, [uploadingItems, items, path, sortBy, sortOrder, pendingPaths, incomingItems, hasMore])
 
-	// Clean up stale optimistic state after server data refreshes.
-	// pendingPaths is read via getState() to avoid the effect running when
-	// pending paths are added (which would immediately undo them).
+	// Clean up stale optimistic state each time the server's data has been
+	// read. pendingPaths is read via getState() to avoid the effect running
+	// when pending paths are added (which would immediately undo them). A
+	// listing holding later pages judges by all of them, once they have been
+	// read again too (see rereadExtraPages): the first page alone cannot tell
+	// an item on a later page from one that is gone.
 	useEffect(() => {
-		if (!data?.files) return
-
-		// Clean up 'removing' entries only for items that are no longer in the
-		// server data (removal succeeded). Entries for items still in the data
-		// are kept: either the removal is still in-flight or the path was reused
-		// (e.g. trash then upload same name).
-		const serverPaths = new Set(data.files.map((f) => f.path))
-		const {pendingPaths: currentPendingPaths} = useFilesStore.getState()
-		const completedRemovals = [...currentPendingPaths.entries()]
-			.filter(
-				([itemPath, type]) =>
-					type === 'removing' &&
-					itemPath.substring(0, itemPath.lastIndexOf('/')) === path &&
-					!serverPaths.has(itemPath),
-			)
-			.map(([itemPath]) => itemPath)
-		if (completedRemovals.length > 0) {
-			useFilesStore.getState().removePendingPaths(completedRemovals)
-		}
-
-		// Clean up incoming items that the server now includes
-		const arrived = incomingItems.filter((item) => serverPaths.has(item.path)).map((item) => item.path)
-		if (arrived.length > 0) {
-			removeIncomingItems(arrived)
-		}
-	}, [data?.files, incomingItems, removeIncomingItems, path])
+		if (!data?.files || listingsWithExtraPages.has(path)) return
+		settleOptimisticState(path, data.files)
+	}, [data?.files, firstPageReadAt, incomingItems, path])
 
 	// Landed uploads the server now lists, on any loaded page, no longer need
 	// their held row. Kept apart from the removal cleanup above, which judges
@@ -384,5 +540,6 @@ export function useListDirectory(
 		isError,
 		error,
 		fetchMoreItems,
+		fetchAllItems,
 	}
 }

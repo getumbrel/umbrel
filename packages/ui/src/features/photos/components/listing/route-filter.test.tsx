@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 import {act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {MemoryRouter, Route, Routes} from 'react-router-dom'
@@ -37,6 +38,10 @@ vi.mock('@/trpc/trpc', () => ({
 		},
 	},
 }))
+// The list's cache key, as tRPC shapes it (the procedure above is a stand-in it couldn't read a path from)
+vi.mock('@trpc/react-query', () => ({
+	getQueryKey: (_procedure: unknown, input: unknown, type: string) => [['photos', 'items', 'list'], {input, type}],
+}))
 ;(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true
 
 function Probe() {
@@ -67,14 +72,16 @@ describe('Photos route filters', () => {
 		fixtures.searchFilter = searchFilter
 		act(() =>
 			root.render(
-				<MemoryRouter initialEntries={[path]}>
-					<Routes>
-						<Route path='/photos' element={<Probe />} />
-						<Route path='/photos/:section' element={<Probe />} />
-						<Route path='/photos/source/:sourceId' element={<Probe />} />
-						<Route path='/photos/albums/:albumId' element={<Probe />} />
-					</Routes>
-				</MemoryRouter>,
+				<QueryClientProvider client={new QueryClient()}>
+					<MemoryRouter initialEntries={[path]}>
+						<Routes>
+							<Route path='/photos' element={<Probe />} />
+							<Route path='/photos/:section' element={<Probe />} />
+							<Route path='/photos/source/:sourceId' element={<Probe />} />
+							<Route path='/photos/albums/:albumId' element={<Probe />} />
+						</Routes>
+					</MemoryRouter>
+				</QueryClientProvider>,
 			),
 		)
 		return fixtures.listInput

@@ -52,6 +52,12 @@ export type GridHandle = {
 	// up on the stage, flying home — so its tile is empty until it lands
 	// (undefined). Takes effect at once, in either renderer, without a render.
 	liftTile: (id: string | undefined) => void
+	// Put the stretch of the timeline around an item the list doesn't hold on
+	// screen, with the grid on its tile — for the lightbox opened on a picture
+	// from a link or a reload, or stepped to one above where a jump landed: the
+	// list it steps through and its filmstrip shows is then that picture's own
+	// neighbourhood, and closing leaves the timeline at it
+	seekTile: (id: string, takenAt: number) => void
 }
 
 // How many items a list asks for at a time. A screenful at a 14px tile is

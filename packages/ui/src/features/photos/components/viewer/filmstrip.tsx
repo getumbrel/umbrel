@@ -482,7 +482,16 @@ export function Filmstrip({
 			// anchoring, by hand: the browser's can't see absolutely-positioned
 			// thumbs move.
 			const by = delta * SLOT
-			writeScroll(el.scrollLeft + by)
+			// At rest the strip is on the current item, so that is where it goes,
+			// said outright rather than as a move from where it is: a browser
+			// that keeps a snapped scroller on its snap element (Chrome) has
+			// carried the strip there itself by the time it is read here, and
+			// moved again it would be as far past the item as the item had come —
+			// off the end of a list that grew by thousands above it (a jump's
+			// stretch of the timeline joined to the rest), which read as the
+			// user's own scroll and put whatever was under the centre on stage.
+			if (st.owner === 'none') writeScroll(clamp(currentIndex * SLOT, 0, el.scrollWidth - el.clientWidth))
+			else writeScroll(el.scrollLeft + by)
 			if (st.glide) {
 				st.glide.from += by
 				st.glide.target += by

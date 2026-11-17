@@ -236,6 +236,8 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 						<fieldset className='flex flex-1 flex-col gap-5'>
 							<Labeled label={inputLabel}>
 								<Input
+									// Focused, with the name selected, as it opens: typing replaces it
+									ref={inputRef}
 									value={name}
 									onClick={preventClickPropagation}
 									onDoubleClick={preventClickPropagation}

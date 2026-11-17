@@ -245,6 +245,16 @@ export function pickMonthLabels(scale: RailScale, minGap: number): MonthMark[] {
 	return kept.sort((a, b) => a.y - b.y)
 }
 
+// A label names what begins at its mark and is drawn centred on it, so the
+// half above the mark lies over the end of what comes before: a pointer on
+// "2019" coming down the rail would be in the first weeks of 2020. Within
+// `reach` above a labelled mark the rail point is the mark itself — pointing
+// at a label means what it says.
+export function settleOnLabel(y: number, labels: {y: number}[], reach: number): number {
+	for (const label of labels) if (y < label.y && label.y - y <= reach) return label.y
+	return y
+}
+
 // The takenAt under a (month, fraction) spot, from the loaded list — what a
 // short-span pill names to the day; undefined while the month isn't loaded
 export function timeAtFraction(items: {takenAt: number}[], key: MonthKey, fraction: number): number | undefined {

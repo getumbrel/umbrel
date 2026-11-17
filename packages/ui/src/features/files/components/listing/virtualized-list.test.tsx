@@ -17,6 +17,9 @@ vi.mock('@/features/files/components/listing/file-item/file-item-context', () =>
 }))
 vi.mock('@/hooks/use-container-size', () => ({useContainerSize: () => ({width: 600, height: 300})}))
 vi.mock('@/hooks/use-is-mobile', () => ({useIsMobile: () => false}))
+// The dock takes 36px of the bottom, and the listing keeps 12px clear above it:
+// the last rows must scroll 48px clear of the scroller's bottom
+vi.mock('@/modules/desktop/dock', () => ({useDockClearance: () => 36}))
 ;(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true
 
 const entry = (name: string): FileSystemItem => ({
@@ -83,7 +86,7 @@ async function render(
 function scroll(top: number) {
 	act(() => scrollAreaRef.current!.scrollTo({top}))
 }
-const rowFor = (path: string) => container.querySelector<HTMLElement>(`[data-marquee-selection-item-path="${path}"]`)
+const rowFor = (path: string) => container.querySelector<HTMLElement>(`[data-item-path="${path}"]`)
 const firstPage = Array.from({length: 250}, (_, index) => entry(`file-${String(index).padStart(4, '0')}`))
 
 describe.each(['list', 'icons'] as const)('selection reveal in %s view', (view) => {

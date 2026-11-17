@@ -23,7 +23,6 @@ export function EmbeddedFiles({
 	className = '',
 	pathAliases,
 	currentPath: controlledPath,
-	explorerScale = 1,
 }: {
 	mode?: 'full' | 'read-only'
 	initialPath?: string
@@ -31,7 +30,6 @@ export function EmbeddedFiles({
 	className?: string
 	pathAliases?: Record<string, string>
 	currentPath?: string
-	explorerScale?: number
 }) {
 	const {t} = useTranslation()
 	const [path, setPath] = useState(initialPath)
@@ -90,9 +88,7 @@ export function EmbeddedFiles({
 							</div>
 						) : null}
 						<ActionsBar />
-						{/* The marquee overlay assumes unscaled coordinates, so pass the applied explorer scale
-						 * (used by SnapshotCarousel) down so selection stays aligned. */}
-						<DirectoryListing marqueeScale={explorerScale} />
+						<DirectoryListing />
 					</ActionsBarProvider>
 				</div>
 			</div>

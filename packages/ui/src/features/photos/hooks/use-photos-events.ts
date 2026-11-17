@@ -1,7 +1,8 @@
 import {useQueryClient, type InfiniteData} from '@tanstack/react-query'
 import {useEffect, useRef} from 'react'
 
-import {ITEMS_LIST_KEY, type ItemsPage} from '@/features/photos/hooks/use-items'
+import {moveActivity} from '@/features/photos/hooks/move-activity'
+import {isUniformList, ITEMS_LIST_KEY, type ItemsPage} from '@/features/photos/hooks/use-items'
 import {MAP_POINTS_KEY} from '@/features/photos/hooks/use-map-points'
 import {trpcReact, type RouterOutput} from '@/trpc/trpc'
 
@@ -9,7 +10,10 @@ type LibraryStatus = RouterOutput['photos']['library']['status']
 
 // A list with this many pages or fewer is cheap to refresh in place; deeper
 // lists are only marked stale, so a scrolled-deep user isn't hit with dozens
-// of page refetches because a file changed somewhere.
+// of page refetches because a file changed somewhere. So is one holding the
+// larger pages a jump along the rail splices in, however few: refetched, it
+// would come back shorter than it was (see "Keeping a list up to date" in
+// use-items.ts).
 const REFETCH_IN_PLACE_MAX_PAGES = 3
 
 // The map's points are every located item, the heaviest read Photos has. They
@@ -47,9 +51,15 @@ export function usePhotosEvents() {
 		const refresh = refreshRef.current
 		if (!refresh.mounted) return
 		refresh.pending = true
+		// A delete or restore of this session's own is still being carried out,
+		// and these are its own events: the library is read once it has finished
+		// (see move-activity.ts), not from half-way through
+		if (moveActivity.isRunning()) return
 		if (refresh.running || timerRef.current) return
 		timerRef.current = setTimeout(async () => {
 			timerRef.current = undefined
+			// … including one that began while this refresh was waiting its turn
+			if (moveActivity.isRunning()) return
 			refresh.running = true
 			// Consume only events already scheduled. Changes received while waiting
 			// must survive: a newly mounted filter can start a read outside the snapshot.
@@ -64,6 +74,10 @@ export function usePhotosEvents() {
 					.flatMap((query) => (query.promise ? [query.promise] : []))
 				if (inFlight.length > 0) await Promise.allSettled(inFlight)
 				if (!refresh.mounted) return
+				if (moveActivity.isRunning()) {
+					refresh.pending = true
+					return
+				}
 				// Queries share the file-index worker with thumbnail resolution. Let
 				// in-flight reads finish, and coalesce changes during a slow refresh
 				// into one follow-up instead of canceling and enqueueing more reads.
@@ -76,10 +90,14 @@ export function usePhotosEvents() {
 					utils.photos.items.get.invalidate(undefined, undefined, options),
 					queryClient.invalidateQueries({queryKey: ITEMS_LIST_KEY, refetchType: 'none'}),
 				]
-				// Refetch shallow lists; leave deep ones stale for their next mount.
+				// Refetch shallow lists that something is showing; leave deep ones
+				// stale for their next mount. (Showing, not merely subscribed to: the
+				// command palette keeps a list of its own under this key while it is
+				// closed, and a change a second for the length of an import was a
+				// request a second for results nobody was looking at.)
 				for (const query of queryClient.getQueryCache().findAll({queryKey: ITEMS_LIST_KEY})) {
 					const pages = (query.state.data as InfiniteData<ItemsPage> | undefined)?.pages.length ?? 0
-					if (pages <= REFETCH_IN_PLACE_MAX_PAGES && query.getObserversCount() > 0) {
+					if (pages <= REFETCH_IN_PLACE_MAX_PAGES && isUniformList(query) && query.isActive()) {
 						requests.push(query.fetch(undefined, options))
 					}
 				}
@@ -93,7 +111,12 @@ export function usePhotosEvents() {
 
 	useEffect(() => {
 		refreshRef.current.mounted = true
+		// The refresh held back while a delete or restore ran
+		const stopListening = moveActivity.onIdle(() => {
+			if (refreshRef.current.pending) schedule()
+		})
 		return () => {
+			stopListening()
 			refreshRef.current.mounted = false
 			refreshRef.current.pending = false
 			clearTimeout(timerRef.current)
@@ -131,6 +154,9 @@ export function usePhotosEvents() {
 		},
 	)
 
+	// Whether the change subscription has started before: a later start is the
+	// socket back after a gap
+	const subscribedRef = useRef(false)
 	trpcReact.eventBus.listen.useSubscription(
 		{event: 'photos:change'},
 		{
@@ -142,6 +168,11 @@ export function usePhotosEvents() {
 				// stale: refetched if the map is up (a read it has just begun is new
 				// enough), otherwise left stale for when it is
 				void queryClient.invalidateQueries({queryKey: MAP_POINTS_KEY}, {cancelRefetch: false})
+				// Changes while the socket was down were never heard, and the lists
+				// are nobody else's to refresh: the same bounded refresh one change
+				// would have brought
+				if (subscribedRef.current) schedule()
+				subscribedRef.current = true
 			},
 			onData: schedule,
 			onError: (err) => console.error('eventBus.listen(photos:change)', err),

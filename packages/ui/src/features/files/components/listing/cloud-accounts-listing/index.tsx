@@ -4,9 +4,7 @@ import {useTranslation} from 'react-i18next'
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
-import {Card} from '@/components/ui/card'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
-import {IconButton} from '@/components/ui/icon-button'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {contextMenuClasses} from '@/components/ui/shared/menu'
 import {CloudIcon} from '@/features/files/assets/cloud-icon'
@@ -26,6 +24,7 @@ import {
 } from '@/features/files/hooks/use-cloud'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {cloudAccountBrand, cloudBrandName, soleRootCloudDestination} from '@/features/files/utils/cloud'
+import {DockSpacer} from '@/modules/desktop/dock'
 import {useLinkToDialog} from '@/utils/dialog'
 
 // Virtual /Cloud route: connected cloud accounts as tiles, like the network
@@ -50,32 +49,28 @@ export function CloudAccountsListing() {
 	useEffect(() => {
 		setActionsBarConfig({
 			hideSearch: true,
-			desktopActions: (
-				<IconButton icon={CloudPlusIcon} onClick={openAddWizard}>
-					{t('files-cloud.add-cloud')}
-				</IconButton>
-			),
-			// Selection is meaningless on account tiles, so the mobile bar
-			// offers the add action instead of the Select toggle
-			mobilePrimaryAction: (
-				<Button className='h-[1.9rem] rounded-full px-3 text-13' size='default' onClick={openAddWizard}>
-					{t('files-cloud.add-cloud')}
-				</Button>
-			),
+			// The tiles are accounts to go into, not things to select or to view as a list
+			selectable: false,
+			hideViewOptions: true,
+			actions: [
+				{id: 'add-cloud', label: t('files-cloud.add-cloud'), icon: CloudPlusIcon, onSelect: openAddWizard, pill: true},
+			],
 		})
 	}, [])
 
 	return (
-		<Card className='h-full rounded-24 bg-white/4 !p-0 !pt-4'>
+		// Straight on the sheet, as the listings are, and down to its bottom edge:
+		// what it holds scrolls clear of the dock at its end
+		<div className='h-full'>
 			{isLoading ? (
-				<div className='flex h-full items-center justify-center'>
+				<div className='flex h-full items-center justify-center pb-24'>
 					<Loader2 className='size-5 animate-spin opacity-60' />
 				</div>
 			) : (accounts?.length ?? 0) === 0 ? (
 				<EmptyState providers={providers} onConnect={openAddWizard} />
 			) : (
 				<ScrollArea className='h-full'>
-					<div className='grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4 p-4 pt-1 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]'>
+					<div className='grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-2 pt-1 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]'>
 						{(accounts ?? []).map((account) => {
 							const accountClouds = clouds?.filter(({accountId}) => accountId === account.id) ?? []
 							const openPath = soleRootCloudDestination(accountClouds) ?? `${CLOUD_PATH}/${account.id}`
@@ -93,6 +88,7 @@ export function CloudAccountsListing() {
 							)
 						})}
 					</div>
+					<DockSpacer className='mt-3' />
 				</ScrollArea>
 			)}
 			<CloudAccountDialog
@@ -112,7 +108,7 @@ export function CloudAccountsListing() {
 					if (!open) setDisconnecting(null)
 				}}
 			/>
-		</Card>
+		</div>
 	)
 }
 
@@ -196,7 +192,7 @@ function EmptyState({providers, onConnect}: {providers?: CloudProvider[]; onConn
 		// Centered by the auto margins on its first and last items rather than by the
 		// container, so when the pitch is taller than the card (larger text, a longer
 		// language, a short phone) it scrolls from the top instead of losing both ends
-		<div className='umbrel-hide-scrollbar flex h-full flex-col items-center gap-5 overflow-y-auto p-4 pt-0 text-center'>
+		<div className='umbrel-hide-scrollbar flex h-full flex-col items-center gap-5 overflow-y-auto px-1 text-center'>
 			<CloudIcon className='mt-auto size-14 shrink-0' />
 			<p className='text-19 font-semibold -tracking-2'>{t('files-cloud.pitch-title')}</p>
 			<CloudPitchPoints />
@@ -212,9 +208,12 @@ function EmptyState({providers, onConnect}: {providers?: CloudProvider[]; onConn
 					/>
 				))}
 			</div>
-			<Button variant='primary' size='dialog' className='mb-auto shrink-0' onClick={onConnect}>
+			<Button variant='primary' size='dialog' className='shrink-0' onClick={onConnect}>
 				{t('files-cloud.pitch-cta')}
 			</Button>
+			{/* The dock floats over the page's end: the pitch stops above it, and its
+			    button scrolls clear of it when the pitch is taller than the page */}
+			<DockSpacer className='mb-auto' />
 		</div>
 	)
 }

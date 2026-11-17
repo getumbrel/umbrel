@@ -11,20 +11,34 @@
  * that, the root folds too, leaving the menu and the current folder, as the
  * phone path bar shows only the current folder.
  *
+ * A path set as a title reads badly with its folders cut short, so it folds
+ * them instead: with `minWidth` Infinity nothing between the root and the
+ * current folder ever narrows, and `minCurrentWidth` is how narrow the current
+ * folder itself may still get.
+ *
+ * A root that can stand as its icon alone, `rootCompactWidth` wide, gives up
+ * its name before the folder above the current one folds and before the
+ * current folder narrows: of everything in the path it is the one its icon
+ * already says.
+ *
  * Returns whether the root is folded, how many segments after it are folded,
  * and the width of each segment that narrows (undefined for one that keeps
- * its natural width).
+ * its natural width; the root's is `rootCompactWidth` when it stands as its icon).
  */
 export function fitPathSegments({
 	available,
 	widths,
 	minWidth,
+	minCurrentWidth = minWidth,
 	overflowWidth,
+	rootCompactWidth,
 }: {
 	available: number
 	widths: number[]
 	minWidth: number
+	minCurrentWidth?: number
 	overflowWidth: number
+	rootCompactWidth?: number
 }): {foldsRoot: boolean; folded: number; widths: Array<number | undefined>} {
 	const fitted: Array<number | undefined> = widths.map(() => undefined)
 	if (widths.length < 2 || sum(widths) <= available) return {foldsRoot: false, folded: 0, widths: fitted}
@@ -36,31 +50,37 @@ export function fitPathSegments({
 		const shown = between.slice(folded)
 		const parent = shown.at(-1)
 		const narrowing = shown.slice(0, -1)
-		const fixed =
-			widths[0] + widths[current] + (parent === undefined ? 0 : widths[parent]) + (folded > 0 ? overflowWidth : 0)
-		const room = available - fixed
-		if (sum(narrowing.map((i) => Math.min(widths[i], minWidth))) > room) continue
+		// With its name first, and once only the parent is left beside it, as its icon
+		const roots = rootCompactWidth !== undefined && shown.length <= 1 ? [widths[0], rootCompactWidth] : [widths[0]]
+		for (const root of roots) {
+			const fixed =
+				root + widths[current] + (parent === undefined ? 0 : widths[parent]) + (folded > 0 ? overflowWidth : 0)
+			const room = available - fixed
+			if (sum(narrowing.map((i) => Math.min(widths[i], minWidth))) > room) continue
 
-		const share = equalShare(
-			narrowing.map((i) => widths[i]),
-			room,
-		)
-		for (const i of narrowing) {
-			if (widths[i] > share) fitted[i] = Math.max(share, minWidth)
+			const share = equalShare(
+				narrowing.map((i) => widths[i]),
+				room,
+			)
+			for (const i of narrowing) {
+				if (widths[i] > share) fitted[i] = Math.max(share, minWidth)
+			}
+			if (root !== widths[0]) fitted[0] = root
+			return {foldsRoot: false, folded, widths: fitted}
 		}
-		return {foldsRoot: false, folded, widths: fitted}
 	}
 
 	// Everything between is folded, and the root and the current folder still don't fit
 	const folded = between.length
 	const menu = folded > 0 ? overflowWidth : 0
-	const besideRoot = available - widths[0] - menu
-	if (besideRoot >= minWidth) {
+	const besideRoot = available - (rootCompactWidth ?? widths[0]) - menu
+	if (besideRoot >= minCurrentWidth) {
+		fitted[0] = rootCompactWidth
 		fitted[current] = besideRoot
 		return {foldsRoot: false, folded, widths: fitted}
 	}
 	const alone = available - overflowWidth
-	if (widths[current] > alone) fitted[current] = Math.max(alone, minWidth)
+	if (widths[current] > alone) fitted[current] = Math.max(alone, minCurrentWidth)
 	return {foldsRoot: true, folded, widths: fitted}
 }
 

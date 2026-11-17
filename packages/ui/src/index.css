@@ -895,30 +895,39 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	mask-image: linear-gradient(to bottom, transparent, red 20px calc(100% - 20px), transparent);
 }
 
-/* Targets the correct div inside the react-window component. The generous bottom
-   fade also keeps the item/selected-count label legible over scrolled rows; the
-   extra stop drops most of the visibility by 60% into the ramp so the last ~40%
-   is close to fully faded */
+/* The Files listing's scroller (react-window's own element, inside the two
+   wrappers that measure it). Rows that scroll up under the column names or the
+   bar dissolve into the window, once there is anything scrolled. At the
+   bottom the listing runs on to the sheet's edge and its rows flow on
+   beneath the dock, as the tiles of Photos do; scrolled all the way down,
+   the last of them come to rest above it (VirtualizedList keeps the room).
+
+   The mask also gives the listing a compositor surface of its own, as the
+   Photos scroller's does (see .umbrel-photos-scroller). */
 .umbrel-files-fade-scroller > div > div {
-	mask-image: linear-gradient(
-		to bottom,
-		red 0,
-		red calc(100% - 48px),
-		rgb(255 0 0 / 0.25) calc(100% - 20px),
-		transparent
-	);
+	mask-image: linear-gradient(to bottom, transparent 0, black var(--umbrel-files-fade-top, 0px));
 }
 
 /* Only fade the top when a user has scrolled */
 .umbrel-files-fade-scroller.scrolled > div > div {
+	--umbrel-files-fade-top: 20px;
+}
+
+/* Embedded in Rewind the listing keeps its card, and fades into its bottom
+   edge. The extra stop drops most of the visibility by 60% into the ramp so
+   the last ~40% is close to fully faded */
+.umbrel-files-fade-scroller.embedded > div > div {
 	mask-image: linear-gradient(
 		to bottom,
 		transparent 0,
-		red 24px,
+		red var(--umbrel-files-fade-top, 0px),
 		red calc(100% - 48px),
 		rgb(255 0 0 / 0.25) calc(100% - 20px),
 		transparent 100%
 	);
+}
+.umbrel-files-fade-scroller.embedded.scrolled > div > div {
+	--umbrel-files-fade-top: 24px;
 }
 
 /* Photos actions bar: its controls float over tiles scrolling beneath them,

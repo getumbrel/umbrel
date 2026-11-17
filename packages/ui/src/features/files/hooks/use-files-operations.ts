@@ -1,3 +1,4 @@
+import {useEffect, useRef} from 'react'
 import {useTranslation} from 'react-i18next'
 import {AiOutlineFileExclamation} from 'react-icons/ai'
 
@@ -7,12 +8,40 @@ import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {transfers} from '@/features/files/transfers/transfers'
 import type {FileSystemItem} from '@/features/files/types'
+import {batchActivity} from '@/features/files/utils/batch-activity'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {canPerformFileOperation} from '@/features/files/utils/file-capabilities'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {authorizedHttpUrl} from '@/modules/auth/http-auth'
 import {useConfirmation} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
+
+// How many of a batch's requests are on their way at once. Trashing or
+// restoring is one request per item and a selection can be thousands of
+// items: all sent at once, they were thousands of requests in one go for the
+// server, and thousands of mutations for everything in the app that watches
+// mutations to look through each time one of them changed state (every app
+// icon does), which froze the page for seconds on end.
+const BATCH_CONCURRENCY = 16
+
+// The longest the paths of a download may be together, as they are written in
+// its address. The server turns away a request whose address and headers come
+// to more than 16 KB, and the rest of both need some of that.
+const DOWNLOAD_PATHS_MAX_LENGTH = 12_000
+
+// One request per item, a few at a time, in order. Resolves when all have settled.
+async function runBatch<T>(items: readonly T[], run: (item: T) => Promise<void>) {
+	let next = 0
+	const worker = async () => {
+		while (next < items.length) await run(items[next++])
+	}
+	batchActivity.begin()
+	try {
+		await Promise.all(Array.from({length: Math.min(BATCH_CONCURRENCY, items.length)}, worker))
+	} finally {
+		batchActivity.end()
+	}
+}
 
 // Define a type for the operation function signature used by the helper
 type OperationAsyncFn<TArgs extends object, TResult = any> = (args: TArgs) => Promise<TResult>
@@ -37,6 +66,27 @@ export function useFilesOperations() {
 	const removePendingPaths = useFilesStore((s) => s.removePendingPaths)
 	const addIncomingItems = useFilesStore((s) => s.addIncomingItems)
 	const removeIncomingItems = useFilesStore((s) => s.removeIncomingItems)
+
+	// Trashing or restoring a selection is one request per item, and each one
+	// that settles wants the listings read again. The server reads a whole
+	// folder for that, however long it is, so a few hundred items settling one
+	// after another had it read hundreds of times over. They are read once
+	// instead, when the batch they are part of has finished (the rows
+	// themselves leave at once, optimistically, either way).
+	const batchRefresh = useRef<(() => void) | undefined>(undefined)
+	useEffect(
+		() =>
+			batchActivity.onIdle(() => {
+				const refresh = batchRefresh.current
+				batchRefresh.current = undefined
+				refresh?.()
+			}),
+		[],
+	)
+	const refreshAfterBatch = (refresh: () => void) => {
+		if (batchActivity.isRunning()) batchRefresh.current = refresh
+		else refresh()
+	}
 
 	// Every mutating command comes through this hook. Check both the embedding
 	// mode and the backend's per-path capability model here so keyboard and DnD
@@ -168,7 +218,7 @@ export function useFilesOperations() {
 			})
 
 		// individual path handler
-		const tasks = paths.map(async (path) => {
+		const handlePath = async (path: string) => {
 			const baseArgs = getOperationArgsFn(path) as Record<string, unknown>
 			try {
 				await operationAsyncFn({...baseArgs, collision: undefined} as any)
@@ -198,9 +248,9 @@ export function useFilesOperations() {
 				onErrorToastFn(error.message)
 				console.error(`Failed ${operationType} ${path}:`, error)
 			}
-		})
+		}
 
-		await Promise.allSettled(tasks)
+		await runBatch(paths, handlePath)
 
 		if (!encounteredError) {
 			onSuccessAll?.()
@@ -385,72 +435,87 @@ export function useFilesOperations() {
 	// Trash operations
 	// ---------------
 
-	// Trash item
+	// Trash item. A finished request is forgotten at once (gcTime): a batch
+	// is thousands of them, and they are not looked up again.
 	const trashItem = trpcReact.files.trash.useMutation({
+		gcTime: 0,
 		onMutate: async ({path}) => {
 			if (path.startsWith(TRASH_PATH)) {
 				throw new Error('ALREADY_IN_TRASH')
 			}
 		},
-		onError: (error) => {
-			if (error.message !== 'ALREADY_IN_TRASH') {
-				toast.error(t('files-error.trash', {message: getFilesErrorMessage(error.message)}), {area: 'files'})
-			}
-		},
-		onSettled: () => {
-			utils.files.list.invalidate()
-			utils.files.recents.invalidate()
-			utils.files.favorites.invalidate()
-			utils.files.shares.invalidate()
-			utils.files.search.invalidate()
-		},
+		onSettled: () =>
+			refreshAfterBatch(() => {
+				utils.files.list.invalidate()
+				utils.files.recents.invalidate()
+				utils.files.favorites.invalidate()
+				utils.files.shares.invalidate()
+				utils.files.search.invalidate()
+			}),
 	}).mutateAsync
+
+	// The items leave the listing at once and go to the Trash a few at a time
+	// (see runBatch). One that can't be trashed comes back, and the batch says
+	// why once, however many of its items failed.
+	const trashItems = (items: FileSystemItem[]) => {
+		addPendingPaths(
+			items.map((item) => item.path),
+			'removing',
+		)
+		let failureShown = false
+		return runBatch(items, (item) =>
+			trashItem({path: item.path}).then(
+				() => {},
+				(error: Error) => {
+					removePendingPaths([item.path])
+					if (failureShown || error.message === 'ALREADY_IN_TRASH') return
+					failureShown = true
+					toast.error(t('files-error.trash', {message: getFilesErrorMessage(error.message)}), {area: 'files'})
+				},
+			),
+		)
+	}
 
 	const trashSelectedItems = async () => {
 		const items = [...selectedItems]
 		if (!(await isCommandAllowed({items, itemOperation: 'trash'}))) return
-		const paths = items.map((item) => item.path)
-		addPendingPaths(paths, 'removing')
-		for (const item of items) {
-			trashItem({path: item.path}).catch(() => {
-				removePendingPaths([item.path])
-			})
-		}
+		void trashItems(items)
 		setSelectedItems([])
 	}
 
 	const trashDraggedItems = async () => {
 		const items = [...draggedItems]
 		if (!(await isCommandAllowed({items, itemOperation: 'trash'}))) return
-		const paths = items.map((item) => item.path)
-		addPendingPaths(paths, 'removing')
-		for (const item of items) {
-			trashItem({path: item.path}).catch(() => {
-				removePendingPaths([item.path])
-			})
-		}
+		void trashItems(items)
 		clearDraggedItems()
 	}
 
 	// Restore from trash
 	const restoreFromTrash = trpcReact.files.restore.useMutation({
-		onSettled: () => {
-			utils.files.list.invalidate()
-			utils.files.recents.invalidate()
-			utils.files.search.invalidate()
-		},
+		gcTime: 0,
+		onSettled: () =>
+			refreshAfterBatch(() => {
+				utils.files.list.invalidate()
+				utils.files.recents.invalidate()
+				utils.files.search.invalidate()
+			}),
 	}).mutateAsync
 
 	// Updated batch restore function
 	const restoreItems = async ({paths}: {paths: string[]}) => {
 		addPendingPaths(paths, 'removing')
+		// The batch says why once, however many of its items failed
+		let failureShown = false
 		await _executeBatchOperationWithCollisionHandling({
 			paths,
 			operationAsyncFn: restoreFromTrash,
 			operationType: 'restore',
 			getOperationArgsFn: (path) => ({path}),
-			onErrorToastFn: (message) =>
-				toast.error(t('files-error.restore', {message: getFilesErrorMessage(message)}), {area: 'files'}),
+			onErrorToastFn: (message) => {
+				if (failureShown) return
+				failureShown = true
+				toast.error(t('files-error.restore', {message: getFilesErrorMessage(message)}), {area: 'files'})
+			},
 			onSuccessAll: () => {},
 			onItemError: (path) => removePendingPaths([path]),
 		})
@@ -511,10 +576,18 @@ export function useFilesOperations() {
 	// Download operations
 	// ------------------
 
-	// Download selected items
-	const downloadSelectedItems = async () => {
+	// Download selected items. A download names every item in its address,
+	// which only has room for a few hundred of them. So a selection that is the
+	// whole of a folder (say so with `wholeFolder`) downloads the folder
+	// itself, however many items that is, and one that is too long to name and
+	// isn't a whole folder says so instead of failing on the server.
+	const downloadSelectedItems = async ({wholeFolder}: {wholeFolder?: string} = {}) => {
 		// For multiple items, construct URL with multiple path parameters
-		const paths = selectedItems.map((item) => `path=${encodeURIComponent(item.path)}`).join('&')
+		let paths = selectedItems.map((item) => `path=${encodeURIComponent(item.path)}`).join('&')
+		if (paths.length > DOWNLOAD_PATHS_MAX_LENGTH) {
+			if (!wholeFolder) return void toast.error(t('files-error.download-too-many'), {area: 'files'})
+			paths = `path=${encodeURIComponent(wholeFolder)}`
+		}
 		const url = await authorizedHttpUrl(`/api/files/download?${paths}`)
 		// create a temporary anchor element to download the files
 		const anchor = document.createElement('a')

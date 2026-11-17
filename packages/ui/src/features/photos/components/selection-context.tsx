@@ -29,6 +29,15 @@ type PhotosSelection = {
 	toggle: (id: string) => void
 	// Replace the selection
 	set: (ids: Iterable<string>) => void
+	// Everything in a list that hasn't all loaded: what is here is selected at
+	// once, and all of it once `rest` brings the id of everything the list
+	// holds (null if it couldn't be had). `kept` is what is selected in other
+	// lists, which stays. Anything else done to the selection meanwhile means
+	// the user has moved on: the rest is then not selected when it arrives.
+	selectAll: (loaded: Iterable<string>, rest: Promise<readonly string[] | null>, kept?: Iterable<string>) => void
+	// … and while it is still on its way: the count is not yet what it will
+	// be, so nothing should act on the selection
+	selectingAll: boolean
 	// Drop what has left a list: what it held (`was`) and no longer does
 	// (`now`). What was selected somewhere else is not the list's to drop.
 	retain: (was: Pick<ReadonlySet<string>, 'has'>, now: ReadonlySet<string>) => void
@@ -65,6 +74,14 @@ const PhotosSelectionContext = createContext<PhotosSelection | undefined>(undefi
 export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 	const [ids, setIds] = useState(EMPTY)
 	const [explicit, setExplicit] = useState(false)
+	// The Select all still waiting on the rest of its list, if one is
+	const allRef = useRef<object | null>(null)
+	const [selectingAll, setSelectingAll] = useState(false)
+	const stopAll = useCallback(() => {
+		if (!allRef.current) return
+		allRef.current = null
+		setSelectingAll(false)
+	}, [])
 	const [pickingFor, setPickingFor] = useState<string>()
 	const [coveringFor, setCoveringFor] = useState<string>()
 	// Where `coverFor` navigated from, when it did: a chosen cover returns
@@ -83,10 +100,12 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 	const {pathname} = useLocation()
 	const navigate = useNavigate()
 	useEffect(() => {
+		// The list a Select all was loading has been left either way
+		stopAll()
 		if (pickingFor) return
 		setIds(EMPTY)
 		setExplicit(false)
-	}, [pathname, pickingFor])
+	}, [pathname, pickingFor, stopAll])
 	// Covering is the album page's own mode: anywhere else there is nothing
 	// valid to choose (the backend only accepts one of the album's items).
 	// Cancelled on leaving the page — but only once the mode has arrived
@@ -110,24 +129,27 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 
 	const start = useCallback(() => setExplicit(true), [])
 	const done = useCallback(() => {
+		stopAll()
 		setIds(EMPTY)
 		setExplicit(false)
 		setPickingFor(undefined)
 		setCoveringFor(undefined)
 		coveringFrom.current = undefined
-	}, [])
+	}, [stopAll])
 	const pickFor = useCallback(
 		(albumId: string) => {
+			stopAll()
 			setIds(EMPTY)
 			setCoveringFor(undefined)
 			coveringFrom.current = undefined
 			setPickingFor(albumId)
 			navigate(BASE_ROUTE_PATH)
 		},
-		[navigate],
+		[navigate, stopAll],
 	)
 	const coverFor = useCallback(
 		(albumId: string) => {
+			stopAll()
 			setIds(EMPTY)
 			setExplicit(false)
 			setPickingFor(undefined)
@@ -138,7 +160,7 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 			coveringFrom.current = pathname !== path ? pathname : undefined
 			if (pathname !== path) navigate(path)
 		},
-		[navigate, pathname],
+		[navigate, pathname, stopAll],
 	)
 	const coverChosen = useCallback(() => {
 		const returnTo = coveringFrom.current
@@ -146,16 +168,43 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 		if (returnTo) navigate(returnTo)
 	}, [done, navigate])
 	const toggle = useCallback(
-		(id: string) =>
+		(id: string) => {
+			stopAll()
 			setIds((prev) => {
 				if (covering.current) return prev
 				const next = new Set(prev)
 				if (!next.delete(id)) next.add(id)
 				return next
-			}),
+			})
+		},
+		[stopAll],
+	)
+	const set = useCallback(
+		(next: Iterable<string>) => {
+			stopAll()
+			setIds((prev) => (covering.current ? prev : new Set(next)))
+		},
+		[stopAll],
+	)
+	const selectAll = useCallback(
+		(loaded: Iterable<string>, rest: Promise<readonly string[] | null>, kept: Iterable<string> = []) => {
+			if (covering.current) return
+			const held = [...kept]
+			const request = {}
+			allRef.current = request
+			setSelectingAll(true)
+			setIds(new Set([...held, ...loaded]))
+			const finish = (all: readonly string[] | null) => {
+				// Something else was done with the selection since: it stands
+				if (allRef.current !== request) return
+				allRef.current = null
+				setSelectingAll(false)
+				if (all) setIds(new Set([...held, ...all]))
+			}
+			rest.then(finish, () => finish(null))
+		},
 		[],
 	)
-	const set = useCallback((next: Iterable<string>) => setIds((prev) => (covering.current ? prev : new Set(next))), [])
 	const retain = useCallback(
 		(was: Pick<ReadonlySet<string>, 'has'>, now: ReadonlySet<string>) =>
 			setIds((prev) => {
@@ -174,6 +223,8 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 			done,
 			toggle,
 			set,
+			selectAll,
+			selectingAll,
 			retain,
 			pickingFor,
 			pickFor,
@@ -181,7 +232,22 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 			coverFor,
 			coverChosen,
 		}),
-		[ids, explicit, start, done, toggle, set, retain, pickingFor, pickFor, coveringFor, coverFor, coverChosen],
+		[
+			ids,
+			explicit,
+			start,
+			done,
+			toggle,
+			set,
+			selectAll,
+			selectingAll,
+			retain,
+			pickingFor,
+			pickFor,
+			coveringFor,
+			coverFor,
+			coverChosen,
+		],
 	)
 	return <PhotosSelectionContext value={value}>{children}</PhotosSelectionContext>
 }

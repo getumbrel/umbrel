@@ -143,10 +143,16 @@ export function ItemViewer() {
 	const filter = useRouteFilter()
 	const inDeleted = filter.deleted === true
 	const confirm = useConfirmation()
-	const {items, hasMore, loadMore} = useItems(filter, {enabled: dialogProps.open})
+	const {items, hasMore, before, loadMore} = useItems(filter, {enabled: dialogProps.open})
 	const {data: item} = useItem(currentId, inDeleted)
 	const index = items.findIndex((candidate) => candidate.id === currentId)
-	const {data: apiNeighbors} = useItemNeighbors(index === -1 ? currentId : undefined, filter)
+	// The list has no neighbour to give when it doesn't hold the item — or
+	// holds it first while being the timeline's tail from a jump (see
+	// useItems), with the rest of the timeline above it
+	const {data: apiNeighbors} = useItemNeighbors(
+		index === -1 || (index === 0 && before !== undefined) ? currentId : undefined,
+		filter,
+	)
 	const prevId = index > 0 ? items[index - 1]!.id : apiNeighbors?.prevId
 	const nextId = index >= 0 && index < items.length - 1 ? items[index + 1]!.id : apiNeighbors?.nextId
 	const {setFavorite, deleteItems, restoreItems, deletePermanently} = useItemActions()
@@ -205,6 +211,25 @@ export function ItemViewer() {
 		}
 	}
 	const {grid} = usePhotosView()
+	// A picture the list doesn't hold — the lightbox opened on it from a link
+	// or a reload, or stepped up to it from the head of a jump's tail. The
+	// grid behind is asked to bring its stretch of the timeline on screen (see
+	// GridHandle.seekTile): the list here is then the picture's own
+	// neighbourhood — what the filmstrip shows, what the arrows step through —
+	// and closing leaves the timeline at its tile rather than at the top.
+	// Once per picture: one a view simply doesn't hold (a link to a photo
+	// opened in Favorites, say) stays the lightbox's alone. Not while the list
+	// is whole and loaded to its end, when that is the only way to be absent.
+	const seekTile = grid?.seekTile
+	const soughtRef = useRef<string>(undefined)
+	const absent = dialogProps.open && index === -1 && items.length > 0 && (hasMore || before !== undefined)
+	const itemTakenAt = item && item.id === currentId ? item.takenAt : undefined
+	useEffect(() => {
+		if (!dialogProps.open) soughtRef.current = undefined
+		if (!absent || !seekTile || !currentId || itemTakenAt === undefined || soughtRef.current === currentId) return
+		soughtRef.current = currentId
+		seekTile(currentId, itemTakenAt)
+	}, [dialogProps.open, absent, seekTile, currentId, itemTakenAt])
 	// Every URL is derived from the id (CONTRACT.md). The stage rests on the
 	// 1280 rendition — the true original is only ever downloaded, and videos
 	// stream it through the player (range requests).
@@ -415,6 +440,11 @@ export function ItemViewer() {
 		deleted: inDeleted,
 		infoShowing: showInfo,
 	})
+	// … and a neighbour whose resting image is in hand slides in under the
+	// finger as that image, not as the thumbnail it would otherwise be until
+	// the swipe has landed (see PeekPane)
+	const prevRestingUrl = useSharedAuthorizedHttpUrl(isTouch && prevId ? itemThumbnailUrl(prevId, 1280) : undefined)
+	const nextRestingUrl = useSharedAuthorizedHttpUrl(isTouch && nextId ? itemThumbnailUrl(nextId, 1280) : undefined)
 
 	// The id that has been looked at for a beat (REST_MS): the stage requests
 	// an original — or mounts an autoplaying player — only for this one, so
@@ -728,17 +758,22 @@ export function ItemViewer() {
 														/>
 													)
 												) : restingUrl && (!closing || loadedId === item.id) ? (
+													// One that was prefetched is the picture from its first
+													// frame: decoded with the commit that mounts it, and with
+													// nothing to fade in from. A swipe brought it in as itself
+													// (see PeekPane), and a thumbnail showing through for a
+													// beat would be the picture going soft and sharp again.
 													<img
 														key={item.id}
 														src={restingUrl}
 														alt={item.fileName}
 														draggable={false}
 														fetchPriority='high'
-														decoding='async'
+														decoding={warm(item.id) ? 'sync' : 'async'}
 														onLoad={() => setLoadedId(item.id)}
 														className={cn(
 															'absolute inset-0 h-full w-full object-cover transition-opacity duration-200',
-															loadedId === item.id ? 'opacity-100' : 'opacity-0',
+															loadedId === item.id || warm(item.id) ? 'opacity-100' : 'opacity-0',
 														)}
 													/>
 												) : null)}
@@ -767,8 +802,22 @@ export function ItemViewer() {
 								{/* A horizontal swipe's neighbours, mounted only while the strip
 								    is being dragged: each pane sits one stage-width to its side
 								    and follows the finger with the picture (stage-gestures) */}
-								{gestures.stepping && peekPrev && <PeekPane ref={peekRefs.prev} side={-1} picture={peekPrev} />}
-								{gestures.stepping && peekNext && <PeekPane ref={peekRefs.next} side={1} picture={peekNext} />}
+								{gestures.stepping && peekPrev && (
+									<PeekPane
+										ref={peekRefs.prev}
+										side={-1}
+										picture={peekPrev}
+										restingUrl={prevId && warm(prevId) ? prevRestingUrl : undefined}
+									/>
+								)}
+								{gestures.stepping && peekNext && (
+									<PeekPane
+										ref={peekRefs.next}
+										side={1}
+										picture={peekNext}
+										restingUrl={nextId && warm(nextId) ? nextRestingUrl : undefined}
+									/>
+								)}
 								{/* Touch steps by swiping; the arrows are the pointer's (and would
 								    be an invisible tap target at each edge) */}
 								{!isTouch && (
@@ -948,15 +997,21 @@ function usePeek(item: Item | undefined, seedFor: (id: string) => ThumbSize) {
 // One pane of the swipe's strip: a stage-sized box one stage-width (plus the
 // gap) to the picture's side, holding the neighbour's thumbnail fitted the
 // way the stage will fit it — so when the swipe lands and the id swaps, the
-// real stage takes over on the same pixels
+// real stage takes over on the same pixels. Over the thumbnail goes the
+// neighbour's resting image when it has already been fetched (`restingUrl`):
+// the picture then arrives as sharp as it will rest, where the thumbnail
+// alone is a few hundred pixels stretched over the screen for the whole of
+// the slide.
 function PeekPane({
 	ref,
 	side,
 	picture,
+	restingUrl,
 }: {
 	ref: React.Ref<HTMLElement>
 	side: -1 | 1
 	picture: {url: string; aspect: number}
+	restingUrl?: string
 }) {
 	return (
 		<div
@@ -970,6 +1025,9 @@ function PeekPane({
 				style={{width: `min(100%, calc(100cqh * ${picture.aspect}))`, aspectRatio: picture.aspect}}
 			>
 				<img src={picture.url} alt='' draggable={false} className='absolute inset-0 h-full w-full object-cover' />
+				{restingUrl && (
+					<img src={restingUrl} alt='' draggable={false} className='absolute inset-0 h-full w-full object-cover' />
+				)}
 			</div>
 		</div>
 	)

@@ -3,11 +3,12 @@ import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {HiMenuAlt2} from 'react-icons/hi'
+import {TbLoader} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
+import {CountText} from '@/components/ui/count-text'
 import {FilterPills, PillButton} from '@/components/ui/edge-controls'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
-import {CountText} from '@/features/photos/components/actions-bar/count-text'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
 import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
 import {MobileActions} from '@/features/photos/components/actions-bar/mobile-actions'
@@ -147,7 +148,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 								</motion.h2>
 							) : selection.selecting ? (
 								<motion.h2 key='selection' className={titleClass} {...faceProps(titleRoll)}>
-									<SelectionCount count={selection.ids.size} />
+									<SelectionCount count={selection.ids.size} gathering={selection.selectingAll} />
 								</motion.h2>
 							) : (
 								<motion.div key='page' className='min-w-0' {...faceProps(titleRoll)}>
@@ -349,8 +350,10 @@ function SectionTitle({section}: {section: string | null}) {
 }
 
 // "3 selected", its number rolling as the selection changes; "Select items"
-// until there is one
-function SelectionCount({count}: {count: number}) {
+// until there is one. While a Select all is still loading the rest of the
+// view (`gathering`) the number is only what has arrived so far, and says so
+// with a spinner beside it until it rolls to the whole.
+function SelectionCount({count, gathering}: {count: number; gathering: boolean}) {
 	const {t, i18n} = useTranslation()
 	if (count === 0)
 		return (
@@ -361,21 +364,26 @@ function SelectionCount({count}: {count: number}) {
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
 	const text = t('photos-selection.count', {count, formattedCount})
 	const at = text.indexOf(formattedCount)
+	const spinner = gathering && (
+		<TbLoader aria-hidden className='ml-2 size-3.5 shrink-0 animate-spin self-center opacity-60' />
+	)
 	if (at === -1)
 		return (
-			<span key='count' className={cn('block truncate', riseClass)}>
-				{text}
+			<span key='count' aria-busy={gathering} className={cn('flex min-w-0', riseClass)}>
+				<span className='truncate'>{text}</span>
+				{spinner}
 			</span>
 		)
 	// Short of room the words give way, before or after the number by
 	// language, and the number always shows whole
 	return (
-		<span key='count' className={cn('flex min-w-0', riseClass)}>
+		<span key='count' aria-busy={gathering} className={cn('flex min-w-0', riseClass)}>
 			<span className={countWordsClass}>{text.slice(0, at)}</span>
 			<span className='shrink-0'>
 				<CountText text={formattedCount} number={formattedCount} />
 			</span>
 			<span className={countWordsClass}>{text.slice(at + formattedCount.length)}</span>
+			{spinner}
 		</span>
 	)
 }

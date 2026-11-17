@@ -28,6 +28,7 @@ import {
 	scrollForMonth,
 	scrollForTime,
 	scrollNamingMonth,
+	settleOnLabel,
 	spansMonth,
 	timeAtFraction,
 	timeAtScroll,
@@ -456,5 +457,23 @@ describe('agreeing with the bar', () => {
 		const years = layoutAt(groupItems({items, zoom: 'years', hasMore: false, language: 'en-US'}), 3, 120, 2, 16)
 		const target = rectOf(years, 14).y - frame.inset // a May row, under 2024's header
 		expect(monthNamedAt(years, target, frame)).toBe(monthKeyFor(2024, 5))
+	})
+})
+
+describe('settleOnLabel', () => {
+	// Labels are drawn centred on their marks, 40px apart here
+	const labels = [{y: 0}, {y: 40}, {y: 80}]
+
+	it('takes a point on the half of a label above its mark for the mark itself', () => {
+		expect(settleOnLabel(34, labels, 6)).toBe(40)
+		expect(settleOnLabel(39.5, labels, 6)).toBe(40)
+		expect(settleOnLabel(74, labels, 6)).toBe(80)
+	})
+
+	it('leaves a point at or below a mark, or clear above the label, where it is', () => {
+		expect(settleOnLabel(40, labels, 6)).toBe(40)
+		expect(settleOnLabel(45, labels, 6)).toBe(45)
+		expect(settleOnLabel(33.9, labels, 6)).toBe(33.9)
+		expect(settleOnLabel(20, [], 6)).toBe(20)
 	})
 })

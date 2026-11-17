@@ -4,22 +4,20 @@
 // - The browser back-button naturally returns the user to the results after
 //   they navigate into a file or folder.
 
+import {Search} from 'lucide-react'
 import {useEffect} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useSearchParams} from 'react-router-dom'
 
-import {Listing} from '@/features/files/components/listing'
+import {Listing, StateView} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
-import {useSearchFiles} from '@/features/files/hooks/use-search-files'
+import {SEARCH_MAX_RESULTS, useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {useFilesStore} from '@/features/files/store/use-files-store'
-import {trpcReact} from '@/trpc/trpc'
 
 export function SearchListing() {
-	const {t} = useTranslation()
 	const clearSelectedItems = useFilesStore((state) => state.clearSelectedItems)
 
 	const setActionsBarConfig = useSetActionsBarConfig()
-	const userName = trpcReact.user.get.useQuery().data?.name
 
 	// read the current search term from the URL
 	const [params] = useSearchParams()
@@ -32,11 +30,8 @@ export function SearchListing() {
 	}, [queryParam])
 
 	useEffect(() => {
-		setActionsBarConfig({
-			pathLabel: t('files-search.searching-label', {name: userName ?? 'Umbrel'}),
-			hideSearch: false,
-		})
-	}, [userName])
+		setActionsBarConfig({hideSearch: false})
+	}, [])
 
 	// query the backend – the hook internally short-circuits when provided an
 	// empty string, so clearing the search box stops the requests
@@ -48,6 +43,9 @@ export function SearchListing() {
 		<Listing
 			items={results}
 			totalItems={results.length}
+			// As many as a search brings back: there may well be more, and the count says so
+			truncatedAt={results.length >= SEARCH_MAX_RESULTS ? results.length : undefined}
+			isSearch
 			selectableItems={results}
 			isLoading={isLoading}
 			error={isError ? error : undefined}
@@ -62,8 +60,9 @@ export function SearchListing() {
 function EmptySearchView({query}: {query: string}) {
 	const {t} = useTranslation()
 	return (
-		<div className='flex h-full items-center justify-center text-xs text-white/45'>
-			{query === '' ? t('files-search.default') : t('files-search.no-results', {query})}
-		</div>
+		<StateView
+			icon={<Search className='size-9 text-white/30' strokeWidth={1.5} />}
+			title={query === '' ? t('files-search.default') : t('files-search.no-results', {query})}
+		/>
 	)
 }

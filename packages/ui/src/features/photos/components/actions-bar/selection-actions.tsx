@@ -29,7 +29,7 @@ import {useBreakpoint} from '@/utils/tw'
 // restore and delete for good — and Done. Deleting for good asks first;
 // the rest just happen. Actions that leave the items in place (favorite,
 // download) keep the selection — Done ends it — while the others end it
-// themselves. Below xl the actions share one pill as icons with tooltips
+// themselves. They wait while a Select all is still gathering the view. Below xl the actions share one pill as icons with tooltips
 // (with labels they only just fit a 1100px window, and not a 1024px one,
 // and on a phone they would crowd the count out); with larger text, below 2xl.
 export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
@@ -40,7 +40,7 @@ export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 	const breakpoint = useBreakpoint()
 	const largerText = useLargerText()
 	const iconOnly = !(breakpoint === '2xl' || (breakpoint === 'xl' && largerText === 0))
-	const {ids, done} = usePhotosSelection()
+	const {ids, done, selectingAll} = usePhotosSelection()
 	const {albumId} = useParams()
 	const {setFavorite, deleteItems, restoreItems, deletePermanently} = useItemActions()
 	const download = useDownloadItems()
@@ -75,8 +75,27 @@ export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 			})
 			.catch(failed)
 	const removeFromThisAlbum = () => removeFromAlbum({id: albumId!, ids: list()}).then(done).catch(failed)
-	const remove = () => deleteItems({ids: list()}).then(done).catch(failed)
-	const restore = () => restoreItems({ids: list()}).then(done).catch(failed)
+	// A delete or a restore carries on past what the server cannot move (a
+	// photo in a read-only cloud folder, say): done all the same, and told how
+	// many were left where they were
+	const leftBehind = (failed: string[]) =>
+		formatNumberI18n({n: failed.length, showDecimals: false, locale: i18n.language})
+	const notDeleted = ({failed}: {failed: string[]}) => {
+		done()
+		if (failed.length === 0) return
+		toast.error(t('photos-selection.not-deleted', {count: failed.length, formattedCount: leftBehind(failed)}), {
+			area: 'photos',
+		})
+	}
+	const notRestored = ({failed}: {failed: string[]}) => {
+		done()
+		if (failed.length === 0) return
+		toast.error(t('photos-selection.not-restored', {count: failed.length, formattedCount: leftBehind(failed)}), {
+			area: 'photos',
+		})
+	}
+	const remove = () => deleteItems({ids: list()}).then(notDeleted).catch(failed)
+	const restore = () => restoreItems({ids: list()}).then(notRestored).catch(failed)
 	const purge = async () => {
 		const ok = await confirm({
 			title: t('photos-selection.delete-permanently-title', {count, formattedCount}),
@@ -90,10 +109,12 @@ export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 			() => false,
 		)
 		if (!ok) return
-		deletePermanently({ids: list()}).then(done).catch(failed)
+		deletePermanently({ids: list()}).then(notDeleted).catch(failed)
 	}
 
-	const none = count === 0
+	// Nothing to act on — or not all of it yet: a Select all is still loading
+	// the rest of the view, and an action now would take only what has arrived
+	const none = count === 0 || selectingAll
 	const actions = inDeleted ? (
 		<>
 			<ActionPill

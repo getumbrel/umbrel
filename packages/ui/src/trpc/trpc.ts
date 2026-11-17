@@ -17,6 +17,7 @@ import {IS_DEV} from '@/utils/misc'
 
 import {httpOnlyPaths, type AppRouter} from '../../../umbreld/source/modules/server/trpc/common'
 import {createReconnectResyncController} from './reconnect-resync'
+import {isTooLargeForSocket} from './socket-limit'
 
 const {protocol, hostname, port} = location
 
@@ -105,13 +106,13 @@ export const links = [
 		condition: (op) => op.type === 'subscription',
 		true: wsLink({client: wsClient}),
 		// Split 2: HTTP vs WebSocket for queries/mutations
-		// We route over HTTP when there is no auth token (public/onboarding, no WS auth yet) or the procedure is in `httpOnlyPaths` (needs request/response semantics like cookies/headers)
+		// We route over HTTP when there is no auth token (public/onboarding, no WS auth yet), the procedure is in `httpOnlyPaths` (needs request/response semantics like cookies/headers), or the change is larger than the socket takes (see socket-limit.ts)
 		// Otherwise we use WebSocket
 		false: splitLink({
 			condition: (operation) => {
 				const noToken = !getAuthToken()
 				const isHttpOnlyPath = httpOnlyPaths.includes(operation.path as (typeof httpOnlyPaths)[number])
-				return noToken || isHttpOnlyPath
+				return noToken || isHttpOnlyPath || isTooLargeForSocket(operation)
 			},
 			true: httpLink({
 				url: trpcHttpUrl,

@@ -2,8 +2,8 @@ import {X} from 'lucide-react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 
+import {CountText} from '@/components/ui/count-text'
 import {DetentSheet, type Detent} from '@/components/ui/detent-sheet'
-import {CountText} from '@/features/photos/components/actions-bar/count-text'
 import {useRouteFilter} from '@/features/photos/components/listing/route-filter'
 import type {Frame} from '@/features/photos/components/listing/surface'
 import {TimelineGrid} from '@/features/photos/components/listing/timeline-grid'
@@ -90,6 +90,7 @@ function AreaList({scope, onClearScope, unlocated}: {scope?: Scope; onClearScope
 	const {items, total, isLoading, hasMore, loadMore} = useItems(filter, {
 		enabled: filter.bounds !== undefined,
 		keepPrevious: true,
+		owner: true,
 	})
 	// The bar names the area and counts it; a spot the list is narrowed to
 	// says so here, with the way back to the whole area

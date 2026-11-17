@@ -22,6 +22,7 @@ import {
 	pickMonthLabels,
 	pickYearLabels,
 	railYForMonth,
+	settleOnLabel,
 	timeAtFraction,
 	timeAtScroll,
 	yearMarks,
@@ -75,6 +76,11 @@ const HIDE_AFTER_MS = 1200
 const MIN_TRACK = 160
 // A press that travels no further than this is a click, not a scrub
 const DRAG_SLOP_PX = 3
+// How far above its mark a pointer is still on a label (see settleOnLabel):
+// half the label's height at rest. Under the lens the label is drawn nearly
+// twice the size but is also pushed away from the pointer, three quarters of
+// a px for each px the pointer is short of the mark, which comes to the same.
+const LABEL_REACH = 6
 
 // ── The lens ──
 // Hovering magnifies the pointer's neighbourhood the way the dock does:
@@ -134,7 +140,8 @@ export function TimeRail({
 	// label carry the year (see labelUnit)
 	const unit = labelUnit(buckets)
 	const spanMonths = monthSpan(buckets)
-	const labelGap = LABEL_MIN_GAP + useLargerText()
+	const largerText = useLargerText()
+	const labelGap = LABEL_MIN_GAP + largerText
 	const yearLabels = useMemo(() => (unit === 'years' ? pickYearLabels(marks, labelGap) : []), [unit, marks, labelGap])
 	const monthLabels = useMemo(
 		() => (unit === 'months' ? pickMonthLabels(scale, labelGap) : []),
@@ -257,10 +264,14 @@ export function TimeRail({
 			const grow = (label ? LENS_LABEL_SCALE : LENS_TICK_SCALE) - 1
 			const scaleBy = 1 + grow * Math.exp(-t * t) * lens.amp
 			const push = Math.sign(distance) * LENS_PUSH * (t / LENS_PUSH_PEAK) * Math.exp(1 - t / LENS_PUSH_PEAK) * lens.amp
-			// Labels centre themselves on their tick (the -translate-y-1/2 the
-			// class gives them at rest), so the inline transform carries it too
+			// Labels centre themselves on their tick with the class's
+			// -translate-y-1/2, which is the `translate` property: it stays in
+			// force beside this inline `transform`, so the push and the scale are
+			// all that is written here. (Carrying the half-height in both lifted
+			// every label clear above its tick while the lens was on, over the
+			// year before the one it names.)
 			el.style.transform = label
-				? `translateY(calc(-50% + ${push}px)) scale(${scaleBy})`
+				? `translateY(${push}px) scale(${scaleBy})`
 				: `translateY(${push}px) scaleX(${scaleBy})`
 		}
 		lens.raf = lens.amp === 0 && lens.target === 0 ? 0 : requestAnimationFrame(lensFrame)
@@ -367,12 +378,21 @@ export function TimeRail({
 		if (!strip) return null
 		return clientY - strip.getBoundingClientRect().top - TRACK_PAD
 	}, [])
+	// What a point on the rail means to a pointer resting on it or clicking: the
+	// month under it, or the label it is on. A scrub reads the rail as it is,
+	// every month in turn.
+	const labels = unit === 'years' ? yearLabels : monthLabels
+	const pointed = useCallback(
+		(y: number, scrub: boolean) =>
+			monthAtRailY(scale, scrub ? y : settleOnLabel(y, labels, LABEL_REACH + largerText / 2)),
+		[scale, labels, largerText],
+	)
 
 	const applyPointer = useCallback(
 		(clientY: number, scrub: boolean) => {
 			const y = railY(clientY)
 			if (y === null) return
-			const at = monthAtRailY(scale, y)
+			const at = pointed(y, scrub)
 			if (!at) return
 			const view = viewRef.current
 			const scroller = scrollerRef.current
@@ -394,7 +414,7 @@ export function TimeRail({
 			scrubWithin()
 			scroller.scrollTop = target
 		},
-		[railY, scale, viewRef, scrollerRef, locate, trackHeight, stopTween, scrubBeyond, scrubWithin],
+		[railY, pointed, viewRef, scrollerRef, locate, trackHeight, stopTween, scrubBeyond, scrubWithin],
 	)
 
 	const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -426,7 +446,7 @@ export function TimeRail({
 		cancelAnimationFrame(moveRaf.current)
 		moveRaf.current = 0
 		const y = railY(event.clientY)
-		const at = y === null ? undefined : monthAtRailY(scale, y)
+		const at = y === null ? undefined : pointed(y, drag.scrubbing)
 		if (!at) return
 		if (!drag.scrubbing) return jump(at.key, at.fraction)
 		// Released after a live scrub: settle exactly, or on what the drag ran

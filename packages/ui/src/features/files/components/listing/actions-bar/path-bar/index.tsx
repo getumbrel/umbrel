@@ -3,58 +3,36 @@ import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
-import {PathBarDesktop} from '@/features/files/components/listing/actions-bar/path-bar/path-bar-desktop'
-import {PathBarMobile} from '@/features/files/components/listing/actions-bar/path-bar/path-bar-mobile'
+import {PathCrumbs} from '@/features/files/components/listing/actions-bar/path-bar/path-crumbs'
 import {PathInput} from '@/features/files/components/listing/actions-bar/path-bar/path-input'
+import {PathTitle} from '@/features/files/components/listing/actions-bar/path-bar/path-title'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
-import {useIsMobile} from '@/hooks/use-is-mobile'
 
-export function PathBar() {
+// Where Files is, as the bar's title: the whole way down from the root where
+// there is room for it (PathCrumbs), the current folder's name on a phone
+// (PathTitle). Right-clicking it offers to type a path instead.
+export function PathBar({compact}: {compact: boolean}) {
 	const {t} = useTranslation()
 	const {uiPath} = useNavigate()
 	const [isEditing, setIsEditing] = useState(false)
-	const isMobile = useIsMobile()
-
-	const handleEdit = () => setIsEditing(true)
 
 	return (
 		<ContextMenu>
-			<ContextMenuTrigger className='w-0 flex-1'>
-				<PathBarContent
-					isEditing={isEditing}
-					isMobile={isMobile}
-					currentPath={uiPath}
-					onInputClose={() => setIsEditing(false)}
-				/>
+			<ContextMenuTrigger className='block min-w-0'>
+				{isEditing ? (
+					<PathInput path={uiPath} onClose={() => setIsEditing(false)} />
+				) : compact ? (
+					<PathTitle />
+				) : (
+					<PathCrumbs />
+				)}
 			</ContextMenuTrigger>
 			<ContextMenuContent>
-				<ContextMenuItem onSelect={handleEdit}>
+				<ContextMenuItem onSelect={() => setIsEditing(true)}>
 					<Pencil className='mr-2 h-3 w-3' />
 					{t('files-action.go-to-path')}
 				</ContextMenuItem>
 			</ContextMenuContent>
 		</ContextMenu>
 	)
-}
-
-const PathBarContent = ({
-	isEditing,
-	isMobile,
-	currentPath,
-	onInputClose,
-}: {
-	isEditing: boolean
-	isMobile: boolean
-	currentPath: string
-	onInputClose: () => void
-}) => {
-	if (isEditing) {
-		return <PathInput path={currentPath} onClose={onInputClose} />
-	}
-
-	if (isMobile) {
-		return <PathBarMobile path={currentPath} />
-	}
-
-	return <PathBarDesktop />
 }

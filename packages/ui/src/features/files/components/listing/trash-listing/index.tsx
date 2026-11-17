@@ -1,11 +1,9 @@
+import {Trash2} from 'lucide-react'
 import {useEffect} from 'react'
 import {useTranslation} from 'react-i18next'
 
-import {ContextMenuItem} from '@/components/ui/context-menu'
-import {DropdownMenuItem} from '@/components/ui/dropdown-menu'
-import {IconButton} from '@/components/ui/icon-button'
 import {FlameIcon} from '@/features/files/assets/flame-icon'
-import {Listing} from '@/features/files/components/listing'
+import {Listing, StateView} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
@@ -16,7 +14,7 @@ import {useConfirmation} from '@/providers/confirmation'
 export function TrashListing() {
 	const {t} = useTranslation()
 	const {currentPath} = useNavigate()
-	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
+	const {listing, isLoading, error, fetchMoreItems, fetchAllItems} = useListDirectory(currentPath)
 	const {emptyTrash} = useFilesOperations()
 	const confirm = useConfirmation()
 	const setActionsBarConfig = useSetActionsBarConfig()
@@ -50,38 +48,22 @@ export function TrashListing() {
 
 	const disableActionsAndHidePath = isTrashEmpty || !!error
 
-	const additionalContextMenuItems = (
-		<ContextMenuItem onClick={handleEmptyTrash} disabled={disableActionsAndHidePath}>
-			{t('files-action.empty-trash')}
-		</ContextMenuItem>
-	)
-
-	const DesktopActions = (
-		<IconButton
-			icon={FlameIcon}
-			onClick={handleEmptyTrash}
-			disabled={disableActionsAndHidePath}
-			className={disableActionsAndHidePath ? 'pointer-events-none opacity-60' : ''}
-		>
-			{t('files-action.empty-trash')}
-		</IconButton>
-	)
-
-	const MobileActions = (
-		<DropdownMenuItem onClick={handleEmptyTrash} disabled={disableActionsAndHidePath}>
-			<FlameIcon className='mr-2 h-4 w-4 opacity-50' />
-			{t('files-action.empty-trash')}
-		</DropdownMenuItem>
-	)
-
 	useEffect(() => {
 		setActionsBarConfig({
-			desktopActions: DesktopActions,
-			mobileActions: MobileActions,
+			actions: [
+				{
+					id: 'empty-trash',
+					label: t('files-action.empty-trash'),
+					icon: FlameIcon,
+					onSelect: () => void handleEmptyTrash(),
+					disabled: disableActionsAndHidePath,
+					pill: true,
+				},
+			],
 			hidePath: !!error,
 			hideSearch: true,
 		})
-	}, [disableActionsAndHidePath])
+	}, [disableActionsAndHidePath, error])
 
 	return (
 		<Listing
@@ -89,13 +71,22 @@ export function TrashListing() {
 			items={items}
 			totalItems={listing?.totalFiles}
 			truncatedAt={listing?.truncatedAt}
+			totalSize={listing?.size}
 			selectableItems={items}
 			isLoading={isLoading}
 			error={error}
 			hasMore={listing?.hasMore ?? false}
 			onLoadMore={fetchMoreItems}
+			onLoadAll={fetchAllItems}
 			enableFileDrop={false}
-			additionalContextMenuItems={additionalContextMenuItems}
+			CustomEmptyView={EmptyStateTrash}
 		/>
+	)
+}
+
+function EmptyStateTrash() {
+	const {t} = useTranslation()
+	return (
+		<StateView icon={<Trash2 className='size-9 text-white/30' strokeWidth={1.5} />} title={t('files-empty.trash')} />
 	)
 }

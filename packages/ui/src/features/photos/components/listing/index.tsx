@@ -43,6 +43,7 @@ function Timeline() {
 	const {items, total, isLoading, hasMore, before, loadMore} = useItems(filter, {
 		enabled: libraryQueryable,
 		keepPrevious: search.active,
+		owner: true,
 	})
 	// A bare library that is empty mid-enrichment is still filling — keep the
 	// spinner up rather than flashing the empty-library invitation. Filtered

@@ -1,8 +1,8 @@
 import {useTranslation} from 'react-i18next'
 import {useParams} from 'react-router-dom'
 
+import {CountText} from '@/components/ui/count-text'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {CountText} from '@/features/photos/components/actions-bar/count-text'
 import {useBarRoute} from '@/features/photos/components/actions-bar/use-bar-route'
 import {useRouteFilter} from '@/features/photos/components/listing'
 import {usePhotosView} from '@/features/photos/components/view-context'

@@ -27,17 +27,15 @@ import {
 import {thumbSizeForTile} from '@/features/photos/components/listing/item-thumbnail'
 import {ItemTile} from '@/features/photos/components/listing/item-tile'
 import {LIVE_MIN_TILE, useLiveHover} from '@/features/photos/components/listing/live-hover'
-import {useMarquee} from '@/features/photos/components/listing/marquee'
 import {attachPinch} from '@/features/photos/components/listing/pinch'
 import {ReflowMotion} from '@/features/photos/components/listing/reflow-motion'
 import {isWholeLibrary} from '@/features/photos/components/listing/route-filter'
 import type {Frame} from '@/features/photos/components/listing/surface'
-import {useSwipeSelect} from '@/features/photos/components/listing/swipe-select'
 import {ThumbnailQueue} from '@/features/photos/components/listing/thumbnail-queue'
 import {TileLayer} from '@/features/photos/components/listing/tile-layer'
 import {createTileLift} from '@/features/photos/components/listing/tile-lift'
 import {DateScrubber} from '@/features/photos/components/listing/time-rail/date-scrubber'
-import {monthsFromItems, railDomain} from '@/features/photos/components/listing/time-rail/rail-scale'
+import {monthKeyOf, monthsFromItems, railDomain} from '@/features/photos/components/listing/time-rail/rail-scale'
 import {
 	RAIL_HIDE_VIEWPORTS,
 	RAIL_SHOW_VIEWPORTS,
@@ -58,6 +56,7 @@ import {
 	HEADER_HEIGHT,
 	headersIn,
 	itemAt,
+	itemsInRect,
 	layoutAt,
 	LOADER_HEIGHT,
 	rectOf,
@@ -80,6 +79,8 @@ import type {Item, ItemFilter, ThumbSize} from '@/features/photos/hooks/use-item
 import {useLibrarySummary} from '@/features/photos/hooks/use-library'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {marqueeBoxClass, useMarquee} from '@/hooks/use-marquee'
+import {useSwipeSelect} from '@/hooks/use-swipe-select'
 import {useDockClearance} from '@/modules/desktop/dock'
 import {formatNumberI18n} from '@/utils/number'
 
@@ -182,8 +183,8 @@ type Slot = {index: number; item: Item; x: number; y: number; size: number}
 // tile's circle, or on any tile while selecting, toggles it; shift extends
 // from the last one toggled; a mouse drag over the grid draws a box
 // (useMarquee), and a finger swiped sideways across it in selection mode
-// selects the run it covers (useSwipeSelect); ⌘A takes every loaded item and
-// Escape leaves.
+// selects the run it covers (useSwipeSelect); ⌘A takes everything in the view
+// and Escape leaves.
 export function TimelineGrid({
 	items,
 	total,
@@ -427,6 +428,8 @@ export function TimelineGrid({
 	// one tile stays put through a whole gesture instead of drifting stop by stop
 	const anchorRef = useRef<Anchor | null>(null)
 	const adoptedAt = useRef(0)
+	// Whether the list last adopted was a jump's tail (and from when)
+	const adoptedTail = useRef(before)
 	// The last blend the canvas drew, so tiles coming back to the DOM at the
 	// seam fly from where the pixels actually were rather than from the stop
 	// the gesture started at, several column counts away
@@ -490,8 +493,28 @@ export function TimelineGrid({
 		if (lands) landingRef.current = null
 		const landed = lands ? landing.top({layout, height}) : undefined
 		if (lands) noteMove(landed ?? current, true)
+		// A jump's stretch of the timeline being joined to the rest (see
+		// use-seek.ts): its first tile — what the jump landed on, or the picture
+		// a lightbox was opened on by its link — is the one that stays where it
+		// is, while it is on screen. When the stretch began part-way through a
+		// month, the rows after it reflow as the rest of the month arrives ahead
+		// of it, and the tile at the focal point can come down a row, taking the
+		// first one up and out of view: the lightbox then closed onto a tile the
+		// grid had just moved off screen.
+		const joined = adoptedTail.current !== undefined && before === undefined
+		adoptedTail.current = before
+		const head = joined && view ? view.layout.items[0] : undefined
+		const headTop = head && view ? rectOf(view.layout, 0).y - current : undefined
+		const headAnchor =
+			head && headTop !== undefined && headTop >= 0 && headTop < height && layout.indexOf.has(head.id)
+				? {id: head.id, top: headTop}
+				: undefined
 		const anchor =
-			landed !== undefined ? undefined : inGesture ? last : view ? findAnchor(view.layout, current, focal) : undefined
+			landed !== undefined
+				? undefined
+				: inGesture
+					? last
+					: (headAnchor ?? (view ? findAnchor(view.layout, current, focal) : undefined))
 		const anchored = anchor && anchoredScrollTop(layout, anchor)
 		const scrollTop = Math.max(0, Math.min(landed ?? anchored ?? current, layout.total + endSpacer - height))
 		// Remember where the anchor actually ended up: the clamp may have moved it
@@ -509,7 +532,7 @@ export function TimelineGrid({
 			gpu,
 			warmUntil: view?.gpu && !gpu ? now + SEAM_WARM_MS : 0,
 		})
-	}, [layout, width, height, endSpacer, view, reduceMotion, gpu, attempt, noteMove])
+	}, [layout, width, height, endSpacer, view, reduceMotion, gpu, attempt, noteMove, before])
 
 	// Scrolling only moves the row window (and the current section); the
 	// geometry is untouched
@@ -666,12 +689,39 @@ export function TimelineGrid({
 		selection.toggle(item.id)
 		rangeAnchor.current = item.id
 	}
-	const marquee = useMarquee({scrollerRef, viewRef, selectionRef, heldRef, onSelect: selection.set})
+	// A box dragged with the mouse selects what it covers. Which tiles those
+	// are is arithmetic over the layout (itemsInRect), so it needs no DOM
+	// measuring and covers rows that aren't mounted. The grid runs up under the
+	// bar and down beneath the dock to the window's own edge, which a pointer
+	// can't get past: holding the box over either scrolls.
+	const marquee = useMarquee({
+		scrollerRef,
+		itemsInRect: (rect) => (viewRef.current ? itemsInRect(viewRef.current.layout, rect) : null),
+		selectionRef,
+		heldRef,
+		edges: {top: frame.fadeTo, bottom: endSpacer},
+		onSelect: selection.set,
+	})
 	// A finger swiped across the tiles in selection mode selects the run it
 	// covers. Not while choosing a cover, which takes a single tap.
 	const swipe = useSwipeSelect({
 		scrollerRef,
-		viewRef,
+		// Like the marquee, which tile is where is arithmetic over the layout,
+		// so the range covers rows that aren't mounted and the canvas works the same way
+		itemAt: (x, y) => {
+			const layout = viewRef.current?.layout
+			const index = layout && itemAt(layout, x, y)
+			return layout && index !== undefined ? layout.items[index]!.id : undefined
+		},
+		between: (from, to) => {
+			const layout = viewRef.current?.layout
+			const start = layout?.indexOf.get(from)
+			const stop = layout?.indexOf.get(to)
+			if (!layout || start === undefined || stop === undefined) return null
+			const ids: string[] = []
+			for (let index = Math.min(start, stop); index <= Math.max(start, stop); index++) ids.push(layout.items[index]!.id)
+			return ids
+		},
 		selectionRef,
 		enabled: selection.selecting && !selection.coveringFor,
 		edges: {top: frame.fadeTo, bottom: endSpacer},
@@ -1079,6 +1129,37 @@ export function TimelineGrid({
 		},
 		[inset, endSpacer],
 	)
+	// An item the list on screen doesn't hold: its stretch of the timeline is
+	// brought on screen the way the rail jumps to a month (see use-seek.ts) —
+	// from the item's own moment, so it is the stretch's first tile — and the
+	// grid lands on it. Asked for by the lightbox, whose backdrop hides the jump.
+	const seekStart = seek.start
+	const seekTileOf = useCallback(
+		(id: string, takenAt: number) => {
+			if (viewRef.current?.layout.indexOf.has(id)) return
+			seekStart(
+				monthKeyOf(takenAt),
+				({first, show}) => {
+					// The list that holds the moment is the one on screen (it has
+					// run that far, or has nothing more): only the scroll is left
+					if (viewRef.current?.layout.items[0]?.id === first) {
+						show()
+						return revealTileOf(id)
+					}
+					landingRef.current = {
+						first,
+						top: ({layout, height: viewport}) => {
+							const rect = tileRect(layout, id)
+							return rect ? rect.y + rect.size / 2 - (inset + viewport) / 2 : undefined
+						},
+					}
+					show()
+				},
+				{before: takenAt + 1},
+			)
+		},
+		[seekStart, revealTileOf, inset],
+	)
 	useEffect(() => {
 		if (width === 0) return
 		setGrid({
@@ -1092,6 +1173,7 @@ export function TimelineGrid({
 			tileRect: tileRectOf,
 			revealTile: revealTileOf,
 			liftTile: liftTileOf,
+			seekTile: seekTileOf,
 		})
 		return () => setGrid(null)
 	}, [
@@ -1106,11 +1188,19 @@ export function TimelineGrid({
 		tileRectOf,
 		revealTileOf,
 		liftTileOf,
+		seekTileOf,
 	])
 
-	// ⌘A selects everything loaded — the keyboard's way in — and Escape
+	// ⌘A selects everything in the view — the keyboard's way in — and Escape
 	// leaves; not while picking for an album, when a selection gathered
-	// across views is too much to lose to a stray key (Cancel is in the bar)
+	// across views is too much to lose to a stray key (Cancel is in the bar).
+	// Everything, not everything loaded: a timeline of twenty thousand has two
+	// hundred in hand when it opens, and "200 selected" over a library that
+	// size would have Delete quietly take a hundredth of what was asked. What
+	// is loaded is selected at once and the rest as soon as the list has been
+	// paged to its end (see Seek.loadAll), the bar holding its actions until
+	// then (PhotosSelection.selectingAll).
+	const loadAll = seek.loadAll
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			const target = event.target as Element
@@ -1120,8 +1210,11 @@ export function TimelineGrid({
 			const layer = target.closest('[role="dialog"], [role="alertdialog"], [role="menu"]')
 			if (layer && !layer.contains(scrollerRef.current)) return
 			if (event.key === 'Escape' && selection.selecting && !picking) selection.done()
-			else if (event.key === 'a' && (event.metaKey || event.ctrlKey)) selection.set([...heldRef.current, ...itemIds])
-			else return
+			else if (event.key === 'a' && (event.metaKey || event.ctrlKey)) {
+				// All of it is here already: the whole list, loaded to its end
+				if (!hasMore && before === undefined) selection.set([...heldRef.current, ...itemIds])
+				else selection.selectAll(itemIds, loadAll(), heldRef.current)
+			} else return
 			// … and the sheet, which would otherwise take the Escape, doesn't get it
 			event.preventDefault()
 			event.stopPropagation()
@@ -1129,7 +1222,17 @@ export function TimelineGrid({
 		// Captured at the window, ahead of the sheet's own listener on the document
 		window.addEventListener('keydown', onKey, {capture: true})
 		return () => window.removeEventListener('keydown', onKey, {capture: true})
-	}, [selection.selecting, selection.done, selection.set, itemIds, picking])
+	}, [
+		selection.selecting,
+		selection.done,
+		selection.set,
+		selection.selectAll,
+		itemIds,
+		picking,
+		hasMore,
+		before,
+		loadAll,
+	])
 
 	const formattedCount = formatNumberI18n({n: items.length, showDecimals: false, locale: i18n.language})
 	const loaderTop = view?.layout.loaderTop
@@ -1225,11 +1328,7 @@ export function TimelineGrid({
 							)}
 						</TileLayer>
 						{/* The marquee, in the grid's coordinates so it scrolls with it; useMarquee shows and sizes it */}
-						<div
-							ref={marquee.boxRef}
-							aria-hidden
-							className='pointer-events-none absolute top-0 left-0 z-10 hidden rounded-sm border border-white/40 bg-white/10'
-						/>
+						<div ref={marquee.boxRef} aria-hidden className={marqueeBoxClass} />
 						{showLoader && (
 							<div
 								className='absolute inset-x-0 flex items-center justify-center'

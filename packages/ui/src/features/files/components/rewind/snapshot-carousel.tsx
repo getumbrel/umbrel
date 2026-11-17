@@ -181,8 +181,6 @@ export function SnapshotCarousel({
 											initialPath={safeInitialPath}
 											currentPath={rewindPath}
 											onNavigate={setRewindPath}
-											// Pass the scale used by the carousel so marquee selection inside the embedded explorer compensates for the transform.
-											explorerScale={explorerScale}
 											pathAliases={
 												mountedDir
 													? {['/Home']: `/Backups/${mountedDir}/Home`, ['/Apps']: `/Backups/${mountedDir}/Apps`}

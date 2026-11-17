@@ -77,4 +77,53 @@ describe('fitPathSegments', () => {
 			widths: [...Array(8).fill(undefined), 62],
 		})
 	})
+
+	test('folds instead of narrowing when the folders between may not narrow', () => {
+		const foldFirst = (available: number, widths: number[]) =>
+			fitPathSegments({available, widths, minWidth: Infinity, minCurrentWidth: 64, overflowWidth: 36})
+		// 60 + 36 + 80 + 70 fit in 300, with one more folder beside them not
+		expect(foldFirst(300, [60, 100, 100, 100, 80, 70])).toEqual({
+			foldsRoot: false,
+			folded: 3,
+			widths: [undefined, undefined, undefined, undefined, undefined, undefined],
+		})
+		// Everything between folded: the current folder narrows beside the root, down to its own floor
+		expect(foldFirst(200, [60, 100, 400])).toEqual({foldsRoot: false, folded: 1, widths: [undefined, undefined, 104]})
+		expect(foldFirst(150, [60, 100, 400])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, 114]})
+	})
+
+	test('stands the root as its icon before the parent folds or the current folder narrows', () => {
+		const withIcon = (available: number, widths: number[]) =>
+			fitPathSegments({
+				available,
+				widths,
+				minWidth: Infinity,
+				minCurrentWidth: 64,
+				overflowWidth: 36,
+				rootCompactWidth: 40,
+			})
+		// Home and Documents don't both fit whole: Home is its icon, and Documents keeps its name
+		expect(withIcon(150, [80, 100])).toEqual({foldsRoot: false, folded: 0, widths: [40, undefined]})
+		// The folders nearest the root fold first, with the root's name still beside the menu
+		expect(withIcon(300, [80, 100, 100, 80, 70])).toEqual({
+			foldsRoot: false,
+			folded: 2,
+			widths: [undefined, undefined, undefined, undefined, undefined],
+		})
+		// Then the root's name goes, and the parent stays
+		expect(withIcon(240, [80, 100, 100, 80, 70])).toEqual({
+			foldsRoot: false,
+			folded: 2,
+			widths: [40, undefined, undefined, undefined, undefined],
+		})
+		// A parent too long to stay folds, and the root has its name back beside the menu
+		expect(withIcon(200, [80, 100, 70])).toEqual({
+			foldsRoot: false,
+			folded: 1,
+			widths: [undefined, undefined, undefined],
+		})
+		// The current folder narrows beside the icon, and only then does the root fold away
+		expect(withIcon(160, [80, 100, 400])).toEqual({foldsRoot: false, folded: 1, widths: [40, undefined, 84]})
+		expect(withIcon(120, [80, 100, 400])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, 84]})
+	})
 })

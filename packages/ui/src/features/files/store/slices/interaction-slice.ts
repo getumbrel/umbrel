@@ -21,6 +21,7 @@ export const createInteractionSlice: StateCreator<
 		get().setSelectedItems([])
 		get().setViewerItem(null)
 		get().setIsSelectingOnMobile(false)
+		get().closeActionSheet()
 		get().clearDraggedItems()
 	},
 })

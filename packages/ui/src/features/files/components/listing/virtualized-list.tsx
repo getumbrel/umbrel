@@ -1,25 +1,35 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react'
-import {FixedSizeGrid, FixedSizeList, GridChildComponentProps, ListChildComponentProps} from 'react-window'
+import React, {memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
+import {TbLoader} from 'react-icons/tb'
+import {areEqual, FixedSizeGrid, FixedSizeList, GridChildComponentProps, ListChildComponentProps} from 'react-window'
 import InfiniteLoader from 'react-window-infinite-loader'
 
 import {FileItem} from '@/features/files/components/listing/file-item'
 import {FileItemProvider} from '@/features/files/components/listing/file-item/file-item-context'
+import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {
 	getGridColumnCount,
 	getGridItemHeight,
 	getGridItemWidth,
+	getGridMinItemWidth,
 	getGridScrollerPadding,
 	getListRowHeight,
-	GRID_ROW_GAP,
+	GRID_GAP,
 	LISTING_FADE_BOTTOM_PX,
 	LISTING_FADE_TOP_PX,
 } from '@/features/files/utils/get-grid-column-count'
 import {getItemKey} from '@/features/files/utils/get-item-key'
+import {indexAtPoint, indexesInRect, type ListingLayout} from '@/features/files/utils/listing-hit-test'
+import {selectedPathsOf} from '@/features/files/utils/selected-paths'
 import {useLargerText} from '@/hooks/use-accessibility'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {marqueeBoxClass, useMarquee} from '@/hooks/use-marquee'
+import {useSwipeSelect} from '@/hooks/use-swipe-select'
+import {cn} from '@/lib/utils'
+import {useDockClearance} from '@/modules/desktop/dock'
 import {useHomeFit} from '@/modules/desktop/home-fit'
 
 // Hook to detect scroll in react-window components so we can apply custom fade styling
@@ -82,11 +92,29 @@ const useScrollFade = () => {
 	return {containerRef, isScrolled}
 }
 
+// What a press with the mouse lands on, as far as the marquee is concerned:
+// the listing's empty space, the empty space of a list row, or something with
+// a use of its own for the press (null). A row of the list runs the listing's
+// whole width, so it gives the marquee all of itself but its icon and name,
+// which are what pick the file up (see FileItem). A tile is picked up anywhere.
+// [vaul-overlay] is the backdrop of the drawer a name is typed in.
+function marqueePress(target: Element): 'space' | 'row' | null {
+	const interactive = target.closest(
+		'button, a, input, [role="button"], [role="link"], [role="menuitem"], [vaul-overlay]',
+	)
+	if (!interactive) return 'space'
+	const item = target.closest('[data-files-item]')
+	const isRowSpace =
+		item !== null &&
+		interactive === item &&
+		item.closest('.files-list-view-file-item') !== null &&
+		!target.closest('[data-item-content]')
+	return isRowSpace ? 'row' : null
+}
+
 // These overscan amounts control how many rows are rendered outside the visible react-window area (both above and below the area)
-// so that items do not appear to render suddenly when scrolling
-// We use a lower value for grid view to prevent performance issues during marquee selection. If there are 6 items (columns) in a row,
-// then an overscan of 2 will render an extra 24 items (12 items above and 12 items below) which becomes expensive for marquee selection.
-const LIST_OVERSCAN_AMOUNT = 20
+// so that items do not appear to render suddenly when scrolling. The grid mounts fewer rows beyond what shows: each holds a row of tiles.
+const LIST_OVERSCAN_AMOUNT = 12
 const GRID_OVERSCAN_AMOUNT = 2
 
 // Used to trigger fetching more items when only a certain number of items are left to render
@@ -94,10 +122,14 @@ const INFINITE_LOADER_THRESHOLD = 100
 
 interface VirtualizedListProps {
 	items: FileSystemItem[]
+	// The items a marquee may select (not ones still uploading). All of them, unless said.
+	selectableItems?: FileSystemItem[]
 	hiddenRenamedPaths?: string[]
 	hasMore: boolean
 	isLoading: boolean
 	onLoadMore: (startIndex: number) => Promise<boolean>
+	// Loads everything there is left to load
+	onLoadAll?: () => Promise<boolean>
 	scrollAreaRef: React.RefObject<HTMLDivElement | null>
 	view: 'list' | 'icons'
 }
@@ -136,30 +168,131 @@ interface GridVisibleIndices {
 }
 
 /**
+ * Data passed to list rows: the items, and the listing's width in pixels
+ * (a fixed width keeps rows from shrinking when the scrollbar appears)
+ */
+interface ListRowData {
+	items: FileSystemItem[]
+	width: number
+	// There is more of the folder to load, asked for from the slot after the last item
+	hasMore: boolean
+}
+
+/**
  * Data passed to grid cells for rendering items
  * Contains both the item array and layout dimensions
  */
 interface GridItemData {
 	items: FileSystemItem[]
 	columnCount: number
-	horizontalGap: number
-	verticalGap: number
 	itemHeight: number
 	itemWidth: number
-	borderAllowance: number
-	totalWidth: number
+	hasMore: boolean
+}
+
+// What stands in the slot after the last loaded item while the next page is
+// on its way: without it a long folder scrolled faster than it loads looks as
+// if it ends there. Most pages land before it could be read, so it holds back
+// a moment, as the listing's own spinner does.
+function MoreLoading() {
+	const {t} = useTranslation()
+	return (
+		<div className='flex size-full items-center justify-center motion-safe:animate-in motion-safe:duration-300 motion-safe:fill-mode-backwards motion-safe:[animation-delay:300ms] motion-safe:fade-in'>
+			<TbLoader className='size-5 animate-spin text-white/40' aria-label={t('files-listing.loading')} />
+		</div>
+	)
+}
+
+// One row of the list, and one tile of the grid. Each is a component of its
+// own that stays the same from render to render and is handed the items as
+// data. They used to be functions made anew whenever the items changed, which
+// to React is a different component each time: every page that arrived, and
+// every refresh, unmounted all the rows on screen and mounted them again,
+// taking a name being typed in one of them along. Now a row whose item hasn't
+// changed is left alone, and one whose item has is updated in place.
+const ListRow = memo(function ListRow({index, style, data}: ListChildComponentProps<ListRowData>) {
+	const {items, width, hasMore} = data
+	const item = items[index]
+	if (!item) {
+		if (!hasMore || index !== items.length) return null
+		return (
+			<div style={{...style, width}}>
+				<MoreLoading />
+			</div>
+		)
+	}
+	return (
+		<div
+			style={{...style, width}}
+			data-item-path={item.path}
+			// Every other row lies on a faint band (see list-view-file-item.css)
+			data-striped={index % 2 === 1 ? '' : undefined}
+			className='files-list-view-file-item relative'
+		>
+			<FileItem item={item} items={items} index={index} />
+		</div>
+	)
+}, areEqual)
+
+// We cannot use simple flexbox css because we are using react-window for
+// virtualization: each tile is placed by hand, the row's width shared out
+// evenly between the columns
+const GridCell = memo(function GridCell({columnIndex, rowIndex, style, data}: GridChildComponentProps<GridItemData>) {
+	const {items, columnCount, itemHeight, itemWidth, hasMore} = data
+	const index = rowIndex * columnCount + columnIndex
+	const item = items[index]
+	const placed = {
+		...style,
+		left: columnIndex * (itemWidth + GRID_GAP),
+		top: rowIndex * (itemHeight + GRID_GAP),
+		width: itemWidth,
+		height: itemHeight,
+	}
+	if (!item) {
+		if (!hasMore || index !== items.length) return null
+		return (
+			<div style={placed}>
+				<MoreLoading />
+			</div>
+		)
+	}
+	return (
+		<div style={placed} className='relative' data-item-path={item.path}>
+			<FileItem item={item} items={items} index={index} />
+		</div>
+	)
+}, areEqual)
+
+// Rows and tiles are known to React by their item, not by where they stand:
+// one that moves as the listing changes above it moves, state and all
+const listRowKey = (index: number, {items}: ListRowData) => (items[index] ? getItemKey(items[index]) : `slot-${index}`)
+const gridCellKey = ({columnIndex, rowIndex, data}: {columnIndex: number; rowIndex: number; data: GridItemData}) => {
+	const item = data.items[rowIndex * data.columnCount + columnIndex]
+	return item ? getItemKey(item) : `slot-${rowIndex}-${columnIndex}`
+}
+
+// How much of the scroller's bottom the listing's last rows must be able to
+// scroll clear of. Files itself runs down to the sheet's bottom edge, beneath
+// the dock, so that is the dock and a breath above it. A phone on its side
+// tucks its dock away as the listing scrolls, and keeps only room to clear it
+// at the very end. Embedded in Rewind there is no dock: only the card's fade.
+const DOCK_BREATHING_ROOM_PX = 12
+const SCROLL_END_SPACER_UNDER_DOCK_PX = 96
+function useBottomInset() {
+	const isEmbedded = useIsFilesEmbedded()
+	const dockClearance = useDockClearance()
+	const {low} = useHomeFit()
+	if (isEmbedded) return LISTING_FADE_BOTTOM_PX
+	return low ? SCROLL_END_SPACER_UNDER_DOCK_PX : Math.round(dockClearance) + DOCK_BREATHING_ROOM_PX
 }
 
 // Trailing scroll room inside the virtualized content so the last row can be
-// scrolled up past the bottom fade and read comfortably. Extends the scrollable
-// height without shrinking the viewport (which must stay flush with the card edge).
-const SCROLL_END_SPACER_PX = LISTING_FADE_BOTTOM_PX
-const SCROLL_END_SPACER_UNDER_DOCK_PX = 96
+// scrolled up past the dock (or the bottom fade) and read comfortably. Extends
+// the scrollable height without shrinking the viewport (which must stay flush
+// with the sheet's edge).
 const InnerElementWithEndSpacer = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
 	function InnerElementWithEndSpacer({style, ...rest}, ref) {
-		// On a phone on its side the card runs under the dock, so the end clears it
-		const {low} = useHomeFit()
-		const endSpacer = low ? SCROLL_END_SPACER_UNDER_DOCK_PX : SCROLL_END_SPACER_PX
+		const endSpacer = useBottomInset()
 		const height =
 			typeof style?.height === 'number' ? style.height + endSpacer : `calc(${style?.height} + ${endSpacer}px)`
 		return <div ref={ref} style={{...style, height}} {...rest} />
@@ -168,18 +301,39 @@ const InnerElementWithEndSpacer = React.forwardRef<HTMLDivElement, React.HTMLAtt
 
 export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	items,
+	selectableItems,
 	hiddenRenamedPaths,
 	hasMore,
 	isLoading,
 	onLoadMore,
+	onLoadAll,
 	scrollAreaRef,
 	view,
 }) => {
 	const infiniteLoaderRef = useRef<InfiniteLoader>(null)
 	const isMobile = useIsMobile()
+	const isEmbedded = useIsFilesEmbedded()
 	const largerText = useLargerText()
+	const bottomInset = useBottomInset()
 	const {containerRef, isScrolled} = useScrollFade()
 	const {width, height} = useContainerSize(containerRef)
+
+	// The layout, in one place: rows and tiles are sized from these, and so is
+	// everything that has to find an item without asking the DOM
+	const rowHeight = getListRowHeight(isMobile, largerText)
+	const columnCount = getGridColumnCount(width, getGridMinItemWidth(isMobile))
+	const itemWidth = getGridItemWidth(width, isMobile)
+	const itemHeight = getGridItemHeight(largerText)
+	const scrollerPadding = getGridScrollerPadding(isMobile, isEmbedded)
+
+	// Keyboard navigation scrolls to items by the numbers the rows were laid out with
+	useLayoutEffect(() => {
+		const scroller = scrollAreaRef.current
+		if (!scroller) return
+		scroller.dataset.columns = String(view === 'list' ? 1 : columnCount)
+		scroller.dataset.bottomInset = String(bottomInset)
+	})
+
 	// Bring a programmatically-selected item into view: type-ahead search, a
 	// freshly created folder, and deep links (e.g. the Recents widget or cmdk)
 	// all select without scrolling. Reveal once using current metadata so later
@@ -192,6 +346,13 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	const isRenameSelection = useFilesStore((s) =>
 		s.incomingItems.some((item) => item === selectedItems[0] && !!item.renamedFrom),
 	)
+	// A folder just made here is listed at once, ahead of the server. In a
+	// folder that isn't all loaded that puts it at the end of what is, wherever
+	// it belongs, so the rest is loaded first and it is revealed where it
+	// really stands.
+	const isNewArrival = useFilesStore((s) =>
+		s.incomingItems.some((item) => item === selectedItems[0] && !item.renamedFrom),
+	)
 	const handledSelectionRef = useRef<string | null>(null)
 	useEffect(() => {
 		handledSelectionRef.current = null
@@ -203,6 +364,10 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 			handledSelectionRef.current = selectedPath
 			return
 		}
+		if (isNewArrival && hasMore && onLoadAll) {
+			void onLoadAll()
+			return
+		}
 		const index = items.findIndex((item) => item.path === selectedPath)
 		if (index === -1) {
 			// The store can update before the listing supplies its rename result.
@@ -212,34 +377,119 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 		}
 		const scrollEl = scrollAreaRef.current
 		if (!scrollEl) return
-		// Row geometry mirrors the List/Grid props below. Scroll only when the
-		// item sits outside the clearly-visible band, padded by the edge fades so
-		// the selection never lands half-hidden under them.
-		const rowHeight =
-			view === 'list' ? getListRowHeight(isMobile, largerText) : getGridItemHeight(largerText) + GRID_ROW_GAP
-		const row = view === 'list' ? index : Math.floor(index / getGridColumnCount(width, getGridItemWidth(isMobile)))
-		const itemTop = row * rowHeight
-		const itemBottom = itemTop + rowHeight
+		// Scroll only when the item sits outside the clearly-visible band, padded
+		// by the top fade and by the dock (or fade) over the bottom, so the
+		// selection never lands half-hidden under them.
+		const rowPitch = view === 'list' ? rowHeight : itemHeight + GRID_GAP
+		const row = view === 'list' ? index : Math.floor(index / columnCount)
+		const itemTop = row * rowPitch
+		const itemBottom = itemTop + rowPitch
 		const {scrollTop, clientHeight} = scrollEl
 		if (itemTop < scrollTop + LISTING_FADE_TOP_PX) {
 			scrollEl.scrollTo({top: Math.max(0, itemTop - LISTING_FADE_TOP_PX)})
-		} else if (itemBottom > scrollTop + clientHeight - LISTING_FADE_BOTTOM_PX) {
-			scrollEl.scrollTo({top: itemBottom - clientHeight + LISTING_FADE_BOTTOM_PX})
+		} else if (itemBottom > scrollTop + clientHeight - bottomInset) {
+			scrollEl.scrollTo({top: itemBottom - clientHeight + bottomInset})
 		}
 		handledSelectionRef.current = selectedPath
 	}, [
 		selectedPath,
 		isRenameSelection,
+		isNewArrival,
 		hiddenRenamedPaths,
 		items,
 		hasMore,
 		onLoadMore,
+		onLoadAll,
 		view,
-		width,
-		isMobile,
-		largerText,
+		rowHeight,
+		itemHeight,
+		columnCount,
+		bottomInset,
 		scrollAreaRef,
 	])
+
+	// Selecting by dragging, with a finger or a mouse. Either way, which item
+	// is where is arithmetic over the layout, so a drag reaches rows that
+	// aren't mounted and measures nothing as it goes.
+	const layout: ListingLayout =
+		view === 'list'
+			? {view: 'list', count: items.length, width, rowHeight}
+			: {view: 'icons', count: items.length, columnCount, itemWidth, itemHeight}
+	const setSelectedItems = useFilesStore((s) => s.setSelectedItems)
+	const selectedPathsRef = useRef<ReadonlySet<string>>(new Set())
+	useLayoutEffect(() => {
+		selectedPathsRef.current = selectedPathsOf(selectedItems)
+	}, [selectedItems])
+
+	// On a touch screen in selection mode, a finger drawn across the items
+	// selects them as it goes (see useSwipeSelect): sideways from any item, as
+	// in Photos, or in any direction from a row's selection circle
+	const isSelecting = useFilesStore((state) => state.isSelectingOnMobile)
+	useSwipeSelect({
+		scrollerRef: scrollAreaRef,
+		// The scroller mounts once the listing is measured, and the list and the grid each have their own
+		scrollerKey: `${view}-${width > 0 && height > 0}-${isLoading}-${items.length > 0}`,
+		itemAt: (x, y) => {
+			const index = indexAtPoint(layout, x, y)
+			return index === undefined ? undefined : items[index]?.path
+		},
+		between: (from, to) => {
+			const start = items.findIndex((item) => item.path === from)
+			const stop = items.findIndex((item) => item.path === to)
+			if (start === -1 || stop === -1) return null
+			return items
+				.slice(Math.min(start, stop), Math.max(start, stop) + 1)
+				.filter((item) => !item.isUploading)
+				.map((item) => item.path)
+		},
+		selectionRef: selectedPathsRef,
+		enabled: isSelecting,
+		edges: {top: LISTING_FADE_TOP_PX, bottom: bottomInset},
+		// What was selected keeps its order, and what the swipe adds follows in the listing's
+		onSelect: (paths) => {
+			const kept = useFilesStore.getState().selectedItems.filter((item) => paths.has(item.path))
+			const keptPaths = new Set(kept.map((item) => item.path))
+			setSelectedItems([...kept, ...items.filter((item) => paths.has(item.path) && !keptPaths.has(item.path))])
+		},
+		handle: '[data-select-handle]',
+	})
+
+	// With a mouse, a box dragged across the items selects what it covers (see useMarquee)
+	const selectable = selectableItems ?? items
+	const selectablePaths = useMemo(() => new Set(selectable.map((item) => item.path)), [selectable])
+	// What a drag with shift or ⌘ held adds to, in the order it was selected:
+	// the item selected last is where a shift-click's range starts from
+	const marqueeBase = useRef<FileSystemItem[]>([])
+	const marquee = useMarquee({
+		scrollerRef: scrollAreaRef,
+		itemsInRect: (rect) => {
+			const paths: string[] = []
+			for (const index of indexesInRect(layout, rect)) {
+				const path = items[index]?.path
+				if (path !== undefined && selectablePaths.has(path)) paths.push(path)
+			}
+			return paths
+		},
+		selectionRef: selectedPathsRef,
+		onSelect: (paths) => {
+			const base = marqueeBase.current
+			const basePaths = new Set(base.map((item) => item.path))
+			setSelectedItems([...base, ...selectable.filter((item) => paths.has(item.path) && !basePaths.has(item.path))])
+		},
+		canStart: (event) => marqueePress(event.target as Element) !== null,
+		// The scrolling starts where the fade and the dock do: under the dock is
+		// as far down as the pointer can go
+		edges: {top: LISTING_FADE_TOP_PX, bottom: bottomInset},
+	})
+	const onMarqueePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+		if (!marquee.handlers.onPointerDown(event)) return
+		const additive = event.shiftKey || event.metaKey || event.ctrlKey
+		marqueeBase.current = additive ? useFilesStore.getState().selectedItems : []
+		if (marqueePress(event.target as Element) !== 'space') return
+		// A press on empty space leaves a name being typed, and lets go of the selection
+		if (document.activeElement instanceof HTMLInputElement) document.activeElement.blur()
+		if (!additive) setSelectedItems([])
+	}
 
 	const isItemsEmpty = items.length === 0
 
@@ -251,13 +501,16 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	}, [isItemsEmpty])
 
 	// Add an extra slot when more items can be loaded - this acts as a trigger point
-	// for InfiniteLoader but doesn't render anything visible (both rendering functions return null for this slot)
+	// for InfiniteLoader, and shows that the next page is on its way (see MoreLoading)
 	const itemCount = hasMore ? items.length + 1 : items.length
 
 	// Callback for loading more items - passed to InfiniteLoader
 	const loadMoreItems = useCallback(
 		async (startIndex: number) => {
-			await onLoadMore(startIndex)
+			// A request that brought nothing (it failed, or its answer was dropped)
+			// is forgotten, or the loader would go on waiting for rows that aren't
+			// coming and never ask again
+			if (!(await onLoadMore(startIndex))) infiniteLoaderRef.current?.resetloadMoreItemsCache()
 		},
 		[onLoadMore],
 	)
@@ -270,143 +523,12 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 		[hasMore, items.length],
 	)
 
-	// Render row for list view
-	const renderListRow = useCallback(
-		({index, style, data}: ListChildComponentProps<number>) => {
-			// Skip rendering if we don't have the item yet (instead of showing a loader)
-			if (!isItemLoaded(index) || index >= items.length) {
-				return null
-			}
-
-			const item = items[index]
-			// We apply background color directly based on item index instead of relying on CSS :nth-child because we are using infinite scrolling where the item count is dynamic
-			const isEvenRow = index % 2 === 1
-
-			return (
-				<div
-					style={{
-						...style,
-						// data contains the container width in pixels (passed via itemData prop)
-						// Using fixed width prevents rows from shrinking when scrollbar appears
-						width: data,
-					}}
-					key={getItemKey(item)}
-					data-marquee-selection-item-path={item.path}
-					className={`files-list-view-file-item relative rounded-lg ${isEvenRow ? 'bg-white/3' : ''}`}
-				>
-					<FileItem item={item} items={items} />
-				</div>
-			)
-		},
-		[items, isItemLoaded],
-	)
-
-	// Calculate grid dimensions based on container width
-	// We cannot use simple flexbox css because we are using react-window for virtualization
-	const getGridDimensions = useCallback(
-		(width: number) => {
-			const itemWidth = getGridItemWidth(isMobile) // Fixed item width (100px mobile / 112px desktop)
-			const minGap = 8 // Prevents borders overlapping at certain screen sizes
-			const borderAllowance = 2 // Extra space on each side for selection borders
-			const fixedVerticalGap = GRID_ROW_GAP // Visual breathing room between rows (cells fully contain their item)
-
-			// Adjust item width to include border allowance
-			const containerWidth = itemWidth + borderAllowance * 2
-
-			// Calculate how many columns can fit with minimum gap enforced
-			const columnCount = getGridColumnCount(width, itemWidth)
-
-			// Now calculate the actual horizontal gap that will be used
-			// We'll ensure this is at least minGap
-			let horizontalGap = minGap
-
-			if (columnCount > 1) {
-				// Calculate the total width available for gaps
-				const totalItemsWidth = columnCount * containerWidth
-				const availableSpaceForGaps = width - totalItemsWidth
-
-				// Calculate gap size that would evenly distribute items
-				const calculatedGap = availableSpaceForGaps / (columnCount - 1)
-
-				// Use the calculated gap if it's larger than our minimum
-				horizontalGap = Math.max(minGap, calculatedGap)
-			}
-
-			// Use a larger fixed vertical gap to prevent wrapped text from overlapping
-			const verticalGap = fixedVerticalGap
-
-			// Set item height and row height separately - row height includes the gap.
-			// The item boxes fill the cell (h-full) so every box in a row is equal-height;
-			// the cell must therefore fully contain a 2-line-filename item: 12px cell top
-			// padding + 134px content (icon + two name lines + type/size label + paddings)
-			const itemHeight = getGridItemHeight(largerText)
-			const rowHeight = itemHeight + verticalGap // Row height includes vertical gap
-
-			return {
-				columnCount,
-				columnWidth: containerWidth, // Column width includes border allowance
-				itemWidth, // The actual item width without border allowance
-				rowHeight,
-				itemHeight,
-				horizontalGap,
-				verticalGap,
-				totalWidth: width,
-				borderAllowance,
-			}
-		},
-		[isMobile, largerText],
-	)
-
-	// Render cell for grid view
-	const renderGridCell = useCallback(
-		({columnIndex, rowIndex, style, data}: GridChildComponentProps) => {
-			const {items, columnCount, horizontalGap, verticalGap, itemHeight, itemWidth, borderAllowance, totalWidth} =
-				data as GridItemData
-
-			const index = rowIndex * columnCount + columnIndex
-
-			// Skip rendering if index is out of bounds or item not loaded
-			if (index >= itemCount || !isItemLoaded(index) || index >= items.length) return null
-
-			const item = items[index]
-			if (!item) return null
-
-			// Calculate the container width (item width + border allowance)
-			const containerWidth = itemWidth + borderAllowance * 2
-
-			// Handle special case for single column to center it
-			const leftPosition =
-				columnCount === 1 ? (totalWidth - containerWidth) / 2 : columnIndex * (containerWidth + horizontalGap)
-
-			// Calculate top position based on row index
-			const topPosition = rowIndex * (itemHeight + verticalGap)
-
-			// Apply proper margin and spacing for grid items
-			const adjustedStyle = {
-				...style,
-				left: leftPosition,
-				top: topPosition,
-				width: containerWidth,
-				height: itemHeight, // Use the full item height
-			}
-
-			return (
-				<div
-					style={adjustedStyle}
-					key={getItemKey(item)}
-					className='relative flex items-start justify-center overflow-visible pt-3'
-					data-marquee-selection-item-path={item.path}
-				>
-					<div
-						className='flex h-full w-full flex-col items-center justify-start'
-						style={{padding: `${rowIndex === 0 ? borderAllowance : 0}px ${borderAllowance}px 0`}}
-					>
-						<FileItem item={item} items={items} />
-					</div>
-				</div>
-			)
-		},
-		[itemCount, isItemLoaded],
+	// What the rows and tiles are drawn from (see ListRow and GridCell). The
+	// same object until something in it changes, so they are left alone until then.
+	const listRowData = useMemo<ListRowData>(() => ({items, width, hasMore}), [items, width, hasMore])
+	const gridCellData = useMemo<GridItemData>(
+		() => ({items, columnCount, itemHeight, itemWidth, hasMore}),
+		[items, columnCount, itemHeight, itemWidth, hasMore],
 	)
 
 	/**
@@ -416,7 +538,6 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	const gridToListIndices = useCallback(
 		(gridIndices: GridVisibleIndices): IndexRange => {
 			const {visibleRowStartIndex, visibleRowStopIndex, visibleColumnStartIndex, visibleColumnStopIndex} = gridIndices
-			const columnCount = getGridDimensions(window.innerWidth).columnCount
 
 			return {
 				visibleStartIndex: visibleRowStartIndex * columnCount + visibleColumnStartIndex,
@@ -425,7 +546,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 				overscanStopIndex: Math.min(itemCount - 1, (visibleRowStopIndex + GRID_OVERSCAN_AMOUNT + 1) * columnCount - 1),
 			}
 		},
-		[getGridDimensions, itemCount],
+		[columnCount, itemCount],
 	)
 
 	if (isLoading) return null
@@ -446,18 +567,21 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 			{({onItemsRendered, ref}: InfiniteLoaderRenderProps) => (
 				<FixedSizeList
 					ref={ref as React.Ref<FixedSizeList>}
-					className='umbrel-files-virtual-scroller'
+					// A finger scrolls it up and down and the browser leaves a sideways
+					// swipe alone, which in selection mode selects (see useSwipeSelect)
+					className='umbrel-files-virtual-scroller touch-pan-y touch-pinch-zoom'
 					height={height}
-					width={width + getGridScrollerPadding(isMobile)} // Push scrollbar into parent padding (px-3 mobile / px-6 desktop)
+					width={width + scrollerPadding} // Push scrollbar into the margin beside the rows
 					innerElementType={InnerElementWithEndSpacer}
 					itemCount={itemCount}
-					itemSize={getListRowHeight(isMobile, largerText)}
-					itemData={width} // Pass the actual width for fixed row width
+					itemSize={rowHeight}
+					itemData={listRowData}
+					itemKey={listRowKey}
 					onItemsRendered={onItemsRendered}
-					outerRef={scrollAreaRef} // For marquee selection
+					outerRef={scrollAreaRef} // The scroller: the marquee, the keyboard and the touch selection all work on it
 					overscanCount={LIST_OVERSCAN_AMOUNT}
 				>
-					{renderListRow}
+					{ListRow}
 				</FixedSizeList>
 			)}
 		</InfiniteLoader>
@@ -466,8 +590,6 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	// ======== GRID VIEW ========
 	let gridContent: React.ReactNode = null
 	if (view !== 'list' && hasDimensions) {
-		const dimensions = getGridDimensions(width)
-		const {columnCount, columnWidth, rowHeight} = dimensions
 		// Calculate the exact number of rows needed
 		const itemsRowCount = Math.ceil(items.length / columnCount)
 		const rowCount = hasMore ? itemsRowCount + 1 : itemsRowCount
@@ -484,23 +606,26 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 				{({onItemsRendered, ref}: InfiniteLoaderRenderProps) => (
 					<FixedSizeGrid
 						ref={ref as React.Ref<FixedSizeGrid>}
-						className='umbrel-files-virtual-scroller'
+						className='umbrel-files-virtual-scroller touch-pan-y touch-pinch-zoom'
 						height={height}
-						width={width + getGridScrollerPadding(isMobile)}
+						width={width + scrollerPadding}
 						innerElementType={InnerElementWithEndSpacer}
 						rowCount={rowCount}
 						columnCount={columnCount}
-						rowHeight={rowHeight}
-						columnWidth={columnWidth}
+						rowHeight={itemHeight + GRID_GAP}
+						// Narrower than the tiles are apart (they are placed by hand), so
+						// the columns never add up to more than the grid and scroll sideways
+						columnWidth={itemWidth}
 						overscanRowCount={GRID_OVERSCAN_AMOUNT}
-						itemData={{...dimensions, items}} // Grid cells need both dimensions and items
-						outerRef={scrollAreaRef} // For marquee selection
+						itemData={gridCellData}
+						itemKey={gridCellKey}
+						outerRef={scrollAreaRef}
 						onItemsRendered={(gridIndices: GridVisibleIndices) => {
 							// Convert grid coordinates to flat list indices for InfiniteLoader
 							onItemsRendered(gridToListIndices(gridIndices))
 						}}
 					>
-						{renderGridCell}
+						{GridCell}
 					</FixedSizeGrid>
 				)}
 			</InfiniteLoader>
@@ -519,16 +644,27 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	return (
 		<div
 			ref={containerRef}
-			className={`umbrel-files-fade-scroller h-full w-full overflow-hidden px-3 lg:px-6 ${isScrolled ? 'scrolled' : ''}`}
+			className={cn(
+				'umbrel-files-fade-scroller relative h-full w-full overflow-hidden',
+				// The padding is the margin the scrollbar sits in. In Files it is taken
+				// out of the sheet's own padding, so the rows keep the bar's width.
+				isEmbedded ? 'embedded px-3 lg:px-6' : 'lg:-mr-4 lg:w-[calc(100%+1rem)] lg:pr-4',
+				isScrolled && 'scrolled',
+			)}
+			{...marquee.handlers}
+			onPointerDown={onMarqueePointerDown}
 		>
+			{/* The marquee's box, laid over the listing (useMarquee shows and sizes it).
+			    Out here it is clear of the fade the rows wear. */}
+			<div ref={marquee.boxRef} aria-hidden className={marqueeBoxClass} />
 			{/* Containment wrapper: the FixedSizeList is rendered wider than the content area
-			    (width + 24) to push its scrollbar into parent padding. Without this wrapper,
-			    the oversized list would be in normal flow and expand the container, creating
-			    a measurement feedback loop. The absolute positioning takes it out of flow,
+			    to push its scrollbar into the margin. Without this wrapper, the oversized
+			    list would be in normal flow and expand the container, creating a
+			    measurement feedback loop. The absolute positioning takes it out of flow,
 			    matching what AutoSizer's internal wrapper did. */}
 			<div className='relative h-full w-full'>
 				<div className='absolute inset-0 overflow-visible'>
-					<FileItemProvider>
+					<FileItemProvider gridItemWidth={itemWidth}>
 						{listContent}
 						{gridContent}
 					</FileItemProvider>

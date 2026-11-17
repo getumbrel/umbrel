@@ -10,6 +10,9 @@ import {USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
 import type {FileSystemItem} from '@/features/files/types'
 import {trpcReact} from '@/trpc/trpc'
 
+// The most results a search brings back. One that reaches it has likely left some out.
+export const SEARCH_MAX_RESULTS = USE_LIST_DIRECTORY_LOAD_ITEMS.INITIAL
+
 export interface UseSearchFilesReturn {
 	results: FileSystemItem[]
 	isLoading: boolean
@@ -21,7 +24,7 @@ export interface UseSearchFilesReturn {
 
 export function useSearchFiles({
 	query,
-	maxResults = USE_LIST_DIRECTORY_LOAD_ITEMS.INITIAL,
+	maxResults = SEARCH_MAX_RESULTS,
 	keepPreviousResults = false,
 	staleTime,
 }: {

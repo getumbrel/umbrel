@@ -465,7 +465,19 @@ function Pages({
 				    doesn't open for the hint alone: the pages scroll out from under it. */}
 				{isEditing && !find.open && !short && <EditHint ref={hintRef} />}
 
-				<div ref={setArea} className='group/area relative min-h-0 flex-1'>
+				{/* While a notice is up (anything with role=status in here), the area says how much room it
+				    takes, for the pages below to keep. Said on the area itself and handed down as a variable:
+				    a rule of the "any descendant of an area that has a notice" kind (Tailwind's group-has-*)
+				    has Chrome restyle the whole page whenever an element is added or removed anywhere in
+				    umbrelOS, viewer open or not. */}
+				<div
+					ref={setArea}
+					className={cn(
+						'relative min-h-0 flex-1',
+						!short &&
+							'has-[[role=status]]:[--notice-room:calc(5rem_+_4_*_var(--text-boost))] has-[[role=status]]:[--stage-transition:opacity]',
+					)}
+				>
 					<div
 						ref={scrollerRef}
 						tabIndex={-1}
@@ -475,14 +487,12 @@ function Pages({
 					>
 						{/* The engine's pages, centred inside the gutters a fit leaves (a page wider than that starts at
 						    the left one). While the notice is up the first page starts below it, rather than under it:
-						    there from the start, and easing back up once the notice is dismissed. The room kept grows with
-						    the text, as the notice's lines do. */}
+						    there from the start (the padding only eases when there is no notice), and easing back up
+						    once the notice is dismissed. The room kept grows with the text, as the notice's lines do. */}
 						<div
 							ref={hostRef}
 							className={cn(
-								'px-4 pt-4 pb-14 transition-[opacity,padding] duration-300 ease-out motion-reduce:!transition-none @3xl:px-6 @3xl:pt-6',
-								!short &&
-									'group-has-[[role=status]]/area:!pt-[calc(5rem+4*var(--text-boost))] group-has-[[role=status]]/area:transition-opacity',
+								'px-4 pt-[var(--notice-room,1rem)] pb-14 [transition-property:var(--stage-transition,opacity,padding)] duration-300 ease-out motion-reduce:!transition-none @3xl:px-6 @3xl:pt-[var(--notice-room,1.5rem)]',
 								!painted && 'opacity-0',
 							)}
 						/>

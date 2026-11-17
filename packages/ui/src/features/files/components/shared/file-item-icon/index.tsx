@@ -46,7 +46,7 @@ import {MachineFolderMetadata} from '@/features/files/hooks/use-machine-folder'
 import {useNetworkDeviceType} from '@/features/files/hooks/use-network-device-type'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {useOnDemandThumbnail} from '@/features/files/hooks/use-on-demand-thumbnail'
-import {useShares} from '@/features/files/hooks/use-shares'
+import {useIsPathShared} from '@/features/files/hooks/use-shares'
 import type {FileSystemItem} from '@/features/files/types'
 import {CLOUD_SELF_TILE_BRANDS, cloudAccountBrand} from '@/features/files/utils/cloud'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
@@ -68,6 +68,13 @@ interface FileItemIconProps {
 	// Overlay badges (share, cloud, app folder) have minimum sizes tuned for
 	// listing icons; compact contexts like breadcrumbs turn them off
 	showBadges?: boolean
+	// How a picture's or a film's own thumbnail sits in the icon's box. 'box'
+	// (the default) stretches the image element over the whole box. 'hug' keeps
+	// it to the picture's own shape inside the box, so its rounded corners and
+	// its edge are the picture's, as a print laid on the row.
+	thumbnailFit?: 'box' | 'hug'
+	// A box of its own for a thumbnail that hugs, where it may be wider than an icon
+	thumbnailClassName?: string
 }
 
 export const FileItemIcon = (props: FileItemIconProps) => {
@@ -87,10 +94,11 @@ const FileItemIconContent = ({
 	useAnimatedIcon = false,
 	isHovered = false,
 	showBadges = true,
+	thumbnailFit = 'box',
+	thumbnailClassName,
 }: FileItemIconProps) => {
 	const {t} = useTranslation()
-	const {isPathShared} = useShares()
-	const isShared = showBadges && isPathShared(item.path)
+	const isShared = useIsPathShared(item.path, {enabled: showBadges})
 	const cloudProvider = useCloudBadge(item.path)
 	// Flavor branding only matters for the handful of icons that carry a badge
 	const {data: badgeAccounts} = useCloudAccounts({enabled: Boolean(cloudProvider)})
@@ -252,12 +260,28 @@ const FileItemIconContent = ({
 	)
 	// Image file
 	if (!isAppleDouble && extension && IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
-		return <ImageThumbnail item={item} fallback={fallback} className={className} />
+		return (
+			<ImageThumbnail
+				item={item}
+				fallback={fallback}
+				className={className}
+				fit={thumbnailFit}
+				boxClassName={thumbnailClassName}
+			/>
+		)
 	}
 
 	// Video file
 	if (!isAppleDouble && extension && VIDEO_EXTENSIONS_WITH_IMAGE_THUMBNAILS.has(extension.toLowerCase())) {
-		return <VideoThumbnail item={item} fallback={fallback} className={className} />
+		return (
+			<VideoThumbnail
+				item={item}
+				fallback={fallback}
+				className={className}
+				fit={thumbnailFit}
+				boxClassName={thumbnailClassName}
+			/>
+		)
 	}
 
 	// Unknown file
@@ -356,28 +380,22 @@ const AppFolderBottomIcon = ({appId}: {appId: string}) => {
 // A file's own thumbnail, asked of the backend when the listing didn't carry
 // it (see useOnDemandThumbnail). The URL is authorized through the provider
 // above — Files, ⌘K — or one of its own where there is none.
-const Thumbnail = (props: {
+type ThumbnailProps = {
 	item: FileSystemItem
 	fallback: React.ReactNode
 	className?: string
 	overlay?: React.ReactNode
-}) => (
+	fit?: 'box' | 'hug'
+	boxClassName?: string
+}
+
+const Thumbnail = (props: ThumbnailProps) => (
 	<EnsureHttpUrlAuthorizer>
 		<AuthorizedThumbnail {...props} />
 	</EnsureHttpUrlAuthorizer>
 )
 
-const AuthorizedThumbnail = ({
-	item,
-	fallback,
-	className,
-	overlay,
-}: {
-	item: FileSystemItem
-	fallback: React.ReactNode
-	className?: string
-	overlay?: React.ReactNode
-}) => {
+const AuthorizedThumbnail = ({item, fallback, className, overlay, fit = 'box', boxClassName}: ThumbnailProps) => {
 	const authorizedThumbnailUrl = useSharedAuthorizedHttpUrl(useOnDemandThumbnail(item))
 
 	// Track if the image failed to load so we can gracefully fall back to the
@@ -389,16 +407,36 @@ const AuthorizedThumbnail = ({
 		setHadError(false)
 	}, [authorizedThumbnailUrl, item.path])
 
-	const imageNode =
-		authorizedThumbnailUrl && !hadError ? (
-			<img
-				src={authorizedThumbnailUrl}
-				alt={item.name}
-				decoding='async'
-				onError={() => setHadError(true)}
-				className={`rounded-xs object-contain ${className || ''}`}
-			/>
-		) : null
+	const hasImage = Boolean(authorizedThumbnailUrl) && !hadError
+
+	// The picture at its own shape, as large as the box allows: the corners,
+	// the hairline and the shadow are the picture's own, not a square's around it
+	if (fit === 'hug') {
+		if (!hasImage) return fallback
+		return (
+			<span className={`relative flex items-center justify-center ${boxClassName ?? className ?? ''}`}>
+				<img
+					src={authorizedThumbnailUrl}
+					alt={item.name}
+					decoding='async'
+					draggable={false}
+					onError={() => setHadError(true)}
+					className='max-h-full max-w-full rounded-[var(--thumbnail-radius,3px)] shadow-[0_0_0_0.5px_rgb(255_255_255/0.16),0_1px_3px_rgb(0_0_0/0.35)]'
+				/>
+				{overlay}
+			</span>
+		)
+	}
+
+	const imageNode = hasImage ? (
+		<img
+			src={authorizedThumbnailUrl}
+			alt={item.name}
+			decoding='async'
+			onError={() => setHadError(true)}
+			className={`rounded-xs object-contain ${className || ''}`}
+		/>
+	) : null
 
 	const content = imageNode ?? fallback
 
@@ -416,27 +454,15 @@ const AuthorizedThumbnail = ({
 }
 
 // Image thumbnail
-const ImageThumbnail = (props: {item: FileSystemItem; fallback: React.ReactNode; className?: string}) => (
-	<Thumbnail {...props} />
-)
+const ImageThumbnail = (props: ThumbnailProps) => <Thumbnail {...props} />
 
 // Video thumbnail
-const VideoThumbnail = ({
-	item,
-	fallback,
-	className,
-}: {
-	item: FileSystemItem
-	fallback: React.ReactNode
-	className?: string
-}) => (
+const VideoThumbnail = (props: ThumbnailProps) => (
 	<Thumbnail
-		item={item}
-		fallback={fallback}
-		className={className}
+		{...props}
 		overlay={
 			<div className='absolute top-1/2 left-1/2 flex h-full w-full -translate-x-1/2 -translate-y-1/2 items-center justify-center'>
-				<IoPlay className='h-1/3 w-1/3 text-white shadow-md' />
+				<IoPlay className='h-1/3 w-1/3 text-white drop-shadow-[0_1px_2px_rgb(0_0_0/0.5)]' />
 			</div>
 		}
 	/>

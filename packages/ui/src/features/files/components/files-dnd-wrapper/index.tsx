@@ -14,9 +14,19 @@ import {useDragAndDrop} from '@/features/files/hooks/use-drag-and-drop'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 
 // The ghost trails the pointer like a badge, so the drop target is whatever is
-// under the pointer itself
-const collisionDetection: CollisionDetection = (args) =>
-	args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args)
+// under the pointer itself. Under it to the eye, that is: the listing runs on
+// beneath the dock, and a folder hidden there (or under an island, or a
+// window opened over Files) must not catch what is let go above it. A target
+// only counts while it is the thing the pointer is actually on.
+const collisionDetection: CollisionDetection = (args) => {
+	const pointer = args.pointerCoordinates
+	if (!pointer) return rectIntersection(args)
+	const top = document.elementFromPoint(pointer.x, pointer.y)
+	return pointerWithin(args).filter(({id}) => {
+		const node = args.droppableContainers.find((container) => container.id === id)?.node.current
+		return !node || !top || node.contains(top)
+	})
+}
 
 export function FilesDndWrapper({children}: {children: React.ReactNode}) {
 	const isReadOnly = useIsFilesReadOnly()

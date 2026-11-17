@@ -5,7 +5,9 @@ import {useLocation, useNavigate} from 'react-router-dom'
 
 import {ChevronLeftIcon} from '@/features/files/assets/chevron-left'
 import {ChevronRightIcon} from '@/features/files/assets/chevron-right'
+import {usePathSegments} from '@/features/files/components/listing/actions-bar/path-bar/use-path-segments'
 import {BASE_ROUTE_PATH, SEARCH_PATH} from '@/features/files/constants'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
 import {setLastFilesPath} from '@/features/files/utils/last-files-path'
@@ -24,7 +26,11 @@ export function NavigationControls() {
 	const navigate = useNavigate()
 	const {uiPath, navigateToDirectory} = useFilesNavigate()
 	const isEmbedded = useIsFilesEmbedded()
+	const isTouchDevice = useIsTouchDevice()
 	const userId = trpcReact.user.get.useQuery().data?.userId
+	// The folder above this one, when there is one to go up to
+	const segments = usePathSegments()
+	const parentPath = segments.length > 1 ? segments[segments.length - 2].path : undefined
 
 	// Track visited paths and current position
 	const [navigation, setNavigation] = useState({
@@ -112,30 +118,51 @@ export function NavigationControls() {
 	// can go forward if there is a next path
 	const canGoForward = Boolean(navigation.paths[navigation.currentPathIndex + 1])
 
+	// A finger has no history to walk: on a touch screen the one control goes
+	// up to the folder that holds this one, as far as the root of wherever Files
+	// is. It is there however the folder was reached (a link from Recents, a
+	// favorite, a reload), which a Back that only retraces steps never was.
+	if (isTouchDevice && !isEmbedded) {
+		if (!parentPath) return null
+		return (
+			<motion.button
+				onClick={() => navigateToDirectory(parentPath)}
+				// Level with the folder's name, which it stands before, not with the
+				// middle of the name and the line under it
+				className={cn(touchTargetClass, '-ml-1 shrink-0 -translate-y-[7px] rounded-full p-0.5', focusRingClass)}
+				whileTap={{scale: 0.85}}
+				aria-label={t('files-path.up')}
+			>
+				<ChevronLeftIcon className='size-6' />
+			</motion.button>
+		)
+	}
+
 	return (
-		// Spaced 44px apart on touch, so their touch targets meet without overlapping
-		<div className='flex items-center gap-2 pointer-coarse:gap-6'>
+		// Level with the path, which they stand before, not with the middle of
+		// the path and the line under it
+		<div className='flex shrink-0 -translate-y-[7px] items-center gap-1.5'>
 			<motion.button
 				onClick={handleBack}
 				disabled={!canGoBack}
-				className={cn(touchTargetClass, 'rounded-full p-0 hover:bg-transparent', focusRingClass, {
-					'opacity-50': !canGoBack,
+				className={cn('rounded-full p-0.5 transition-opacity hover:bg-white/8', focusRingClass, {
+					'opacity-35 hover:bg-transparent': !canGoBack,
 				})}
 				whileTap={{scale: 0.85}}
 				aria-label={t('back')}
 			>
-				<ChevronLeftIcon className='h-5 w-5' />
+				<ChevronLeftIcon className='size-5' />
 			</motion.button>
 			<motion.button
 				onClick={handleForward}
 				disabled={!canGoForward}
-				className={cn(touchTargetClass, 'rounded-full p-0 hover:bg-transparent', focusRingClass, {
-					'opacity-50': !canGoForward,
+				className={cn('rounded-full p-0.5 transition-opacity hover:bg-white/8', focusRingClass, {
+					'opacity-35 hover:bg-transparent': !canGoForward,
 				})}
 				whileTap={{scale: 0.85}}
 				aria-label={t('forward')}
 			>
-				<ChevronRightIcon className='h-5 w-5' />
+				<ChevronRightIcon className='size-5' />
 			</motion.button>
 		</div>
 	)

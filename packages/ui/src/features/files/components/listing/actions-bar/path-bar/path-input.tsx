@@ -37,32 +37,27 @@ export function PathInput({path, onClose}: PathInputProps) {
 	}
 
 	return (
+		// As tall as the title it stands in for, so nothing under it moves
 		<div
-			className={cn(
-				'border-[0.5px] bg-white/6',
-				'flex h-8 items-center rounded-full border-[hsl(var(--color-brand))] p-3 py-1',
-			)}
+			className='flex h-[1lh] items-center rounded-6 bg-white/8 px-1.5 text-17 leading-tight ring-1 ring-brand'
 			role='group'
 			aria-label={t('files-path.input-group')}
 		>
-			<div className='flex flex-1 items-center'>
-				<Input
-					ref={inputRef}
-					value={inputValue}
-					onChange={(e) => setInputValue(e.target.value)}
-					onKeyDown={handleKeyDown}
-					onBlur={onClose}
-					className={cn(
-						'h-8 bg-transparent text-xs text-white',
-						'border-none p-0 [outline:none]',
-						'focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0',
-						'[&:active]:bg-transparent [&:focus]:bg-transparent [&:hover]:bg-transparent',
-						'w-full',
-					)}
-					spellCheck={false}
-					aria-label={t('files-path.input-label')}
-				/>
-			</div>
+			<Input
+				ref={inputRef}
+				value={inputValue}
+				onChange={(e) => setInputValue(e.target.value)}
+				onKeyDown={handleKeyDown}
+				onBlur={onClose}
+				className={cn(
+					'h-full w-full bg-transparent text-13 text-white',
+					'border-none p-0 [outline:none]',
+					'focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0',
+					'[&:active]:bg-transparent [&:focus]:bg-transparent [&:hover]:bg-transparent',
+				)}
+				spellCheck={false}
+				aria-label={t('files-path.input-label')}
+			/>
 		</div>
 	)
 }

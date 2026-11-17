@@ -6,6 +6,7 @@ import {monthStartUtc, type MonthKey} from '@/features/photos/components/listing
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {listKey, tailFilter, type ItemFilter, type ItemsPage} from '@/features/photos/hooks/use-items'
 import {trpcReact} from '@/trpc/trpc'
+import {MS_PER_MINUTE} from '@/utils/date-time'
 
 // Jumping past the loading frontier. Keyset pagination can only walk
 // forward, so reaching a month nothing has loaded yet by paging is a run of
@@ -30,8 +31,14 @@ import {trpcReact} from '@/trpc/trpc'
 // While those pages land in a list that is itself on screen, the grid's own
 // load-ahead must stand down (it gates on `busy`): both would chain a fetch
 // from the same tail cursor, and the same page would splice in twice.
+//
+// The same paging, run to the end of the list, is how everything in a view
+// is selected (`loadAll`): the list is then all there, and so are its ids.
 
 const SEEK_LIMIT = 1000
+// A tail left in the cache by an earlier jump is good to land on again for
+// this long: nothing refreshes one that isn't on screen
+const TAIL_FRESH_MS = MS_PER_MINUTE
 // However deep the tail, stop somewhere: 500 pages is half a million items
 const SEEK_MAX_PAGES = 500
 // An in-flight page the grid's load-ahead already started must land before
@@ -51,9 +58,15 @@ export type Seek = {
 	busy: boolean
 	// The month a jump is waiting on — what the rail's pill names; null at rest
 	target: MonthKey | null
-	start: (key: MonthKey, arrive: (arrival: Arrival) => void) => void
+	// `before`: the moment the stretch runs back from, when it is not the end
+	// of the month — for landing on one photograph rather than on its month
+	start: (key: MonthKey, arrive: (arrival: Arrival) => void, options?: {before?: number}) => void
 	// Never mind the jump being waited on
 	cancel: () => void
+	// Pages the list from the top to its end, and resolves with the id of
+	// everything in it — or with null if it could not be had whole (a page
+	// failed, or the listing was left meanwhile)
+	loadAll: () => Promise<string[] | null>
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -121,7 +134,7 @@ export function useSeek({
 	const [tailed, setTailed] = useState(false)
 	const state = useRef({
 		// The jump being waited on
-		pending: null as {key: MonthKey; cancelled: boolean; arrive: (arrival: Arrival) => void} | null,
+		pending: null as {key: MonthKey; before: number; cancelled: boolean; arrive: (arrival: Arrival) => void} | null,
 		// Where the tail on screen runs back from
 		tail: null as number | null,
 		// The paging under way, and whether the list is being brought to a tail
@@ -179,9 +192,18 @@ export function useSeek({
 			const run = async () => {
 				const {input} = lists
 				const infiniteKey = getQueryKey(trpcReact.photos.items.list, input, 'infinite')
-				for (let waited = 0; queryClient.isFetching({queryKey: infiniteKey}) > 0 && waited < FETCH_WAIT_MAX; waited++) {
-					await sleep(FETCH_WAIT_MS)
+				// A fetch of the list itself under way (bounded): the grid's own next
+				// page, or a refresh of the list in place after a change somewhere
+				const settled = async () => {
+					for (
+						let waited = 0;
+						queryClient.isFetching({queryKey: infiniteKey}) > 0 && waited < FETCH_WAIT_MAX;
+						waited++
+					) {
+						await sleep(FETCH_WAIT_MS)
+					}
 				}
+				await settled()
 				for (let page = 0; page < SEEK_MAX_PAGES && !current.disposed; page++) {
 					await turn?.()
 					const data = lists.whole()
@@ -189,6 +211,13 @@ export function useSeek({
 					const cursor = data.pages[data.pages.length - 1]!.nextCursor
 					if (cursor === undefined) return
 					const fetched = await utils.client.photos.items.list.query({filter, cursor, limit: SEEK_LIMIT})
+					// … and one that went out while this page was on its way lands
+					// first: its answer is the list as it asked for it, without this
+					// page, and arriving after the splice it would take the page (and
+					// every one spliced since) back out. On a slow link a change
+					// event's refresh did exactly that to a Select all, which ended
+					// with the first page selected and nothing to say so.
+					await settled()
 					utils.photos.items.list.setInfiniteData(input, (latest) => {
 						// Splice only onto the tail this page was fetched from —
 						// if anything moved it (it shouldn't, the grid is gated),
@@ -243,15 +272,16 @@ export function useSeek({
 	}, [lists, pageDown, open, scrollerRef, idle])
 
 	const start = useCallback(
-		(key: MonthKey, arrive: (arrival: Arrival) => void) => {
+		(key: MonthKey, arrive: (arrival: Arrival) => void, options?: {before?: number}) => {
 			const current = state.current
+			const before = options?.before ?? monthStartUtc(key + 1)
 			// Already on its way (a scrub that rested on the month, then let go there)
-			if (current.pending?.key === key) {
+			if (current.pending?.key === key && current.pending.before === before) {
 				current.pending.arrive = arrive
 				return
 			}
 			cancel()
-			const pending = {key, cancelled: false, arrive}
+			const pending = {key, before, cancelled: false, arrive}
 			current.pending = pending
 			setTarget(key)
 			const settle = (arrival?: Arrival) => {
@@ -264,14 +294,25 @@ export function useSeek({
 
 			// The list from the top already holds the month (the jump came from a
 			// tail further down), or holds everything there is
-			const before = monthStartUtc(key + 1)
 			const pages = lists.whole()?.pages ?? []
 			const oldest = oldestLoaded(pages)
 			if ((oldest && oldest.takenAt < before) || pages[pages.length - 1]?.nextCursor === undefined) {
 				return settle(showWhole())
 			}
 
-			const held = lists.tail(before)
+			// A tail from this moment that is already here is landed on as it is —
+			// the one on screen, or one an earlier jump left that is still fresh.
+			// An older one is let go and asked for again: lists are never
+			// refetched behind Photos' back (see use-items.ts), so nothing else
+			// would bring it up to date.
+			const tailKey = getQueryKey(trpcReact.photos.items.list, lists.tailInput(before), 'infinite')
+			const cached = queryClient.getQueryCache().find({queryKey: tailKey, exact: true})
+			const usable =
+				cached?.state.data !== undefined &&
+				(cached.getObserversCount() > 0 ||
+					(!cached.state.isInvalidated && Date.now() - cached.state.dataUpdatedAt < TAIL_FRESH_MS))
+			if (cached && !usable) queryClient.removeQueries({queryKey: tailKey, exact: true})
+			const held = usable ? lists.tail(before) : undefined
 			const ready = held
 				? Promise.resolve(held)
 				: utils.photos.items.list.fetchInfinite(lists.tailInput(before), {initialCursor: undefined})
@@ -296,8 +337,19 @@ export function useSeek({
 				() => settle(),
 			)
 		},
-		[lists, utils, cancel, open, join, pageDown],
+		[lists, utils, queryClient, cancel, open, join, pageDown],
 	)
 
-	return useMemo(() => ({busy: paging && !tailed, target, start, cancel}), [paging, tailed, target, start, cancel])
+	const loadAll = useCallback(async () => {
+		await pageDown(() => false)
+		const pages = lists.whole()?.pages
+		if (state.current.disposed || !pages || pages.length === 0) return null
+		if (pages[pages.length - 1]!.nextCursor !== undefined) return null
+		return pages.flatMap((page) => page.items.map((item) => item.id))
+	}, [pageDown, lists])
+
+	return useMemo(
+		() => ({busy: paging && !tailed, target, start, cancel, loadAll}),
+		[paging, tailed, target, start, cancel, loadAll],
+	)
 }
