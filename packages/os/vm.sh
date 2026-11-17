@@ -131,7 +131,11 @@ Commands:
     sas move <from> <to>           Move a SAS device from one slot to another
 
     usb list                       List all USB storage devices and their status
-    usb add <slot> [--size SIZE]   Add a USB storage device to slot (1-${MAX_USB_STORAGE_SLOTS})
+    usb add <slot> [--size SIZE] [--removable]
+                                   Add a USB storage device to slot (1-${MAX_USB_STORAGE_SLOTS}). With --removable it
+                                   reports removable media, as a USB flash drive does. Without it the
+                                   OS can't tell it from a built-in disk: QEMU has no way to say a USB
+                                   port is external, which real computers do through ACPI.
     usb destroy <slot>             Destroy USB storage device (deletes data)
     usb connect <slot>             Connect an existing USB storage device to the running VM
     usb disconnect <slot>          Disconnect USB storage from the running VM without deleting data
@@ -749,6 +753,7 @@ hdd_move() {
 usb_add() {
   local slot="$1"
   local size="$2"
+  local removable="${3:-false}"
 
   validate_slot "$slot" "$MAX_USB_STORAGE_SLOTS"
   init_state
@@ -775,8 +780,8 @@ usb_add() {
   qemu-img create -f qcow2 "$disk_path" "$size" >/dev/null
   local tmp
   tmp=$(mktemp)
-  jq --arg size "$size" --arg serial "$serial" \
-    ".\"$slot\" = {\"size\": \$size, \"serial\": \$serial, \"connected\": true, \"exists\": true}" \
+  jq --arg size "$size" --arg serial "$serial" --argjson removable "$removable" \
+    ".\"$slot\" = {\"size\": \$size, \"serial\": \$serial, \"removable\": \$removable, \"connected\": true, \"exists\": true}" \
     "$USB_STATE_FILE" > "$tmp" && mv "$tmp" "$USB_STATE_FILE"
   echo "Done. USB storage created in slot $slot (serial: $serial)"
 }
@@ -888,6 +893,11 @@ set_usb_connected() {
 # USB state predates the connected flag, so missing means connected. Preserve
 # an explicit false value instead of using jq's // operator, which treats false
 # as absent.
+get_usb_removable() {
+  local slot="$1"
+  jq -r ".\"$slot\".removable | if type == \"boolean\" then . else false end" "$USB_STATE_FILE"
+}
+
 get_usb_connected() {
   local slot="$1"
   jq -r ".\"$slot\".connected | if type == \"boolean\" then . else true end" "$USB_STATE_FILE"
@@ -957,12 +967,14 @@ usb_connect() {
     fi
     command=$(jq -cn \
       --arg id "$device_id" --arg drive "usb${slot}" --arg serial "$serial" --arg bus "$bus" --arg port "$port" \
-      '{execute:"device_add",arguments:{driver:"usb-storage",id:$id,drive:$drive,serial:$serial,bus:$bus,port:$port}}')
+      --argjson removable "$(get_usb_removable "$slot")" \
+      '{execute:"device_add",arguments:{driver:"usb-storage",id:$id,drive:$drive,serial:$serial,bus:$bus,port:$port,removable:$removable}}')
   else
     bus="usb_storage_xhci.0"
     command=$(jq -cn \
       --arg id "$device_id" --arg drive "usb${slot}" --arg serial "$serial" --arg bus "$bus" \
-      '{execute:"device_add",arguments:{driver:"usb-storage",id:$id,drive:$drive,serial:$serial,bus:$bus}}')
+      --argjson removable "$(get_usb_removable "$slot")" \
+      '{execute:"device_add",arguments:{driver:"usb-storage",id:$id,drive:$drive,serial:$serial,bus:$bus,removable:$removable}}')
   fi
   qmp_execute "$command"
   set_usb_connected "$slot" true
@@ -1413,7 +1425,11 @@ build_usb_args() {
       usb_args="$usb_args -blockdev driver=file,node-name=usb${slot}-file,filename=${disk_path},cache.direct=on,cache.no-flush=off,aio=threads"
       usb_args="$usb_args -blockdev driver=qcow2,node-name=usb${slot},file=usb${slot}-file,discard=unmap"
       if [[ "$connected" == "true" ]]; then
-        usb_args="$usb_args -device usb-storage${bus_arg},id=usb-storage${slot},drive=usb${slot},serial=${serial}"
+        local removable_arg=""
+        if [[ "$(get_usb_removable "$slot")" == "true" ]]; then
+          removable_arg=",removable=on"
+        fi
+        usb_args="$usb_args -device usb-storage${bus_arg},id=usb-storage${slot},drive=usb${slot},serial=${serial}${removable_arg}"
       fi
     fi
   done
@@ -2157,11 +2173,16 @@ case "$command" in
         slot="$1"
         shift
         size="$DEFAULT_USB_STORAGE_SIZE"
+        removable=false
         while [[ $# -gt 0 ]]; do
           case "$1" in
             --size)
               size="$2"
               shift 2
+              ;;
+            --removable)
+              removable=true
+              shift
               ;;
             *)
               echo "Error: Unknown option: $1" >&2
@@ -2169,7 +2190,7 @@ case "$command" in
               ;;
           esac
         done
-        usb_add "$slot" "$size"
+        usb_add "$slot" "$size" "$removable"
         ;;
       destroy)
         if [[ $# -lt 1 ]]; then

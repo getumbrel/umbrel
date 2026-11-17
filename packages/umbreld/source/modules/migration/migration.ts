@@ -165,9 +165,13 @@ export async function runPreMigrationChecks(
 		externalVersion = version
 	}
 
-	// Don't allow migrating in data more recent than the current install
-	const validVersionRange =
-		externalVersion !== 'unknown' && semver.gte(umbreld.version, semver.coerce(externalVersion)!)
+	// Don't allow migrating in data more recent than the current install. A
+	// version is compared as it is written when it is a complete one, so that a
+	// pre-release counts as the pre-release it is: data from 2.1.0-beta.1 is not
+	// more recent than a 2.1.0-beta.1 install, which it would be if the data's
+	// version were rounded up to 2.1.0.
+	const comparableVersion = semver.valid(externalVersion) ?? semver.coerce(externalVersion)
+	const validVersionRange = comparableVersion !== null && semver.gte(umbreld.version, comparableVersion)
 	if (!validVersionRange) {
 		throw new Error(`Cannot migrate umbrelOS ${externalVersion} data into an umbrelOS ${umbreld.version} install.`)
 	}

@@ -726,12 +726,14 @@ export async function createTestVm({
 		await $({env})`${vmScript} ${bus} destroy ${slot}`
 	}
 
-	async function addUsbStorage({slot, size}: {slot: number; size?: string}) {
-		if (size) {
-			await $({env})`${vmScript} usb add ${slot} --size ${size}`
-		} else {
-			await $({env})`${vmScript} usb add ${slot}`
-		}
+	// A USB drive. QEMU can't mark a USB port as external the way a real
+	// computer's firmware does, so the OS sees the drive as one it can't tell
+	// from a built-in disk. `removable` makes it report removable media instead,
+	// as a USB flash drive does, for code that looks for a drive plugged in from
+	// outside.
+	async function addUsbStorage({slot, size, removable}: {slot: number; size?: string; removable?: boolean}) {
+		const options = [...(size ? ['--size', size] : []), ...(removable ? ['--removable'] : [])]
+		await $({env})`${vmScript} usb add ${slot} ${options}`
 	}
 
 	async function removeUsbStorage({slot}: {slot: number}) {
