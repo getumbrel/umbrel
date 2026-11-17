@@ -218,6 +218,50 @@ describe.sequential('Network storage', () => {
 		)
 	})
 
+	test('discovers shares on a server named by its .local address', async () => {
+		// Servers found on the network are listed by their .local address, which
+		// only the mDNS responder can resolve. The device answers to its own.
+		const hostname = (await umbreld.vm.ssh('hostname')).trim()
+		const sharePassword = await umbreld.client.files.sharePassword.query()
+
+		await pRetry(
+			async () => {
+				const shares = await umbreld.client.files.discoverNetworkSharesOnServer.query({
+					host: `${hostname}.local`,
+					username: 'umbrel',
+					password: sharePassword,
+				})
+
+				expect(shares).toEqual(expect.arrayContaining([`${primaryShareName} (Umbrel)`]))
+			},
+			{retries: 20, factor: 1, minTimeout: 1000, maxTimeout: 1000},
+		)
+	})
+
+	test('discovers the servers announcing shares on the network', async () => {
+		// Another server, announced through the device's own mDNS responder as
+		// one on the network would be heard
+		const announce = (unit: string, arguments_: string) =>
+			umbreld.vm.sshAsRoot(`systemd-run --quiet --unit ${unit} avahi-publish ${arguments_}`)
+		await announce('vm-test-announced-address', '--address --no-reverse vm-test-server.local 192.0.2.10')
+		await announce('vm-test-announced-shares', "--service --host=vm-test-server.local 'VM test server' _smb._tcp 445")
+		const hostname = (await umbreld.vm.ssh('hostname')).trim()
+
+		try {
+			await pRetry(
+				async () => {
+					const servers = await umbreld.client.files.discoverNetworkShareServers.query()
+					expect(servers).toContain('vm-test-server.local')
+					// Not the device itself, which announces its own shares
+					expect(servers).not.toContain(`${hostname}.local`)
+				},
+				{retries: 20, factor: 1, minTimeout: 1000, maxTimeout: 1000},
+			)
+		} finally {
+			await umbreld.vm.sshAsRoot('systemctl stop vm-test-announced-shares vm-test-announced-address')
+		}
+	})
+
 	test('detects whether a network address is an Umbrel device', async () => {
 		await expect(umbreld.client.files.isServerAnUmbrelDevice.query({address: 'localhost'})).resolves.toBe(true)
 		await expect(umbreld.client.files.isServerAnUmbrelDevice.query({address: 'localhost:9'})).resolves.toBe(false)
