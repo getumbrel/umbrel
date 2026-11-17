@@ -78,7 +78,7 @@ exit 0
 		async stubCommand(name: string, script: string) {
 			await fse.outputFile(path.join(binDirectory, name), `#!/usr/bin/env bash\n${script}\n`, {mode: 0o755})
 		},
-		async run(command: 'pre-patch-update' | 'logs' = 'pre-patch-update', boundedLogs = false) {
+		async run(command: 'pre-patch-update' | 'post-patch-update' | 'logs' = 'pre-patch-update', boundedLogs = false) {
 			const args =
 				command === 'logs'
 					? [command, appId, ...(boundedLogs ? ['1024'] : [])]
@@ -282,6 +282,31 @@ exec '${realCopy}' "$@"`,
 		expect(result.exitCode, result.stderr).toBe(37)
 		expect(result.signal).toBeUndefined()
 		expect(result.stderr).toBe('')
+		await fixture.expectNoTemporaryFiles()
+	})
+})
+
+describe('post-update hook', () => {
+	test('runs with the app and dependency env', async () => {
+		const fixture = await createFixture()
+		const envPath = path.join(fixture.root, 'post-update-env')
+		await fse.outputFile(
+			path.join(fixture.appDirectory, 'hooks', 'post-update'),
+			`#!/usr/bin/env bash
+printf '%s\\n' \\
+  "APP_ID=\${APP_ID:-}" \\
+  "APP_TEST_VALUE=\${APP_TEST_VALUE:-}" \\
+  "APP_BITCOIN_RPC_PORT=\${APP_BITCOIN_RPC_PORT:-}" > '${envPath}'
+`,
+			{mode: 0o755},
+		)
+
+		const result = await fixture.run('post-patch-update')
+
+		expect(result.exitCode, result.stderr).toBe(0)
+		expect(await fse.readFile(envPath, 'utf8')).toBe(
+			`APP_ID=test-app\nAPP_TEST_VALUE=original\nAPP_BITCOIN_RPC_PORT=8332\n`,
+		)
 		await fixture.expectNoTemporaryFiles()
 	})
 })

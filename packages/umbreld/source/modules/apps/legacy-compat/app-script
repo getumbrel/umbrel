@@ -908,6 +908,10 @@ if [[ "$command" = "post-patch-update" ]]; then
   # umbreld pulls and starts the app between the split update phases. Keeping
   # startup in TypeScript lets normal starts and fresh-data initialization use
   # the same recovery path.
+  #
+  # post-update hooks expect the app env, e.g. ${APP_ID}.
+  source_app "${app}"
+
   execute_hook "${app}" "post-update"
 
   exit
