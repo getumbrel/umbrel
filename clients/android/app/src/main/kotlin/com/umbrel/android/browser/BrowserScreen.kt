@@ -167,6 +167,13 @@ internal fun UmbrelOSLayer(page: BrowserPage, isShown: Boolean, modifier: Modifi
 		showsProgress = true
 	}
 
+	// An umbrelOS that keeps clear of the top safe area runs under the header, so its dims,
+	// blurs and backgrounds reach the top of the screen; the header is its top safe area.
+	// Otherwise it begins beneath the header.
+	val context = LocalContext.current
+	val underHeader = page.keepsClearOfTop && remember { reportsSafeArea(context) }
+	val density = LocalDensity.current
+	val headerBottom = with(density) { WindowInsets.statusBars.getTop(this) + BrowserBarHeight.roundToPx() }
 	Column(
 		modifier
 			.fillMaxSize()
@@ -180,9 +187,11 @@ internal fun UmbrelOSLayer(page: BrowserPage, isShown: Boolean, modifier: Modifi
 				scaleY = scale
 			},
 	) {
-		// The app's header stays put above; umbrelOS begins beneath it.
-		Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-		Spacer(Modifier.height(BrowserBarHeight))
+		if (!underHeader) {
+			// The app's header stays put above; umbrelOS begins beneath it.
+			Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+			Spacer(Modifier.height(BrowserBarHeight))
+		}
 		Box(Modifier.fillMaxWidth().weight(1f).navigationBarsPadding().imePadding()) {
 			BrowserWebView(
 				page.webView,
@@ -190,19 +199,21 @@ internal fun UmbrelOSLayer(page: BrowserPage, isShown: Boolean, modifier: Modifi
 					.fillMaxSize()
 					.graphicsLayer {
 						alpha = ready
-						// The page's top and bottom edges are feathered so umbrelOS's dimming and
-						// sheets fade out there instead of ending in a line.
+						// The page's edges are feathered so umbrelOS's dimming and sheets fade out
+						// there instead of ending in a line. Under the header it reaches the top
+						// of the screen, so only the bottom is.
 						compositingStrategy = CompositingStrategy.Offscreen
 					}
 					.drawWithContent {
 						drawContent()
-						val top = 14.dp.toPx() / size.height
+						val top = if (underHeader) 0f else 14.dp.toPx() / size.height
 						val bottom = 1f - 10.dp.toPx() / size.height
 						drawRect(
 							Brush.verticalGradient(0f to Color.Transparent, top to Color.Black, bottom to Color.Black, 1f to Color.Transparent),
 							blendMode = BlendMode.DstIn,
 						)
 					},
+				insets = WebViewInsets(top = if (underHeader) headerBottom else 0),
 			)
 			val failure = page.failure
 			if (failure != null) {

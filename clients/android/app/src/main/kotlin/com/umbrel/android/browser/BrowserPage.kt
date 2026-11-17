@@ -138,6 +138,13 @@ internal class BrowserPage(
 	/** Whether the page has drawn something worth showing instead of the launch screen. */
 	var isRevealed by mutableStateOf(false)
 		private set
+
+	/**
+	 * umbrelOS keeps clear of the top safe area itself (it says so with a meta tag), so it can
+	 * run under the header with the header's height as its top safe area.
+	 */
+	var keepsClearOfTop by mutableStateOf(false)
+		private set
 	var failure by mutableStateOf<Failure?>(null)
 		private set
 	var barColor by mutableStateOf<Color?>(null)
@@ -613,6 +620,27 @@ internal class BrowserPage(
 		if (passwordEntry != null) installPasswordEntry(view)
 		installScreenInsets(view)
 		installPageDownloads(view)
+		if (isSeeThrough) installSafeAreaReport(view)
+	}
+
+	/**
+	 * umbrelOS says whether it keeps clear of the top safe area as soon as its head is parsed,
+	 * like the iOS app reads it, so the layout is settled before umbrelOS first draws.
+	 */
+	private fun installSafeAreaReport(view: WebView) {
+		val origins = context.hosts.map { "https://${BrowserContext.bracketed(it)}" }.toSet()
+		// Without both, umbrelOS keeps starting beneath the header, as before.
+		if (origins.isEmpty() ||
+			!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) ||
+			!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+		) {
+			return
+		}
+		WebViewCompat.addWebMessageListener(view, SAFE_AREA_CHANNEL, origins) { _, message, sourceOrigin, isMainFrame, _ ->
+			if (!isMainFrame || !context.isDashboard(sourceOrigin)) return@addWebMessageListener
+			keepsClearOfTop = message.data == "top"
+		}
+		WebViewCompat.addDocumentStartJavaScript(view, SAFE_AREA_SCRIPT, origins)
 	}
 
 	private fun installPasswordEntry(view: WebView) {
@@ -964,6 +992,21 @@ internal class BrowserPage(
 	}
 
 	companion object {
+		private const val SAFE_AREA_CHANNEL = "umbrelSafeArea"
+
+		private val SAFE_AREA_SCRIPT = """
+			(() => {
+				if (window.top !== window) return
+				const observer = new MutationObserver(() => {
+					if (!document.body) return
+					observer.disconnect()
+					const safeArea = document.querySelector('meta[name=umbrel-safe-area]')?.content ?? ''
+					$SAFE_AREA_CHANNEL.postMessage(safeArea.split(/[ ,]+/).includes('top') ? 'top' : 'none')
+				})
+				observer.observe(document, {childList: true, subtree: true})
+			})()
+		""".trimIndent()
+
 		private val LocalSchemes = setOf("file", "content", "javascript")
 		private const val SETTLE_MILLIS = 300L
 
