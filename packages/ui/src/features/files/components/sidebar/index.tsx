@@ -48,7 +48,6 @@ export function Sidebar({className}: {className?: string}) {
 	const homeShares = sharedWithMe?.shares.filter((share) => share.base === 'home') ?? []
 	const hasExternalStorage = sharedWithMe?.shares.some((share) => share.path === '/External') ?? false
 	const hasNetworkStorage = sharedWithMe?.shares.some((share) => share.path === '/Network') ?? false
-	const hasSharedApps = sharedWithMe?.shares.some((share) => share.base === 'apps') ?? false
 	const sharedWithMeLabel = sharedWithMe?.ownerName
 		? t('files-sidebar.owners-umbrel', {name: firstNameFromFullName(sharedWithMe.ownerName)})
 		: ''
@@ -79,7 +78,7 @@ export function Sidebar({className}: {className?: string}) {
 				<SidebarSection>
 					<SidebarHome />
 					{!isMember && <SidebarRecents />}
-					{(!isMember || hasSharedApps) && <SidebarApps />}
+					{!isMember && <SidebarApps />}
 					{showMachines && <SidebarMachines />}
 				</SidebarSection>
 

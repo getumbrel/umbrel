@@ -4,16 +4,20 @@ import type Umbreld from '../../index.ts'
 import {OWNER_USER_ID} from '../user/constants.ts'
 import type {FileChangeEvent} from './watcher.ts'
 import AsyncBurstCache from '../utilities/async-burst-cache.ts'
-import AppDirectoryMonitor from './app-directory-monitor.ts'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 
 // A path the owner has shared with member accounts. Paths are always in the
-// owner namespace (/Home, /Apps, /External, /Network) and access covers the
-// entire subtree below them. `sharedWith` is either the literal 'all', which also
+// owner namespace (/Home, /External, /Network) and access covers the entire
+// subtree below them. `sharedWith` is either the literal 'all', which also
 // covers members created in the future, or an explicit list of member ids.
 // Shares grant read-write access subject to the usual system rules such as
 // protected and read-only paths.
+//
+// Nothing under /Apps can be shared. An app's folder holds the scripts and
+// compose file that run as root when the app starts, so write access to it is
+// root on the device. Members only ever get an app through the app proxy.
+// Sharing can come back once an app's definition no longer lives in its folder.
 export type MemberShare = {
 	path: string
 	sharedWith: 'all' | string[]
@@ -23,7 +27,6 @@ export default class MemberShares {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	#removeFileChangeListener?: () => void
-	#appDirectories: AppDirectoryMonitor
 	#watcherShares: AsyncBurstCache<MemberShare[]>
 
 	constructor(umbreld: Umbreld) {
@@ -31,19 +34,12 @@ export default class MemberShares {
 		this.#watcherShares = new AsyncBurstCache(() => this.list(), WATCHER_SNAPSHOT_TTL_MS)
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
-		this.#appDirectories = new AppDirectoryMonitor({
-			listPaths: async () => (await this.list()).map(({path}) => path),
-			systemPath: (path) => umbreld.files.virtualToSystemPathUnsafe(path),
-			onDelete: (path) => this.removeWithin(path),
-			logger: this.logger,
-		})
 	}
 
 	// Remove shares when the shared directory is deleted, trashed or renamed so
 	// a directory recreated at the same path later isn't silently re-shared.
-	// Apps use targeted directory identity checks. External and network
-	// paths aren't watched, so UI-initiated deletes handle their share removal in
-	// files.ts (mirrors the samba module).
+	// External and network paths aren't watched, so UI-initiated deletes handle
+	// their share removal in files.ts (mirrors the samba module).
 	async #handleFileChanges(events: readonly FileChangeEvent[]) {
 		const deletions = events.filter((event) => event.type === 'delete')
 		if (deletions.length === 0) return
@@ -77,25 +73,17 @@ export default class MemberShares {
 
 		// The watcher can miss deletions (while umbreld is stopped, or during a
 		// watcher outage), leaving stale records that would silently re-grant
-		// access to a directory recreated at the same path. Sweep Home and Apps
-		// paths on startup. External and Network shares legitimately point at
-		// nothing while the device is detached, like samba shares they stay and
+		// access to a directory recreated at the same path. Sweep Home paths on
+		// startup. External and Network shares legitimately point at nothing
+		// while the device is detached, like samba shares they stay and
 		// UI-initiated deletes clean them up in files.ts.
 		await this.#removeStaleShares().catch((error) => this.logger.error('Failed to remove stale shares', error))
-		await this.#appDirectories.start()
 	}
 
 	async #removeStaleShares() {
 		const shares = await this.list()
 		for (const share of shares) {
-			if (
-				share.path !== '/Home' &&
-				!share.path.startsWith('/Home/') &&
-				share.path !== '/Apps' &&
-				!share.path.startsWith('/Apps/')
-			) {
-				continue
-			}
+			if (share.path !== '/Home' && !share.path.startsWith('/Home/')) continue
 			const exists = await this.#umbreld.files
 				.virtualToSystemPath(share.path, OWNER_USER_ID)
 				.then((systemPath) => fse.pathExists(systemPath))
@@ -110,7 +98,6 @@ export default class MemberShares {
 	// Remove listener
 	async stop() {
 		this.#removeFileChangeListener?.()
-		await this.#appDirectories.stop()
 	}
 
 	// Notify listeners (e.g. member UIs and Cloud destination guards) which
@@ -201,22 +188,19 @@ export default class MemberShares {
 	async add(virtualPath: string, sharedWith: 'all' | string[]): Promise<MemberShare> {
 		const path = this.#umbreld.files.normalizeVirtualPath(virtualPath)
 
-		// Only paths in the owner's namespace can be shared: their home, app data
-		// (at least a specific app, not the /Apps root), or the complete external
-		// or network storage category. Category-wide storage grants deliberately
-		// cover current and future devices; individual devices and directories
-		// below them are not independently shareable.
+		// Only paths in the owner's namespace can be shared: their home, or the
+		// complete external or network storage category. Category-wide storage
+		// grants deliberately cover current and future devices; individual devices
+		// and directories below them are not independently shareable.
 		const segments = path.split('/').filter(Boolean)
 		const base = segments[0]
 		if (base === 'Home') {
 			// '/Home' itself or anything below it is fine
-		} else if (base === 'Apps') {
-			if (segments.length < 2) throw new Error('[invalid-base] Share an app or a directory inside it')
 		} else if (base === 'External' || base === 'Network') {
 			if (segments.length !== 1) throw new Error('[invalid-base] Share all storage in this category')
 			if (sharedWith === 'all') throw new Error('[invalid-users] Storage access must target specific users')
 		} else {
-			throw new Error('[invalid-base] Only Home, Apps, External and Network paths can be shared')
+			throw new Error('[invalid-base] Only Home, External and Network paths can be shared')
 		}
 
 		// The path must exist and be a directory. Resolved as the owner so the
@@ -249,8 +233,6 @@ export default class MemberShares {
 		})
 		this.invalidateCache()
 		await this.#emitChange(previousSharedWith, sharedWith)
-		this.#appDirectories.forget(path)
-		await this.#appDirectories.refresh()
 
 		this.logger.log(`Shared '${path}' with ${sharedWith === 'all' ? 'all users' : sharedWith.join(', ')}`)
 		return share

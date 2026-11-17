@@ -177,8 +177,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 			// Share a directory with member accounts (owner only, memberShares is
 			// undefined for members so the item never renders for them)
-			const isShareableWithUsersPath =
-				item.path === '/Home' || item.path.startsWith('/Home/') || item.path.startsWith('/Apps/')
+			const isShareableWithUsersPath = item.path === '/Home' || item.path.startsWith('/Home/')
 			const canShareWithUsers =
 				hasOneSelectedItem &&
 				hasMembers &&

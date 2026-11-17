@@ -130,33 +130,13 @@ test('member file shares still resolve from persisted file share records', async
 	])
 })
 
-test('explicit app data file shares can target an app directory or subdirectory', async () => {
+test('app folders cannot be shared with members', async () => {
 	const {cleanup, fileShares, memberShares, virtualToSystemPath} = await createMemberSharesWithFilesystem()
 	try {
-		await expect(memberShares.add('/Apps/sparkles-hello-world', 'all')).resolves.toStrictEqual({
-			path: '/Apps/sparkles-hello-world',
-			sharedWith: 'all',
-		})
-		await expect(memberShares.add('/Apps/sparkles-hello-world/subdir/', ['member-1'])).resolves.toStrictEqual({
-			path: '/Apps/sparkles-hello-world/subdir',
-			sharedWith: ['member-1'],
-		})
-
-		expect(fileShares()).toStrictEqual([
-			{path: '/Apps/sparkles-hello-world', sharedWith: 'all'},
-			{path: '/Apps/sparkles-hello-world/subdir', sharedWith: ['member-1']},
-		])
-		expect(virtualToSystemPath).toHaveBeenCalledWith('/Apps/sparkles-hello-world', '0')
-		expect(virtualToSystemPath).toHaveBeenCalledWith('/Apps/sparkles-hello-world/subdir', '0')
-	} finally {
-		await cleanup()
-	}
-})
-
-test('explicit app data file shares reject the /Apps root', async () => {
-	const {cleanup, memberShares, virtualToSystemPath} = await createMemberSharesWithFilesystem()
-	try {
-		await expect(memberShares.add('/Apps', 'all')).rejects.toThrow('invalid-base')
+		for (const path of ['/Apps', '/Apps/sparkles-hello-world', '/Apps/sparkles-hello-world/subdir']) {
+			await expect(memberShares.add(path, ['member-1'])).rejects.toThrow('invalid-base')
+		}
+		expect(fileShares()).toStrictEqual([])
 		expect(virtualToSystemPath).not.toHaveBeenCalled()
 	} finally {
 		await cleanup()

@@ -1345,47 +1345,28 @@ rm -rf '${home}/Photos/holiday-private'
 		await expect(umbreld.client.apps.list.query()).resolves.toStrictEqual([])
 		await expect(umbreld.client.files.list.query({path: '/Apps/sparkles-hello-world'})).rejects.toThrow('forbidden')
 
-		// The owner can explicitly share app data as a separate file share, which
-		// does not grant app UI/proxy access
+		// The owner can't share an app's folder, or anything inside it, as a file
+		// share either: members only ever get an app through the app proxy
 		await loginAs(ownerToken)
 		await umbreld.client.files.createDirectory.mutate({path: '/Apps/sparkles-hello-world/explicit-subpath'})
-		await expect(
-			umbreld.client.files.addMemberShare.mutate({path: '/Apps/sparkles-hello-world', sharedWith: 'all'}),
-		).resolves.toMatchObject({path: '/Apps/sparkles-hello-world'})
-		await loginAs(memberToken)
-		await expect(umbreld.client.apps.list.query()).resolves.toStrictEqual([])
-		await expect(umbreld.client.files.sharedWithMe.query()).resolves.toMatchObject({
-			shares: [{path: '/Apps/sparkles-hello-world', name: 'sparkles-hello-world', base: 'apps'}],
-		})
-		const explicitlySharedApps = await umbreld.client.files.list.query({path: '/Apps'})
-		expect(explicitlySharedApps.files.map((file) => file.name)).toStrictEqual(['sparkles-hello-world'])
-		await expect(umbreld.client.files.list.query({path: '/Apps/sparkles-hello-world'})).resolves.toBeDefined()
-
-		// Subpaths under an app data directory can also be shared directly
-		await loginAs(ownerToken)
-		await expect(umbreld.client.files.removeMemberShare.mutate({path: '/Apps/sparkles-hello-world'})).resolves.toBe(
-			true,
+		for (const path of ['/Apps/sparkles-hello-world', '/Apps/sparkles-hello-world/explicit-subpath']) {
+			await expect(umbreld.client.files.addMemberShare.mutate({path, sharedWith: 'all'})).rejects.toThrow(
+				'invalid-base',
+			)
+			await expect(umbreld.client.files.addMemberShare.mutate({path, sharedWith: [memberUserId]})).rejects.toThrow(
+				'invalid-base',
+			)
+		}
+		await expect(umbreld.client.files.memberShares.query()).resolves.not.toContainEqual(
+			expect.objectContaining({path: expect.stringMatching(/^\/Apps/)}),
 		)
-		await expect(
-			umbreld.client.files.addMemberShare.mutate({
-				path: '/Apps/sparkles-hello-world/explicit-subpath',
-				sharedWith: 'all',
-			}),
-		).resolves.toMatchObject({path: '/Apps/sparkles-hello-world/explicit-subpath'})
 		await loginAs(memberToken)
-		const appDataAncestor = await umbreld.client.files.list.query({path: '/Apps/sparkles-hello-world'})
-		expect(appDataAncestor.files.map((file) => file.name)).toStrictEqual(['explicit-subpath'])
+		await expect(umbreld.client.files.sharedWithMe.query()).resolves.toMatchObject({shares: []})
+		await expect(umbreld.client.files.list.query({path: '/Apps'})).rejects.toThrow('forbidden')
+		await expect(umbreld.client.files.list.query({path: '/Apps/sparkles-hello-world'})).rejects.toThrow('forbidden')
 		await expect(
 			umbreld.client.files.list.query({path: '/Apps/sparkles-hello-world/explicit-subpath'}),
-		).resolves.toBeDefined()
-
-		// Clean up the explicit file share before testing app share wildcards
-		await loginAs(ownerToken)
-		await expect(
-			umbreld.client.files.removeMemberShare.mutate({path: '/Apps/sparkles-hello-world/explicit-subpath'}),
-		).resolves.toBe(true)
-		await loginAs(memberToken)
-		await expect(umbreld.client.files.list.query({path: '/Apps'})).rejects.toThrow('forbidden')
+		).rejects.toThrow('forbidden')
 
 		// Sharing all apps ('*') covers every installed app
 		await loginAs(ownerToken)
@@ -1583,8 +1564,8 @@ rm -rf '${home}/Photos/holiday-private'
 
 	test('sharing validates the path and users', async () => {
 		await loginAs(ownerToken)
-		// App data must target a specific app. Storage can only be shared as a
-		// complete category, never as an individual device or directory.
+		// App data can never be shared. Storage can only be shared as a complete
+		// category, never as an individual device or directory.
 		await expect(umbreld.client.files.addMemberShare.mutate({path: '/Apps', sharedWith: 'all'})).rejects.toThrow(
 			'invalid-base',
 		)
@@ -1604,9 +1585,6 @@ rm -rf '${home}/Photos/holiday-private'
 		// Shareable paths must exist
 		await expect(
 			umbreld.client.files.addMemberShare.mutate({path: '/Home/does-not-exist', sharedWith: 'all'}),
-		).rejects.toThrow('does-not-exist')
-		await expect(
-			umbreld.client.files.addMemberShare.mutate({path: '/Apps/does-not-exist', sharedWith: 'all'}),
 		).rejects.toThrow('does-not-exist')
 		await expect(
 			umbreld.client.files.addMemberShare.mutate({path: '/Home/Photos', sharedWith: ['not-a-user']}),

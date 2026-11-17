@@ -39,10 +39,6 @@ async function referenceFixture(path = '/Apps/example/shared') {
 		'files.shares',
 		paths.map((path, index) => ({name: `Share${index}`, path, userId: '0'})),
 	)
-	await umbreld.store.set(
-		'files.memberShares',
-		paths.map((path) => ({path, sharedWith: 'all' as const})),
-	)
 	const applyShares = vi.spyOn(files.samba, 'applyShares').mockResolvedValue(undefined as never)
 	vi.spyOn(files, 'getAllowedOperations').mockResolvedValue([
 		'writable',
@@ -58,7 +54,6 @@ async function referenceFixture(path = '/Apps/example/shared') {
 	const expectReferences = async (remaining: string[]) => {
 		expect(await umbreld.user.getAccountFavorites('0')).toEqual(remaining)
 		expect((await umbreld.store.get('files.shares'))?.map(({path}) => path)).toEqual(remaining)
-		expect((await files.memberShares.list()).map(({path}) => path)).toEqual(remaining)
 	}
 	return {files, path, paths, applyShares, expectReferences, systemPath: files.virtualToSystemPathUnsafe(path)}
 }
@@ -139,7 +134,7 @@ test('app removal clears root and descendant references without removing similar
 	await expectReferences(paths.slice(2))
 })
 
-test('cleans up app favorites, Samba shares and member grants once every 24 hours', async () => {
+test('cleans up app favorites and Samba shares once every 24 hours', async () => {
 	const temporary = temporaryDirectory()
 	const umbreld = new Umbreld({dataDirectory: await temporary.create(), logLevel: 'silent'})
 	const path = '/Apps/example/shared'
@@ -148,13 +143,11 @@ test('cleans up app favorites, Samba shares and member grants once every 24 hour
 	await umbreld.store.set('user', {name: 'Owner', hashedPassword: 'unused'})
 	await umbreld.user.updateAccountFavorites('0', () => [path])
 	await umbreld.store.set('files.shares', [{name: 'Shared', path, userId: '0'}])
-	await umbreld.store.set('files.memberShares', [{path, sharedWith: 'all'}])
 	vi.spyOn(umbreld.files.samba, 'applyCredentials').mockResolvedValue(undefined)
 	const applyShares = vi.spyOn(umbreld.files.samba, 'applyShares').mockResolvedValue(undefined as never)
 	try {
 		vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
 		await umbreld.files.favorites.start()
-		await umbreld.files.memberShares.start()
 		await umbreld.files.samba.start()
 
 		// Replace the directory between polls, with no time when the poll can
@@ -164,20 +157,17 @@ test('cleans up app favorites, Samba shares and member grants once every 24 hour
 		await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000 - 1)
 		expect(await umbreld.user.getAccountFavorites('0')).toEqual([path])
 		expect(await umbreld.store.get('files.shares')).toHaveLength(1)
-		expect(await umbreld.files.memberShares.list()).toHaveLength(1)
 		expect(applyShares).toHaveBeenCalledOnce()
 		await vi.advanceTimersByTimeAsync(1)
 		// Samba reapplies shares only after its store write completes.
 		await vi.waitFor(async () => {
 			expect(await umbreld.user.getAccountFavorites('0')).toEqual([])
 			expect(await umbreld.store.get('files.shares')).toEqual([])
-			expect(await umbreld.files.memberShares.list()).toEqual([])
 			expect(applyShares).toHaveBeenCalledTimes(2)
 		})
 		await expect(fse.pathExists(systemPath)).resolves.toBe(true)
 	} finally {
 		await umbreld.files.favorites.stop()
-		await umbreld.files.memberShares.stop()
 		await umbreld.files.samba.stop()
 		await umbreld.auth.stop()
 		await temporary.destroyRoot()

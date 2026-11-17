@@ -81,6 +81,25 @@ test('legacy downloads directory is migrated', async () => {
 	await expect(fse.pathExists(newDownloadsFile)).resolves.toBe(true)
 })
 
+test('app folders shared with members before 2.1 stop being shared', async () => {
+	const {dataDirectory, store} = umbreld.instance
+
+	// Shares from a version that allowed sharing an app's folder with members
+	await fse.ensureDir(`${dataDirectory}/home/Shared`)
+	await fse.ensureDir(`${dataDirectory}/app-data/bitcoin/data`)
+	await store.set('files.memberShares', [
+		{path: '/Apps/bitcoin', sharedWith: 'all'},
+		{path: '/Home/Shared', sharedWith: 'all'},
+		{path: '/Apps/bitcoin/data', sharedWith: ['alice']},
+	])
+
+	// Start umbreld
+	await umbreld.instance.start()
+
+	// Only the share outside /Apps is left
+	await expect(store.get('files.memberShares')).resolves.toStrictEqual([{path: '/Home/Shared', sharedWith: 'all'}])
+})
+
 test('Back That Mac Up app port is migrated from 445 to 1445', async () => {
 	const {dataDirectory} = umbreld.instance
 	const appComposeFile = `${dataDirectory}/app-data/back-that-mac-up/docker-compose.yml`

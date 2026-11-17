@@ -192,6 +192,15 @@ class Migration {
 		this.logger.log('Downloads directory migrated')
 	}
 
+	// Before 2.1 the owner could share an app's folder under /Apps with members,
+	// which let them change the scripts that run as root when the app starts.
+	// Stop any of those shares before anything can serve a request with them.
+	async removeAppFolderMemberShares() {
+		if (await this.umbreld.files.memberShares.removeWithin('/Apps')) {
+			this.logger.log('Stopped sharing app folders with members')
+		}
+	}
+
 	async start() {
 		this.logger.log('Checking if any migrations are needed...')
 
@@ -240,6 +249,13 @@ class Migration {
 			await this.migrateDownloadsDirectory()
 		} catch (error) {
 			this.logger.error(`Failed to migrate Downloads directory`, error)
+		}
+
+		// Stop sharing app folders with members
+		try {
+			await this.removeAppFolderMemberShares()
+		} catch (error) {
+			this.logger.error(`Failed to stop sharing app folders with members`, error)
 		}
 
 		// Write the current version to signal what version we've migrated up to.

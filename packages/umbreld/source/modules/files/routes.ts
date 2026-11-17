@@ -366,18 +366,11 @@ export default router({
 			...(owner?.avatarHash ? {ownerAvatarUrl: accountAvatarUrl(OWNER_USER_ID, owner.avatarHash)} : {}),
 			shares: shares.map((share) => {
 				const segments = share.path.split('/').filter(Boolean)
-				const base =
-					segments[0] === 'External'
-						? 'external'
-						: segments[0] === 'Network'
-							? 'network'
-							: segments[0] === 'Apps'
-								? 'apps'
-								: 'home'
+				const base = segments[0] === 'External' ? 'external' : segments[0] === 'Network' ? 'network' : 'home'
 				return {
 					path: share.path,
 					name: share.path === '/Home' ? 'Home' : segments[segments.length - 1],
-					base: base as 'home' | 'external' | 'network' | 'apps',
+					base: base as 'home' | 'external' | 'network',
 				}
 			}),
 		}
