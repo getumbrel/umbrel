@@ -1,4 +1,4 @@
-import {initTRPC} from '@trpc/server'
+import {initTRPC, TRPCError} from '@trpc/server'
 import {ZodError} from 'zod'
 
 import {type Context} from './context.ts'
@@ -9,6 +9,7 @@ import {
 	isOwner,
 } from './is-authenticated.ts'
 import {websocketLogger} from './websocket-logger.ts'
+import {TooManyAttemptsError} from '../../utilities/attempt-limiter.ts'
 
 export const t = initTRPC.context<Context>().create({
 	// TODO: Add more context on why this is needed
@@ -25,7 +26,16 @@ export const t = initTRPC.context<Context>().create({
 	},
 })
 export const router = t.router
-const baseProcedure = t.procedure.use(websocketLogger)
+// Any procedure that checks a password or 2FA code can run into the limit on
+// wrong guesses. Report it as a rate limit rather than an internal error.
+const reportTooManyAttempts = t.middleware(async ({next}) => {
+	const result = await next()
+	if (!result.ok && result.error.cause instanceof TooManyAttemptsError) {
+		throw new TRPCError({code: 'TOO_MANY_REQUESTS', message: result.error.cause.message})
+	}
+	return result
+})
+const baseProcedure = t.procedure.use(websocketLogger).use(reportTooManyAttempts)
 export const publicProcedure = baseProcedure
 export const accountProcedure = baseProcedure.use(isAuthenticated)
 export const ownerProcedure = baseProcedure.use(isOwner)

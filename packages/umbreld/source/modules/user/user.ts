@@ -5,6 +5,7 @@ import {$} from 'execa'
 import type Umbreld from '../../index.ts'
 import type {ViewPreferences} from '../files/files.ts'
 
+import AttemptLimiter from '../utilities/attempt-limiter.ts'
 import * as totp from '../utilities/totp.ts'
 import {removeAccountAvatarDirectory} from './avatar.ts'
 import {OWNER_USER_ID} from './constants.ts'
@@ -61,6 +62,11 @@ export default class User {
 	#store: Umbreld['store']
 	logger: Umbreld['logger']
 	#umbreld: Umbreld
+	// Every check of an account's password or 2FA code counts against whoever
+	// made it: the client address for a login, or the session for a logged in
+	// account. Counting per account and client means wrong guesses only block
+	// that account for clients at the same address or on the same session.
+	#credentialAttempts = new AttemptLimiter()
 	constructor(umbreld: Umbreld) {
 		this.#store = umbreld.store
 		const {name} = this.constructor
@@ -193,17 +199,6 @@ export default class User {
 		// Drives the tips on the homescreen until the user dismisses
 		await this.#umbreld.notifications.add('onboarding-complete')
 		return this.setPassword(password)
-	}
-
-	// Validate a password against the stored hash
-	async validatePassword(password: string) {
-		// Get hashed password
-		const hashedPassword = await this.#store.get('user.hashedPassword')
-
-		// Validate credentials
-		const validPassword = hashedPassword && (await bcrypt.compare(password, hashedPassword))
-
-		return validPassword
 	}
 
 	// Check if 2FA is enabled
@@ -430,8 +425,9 @@ export default class User {
 		this.logger.log(`Deleted user ${userId}`)
 	}
 
-	// Validate a password against any account's stored hash
-	async validateAccountPassword(userId: string, password: string): Promise<boolean> {
+	// Validate a password against any account's stored hash. Throws
+	// TooManyAttemptsError when the client has made too many wrong guesses.
+	async validateAccountPassword(userId: string, password: string, client: string): Promise<boolean> {
 		let hashedPassword: string | undefined
 		if (userId === OWNER_USER_ID) {
 			hashedPassword = await this.#store.get('user.hashedPassword')
@@ -439,25 +435,44 @@ export default class User {
 			const member = await this.getMember(userId)
 			hashedPassword = member?.hashedPassword
 		}
-		return Boolean(hashedPassword && (await bcrypt.compare(password, hashedPassword)))
+		if (!hashedPassword) return false
+
+		const attempt = this.#credentialAttempts.start(`${userId} ${client}`)
+		const valid = await bcrypt.compare(password, hashedPassword)
+		if (valid) attempt.succeeded()
+		return valid
 	}
 
 	// Validate one coherent password/MFA snapshot and bind the result to the
 	// current session-issuance revision. Auth rechecks that revision immediately
 	// before committing the session, so a concurrent credential change cannot
-	// turn a stale verification into a new login.
-	async validateAccountLogin(userId: string, password: string, totpToken?: string): Promise<AccountLoginValidation> {
+	// turn a stale verification into a new login. Throws TooManyAttemptsError
+	// when the client has made too many wrong guesses.
+	async validateAccountLogin(
+		userId: string,
+		password: string,
+		totpToken: string | undefined,
+		client: string,
+	): Promise<AccountLoginValidation> {
 		const sessionIssuanceRevision = this.#umbreld.auth.sessionIssuanceRevision(userId)
 		const account = userId === OWNER_USER_ID ? await this.get() : await this.getMember(userId)
+		if (!account?.hashedPassword) return {valid: false, reason: 'incorrect-password'}
 
-		if (!account?.hashedPassword || !(await bcrypt.compare(password, account.hashedPassword))) {
+		const attempt = this.#credentialAttempts.start(`${userId} ${client}`)
+		if (!(await bcrypt.compare(password, account.hashedPassword))) {
 			return {valid: false, reason: 'incorrect-password'}
 		}
 		if (account.totpUri) {
-			if (!totpToken) return {valid: false, reason: 'missing-totp'}
+			if (!totpToken) {
+				// Login screens send the password alone first to find out whether a
+				// code is needed, which isn't a guess at either.
+				attempt.withdraw()
+				return {valid: false, reason: 'missing-totp'}
+			}
 			if (!totp.verify(account.totpUri, totpToken)) return {valid: false, reason: 'incorrect-totp'}
 		}
 
+		attempt.succeeded()
 		return {valid: true, sessionIssuanceRevision}
 	}
 
@@ -757,10 +772,16 @@ export default class User {
 		return Boolean(await this.#getAccountTotpUri(userId))
 	}
 
-	// Validate a 2FA token against any account's stored secret
-	async validate2faTokenForAccount(userId: string, token: string) {
+	// Validate a 2FA token against any account's stored secret. Throws
+	// TooManyAttemptsError when the client has made too many wrong guesses.
+	async validate2faTokenForAccount(userId: string, token: string, client: string) {
 		const totpUri = await this.#getAccountTotpUri(userId)
-		return Boolean(totpUri && totp.verify(totpUri, token))
+		if (!totpUri) return false
+
+		const attempt = this.#credentialAttempts.start(`${userId} ${client}`)
+		const valid = totp.verify(totpUri, token)
+		if (valid) attempt.succeeded()
+		return valid
 	}
 
 	// Enable 2FA for any account

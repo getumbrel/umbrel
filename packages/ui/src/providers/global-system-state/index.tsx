@@ -66,10 +66,11 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	}
 
 	// Intercept factory reset errors so the triggering component can handle them.
-	// Password errors (UNAUTHORIZED) are shown in the form field.
+	// Password errors (UNAUTHORIZED, or TOO_MANY_REQUESTS after too many wrong
+	// passwords) are shown in the form field.
 	// System errors (e.g., factory reset failed) are shown as toasts.
 	const onResetError = (error: RouterError) => {
-		if (error?.data?.code === 'UNAUTHORIZED') {
+		if (error?.data?.code === 'UNAUTHORIZED' || error?.data?.code === 'TOO_MANY_REQUESTS') {
 			setRouterError(error)
 		} else {
 			toast.error(t('factory-reset-failed', {message: error.message}), {area: 'umbrelos'})

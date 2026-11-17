@@ -15,6 +15,7 @@ import {
 } from '../auth/browser-session-cookie.ts'
 import {nativeClientSchema} from '../auth/native-client.ts'
 import * as totp from '../utilities/totp.ts'
+import clientAddress from '../server/client-address.ts'
 import type {Context} from '../server/trpc/context.ts'
 import {privateProcedure, privateProcedureWithMembers, publicProcedure, router} from '../server/trpc/trpc.ts'
 import {accountAvatarUrl, serializeAccountAvatar} from './avatar-api.ts'
@@ -114,7 +115,12 @@ export default router({
 			if (!ctx.request || !ctx.response) {
 				throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})
 			}
-			const validation = await ctx.user.validateAccountLogin(input.userId, input.password, input.totpToken)
+			const validation = await ctx.user.validateAccountLogin(
+				input.userId,
+				input.password,
+				input.totpToken,
+				clientAddress(ctx.request),
+			)
 			if (!validation.valid) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: loginErrorMessage(validation.reason)})
 			}
@@ -149,7 +155,12 @@ export default router({
 			if (!ctx.request || !ctx.response) {
 				throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})
 			}
-			const validation = await ctx.user.validateAccountLogin(input.userId, input.password, input.totpToken)
+			const validation = await ctx.user.validateAccountLogin(
+				input.userId,
+				input.password,
+				input.totpToken,
+				clientAddress(ctx.request),
+			)
 			if (!validation.valid) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: loginErrorMessage(validation.reason)})
 			}
@@ -332,7 +343,8 @@ export default router({
 	}),
 
 	verifyPassword: privateProcedureWithMembers.input(z.object({password: z.string()})).mutation(async ({ctx, input}) => {
-		if (!(await ctx.user.validateAccountPassword(ctx.principal!.accountId, input.password))) {
+		const {accountId, sessionId} = ctx.principal!
+		if (!(await ctx.user.validateAccountPassword(accountId, input.password, sessionId))) {
 			throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect password'})
 		}
 		return true
@@ -346,8 +358,8 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			const accountId = ctx.principal!.accountId
-			if (!(await ctx.user.validateAccountPassword(accountId, input.oldPassword))) {
+			const {accountId, sessionId} = ctx.principal!
+			if (!(await ctx.user.validateAccountPassword(accountId, input.oldPassword, sessionId))) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect password'})
 			}
 			return ctx.user.setAccountPassword(accountId, input.newPassword)
@@ -382,11 +394,11 @@ export default router({
 	),
 
 	disable2fa: privateProcedureWithMembers.input(z.object({totpToken: z.string()})).mutation(async ({ctx, input}) => {
-		const accountId = ctx.principal!.accountId
+		const {accountId, sessionId} = ctx.principal!
 		if (!(await ctx.user.is2faEnabledForAccount(accountId))) {
 			throw new TRPCError({code: 'UNAUTHORIZED', message: '2FA is not enabled'})
 		}
-		if (!(await ctx.user.validate2faTokenForAccount(accountId, input.totpToken))) {
+		if (!(await ctx.user.validate2faTokenForAccount(accountId, input.totpToken, sessionId))) {
 			throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect 2FA code'})
 		}
 		return ctx.user.disable2faForAccount(accountId)

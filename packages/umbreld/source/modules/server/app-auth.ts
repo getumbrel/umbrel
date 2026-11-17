@@ -11,6 +11,8 @@ import {SessionIssuanceInvalidatedError} from '../auth/auth.ts'
 import {serializeAccountAvatar, serveAccountAvatar} from '../user/avatar-api.ts'
 import {OWNER_USER_ID} from '../user/constants.ts'
 import {resolveWallpaperAppearance} from '../user/wallpapers.ts'
+import {TooManyAttemptsError} from '../utilities/attempt-limiter.ts'
+import clientAddress from './client-address.ts'
 
 type AppAuthRequest = {
 	appId: string
@@ -150,9 +152,22 @@ export default function createAppAuthRouter(umbreld: Umbreld) {
 
 	router.post('/v1/account/login', async (request, response) => {
 		const userId = typeof request.body?.userId === 'string' ? request.body.userId : OWNER_USER_ID
-		const password = typeof request.body?.password === 'string' ? request.body.password : ''
+		const password = request.body?.password
+		// A page on another site can make a browser post here, but not as JSON.
+		// Don't let it use up the browser's login attempts.
+		if (typeof password !== 'string') {
+			return response.status(400).json({error: {code: -32600, message: 'Missing password'}})
+		}
 		const totpToken = typeof request.body?.totpToken === 'string' ? request.body.totpToken : undefined
-		const validation = await umbreld.user.validateAccountLogin(userId, password, totpToken)
+		let validation
+		try {
+			validation = await umbreld.user.validateAccountLogin(userId, password, totpToken, clientAddress(request))
+		} catch (error) {
+			if (error instanceof TooManyAttemptsError) {
+				return response.status(429).json({error: {code: -32029, message: error.message}})
+			}
+			throw error
+		}
 		if (!validation.valid) {
 			const message =
 				validation.reason === 'missing-totp'
