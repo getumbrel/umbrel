@@ -133,7 +133,9 @@ public static class Mounter
 	/// Disconnect on the thread pool: from an unreachable host this can take about a minute.
 	/// Unless forced, it fails on open files (see HasOpenFiles). Flags 0 leaves the user's
 	/// profile alone: the app's own drives are temporary, and a drive the user saved to
-	/// reconnect at sign-in keeps doing so.
+	/// reconnect at sign-in keeps doing so. This removes the drive letter only: Windows keeps
+	/// the share session itself a while longer (up to ten minutes after a write), and has no
+	/// documented call to end it.
 	/// </summary>
 	public static Task UnmountAsync(string path, CancellationToken ct, bool force = false) =>
 		Task.Run(() =>
