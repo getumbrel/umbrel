@@ -708,6 +708,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.apple-changed == 'true'
     runs-on: xcode-27
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -751,6 +753,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.android-changed == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: clients/android
