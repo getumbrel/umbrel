@@ -469,6 +469,7 @@ export default class Raid {
 	temporaryDevicePath = '/tmp/umbrelos-temporary-migration-device.img'
 	#lastExpansionProgress = 0
 	#lastRebuildProgress = 0
+	#lastRebuildStartTime?: number
 	#lastScrubProgress = 0
 	#isStartingScrub = false
 	#activePoolMutation?: PoolMutation
@@ -904,6 +905,13 @@ export default class Raid {
 				this.#lastRebuildProgress = 0
 				progress = state === 'finished' ? 100 : 0
 			} else {
+				// A rebuild that ZFS restarts never reports an end, so a new start time is the only sign
+				// that this is a new rebuild that starts from 0
+				if (stats.start_time !== this.#lastRebuildStartTime) {
+					this.#lastRebuildStartTime = stats.start_time
+					this.#lastRebuildProgress = 0
+				}
+
 				// Calculate progress from issued vs to_examine
 				const rawProgress = stats.to_examine > 0 ? floorToTenthPercent((stats.issued / stats.to_examine) * 100) : 0
 				const cappedProgress = Math.min(rawProgress, 99)
