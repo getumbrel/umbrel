@@ -137,7 +137,11 @@ describe('QuickLook', () => {
 		await key({key: 'Escape'})
 		expect(closed()).toBe(false)
 
+		// Nor for one that gives up text being composed, which is the input method's
 		look.escape = false
+		await key({key: 'Escape', isComposing: true})
+		expect(closed()).toBe(false)
+
 		await key({key: 'Escape'})
 		expect(closed()).toBe(true)
 	})

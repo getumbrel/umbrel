@@ -121,7 +121,8 @@ export function useApproximationNotice(approximated: ReadonlySet<keyof typeof AP
 	)
 }
 
-// Where a notice or the edit hint floats: across the top of the stage, letting presses through around it
+// Where a notice, the edit hint or a document's format bar floats: across the top of the stage, letting presses
+// through around it
 export const stageTopClass = tw`pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center`
 
 // What a viewer leaves out (charts, embedded media), said once and calmly,

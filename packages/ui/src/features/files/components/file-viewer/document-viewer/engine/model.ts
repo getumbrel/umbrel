@@ -1,12 +1,14 @@
 // The document model: document.xml and the parts around it read into sections of blocks (paragraphs and tables)
 // whose formatting is fully resolved. It holds no DOM, so it's built and tested anywhere; the renderer only maps it to
-// elements. Every w:t that can be edited keeps its element, whose source offsets let a save splice the new text in.
+// elements. Every w:t that can be edited keeps its element, whose source offsets let a save splice the new text in;
+// every paragraph keeps the XML it was read from, so an edit that changes more than text can rewrite it (rewrite.ts)
+// and have just that paragraph read again.
 
 import {colorOf, presetColor, toCss, type ColorContext} from '@/features/files/components/file-viewer/shared/color'
 import {safeHref} from '@/features/files/components/file-viewer/shared/links'
 import {lookup} from '@/features/files/components/file-viewer/shared/lookup'
 import type {Relationship} from '@/features/files/components/file-viewer/shared/opc'
-import {attr, child, children, type XmlElement} from '@/features/files/components/file-viewer/shared/xml'
+import {attr, child, children, parseXml, type XmlElement} from '@/features/files/components/file-viewer/shared/xml'
 
 import {symbolChar} from './fonts'
 import {formatNumber, Numbering} from './numbering'
@@ -139,7 +141,8 @@ export type Anchored = {
 
 export type FieldKind = 'page' | 'numpages' | 'sectionpages'
 
-// Inlines from a run keep the run and their own element in it (`node`), so typed text can go in beside them
+// Inlines keep the element they were read from (`node`) and the run it is in, so typed text can go in beside them
+// and an edit can find them in the paragraph's XML
 export type Inline =
 	| {
 			kind: 'text'
@@ -172,10 +175,18 @@ export type Inline =
 	  }
 	| {kind: 'graphic'; content: Graphic; style: RunProps; link?: Link; run?: XmlElement; node?: XmlElement}
 	| {kind: 'anchor'; object: Anchored; run?: XmlElement}
-	| {kind: 'field'; field: FieldKind; format: string; style: RunProps; run?: XmlElement}
+	| {kind: 'field'; field: FieldKind; format: string; style: RunProps; run?: XmlElement; node?: XmlElement}
 	// A footnote or endnote reference (`footnote` names the footnote, placed on the reference's page), or a note's own number
 	| {kind: 'note'; label: string; footnote?: string; style: RunProps; run?: XmlElement; node?: XmlElement}
-	| {kind: 'rule'; height: number; color: string; align: 'left' | 'center' | 'right'; width: number; run?: XmlElement}
+	| {
+			kind: 'rule'
+			height: number
+			color: string
+			align: 'left' | 'center' | 'right'
+			width: number
+			run?: XmlElement
+			node?: XmlElement
+	  }
 	| {kind: 'separator'; continuation: boolean}
 
 export type Numbered = {
@@ -192,11 +203,26 @@ export type Paragraph = {
 	mark: RunProps
 	inlines: Inline[]
 	numbering?: Numbered
+	// The list it counts in. `direct`: it names the list itself rather than through its style. `styled`: its style is
+	// the one Word puts on list items, which goes when the list does.
+	list?: {numId: number; ilvl: number; direct: boolean; styled: boolean}
+	// The style Word gives a paragraph started after this one, when that isn't its own
+	next?: string
 	part: string
+	// The text `element`'s offsets are in: the part's as it was read, or the paragraph's own XML once an edit rewrote it
+	source: string
 	element: XmlElement
 	editable: boolean
-	// Its mark is hidden or deleted and nothing in it shows: Word lays it out as nothing
+	// Word lays it out as nothing: its mark is hidden or deleted and nothing in it shows, or it's the empty paragraph
+	// a cell ends with after a table inside the cell
 	hidden: boolean
+	// A field opens before it or is still open where it ends, so its XML can't be rewritten on its own
+	fielded: boolean
+	// A field is still open where it ends: what's typed at its end would be in the field's result, which isn't ours to
+	// edit
+	endsInField: boolean
+	// After an edit, the paragraph of the file this one is written in place of
+	origin?: Paragraph
 }
 
 export type Cell = {
@@ -235,6 +261,8 @@ export type Section = {
 	footers: {default?: Story; first?: Story; even?: Story}
 	pageNumbers: {start?: number; format: string}
 	verticalAlign: 'top' | 'center' | 'bottom'
+	// How far apart the lines of its grid are, where the section sets its lines on one
+	grid?: number
 	blocks: Block[]
 }
 
@@ -252,6 +280,10 @@ export type DocumentModel = {
 	images: Set<string>
 	// Whether anything carries a comment, which the pages leave out
 	comments: boolean
+	// A paragraph read from rewritten XML, as `like` (the paragraph it takes the place of) was read from the file
+	derive: (xml: string, like: Paragraph) => Paragraph
+	// List labels counted again after body paragraphs came, went or changed lists; returns those whose label changed
+	renumber: () => Paragraph[]
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -272,10 +304,22 @@ const UNDERSTOOD = new Set([
 	'http://schemas.openxmlformats.org/officeDocument/2006/math',
 ])
 
-type Field = {instruction: string; separated: boolean; hide: boolean; kind?: FieldKind; format: string; link?: Link}
+type Field = {
+	instruction: string
+	separated: boolean
+	hide: boolean
+	kind?: FieldKind
+	format: string
+	link?: Link
+	// A form field's settings, and what one shows that has no result of its own: a check box, or a list's chosen entry
+	form?: XmlElement
+	shows?: {text: string; style: RunProps}
+}
 
 type StoryContext = {
 	part: string
+	// The XML its elements' offsets are in
+	source: string
 	rels: Map<string, Relationship>
 	namespaces: Map<string, string>
 	editable: boolean
@@ -283,9 +327,13 @@ type StoryContext = {
 	// Complex fields can span runs and paragraphs, so their state lives with the story
 	fields: Field[]
 	noteLabel?: string
+	// Reading a rewritten paragraph: its text isn't the file's, and its list labels are counted afterwards
+	derived?: boolean
 }
 
 type CellFormatting = {pPr: ParaProps; rPr: RunProps}
+
+type Reading = {story: StoryContext; cell: CellFormatting | undefined; fields: Field[]; ending?: boolean}
 
 type Context = {
 	pkg: DocxPackage
@@ -294,6 +342,12 @@ type Context = {
 	theme: Theme | undefined
 	settings: Settings
 	refs: TextRef[]
+	// Ids for text read after the file was, which `refs` doesn't list
+	nextRef: number
+	// How each body paragraph was read, to read its rewritten XML the same way: its story, the formatting its cell
+	// gives it, the fields that were open where it starts, and whether it's there only for its cell to end with (see
+	// `table`)
+	readings: WeakMap<Paragraph, Reading>
 	images: Set<string>
 	runs: Map<string, RunProps>
 	footnoteLabels: Map<string, string>
@@ -337,6 +391,8 @@ export async function buildModel(pkg: DocxPackage): Promise<DocumentModel> {
 		theme,
 		settings,
 		refs: [],
+		nextRef: 0,
+		readings: new WeakMap(),
 		images: new Set(),
 		runs: new Map(),
 		footnoteLabels: new Map(),
@@ -350,7 +406,7 @@ export async function buildModel(pkg: DocxPackage): Promise<DocumentModel> {
 	const sections: Section[] = []
 	const sectionEnds: Array<XmlElement | undefined> = []
 	let blocks: Block[] = []
-	walkBlocks(body, storyOf(main, rels, documentPart.root, true, ctx), ctx, blocks, undefined, (paragraph) => {
+	walkBlocks(body, storyOf(documentPart, rels, true, ctx), ctx, blocks, undefined, (paragraph) => {
 		const pPr = child(paragraph, 'pPr')
 		const sectPr = pPr && child(pPr, 'sectPr')
 		if (!sectPr) return undefined
@@ -404,21 +460,25 @@ export async function buildModel(pkg: DocxPackage): Promise<DocumentModel> {
 		parts,
 		images: ctx.images,
 		comments: ctx.comments,
+		derive: (xml, like) => derive(xml, like, ctx),
+		renumber: () => renumber(sections, ctx),
 	}
 }
 
-function storyOf(
-	part: string,
-	rels: Map<string, Relationship>,
-	root: XmlElement,
-	editable: boolean,
-	ctx: Context,
-): StoryContext {
+function storyOf(part: XmlPart, rels: Map<string, Relationship>, editable: boolean, ctx: Context): StoryContext {
 	// mc:AlternateContent names namespaces by prefix, as declared on the part's root
 	const namespaces = new Map<string, string>()
-	for (const [key, uri] of Object.entries(root.attributes))
+	for (const [key, uri] of Object.entries(part.root.attributes))
 		if (key.startsWith('xmlns:')) namespaces.set(key.slice(6), uri)
-	return {part, rels, namespaces, editable, counters: ctx.numbering.counters(), fields: []}
+	return {
+		part: part.name,
+		source: part.text,
+		rels,
+		namespaces,
+		editable,
+		counters: ctx.numbering.counters(),
+		fields: [],
+	}
 }
 
 function noteBlocks(
@@ -428,7 +488,7 @@ function noteBlocks(
 	ctx: Context,
 	label?: string,
 ): Block[] {
-	const story = storyOf(part.name, rels, part.root, false, ctx)
+	const story = storyOf(part, rels, false, ctx)
 	story.noteLabel = label ?? ''
 	const blocks: Block[] = []
 	walkBlocks(note, story, ctx, blocks, undefined)
@@ -452,13 +512,7 @@ async function attachStories(
 				if (!part) return undefined
 				parts.set(target, part)
 				const blocks: Block[] = []
-				walkBlocks(
-					part.root,
-					storyOf(target, await ctx.pkg.rels(target), part.root, false, ctx),
-					ctx,
-					blocks,
-					undefined,
-				)
+				walkBlocks(part.root, storyOf(part, await ctx.pkg.rels(target), false, ctx), ctx, blocks, undefined)
 				return {blocks, part: target}
 			})()
 			cache.set(target, story)
@@ -493,6 +547,13 @@ function sectionProps(sectPr: XmlElement | undefined, blocks: Block[]): Section 
 	const margin = get('pgMar')
 	const cols = get('cols')
 	const pageNumbers = get('pgNumType')
+	// A grid sets lines only where its type says so: the pitch is written in every section, grid or not
+	const grid = get('docGrid')
+	const gridType = grid && attr(grid, 'type')
+	const pitch =
+		gridType === 'lines' || gridType === 'linesAndChars' || gridType === 'snapToChars'
+			? length(grid, 'linePitch')
+			: undefined
 	// Letter with one-inch margins, Word's own default
 	const page = (name: string, fallback: number) => clamp(length(size, name) ?? fallback, 96, 31680 * TWIP)
 	const side = (name: string, fallback: number) => length(margin, name) ?? fallback
@@ -529,6 +590,7 @@ function sectionProps(sectPr: XmlElement | undefined, blocks: Block[]): Section 
 			format: (pageNumbers && attr(pageNumbers, 'fmt')) || 'decimal',
 		},
 		verticalAlign: vAlign === 'center' || vAlign === 'both' ? 'center' : vAlign === 'bottom' ? 'bottom' : 'top',
+		grid: pitch !== undefined && pitch >= 1 ? pitch : undefined,
 		blocks,
 	}
 }
@@ -637,14 +699,19 @@ function paragraph(
 	const mark = intern(ctx, styles.run(runBase, parseRunProps(markElement, theme)))
 
 	const context: ParagraphContext = {story, runBase, inlines: []}
+	const fieldsBefore = story.fields.map((field) => ({...field}))
 	walkInlines(element, context, ctx, undefined)
 
+	// A rewritten paragraph's label waits for the count that follows it
 	let numbered: Numbered | undefined
-	const label = level && numId ? story.counters(numId, ilvl) : undefined
+	const label = level && numId ? (story.derived ? '' : story.counters(numId, ilvl)) : undefined
 	if (level && label !== undefined) {
-		const labelStyle = intern(ctx, mergeRun(mark, level.rPr))
+		// A number or bullet is set as its paragraph's mark is, then as its level says. All but the line under the
+		// mark: since Word 97, a number has only the line its own level asks for.
+		const unlined: RunProps = {...mark, underline: undefined, underlineColor: undefined}
+		const labelStyle = intern(ctx, mergeRun(unlined, level.rPr))
 		numbered = {
-			label: level.format === 'bullet' ? fromSymbolFont(label, labelStyle, theme) : label,
+			label: labelText(label, level, labelStyle, theme),
 			style: labelStyle,
 			suffix: level.suffix,
 			align: level.align,
@@ -652,21 +719,83 @@ function paragraph(
 	}
 	const markDeleted = markElement !== undefined && child(markElement, 'del') !== undefined
 	const shows = context.inlines.some((inline) => inline.kind !== 'anchor')
-	return {
+	const result: Paragraph = {
 		kind: 'paragraph',
 		props,
 		styleId,
 		mark,
 		inlines: context.inlines,
 		numbering: numbered,
+		list: numbered && numId ? {numId, ilvl, direct: !fromStyle, styled: styles.listParagraph(styleId)} : undefined,
+		next: styles.following(styleId),
 		part: story.part,
+		source: story.source,
 		element,
 		editable: story.editable,
 		hidden: (Boolean(mark.vanish) || markDeleted) && !shows,
+		fielded: fieldsBefore.length > 0 || story.fields.length > 0,
+		endsInField: story.fields.length > 0,
 	}
+	if (story.editable) ctx.readings.set(result, {story, cell, fields: fieldsBefore})
+	return result
 }
 
 // Bullets drawn from symbol fonts become the Unicode characters they depict
+const labelText = (label: string, level: {format: string}, style: RunProps, theme: Theme | undefined) =>
+	level.format === 'bullet' ? fromSymbolFont(label, style, theme) : label
+
+// Reads one paragraph of the body again from XML an edit rewrote. It stands where `like` stood (same story, same
+// cell), and for the paragraph of the file that `like` did.
+function derive(xml: string, like: Paragraph, ctx: Context): Paragraph {
+	const reading = ctx.readings.get(like)
+	if (!reading) throw new DocxError('corrupt', 'Not a paragraph that can be rewritten')
+	const fields = reading.fields.map((field) => ({...field}))
+	const story: StoryContext = {...reading.story, source: xml, fields, derived: true}
+	const result = paragraph(parseXml(xml), story, ctx, reading.cell)
+	result.origin = like.origin ?? like
+	// There only for its cell to end with, it's still laid out as nothing while it's empty
+	if (reading.ending) {
+		ctx.readings.get(result)!.ending = true
+		if (vacant(result)) result.hidden = true
+	}
+	return result
+}
+
+// Whether a paragraph holds nothing: no text, nothing on its line or anchored to it, no number before it
+const vacant = (paragraph: Paragraph) =>
+	!paragraph.numbering && paragraph.inlines.every((inline) => inline.kind === 'text' && !inline.text)
+
+// Counts the body's lists again, in the order the file was read: a paragraph's text boxes before the paragraph itself
+function renumber(sections: Section[], ctx: Context): Paragraph[] {
+	const counters = ctx.numbering.counters()
+	const changed: Paragraph[] = []
+	const boxed = (content: Graphic) => {
+		if (content.kind === 'shape' && content.blocks) visit(content.blocks)
+		else if (content.kind === 'group') for (const item of content.items) boxed(item.content)
+	}
+	const visit = (blocks: Block[]) => {
+		for (const block of blocks) {
+			if (block.kind === 'table') {
+				for (const row of block.rows) for (const cell of row.cells) visit(cell.blocks)
+				continue
+			}
+			for (const inline of block.inlines) {
+				if (inline.kind === 'graphic') boxed(inline.content)
+				else if (inline.kind === 'anchor') boxed(inline.object.content)
+			}
+			const level = block.list && ctx.numbering.level(block.list.numId, block.list.ilvl)
+			const label = level && counters(block.list!.numId, block.list!.ilvl)
+			if (!level || label === undefined || !block.numbering) continue
+			const text = labelText(label, level, block.numbering.style, ctx.theme)
+			if (text === block.numbering.label) continue
+			block.numbering.label = text
+			changed.push(block)
+		}
+	}
+	for (const section of sections) visit(section.blocks)
+	return changed
+}
+
 function fromSymbolFont(text: string, style: RunProps, theme: Theme | undefined): string {
 	const font = fontName(style.fontAscii, theme)
 	return Array.from(text, (char) => symbolChar(font, char.codePointAt(0)!) ?? char).join('')
@@ -713,7 +842,7 @@ function walkInlines(container: XmlElement, p: ParagraphContext, ctx: Context, l
 					const style = first
 						? intern(ctx, ctx.styles.run(p.runBase, parseRunProps(child(first, 'rPr'), ctx.theme)))
 						: p.runBase
-					p.inlines.push({kind: 'field', field: field.kind, format: field.format, style})
+					p.inlines.push({kind: 'field', field: field.kind, format: field.format, style, node})
 				}
 				walkInlines(node, p, ctx, link)
 				p.story.fields.pop()
@@ -730,6 +859,7 @@ function walkInlines(container: XmlElement, p: ParagraphContext, ctx: Context, l
 						style: intern(ctx, mergeRun(p.runBase, {italic: true})),
 						font: 'Cambria Math',
 						math: true,
+						node,
 					})
 				}
 				break
@@ -798,6 +928,21 @@ function resolveField(field: Field) {
 			else target ??= unquote(tokens[i])
 		}
 		field.link = {href: safeHref(target), tooltip}
+	} else if (type === 'FORMCHECKBOX') {
+		const box = field.form && child(field.form, 'checkBox')
+		// Ticked by whoever filled the form in, else as it starts out. The box is a symbol: upright, and as large as the
+		// text unless the form gives it a size of its own.
+		const checked = box && (onOff(child(box, 'checked')) ?? onOff(child(box, 'default')))
+		const size = int(value(box && child(box, 'size')))
+		field.shows = {
+			text: checked ? '\u2612' : '\u2610',
+			style: {bold: false, italic: false, ...(size === undefined ? {} : {size: clamp(size, 2, 3276)})},
+		}
+	} else if (type === 'FORMDROPDOWN') {
+		const list = field.form && child(field.form, 'ddList')
+		const entries = list ? children(list, 'listEntry') : []
+		const chosen = int(value(list && child(list, 'result'))) ?? int(value(list && child(list, 'default'))) ?? 0
+		field.shows = {text: value(entries[chosen]) ?? '', style: {}}
 	}
 }
 
@@ -832,15 +977,15 @@ function runContent(
 				// Field results are regenerated by Word, so they aren't ours to edit
 				const ref: TextRef | undefined =
 					story.editable && story.fields.length === 0
-						? {id: ctx.refs.length, part: story.part, element: node, text}
+						? {id: ctx.nextRef++, part: story.part, element: node, text}
 						: undefined
-				if (ref) ctx.refs.push(ref)
+				if (ref && !story.derived) ctx.refs.push(ref)
 				// A tab character in the text is a tab, as Word lays it out; each piece keeps the w:t it belongs to
 				const pieces = text.split('\t')
 				pieces.forEach((piece, i) => {
 					if (i > 0) p.inlines.push({kind: 'tab', style, ref, run, node})
 					if (piece || (ref && pieces.length === 1))
-						p.inlines.push({kind: 'text', text: piece, style, ref, link: linked(), run})
+						p.inlines.push({kind: 'text', text: piece, style, ref, link: linked(), run, node})
 				})
 				break
 			}
@@ -940,16 +1085,22 @@ function runContent(
 			case 'fldChar': {
 				const type = attr(node, 'fldCharType')
 				const field = story.fields[story.fields.length - 1]
-				if (type === 'begin') openField('', story)
+				if (type === 'begin') openField('', story).form = child(node, 'ffData')
 				else if ((type === 'separate' || type === 'end') && field) {
 					if (!field.separated) {
 						resolveField(field)
-						// A computed field shows its value where its result starts, or where it ends if it has none
-						if (field.kind && visible(story, 1) && !style.vanish) {
-							p.inlines.push({kind: 'field', field: field.kind, format: field.format, style, run})
+						// A field whose value is ours to work out shows it where its result starts, or where it ends if it has
+						// none
+						if (visible(story, 1) && !style.vanish) {
+							if (field.kind) {
+								p.inlines.push({kind: 'field', field: field.kind, format: field.format, style, run, node})
+							} else if (field.shows?.text) {
+								const shown = intern(ctx, mergeRun(style, field.shows.style))
+								p.inlines.push({kind: 'text', text: field.shows.text, style: shown, run, node})
+							}
 						}
 						field.separated = true
-						field.hide = field.kind !== undefined
+						field.hide = field.kind !== undefined || field.shows !== undefined
 					}
 					if (type === 'end') story.fields.pop()
 				}
@@ -1316,6 +1467,7 @@ function vml(element: XmlElement, p: ParagraphContext, ctx: Context, style: RunP
 			align: align === 'center' ? 'center' : align === 'right' ? 'right' : 'left',
 			width: clamp((int(attr(shape, 'o:hrpct')) || 1000) / 1000, 0.01, 1),
 			run,
+			node: element,
 		})
 		return
 	}
@@ -1529,6 +1681,14 @@ function table(element: XmlElement, story: StoryContext, ctx: Context): Table {
 			ctx.depth++
 			walkBlocks(cellDraft.element, story, ctx, blocks, formatting)
 			ctx.depth--
+			// A cell has to end with a paragraph. After a table inside the cell, Word makes no room for that paragraph
+			// while it's empty: the cell ends with the table.
+			const [inner, end] = blocks.slice(-2)
+			if (inner?.kind === 'table' && end?.kind === 'paragraph' && vacant(end)) {
+				end.hidden = true
+				const reading = ctx.readings.get(end)
+				if (reading) reading.ending = true
+			}
 			const cell: Cell = {
 				blocks,
 				props: cellProps,

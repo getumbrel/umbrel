@@ -119,9 +119,10 @@ export function QuickLook({item, viewer}: {item: FileSystemItem; viewer?: Viewer
 						event.preventDefault()
 						if (opener.current instanceof HTMLElement) opener.current.focus({preventScroll: true})
 					}}
-					// Escape unwinds the viewer's own state first (a search)
+					// Escape unwinds the viewer's own state first (a search). One that gives up text being composed is
+					// the input method's, and done.
 					onEscapeKeyDown={(event) => {
-						if (escapeHandler.current?.()) event.preventDefault()
+						if (event.isComposing || event.keyCode === 229 || escapeHandler.current?.()) event.preventDefault()
 					}}
 					// Only the scrim closes it, once clicked: a floating island or a
 					// toast over it is pressed as itself

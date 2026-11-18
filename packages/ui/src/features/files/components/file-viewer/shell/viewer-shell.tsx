@@ -360,6 +360,8 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 					// Escape unwinds the viewer's own state first (a search, a tool)
 					onEscapeKeyDown={(event) => {
 						event.preventDefault()
+						// One that gives up text being composed is the input method's, and done
+						if (event.isComposing || event.keyCode === 229) return
 						if (escapeHandler.current?.()) return
 						// Then a text field gives the keyboard back to the file (a page
 						// number half typed, a form's field), and only after that does

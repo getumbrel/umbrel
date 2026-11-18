@@ -8,6 +8,7 @@
 // reads right to left (Arabic, Hebrew) is mirrored only as it's drawn, so
 // column A sits at the right and text stays readable.
 
+import {RIGHT_TO_LEFT} from '@/features/files/components/file-viewer/shared/scripts'
 import type {Axis} from '@/features/files/components/file-viewer/sheet-viewer/axis'
 import {columnName} from '@/features/files/components/file-viewer/sheet-viewer/engine/xlsx/package'
 import type {
@@ -219,15 +220,12 @@ type Appearance = {
 	strike: boolean
 }
 
-// Hebrew, Arabic, Syriac, Thaana and N'Ko, and Hebrew and Arabic presentation forms
-const RTL = /[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufefc]/
-
 // The direction text reads in: as the cell says, or else as its first letter
 // does (Excel's "context" reading order), or else as the sheet does
 function directionOf(text: string | undefined, order: string, sheet: 'ltr' | 'rtl'): 'ltr' | 'rtl' {
 	if (order === 'ltr' || order === 'rtl') return order
 	const letter = text?.match(/\p{L}/u)?.[0]
-	return letter ? (RTL.test(letter) ? 'rtl' : 'ltr') : sheet
+	return letter ? (RIGHT_TO_LEFT.test(letter) ? 'rtl' : 'ltr') : sheet
 }
 
 // How a cell is drawn, and what typing into it looks like

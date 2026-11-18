@@ -1,23 +1,24 @@
-// Saving writes edits back into the original XML by splicing at the source offsets the parser recorded: changed w:t
-// contents, plus runs for text typed where the paragraph had none. Everything else in each part, and every part
-// that wasn't edited, stays byte for byte as it was.
+// Saving writes edits back into the original XML by splicing at the source offsets the parser recorded. A paragraph
+// whose text changed is written with the new contents of its w:t elements, plus runs for text typed where it had
+// none; one an edit rewrote (divided, joined to another, formatted) is written as the XML it was rewritten to.
+// Everything else in each part, and every part that wasn't edited, stays byte for byte as it was.
 
 import {asUtf8} from '@/features/files/components/file-viewer/shared/opc'
 import {child, escapeXmlText, parseXml, type XmlElement} from '@/features/files/components/file-viewer/shared/xml'
 import {patchZip} from '@/features/files/components/file-viewer/shared/zip'
 
-import type {Insertion, Slot, TextRef} from './model'
+import type {Insertion, Paragraph, Slot, TextRef} from './model'
 import {DocxError, type DocxPackage, type XmlPart} from './package'
 
-type Splice = {start: number; end: number; text: string}
+export type Splice = {start: number; end: number; text: string}
 
 // Leading, trailing or repeated whitespace only survives in a w:t that preserves it
-const NEEDS_PRESERVE = /^\s|\s$|\s\s|[\t\n]/
+export const NEEDS_PRESERVE = /^\s|\s$|\s\s|[\t\n]/
 
-const prefixOf = (element: XmlElement) => element.name.slice(0, element.name.length - element.local.length)
+export const prefixOf = (element: XmlElement) => element.name.slice(0, element.name.length - element.local.length)
 
 // A w:t's new content, adding xml:space="preserve" to its tag when the text needs it
-function textSplice(source: string, element: XmlElement, text: string): Splice {
+export function textSplice(source: string, element: XmlElement, text: string): Splice {
 	const escaped = escapeXmlText(text)
 	const tag = source.slice(element.start, element.contentStart)
 	const selfClosing = element.contentStart === element.end && tag.endsWith('/>')
@@ -71,34 +72,49 @@ function insertionSplice(source: string, insertion: Insertion, text: string): Sp
 	return {start: p.contentEnd, end: p.contentEnd, text: run}
 }
 
+// In one pass over the source, however many splices: every paragraph of a long document can be among them
 export function applySplices(source: string, splices: Splice[]): string {
-	const ordered = [...splices].sort((a, b) => b.start - a.start || b.end - a.end)
-	let out = source
-	let limit = Infinity
+	const ordered = [...splices].sort((a, b) => a.start - b.start || a.end - b.end)
+	const pieces: string[] = []
+	let at = 0
 	for (const splice of ordered) {
 		// Two edits of one span would mean a bookkeeping bug; refuse rather than write a broken part
-		if (splice.end > limit) throw new DocxError('corrupt', 'Overlapping edits')
-		out = out.slice(0, splice.start) + splice.text + out.slice(splice.end)
-		limit = splice.start
+		if (splice.start < at) throw new DocxError('corrupt', 'Overlapping edits')
+		pieces.push(source.slice(at, splice.start), splice.text)
+		at = splice.end
 	}
-	return out
+	pieces.push(source.slice(at))
+	return pieces.join('')
 }
 
 const isRef = (slot: Slot): slot is TextRef => slot.id >= 0
 
-// The package with each slot's text in place of what it held when opened
+// A paragraph's XML with what its slots hold now (`texts`, for those that changed) in place of what it was read with
+export function paragraphXml(paragraph: Paragraph, texts?: ReadonlyMap<Slot, string>): string {
+	const {source, element} = paragraph
+	const splices: Splice[] = []
+	for (const [slot, text] of texts ?? []) {
+		if (text === (isRef(slot) ? slot.text : '')) continue
+		const splice = isRef(slot) ? textSplice(source, slot.element, text) : insertionSplice(source, slot, text)
+		splices.push({start: splice.start - element.start, end: splice.end - element.start, text: splice.text})
+	}
+	return applySplices(source.slice(element.start, element.end), splices)
+}
+
+// The package with `paragraphs` written in place of the paragraphs of the file they're keyed by: each one's XML as
+// it now is, or the XML of the paragraphs that took its place (none, when it was joined to another)
 export async function save(
 	pkg: DocxPackage,
 	parts: Map<string, XmlPart>,
-	texts: Map<Slot, string>,
+	paragraphs: ReadonlyMap<Paragraph, string>,
 ): Promise<Uint8Array<ArrayBuffer>> {
 	const byPart = new Map<string, Splice[]>()
-	for (const [slot, text] of texts) {
-		const name = isRef(slot) ? slot.part : slot.paragraph.part
-		const part = parts.get(name)
-		if (!part || text === (isRef(slot) ? slot.text : '')) continue
-		const splice = isRef(slot) ? textSplice(part.text, slot.element, text) : insertionSplice(part.text, slot, text)
-		byPart.set(name, [...(byPart.get(name) ?? []), splice])
+	for (const [{part, element}, text] of paragraphs) {
+		const source = parts.get(part)
+		if (!source || text === source.text.slice(element.start, element.end)) continue
+		const splices = byPart.get(part) ?? []
+		splices.push({start: element.start, end: element.end, text})
+		byPart.set(part, splices)
 	}
 	const changes = new Map<string, string>()
 	for (const [name, splices] of byPart) {

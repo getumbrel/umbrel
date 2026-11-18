@@ -32,11 +32,12 @@ export function EditHint({ref}: {ref: Ref<HTMLParagraphElement>}) {
 	)
 }
 
-// The hint answers an edit the document turns away (a new paragraph, formatting) with a nudge: a change of colour
-// alone, with reduced motion. The keyframes left out are the hint's own colour, whatever Increase contrast makes it.
-export function nudge(hint: HTMLElement | null) {
+// What floats over the stage for editing (the hint, or a document's format bar) answers an edit that's turned away
+// with a nudge: a change of colour alone, with reduced motion. The keyframes left out are its own colour, whatever
+// Increase contrast makes it.
+export function nudge(element: HTMLElement | null) {
 	const still = matchMedia('(prefers-reduced-motion: reduce)').matches
-	hint?.animate(
+	element?.animate(
 		still
 			? [{color: 'rgb(255 255 255)', offset: 0}]
 			: [{color: 'rgb(255 255 255)', transform: 'scale(1.04)', offset: 0.3}],

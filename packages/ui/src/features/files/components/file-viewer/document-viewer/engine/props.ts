@@ -403,6 +403,19 @@ export type TabStop = {pos: number; align: TabAlign; leader: TabLeader}
 export type ParagraphBorders = Sides<'top' | 'left' | 'bottom' | 'right' | 'between'>
 export type Justification = 'left' | 'center' | 'right' | 'both' | 'distribute'
 
+// A frame (w:framePr) holds its paragraphs apart from the text: where it's placed from, and how far along or to
+// which side; its size, where it isn't as large as what it holds; and whether text runs beside it (`around`), stops
+// above it and goes on below (`notBeside`), or runs under it (`none`)
+export type Frame = {
+	x: {from: 'text' | 'margin' | 'page'; offset: number; align?: 'left' | 'center' | 'right'}
+	y: {from: 'text' | 'margin' | 'page'; offset: number; align?: 'top' | 'center' | 'bottom'}
+	width?: number
+	height?: number
+	exact?: boolean
+	wrap: 'around' | 'notBeside' | 'none'
+	distance: {x: number; y: number}
+}
+
 export type ParaProps = {
 	styleId?: string
 	keepNext?: boolean
@@ -420,6 +433,8 @@ export type ParaProps = {
 	contextualSpacing?: boolean
 	bidi?: boolean
 	suppressAutoHyphens?: boolean
+	snapToGrid?: boolean
+	frame?: Frame
 }
 
 const PARAGRAPH_BORDERS = {
@@ -460,6 +475,56 @@ const TAB_ALIGNS = lookup<TabAlign>({
 
 const TAB_LEADERS = new Set<string>(['dot', 'hyphen', 'underscore', 'heavy', 'middleDot'])
 
+const FRAME_ANCHORS = lookup<Frame['x']['from']>({text: 'text', margin: 'margin', page: 'page'})
+// The inside of a page is its left and its top, as on a right-hand page
+const FRAME_SIDES = lookup<NonNullable<Frame['x']['align']>>({
+	left: 'left',
+	inside: 'left',
+	center: 'center',
+	right: 'right',
+	outside: 'right',
+})
+const FRAME_LEVELS = lookup<NonNullable<Frame['y']['align']>>({
+	top: 'top',
+	inside: 'top',
+	center: 'center',
+	bottom: 'bottom',
+	outside: 'bottom',
+})
+const FRAME_WRAPS = lookup<Frame['wrap']>({
+	around: 'around',
+	auto: 'around',
+	tight: 'around',
+	through: 'around',
+	notBeside: 'notBeside',
+	none: 'none',
+})
+
+// Left unsaid, a frame is placed from the text's column and from the top margin, which is what nothing set means in
+// the format Word had before this one
+function parseFrame(element: XmlElement): Frame {
+	const frame: Frame = {
+		x: {from: FRAME_ANCHORS[attr(element, 'hAnchor') ?? ''] ?? 'text', offset: length(element, 'x') ?? 0},
+		y: {from: FRAME_ANCHORS[attr(element, 'vAnchor') ?? ''] ?? 'margin', offset: length(element, 'y') ?? 0},
+		wrap: FRAME_WRAPS[attr(element, 'wrap') ?? ''] ?? 'around',
+		distance: {x: length(element, 'hSpace', 0) ?? 0, y: length(element, 'vSpace', 0) ?? 0},
+	}
+	const side = FRAME_SIDES[attr(element, 'xAlign') ?? '']
+	const level = FRAME_LEVELS[attr(element, 'yAlign') ?? '']
+	if (side) frame.x.align = side
+	if (level) frame.y.align = level
+	const width = length(element, 'w', 0)
+	const height = length(element, 'h', 0)
+	const rule = attr(element, 'hRule')
+	if (width) frame.width = width
+	// A height is the least a frame has unless it's said to be all of it, and it's said to be `auto` to have none
+	if (height && rule !== 'auto') {
+		frame.height = height
+		frame.exact = rule === 'exact'
+	}
+	return frame
+}
+
 function parseTabStop(element: XmlElement): TabStop | undefined {
 	const pos = length(element, 'pos')
 	const align = TAB_ALIGNS[attr(element, 'val') ?? '']
@@ -484,6 +549,7 @@ export function parseParaProps(pPr: XmlElement | undefined, theme: Theme | undef
 			case 'contextualSpacing':
 			case 'bidi':
 			case 'suppressAutoHyphens':
+			case 'snapToGrid':
 				props[element.local] = onOff(element)
 				break
 			case 'numPr': {
@@ -495,6 +561,9 @@ export function parseParaProps(pPr: XmlElement | undefined, theme: Theme | undef
 			}
 			case 'pBdr':
 				props.borders = borders(element, theme, PARAGRAPH_BORDERS)
+				break
+			case 'framePr':
+				props.frame = parseFrame(element)
 				break
 			case 'shd':
 				props.shading = shading(element, theme)
@@ -516,8 +585,11 @@ export function parseParaProps(pPr: XmlElement | undefined, theme: Theme | undef
 				if (afterLines !== undefined) spacing.afterLines = clamp(afterLines, 0, 10000)
 				const beforeAuto = attr(element, 'beforeAutospacing')
 				const afterAuto = attr(element, 'afterAutospacing')
+				// A length given with no word on automatic spacing takes the place of any that's inherited, as in Word
 				if (beforeAuto !== undefined) spacing.beforeAuto = isOn(beforeAuto)
+				else if (before !== undefined || beforeLines !== undefined) spacing.beforeAuto = false
 				if (afterAuto !== undefined) spacing.afterAuto = isOn(afterAuto)
+				else if (after !== undefined || afterLines !== undefined) spacing.afterAuto = false
 				const line = twips(attr(element, 'line'))
 				const rule = attr(element, 'lineRule')
 				if (line !== undefined && line > 0) {
@@ -593,7 +665,7 @@ function mergeTabs(base: TabStop[] | undefined, over: TabStop[]): TabStop[] {
 
 export type Width = {type: 'dxa' | 'pct' | 'auto' | 'nil'; value: number} // dxa in px, pct as a fraction
 
-function width(element: XmlElement | undefined): Width | undefined {
+function width(element: XmlElement | undefined, min = 0): Width | undefined {
 	if (!element) return undefined
 	const type = attr(element, 'type') ?? 'dxa'
 	const raw = attr(element, 'w')
@@ -604,7 +676,7 @@ function width(element: XmlElement | undefined): Width | undefined {
 		return Number.isFinite(percent) ? {type, value: clamp(percent, 0, 1000) / 100} : undefined
 	}
 	const dxa = twips(raw)
-	return dxa === undefined ? undefined : {type: 'dxa', value: clamp(dxa * TWIP, 0, MAX_LENGTH)}
+	return dxa === undefined ? undefined : {type: 'dxa', value: clamp(dxa * TWIP, min, MAX_LENGTH)}
 }
 
 export type TableBorders = Sides<'top' | 'left' | 'bottom' | 'right' | 'insideH' | 'insideV'>
@@ -695,7 +767,8 @@ export function parseTableProps(tblPr: XmlElement | undefined, theme: Theme | un
 				break
 			}
 			case 'tblInd': {
-				const indent = width(element)
+				// Less than none starts the table left of the text, in the margin
+				const indent = width(element, -MAX_LENGTH)
 				if (indent?.type === 'dxa') props.indent = indent.value
 				else if (indent?.type === 'nil') props.indent = 0
 				break
@@ -748,6 +821,8 @@ export type RowProps = {
 	height?: number
 	heightRule?: 'atLeast' | 'exact'
 	header?: boolean
+	// Stays on one page where it can (w:cantSplit)
+	cantSplit?: boolean
 	gridBefore?: number
 	hidden?: boolean
 }
@@ -769,6 +844,9 @@ export function parseRowProps(trPr: XmlElement | undefined): RowProps {
 			}
 			case 'tblHeader':
 				props.header = onOff(element)
+				break
+			case 'cantSplit':
+				props.cantSplit = onOff(element)
 				break
 			case 'hidden':
 				props.hidden = onOff(element)

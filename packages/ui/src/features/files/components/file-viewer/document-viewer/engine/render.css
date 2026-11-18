@@ -1,0 +1,29 @@
+/* The lines under and through a tab's run, across the tab. A browser draws them for text, and not across a box or (in
+   Chrome) under a tab character, so they're drawn under spaces set as the run is: render.ts gives the tab its run's
+   font and lines, and its run's size, which its own text has none of, as --docx-size.
+
+   The spaces are spread wider than any page (Word's widest is 22 inches) and cut off at the tab's edges. There are two
+   for the spread to lie between: a browser may leave it out after the last character of a line. They stand on the
+   line's baseline, 0.7 of their size below the tab's own (its top edge), in a flex box, whose baseline is its text's
+   whether it clips or not: an inline-block that clips has its bottom edge for one (CSS 2.1). */
+.umbrel-docx-lined-tab::after {
+	display: inline-flex;
+	vertical-align: -0.7em;
+	width: 100%;
+	overflow-x: clip;
+	content: '\a0\a0';
+	font-size: var(--docx-size);
+	letter-spacing: 22in;
+	text-decoration-line: inherit;
+	text-decoration-style: inherit;
+	text-decoration-color: inherit;
+	text-decoration-thickness: inherit;
+}
+
+/* While the document is edited, a press on a picture or another drawn object goes through it to the text: to the line
+   the object stands on, where a browser puts the caret beside it, or to what's under an object that floats. Pressed
+   itself, an object gives a browser no place for a caret: Chrome leaves the caret where it was, for what's typed next
+   to go in there. */
+[contenteditable]:not([contenteditable='false']) .umbrel-docx-object {
+	pointer-events: none;
+}
