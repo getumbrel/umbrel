@@ -38,6 +38,7 @@ class PhotoBackupEngineTest {
 		directory = File(System.getProperty("java.io.tmpdir"), "umbrel-engine-" + System.nanoTime()).apply { mkdirs() }
 		ledger = PhotoBackupLedger(File(directory, "photo-backup.sqlite"))
 		secrets.grants["umbrel:0"] = "grant"
+		preferences.save(PhotoBackupPreference(includesPhotos = true, includesVideos = true, foldersChosen = true), "umbrel", "0", activate = true)
 		configure()
 	}
 
@@ -683,6 +684,72 @@ class PhotoBackupEngineTest {
 
 		assertEquals(4, server.uploads.size)
 		assertTrue(rest.all { ledger.assetRecord("source", it)?.state == PhotoBackupLedger.AssetState.UPLOADED })
+	}
+
+	// The watcher and the hourly check start passes without the app, so the pass itself waits.
+	@Test
+	fun accessToEverythingWaitsForTheFolderChoice() {
+		val unchosen = PhotoBackupPreference(includesPhotos = true, includesVideos = true)
+		preferences.save(unchosen, "umbrel", "0", activate = true)
+		library.access = PhotoLibraryAccess.SELECTED
+		library.select(library.add())
+		library.add(folder = WHATSAPP_FOLDER)
+		pass()
+		assertEquals(1, server.uploads.size)
+
+		library.access = PhotoLibraryAccess.FULL
+		assertEquals(PassOutcome.WaitingForUser, pass())
+		assertEquals(1, server.uploads.size)
+
+		preferences.save(unchosen.copy(foldersChosen = true), "umbrel", "0", activate = true)
+		settle()
+		assertEquals(2, server.uploads.size)
+	}
+
+	@Test
+	fun aFolderSkippedDuringAPassIsLeftOutFromTheNextItem() {
+		repeat(3) { library.add(folder = WHATSAPP_FOLDER) }
+		library.add()
+		server.respond = {
+			configure(skippedFolders = setOf(WHATSAPP_FOLDER))
+			PhotoUploadResult.Succeeded(10)
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(1, server.uploads.size)
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(1, server.uploads.size)
+	}
+
+	@Test
+	fun videosTurnedOffDuringAPassAreLeftOutFromTheNextItem() {
+		repeat(3) { library.add(PhotoBackupLedger.MEDIA_TYPE_VIDEO) }
+		library.add(PhotoBackupLedger.MEDIA_TYPE_IMAGE)
+		server.respond = {
+			configure(includeVideos = false)
+			PhotoUploadResult.Succeeded(10)
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(1, server.uploads.size)
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(1, server.uploads.size)
+	}
+
+	@Test
+	fun aFolderTurnedBackOnDuringTheLastUploadIsBackedUpByTheNextPass() {
+		configure(skippedFolders = setOf(WHATSAPP_FOLDER))
+		library.add(folder = WHATSAPP_FOLDER)
+		library.add()
+		server.respond = {
+			configure()
+			PhotoUploadResult.Succeeded(10)
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(1, server.uploads.size)
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(2, server.uploads.size)
 	}
 
 	@Test

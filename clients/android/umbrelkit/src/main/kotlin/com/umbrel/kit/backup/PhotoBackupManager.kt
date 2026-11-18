@@ -275,12 +275,12 @@ class PhotoBackupManager internal constructor(
 	}
 
 	/**
-	 * Setup with access to all photos waits for the folder choice, which the app shows once
-	 * access is granted, so nothing uploads before a folder could be skipped. Backup that is
-	 * already set up keeps running.
+	 * Backup with access to all photos waits for the folder choice, which the app shows once
+	 * access is granted, so nothing uploads before a folder could be skipped. Backup set up
+	 * with a selection of photos was never asked, so it waits too once it can see them all.
 	 */
-	private fun awaitsFolderChoice(preference: PhotoBackupPreference, configured: Boolean): Boolean =
-		!configured && preference.isEnabled && !preference.foldersChosen && libraryAccess() == PhotoLibraryAccess.FULL
+	private fun awaitsFolderChoice(preference: PhotoBackupPreference): Boolean =
+		preference.isEnabled && !preference.foldersChosen && libraryAccess() == PhotoLibraryAccess.FULL
 
 	/**
 	 * Losing photo access pauses backup and never turns it off: Android revokes the
@@ -331,7 +331,7 @@ class PhotoBackupManager internal constructor(
 			return
 		}
 		val preference = preferences.preference(device.id, accountId)
-		if (awaitsFolderChoice(preference, configured = belongsToAccount)) {
+		if (awaitsFolderChoice(preference)) {
 			setSetup(inProgress = false, failure = null)
 			return
 		}
@@ -363,7 +363,7 @@ class PhotoBackupManager internal constructor(
 		val state = _state.value
 		if (!intentEnabled(device.id, session.accountId) || state.setupInProgress || state.setupFailure != null) return false
 		if (configuration(device.id, session.accountId) != null) return false
-		if (awaitsFolderChoice(preferences.preference(device.id, session.accountId), configured = false)) return false
+		if (awaitsFolderChoice(preferences.preference(device.id, session.accountId))) return false
 		sync(device, session, userInitiated = false)
 		return true
 	}

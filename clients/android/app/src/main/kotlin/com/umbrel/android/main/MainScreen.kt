@@ -125,6 +125,7 @@ import com.umbrel.android.ui.liquid.DampedDragAnimation
 import com.umbrel.android.ui.liquid.InteractiveHighlight
 import com.umbrel.android.ui.openUrl
 import com.umbrel.kit.SavedDevice
+import com.umbrel.kit.backup.PhotoLibraryAccess
 import kotlin.math.abs
 import kotlin.math.sign
 import kotlinx.coroutines.flow.drop
@@ -219,8 +220,10 @@ fun MainScreen(device: SavedDevice, onSignedOut: () -> Unit, onShowAllDevices: (
 	LaunchedEffect(profileOpen) { if (profileOpen) model.profileOpened() }
 	LaunchedEffect(state.session) { if (state.session == null) onSignedOut() }
 	// Turning backup on with access to all photos asks once which folders to back up. A
-	// library in a single folder has nothing to choose, so backup starts straight away.
-	val choicePending = folderChoicePending(state) && libraryState.loaded
+	// library in a single folder has nothing to choose, so backup starts straight away. Right
+	// after access widens, the library loaded may still be the selection's, so its folders
+	// don't count yet.
+	val choicePending = folderChoicePending(state) && libraryState.loaded && libraryState.access == PhotoLibraryAccess.FULL
 	LaunchedEffect(choicePending, libraryState.folders.size) {
 		if (choicePending && libraryState.folders.size <= 1) model.confirmFolderChoice()
 	}

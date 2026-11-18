@@ -182,6 +182,32 @@ class PhotoBackupManagerTest {
 		assertEquals(listOf("start", "transfer"), work.events)
 	}
 
+	// Backup set up with a selection never asked about folders, so it asks once it can see them all.
+	@Test
+	fun allowingAllPhotosAfterSetupWaitsForTheFolderChoice() = runTest {
+		access = PhotoLibraryAccess.SELECTED
+		val manager = manager()
+		manager.enableBackup(device, session)
+		advanceUntilIdle()
+		work.events.clear()
+
+		access = PhotoLibraryAccess.FULL
+		manager.libraryAccessChanged(device, session, userInitiated = true)
+		advanceUntilIdle()
+		assertTrue(work.events.isEmpty())
+
+		val enabled = manager.preference(device.id, session.accountId)
+		manager.setPreference(device, session, enabled.copy(skippedFolders = setOf("pictures/whatsapp/")))
+		advanceUntilIdle()
+		assertTrue(work.events.isEmpty())
+
+		manager.confirmFolderChoice(device, session)
+		advanceUntilIdle()
+		assertEquals(setOf("pictures/whatsapp/"), preferences.configuration?.skippedFolders)
+		assertEquals(listOf("start", "transfer"), work.events)
+		assertEquals(1, server.grantsCreated.size)
+	}
+
 	@Test
 	fun skippingAFolderReachesTheWorkerWithoutANewGrant() = runTest {
 		val manager = manager()

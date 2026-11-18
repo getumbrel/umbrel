@@ -139,6 +139,13 @@ class PhotoBackupSchedulerTest {
 		assertEquals(PhotoBackupScheduler.networkRequest(allowsCellular = false, userInitiated = true), job.requiredNetwork)
 	}
 
+	// Must stay the inverse of networkRequest's NOT_METERED rule.
+	@Test
+	fun aTransferJobTellsWhetherItAllowsMobileData() {
+		assertFalse(PhotoBackupScheduler.allowsMobileData(PhotoBackupScheduler.transferJob(context, configuration(allowsCellular = false))))
+		assertTrue(PhotoBackupScheduler.allowsMobileData(PhotoBackupScheduler.transferJob(context, configuration(allowsCellular = true))))
+	}
+
 	@Test
 	fun withoutAConfigurationNothingIsScheduled() = runBlocking {
 		context.getSharedPreferences(PhotoBackupPreferences.FILE_NAME, Context.MODE_PRIVATE).edit().clear().commit()

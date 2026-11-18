@@ -78,6 +78,12 @@ class PhotoBackupEngine(
 			pauseForPhotoAccess(sourceId)
 			return@withContext PassOutcome.WaitingForUser
 		}
+		// The app asks which folders to back up once it can see them all. Passes also start
+		// without the app, so they wait for that answer too.
+		val preference = preferences.preference(configuration.deviceId, configuration.source.accountId)
+		if (library.access == PhotoLibraryAccess.FULL && preference.isEnabled && !preference.foldersChosen) {
+			return@withContext PassOutcome.WaitingForUser
+		}
 
 		val initialSnapshot = preferences.snapshot
 		val recoveryRetryRequested = preferences.recoveryRetryRequested(sourceId)
@@ -193,7 +199,7 @@ class PhotoBackupEngine(
 			}
 			when {
 				authenticationRequired || recovery.storagePaused -> PassOutcome.WaitingForUser
-				ingestion == Ingestion.MORE_WORK || hasQueuedWork -> PassOutcome.MoreWork
+				ingestion == Ingestion.MORE_WORK || hasQueuedWork || preferences.configuration != configuration -> PassOutcome.MoreWork
 				else -> PassOutcome.Completed
 			}
 		} catch (cancelled: CancellationException) {
@@ -340,6 +346,9 @@ class PhotoBackupEngine(
 			for (work in candidates) {
 				currentCoroutineContext().ensureActive()
 				if (clock() >= deadlineMs) break
+				// A pass keeps the settings it started with, so a change ends it and the next
+				// pass applies the new ones.
+				if (preferences.configuration != configuration) return null
 				ledger.uploadStarted(sourceId, work.localIdentifier)
 				val result = uploadAsset(configuration, endpoint, grant, work)
 				ledger.uploadFinished(sourceId, work.localIdentifier)

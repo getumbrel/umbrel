@@ -267,8 +267,9 @@ class PhotoBackupModelTest {
 			PhotoBackupStatus.WaitingForUmbrel,
 			PhotoBackupPresentation.resolve(inputs(preference = unchosen, configured = false, access = PhotoLibraryAccess.SELECTED)).status,
 		)
-		// Backup that's already set up keeps running.
-		assertEquals(PhotoBackupStatus.UpToDate, PhotoBackupPresentation.resolve(inputs(preference = unchosen)).status)
+		// Backup set up with a selection waits for the choice too once it can see every folder.
+		assertEquals(PhotoBackupStatus.SettingUp, PhotoBackupPresentation.resolve(inputs(preference = unchosen)).status)
+		assertEquals(PhotoBackupStatus.UpToDate, PhotoBackupPresentation.resolve(inputs(preference = unchosen, access = PhotoLibraryAccess.SELECTED)).status)
 	}
 
 	@Test

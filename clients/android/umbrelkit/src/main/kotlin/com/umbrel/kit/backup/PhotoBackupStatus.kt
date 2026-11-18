@@ -183,8 +183,8 @@ data class PhotoBackupPresentation(
 			// wherever the library can't be read, offers the way back.
 			if (!inputs.libraryAccess.canReadLibrary) return PhotoBackupStatus.Paused
 			if (inputs.recoveryRetryRequested) return PhotoBackupStatus.SettingUp
-			// The folder choice is on screen; setup starts when the user confirms it.
-			if (inputs.configuration == null && !inputs.preference.foldersChosen && inputs.libraryAccess == PhotoLibraryAccess.FULL) {
+			// The folder choice is on screen; backup starts when the user confirms it.
+			if (!inputs.preference.foldersChosen && inputs.libraryAccess == PhotoLibraryAccess.FULL) {
 				return PhotoBackupStatus.SettingUp
 			}
 			// Setup work is described first; once setup is idle, the system restriction is the
