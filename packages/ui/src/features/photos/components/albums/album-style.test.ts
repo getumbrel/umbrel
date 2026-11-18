@@ -22,7 +22,7 @@ describe('albumStyleId', () => {
 
 describe('formatAlbumDates', () => {
 	it('shows the day when everything was taken on one day', () => {
-		expect(formatAlbumDates(at('2026-08-27T09:00'), at('2026-08-27T22:00'), 'en')).toBe('Aug 27, 2026')
+		expect(formatAlbumDates(at('2026-08-27T09:00Z'), at('2026-08-27T22:00Z'), 'en')).toBe('Aug 27, 2026')
 	})
 
 	it('shows the month when everything was taken in one month', () => {
