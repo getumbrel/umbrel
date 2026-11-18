@@ -1761,6 +1761,10 @@ export default class Raid {
 			throw new Error('addDevice is not supported for mirror failsafe mode, use addMirror')
 		if (pool.topology !== 'stripe' && pool.topology !== 'raidz')
 			throw new Error(`Unsupported RAID topology for addDevice: ${pool.topology}`)
+		// ZFS won't expand a raidz that has a device missing or being replaced, and by the time it
+		// refuses the new device has already been wiped
+		if (pool.topology === 'raidz' && pool.status !== 'ONLINE')
+			throw new Error('Cannot add a RAID device until the RAID array is healthy')
 
 		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
 		const device = `/dev/disk/by-umbrel-id/${deviceId}`
