@@ -191,6 +191,7 @@ internal static unsafe partial class NativeMethods
 	public const uint RESOURCETYPE_DISK = 0x1;
 	public const uint CONNECT_TEMPORARY = 0x4;
 	public const uint CONNECT_REDIRECT = 0x80;
+	public const uint CONNECT_REQUIRE_INTEGRITY = 0x4000;
 	public const uint WNNC_NET_LANMAN = 0x00020000;
 
 	public const uint ERROR_SUCCESS = 0;

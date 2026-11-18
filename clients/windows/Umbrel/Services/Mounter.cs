@@ -105,7 +105,9 @@ public static class Mounter
 				ref resource,
 				password,
 				username,
-				NativeMethods.CONNECT_REDIRECT | NativeMethods.CONNECT_TEMPORARY,
+				// Requiring signing makes Windows refuse a server that can't prove it holds the
+				// share password. Only Windows 11 24H2 and later requires it by itself, and not on Home.
+				NativeMethods.CONNECT_REDIRECT | NativeMethods.CONNECT_TEMPORARY | NativeMethods.CONNECT_REQUIRE_INTEGRITY,
 				accessName,
 				ref size,
 				out _);

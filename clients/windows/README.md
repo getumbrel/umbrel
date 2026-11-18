@@ -34,9 +34,12 @@ live in [Umbrel.Core](Umbrel.Core), a .NET port of the Swift
   the current-user scope under `%LOCALAPPDATA%\Umbrel\secrets`. Saved devices live
   beside them in `config.json` with the same shape as the Apple apps.
 - **Shares** are mapped with `WNetUseConnection` and `CONNECT_REDIRECT`, so Windows
-  assigns and reports the drive letter. Mappings are session-scoped: they outlive the
-  app like Finder mounts, are re-adopted on the next launch after the host proves its
-  pinned identity, and are dropped at logoff.
+  assigns and reports the drive letter. The mapping also passes
+  `CONNECT_REQUIRE_INTEGRITY`, so Windows requires SMB signing and only maps a server
+  that holds the share password, also on Windows versions and editions that don't
+  require signing themselves. Mappings are session-scoped: they outlive the app like
+  Finder mounts, are re-adopted on the next launch after the host proves its pinned
+  identity, and are dropped at logoff.
 - **Run at startup** uses the `windows.startupTask` extension, which the installed app
   turns on once on first run; turning it off later in Settings is respected. Unpackaged
   builds use the per-user `Run` key only when it's turned on from the tray menu, so a
