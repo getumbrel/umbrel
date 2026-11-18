@@ -83,6 +83,10 @@ The script signs the package, timestamps it (Artifact Signing certificates last 
 days) and verifies the signature. The `Publisher` in `Package.appxmanifest` and
 `Umbrel.appinstaller` must equal the certificate profile's subject exactly.
 
+The package carries its own .NET runtime, and the SDK on the packaging machine decides
+its patch level. The script refuses a runtime that is behind Microsoft's latest patch, so
+update the .NET SDK before packaging.
+
 Before publishing, install that exact package on a PC where development builds cannot
 mask a packaging error.
 
