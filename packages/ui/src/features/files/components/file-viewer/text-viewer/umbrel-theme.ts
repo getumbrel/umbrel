@@ -118,24 +118,6 @@ const umbrelEditorTheme = EditorView.theme(
 			borderLeft: '2px solid rgba(245, 158, 11, 0.5)',
 			backgroundColor: 'rgba(245, 158, 11, 0.05)',
 		},
-		// Scrollbar — match Umbrel's custom scrollbar
-		'.cm-scroller::-webkit-scrollbar': {
-			width: '11px',
-			height: '11px',
-			background: 'transparent',
-		},
-		'.cm-scroller::-webkit-scrollbar-thumb': {
-			border: '4px solid transparent',
-			borderRadius: '20px',
-			backgroundClip: 'padding-box',
-			backgroundColor: 'rgba(255, 255, 255, 0.15)',
-		},
-		'.cm-scroller::-webkit-scrollbar-thumb:hover': {
-			backgroundColor: 'rgba(255, 255, 255, 0.30)',
-		},
-		'.cm-scroller::-webkit-scrollbar-corner': {
-			background: 'transparent',
-		},
 		// Focus ring — invisible (we handle focus at container level)
 		'&.cm-focused': {
 			outline: 'none',

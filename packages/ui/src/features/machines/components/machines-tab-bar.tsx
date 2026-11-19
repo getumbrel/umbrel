@@ -80,7 +80,7 @@ export function MachinesTabBar({machines}: {machines: Machine[]}) {
 			// the column's px-3, so they read as a row that scrolls
 			className={cn(
 				scrollerClass,
-				'-mx-3 -mt-1 -mb-3 flex min-w-0 flex-1 scroll-px-6 items-center gap-2 overflow-x-auto px-3 py-1 [scrollbar-width:none] md:mx-0 md:px-0 low:mr-0 low:pr-2 [&::-webkit-scrollbar]:hidden',
+				'umbrel-hide-scrollbar -mx-3 -mt-1 -mb-3 flex min-w-0 flex-1 scroll-px-6 items-center gap-2 overflow-x-auto px-3 py-1 md:mx-0 md:px-0 low:mr-0 low:pr-2',
 			)}
 		>
 			<DarkTooltip label={t('machines.all-machines')} side='bottom'>

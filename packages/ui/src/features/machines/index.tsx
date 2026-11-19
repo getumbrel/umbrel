@@ -138,11 +138,7 @@ function MachinesLayoutContent() {
 			initial={{opacity: 0}}
 			animate={{opacity: closing ? 0 : 1}}
 			transition={{duration: 0.15, ease: 'easeOut'}}
-			// stable both-edges: pages taller than the viewport (catalog) and shorter
-			// ones (index) would otherwise toggle the scrollbar and shift the centered
-			// column; both-edges reserves symmetric gutters so it stays centered.
-			// Touch scrollbars float over the page, so they need none.
-			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xl [scrollbar-gutter:stable_both-edges] pointer-coarse:[scrollbar-gutter:auto]'
+			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xl'
 			onClick={!closing && canImplicitlyDismiss ? close : undefined}
 		>
 			<motion.div

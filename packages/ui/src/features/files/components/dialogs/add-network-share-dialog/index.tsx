@@ -286,7 +286,7 @@ export default function AddNetworkShareDialog(props?: {
 	)
 
 	const body = (
-		<div className='umbrel-stable-gutter flex-1 overflow-x-hidden overflow-y-auto'>
+		<div className='flex-1 overflow-x-hidden overflow-y-auto'>
 			<AnimatePresence mode='wait'>
 				{mode === 'wizard' ? (
 					<Form {...form}>
@@ -443,8 +443,7 @@ function DiscoverStep({
 	return (
 		// The same grid as the Backups wizard: columns of 125px or more share out the width, so a
 		// phone gets two full columns rather than an empty strip. Three across needs 399px, which
-		// the dialog has even with Chrome's scrollbar gutter reserved. The columns widen with the
-		// text size, so the cards' one-line labels still fit.
+		// the dialog has. The columns widen with the text size, so the cards' one-line labels still fit.
 		<div className='grid grid-cols-[repeat(auto-fill,minmax(calc(125px+8*var(--text-boost)),1fr))] gap-3 py-2'>
 			<AddManuallyCard onClick={onManual} label={t('files-add-network-share.add-manually')} />
 

@@ -78,10 +78,7 @@ export async function showStorageInUseDialog({
 				) : null}
 				<p>{description}</p>
 				{/* Same row treatment as AppWithName in uninstall-these-first-dialog.tsx */}
-				<FadeScroller
-					direction='y'
-					className='umbrel-hide-scrollbar umbrel-stable-gutter max-h-[196px] space-y-3 overflow-y-auto'
-				>
+				<FadeScroller direction='y' className='umbrel-hide-scrollbar max-h-[196px] space-y-3 overflow-y-auto'>
 					{apps.map((app) => (
 						<div key={app.id} className='flex w-full items-center gap-2.5'>
 							<AppIcon src={app.icon} size={36} className='rounded-8' />

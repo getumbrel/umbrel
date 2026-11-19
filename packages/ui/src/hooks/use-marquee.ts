@@ -193,7 +193,7 @@ export function useMarquee({
 		swallowClick.current = false
 		const bounds = scroller.getBoundingClientRect()
 		const scale = scaleOf(scroller, bounds)
-		// Not from outside the scroller, and not from its scrollbar
+		// Not from outside the scroller
 		if (event.clientX < bounds.left || event.clientY < bounds.top || event.clientY > bounds.bottom) return false
 		if (event.clientX > bounds.left + scroller.clientWidth * scale) return false
 		if (latest.current.canStart && !latest.current.canStart(event)) return false

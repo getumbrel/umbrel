@@ -53,9 +53,9 @@ export function getGridItemHeight(largerText: number): number {
 }
 
 /**
- * How much wider than its content the scroller is drawn, so that a scrollbar
- * that takes layout space sits in the margin beside the rows instead of on
- * them. Phones have no such scrollbar, and their rows run edge to edge.
+ * How much wider than its content the scroller is drawn, so that its
+ * scrollbar sits in the margin beside the rows instead of on them. Phones'
+ * rows run edge to edge.
  * Keep in sync with the container's padding in virtualized-list.tsx.
  */
 export function getGridScrollerPadding(isMobile: boolean, isEmbedded = false): number {

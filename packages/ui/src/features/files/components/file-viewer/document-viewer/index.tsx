@@ -57,8 +57,7 @@ type Opened = {doc: DocxDocument} | {error: DocxErrorCode}
 
 type Stage = {width: number; height: number}
 const spaceFor = (stage: Stage) => (stage.width < 768 ? SPACE.narrow : SPACE.wide)
-// The stage as a fit sees it: its width beside the vertical scrollbar's gutter, its height without the sideways
-// scrollbar of pages zoomed past it (a fit takes that away)
+// The stage as a fit sees it
 const stageOf = (scroller: HTMLElement): Stage => ({width: scroller.clientWidth, height: scroller.offsetHeight})
 
 export default function DocumentViewer({item, mode}: ViewerProps) {
@@ -506,7 +505,7 @@ function Pages({
 					role='document'
 					aria-label={item.name}
 					className={cn(
-						'@container absolute inset-0 touch-pan-x touch-pan-y overflow-auto overscroll-contain outline-none [scrollbar-gutter:stable]',
+						'@container absolute inset-0 touch-pan-x touch-pan-y overflow-auto overscroll-contain outline-none',
 						// The browser keeps the caret clear of the format bar as it brings it into view
 						isEditing && 'scroll-pt-16',
 					)}

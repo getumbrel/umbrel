@@ -228,7 +228,7 @@ function HttpsCertificateDetails({
 			{certificateAddresses.length > 0 && (
 				<div className='space-y-2 px-3 py-3 text-15 font-medium -tracking-3'>
 					<div>{t('https-access-certificate-umbrel-addresses')}</div>
-					<div className='umbrel-stable-gutter max-h-28 overflow-auto text-13 leading-snug font-normal break-words text-white/60'>
+					<div className='max-h-28 overflow-auto text-13 leading-snug font-normal break-words text-white/60'>
 						{certificateAddresses.join(', ')}
 					</div>
 				</div>

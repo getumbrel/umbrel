@@ -403,7 +403,7 @@ function RepositoryStep({
 						{isLoading ? (
 							<LoadingCard />
 						) : repositories && repositories.length > 0 ? (
-							<div className='umbrel-stable-gutter max-h-[min(60vh,500px)] overflow-y-auto'>
+							<div className='max-h-[min(60vh,500px)] overflow-y-auto'>
 								<div className='space-y-3'>
 									{repositories.map((repo) => {
 										const selected = repo.id === selectedId
@@ -603,7 +603,7 @@ function BackupsStep({
 					<EmptyCard text={t('backups-restore.no-backups-found')} />
 				) : (
 					<div
-						className='umbrel-stable-gutter max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-linear-to-b from-white/[0.03] to-transparent pt-1 pb-8 pl-1 md:max-h-[min(60vh,560px)]'
+						className='max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-linear-to-b from-white/[0.03] to-transparent pt-1 pb-8 pl-1 md:max-h-[min(60vh,560px)]'
 						style={{
 							maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 80px), transparent)',
 						}}

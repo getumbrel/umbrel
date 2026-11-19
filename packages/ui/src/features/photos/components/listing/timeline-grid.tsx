@@ -1242,13 +1242,11 @@ export function TimelineGrid({
 		footer !== undefined && view !== null && footerTop !== undefined && view.items.end >= view.layout.items.length - 1
 
 	return (
-		// The scroller is the grid's box: rows are laid out for its client size
-		// (a classic scrollbar excluded — FadedScroller reserves its gutter where one takes space, so it
-		// can't come and go with the content and resize the grid). The time rail
+		// The scroller is the grid's box: rows are laid out for its client size,
+		// which no scrollbar takes from (see modules/scrollbars). The time rail
 		// sits over it as a sibling, so its pointer never starts a marquee, and
-		// while it shows it owns the right edge alone: the scrollbar is hidden,
-		// its strip still reserved (see FadedScroller), so the rail's coming
-		// and going can't resize the grid either.
+		// while it shows it owns the right edge alone: the scrollbar is hidden
+		// (see FadedScroller).
 		<div className='relative h-full w-full'>
 			<FadedScroller
 				ref={scrollerRef}

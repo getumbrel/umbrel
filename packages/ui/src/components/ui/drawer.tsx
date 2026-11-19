@@ -121,7 +121,7 @@ function DrawerScroller({
 	fade?: boolean
 	ref?: React.Ref<HTMLDivElement>
 }) {
-	const className = 'umbrel-stable-gutter flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'
+	const className = 'flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'
 	if (!fade)
 		return (
 			<div ref={ref} className={className}>

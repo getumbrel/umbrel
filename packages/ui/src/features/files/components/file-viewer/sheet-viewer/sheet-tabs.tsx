@@ -74,7 +74,7 @@ export function SheetTabs({
 					}}
 					data-more={more}
 					className={cn(
-						'flex items-center gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+						'umbrel-hide-scrollbar flex items-center gap-1 overflow-x-auto rounded-full',
 						'data-[more=start]:[mask-image:linear-gradient(to_right,transparent,black_24px)]',
 						'data-[more=end]:[mask-image:linear-gradient(to_left,transparent,black_24px)]',
 						'data-[more=both]:[mask-image:linear-gradient(to_right,transparent,black_24px,black_calc(100%-24px),transparent)]',
