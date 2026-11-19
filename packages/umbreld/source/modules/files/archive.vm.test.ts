@@ -287,6 +287,83 @@ describe('unarchive()', () => {
 		await expect(readGuestFile(`${guestHome}/test-extract/file1.txt`)).resolves.toBe('content1')
 		await expect(readGuestFile(`${guestHome}/test-extract/file2.txt`)).resolves.toBe('content2')
 		await expect(readGuestFile(`${guestHome}/test-extract/subdir/file3.txt`)).resolves.toBe('content3')
+
+		// What was extracted belongs to the umbrel user, like any file of theirs
+		const owners = await umbreld.vm.ssh(
+			`stat -c '%U:%G' '${guestHome}/test-extract' '${guestHome}/test-extract/file1.txt' '${guestHome}/test-extract/subdir/file3.txt'`,
+		)
+		expect(owners.trim()).toBe('umbrel:umbrel\numbrel:umbrel\numbrel:umbrel')
+	})
+
+	test('extracts an archive only root can read, in a folder only root can enter', async () => {
+		// Folders and files in Home are not always the umbrel user's: an
+		// earlier extraction, or an upload that was never handed over, leaves
+		// them root's. The user can still see them in Files, so can still ask
+		// for an archive among them to be extracted.
+		const zip = new AdmZip()
+		zip.addFile('inside.txt', Buffer.from('reached', 'utf8'))
+		await uploadFile('/Home/locked-source.zip', zip.toBuffer())
+		const made = await umbreld.vm.sshAsRoot(`
+			mkdir '${guestHome}/locked' && mv '${guestHome}/locked-source.zip' '${guestHome}/locked/archive.zip' &&
+			chown -R root:root '${guestHome}/locked' && chmod 700 '${guestHome}/locked' && chmod 600 '${guestHome}/locked/archive.zip' &&
+			stat -c '%U %a' '${guestHome}/locked' '${guestHome}/locked/archive.zip'
+		`)
+		expect(made).toBe('root 700\nroot 600')
+
+		const extractPath = await umbreld.client.files.unarchive.mutate({path: '/Home/locked/archive.zip'})
+		expect(extractPath).toBe('/Home/locked/archive')
+
+		// It was extracted, and what came out is the umbrel user's
+		const extracted = await umbreld.vm.sshAsRoot(
+			`cat '${guestHome}/locked/archive/inside.txt'; stat -c ' %U:%G' '${guestHome}/locked/archive' '${guestHome}/locked/archive/inside.txt'`,
+		)
+		expect(extracted).toBe('reached umbrel:umbrel\n umbrel:umbrel')
+	})
+
+	test('extracts an archive that is split across several files', async () => {
+		// A ZIP in two volumes, made with `zip -s 64k`. unar is given one volume
+		// and finds the other beside it itself, so it has to be shown the folder
+		// they are in. The volumes of a split ZIP are named in one of two ways.
+		const fixtures = nodePath.resolve(__dirname, 'fixtures', 'archives')
+		const [first, last] = await Promise.all(
+			['split-archive.z01', 'split-archive.zip'].map((name) => fse.readFile(`${fixtures}/${name}`)),
+		)
+		for (const [directory, firstName, lastName, opened] of [
+			['split', 'split-archive.z01', 'split-archive.zip', 'split-archive.zip'],
+			['numbered', 'split-archive.1.zip', 'split-archive.2.zip', 'split-archive.1.zip'],
+		]) {
+			await umbreld.client.files.createDirectory.mutate({path: `/Home/${directory}`})
+			await uploadFile(`/Home/${directory}/${firstName}`, first)
+			await uploadFile(`/Home/${directory}/${lastName}`, last)
+
+			const extractPath = await umbreld.client.files.unarchive.mutate({path: `/Home/${directory}/${opened}`})
+			expect(extractPath).toBe(`/Home/${directory}/${opened.slice(0, -'.zip'.length)}`)
+
+			// The larger file spans both volumes
+			const extracted = await umbreld.vm.ssh(
+				`cd '${guestHome}${extractPath.slice('/Home'.length)}' && ls && sha256sum split-file.bin | cut -c1-64 && cat other.txt`,
+			)
+			expect(extracted).toBe(
+				[
+					'other.txt',
+					'split-file.bin',
+					'90c91e565d293751ca4d3ef8bcf9d08e07210ac88b9e12501e65fa7e076c52bc',
+					'second file',
+				].join('\n'),
+			)
+		}
+	})
+
+	test('extracts an archive in a folder reached through a link', async () => {
+		const zip = new AdmZip()
+		zip.addFile('inside.txt', Buffer.from('reached', 'utf8'))
+		await umbreld.client.files.createDirectory.mutate({path: '/Home/linked-to'})
+		await uploadFile('/Home/linked-to/archive.zip', zip.toBuffer())
+		await umbreld.vm.ssh(`ln -s '${guestHome}/linked-to' '${guestHome}/linked-from'`)
+
+		const extractPath = await umbreld.client.files.unarchive.mutate({path: '/Home/linked-from/archive.zip'})
+		expect(extractPath).toBe('/Home/linked-from/archive')
+		expect(await umbreld.vm.ssh(`cat '${guestHome}/linked-to/archive/inside.txt'`)).toBe('reached')
 	})
 
 	test('creates a unique directory name if target already exists', async () => {

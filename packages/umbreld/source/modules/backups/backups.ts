@@ -12,6 +12,7 @@ import prettyBytes from 'pretty-bytes'
 
 import randomToken from '../../modules/utilities/random-token.ts'
 import {copyWithProgress} from '../utilities/copy-with-progress.ts'
+import {sandboxed} from '../utilities/sandbox.ts'
 
 // TODO: These should be refactored into proper umbreld modules
 import {getSystemDiskUsage} from '../system/system.ts'
@@ -213,9 +214,28 @@ export default class Backups {
 	// Run a kopia command
 	// We just default to bypassing the queue to effectively disable it now. It was causing blocking problems.
 	// We can carefully re-enable it in select places in the future if we need to.
+	//
+	// A repository is on a drive or a share that anyone with access to it can
+	// have changed, so kopia runs sandboxed. It is root, which reading every
+	// file being backed up needs, with no network: every repository is a
+	// directory. It sees the repository, its own config and cache, and for a
+	// backup what it backs up. Only mounting a backup runs unsandboxed,
+	// because a mount made in a sandbox stays in it.
 	async kopia(
 		flags: string[] = [],
-		{onOutput, bypassQueue = true}: {onOutput?: (output: string) => void; bypassQueue?: boolean} = {},
+		{
+			repositoryPath,
+			readablePaths = [],
+			sandbox = true,
+			onOutput,
+			bypassQueue = true,
+		}: {
+			repositoryPath?: string
+			readablePaths?: string[]
+			sandbox?: boolean
+			onOutput?: (output: string) => void
+			bypassQueue?: boolean
+		} = {},
 	) {
 		// Refuse to spawn new kopia processes until backups has started (it starts last
 		// during boot, after the API is already up) and once we're shutting down
@@ -225,15 +245,42 @@ export default class Backups {
 		}
 
 		const spawnKopiaProcess = async () => {
-			// Spawn process
+			// Keep the cache and logs on the data directory's filesystem. /kopia lives on
+			// the data partition which on Raspberry Pi installs is too small to hold the cache.
+			const cacheDirectory = `${this.#umbreld.dataDirectory}/kopia/cache`
+			const configDirectory = '/kopia/config'
 			const env = {
 				KOPIA_CHECK_FOR_UPDATES: 'false',
-				// Keep the cache and logs on the data directory's filesystem. /kopia lives on
-				// the data partition which on Raspberry Pi installs is too small to hold the cache.
-				XDG_CACHE_HOME: `${this.#umbreld.dataDirectory}/kopia/cache`,
-				XDG_CONFIG_HOME: '/kopia/config',
+				XDG_CACHE_HOME: cacheDirectory,
+				XDG_CONFIG_HOME: configDirectory,
 			}
-			const process = execa('kopia', flags, {env})
+
+			// Spawn process
+			let process: ExecaChildProcess
+			if (sandbox) {
+				// Only what is there can be shown to a sandbox. These are kopia's
+				// own, closed to everyone else as kopia makes them.
+				await Promise.all([fse.ensureDir(cacheDirectory, 0o700), fse.ensureDir(configDirectory, 0o700)])
+				// A repository that isn't there is left out, for kopia to report
+				// as it always has
+				const repository = repositoryPath && (await fse.pathExists(repositoryPath)) ? [repositoryPath] : []
+				process = sandboxed(
+					'kopia',
+					flags,
+					{
+						network: false,
+						gpu: false,
+						// kopia names each backup after the user who made it, and
+						// finds this one's name here
+						readablePaths: [...readablePaths, '/etc/passwd'],
+						writablePaths: [configDirectory, cacheDirectory, ...repository],
+						user: 'root',
+					},
+					{env},
+				)
+			} else {
+				process = execa('kopia', flags, {env})
+			}
 
 			// Store reference to running process
 			this.runningKopiaProcesses.push(process)
@@ -307,23 +354,26 @@ export default class Backups {
 
 			// Create the kopia repository
 			// TODO: Investigate all the possible options here
-			await this.kopia([
-				'repository',
-				'create',
-				'filesystem',
-				// Location to backup the data to
-				`--path=${systemPath}`,
-				// Path to local config file for this repository
-				// These don't seem to need to be persisted. If you nuke them they
-				// get recreated the next time we connect.
-				`--config-file=/kopia/config/${id}.config`,
-				// Password for the repository
-				`--password=${password}`,
-				// Kopia stamps the creating user@host as the repository's maintenance owner and
-				// only runs automatic maintenance when the connecting user@host matches it.
-				// Use the same hostname override as connect() so they always match.
-				'--override-hostname=umbrel',
-			])
+			await this.kopia(
+				[
+					'repository',
+					'create',
+					'filesystem',
+					// Location to backup the data to
+					`--path=${systemPath}`,
+					// Path to local config file for this repository
+					// These don't seem to need to be persisted. If you nuke them they
+					// get recreated the next time we connect.
+					`--config-file=/kopia/config/${id}.config`,
+					// Password for the repository
+					`--password=${password}`,
+					// Kopia stamps the creating user@host as the repository's maintenance owner and
+					// only runs automatic maintenance when the connecting user@host matches it.
+					// Use the same hostname override as connect() so they always match.
+					'--override-hostname=umbrel',
+				],
+				{repositoryPath: systemPath},
+			)
 		}
 
 		// Update the store
@@ -401,8 +451,10 @@ export default class Backups {
 			const backupDirectoryName = await this.mountBackup(backupId)
 			const internalBackupMountpoint = nodePath.join(this.internalMountPath, backupDirectoryName)
 
-			// Copy over data dir from previous install to temp dir while preserving permissions
+			// Copy over data dir from previous install to temp dir while preserving permissions.
+			// The directory is made first so that it is all the copy can write to.
 			await fse.remove(temporaryData)
+			await fse.mkdir(temporaryData)
 			let previousProgress: number
 			await copyWithProgress(`${internalBackupMountpoint}/`, temporaryData, (progress) => {
 				this.restoreStatus.progress = progress.progress
@@ -483,25 +535,29 @@ export default class Backups {
 		const cacheSizeFlags = await this.kopiaCacheSizeFlags()
 
 		const systemPath = this.#umbreld.files.virtualToSystemPathUnsafe(repository.path)
-		await this.kopia([
-			'repository',
-			'connect',
-			'filesystem',
-			// Location to backup the data to
-			`--path=${systemPath}`,
-			// Path to local config file for this repository
-			// These don't seem to need to be persisted. If you nuke them they
-			// get recreated the next time we connect.
-			`--config-file=/kopia/config/${repository.id}.config`,
-			// Password for the repository
-			`--password=${repository.password}`,
-			// Force the hostname to 'umbrel' so backups always match the same host.
-			// Without this if you start backing up, then change your hostname, then
-			// continue to backup, kopia will see these as backups originating from
-			// different machines.
-			'--override-hostname=umbrel',
-			...cacheSizeFlags,
-		])
+		await this.kopia(
+			[
+				'repository',
+				'connect',
+				'filesystem',
+				// Location to backup the data to
+				`--path=${systemPath}`,
+				// Path to local config file for this repository
+				// These don't seem to need to be persisted. If you nuke them they
+				// get recreated the next time we connect.
+				`--config-file=/kopia/config/${repository.id}.config`,
+				// Password for the repository
+				`--password=${repository.password}`,
+				// Force the hostname to 'umbrel' so backups always match the same host.
+				// Without this if you start backing up, then change your hostname, then
+				// continue to backup, kopia will see these as backups originating from
+				// different machines.
+				'--override-hostname=umbrel',
+				...cacheSizeFlags,
+			],
+			{repositoryPath: systemPath},
+		)
+		return systemPath
 	}
 
 	// Small fixed-inode filesystems can be exhausted by kopia's many cache files.
@@ -521,16 +577,32 @@ export default class Backups {
 	async repository(
 		repositoryId: string,
 		flags: string[] = [],
-		{onOutput, bypassQueue = true}: {onOutput?: (output: string) => void; bypassQueue?: boolean} = {},
+		{
+			readablePaths,
+			sandbox,
+			onOutput,
+			bypassQueue = true,
+		}: {
+			readablePaths?: string[]
+			sandbox?: boolean
+			onOutput?: (output: string) => void
+			bypassQueue?: boolean
+		} = {},
 	) {
 		// Check we're connected to the repository
 		// We technically only need to connect once, but there's no downside to connecting
 		// once we're already connected. This also conveniently means we auto retry connecting
 		// to repos that weren't accessible before.
-		await this.connect(repositoryId)
+		const repositoryPath = await this.connect(repositoryId)
 
 		// Run the command
-		return this.kopia([...flags, `--config-file=/kopia/config/${repositoryId}.config`], {onOutput, bypassQueue})
+		return this.kopia([...flags, `--config-file=/kopia/config/${repositoryId}.config`], {
+			repositoryPath,
+			readablePaths,
+			sandbox,
+			onOutput,
+			bypassQueue,
+		})
 	}
 
 	// Get size of a repository
@@ -678,6 +750,7 @@ export default class Backups {
 				this.logger.log(`Creating snapshot`)
 				// Kopia only prints progress to a terminal unless --progress is passed
 				await this.repository(repository.id, ['snapshot', 'create', '--progress', this.#umbreld.dataDirectory], {
+					readablePaths: [this.#umbreld.dataDirectory],
 					onOutput: (output) => {
 						// Pluck progress in brackets from output like:
 						// '/ 1 hashing, 216 hashed (1.6 GB), 21121 cached (5.4 GB), uploaded 1.4 GB, estimated 7.6 GB (91.6%) 0s left'
@@ -948,7 +1021,7 @@ export default class Backups {
 		const internalMountpoint = nodePath.join(this.internalMountPath, directoryName)
 		await fse.mkdir(internalMountpoint, {recursive: true})
 		let mountProcessExitCode = null
-		this.repository(repositoryId, ['mount', snapshotId, internalMountpoint], {bypassQueue: true})
+		this.repository(repositoryId, ['mount', snapshotId, internalMountpoint], {bypassQueue: true, sandbox: false})
 			.then((process) => (mountProcessExitCode = process.exitCode))
 			.catch((error) => {
 				this.logger.error(`Failed to mount backup ${backupId}`, error)

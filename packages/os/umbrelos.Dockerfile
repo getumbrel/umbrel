@@ -598,7 +598,7 @@ RUN systemctl enable libvirtd.socket libvirtd-ro.socket libvirtd-admin.socket vi
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg libimage-exiftool-perl samba wsdd2 cifs-utils smbclient nvme-cli smartmontools pciutils
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg libimage-exiftool-perl bubblewrap samba wsdd2 cifs-utils smbclient nvme-cli smartmontools pciutils
 
 # Debian trixie ships libde265 1.0.15, which leaves 10-bit image planes
 # uninitialized before decoding. Apple tiled HEIC images can consequently pick

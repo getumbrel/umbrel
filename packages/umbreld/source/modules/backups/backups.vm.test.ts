@@ -135,6 +135,11 @@ NODE
 `)
 		const {totalInodes, cacheDirectory, caching} = JSON.parse(output)
 
+		// kopia's own directories, one of which holds each repository's password,
+		// are closed to everyone else
+		const modes = await umbreld.vm.sshAsRoot(`stat --format=%a /kopia/config ${vmDataDirectory}/kopia/cache`)
+		expect(modes).toBe('700\n700')
+
 		expect(cacheDirectory).toMatch(new RegExp(`^${vmDataDirectory}/kopia/cache/kopia/[a-f0-9]+$`))
 		if (kopiaCacheSizeFlagsForInodes(totalInodes).length > 0) {
 			expect(caching).toMatchObject({
@@ -212,6 +217,16 @@ NODE
 				password: repositoryPassword,
 			}),
 		).rejects.toThrow('Repository already exists')
+
+		// A folder that holds no backup is reported by kopia itself, as it was
+		// before kopia was sandboxed
+		await umbreld.client.files.createDirectory.mutate({path: `${externalPath}/Empty`})
+		await expect(
+			umbreld.client.backups.connectToExistingRepository.mutate({
+				path: `${externalPath}/Empty`,
+				password: repositoryPassword,
+			}),
+		).rejects.toThrow('cannot access storage path')
 	})
 
 	test('creates a backup and lists repository contents', async () => {

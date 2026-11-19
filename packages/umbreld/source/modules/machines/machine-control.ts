@@ -1,7 +1,6 @@
 import {setTimeout as delay} from 'node:timers/promises'
 
-import {execa} from 'execa'
-
+import {GiB, sandboxed} from '../utilities/sandbox.ts'
 import {
 	createPointerMotion,
 	pointOnMotion,
@@ -56,7 +55,7 @@ export async function encodeScreenshot(frame: Framebuffer): Promise<MachineScree
 	const ppm = Buffer.concat([Buffer.from(`P6\n${frame.width} ${frame.height}\n255\n`, 'latin1'), frame.rgb])
 	// Full chroma keeps small coloured text legible, which is what an agent
 	// reading a terminal or a dialog needs most from a screenshot
-	const {stdout} = await execa(
+	const {stdout} = await sandboxed(
 		'convert',
 		[
 			'ppm:-',
@@ -67,6 +66,10 @@ export async function encodeScreenshot(frame: Framebuffer): Promise<MachineScree
 			'4:4:4',
 			'jpeg:-',
 		],
+		// The frame goes in on standard input and the JPEG comes back on standard
+		// output. An agent driving a machine waits on every screenshot, so
+		// encoding one is not held back.
+		{network: false, gpu: false, readablePaths: [], writablePaths: [], memoryLimit: GiB},
 		{input: ppm, encoding: null, timeout: SCREENSHOT_ENCODE_TIMEOUT_MS, killSignal: 'SIGKILL'},
 	)
 	return {width: fit.width, height: fit.height, mimeType: 'image/jpeg', data: stdout.toString('base64')}

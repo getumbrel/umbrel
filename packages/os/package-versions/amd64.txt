@@ -43,6 +43,7 @@ binutils-x86-64-linux-gnu 2.44-3
 bluez 5.82-1.1
 bsdextrautils 2.41.5-0+deb13u1
 bsdutils 1:2.41.5-0+deb13u1
+bubblewrap 0.12.0-1~deb13u1
 build-essential 12.12
 busybox 1:1.37.0-6+b9
 bzip2 1.0.8-6

@@ -5,11 +5,11 @@ import {tmpdir} from 'node:os'
 import nodePath from 'node:path'
 import type {Readable} from 'node:stream'
 
-import {execa} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
 import type Umbreld from '../../index.ts'
+import {GiB, sandboxed} from '../utilities/sandbox.ts'
 
 export const MAX_AVATAR_UPLOAD_BYTES = 20 * 1024 * 1024
 const MAX_AVATAR_DECODED_PIXELS = 50_000_000
@@ -113,17 +113,32 @@ async function uploadedImageFormat(source: string): Promise<SupportedImageFormat
 	throw new AvatarError('Unsupported avatar image')
 }
 
+// ImageMagick runs in the sandbox (see utilities/sandbox.ts) and can't open any
+// path. It reads the image from standard input and writes the avatar to
+// descriptor 3. Told the format the upload's first bytes gave, it decodes
+// straight from the descriptor, and with that format's decoder only.
+const SANDBOX = {
+	network: false,
+	gpu: false,
+	readablePaths: [],
+	writablePaths: [],
+	memoryLimit: 2 * GiB,
+}
 async function inspectImage(source: string) {
 	const expectedFormat = await uploadedImageFormat(source)
 	let stdout: string
+	const file = await open(source, constants.O_RDONLY | constants.O_NOFOLLOW)
 	try {
-		;({stdout} = await execa(
+		;({stdout} = await sandboxed(
 			'identify',
-			[...IMAGE_MAGICK_LIMITS, '-quiet', '-ping', '-format', '%m %w %h', `${source}[0]`],
-			{timeout: AVATAR_CONVERSION_TIMEOUT_MS},
+			[...IMAGE_MAGICK_LIMITS, '-quiet', '-ping', '-format', '%m %w %h', `${expectedFormat}:fd:0[0]`],
+			SANDBOX,
+			{timeout: AVATAR_CONVERSION_TIMEOUT_MS, stdio: [file.fd, 'pipe', 'pipe']},
 		))
 	} catch {
 		throw new AvatarError('Invalid avatar image')
+	} finally {
+		await file.close()
 	}
 
 	const [format, widthValue, heightValue] = stdout.trim().split(/\s+/)
@@ -143,13 +158,18 @@ async function inspectImage(source: string) {
 }
 
 async function convertImage(source: string, destination: string) {
-	await inspectImage(source)
+	const {format} = await inspectImage(source)
+	const files: Array<Awaited<ReturnType<typeof open>>> = []
 	try {
-		await execa(
+		files.push(await open(source, constants.O_RDONLY | constants.O_NOFOLLOW))
+		files.push(
+			await open(destination, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW),
+		)
+		await sandboxed(
 			'convert',
 			[
 				...IMAGE_MAGICK_LIMITS,
-				`${source}[0]`,
+				`${format}:fd:0[0]`,
 				'-auto-orient',
 				'-colorspace',
 				'sRGB',
@@ -164,12 +184,15 @@ async function convertImage(source: string, destination: string) {
 				String(AVATAR_WEBP_QUALITY),
 				'-define',
 				'webp:method=4',
-				destination,
+				'webp:fd:3',
 			],
-			{timeout: AVATAR_CONVERSION_TIMEOUT_MS},
+			SANDBOX,
+			{timeout: AVATAR_CONVERSION_TIMEOUT_MS, stdio: [files[0].fd, 'pipe', 'pipe', files[1].fd]},
 		)
 	} catch {
 		throw new AvatarError('Unable to process avatar image')
+	} finally {
+		await Promise.all(files.map((file) => file.close()))
 	}
 
 	const output = await inspectImage(destination).catch(() => {

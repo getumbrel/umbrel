@@ -653,6 +653,11 @@ jobs:
           # overwhelms the cache backend and intermittently fails the build with
           # 429/504/not_found errors, which surfaced as flaky integration tests.
           UMBREL_DEV_SKIP_CACHE_EXPORT: 'true'
+      # umbreld runs media tools in a bubblewrap sandbox, which sets itself up
+      # inside a user namespace created by an unprivileged user. Ubuntu's
+      # AppArmor denies capabilities in those namespaces by default, and the dev
+      # container shares the runner's kernel. umbrelOS has no such restriction.
+      - run: sudo sysctl --write kernel.apparmor_restrict_unprivileged_userns=0
       - run: npm run dev start
       - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
       # Retried once for the same reason as the VM tests. Each run creates its own

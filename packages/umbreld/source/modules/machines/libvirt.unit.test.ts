@@ -35,9 +35,20 @@ const execaMock = vi.hoisted(() =>
 
 vi.mock('execa', () => ({execa: execaMock}))
 
+// Sandboxed commands land in the same mock, with what each was allowed
+// recorded beside it
+const sandboxes = vi.hoisted(() => [] as Array<{readablePaths: string[]; writablePaths: string[]; user?: unknown}>)
+vi.mock('../utilities/sandbox.ts', () => ({
+	sandboxed: (command: string, arguments_: string[], sandbox: (typeof sandboxes)[number], options?: any) => {
+		sandboxes.push(sandbox)
+		return execaMock(command, arguments_, options)
+	},
+}))
+
 const temporaryDirectories: string[] = []
 
 afterEach(async () => {
+	sandboxes.length = 0
 	execaMock.mockReset()
 	execaMock.mockResolvedValue({stdout: '', stderr: '', exitCode: 0})
 	await Promise.all(temporaryDirectories.splice(0).map((directory) => fse.remove(directory)))
@@ -198,6 +209,26 @@ describe('qemu-img input format', () => {
 			'/input/disk.vmdk',
 			'/output/disk.qcow2',
 		])
+	})
+
+	test.each([
+		['raw', '/input/disk.img', ['/input/disk.img']],
+		['qcow2', '/input/disk.qcow2', ['/input/disk.qcow2']],
+		// A VMDK descriptor can name other files as its extents: it sees none
+		['vmdk', '/input/disk.vmdk', ['/input/disk.vmdk']],
+	] as const)('shows qemu-img a %s image and nothing else it could name', async (format, source, readable) => {
+		const libvirt = new Libvirt({
+			logger: {createChildLogger: () => ({log: vi.fn(), error: vi.fn()})},
+		} as unknown as Umbreld)
+		execaMock.mockClear()
+		execaMock.mockResolvedValueOnce({stdout: JSON.stringify({'virtual-size': 1}), stderr: '', exitCode: 0})
+
+		await libvirt.convertDisk(source, '/output/disk.qcow2', 1, format, new AbortController().signal)
+
+		// Inspecting, converting, then resizing what was converted
+		expect(sandboxes.map(({readablePaths}) => readablePaths)).toEqual([readable, readable, []])
+		expect(sandboxes.map(({writablePaths}) => writablePaths)).toEqual([[], ['/output'], ['/output/disk.qcow2']])
+		expect(sandboxes.every(({user}) => user === 'root')).toBe(true)
 	})
 
 	test('cancels and bounds inspection, conversion, and resize commands', async () => {
@@ -607,11 +638,19 @@ describe('disk resize safety', () => {
 		})
 
 		await expect(libvirt.diskVirtualSizeBytes('/data/machines/test/disk.qcow2')).resolves.toBe(64 * 1_024 ** 3)
-		expect(execaMock).toHaveBeenCalledWith(
-			'qemu-img',
-			['info', '-f', 'qcow2', '--force-share', '--output=json', '/data/machines/test/disk.qcow2'],
-			{reject: false},
-		)
+		// qemu-img runs sandboxed, and the disk is the only path it is given
+		const [command, arguments_, options] = execaMock.mock.calls.at(-1)!
+		expect(command).toBe('qemu-img')
+		expect(arguments_).toEqual([
+			'info',
+			'-f',
+			'qcow2',
+			'--force-share',
+			'--output=json',
+			'/data/machines/test/disk.qcow2',
+		])
+		expect(sandboxes.at(-1)).toMatchObject({readablePaths: ['/data/machines/test/disk.qcow2'], writablePaths: []})
+		expect(options).toEqual({reject: false})
 	})
 
 	test('grows a live disk through libvirt', async () => {

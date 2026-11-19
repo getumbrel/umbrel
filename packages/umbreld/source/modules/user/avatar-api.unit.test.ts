@@ -5,21 +5,18 @@ import nodePath from 'node:path'
 
 import cookieParser from 'cookie-parser'
 import express from 'express'
-import {execa} from 'execa'
 import fse from 'fs-extra'
 import got from 'got'
 import {afterAll, beforeAll, describe, expect, test, vi} from 'vitest'
 
 import Umbreld from '../../index.ts'
+import {sandboxed} from '../utilities/sandbox.ts'
 import temporaryDirectory from '../utilities/temporary-directory.ts'
 import {OWNER_ACCOUNT_ID, type Principal} from '../auth/auth.ts'
 import {BROWSER_SESSION_HTTP_COOKIE_NAME} from '../auth/browser-session-cookie.ts'
 import accountAvatarApi, {accountAvatarUrl, authorizeAccountAvatarWrite, serializeAccountAvatar} from './avatar-api.ts'
 
-vi.mock('execa', async (importOriginal) => ({
-	...(await importOriginal<typeof import('execa')>()),
-	execa: vi.fn(),
-}))
+vi.mock('../utilities/sandbox.ts')
 
 const accountAvatarPath = (umbreld: Umbreld, userId: string, hash: string) =>
 	nodePath.join(umbreld.dataDirectory, 'avatars', userId, `${hash}.webp`)
@@ -107,13 +104,24 @@ describe('avatar write responses', () => {
 			cookie: `${BROWSER_SESSION_HTTP_COOKIE_NAME}=${session.browserSessionToken}`,
 		}
 
-		vi.mocked(execa).mockImplementation((async (command: string, args: readonly string[]) => {
+		// ImageMagick reads an image from its standard input and writes the
+		// avatar to descriptor 3. An upload is inspected, converted, and the
+		// avatar that came out inspected in turn.
+		let converted = false
+		vi.mocked(sandboxed).mockImplementation((async (
+			command: string,
+			_arguments: readonly string[],
+			_sandbox: unknown,
+			options: {stdio: number[]},
+		) => {
 			if (command === 'identify') {
-				const source = args.at(-1) ?? ''
-				return {stdout: source.includes('.tmp.webp') ? 'WEBP 512 512' : 'JPEG 640 480'}
+				const inspection = converted ? 'WEBP 512 512' : 'JPEG 640 480'
+				converted = false
+				return {stdout: inspection}
 			}
 			if (command === 'convert') {
-				await fse.writeFile(args.at(-1)!, canonicalWebp)
+				await fse.write(options.stdio[3], canonicalWebp)
+				converted = true
 				return {stdout: ''}
 			}
 			throw new Error(`Unexpected command: ${command}`)
@@ -131,7 +139,7 @@ describe('avatar write responses', () => {
 		await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())))
 		await umbreld.auth.stop()
 		await directory.destroyRoot()
-		vi.mocked(execa).mockReset()
+		vi.mocked(sandboxed).mockReset()
 	})
 
 	test('returns the public content-addressed URL after a successful PUT', async () => {

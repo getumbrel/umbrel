@@ -9,10 +9,9 @@ import nodePath from 'node:path'
 import {Readable} from 'node:stream'
 import {pipeline} from 'node:stream/promises'
 
-import {$} from 'execa'
-
 import type Umbreld from '../../index.ts'
 import {OWNER_USER_ID} from '../user/constants.ts'
+import {GiB, sandboxed} from '../utilities/sandbox.ts'
 
 type ZipEntryData = archiver.EntryData & {store?: boolean}
 
@@ -231,7 +230,45 @@ export default class Archive {
 
 		// Unarchive
 		// TODO: Add progress reporting
-		await $`unar -force-overwrite -no-directory -output-directory ${targetDirectory} ${systemPath}`
+		// unar runs sandboxed as root, seeing only the archive's folder, which
+		// it can read, and the target directory. As root it can read any
+		// archive and write wherever the user asked, whoever owns the folders
+		// on the way there, as it could before it was sandboxed. The target is
+		// made here because unar can't create it in a folder it can only read.
+		// The user database is what unar needs to read ZIPs.
+		//
+		// It is shown the folder and not the archive alone because an archive
+		// can be split across several files, which unar finds beside the one it
+		// is given.
+		await fse.mkdir(targetDirectory)
+		try {
+			await sandboxed('unar', ['-force-overwrite', '-no-directory', '-output-directory', targetDirectory, systemPath], {
+				network: false,
+				gpu: false,
+				readablePaths: [nodePath.dirname(systemPath), '/etc/passwd'],
+				writablePaths: [targetDirectory],
+				// Enough for the largest dictionaries archives are made with
+				memoryLimit: 4 * GiB,
+				user: 'root',
+			})
+		} catch (error) {
+			// Nothing came out of it: leave no empty folder behind
+			await fse.rmdir(targetDirectory).catch(() => {})
+			throw error
+		} finally {
+			// What was extracted, in full or in part, belongs to the owner of
+			// the user's files, like anything else of theirs. Links are handed
+			// over, never followed. This fails where mount options supply the
+			// ownership, as on exFAT or a network share, which is fine there.
+			const {userId, groupId} = this.#umbreld.files.fileOwner
+			await sandboxed('chown', ['--recursive', '--no-dereference', `${userId}:${groupId}`, targetDirectory], {
+				network: false,
+				gpu: false,
+				readablePaths: [],
+				writablePaths: [targetDirectory],
+				user: 'root',
+			}).catch(() => {})
+		}
 		void this.#umbreld.files.fileIndex
 			.reconcilePath(targetDirectory)
 			.catch((error) => this.logger.error(`Failed to index extracted archive '${targetDirectory}'`, error))

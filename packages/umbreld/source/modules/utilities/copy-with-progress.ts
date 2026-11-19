@@ -1,7 +1,10 @@
-import {execa} from 'execa'
+import {lstat, stat} from 'node:fs/promises'
+import nodePath from 'node:path'
+
 import bytes from 'bytes'
 
 import {floorToTenthPercent} from './progress.ts'
+import {sandboxed} from './sandbox.ts'
 
 // rsync only prints whole percents, which on a large copy can mean minutes between
 // updates. It calculates them as floor(100 * bytesCopied / totalBytes) against a fixed
@@ -44,24 +47,51 @@ export async function copyWithProgress(
 	if (durable) rsyncExtraOptions.push('--fsync')
 
 	// Start rsync copy
-	const rsync = execa('rsync', [
-		// Give detailed progress output we can easily parse.
-		// Build the entire file list before starting the transfer instead of incrementally
-		// for more accurate progress reporting.
-		'--info=progress2',
-		'--no-human-readable',
-		'--no-inc-recursive',
-		// Archive mode, recursive and preserve permissions etc
-		'--archive',
-		// Inplace mode, update files in place instead of temporary files with a random suffix
-		// which confuses recents tracking.
-		'--inplace',
-		// Drop in extra options
-		...rsyncExtraOptions,
-		// Absolute source and target
-		source,
-		destination,
-	])
+	// rsync runs sandboxed as root, which keeping each file's owner and
+	// permissions needs. It can read the source and write to where the copy
+	// lands, and sees nothing else. That is the destination where it is a
+	// directory already there, and otherwise the directory it is made in.
+	//
+	// A source that is itself a symlink is copied as the link it is, which
+	// rsync can only see from the directory holding it: listed on its own, the
+	// sandbox would show what the link points to in its place.
+	const sourcePath = nodePath.resolve(source)
+	const sourceIsLink = !source.endsWith(nodePath.sep) && (await lstat(sourcePath)).isSymbolicLink()
+	const destinationPath = nodePath.resolve(destination)
+	const destinationIsDirectory = await stat(destinationPath).then(
+		(status) => status.isDirectory(),
+		() => false,
+	)
+	const sandbox = {
+		network: false,
+		gpu: false,
+		readablePaths: [sourceIsLink ? nodePath.dirname(sourcePath) : sourcePath],
+		writablePaths: [destinationIsDirectory ? destinationPath : nodePath.dirname(destinationPath)],
+		user: 'root' as const,
+		deviceFiles: true,
+	}
+	const rsync = sandboxed(
+		'rsync',
+		[
+			// Give detailed progress output we can easily parse.
+			// Build the entire file list before starting the transfer instead of incrementally
+			// for more accurate progress reporting.
+			'--info=progress2',
+			'--no-human-readable',
+			'--no-inc-recursive',
+			// Archive mode, recursive and preserve permissions etc
+			'--archive',
+			// Inplace mode, update files in place instead of temporary files with a random suffix
+			// which confuses recents tracking.
+			'--inplace',
+			// Drop in extra options
+			...rsyncExtraOptions,
+			// Absolute source and target
+			source,
+			destination,
+		],
+		sandbox,
+	)
 
 	// Process output from rsync to handle copy progress
 	if (onProgress) {

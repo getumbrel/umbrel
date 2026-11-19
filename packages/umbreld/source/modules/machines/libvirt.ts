@@ -9,6 +9,7 @@ import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
 import type Umbreld from '../../index.ts'
+import {sandboxed} from '../utilities/sandbox.ts'
 import {
 	buildDomainXml,
 	buildInterfaceXml,
@@ -976,14 +977,29 @@ export default class Libvirt {
 				`${sizeGb}G`,
 			])
 		} else {
-			await execa('qemu-img', ['resize', '-f', 'qcow2', disk, `${sizeGb}G`])
+			await sandboxed('qemu-img', ['resize', '-f', 'qcow2', disk, `${sizeGb}G`], {
+				network: false,
+				gpu: false,
+				readablePaths: [],
+				writablePaths: [disk],
+				user: 'root',
+			})
 		}
 	}
 
 	async diskVirtualSizeBytes(diskPath: string) {
-		const result = await execa('qemu-img', ['info', '-f', 'qcow2', '--force-share', '--output=json', diskPath], {
-			reject: false,
-		})
+		const result = await sandboxed(
+			'qemu-img',
+			['info', '-f', 'qcow2', '--force-share', '--output=json', diskPath],
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [diskPath],
+				writablePaths: [],
+				user: 'root',
+			},
+			{reject: false},
+		)
 		if (result.exitCode !== 0) throw new Error('[machine-disk-size-unavailable]')
 		try {
 			const size = (JSON.parse(result.stdout) as {'virtual-size'?: unknown})['virtual-size']
@@ -999,9 +1015,18 @@ export default class Libvirt {
 	}
 
 	async diskUsageBytes(diskPath: string) {
-		const result = await execa('qemu-img', ['info', '-f', 'qcow2', '--force-share', '--output=json', diskPath], {
-			reject: false,
-		})
+		const result = await sandboxed(
+			'qemu-img',
+			['info', '-f', 'qcow2', '--force-share', '--output=json', diskPath],
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [diskPath],
+				writablePaths: [],
+				user: 'root',
+			},
+			{reject: false},
+		)
 		if (result.exitCode !== 0) return 0
 		const info = JSON.parse(result.stdout) as {'actual-size'?: number}
 		return info['actual-size'] ?? 0
@@ -1028,17 +1053,35 @@ export default class Libvirt {
 		// Never let qemu-img probe an untrusted image. An explicit input driver is
 		// the security boundary against a raw-looking image being interpreted as a
 		// more powerful format that can reference host files or external resources.
-		const infoResult = await execa(
+		// qemu-img sees the image and the directory the machine's disk is
+		// written to. Whatever else an image names, a backing file, a data
+		// file, an extent, is not there for it to open.
+		const destinationDirectory = nodePath.dirname(destination)
+		const infoResult = await sandboxed(
 			'qemu-img',
 			qemuImageInfoArguments(source, inputFormat),
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [source],
+				writablePaths: [],
+				user: 'root',
+			},
 			installCommandOptions(signal, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS),
 		)
 		const info = JSON.parse(infoResult.stdout) as {'virtual-size': number; 'backing-filename'?: string}
 		if (info['backing-filename']) throw new Error('[machine-image-backing-chain-not-supported]')
 		if (info['virtual-size'] > sizeGb * 1_000_000_000) throw new Error('[machine-disk-too-small]')
-		const conversion = execa(
+		const conversion = sandboxed(
 			'qemu-img',
 			qemuImageConvertArguments(source, destination, inputFormat),
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [source],
+				writablePaths: [destinationDirectory],
+				user: 'root',
+			},
 			installCommandOptions(signal, MACHINE_INSTALL_COMMAND_TIMEOUT_MS),
 		)
 		conversion.stderr?.on('data', (data: Buffer) => {
@@ -1047,17 +1090,31 @@ export default class Libvirt {
 		})
 		await conversion
 		onProgress?.(100)
-		await execa(
+		await sandboxed(
 			'qemu-img',
 			['resize', '-f', 'qcow2', destination, `${sizeGb}G`],
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [],
+				writablePaths: [destination],
+				user: 'root',
+			},
 			installCommandOptions(signal, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS),
 		)
 	}
 
 	async createDisk(destination: string, sizeGb: number, signal: AbortSignal) {
-		await execa(
+		await sandboxed(
 			'qemu-img',
 			['create', '-f', 'qcow2', destination, `${sizeGb}G`],
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [],
+				writablePaths: [nodePath.dirname(destination)],
+				user: 'root',
+			},
 			installCommandOptions(signal, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS),
 		)
 	}
@@ -1087,9 +1144,16 @@ export default class Libvirt {
 				],
 				installCommandOptions(signal, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS),
 			)
-			await execa(
+			await sandboxed(
 				'qemu-img',
 				['convert', '-f', 'raw', '-O', 'qcow2', raw, destination],
+				{
+					network: false,
+					gpu: false,
+					readablePaths: [],
+					writablePaths: [nodePath.dirname(destination)],
+					user: 'root',
+				},
 				installCommandOptions(signal, MACHINE_INSTALL_COMMAND_TIMEOUT_MS),
 			)
 		} catch (error) {
@@ -1156,18 +1220,21 @@ export default class Libvirt {
 			// the byte-identical canonical disk before committing the interrupted
 			// backup overlay offline.
 			const machineDirectory = nodePath.dirname(nodePath.dirname(overlay))
-			await execa('qemu-img', [
-				'rebase',
-				'-f',
-				'qcow2',
-				'-u',
-				'-b',
-				nodePath.join(machineDirectory, 'disk.qcow2'),
-				'-F',
-				'qcow2',
-				overlay,
-			])
-			await execa('qemu-img', ['commit', '-f', 'qcow2', overlay])
+			// The overlay and the disk it is committed into are both in the
+			// machine's directory, which is all qemu-img sees
+			const sandbox = {
+				network: false,
+				gpu: false,
+				readablePaths: [],
+				writablePaths: [machineDirectory],
+				user: 'root' as const,
+			}
+			await sandboxed(
+				'qemu-img',
+				['rebase', '-f', 'qcow2', '-u', '-b', nodePath.join(machineDirectory, 'disk.qcow2'), '-F', 'qcow2', overlay],
+				sandbox,
+			)
+			await sandboxed('qemu-img', ['commit', '-f', 'qcow2', overlay], sandbox)
 			await fse.remove(overlay)
 		}
 	}

@@ -15,6 +15,7 @@ import isUmbrelHome from '../is-umbrel-home.ts'
 import type {ProgressStatus} from '../apps/schema.ts'
 import {reboot} from '../system/system.ts'
 import {setSystemStatus} from '../system/routes.ts'
+import {sandboxed} from '../utilities/sandbox.ts'
 
 let migrationStatus: ProgressStatus = {
 	running: false,
@@ -202,15 +203,24 @@ export async function migrateData(currentInstall: string, externalUmbrelInstall:
 	updateMigrationStatus({running: true, description: 'Copying data'})
 
 	try {
-		// Copy over data dir from previous install to temp dir while preserving permissions
+		// Copy over data dir from previous install to temp dir while preserving permissions.
+		// The drive is whatever was plugged in, so rsync runs sandboxed: as root, which
+		// keeping each file's owner needs, seeing the old install and the empty
+		// directory it copies into and nothing else.
 		await fse.remove(temporaryData)
-		const rsync = execa('rsync', [
-			'--info=progress2',
-			'--archive',
-			'--delete',
-			`${externalUmbrelInstall}/`,
-			temporaryData,
-		])
+		await fse.mkdir(temporaryData)
+		const rsync = sandboxed(
+			'rsync',
+			['--info=progress2', '--archive', '--delete', `${externalUmbrelInstall}/`, temporaryData],
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [externalUmbrelInstall],
+				writablePaths: [temporaryData],
+				user: 'root',
+				deviceFiles: true,
+			},
+		)
 
 		// Update migration status with rsync progress
 		rsync.stdout!.on('data', (chunk) => {

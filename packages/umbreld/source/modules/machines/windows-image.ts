@@ -4,11 +4,18 @@ import nodePath from 'node:path'
 import {execa} from 'execa'
 import fse from 'fs-extra'
 
+import {sandboxed} from '../utilities/sandbox.ts'
+
 import {
 	installCommandOptions,
 	MACHINE_INSTALL_CLEANUP_TIMEOUT_MS,
 	MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS,
 } from './install-command.ts'
+
+// Install media comes from the internet and is taken apart and put back
+// together here by tools that parse every part of it. Each runs sandboxed: as
+// root, which reading the downloaded media and writing a machine's files
+// takes, seeing only what it reads from and the one place it writes to.
 
 export type WindowsInstaller = 'windows-11' | 'windows-server-2025' | 'windows-7' | 'windows-xp' | 'windows-98'
 export type WindowsArchitecture = 'amd64' | 'arm64'
@@ -380,9 +387,24 @@ async function prepareWindows98BootFloppy(options: WindowsInstallOptions, overla
 		fsp.writeFile(disable, renderWindows98DisableFloppyScript(), {mode: 0o600}),
 	])
 	const commandOptions = installCommandOptions(signal, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS)
-	await execa('mcopy', ['-o', '-i', options.bootFloppyDestination, config, '::CONFIG.SYS'], commandOptions)
-	await execa('mcopy', ['-o', '-i', options.bootFloppyDestination, autoexec, '::AUTOEXEC.BAT'], commandOptions)
-	await execa('mcopy', ['-o', '-i', options.bootFloppyDestination, disable, '::DISABLE.SCR'], commandOptions)
+	for (const [file, name] of [
+		[config, '::CONFIG.SYS'],
+		[autoexec, '::AUTOEXEC.BAT'],
+		[disable, '::DISABLE.SCR'],
+	]) {
+		await sandboxed(
+			'mcopy',
+			['-o', '-i', options.bootFloppyDestination, file, name],
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [file],
+				writablePaths: [options.bootFloppyDestination],
+				user: 'root',
+			},
+			commandOptions,
+		)
+	}
 }
 
 function renderXpCompletionVbs(options: WindowsInstallOptions) {
@@ -401,10 +423,12 @@ request.Send
 }
 
 async function assertSafeIso(source: string, signal: AbortSignal) {
-	const {stdout} = await execa('bsdtar', ['-tf', source], {
-		...installCommandOptions(signal),
-		maxBuffer: 100 * 1024 * 1024,
-	})
+	const {stdout} = await sandboxed(
+		'bsdtar',
+		['-tf', source],
+		{network: false, gpu: false, readablePaths: [source], writablePaths: [], user: 'root'},
+		{...installCommandOptions(signal), maxBuffer: 100 * 1024 * 1024},
+	)
 	const entries = stdout.split('\n').filter(Boolean)
 	for (const entry of entries) {
 		if (entry.startsWith('/') || entry.split('/').includes('..')) throw new Error('[machine-windows-iso-unsafe-path]')
@@ -537,9 +561,21 @@ export function windowsArmUsbImageSize(sourceSize: number) {
 	return Math.ceil((sourceSize + 512 * MEBIBYTE) / GIBIBYTE) * GIBIBYTE
 }
 
-async function copyToFatImage(image: string, entries: string[], destination: string, signal: AbortSignal) {
+// Copies entries, all of them somewhere under one directory, into a FAT image
+async function copyToFatImage(
+	image: string,
+	directory: string,
+	entries: string[],
+	destination: string,
+	signal: AbortSignal,
+) {
 	if (entries.length === 0) return
-	await execa('mcopy', ['-s', '-o', '-i', image, ...entries, destination], installCommandOptions(signal))
+	await sandboxed(
+		'mcopy',
+		['-s', '-o', '-i', image, ...entries, destination],
+		{network: false, gpu: false, readablePaths: [directory], writablePaths: [image], user: 'root'},
+		installCommandOptions(signal),
+	)
 }
 
 async function prepareWindowsArmUsbMedia({
@@ -561,15 +597,21 @@ async function prepareWindowsArmUsbMedia({
 	const imageSize = windowsArmUsbImageSize((await fsp.stat(source)).size)
 	await fsp.writeFile(destination, '')
 	await fsp.truncate(destination, imageSize)
-	await execa('mkfs.fat', ['-F', '32', '-n', 'UMBREL_WIN', destination], installCommandOptions(signal))
+	await sandboxed(
+		'mkfs.fat',
+		['-F', '32', '-n', 'UMBREL_WIN', destination],
+		{network: false, gpu: false, readablePaths: [], writablePaths: [destination], user: 'root'},
+		installCommandOptions(signal),
+	)
 
 	const rootEntries = (await fsp.readdir(sourceMount))
 		.filter((entry) => entry.toLowerCase() !== 'sources')
 		.map((entry) => nodePath.join(sourceMount, entry))
-	await copyToFatImage(destination, rootEntries, '::', signal)
-	await execa(
+	await copyToFatImage(destination, sourceMount, rootEntries, '::', signal)
+	await sandboxed(
 		'mmd',
 		['-i', destination, '::sources'],
+		{network: false, gpu: false, readablePaths: [], writablePaths: [destination], user: 'root'},
 		installCommandOptions(signal, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS),
 	)
 
@@ -580,19 +622,21 @@ async function prepareWindowsArmUsbMedia({
 	const sourceEntries = (await fsp.readdir(sourcesDirectory))
 		.filter((entry) => !splitInstallWim || entry.toLowerCase() !== 'install.wim')
 		.map((entry) => nodePath.join(sourcesDirectory, entry))
-	await copyToFatImage(destination, sourceEntries, '::sources/', signal)
+	await copyToFatImage(destination, sourcesDirectory, sourceEntries, '::sources/', signal)
 
 	if (splitInstallWim) {
 		const splitDirectory = nodePath.join(overlay, 'split-wim')
 		await fse.ensureDir(splitDirectory)
-		await execa('wimlib-imagex', ['split', installWim, nodePath.join(splitDirectory, 'install.swm'), '3800'], {
-			...installCommandOptions(signal),
-			stdout: 'ignore',
-		})
+		await sandboxed(
+			'wimlib-imagex',
+			['split', installWim, nodePath.join(splitDirectory, 'install.swm'), '3800'],
+			{network: false, gpu: false, readablePaths: [installWim], writablePaths: [splitDirectory], user: 'root'},
+			{...installCommandOptions(signal), stdout: 'ignore'},
+		)
 		const parts = (await fsp.readdir(splitDirectory))
 			.filter((entry) => entry.toLowerCase().endsWith('.swm'))
 			.map((entry) => nodePath.join(splitDirectory, entry))
-		await copyToFatImage(destination, parts, '::sources/', signal)
+		await copyToFatImage(destination, splitDirectory, parts, '::sources/', signal)
 	}
 
 	const fatOverlay = nodePath.join(overlay, 'fat-overlay')
@@ -603,7 +647,7 @@ async function prepareWindowsArmUsbMedia({
 		await fse.copy(from, target, {overwrite: true})
 	}
 	const overlayEntries = (await fsp.readdir(fatOverlay)).map((entry) => nodePath.join(fatOverlay, entry))
-	await copyToFatImage(destination, overlayEntries, '::', signal)
+	await copyToFatImage(destination, fatOverlay, overlayEntries, '::', signal)
 }
 
 async function extractLegacyElToritoBoot(
@@ -611,17 +655,19 @@ async function extractLegacyElToritoBoot(
 	overlay: string,
 	signal: AbortSignal,
 ): Promise<LegacyElToritoBoot> {
-	const {stdout} = await execa(
+	const {stdout} = await sandboxed(
 		'xorriso',
 		['-indev', source, '-report_el_torito', 'plain'],
+		{network: false, gpu: false, readablePaths: [source], writablePaths: [], user: 'root'},
 		installCommandOptions(signal, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS),
 	)
 	const boot = parseLegacyElToritoReport(stdout)
 	const directory = nodePath.join(overlay, 'eltorito')
 	await fse.ensureDir(directory)
-	await execa(
+	await sandboxed(
 		'xorriso',
 		['-osirrox', 'on', '-indev', source, '-extract_boot_images', directory],
+		{network: false, gpu: false, readablePaths: [source], writablePaths: [directory], user: 'root'},
 		installCommandOptions(signal),
 	)
 	const diskPath = nodePath.join(directory, 'eltorito_img1_bios.img')
@@ -665,13 +711,42 @@ export async function prepareWindowsInstallMedia(
 			if (!options.patcher9xArchive) throw new Error('[machine-windows-98-patcher-unavailable]')
 			const win98 = entries.find((entry) => /^win98\//i.test(entry))?.split('/')[0]
 			if (!win98) throw new Error('[machine-windows-98-source-invalid]')
-			await execa('bsdtar', ['-xf', source, '-C', overlay, win98], installCommandOptions(signal))
+			await sandboxed(
+				'bsdtar',
+				['-xf', source, '-C', overlay, win98],
+				{network: false, gpu: false, readablePaths: [source], writablePaths: [overlay], user: 'root'},
+				installCommandOptions(signal),
+			)
 			const patcherDirectory = nodePath.join(overlay, 'patcher9x')
 			await fse.ensureDir(patcherDirectory)
-			await execa('bsdtar', ['-xf', options.patcher9xArchive, '-C', patcherDirectory], installCommandOptions(signal))
+			await sandboxed(
+				'bsdtar',
+				['-xf', options.patcher9xArchive, '-C', patcherDirectory],
+				{
+					network: false,
+					gpu: false,
+					readablePaths: [options.patcher9xArchive],
+					writablePaths: [patcherDirectory],
+					user: 'root',
+				},
+				installCommandOptions(signal),
+			)
 			const patcher = nodePath.join(patcherDirectory, 'patcher9x')
 			await fsp.chmod(patcher, 0o700)
-			await execa(patcher, ['-auto', '-no-backup', nodePath.join(overlay, win98)], installCommandOptions(signal))
+			// The patcher is a downloaded program. All it is given is itself and
+			// the Windows files it patches.
+			await sandboxed(
+				patcher,
+				['-auto', '-no-backup', nodePath.join(overlay, win98)],
+				{
+					network: false,
+					gpu: false,
+					readablePaths: [patcherDirectory],
+					writablePaths: [nodePath.join(overlay, win98)],
+					user: 'root',
+				},
+				installCommandOptions(signal),
+			)
 			const batch = nodePath.join(overlay, win98, 'MSBATCH.INF')
 			const completion = nodePath.join(overlay, win98, 'UMBREL.HTA')
 			await Promise.all([
@@ -702,7 +777,12 @@ export async function prepareWindowsInstallMedia(
 				// their canonical targets first so libarchive has real file payloads,
 				// then stage compact, edition-agnostic folders for Windows PE discovery.
 				for (const path of windowsVirtioExtractionPaths(options.installer, options.arch)) {
-					await execa('bsdtar', ['-xf', options.virtioIso, '-C', extracted, path], installCommandOptions(signal))
+					await sandboxed(
+						'bsdtar',
+						['-xf', options.virtioIso, '-C', extracted, path],
+						{network: false, gpu: false, readablePaths: [options.virtioIso], writablePaths: [extracted], user: 'root'},
+						installCommandOptions(signal),
+					)
 				}
 				for (const [name, path] of windowsVirtioDriverPaths(options.installer, options.arch)) {
 					if (signal.aborted) throw signal.reason
@@ -710,9 +790,10 @@ export async function prepareWindowsInstallMedia(
 				}
 				mappings.push([drivers, '/$WinPEDriver$'])
 				if (windowsGuestToolsSupported(options)) {
-					await execa(
+					await sandboxed(
 						'bsdtar',
 						['-xf', options.virtioIso, '-C', extracted, WINDOWS_GUEST_TOOLS],
+						{network: false, gpu: false, readablePaths: [options.virtioIso], writablePaths: [extracted], user: 'root'},
 						installCommandOptions(signal),
 					)
 					// Setup copies $OEM$/$$ into C:\Windows, so first logon finds the
@@ -728,10 +809,15 @@ export async function prepareWindowsInstallMedia(
 		// Legacy media needs its reconstructed boot image and imported ISO9660
 		// tree. Modern Microsoft media stores the installer in UDF, so rebuild it
 		// from a read-only mount and select its no-prompt UEFI boot image directly.
+		//
+		// Both builders create the finished media, which sits beside the working
+		// directory in a directory holding this machine's install media only.
+		const mediaDirectory = nodePath.dirname(destination)
 		if (legacyBoot) {
-			await execa(
+			await sandboxed(
 				'xorriso',
 				buildXorrisoEditArgs(source, destination, replacedIsoPath, mappings, legacyBoot),
+				{network: false, gpu: false, readablePaths: [source], writablePaths: [mediaDirectory], user: 'root'},
 				installCommandOptions(signal),
 			)
 		} else {
@@ -758,9 +844,10 @@ export async function prepareWindowsInstallMedia(
 			if (options.arch === 'arm64') {
 				await prepareWindowsArmUsbMedia({source, sourceMount, destination, mappings, overlay, signal})
 			} else {
-				await execa(
+				await sandboxed(
 					'genisoimage',
 					buildGenisoimageArgs(sourceMount, destination, installer, mappings),
+					{network: false, gpu: false, readablePaths: [], writablePaths: [mediaDirectory], user: 'root'},
 					installCommandOptions(signal),
 				)
 			}
@@ -777,10 +864,12 @@ export async function prepareWindowsInstallMedia(
 		})
 		// Installer media can mark extracted directories read-only. Restore owner
 		// write access so cleanup cannot fail or mask the original preparation error.
-		await execa('chmod', ['-R', 'u+rwX', overlay], {
-			reject: false,
-			timeout: MACHINE_INSTALL_CLEANUP_TIMEOUT_MS,
-		})
+		await sandboxed(
+			'chmod',
+			['-R', 'u+rwX', overlay],
+			{network: false, gpu: false, readablePaths: [], writablePaths: [overlay], user: 'root'},
+			{reject: false, timeout: MACHINE_INSTALL_CLEANUP_TIMEOUT_MS},
+		)
 		await fse.remove(overlay)
 	}
 }

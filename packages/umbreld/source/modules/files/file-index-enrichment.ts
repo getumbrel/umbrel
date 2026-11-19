@@ -1,15 +1,17 @@
-import {constants as fsConstants} from 'node:fs'
+import {constants as fsConstants, read} from 'node:fs'
 import {mkdir, open, opendir} from 'node:fs/promises'
 import {availableParallelism as nodeAvailableParallelism} from 'node:os'
 import nodePath from 'node:path'
 import {createHash, randomUUID} from 'node:crypto'
+import {promisify} from 'node:util'
 
 import type DatabaseTypes from 'better-sqlite3'
-import {execa} from 'execa'
+import type {ExecaChildProcess} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
 import {photoKind, type PhotoKind, type PhotoSubKind} from '../photos/types.ts'
+import {GiB, sandboxed} from '../utilities/sandbox.ts'
 import {readDatabase, type ReadDatabase, type ReadLane, type ReadSql} from './file-index/read-database.ts'
 import {BACKGROUND_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
 import {Blake3Hasher} from './blake3.ts'
@@ -48,43 +50,24 @@ const CAMERA_RAW_EXTENSIONS = new Set(['.arw', '.cr2', '.cr3', '.dng', '.nef', '
 // Every scan-enabled root is indexed, but proactive content I/O is limited to
 // personal Home and Trash roots. Other roots are enriched by Files only when browsed.
 const BACKGROUND_ENRICHMENT_ROOT_SQL = "index_roots.kind IN ('home', 'trash')"
-const IMAGE_MAGICK_MEDIA_CODERS = new Map([
-	// Camera RAW formats need an explicit coder because their container can be
-	// mistaken for TIFF (or only expose a small embedded preview) once the held
-	// source descriptor hides the filename extension.
-	['.arw', 'ARW'],
-	['.cr2', 'CR2'],
-	['.cr3', 'CR3'],
-	['.dng', 'DNG'],
-	['.nef', 'NEF'],
-	['.orf', 'ORF'],
-	['.raf', 'RAF'],
-	['.rw2', 'RW2'],
-	// Video containers also need an explicit ImageMagick coder when read from a
-	// descriptor. MTS/M2TS are MPEG transport streams, while INSV and GoPro 360
-	// files use MP4-family containers.
-	['.360', 'MP4'],
-	['.3gp', '3GP'],
-	['.3g2', '3G2'],
-	['.avi', 'AVI'],
-	['.insv', 'MP4'],
-	['.m4v', 'M4V'],
-	['.mkv', 'MKV'],
-	['.m2ts', 'MPEG'],
-	['.mov', 'MOV'],
-	['.mp4', 'MP4'],
-	['.mpeg', 'MPEG'],
-	['.mpg', 'MPEG'],
-	['.mts', 'MPEG'],
-	['.webm', 'WEBM'],
-	['.wmv', 'WMV'],
-])
+// Extracts the first frame of a video and pipes it to the command that follows.
+// These are the arguments ImageMagick's own ffmpeg delegate uses, so the frame
+// is the same. The delegate itself can't be used: ImageMagick hands it a path
+// to open, and a sandboxed tool only has the descriptor it was given.
+//
+// The decoder gets one thread. Left to choose, it takes one per core and holds
+// a frame in memory for each before it gives up the first, which gains no time
+// and on a device with many cores takes an 8K video past the memory limit.
+const VIDEO_FRAME_PIPELINE =
+	'ffmpeg -nostdin -loglevel error -threads 1 -i fd: -an -f rawvideo -vframes 1 -vcodec webp -lossless 1 - | exec "$@"'
 const ARTIFACT_MAINTENANCE_INTERVAL_MS = 24 * 60 * 60 * 1000
 const ARTIFACT_MAINTENANCE_BATCH_SIZE = 256
 const ORPHAN_SWEEP_BATCH_SIZE = 256
 const ARTIFACT_IO_CONCURRENCY = 16
 export const BACKGROUND_QUIET_PERIOD_MS = 1_000
-export const THUMBNAIL_GENERATION_TIMEOUT_MS = 60_000
+// Each job has one core. The slowest decode measured, a 26 megapixel Fuji RAW
+// photo on a Raspberry Pi 4, takes 77 seconds of it.
+export const THUMBNAIL_GENERATION_TIMEOUT_MS = 180_000
 export const ORPHAN_GC_MAX_DEFERRAL_MS = 6 * 60 * 60 * 1000
 const TEMPORARY_ARTIFACT_GRACE_MS = 2 * THUMBNAIL_GENERATION_TIMEOUT_MS
 
@@ -2413,7 +2396,7 @@ function referenceFailureMessage(message: string | null) {
 
 export async function extractMediaMetadata(
 	systemPath: string,
-	sourceFileDescriptor?: number,
+	sourceFileDescriptor: number,
 	onOptionalMetadataFailure?: (error: unknown) => void,
 ): Promise<MediaMetadata> {
 	const kind = photoKind(systemPath)
@@ -2422,7 +2405,7 @@ export async function extractMediaMetadata(
 	return extractPhotoMetadata(systemPath, sourceFileDescriptor)
 }
 
-async function extractPhotoMetadata(systemPath: string, sourceFileDescriptor?: number): Promise<MediaMetadata> {
+async function extractPhotoMetadata(systemPath: string, sourceFileDescriptor: number): Promise<MediaMetadata> {
 	const {metadata, imageWidth, imageHeight, orientation, spherical} = await extractExifMetadata(
 		systemPath,
 		sourceFileDescriptor,
@@ -2447,19 +2430,24 @@ async function extractPhotoMetadata(systemPath: string, sourceFileDescriptor?: n
 
 async function extractVideoMetadata(
 	systemPath: string,
-	sourceFileDescriptor?: number,
+	sourceFileDescriptor: number,
 	onOptionalMetadataFailure?: (error: unknown) => void,
 ): Promise<MediaMetadata> {
 	// FFprobe is authoritative only for the playable video stream. ExifTool owns
 	// semantic metadata for every media type, but remains optional for videos: an
 	// unusual vendor trailer must never make otherwise playable media disappear.
-	const [video, exifMetadata] = await Promise.all([
-		probeVideoStream(systemPath, sourceFileDescriptor),
-		extractExifMetadata(systemPath, sourceFileDescriptor).catch((error) => {
-			onOptionalMetadataFailure?.(error)
-			return {metadata: {}, spherical: false}
-		}),
+	// Both are waited for even when the probe fails. Each run reopens the held
+	// descriptor when it starts, so the caller must not close it, and let its
+	// number be reused, while a run has yet to start.
+	const [probe, exif] = await Promise.allSettled([
+		probeVideoStream(sourceFileDescriptor),
+		extractExifMetadata(systemPath, sourceFileDescriptor),
 	])
+	if (probe.status === 'rejected') throw probe.reason
+	const video = probe.value
+	let exifMetadata: ExtractedExifMetadata = {metadata: {}, spherical: false}
+	if (exif.status === 'fulfilled') exifMetadata = exif.value
+	else onOptionalMetadataFailure?.(exif.reason)
 	return {
 		kind: 'video',
 		...(exifMetadata.spherical ? {subKind: 'spherical' as const} : {}),
@@ -2470,8 +2458,8 @@ async function extractVideoMetadata(
 	}
 }
 
-async function probeVideoStream(systemPath: string, sourceFileDescriptor?: number) {
-	const {stdout} = await runBoundedMediaProcess(
+async function probeVideoStream(sourceFileDescriptor: number) {
+	const {stdout} = await runMediaTool(
 		'ffprobe',
 		[
 			'-v',
@@ -2480,7 +2468,8 @@ async function probeVideoStream(systemPath: string, sourceFileDescriptor?: numbe
 			'stream=codec_type,width,height,sample_aspect_ratio,duration:stream_tags=rotate:stream_side_data=rotation,crop_top,crop_bottom,crop_left,crop_right:format=duration',
 			'-of',
 			'json',
-			mediaProcessInput(systemPath, sourceFileDescriptor),
+			// The descriptor on standard input, which FFmpeg can seek in
+			'fd:',
 		],
 		sourceFileDescriptor,
 	)
@@ -2538,7 +2527,7 @@ type ExtractedExifMetadata = {
 	spherical: boolean
 }
 
-async function extractExifMetadata(systemPath: string, sourceFileDescriptor?: number): Promise<ExtractedExifMetadata> {
+async function extractExifMetadata(systemPath: string, sourceFileDescriptor: number): Promise<ExtractedExifMetadata> {
 	const extension = nodePath.extname(systemPath).toLowerCase()
 	const extractEmbedded = extension === '.insv'
 	const cameraRaw = CAMERA_RAW_EXTENSIONS.has(extension)
@@ -2548,7 +2537,7 @@ async function extractExifMetadata(systemPath: string, sourceFileDescriptor?: nu
 	// IgnoreTags=all remains useful for ordinary photos and the much larger INSV
 	// embedded-document scan.
 	const ignoreUnrequestedTags = (photoKind(systemPath) === 'photo' && !cameraRaw) || extractEmbedded
-	const {stdout} = await runBoundedMediaProcess(
+	const {stdout} = await runMediaTool(
 		'exiftool',
 		[
 			'-j',
@@ -2595,9 +2584,11 @@ async function extractExifMetadata(systemPath: string, sourceFileDescriptor?: nu
 			'-Spherical',
 			'-ContentIdentifier',
 			'-UserComment',
-			mediaProcessInput(systemPath, sourceFileDescriptor),
+			SOURCE_PATH,
 		],
 		sourceFileDescriptor,
+		[],
+		{sourceAtPath: true},
 	)
 	const parsed = JSON.parse(stdout) as unknown
 	if (!Array.isArray(parsed) || !isMetadataRecord(parsed[0])) return {metadata: {}, spherical: false}
@@ -2865,8 +2856,8 @@ function formatExposure(value: string) {
 export async function generateThumbnailFile(
 	systemPath: string,
 	destination: string,
-	variant: ThumbnailVariant = FILES_THUMBNAIL_VARIANT,
-	sourceFileDescriptor?: number,
+	variant: ThumbnailVariant,
+	sourceFileDescriptor: number,
 ) {
 	return generateThumbnailFiles(systemPath, [{destination, variant}], sourceFileDescriptor)
 }
@@ -2874,9 +2865,30 @@ export async function generateThumbnailFile(
 export async function generateThumbnailFiles(
 	systemPath: string,
 	outputs: ThumbnailOutput[],
-	sourceFileDescriptor?: number,
+	sourceFileDescriptor: number,
 ) {
 	if (outputs.length === 0) return
+	const video = photoKind(systemPath) === 'video'
+	const extension = nodePath.extname(systemPath).toLowerCase()
+	// ImageMagick reads the source from standard input, where there is no
+	// filename extension.
+	let source: string
+	if (video) {
+		// The WebP frame FFmpeg extracted, arriving on a pipe
+		source = 'webp:-[0]'
+	} else if (CAMERA_RAW_EXTENSIONS.has(extension)) {
+		// Camera RAW needs an explicit coder because its container can be
+		// mistaken for TIFF, or only expose a small embedded preview
+		source = `${extension.slice(1).toUpperCase()}:-[0]`
+	} else {
+		// Told the format, ImageMagick decodes these straight from the
+		// descriptor. Left to work the format out itself, it first copies the
+		// whole source to its temporary directory, which is memory in the
+		// sandbox. That remains for the formats whose decoders need a file to
+		// open: camera RAW above, and HEIC and AVIF.
+		const coder = await streamableImageCoder(sourceFileDescriptor)
+		source = coder ? `${coder}:fd:0[0]` : '-[0]'
+	}
 	const arguments_ = [
 		'-limit',
 		'memory',
@@ -2893,14 +2905,14 @@ export async function generateThumbnailFiles(
 		'-limit',
 		'time',
 		String(Math.ceil(THUMBNAIL_GENERATION_TIMEOUT_MS / 1000)),
-		`${escapeImageMagickInputPath(imageMagickMediaProcessInput(systemPath, sourceFileDescriptor))}[0]`,
+		source,
 		'-auto-orient',
 	]
 	// FFmpeg hands ImageMagick an anamorphic frame in its stored, non-square
 	// pixels (already rotated). Stretch it to the shape players display. The
 	// probe only refines the frame, so a failed one leaves it as decoded.
-	if (photoKind(systemPath) === 'video') {
-		const {rotated, pixelAspectRatio} = await probeVideoStream(systemPath, sourceFileDescriptor).catch(() => ({
+	if (video) {
+		const {rotated, pixelAspectRatio} = await probeVideoStream(sourceFileDescriptor).catch(() => ({
 			rotated: false,
 			pixelAspectRatio: 1,
 		}))
@@ -2909,63 +2921,79 @@ export async function generateThumbnailFiles(
 			arguments_.push('-resize', rotated ? `100%x${stretch}` : `${stretch}x100%`)
 		}
 	}
-	for (const {destination, variant} of outputs) {
-		const definition = THUMBNAIL_VARIANTS[variant]
-		arguments_.push(
-			'(',
-			'+clone',
-			'-thumbnail',
-			`${definition.width}x${definition.height}^>`,
-			'-quality',
-			String(definition.quality),
-			'-write',
-			`${definition.format}:${destination}`,
-			'+delete',
-			')',
-		)
+	// A sandboxed tool can't open the destinations, so open them here and have
+	// ImageMagick write each rendition to the descriptor it inherits, from 3 up.
+	const destinations: Array<Awaited<ReturnType<typeof open>>> = []
+	try {
+		for (const {destination, variant} of outputs) {
+			const definition = THUMBNAIL_VARIANTS[variant]
+			destinations.push(await open(destination, 'w'))
+			arguments_.push(
+				'(',
+				'+clone',
+				'-thumbnail',
+				`${definition.width}x${definition.height}^>`,
+				'-quality',
+				String(definition.quality),
+				'-write',
+				`${definition.format}:fd:${2 + destinations.length}`,
+				'+delete',
+				')',
+			)
+		}
+		arguments_.push('null:')
+		const outputFileDescriptors = destinations.map((destination) => destination.fd)
+		if (video) {
+			await runMediaTool(
+				'sh',
+				['-c', VIDEO_FRAME_PIPELINE, 'sh', 'convert', ...arguments_],
+				sourceFileDescriptor,
+				outputFileDescriptors,
+			)
+		} else {
+			await runMediaTool('convert', arguments_, sourceFileDescriptor, outputFileDescriptors)
+		}
+	} finally {
+		await Promise.all(destinations.map((destination) => destination.close()))
 	}
-	arguments_.push('null:')
-	await runBoundedMediaProcess('convert', arguments_, sourceFileDescriptor)
+}
+
+// The ImageMagick coder for a still image that can be decoded from a
+// descriptor without a temporary copy, told from its first bytes the way
+// ImageMagick itself tells formats apart
+export async function streamableImageCoder(sourceFileDescriptor: number) {
+	const header = Buffer.alloc(12)
+	// A positional read, which leaves the descriptor's offset alone
+	const {bytesRead} = await promisify(read)(sourceFileDescriptor, header, 0, header.length, 0)
+	const starts = (bytes: string, offset = 0) =>
+		bytesRead >= offset + bytes.length && header.toString('latin1', offset, offset + bytes.length) === bytes
+	if (starts('\xff\xd8\xff')) return 'JPEG'
+	if (starts('\x89PNG\r\n\x1a\n')) return 'PNG'
+	if (starts('GIF87a') || starts('GIF89a')) return 'GIF'
+	if (starts('RIFF') && starts('WEBP', 8)) return 'WEBP'
+	if (starts('II*\0') || starts('MM\0*')) return 'TIFF'
+	if (starts('BM')) return 'BMP'
 }
 
 export async function extractThumbnailTint(thumbnailPath: string) {
-	const {stdout} = await execa('convert', [
-		escapeImageMagickInputPath(thumbnailPath),
-		'-resize',
-		'1x1!',
-		'-format',
-		'%[fx:round(255*r)],%[fx:round(255*g)],%[fx:round(255*b)]',
-		'info:',
-	])
-	const channels = stdout.split(',').map(Number)
-	if (channels.length !== 3 || channels.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)) {
-		throw new Error('ImageMagick returned an invalid thumbnail tint')
-	}
-	return (channels[0]! << 16) | (channels[1]! << 8) | channels[2]!
-}
-
-function escapeImageMagickInputPath(systemPath: string) {
-	// ImageMagick expands these characters itself even though execa bypasses the
-	// shell. Escape only the subprocess argument; the real filesystem path and
-	// the intentional first-frame selector appended by the caller stay unchanged.
-	// Backslashes are legal Linux filename characters and are preserved unless
-	// they precede a glob character. In that case ImageMagick needs 2n+1
-	// backslashes to represent n literal backslashes followed by an escaped glob.
-	let escaped = ''
-	let backslashes = 0
-	for (const character of systemPath) {
-		if (character === '\\') {
-			backslashes++
-			continue
+	const thumbnail = await open(thumbnailPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW)
+	try {
+		const {stdout} = await runMediaTool(
+			'convert',
+			['webp:-', '-resize', '1x1!', '-format', '%[fx:round(255*r)],%[fx:round(255*g)],%[fx:round(255*b)]', 'info:'],
+			thumbnail.fd,
+		)
+		const channels = stdout.split(',').map(Number)
+		if (
+			channels.length !== 3 ||
+			channels.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)
+		) {
+			throw new Error('ImageMagick returned an invalid thumbnail tint')
 		}
-		if (character === '*' || character === '?' || character === '[' || character === ']') {
-			escaped += `${'\\'.repeat(2 * backslashes + 1)}${character}`
-		} else {
-			escaped += `${'\\'.repeat(backslashes)}${character === '%' ? '%%' : character}`
-		}
-		backslashes = 0
+		return (channels[0]! << 16) | (channels[1]! << 8) | channels[2]!
+	} finally {
+		await thumbnail.close()
 	}
-	return escaped + '\\'.repeat(backslashes)
 }
 
 function killProcessGroup(pid: number) {
@@ -2976,32 +3004,60 @@ function killProcessGroup(pid: number) {
 	}
 }
 
-function mediaProcessInput(systemPath: string, sourceFileDescriptor?: number) {
-	return sourceFileDescriptor === undefined ? systemPath : '/dev/fd/3'
-}
+// Where a tool that has to open its source by path finds it
+const SOURCE_PATH = '/source'
 
-function imageMagickMediaProcessInput(systemPath: string, sourceFileDescriptor?: number) {
-	const input = mediaProcessInput(systemPath, sourceFileDescriptor)
-	if (sourceFileDescriptor === undefined) return input
-	// Most still-image formats can be sniffed from a pathless descriptor. Camera
-	// RAW and video formats need an explicit coder to select the full decoder once
-	// the filename extension is no longer present.
-	const coder = IMAGE_MAGICK_MEDIA_CODERS.get(nodePath.extname(systemPath).toLowerCase())
-	return `${coder ? `${coder}:` : ''}${input}`
-}
-
-async function runBoundedMediaProcess(command: string, arguments_: string[], sourceFileDescriptor?: number) {
-	const process = execa(command, arguments_, {
-		detached: true,
-		timeout: THUMBNAIL_GENERATION_TIMEOUT_MS,
-		killSignal: 'SIGKILL',
-		...(sourceFileDescriptor === undefined ? {} : {stdio: ['ignore', 'pipe', 'pipe', sourceFileDescriptor]}),
-	})
+// Runs a media tool in the sandbox (see utilities/sandbox.ts). The tool can't
+// open any path, so it reads the source from standard input and writes each
+// output to a descriptor from 3 up. It reads exactly the file umbreld opened,
+// whoever owns that file and whatever is at its path by now.
+//
+// ExifTool can't work that way. It keeps all it reads from standard input in
+// memory, which for a video is the whole file, and only moves around in a
+// file it opened itself. So it is shown the same open file at SOURCE_PATH,
+// and runs as root to be able to open it whoever owns it.
+async function runMediaTool(
+	command: string,
+	arguments_: string[],
+	sourceFileDescriptor: number,
+	outputFileDescriptors: number[] = [],
+	{sourceAtPath = false}: {sourceAtPath?: boolean} = {},
+) {
+	// Reopen the held descriptor so this run has a read offset of its own.
+	// Several tools read the same source, sometimes at the same time, and each
+	// must start from the beginning of the file, not where another left off.
+	const source = await open(`/dev/fd/${sourceFileDescriptor}`, fsConstants.O_RDONLY)
+	let process: ExecaChildProcess | undefined
 	try {
+		// No network, no GPU and no path: only the descriptors handed over.
+		// The memory is twice what the largest decode measured needs, an 8K
+		// video frame at just under 2 GiB. The queues run as many of these at
+		// once as the device has cores to spare for them, which counts on
+		// each using one core. ImageMagick is told to; the RAW decoder starts
+		// a thread per core unless the limit tells it otherwise.
+		const sandbox = {
+			network: false,
+			gpu: false,
+			readablePaths: [],
+			writablePaths: [],
+			memoryLimit: 4 * GiB,
+			cpuLimit: 1,
+			...(sourceAtPath ? {user: 'root' as const, readableFile: {descriptor: 3, path: SOURCE_PATH}} : {}),
+		}
+		process = sandboxed(command, arguments_, sandbox, {
+			detached: true,
+			timeout: THUMBNAIL_GENERATION_TIMEOUT_MS,
+			killSignal: 'SIGKILL',
+			stdio: sourceAtPath
+				? ['ignore', 'pipe', 'pipe', source.fd]
+				: [source.fd, 'pipe', 'pipe', ...outputFileDescriptors],
+		})
 		return await process
 	} catch (error) {
-		if ((error as {timedOut?: boolean}).timedOut && process.pid !== undefined) killProcessGroup(process.pid)
+		if ((error as {timedOut?: boolean}).timedOut && process?.pid !== undefined) killProcessGroup(process.pid)
 		throw error
+	} finally {
+		await source.close()
 	}
 }
 
