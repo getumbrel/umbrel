@@ -219,7 +219,10 @@ internal class BrowserContext private constructor(
 		val existing = cookies(host)
 		session?.let { current ->
 			val replacesAnother = current.cookies.any { (name, value) -> existing[name].let { it != null && it != value } }
-			if (replacesAnother) validateSession(force = true)
+			// Without the force, this only asks umbrelOS if the session hasn't been checked in
+			// 12 hours, so one that ended while the app was unused is replaced before a page is
+			// shown its login screen.
+			validateSession(force = replacesAnother)
 		}
 		if (session?.linked != true) makeSession()
 		val session = session ?: return

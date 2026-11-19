@@ -56,6 +56,11 @@ final class NativeAPIContractTests: XCTestCase {
 			#"{"result":{"data":{"accessToken":"new-access","accessExpiresAt":1787000001000}}}"#)
 		XCTAssertEqual(refresh.accessToken, "new-access")
 		XCTAssertEqual(refresh.accessExpiresAt, 1_787_000_001_000)
+		XCTAssertNil(refresh.dashboardToken)
+
+		let withBrowserSession: Umbreld.NativeAccessResponse = try decode(
+			#"{"result":{"data":{"accessToken":"new-access","accessExpiresAt":1787000001000,"dashboardToken":"dashboard"}}}"#)
+		XCTAssertEqual(withBrowserSession.dashboardToken, "dashboard")
 	}
 
 	func testUserAndDashboardResponsesDecode() throws {
@@ -183,6 +188,10 @@ final class NativeAPIContractTests: XCTestCase {
 		XCTAssertEqual(
 			try jsonObject(Umbreld.NativeRefreshInput(deviceToken: "device-token", client: nativeClient)),
 			["deviceToken": "device-token", "client": nativeClientJson])
+		XCTAssertEqual(
+			try jsonObject(
+				Umbreld.NativeRefreshInput(deviceToken: "device-token", client: nativeClient, browserSession: true)),
+			["deviceToken": "device-token", "client": nativeClientJson, "browserSession": true])
 		XCTAssertEqual(
 			try jsonObject(
 				Umbreld.PhotoBackupGrantInput(

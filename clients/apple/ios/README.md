@@ -13,11 +13,14 @@ umbrelOS's own web UI, which always matches the umbrelOS version it is served by
 
 - Pages load over HTTPS from an address that has just proved the Umbrel's pinned
   identity, and the web view trusts that Umbrel's CA and nothing else for it.
-- Signing in natively also creates an umbrelOS browser session, which is replayed
-  into the web view for whichever address is in use, replacing cookies an older
-  session left there. Without one (an older install, an ended session) the browser
-  shows umbrelOS's login page once and keeps the session that produces, after
-  umbrelOS confirms it belongs to the account signed in to the app.
+- umbrelOS makes the web view's browser session from the native sign-in, linked to
+  it: one login in umbrelOS's list, ended together. It's replayed into the web view
+  for whichever address is in use, replacing cookies an older session left there. A
+  browser without one (signed in before this, or unused for a week) gets one before
+  its first page, and any other session it held is left to expire. An older umbrelOS
+  can't make them, so signing in also logs in the way a browser does; failing that,
+  the browser shows umbrelOS's login page once and keeps the session that produces,
+  after umbrelOS confirms it belongs to the account signed in to the app.
 - A brand-new Umbrel Home or Raspberry Pi is set up in the same browser, edge to
   edge with no title bar, then signed in to with the password just chosen. Setup
   that restarts the Umbrel onto other drives (an Umbrel Pro, a PC with a drive

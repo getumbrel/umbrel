@@ -214,15 +214,23 @@ final class BrowserContext {
 	// umbrelOS only accepts a token and a cookie from the same session, so cookies left
 	// by another session are replaced, but only while umbrelOS still accepts this one:
 	// the other may be a sign-in made on one of umbrelOS's own pages after this ended.
+	// First, where umbrelOS can, the app makes a session from its own sign-in to use in
+	// place of any other.
 	func prepare(for url: URL) async {
-		guard let current = session, let host = url.host(), isUmbrel(url) else { return }
+		guard let host = url.host(), isUmbrel(url) else { return }
 		let store = dataStore.httpCookieStore
 		let existing = await store.allCookies()
 			.filter { Self.normalized($0.domain) == Self.normalized(host) && $0.path == "/" }
-		let replacesAnother = current.cookies(forHost: host).contains { cookie in
-			existing.contains { $0.name == cookie.name && $0.value != cookie.value }
+		if let current = session {
+			let replacesAnother = current.cookies(forHost: host).contains { cookie in
+				existing.contains { $0.name == cookie.name && $0.value != cookie.value }
+			}
+			// Without the force, this only asks umbrelOS if the session hasn't been checked in
+			// 12 hours, so one that ended while the app was unused is replaced before a page
+			// is shown its login screen.
+			await validateSession(force: replacesAnother)
 		}
-		if replacesAnother { await validateSession(force: true) }
+		if session?.linked != true { await makeSession() }
 		guard let session else { return }
 		for cookie in session.cookies(forHost: host)
 		where !existing.contains(where: { $0.name == cookie.name && $0.value == cookie.value }) {
@@ -277,7 +285,7 @@ final class BrowserContext {
 	// tells us when the session has ended so a dead one is never handed to a page.
 	func validateSession(target: Umbreld.Target, force: Bool = false) async {
 		guard let current = session else { return }
-		let key = "browser-session-validated:\(deviceId)"
+		let key = Self.validatedKey(deviceId)
 		let last = UserDefaults.standard.double(forKey: key)
 		guard force || Date().timeIntervalSince1970 - last > 12 * 60 * 60 else { return }
 		switch await Umbreld.renewBrowserSession(target: target, session: current) {
@@ -292,6 +300,42 @@ final class BrowserContext {
 		}
 	}
 
+	// umbrelOS makes a browser session from the app's own sign-in, so a browser without
+	// one (signed in before umbrelOS could do this, or unused for a week) gets one here
+	// rather than asking for the password. A session it replaces is left to expire, not
+	// logged out, so pages already using it keep working.
+	private var making: Task<Void, Never>?
+	// An older umbrelOS makes none. It's asked once; after that its login page shows.
+	private var makesSessions = true
+
+	private func makeSession() async {
+		if let making { return await making.value }
+		guard makesSessions,
+			let native = Keychain.readSession(deviceId: deviceId).session, native.accountId == accountId
+		else { return }
+		let task = Task {
+			let made: Umbreld.BrowserSession?
+			do {
+				made = try await Umbreld.makeBrowserSession(target: target, session: native)
+			} catch {
+				return
+			}
+			guard let made else {
+				makesSessions = false
+				return
+			}
+			// The app may have signed out while umbrelOS was asked.
+			guard Keychain.readSession(deviceId: deviceId).session?.belongsToSameLogin(as: native) == true
+			else { return }
+			session = made
+			Keychain.setBrowserSession(made)
+			UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.validatedKey(deviceId))
+		}
+		making = task
+		await task.value
+		making = nil
+	}
+
 	private var target: Umbreld.Target { Umbreld.Target(deviceId: deviceId, hosts: Array(hosts)) }
 
 	private func validateSession(force: Bool) async {
@@ -300,24 +344,36 @@ final class BrowserContext {
 
 	// ── Lifecycle ──
 
-	// Called with the password the user just typed into the native sign-in form, so
-	// they are never asked for it again by a web page. Best-effort: without it the
-	// browser simply shows umbrelOS's own login page once.
+	// Called with a native sign-in before it's stored, so a web page never asks for the
+	// password again. Making the browser session renews the sign-in's access, so the
+	// session returned is the one to store. Best-effort: without a browser session, the
+	// browser makes one when it first needs it, or shows umbrelOS's own login page once.
 	static func signIn(
 		target: Umbreld.Target,
-		userId: String,
+		session: Umbreld.Session,
 		password: String,
 		totpToken: String?
-	) async {
+	) async -> Umbreld.Session {
 		// Ends any previous browser session for this Umbrel rather than leaving it live
 		// on the server once its Keychain entry is replaced.
-		await signOut(target: target, accountId: userId)
-		guard let session = try? await Umbreld.loginBrowser(
-			target: target, userId: userId, password: password, totpToken: totpToken)
-		else { return }
-		Keychain.setBrowserSession(session)
-		UserDefaults.standard.set(
-			Date().timeIntervalSince1970, forKey: "browser-session-validated:\(target.deviceId)")
+		await signOut(target: target, accountId: session.accountId)
+		var native = session
+		var browserSession: Umbreld.BrowserSession?
+		if let made = try? await Umbreld.makeBrowserSession(target: target, signingIn: session) {
+			native = made.session
+			browserSession = made.browserSession
+		}
+		// An older umbrelOS makes none, so log in the way a browser does, as the app
+		// always has. Older Umbrels keep working.
+		if browserSession == nil {
+			browserSession = try? await Umbreld.loginBrowser(
+				target: target, userId: session.accountId, password: password, totpToken: totpToken)
+		}
+		if let browserSession {
+			Keychain.setBrowserSession(browserSession)
+			UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: validatedKey(target.deviceId))
+		}
+		return native
 	}
 
 	// Forgets the session and everything its web pages stored. The server-side
@@ -352,6 +408,10 @@ final class BrowserContext {
 			digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7],
 			digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15]
 		))
+	}
+
+	private static func validatedKey(_ deviceId: String) -> String {
+		"browser-session-validated:\(deviceId)"
 	}
 
 	private static func normalized(_ host: String) -> String {

@@ -43,7 +43,7 @@ struct SignInSheet: View {
 			onRemove: nil
 		) { account, userId, password, totpToken in
 			guard model.selectedDevice != nil else { return }
-			let session = try await Umbreld.login(
+			let login = try await Umbreld.login(
 				target: target,
 				userId: userId,
 				password: password,
@@ -53,10 +53,11 @@ struct SignInSheet: View {
 			// The cleanup runs in its own task: this one is cancelled, so its requests would
 			// never be sent.
 			if Task.isCancelled {
-				Task { try? await Umbreld.logout(target: target, session: session) }
+				Task { try? await Umbreld.logout(target: target, session: login) }
 				throw CancellationError()
 			}
-			await BrowserContext.signIn(target: target, userId: userId, password: password, totpToken: totpToken)
+			let session = await BrowserContext.signIn(
+				target: target, session: login, password: password, totpToken: totpToken)
 			if Task.isCancelled {
 				Task {
 					await BrowserContext.signOut(target: target, accountId: userId)

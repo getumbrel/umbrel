@@ -94,7 +94,7 @@ struct RootView: View {
 					onRemove: { await remove(device) },
 					onReconnect: { await reconnect(device) }
 				) { account, userId, password, totpToken in
-					let session = try await Umbreld.login(
+					let login = try await Umbreld.login(
 						target: device.nativeTarget,
 						userId: userId,
 						password: password,
@@ -104,25 +104,26 @@ struct RootView: View {
 					// The cleanup runs in its own task: this one is cancelled, so its requests
 					// would never be sent.
 					if Task.isCancelled {
-						Task { try? await Umbreld.logout(target: device.nativeTarget, session: session) }
+						Task { try? await Umbreld.logout(target: device.nativeTarget, session: login) }
 						throw CancellationError()
 					}
-					guard Keychain.setSession(session, deviceId: device.id) else {
-						throw SignInError.sessionStorageFailed
-					}
-					await BrowserContext.signIn(
+					let session = await BrowserContext.signIn(
 						target: device.nativeTarget,
-						userId: userId,
+						session: login,
 						password: password,
 						totpToken: totpToken
 					)
 					if Task.isCancelled {
-						Keychain.deleteSession(deviceId: device.id)
 						Task {
 							await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
 							try? await Umbreld.logout(target: device.nativeTarget, session: session)
 						}
 						throw CancellationError()
+					}
+					guard Keychain.setSession(session, deviceId: device.id) else {
+						try? await Umbreld.logout(target: device.nativeTarget, session: session)
+						await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
+						throw SignInError.sessionStorageFailed
 					}
 					// Reconnecting an account must not move the iPhone library away from
 					// another Umbrel. Backup ownership changes only through backup controls.

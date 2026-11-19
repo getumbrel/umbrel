@@ -1503,6 +1503,29 @@ public enum Umbreld {
 		}
 	}
 
+	// A browser session for the in-app browser, made from the app's own sign-in so the
+	// browser never asks for the password. umbrelOS links the two: they show as one login
+	// and end together. Each one replaces the last, and making one also renews access.
+	// Nil when umbrelOS can't make them: an older one ignores the request and only renews.
+	public static func makeBrowserSession(target: Target, session: Session) async throws -> BrowserSession? {
+		// Each refresh replaces the last one's browser session, so a retry is safe too.
+		try await withResolvedHost(for: target, replay: .safe) { host in
+			try await sessionCoordinator.browserSession(host: host, supplied: session)
+		}
+	}
+
+	// The same for a sign-in that isn't stored yet. Its access is renewed, so the session
+	// returned takes the place of the one passed in.
+	public static func makeBrowserSession(
+		target: Target,
+		signingIn session: Session
+	) async throws -> (session: Session, browserSession: BrowserSession?) {
+		let refreshed = try await withResolvedHost(for: target, replay: .safe) { host in
+			try await refreshDirect(host: host, session: session, browserSession: true)
+		}
+		return (refreshed.session, refreshed.browserSession)
+	}
+
 	public static func logout(host: String, session: Session) async throws {
 		let body = try JSONEncoder().encode(EmptyInput())
 		var activeSession = session
@@ -1518,7 +1541,12 @@ public enum Umbreld {
 			// A caller may remove the local Keychain item before this best-effort request.
 			// Refresh from the captured device credential without storing anything, so
 			// delayed cleanup can never overwrite a subsequent sign-in.
-			activeSession = try await refreshSessionDirect(host: host, session: activeSession)
+			do {
+				activeSession = try await refreshSessionDirect(host: host, session: activeSession)
+			} catch let error as Error where error.isAuthError {
+				// Already ended: logging out its browser session ends it too.
+				return
+			}
 			response = try await performRequestRaw(
 				host: host,
 				path: "user.logout",
@@ -2191,10 +2219,13 @@ public enum Umbreld {
 	struct NativeRefreshInput: Encodable {
 		let deviceToken: String
 		let client: NativeClient
+		// Left out unless asked for, so a plain refresh reads exactly as it always has.
+		let browserSession: Bool?
 
-		init(deviceToken: String, client: NativeClient = .current) {
+		init(deviceToken: String, client: NativeClient = .current, browserSession: Bool = false) {
 			self.deviceToken = deviceToken
 			self.client = client
+			self.browserSession = browserSession ? true : nil
 		}
 	}
 
@@ -2242,6 +2273,13 @@ public enum Umbreld {
 	struct NativeAccessResponse: Decodable {
 		let accessToken: String
 		let accessExpiresAt: Int64
+		// Only when a browser session was asked for, and umbrelOS can make one.
+		let dashboardToken: String?
+	}
+
+	struct NativeRefresh: Sendable {
+		let session: Session
+		let browserSession: BrowserSession?
 	}
 
 	private struct IgnoredResult: Decodable {
@@ -2418,7 +2456,14 @@ public enum Umbreld {
 			}
 		}
 
-		private var refreshTasks: [LoginIdentity: Task<Session, Swift.Error>] = [:]
+		// Every refresh replaces the access credential, so a login has one at a time. One
+		// that made a browser session serves a plain refresh as well.
+		private struct Refresh {
+			let task: Task<NativeRefresh, Swift.Error>
+			let makesBrowserSession: Bool
+		}
+
+		private var refreshes: [LoginIdentity: Refresh] = [:]
 
 		func session(
 			host: String,
@@ -2444,17 +2489,39 @@ public enum Umbreld {
 				throw Umbreld.Error(status: 0, message: "Session storage is temporarily unavailable")
 			}
 
+			return try await refresh(host: host, current: current, makingBrowserSession: false).session
+		}
+
+		func browserSession(host: String, supplied: Session) async throws -> BrowserSession? {
+			let stored = Keychain.readSession(deviceId: supplied.deviceId)
+			guard let current = stored.session, current.belongsToSameLogin(as: supplied) else {
+				throw Umbreld.Error(status: 401, message: "This account is no longer signed in")
+			}
+			if case .unavailable = stored {
+				throw Umbreld.Error(status: 0, message: "Session storage is temporarily unavailable")
+			}
+			return try await refresh(host: host, current: current, makingBrowserSession: true).browserSession
+		}
+
+		private func refresh(host: String, current: Session, makingBrowserSession: Bool) async throws -> NativeRefresh {
 			let identity = LoginIdentity(current)
-			if let refreshTask = refreshTasks[identity] {
-				return try await refreshTask.value
+			if let inFlight = refreshes[identity] {
+				if inFlight.makesBrowserSession || !makingBrowserSession {
+					return try await inFlight.task.value
+				}
+				// A plain refresh can't serve a browser session: let it finish, then ask.
+				_ = try await inFlight.task.value
+				if refreshes[identity]?.task == inFlight.task { refreshes[identity] = nil }
+				return try await refresh(host: host, current: current, makingBrowserSession: true)
 			}
 
 			// Actor methods are reentrant across await. Publish one task before doing
 			// network I/O so concurrent API calls share the same refresh.
-			let refreshTask = Task<Session, Swift.Error> {
+			let task = Task<NativeRefresh, Swift.Error> {
 				do {
-					let refreshed = try await Umbreld.refreshSessionDirect(host: host, session: current)
-					guard Keychain.replaceSession(refreshed, matching: current) else {
+					let refreshed = try await Umbreld.refreshDirect(
+						host: host, session: current, browserSession: makingBrowserSession)
+					guard Keychain.replaceSession(refreshed.session, matching: current) else {
 						throw Umbreld.Error(status: 0, message: "Couldn\u{2019}t save the renewed session")
 					}
 					return refreshed
@@ -2463,9 +2530,9 @@ public enum Umbreld {
 					throw error
 				}
 			}
-			refreshTasks[identity] = refreshTask
-			defer { refreshTasks[identity] = nil }
-			return try await refreshTask.value
+			refreshes[identity] = Refresh(task: task, makesBrowserSession: makingBrowserSession)
+			defer { if refreshes[identity]?.task == task { refreshes[identity] = nil } }
+			return try await task.value
 		}
 	}
 
@@ -2544,23 +2611,43 @@ public enum Umbreld {
 	}
 
 	private static func refreshSessionDirect(host: String, session: Session) async throws -> Session {
-		let body = try JSONEncoder().encode(NativeRefreshInput(deviceToken: session.deviceToken))
+		try await refreshDirect(host: host, session: session).session
+	}
+
+	private static func refreshDirect(
+		host: String,
+		session: Session,
+		browserSession: Bool = false
+	) async throws -> NativeRefresh {
+		let path = "user.refreshNativeAccess"
+		let body = try JSONEncoder().encode(
+			NativeRefreshInput(deviceToken: session.deviceToken, browserSession: browserSession))
 		let (data, response) = try await performRequestRaw(
 			host: host,
-			path: "user.refreshNativeAccess",
+			path: path,
 			method: "POST",
 			deviceId: session.deviceId,
 			accessToken: nil,
 			body: body,
 			timeout: 10)
-		let access: NativeAccessResponse = try decodeEnvelope(
-			data: data, status: response.statusCode, path: "user.refreshNativeAccess")
-		return Session(
-			deviceId: session.deviceId,
-			accountId: session.accountId,
-			accessToken: access.accessToken,
-			accessExpiresAt: access.accessExpiresAt,
-			deviceToken: session.deviceToken)
+		let access: NativeAccessResponse = try decodeEnvelope(data: data, status: response.statusCode, path: path)
+		return NativeRefresh(
+			session: Session(
+				deviceId: session.deviceId,
+				accountId: session.accountId,
+				accessToken: access.accessToken,
+				accessExpiresAt: access.accessExpiresAt,
+				deviceToken: session.deviceToken),
+			// Unreadable, it's treated as never made: the renewed access is still kept.
+			browserSession: access.dashboardToken.flatMap { dashboardToken in
+				try? BrowserSession(
+					issuedBy: response,
+					path: path,
+					deviceId: session.deviceId,
+					accountId: session.accountId,
+					dashboardToken: dashboardToken,
+					linked: true)
+			})
 	}
 
 	private static func requestRaw(
