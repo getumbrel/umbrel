@@ -13,6 +13,7 @@ jobs:
       apple-changed: ${{ steps.check.outputs.apple-changed }}
       android-changed: ${{ steps.check.outputs.android-changed }}
       run-pi-tests: ${{ steps.pi.outputs.run-pi-tests }}
+      run-raid-tests: ${{ steps.raid.outputs.run-raid-tests }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -29,6 +30,7 @@ jobs:
             echo "ui-changed=true" >> $GITHUB_OUTPUT
             echo "apple-changed=true" >> $GITHUB_OUTPUT
             echo "android-changed=true" >> $GITHUB_OUTPUT
+            echo "raid-changed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -54,6 +56,7 @@ jobs:
           UI_CHANGED="false"
           APPLE_CHANGED="false"
           ANDROID_CHANGED="false"
+          RAID_CHANGED="false"
           while IFS= read -r file; do
             if [[ -n "$file" && ! "$file" =~ ^packages/ui/ ]]; then
               UI_ONLY="false"
@@ -76,10 +79,19 @@ jobs:
                 ANDROID_CHANGED="true"
                 ;;
             esac
+
+            # Everything the RAID VM tests run on or through: the RAID code and
+            # its tests, the OS image, and the VM test harness.
+            case "$file" in
+              packages/umbreld/source/modules/hardware/raid*|packages/umbreld/source/modules/test-utilities/*|packages/os/*|.github/workflows/ci.yml)
+                RAID_CHANGED="true"
+                ;;
+            esac
           done <<< "$CHANGED_FILES"
 
           if [[ -z "$CHANGED_FILES" ]]; then
             UI_ONLY="false"
+            RAID_CHANGED="true"
           fi
 
           echo "Changed files:"
@@ -88,10 +100,12 @@ jobs:
           echo "UI changed: $UI_CHANGED"
           echo "Apple changed: $APPLE_CHANGED"
           echo "Android changed: $ANDROID_CHANGED"
+          echo "RAID changed: $RAID_CHANGED"
           echo "ui-only=$UI_ONLY" >> $GITHUB_OUTPUT
           echo "ui-changed=$UI_CHANGED" >> $GITHUB_OUTPUT
           echo "apple-changed=$APPLE_CHANGED" >> $GITHUB_OUTPUT
           echo "android-changed=$ANDROID_CHANGED" >> $GITHUB_OUTPUT
+          echo "raid-changed=$RAID_CHANGED" >> $GITHUB_OUTPUT
       # The Pi VM tests boot the production Pi image in an emulated Raspberry
       # Pi 4. Emulation is TCG-only (no hardware acceleration exists for the
       # raspi4b machine) so they're the slowest jobs in CI and only run on
@@ -121,6 +135,33 @@ jobs:
             echo "run-pi-tests=true" >> $GITHUB_OUTPUT
           else
             echo "run-pi-tests=false" >> $GITHUB_OUTPUT
+          fi
+      # The RAID VM tests (raid-*.vm.test.ts) are over a third of the amd64 VM
+      # matrix and its slowest jobs, and nearly all of that time is spent
+      # booting VMs and waiting on ZFS. They only run on master/staging/tags,
+      # on branches that change something they depend on (see "RAID changed"
+      # above), or on branches whose open PR has the "raid-tests" label.
+      #
+      # Add the "raid-tests" label to PRs that can affect RAID from outside
+      # those paths, such as changes to reboot or startup handling. As with
+      # "pi-tests", after labelling an already-pushed PR use "Re-run all jobs".
+      - id: raid
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAID_CHANGED: ${{ steps.check.outputs.raid-changed }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" == "refs/heads/master" || "$GITHUB_REF" == "refs/heads/staging" || "$GITHUB_REF" == refs/tags/* || "$RAID_CHANGED" == "true" ]]; then
+            echo "run-raid-tests=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          labels=$(gh pr list --repo "${{ github.repository }}" --head "$GITHUB_REF_NAME" --state open --json labels --jq '.[].labels[].name' || true)
+          if grep --quiet --line-regexp 'raid-tests' <<< "$labels"; then
+            echo "run-raid-tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "run-raid-tests=false" >> $GITHUB_OUTPUT
           fi
 
   # These jobs simply serve as architecture native cache steps to load up the Docker cache for umbrelOS.
@@ -385,9 +426,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: find
+        env:
+          RUN_RAID_TESTS: ${{ needs.detect-changes.outputs.run-raid-tests }}
         run: |
+          # Leave the RAID tests out of the matrix when detect-changes says
+          # this branch doesn't need them
+          exclude_raid=()
+          if [[ "$RUN_RAID_TESTS" == "false" ]]; then
+            exclude_raid=(! -name "raid-*.vm.test.ts")
+          fi
+
           tests=$(
-            find packages/umbreld/source -name "*.vm.test.ts" ! -name "*.pi.vm.test.ts" |
+            find packages/umbreld/source -name "*.vm.test.ts" ! -name "*.pi.vm.test.ts" "${exclude_raid[@]}" |
               while IFS= read -r test_path; do
                 relative_path="${test_path#packages/umbreld/}"
                 name="$(basename "${test_path}" .vm.test.ts)"
