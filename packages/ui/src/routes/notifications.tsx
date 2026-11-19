@@ -21,6 +21,7 @@ import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-b
 import {CloudBreakDiagram} from '@/features/files/components/cloud-break-diagram'
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {cloudAccountBrand} from '@/features/files/utils/cloud'
+import {damageNotice} from '@/features/storage/manager/status'
 import {useLargerText} from '@/hooks/use-accessibility'
 import {ONBOARDING_COMPLETE_NOTIFICATION, useNotifications} from '@/hooks/use-notifications'
 import {cn} from '@/lib/utils'
@@ -219,6 +220,15 @@ export function Notifications() {
 		enabled: hasAppStorageNotification,
 	})
 
+	// What the storage reports of the damage a storage check left behind (only when umbreld has
+	// raised it), so the notification says what Storage Manager says
+	const hasScrubNotification = notifications.includes('raid-scrub-errors')
+	const raidStatusQuery = trpcReact.hardware.raid.getStatus.useQuery(undefined, {enabled: hasScrubNotification})
+	const scrubErrors = Math.max(
+		raidStatusQuery.data?.dataErrors ?? 0,
+		raidStatusQuery.data?.scrub?.state === 'finished' ? raidStatusQuery.data.scrub.errors : 0,
+	)
+
 	// Query cloud accounts (only when a cloud auth notification is present)
 	const hasCloudNotification = notifications.some((n) => n.startsWith('cloud-auth:'))
 	const cloudAccountsQuery = trpcReact.files.cloud.accounts.useQuery(undefined, {
@@ -298,8 +308,11 @@ export function Notifications() {
 				clearNotification(notification)
 				navigate('/settings/storage')
 			}
+			// The count is what the storage reports now. Without one, the notification still says
+			// what umbreld raised it for.
+			const damage = scrubErrors > 0 ? damageNotice(t, scrubErrors) : undefined
 			return {
-				title: t('notifications.raid.issue.title'),
+				title: damage?.title ?? t('notifications.raid.issue.title'),
 				icon: (
 					<div className='relative'>
 						<SettingsListIcon
@@ -310,7 +323,7 @@ export function Notifications() {
 						<RiErrorWarningFill className='absolute -top-2 -right-2 size-8 text-[#FF3434] drop-shadow-[0_2px_3px_rgba(0,0,0,0.55)]' />
 					</div>
 				),
-				description: t('notifications.raid.issue.description'),
+				description: damage?.body ?? t('notifications.raid.issue.description'),
 				action: (
 					<>
 						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>

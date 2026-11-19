@@ -48,6 +48,18 @@ export function SettingsAccountAvatar({
 	)
 }
 
+// The mark beside Storage Manager when something is wrong with the storage: amber for what
+// needs attention, red for what can't wait. Its label is the sentence Storage Manager leads with.
+export function StorageAlarmDot({critical, label, className}: {critical: boolean; label: string; className?: string}) {
+	const colour = critical ? 'bg-[#FF3434]' : 'bg-[#F5A623]'
+	return (
+		<span className={cn('relative', className)} role='img' aria-label={label}>
+			<span className={cn('absolute inset-0 rounded-full', colour)} />
+			<span className={cn('absolute inset-0 animate-ping rounded-full opacity-75', colour)} />
+		</span>
+	)
+}
+
 export function ChangePasswordWarning() {
 	const {t} = useTranslation()
 	return <ErrorAlert icon={RiAlarmWarningFill} description={t('change-password.callout')} />

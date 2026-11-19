@@ -1,9 +1,10 @@
-import {motion} from 'motion/react'
 import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {TbLoader} from 'react-icons/tb'
 import {useLocation, useNavigate} from 'react-router-dom'
 
+import {NoDrivesStage, ScanStage} from '@/features/storage/setup/stages'
+import {ShutDownDialog} from '@/features/storage/setup/storage-step'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {AccountCredentials} from '@/routes/onboarding/create-account'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -24,6 +25,8 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 	const isGeneric = variant === 'generic'
 	const basePath = isGeneric ? '/onboarding/ssd-raid' : '/onboarding/raid'
 	const {devices, isDetecting, isFetching, error, refetch} = useDetectStorageDevices({genericSsd: isGeneric})
+	const {shutdown} = useGlobalSystemState()
+	const [shuttingDown, setShuttingDown] = useState(false)
 
 	// Get credentials passed from create-account page via React Router's location.state
 	const credentials = location.state?.credentials as AccountCredentials | undefined
@@ -85,14 +88,16 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 	// Don't render while redirecting due to missing credentials
 	if (!credentials) return null
 
+	const lookAgain = () => {
+		void refetch()
+		void recoverableInstallQ.refetch()
+	}
+
 	// Show error state if detection failed
 	if (error || recoverableInstallQ.error) {
 		return (
 			<RaidError
-				onRetry={() => {
-					void refetch()
-					void recoverableInstallQ.refetch()
-				}}
+				onRetry={lookAgain}
 				retrying={isFetching || recoverableInstallQ.isFetching}
 				title={t('onboarding.raid.error.detection-failed')}
 				detail={error ?? recoverableInstallQ.error?.message}
@@ -105,76 +110,28 @@ export default function Raid({variant = 'pro'}: {variant?: RaidOnboardingVariant
 		)
 	}
 
-	// Show no SSDs state if detection complete but no devices found
+	// Nothing to set up yet
 	if (detectionComplete && devices.length === 0) {
 		return (
-			<RaidError
-				onRetry={() => {
-					void refetch()
-					void recoverableInstallQ.refetch()
-				}}
-				retrying={isFetching || recoverableInstallQ.isFetching}
-				title={t('onboarding.raid.error.no-ssds-detected')}
-				instructions={
-					isGeneric
-						? t('onboarding.ssd-raid.error.no-ssds-instructions')
-						: t('onboarding.raid.error.no-ssds-instructions')
-				}
-				image={
-					isGeneric
-						? undefined
-						: {
-								src: '/assets/onboarding/no-ssd-found.webp',
-								alt: t('onboarding.raid.no-ssds-alt'),
-							}
-				}
-			/>
+			<>
+				<NoDrivesStage
+					isPro={!isGeneric}
+					looking={isFetching || recoverableInstallQ.isFetching}
+					onLookAgain={lookAgain}
+					onShutdown={() => setShuttingDown(true)}
+				/>
+				<ShutDownDialog
+					isPro={!isGeneric}
+					// Both of these pages are for machines with nothing but SSDs
+					ssd
+					open={shuttingDown}
+					onOpenChange={setShuttingDown}
+					onShutdown={() => shutdown()}
+					reason='change'
+				/>
+			</>
 		)
 	}
 
-	if (isGeneric) {
-		return (
-			<div className='flex flex-1 flex-col items-center justify-center gap-4'>
-				{/* Same spinner as the Files listing loading state */}
-				<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-xs' />
-				<span className='text-15 text-white/85'>{t('onboarding.ssd-raid.scanning')}</span>
-			</div>
-		)
-	}
-
-	return (
-		<div className='flex flex-1 flex-col items-center justify-center gap-10'>
-			{/* Image with scanning line overlay - the animated line serves as the loading indicator */}
-			<div className='relative flex items-center justify-center'>
-				<img
-					src='/assets/onboarding/ssd-scan.webp'
-					alt={t('onboarding.raid.scanning-alt')}
-					className='aspect-square w-[300px]'
-				/>
-				<motion.div
-					className='pointer-events-none absolute w-[340px]'
-					style={{
-						height: '2px',
-						background: 'white',
-						boxShadow: '0 0 10px 2px rgba(255, 255, 255, 0.6), 0 0 20px 4px rgba(255, 255, 255, 0.3)',
-					}}
-					animate={{
-						y: ['-120px', '120px', '-120px'],
-					}}
-					transition={{
-						duration: 5,
-						repeat: Infinity,
-						ease: 'easeInOut',
-					}}
-				/>
-			</div>
-
-			<span
-				className='text-15 text-white/85'
-				style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
-			>
-				{t('onboarding.raid.scanning')}
-			</span>
-		</div>
-	)
+	return <ScanStage isPro={!isGeneric} />
 }

@@ -5,6 +5,7 @@ import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
 
 import {usePendingRaidOperation} from '../providers/pending-operation-context'
+import {noteFailsafeRestart} from '../restart-reason'
 
 // Types matching the backend event types
 type ExpansionStatus = {
@@ -145,13 +146,17 @@ export function useRaidProgress(): RaidProgress | null {
 				// one event from stacking a toast per instance.
 				if (status.state === 'error') {
 					setOperationError(status.error || t('storage-manager.failsafe-transition-failed'))
-					toast.error(status.error || t('storage-manager.failsafe-transition-failed'), {
+					// What happened in plain words, with umbreld's own beneath for anyone who wants them
+					toast.error(t('storage-manager.failsafe-transition-failed'), {
 						area: 'settings',
 						id: 'raid-failsafe-transition-error',
+						description: status.error || undefined,
 					})
 					setFailsafeTransition(null)
 					return
 				}
+				// umbreld says so a few seconds before it restarts, so the restarting screen can say why
+				if (status.state === 'rebooting') noteFailsafeRestart()
 				// On complete: keep visible briefly so user sees completion
 				if (status.state === 'complete') {
 					setTimeout(() => setFailsafeTransition(null), 2000)

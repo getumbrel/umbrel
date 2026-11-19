@@ -1,9 +1,6 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {useEffect, useLayoutEffect, useRef} from 'react'
-import {useTranslation} from 'react-i18next'
-import {useNavigate} from 'react-router-dom'
 
-import {toast} from '@/components/ui/toast'
 import {BackupsIsland} from '@/features/backups/components/floating-island'
 import {useBackupProgress, useBackupProgressLiveUpdates} from '@/features/backups/hooks/use-backups'
 import {AudioIsland} from '@/features/files/components/floating-islands/audio-island'
@@ -24,6 +21,7 @@ import {PhotosUploadIsland} from '@/features/photos/components/upload-island'
 import {usePhotosUploadsFeedback, usePhotosUploadsStatus} from '@/features/photos/hooks/use-upload'
 import {RaidIsland} from '@/features/storage/components/floating-island'
 import {useRaidProgress} from '@/features/storage/hooks/use-raid-progress'
+import {useStorageToasts} from '@/features/storage/hooks/use-storage-toasts'
 import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useDockClearance} from '@/modules/desktop/dock'
@@ -46,8 +44,6 @@ const spring = {
 const ROW_SHADOW_ROOM = 24
 
 export function FloatingIslandContainer() {
-	const {t} = useTranslation()
-	const navigate = useNavigate()
 	// When any ImmersiveDialog is open, bump z-index so islands appear above it
 	const isImmersiveDialogOpen = useImmersiveDialogOpen()
 
@@ -102,33 +98,8 @@ export function FloatingIslandContainer() {
 	const showMachinesInstall = installingMachines.length > 0
 	// Show the clipboard island while Files is open with something copied or cut
 	const showClipboard = useShowClipboardIsland()
-	const raidOperationType = raidProgress?.type
-	const raidOperationState = raidProgress?.state
-	const raidScrubErrors = raidProgress?.errors
-
-	useEffect(() => {
-		if (raidOperationType !== 'scrub' || raidOperationState !== 'finished') return
-
-		if ((raidScrubErrors ?? 0) > 0) {
-			toast.error(t('storage-manager.scrub.error-title'), {
-				id: 'raid-scrub-result',
-				area: 'settings',
-				description: t('storage-manager.scrub.error-description', {count: raidScrubErrors}),
-				duration: Infinity,
-				fullClick: true,
-				action: {
-					label: t('notifications.view'),
-					onClick: () => navigate('/settings/storage'),
-				},
-			})
-			return
-		}
-
-		toast.success(t('storage-manager.scrub.completed-toast'), {
-			id: 'raid-scrub-result',
-			area: 'settings',
-		})
-	}, [navigate, raidOperationState, raidOperationType, raidScrubErrors, t])
+	// What a storage check found, and the moment a long storage task ends
+	useStorageToasts(raidProgress)
 
 	// Home's Search shrinks to its orb when the shared row gets crowded
 	const islandCount = [

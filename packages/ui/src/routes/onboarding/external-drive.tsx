@@ -4,7 +4,7 @@ import {useNavigate} from 'react-router-dom'
 
 import {links} from '@/constants/links'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {DriveIcon, SdCard} from '@/features/storage/components/list-manager/drive-visuals'
+import {DriveIcon, SdCard} from '@/features/storage/components/drive-visuals'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {Layout, primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'

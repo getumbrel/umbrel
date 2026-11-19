@@ -1,40 +1,32 @@
-import {useState} from 'react'
-import {useTranslation} from 'react-i18next'
+// An earlier Umbrel setup was found on the drives. It can be restored, or the drives can be
+// set up as new. Nothing is erased here: setting up as new goes on to the storage step, and
+// that step's own confirmation is the one place the drives are erased.
 
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {SsdHealthDialog} from '@/features/storage/components/dialogs/ssd-health-dialog'
-import {StorageDeviceCard} from '@/features/storage/components/storage-device-card'
-import {Layout, primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
-import {Progress} from '@/modules/bare/progress'
-import {RaidError} from '@/routes/onboarding/raid/raid-error'
+import {useState} from 'react'
+
+import type {DriveView} from '@/features/storage/art'
+import {toDrive} from '@/features/storage/from-umbreld'
+import {EarlierSetupStage, FailedStage, WorkingStage} from '@/features/storage/setup/stages'
+import {ShutDownDialog} from '@/features/storage/setup/storage-step'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {ReturnToStart} from '@/routes/onboarding/raid/return-to-start'
 
 import type {RaidOnboardingVariant} from './index'
-import {GenericSsdTray, SsdSlot, SsdTray} from './ssd-tray'
-import {formatSize, getDeviceHealth, StorageDevice} from './use-raid-setup'
+import {StorageDevice} from './use-raid-setup'
 import {useRecoverExistingInstall} from './use-recover-existing-install'
-import {useSsdHealthDialog} from './use-ssd-health-dialog'
 
 type RecoverExistingInstallProps = {
 	devices: StorageDevice[]
 	variant?: RaidOnboardingVariant
+	// The machine has nothing but SSDs, so it is told about SSDs
+	ssd?: boolean
 	onSetUpAsNew: () => void
 }
 
-export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}: RecoverExistingInstallProps) {
-	const {t} = useTranslation()
-	const isGeneric = variant === 'generic'
-	const healthDialog = useSsdHealthDialog()
-	const [showSetUpAsNewDialog, setShowSetUpAsNewDialog] = useState(false)
+export function RecoverExistingInstall({devices, variant = 'pro', ssd, onSetUpAsNew}: RecoverExistingInstallProps) {
+	const isPro = variant !== 'generic'
+	const {shutdown} = useGlobalSystemState()
+	const [shuttingDown, setShuttingDown] = useState(false)
 
 	const {
 		handleRestore,
@@ -47,205 +39,56 @@ export function RecoverExistingInstall({devices, variant = 'pro', onSetUpAsNew}:
 		checking,
 	} = useRecoverExistingInstall()
 
-	const proSlots: (SsdSlot | null)[] = [null, null, null, null]
-	devices.forEach((device) => {
-		const slotIndex = (device.slot ?? 0) - 1
-		if (slotIndex >= 0 && slotIndex < proSlots.length) {
-			proSlots[slotIndex] = {
-				size: formatSize(device.roundedSize),
-				hasWarning: getDeviceHealth(device).hasWarning,
-			}
-		}
-	})
-	const genericSlots: SsdSlot[] = devices.map((device) => ({
-		size: formatSize(device.roundedSize),
-		hasWarning: getDeviceHealth(device).hasWarning,
-		label: device.name,
-	}))
-
-	const setUpAsNewDialog = (
-		<AlertDialog open={showSetUpAsNewDialog} onOpenChange={setShowSetUpAsNewDialog}>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>{t('onboarding.raid.recovery.set-up-new-dialog.title')}</AlertDialogTitle>
-					<AlertDialogDescription>{t('onboarding.raid.recovery.set-up-new-dialog.description')}</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogAction onClick={onSetUpAsNew}>
-						{t('onboarding.raid.recovery.set-up-new-dialog.confirm')}
-					</AlertDialogAction>
-					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
-	)
-
 	if (restoreRequested && !restoreFailed) {
 		return (
-			<Layout
-				title={t(
-					outcomeUnknown ? 'onboarding.raid.recovery.confirming.title' : 'onboarding.raid.recovery.restoring.title',
-				)}
-				subTitle={t(
-					outcomeUnknown ? 'onboarding.raid.recovery.outcome-unknown' : 'onboarding.raid.recovery.restoring.subtitle',
-				)}
-				subTitleMaxWidth={430}
-				showLogo={false}
-				footer={
-					<div className='w-full max-w-sm'>
-						<p className='text-center text-sm text-white/60'>
-							{t(showWaitNotice ? 'onboarding.raid.wait-warning' : 'onboarding.raid.recovery.restoring.warning')}
-						</p>
-					</div>
-				}
-			>
-				{!isGeneric && (
-					<>
-						<img
-							src='/assets/onboarding/pro-front.webp'
-							alt={t('storage-manager.umbrel-pro')}
-							draggable={false}
-							className='w-64 md:w-96'
-						/>
-						<p className='-mt-4 text-13 font-medium text-white/30'>{t('storage-manager.umbrel-pro')}</p>
-					</>
-				)}
-				<div className='mt-4 w-full max-w-sm'>
-					<Progress />
-					{(outcomeUnknown || showWaitNotice) && (
-						<div className='mt-5 flex flex-col items-center gap-3'>
-							{showWaitNotice && (
-								<p className='text-center text-13 leading-relaxed text-white/50'>
-									{t('onboarding.raid.still-working')}
-								</p>
-							)}
-							<button className={secondaryButtonClasss} onClick={() => void checkStatus()} disabled={checking}>
-								{t('storage-status.check-again')}
-							</button>
-							{showWaitNotice && <ReturnToStart />}
-						</div>
-					)}
-				</div>
-			</Layout>
+			<WorkingStage
+				isPro={isPro}
+				ssd={ssd}
+				restoring
+				// The connection was lost before umbreld could confirm, or it has simply been a while
+				waiting={outcomeUnknown ? 'connection-lost' : showWaitNotice ? 'still-working' : undefined}
+				checking={checking}
+				onCheckAgain={outcomeUnknown || showWaitNotice ? () => void checkStatus() : undefined}
+				actions={showWaitNotice ? <ReturnToStart /> : undefined}
+			/>
 		)
 	}
 
 	if (restoreFailed) {
 		return (
 			<>
-				<RaidError
-					title={t('onboarding.raid.recovery.failed.title')}
-					instructions={t('onboarding.raid.recovery.failed-help')}
+				<FailedStage
+					ssd={ssd}
+					restoring
+					canRetry
 					detail={errorMessage}
-					onRetry={handleRestore}
-					retryLabel={t('onboarding.raid.try-again')}
-					secondaryAction={{
-						label: t('onboarding.raid.recovery.set-up-new'),
-						onClick: () => setShowSetUpAsNewDialog(true),
-					}}
+					onRetry={() => void handleRestore()}
+					onShutdown={() => setShuttingDown(true)}
+					onSetUpAsNew={onSetUpAsNew}
 				/>
-				{setUpAsNewDialog}
+				<ShutDownDialog
+					isPro={isPro}
+					ssd={ssd}
+					open={shuttingDown}
+					onOpenChange={setShuttingDown}
+					onShutdown={() => shutdown()}
+					reason='check'
+				/>
 			</>
 		)
 	}
 
+	// umbreld says an earlier setup is there, not which drives hold it: every drive is shown alike
+	const drives: DriveView[] = devices
+		.filter((device): device is StorageDevice & {id: string} => !!device.id)
+		.map((device) => ({id: device.id, drive: toDrive(device), tone: 'in'}))
+
 	return (
-		<div className='flex flex-1 flex-col md:flex-row'>
-			<div className='flex min-w-0 flex-1 flex-col justify-center gap-5 px-4 py-6 md:pr-0 md:pl-6'>
-				<div className='flex flex-col gap-1 md:gap-2'>
-					<h1
-						className='text-[20px] font-bold text-white/85 md:text-24'
-						style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
-					>
-						{t('onboarding.raid.recovery.found.title')}
-					</h1>
-					<p className='max-w-[500px] text-14 text-white/50 md:text-16'>
-						{t('onboarding.raid.recovery.found.subtitle')}
-					</p>
-				</div>
-
-				<div className='flex min-w-0 flex-col gap-3 md:hidden'>
-					<p className='text-13 text-white/50'>{t('storage-status.connected-drives')}</p>
-					{devices.map((device) => (
-						<StorageDeviceCard
-							key={device.id ?? device.device}
-							device={device}
-							onDetails={() => healthDialog.openDialog(device, isGeneric ? undefined : device.slot)}
-						/>
-					))}
-				</div>
-				{!isGeneric &&
-					devices
-						.filter((device) => !device.slot || device.slot < 1 || device.slot > 4)
-						.map((device) => (
-							<div className='hidden md:block' key={device.id ?? device.device}>
-								<StorageDeviceCard
-									device={device}
-									status={t('storage-status.slot-unknown')}
-									onDetails={() => healthDialog.openDialog(device)}
-								/>
-							</div>
-						))}
-
-				<div className='flex flex-col gap-3 sm:flex-row'>
-					<button
-						onClick={handleRestore}
-						{...primaryButtonProps}
-						className={`${primaryButtonProps.className} w-full sm:w-fit`}
-					>
-						{t('onboarding.raid.recovery.restore')}
-					</button>
-					<button onClick={() => setShowSetUpAsNewDialog(true)} className={`${secondaryButtonClasss} w-full sm:w-fit`}>
-						{t('onboarding.raid.recovery.set-up-new')}
-					</button>
-				</div>
-			</div>
-
-			<div
-				className={`hidden min-w-0 flex-1 flex-col justify-center md:flex ${isGeneric ? 'items-center' : 'items-end md:-mr-6'}`}
-			>
-				{/* The bottom fade suits the Pro chassis photo; the generic enclosure is a bounded card */}
-				<div
-					className={isGeneric ? 'w-full' : 'w-[95%]'}
-					style={
-						isGeneric
-							? undefined
-							: {
-									maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
-									WebkitMaskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
-								}
-					}
-				>
-					{isGeneric ? (
-						<GenericSsdTray
-							slots={genericSlots}
-							onHealthClick={(deviceIndex) => {
-								const device = devices[deviceIndex]
-								if (device) healthDialog.openDialog(device)
-							}}
-						/>
-					) : (
-						<SsdTray
-							slots={proSlots}
-							onHealthClick={(slotIndex) => {
-								const device = devices.find((candidate) => candidate.slot === slotIndex + 1)
-								if (device) healthDialog.openDialog(device, slotIndex + 1)
-							}}
-						/>
-					)}
-				</div>
-			</div>
-
-			{setUpAsNewDialog}
-
-			{healthDialog.selectedDevice && (
-				<SsdHealthDialog
-					device={healthDialog.selectedDevice.device}
-					slotNumber={healthDialog.selectedDevice.slotNumber}
-					open={healthDialog.open}
-					onOpenChange={healthDialog.onOpenChange}
-				/>
-			)}
-		</div>
+		<EarlierSetupStage
+			isPro={isPro}
+			drives={drives}
+			onRestore={() => void handleRestore()}
+			onSetUpAsNew={onSetUpAsNew}
+		/>
 	)
 }

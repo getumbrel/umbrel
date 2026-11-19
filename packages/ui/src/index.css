@@ -84,6 +84,10 @@
 @custom-variant low (@media (height < 500px));
 /* Tablets, inner displays and phones on their side: room for two panes, below the desktop layout */
 @custom-variant panes (@media (640px <= width < 1024px));
+/* Wide enough for storage setup and Storage Manager to put the drives beside the words with each
+   side about a phone wide: small tablets upright, and up. one-up is everything narrower. */
+@custom-variant two-up (@media (width >= 700px));
+@custom-variant one-up (@media (width < 700px));
 /* Phones on their side: too short for a page title above a toolbar */
 @custom-variant phone-side (@media (height < 500px) and (width < 1024px));
 /* Tablets upright, and windows of their size: wide enough for a bar to share the
