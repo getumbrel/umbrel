@@ -115,6 +115,11 @@ export function SheetLayout() {
 											isPhotosRoute
 											? 'pt-(--page-top) lg:pt-12'
 											: 'pt-6 md:pt-12',
+									// On a tablet Files and Photos open on a row of controls beside
+									// their title, not on a title alone, and a row of controls wants
+									// no more above it than a phone gives it. Set as the variable, so
+									// everything of theirs that is measured from it follows
+									isFullHeightFeatureRoute && 'tablet:[--page-top:clamp(12px,calc(12dvh_-_32px),24px)]',
 									isSettingsRoute
 										? 'lg:h-full lg:min-h-0 lg:gap-0 lg:pt-0 xl:px-[60px] low:gap-3'
 										: isFullHeightFeatureRoute

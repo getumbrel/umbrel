@@ -18,14 +18,14 @@ import {UploadButton} from '@/features/photos/components/actions-bar/upload-butt
 import {useBarRoute} from '@/features/photos/components/actions-bar/use-bar-route'
 import {ViewLine} from '@/features/photos/components/actions-bar/view-line'
 import {ZoomSlider} from '@/features/photos/components/actions-bar/zoom-slider'
-import {SearchPill, useSearchEngaged} from '@/features/photos/components/search'
+import {MobileSearch, SearchPill, useSearchEngaged} from '@/features/photos/components/search'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {SourceActions} from '@/features/photos/components/sources/source-actions'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import type {CollectionSection} from '@/features/photos/constants'
 import {useAlbums} from '@/features/photos/hooks/use-library'
 import {usePhotoSources} from '@/features/photos/hooks/use-photo-sources'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsMobile, useIsTablet} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
 import {touchTargetClass} from '@/utils/element-classes'
@@ -42,7 +42,10 @@ import {tw} from '@/utils/tw'
 // page has, search. Zoom and search live in the view
 // context so the listing reacts to them. Deleted additionally offers a
 // media-only permanent purge of Trash. On phones the page's controls sit
-// in the title row instead (MobileActions), leaving this row to the date.
+// in the title row instead (MobileActions), leaving this row to the date. A
+// tablet has the width for one row, as a desktop does: the bar comes up
+// beside "Photos" and carries those same few buttons itself, and its search
+// opens in their place.
 //
 // While items are selected the bar is the selection's: how many, and what
 // can be done with them (SelectionActions) in place of the page's controls.
@@ -76,6 +79,10 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	const {section, mapArea, mapControls} = usePhotosView()
 	const searchEngaged = useSearchEngaged()
 	const isMobile = useIsMobile()
+	// A tablet's search has this row: the field and its Cancel stand where the
+	// page's buttons were (a phone's takes the title row: see PhotosLayout)
+	const isTablet = useIsTablet()
+	const searchingHere = isTablet && searchEngaged
 	// A phone's grid zooms under the fingers — two columns to six in one
 	// pinch — so the − / + steps would only be a smaller, slower copy of the
 	// gesture taking the date's row. A window merely narrowed to a phone's
@@ -83,9 +90,25 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	const pinchZooms = useIsTouchDevice() && isMobile
 	const selection = usePhotosSelection()
 	const {albumId, sourceId} = useParams()
+	// Below the desktop layout the grouping is in the bar only where the bar
+	// can hold it whole beside the longest date it may have to show, a day's
+	// ("Wed, September 23, 2026"), whatever the grid is grouped by: a control
+	// that came and went as the date changed, or with the grouping it sets,
+	// would be worse than none. The bar's own width decides (it is a
+	// container). What it must hold is 212px for the date, a 12px gap, the
+	// grouping's 188px, and the buttons after it at 52px apiece: upload,
+	// select and search under a finger (an album's page has its Add too);
+	// under a mouse no select, and the zoom steps' 100px.
+	const groupingRoomClass = pinchZooms
+		? albumId
+			? 'md:@min-[620px]/bar:flex'
+			: 'md:@min-[568px]/bar:flex'
+		: albumId
+			? 'md:@min-[668px]/bar:flex'
+			: 'md:@min-[616px]/bar:flex'
 	const reduceMotion = useReducedMotion() ?? false
 	// Which way the drum turns: up as the selection's face comes in, down as it leaves
-	const direction = selection.selecting ? 1 : -1
+	const direction = selection.selecting || searchingHere ? 1 : -1
 	const faceProps = (variants: typeof titleRoll) => ({
 		custom: direction,
 		variants: reduceMotion ? undefined : variants,
@@ -102,8 +125,15 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 		<nav
 			// The lg pull-up puts the bar in the sheet close button's row; xl's
 			// wider sheet padding clears the × on its own, lg needs the padding.
-			// A phone on its side has no title row, so this is the top row there
-			className='umbrel-photos-actions relative z-10 flex h-11 w-full min-w-0 items-center gap-3 lg:-mt-[86px] lg:pr-5 xl:pr-0 phone-side:pr-9'
+			// A phone on its side has no title row, so this is the top row there.
+			// On a tablet it comes up into the title's row and starts after the
+			// menu button and the title's box (20 + 16 + 124, and a gap). The row
+			// is level with the sheet's close button there, which under a finger
+			// answers across the whole 44px of the sheet's corner, so the row ends
+			// short of that square, as a phone's does on its side: by 36px beside
+			// the sheet's 12px of padding, and from md by 8px beside its 40px. Its
+			// own width decides what it has room for (the grouping)
+			className='umbrel-photos-actions @container/bar relative z-10 flex h-11 w-full min-w-0 items-center gap-3 lg:-mt-[86px] lg:pr-5 xl:pr-0 phone-side:pr-9 tablet:-mt-14 tablet:ml-[184px] tablet:w-auto tablet:max-md:pr-9 tablet:md:pr-2'
 			aria-label={t('photos-actions.navigation')}
 		>
 			{onOpenSidebar && (
@@ -131,6 +161,9 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 				<div
 					className={cn(
 						'flex min-w-0 flex-col self-end',
+						// Beside a tablet's search the field has the say: this block
+						// gives first, down to the room a month's date needs
+						searchingHere && 'min-w-36 shrink-[999]',
 						// Over the map the title stands on the map itself, names and all,
 						// under a light shade: its own shadow is deeper there
 						isMap ? mapTitleShadowClass : titleShadowClass,
@@ -168,54 +201,55 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			    While picking, the album's name in Add can give way, so this side
 			    narrows with the title instead of squeezing it to a sliver. On a
 			    timeline's own face (from md, where it has the grouping) this side
-			    takes the squeeze first: the grouping scrolls so the date stays whole */}
+			    takes the squeeze first: the grouping scrolls so the date stays whole.
+			    A tablet shows the grouping only where the date has room beside it
+			    (see below), so there nothing is squeezed */}
 			<div
 				className={cn(
 					'relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5',
 					selection.pickingFor && 'min-w-0',
 					timelineFace && 'md:min-w-0 md:shrink-[999]',
+					timelineFace && !searchingHere && 'tablet:shrink-0',
+					// A search field is as wide as the bar can spare, and no wider than it needs
+					searchingHere && 'min-w-0 shrink basis-[380px]',
 				)}
 			>
 				<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 					{selection.coveringFor ? (
 						<motion.div key='covering' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
-							{isTimeline && (
-								<div className='hidden items-center gap-2 md:flex'>
-									<TimelineZoom slider={!pinchZooms} />
-								</div>
-							)}
+							{isTimeline && <TimelineZoom slider={!pinchZooms} groupingClassName={groupingRoomClass} />}
 							<PillButton onClick={() => selection.done()}>{t('cancel')}</PillButton>
 						</motion.div>
 					) : selection.pickingFor ? (
 						<motion.div key='picking' className='flex min-w-0 items-center gap-2' {...faceProps(pillsRoll)}>
-							{isTimeline && (
-								<div className='hidden min-w-0 items-center gap-2 md:flex'>
-									<TimelineZoom slider={!pinchZooms} />
-								</div>
-							)}
+							{isTimeline && <TimelineZoom slider={!pinchZooms} groupingClassName={groupingRoomClass} />}
 							<PickingActions albumId={selection.pickingFor} />
 						</motion.div>
 					) : selection.selecting ? (
 						<motion.div key='selection' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
 							<SelectionActions inDeleted={inDeleted} />
 						</motion.div>
+					) : searchingHere ? (
+						<motion.div key='search' className='flex w-full min-w-0 items-center' {...faceProps(pillsRoll)}>
+							<MobileSearch />
+						</motion.div>
 					) : (
 						<motion.div key='page' className='flex min-w-0 items-center gap-2' {...faceProps(pillsRoll)}>
-							{/* Phones and tablets: the page's controls live in the title row,
-							    so the date's row carries only what sizes the grid beneath it —
-							    the grouping where there's room, and the zoom steps for a mouse
-							    (the slider folds to − / + below xl): on a touch screen the
-							    date has the row. A phone on its side has no title row, so the
+							{/* Phones: the page's controls live in the title row, so the
+							    date's row carries only what sizes the grid beneath it: the
+							    zoom steps for a mouse (the slider folds to − / + below xl),
+							    and on a touch screen the date has the row. A tablet's title
+							    row is this one and a phone on its side has none, so the
 							    controls come here */}
 							<div className='flex min-w-0 items-center gap-2 lg:hidden'>
 								{isTimeline && (
-									<div className='hidden min-w-0 md:flex'>
+									<div className={cn('hidden min-w-0', groupingRoomClass)}>
 										<GroupingPills />
 									</div>
 								)}
 								{isTimeline && !pinchZooms && <ZoomSlider />}
 								{/* While a search is on, the title row is back with its field */}
-								{!searchEngaged && <MobileActions className='hidden shrink-0 phone-side:flex' />}
+								{!searchEngaged && <MobileActions className='hidden shrink-0 phone-side:flex tablet:flex' />}
 							</div>
 							<div className='hidden min-w-0 items-center gap-2 lg:flex'>
 								{/* Most of the page's controls step aside while the search has
@@ -313,14 +347,22 @@ function GroupingPills() {
 	)
 }
 
-// The grouping and the thumbnail size together (the picking face keeps them
-// side by side; the page face lays them out itself so the slider can stay up
-// while the search is open) — the size only where it isn't a pinch
-function TimelineZoom({slider}: {slider: boolean}) {
+// The grouping and the thumbnail size together, for the faces that keep them
+// side by side while photos are being picked (the page face lays them out
+// itself so the slider can stay up while the search is open): the grouping
+// where the bar has the room for it, the size only where it isn't a pinch
+function TimelineZoom({slider, groupingClassName}: {slider: boolean; groupingClassName: string}) {
 	return (
 		<>
-			<GroupingPills />
-			{slider && <ZoomSlider />}
+			{/* (The desktop layout always has the room) */}
+			<div className={cn('hidden min-w-0 lg:flex', groupingClassName)}>
+				<GroupingPills />
+			</div>
+			{slider && (
+				<div className='hidden md:flex'>
+					<ZoomSlider />
+				</div>
+			)}
 		</>
 	)
 }

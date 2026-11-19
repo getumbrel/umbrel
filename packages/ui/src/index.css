@@ -86,6 +86,9 @@
 @custom-variant panes (@media (640px <= width < 1024px));
 /* Phones on their side: too short for a page title above a toolbar */
 @custom-variant phone-side (@media (height < 500px) and (width < 1024px));
+/* Tablets upright, and windows of their size: wide enough for a bar to share the
+   title's row as it does on a desktop, and tall enough to keep the title */
+@custom-variant tablet (@media (640px <= width < 1024px) and (height >= 500px));
 
 /* A Machines list row too narrow for its monitor, copy and controls side by side:
    the two columns of a tablet. 368px is inside the row's padding, so a 400px row.

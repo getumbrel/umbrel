@@ -32,6 +32,16 @@ export function useIsPhone() {
 	return isMobile && phoneScale
 }
 
+// A tablet, or a window of its size: below the desktop layout, and not a phone.
+// It ignores the keyboard as useIsPhone does, so what it decides (where a search
+// field lives) can't change under a field that is being typed in.
+export function useIsTablet() {
+	const isMobile = useIsMobile()
+	const isPhone = useIsPhone()
+
+	return isMobile && !isPhone
+}
+
 // The same, following the window as it is, keyboard and all. For layouts that
 // have to agree with the `low` and `phone-side` variants in index.css.
 export function useIsPhoneNow() {

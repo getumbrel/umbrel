@@ -74,9 +74,11 @@ export function SortMenu() {
 	)
 }
 
-// Phones and tablets: how the folder is shown and ordered, behind one quiet
-// glyph at the end of the title's row. The page's own buttons are in the row above.
-export function ViewOptionsButton() {
+// Phones and tablets: how the folder is shown and ordered, behind one glyph.
+// On a phone it is a quiet one at the end of the title's row, with the page's
+// own buttons in the row above. On a tablet those buttons stand beside it, and
+// it is a pill as they are.
+export function ViewOptionsButton({quiet = true}: {quiet?: boolean}) {
 	const {t} = useTranslation()
 	const {preferences, setView} = usePreferences()
 	const current = preferences?.view ?? 'list'
@@ -87,7 +89,11 @@ export function ViewOptionsButton() {
 				<PillButton
 					icon={SlidersHorizontal}
 					aria-label={t('files-view.options')}
-					className='size-9 bg-transparent shadow-none [border:none] hover:bg-white/10 data-[state=open]:bg-white/10'
+					className={
+						quiet
+							? 'size-9 bg-transparent shadow-none [border:none] hover:bg-white/10 data-[state=open]:bg-white/10'
+							: undefined
+					}
 				/>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align='end' className='min-w-48'>

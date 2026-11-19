@@ -2,7 +2,7 @@ import type {ReactNode} from 'react'
 
 import {useSearchEngaged} from '@/features/photos/components/search'
 import {useLargerText} from '@/hooks/use-accessibility'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsMobile, useIsPhone, useIsTablet} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 
 // The actions bar, in the scroller's coordinates: its height, the gap the
@@ -37,6 +37,13 @@ export function useBarDrop() {
 // its view line's growth (leading-tight: 1.25 × the boost) and its own
 // half-leading (0.125 ×); a header's leading-none title stays where it is.
 const TITLE_HANDOFF = 46
+// A tablet's bar shares its row with the sheet's title, and that title, not
+// the bar's, stands where the grid's date headers come up. So there nothing
+// dissolves on beneath the row: what scrolls up fades out below it and is
+// gone by its lower edge, and one title never crosses another. A header hands
+// its title to the bar once it is out of sight under that edge: its own
+// title ends 30px into its row.
+const HEADER_TITLE_END = 30
 
 // Where a listing's content sits under the bar floating over it, in the
 // scroller's px: `inset` is where it starts (under the bar at rest); what
@@ -59,18 +66,22 @@ export function ListingSurface({bleed = false, children}: {bleed?: boolean; chil
 	const isMobile = useIsMobile()
 	const largerText = useLargerText()
 	const drop = useBarDrop()
-	// A phone on its side gives the title row to the listing, until a search takes it back
-	const searching = useSearchEngaged()
+	// A phone on its side gives the title row to the listing, until a search
+	// takes it back (a tablet's search opens in the bar, and takes nothing)
+	const isPhone = useIsPhone()
+	const isTablet = useIsTablet()
+	const searching = useSearchEngaged() && isPhone
 	const barBottom = (isMobile ? BAR_TOP.mobile : BAR_TOP.desktop) + BAR_HEIGHT
 	// Content is hidden up to the pinned bar's top and fades in through the
 	// bar (so the glass controls have something to frost), complete just
 	// after it; it starts that far under the bar at rest
 	const fadeTo = barBottom + FADE_TAIL
+	const fadeFrom = isTablet ? barBottom : barBottom - BAR_HEIGHT
 	const frame: Frame = {
-		fadeFrom: barBottom - BAR_HEIGHT,
+		fadeFrom,
 		fadeTo,
 		inset: fadeTo + drop,
-		handoff: barBottom - (TITLE_HANDOFF + Math.round(largerText * 1.375)),
+		handoff: isTablet ? fadeFrom - HEADER_TITLE_END : barBottom - (TITLE_HANDOFF + Math.round(largerText * 1.375)),
 	}
 
 	return (
@@ -97,6 +108,8 @@ export function ListingSurface({bleed = false, children}: {bleed?: boolean; chil
 					searching
 						? 'phone-side:h-[calc(100dvh-var(--sheet-top)-var(--page-top)-120px+var(--umbrel-photos-inset))]'
 						: 'phone-side:h-[calc(100dvh-var(--sheet-top)-var(--page-top)-56px+var(--umbrel-photos-inset))]',
+					// A tablet's bar is in the title row, so that row is all there is above
+					'tablet:h-[calc(100dvh-var(--sheet-top)-var(--page-top)-56px+var(--umbrel-photos-inset))]',
 					bleed &&
 						'max-lg:-mx-3 max-lg:[--umbrel-photos-gutter:12px] md:max-lg:-mx-10 md:max-lg:[--umbrel-photos-gutter:40px]',
 				)}

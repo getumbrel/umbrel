@@ -227,7 +227,10 @@ function SearchBox({
 					if (boxRef.current?.contains(event.target as Node)) return
 					if (variant === 'bar') search.setOpen(false)
 				}}
-				className='relative w-[var(--radix-popper-anchor-width)] rounded-20 p-3'
+				// As wide as the field, which in a tablet's bar can be narrower than
+				// the suggestions read well at: there the panel keeps a width of its
+				// own, and runs out to the left from under the field
+				className='relative w-[var(--radix-popper-anchor-width)] rounded-20 p-3 tablet:min-w-[22rem]'
 			>
 				{/* Puts the panel away without touching the search itself */}
 				<button

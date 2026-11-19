@@ -10,19 +10,19 @@ import {useActionsBarConfig} from '@/features/files/components/listing/actions-b
 import {MobileActions} from '@/features/files/components/listing/actions-bar/mobile-actions'
 import {NavigationControls} from '@/features/files/components/listing/actions-bar/navigation-controls'
 import {PathBar} from '@/features/files/components/listing/actions-bar/path-bar'
-import {SearchPill} from '@/features/files/components/listing/actions-bar/search'
+import {MobileSearch, SearchPill} from '@/features/files/components/listing/actions-bar/search'
 import {
 	PointerSelectionActions,
 	SelectionActions,
 	useHasPointerSelection,
 } from '@/features/files/components/listing/actions-bar/selection-actions'
 import {SortMenu, ViewOptionsButton, ViewToggle} from '@/features/files/components/listing/actions-bar/view-controls'
-import {useFilesSearchEngaged} from '@/features/files/hooks/use-files-search'
+import {useFilesSearch, useFilesSearchEngaged} from '@/features/files/hooks/use-files-search'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsFilesEmbedded, useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {useIsPhoneNow} from '@/hooks/use-is-mobile'
+import {useIsPhoneNow, useIsTablet} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {touchTargetClass} from '@/utils/element-classes'
 import {formatNumberI18n} from '@/utils/number'
@@ -34,9 +34,11 @@ import {tw, useBreakpoint} from '@/utils/tw'
 // folder holds; on the right are the folder's own controls, in the same pills
 // and the same places Photos keeps its own, ending in the search.
 //
-// What it offers is the listing's to say (see actions-bar-context.tsx). On
-// phones and tablets the page's buttons live in the title row instead
-// (MobileActions), leaving this row to the folder's name.
+// What it offers is the listing's to say (see actions-bar-context.tsx). On a
+// phone the page's buttons live in the title row instead (MobileActions),
+// leaving this row to the folder's name. A tablet has the width for one row,
+// as a desktop does: the bar comes up beside "Files" and carries those same
+// few buttons itself, and its search opens in their place.
 //
 // While a touch screen is selecting, the bar is the selection's: how many,
 // and what can be done with them, in place of the page's controls. The two
@@ -66,13 +68,19 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	const isPhone = useIsPhoneNow()
 	const breakpoint = useBreakpoint()
 	const searchEngaged = useFilesSearchEngaged()
+	// A tablet's search has this row: the field and its Cancel stand where the
+	// page's buttons were (a phone's takes the title row: see FilesLayout)
+	const isTablet = useIsTablet()
+	const search = useFilesSearch()
+	const searchingHere = isTablet && !isEmbedded && !!search && (search.open || search.query !== '')
 	const reduceMotion = useReducedMotion() ?? false
 	const isSelecting = useFilesStore((state) => state.isSelectingOnMobile)
 	const setIsSelecting = useFilesStore((state) => state.setIsSelectingOnMobile)
 	const selectedCount = useFilesStore((state) => state.selectedItems.length)
 
-	// Which way the drum turns: up as the selection's face comes in, down as it leaves
-	const direction = isSelecting ? 1 : -1
+	// Which way the drum turns: up as the selection's face (or a tablet's
+	// search) comes in, down as it leaves
+	const direction = isSelecting || searchingHere ? 1 : -1
 	const faceProps = (variants: typeof titleRoll, custom = direction) => ({
 		custom,
 		variants: reduceMotion ? undefined : variants,
@@ -99,7 +107,12 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 				// Up into the sheet's title row on a desktop, level with "Files". A
 				// phone on its side has no title row, and the window's close button
 				// sits at this row's end
-				!isEmbedded && 'lg:-mt-14 phone-side:pr-9',
+				// A tablet's too, where the row is level with the sheet's close
+				// button. Under a finger that button answers across the whole 44px of
+				// the sheet's corner, so the row ends short of that square, as a
+				// phone's does on its side: by 36px beside the sheet's 12px of padding,
+				// and from md by 8px beside its 40px
+				!isEmbedded && 'lg:-mt-14 phone-side:pr-9 tablet:-mt-14 tablet:max-md:pr-9 tablet:md:pr-2',
 			)}
 			aria-label={t('files-view.actions')}
 		>
@@ -122,7 +135,8 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			<div className={cn('flex shrink-0 items-center empty:hidden', isSelecting && 'hidden')}>
 				<NavigationControls />
 			</div>
-			<div className='flex min-w-0 flex-1 flex-col justify-center'>
+			{/* Beside a tablet's search the count under the title keeps room to be read */}
+			<div className={cn('flex min-w-0 flex-1 flex-col justify-center', searchingHere && 'min-w-28')}>
 				<div className='relative h-[1lh] overflow-y-clip text-17 leading-tight'>
 					<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 						{isSelecting ? (
@@ -142,17 +156,28 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			{/* Right side: the page's actions, or the selection's. Clipped above and
 			    below (with room for focus rings), not at the sides: menus and
 			    tooltips are portaled, and the wider face must not be cut while it rolls. */}
-			<div className='relative -my-1.5 ml-auto flex shrink-0 items-center gap-2 overflow-x-visible overflow-y-clip py-1.5'>
+			<div
+				className={cn(
+					'relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5',
+					// A search field is as wide as the bar can spare, and no wider than it needs
+					searchingHere ? 'min-w-0 shrink basis-[320px]' : 'shrink-0',
+				)}
+			>
 				<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 					{isSelecting ? (
 						<motion.div key='selection' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
 							<SelectionActions />
 						</motion.div>
+					) : searchingHere ? (
+						<motion.div key='search' className='flex w-full min-w-0 items-center' {...faceProps(pillsRoll)}>
+							<MobileSearch />
+						</motion.div>
 					) : (
 						<motion.div key='page' className='flex min-w-0 items-center gap-2' {...faceProps(pillsRoll)}>
-							{/* Phones and tablets: the page's controls live in the title row,
-							    so this row carries only how the folder is shown. A phone on its
-							    side has no title row, so the controls come here. */}
+							{/* Phones: the page's controls live in the title row, so this row
+							    carries only how the folder is shown. A tablet's title row is
+							    this one and a phone on its side has none, so the controls
+							    come here. */}
 							<div className={cn('flex items-center gap-2', !isEmbedded && 'lg:hidden')}>
 								{isEmbedded ? (
 									<>
@@ -163,8 +188,12 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 									<>
 										{/* A pointer in a narrow window selects with a click, and
 										    finds what to do with the selection here */}
-										{hasPointerSelection ? <PointerSelectionActions /> : !hideViewOptions && <ViewOptionsButton />}
-										{!searchEngaged && <MobileActions className='hidden shrink-0 phone-side:flex' />}
+										{hasPointerSelection ? (
+											<PointerSelectionActions />
+										) : (
+											!hideViewOptions && <ViewOptionsButton quiet={!isTablet} />
+										)}
+										{!searchEngaged && <MobileActions className='hidden shrink-0 phone-side:flex tablet:flex' />}
 									</>
 								)}
 							</div>

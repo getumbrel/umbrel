@@ -17,7 +17,7 @@ import {Sidebar} from '@/features/photos/components/sidebar'
 import {UploadDropZone} from '@/features/photos/components/upload-drop-zone'
 import {PhotosViewProvider} from '@/features/photos/components/view-context'
 import {usePhotosEvents} from '@/features/photos/hooks/use-photos-events'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsMobile, useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {HttpUrlAuthorizerProvider} from '@/modules/auth/http-url-authorizer'
 import {trpcReact} from '@/trpc/trpc'
@@ -27,10 +27,13 @@ import {trpcReact} from '@/trpc/trpc'
 // field takes the actions bar), and the title returns when it ends. Kept
 // never shorter than the pills that share it, so their coming and going
 // can't move what's below. A phone on its side gives the row to the grid
-// (the actions bar takes its controls) until a search needs it.
+// (the actions bar takes its controls) until a search needs it. On a tablet,
+// as on a desktop, the bar comes up into this row beside the title, and
+// keeps its own controls and its own search.
 function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () => void}) {
 	const {t} = useTranslation()
-	const searching = useSearchEngaged() && isMobile
+	const isPhone = useIsPhone()
+	const searching = useSearchEngaged() && isPhone
 	const reduceMotion = useReducedMotion() ?? false
 	const swap = (direction: 1 | -1) =>
 		reduceMotion
@@ -49,7 +52,8 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 			<div className='relative z-10 flex min-h-11 w-full items-center'>
 				<AnimatePresence initial={false} mode='popLayout'>
 					{searching ? (
-						<motion.div key='search' className='mr-5 flex min-w-0 flex-1 phone-side:mr-9' {...swap(1)}>
+						// (Clear of the sheet's close button: see the note on the title's controls below)
+						<motion.div key='search' className='mr-9 flex min-w-0 flex-1' {...swap(1)}>
 							<MobileSearch />
 						</motion.div>
 					) : (
@@ -65,8 +69,12 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 								</button>
 							) : null}
 							<Title />
-							{/* Phones and tablets: the page's controls, clear of the sheet's close button */}
-							<MobileActions className='mr-5 ml-auto lg:hidden phone-side:hidden' />
+							{/* Phones: the page's controls, clear of the sheet's close button. Not
+							    of its glyph alone: under a finger the button answers across the
+							    whole 44px of the sheet's corner, and anything of this row in that
+							    square would close the window when tapped. The sheet's own 12px
+							    of padding and these 36px keep the last control out of it */}
+							<MobileActions className='mr-9 ml-auto lg:hidden phone-side:hidden tablet:hidden' />
 						</motion.div>
 					)}
 				</AnimatePresence>
@@ -81,7 +89,7 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 // ran past the sidebar's column into the bar's title on desktop, and on a
 // phone it squeezed the menu button out of the row. On desktop its box is the
 // sidebar's column, less a gap before the bar's own title, which stands right
-// after it. Fitted when it mounts (it comes and goes with a phone's search)
+// after it; on a tablet, a box the bar starts after (see ActionsBar). Fitted when it mounts (it comes and goes with a phone's search)
 // and again whenever its row changes size.
 function Title() {
 	const {t} = useTranslation()
@@ -105,7 +113,7 @@ function Title() {
 	return (
 		<SheetTitle
 			ref={ref}
-			className='mr-2 min-w-0 leading-none whitespace-nowrap lg:mr-3 lg:w-[212px] lg:text-36 panes:text-36 phone-side:sr-only'
+			className='mr-2 min-w-0 leading-none whitespace-nowrap lg:mr-3 lg:w-[212px] lg:text-36 panes:text-36 phone-side:sr-only tablet:w-[124px]'
 		>
 			{title}
 		</SheetTitle>
