@@ -1,4 +1,4 @@
 package-lock.json
 node_modules
 public/locales/*.json
-public/assets/photos/offline-map-v1.json
+src/assets/photos/offline-map-v1.json

@@ -26,6 +26,7 @@ import createAppAuthRouter from './app-auth.ts'
 import {authorizeHttpRequest} from '../auth/http-request.ts'
 import {getSystemDiskUsage} from '../system/system.ts'
 import UploadDiskPreflight from './upload-disk-preflight.ts'
+import {uiStaticOptions} from './cache-control.ts'
 import createErrorHandler from './error-handler.ts'
 
 import fileApi from '../files/api.ts'
@@ -321,23 +322,14 @@ class Server {
 			const currentDirname = dirname(currentFilename)
 			const uiPath = join(currentDirname, '../../../ui')
 
-			// Built assets include a hash of the contents in the filename, so we can
-			// cache these aggressively. Files copied from the UI's public/ directory
-			// keep their names when they change, so anything that links to one must
-			// version the URL itself, as wallpapers do with `?v=<hash>`.
-			const cacheAggressively: express.RequestHandler = (_, response, next) => {
-				const approximatelyOneYearInSeconds = 365 * 24 * 60 * 60 // RFC 2616, 14.21
-				response.set('Cache-Control', `public, max-age=${approximatelyOneYearInSeconds}, immutable`)
-				next()
-			}
-			this.app.get('/assets/*', cacheAggressively)
-			this.app.get('/wallpapers/*', cacheAggressively)
-
-			// Other files without a hash in their filename should revalidate based on
-			// ETag and Last-Modified instead to force the browser to automatically
-			// refresh their contents after an OTA update for example.
-			const staticOptions = {cacheControl: true, etag: true, lastModified: true, maxAge: 0}
+			const staticOptions = uiStaticOptions(uiPath)
 			this.app.use('/', express.static(uiPath, staticOptions))
+
+			// A missing asset is an error, not a page: answering with the dashboard would
+			// hand an image or script request a 200 with the wrong content
+			this.app.get('/assets/*', (_request, response) => {
+				response.status(404).set('Cache-Control', 'no-store').end()
+			})
 
 			// SPA fallback: serve index.html for all unmatched routes
 			this.app.get('*', (request, response) => {

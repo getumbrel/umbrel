@@ -13,7 +13,7 @@ const sourceRoot = process.argv[2]
 if (!sourceRoot) throw new Error('Pass the path to a natural-earth-vector checkout')
 
 const source = (name) => path.join(sourceRoot, 'geojson', name)
-const output = path.resolve('public/assets/photos/offline-map-v1.json')
+const output = path.resolve('src/assets/photos/offline-map-v1.json')
 
 const [countriesSource, placesSource] = await Promise.all([
 	readGeoJson(source('ne_110m_admin_0_countries.geojson')),

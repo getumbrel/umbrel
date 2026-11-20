@@ -37,6 +37,9 @@ export default defineConfig({
 		},
 	},
 	build: {
+		// Kept apart from the files copied from public/assets, which keep their names when
+		// they change: the server only caches this directory's content-hashed files forever
+		assetsDir: 'assets/build',
 		rollupOptions: {
 			// Build separate HTML entrypoints while keeping their shared dependencies
 			// in one set of chunks. The server chooses which document to serve, so the
