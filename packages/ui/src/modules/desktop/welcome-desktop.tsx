@@ -72,7 +72,7 @@ export function WelcomeDesktop() {
 
 	return (
 		<motion.div
-			className='relative z-10 flex min-h-[100dvh] w-full flex-col items-center'
+			className='relative z-10 flex min-h-[100dvh] w-full flex-col items-center pt-(--safe-top)'
 			// Out of reach while hidden, as the home screen is
 			inert={hidden}
 			variants={desktopVariants}

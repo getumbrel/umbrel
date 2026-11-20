@@ -250,7 +250,7 @@ export function RewindOverlay() {
 					<DialogPrimitive.Overlay className='fixed inset-0 z-50 bg-black' />
 					<DialogPrimitive.Content
 						aria-describedby={undefined}
-						className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 outline-hidden'
+						className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 pt-(--safe-top) outline-hidden'
 					>
 						<DialogPrimitive.Title className='sr-only'>{t('rewind')}</DialogPrimitive.Title>
 						<div className='flex size-full flex-col'>

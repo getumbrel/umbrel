@@ -178,7 +178,7 @@ export default function PhotosLayout() {
 									onClose={() => setIsMobileSidebarOpen(false)}
 									label={t('photos-sidebar.navigation')}
 								>
-									<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
+									<Sidebar className='h-[calc(100svh-140px-var(--safe-top))] low:h-[calc(100svh-56px-var(--safe-top))]' />
 								</MobileSidebarWrapper>
 							) : (
 								// Above the listing: the map runs on beneath it

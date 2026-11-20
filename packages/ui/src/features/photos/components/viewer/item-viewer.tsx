@@ -653,7 +653,7 @@ export function ItemViewer() {
 				<DialogPrimitive.Content
 					onOpenAutoFocus={(e) => e.preventDefault()}
 					onPointerDownOutside={preventDialogDismissForToasts}
-					className='fixed inset-0 z-50 h-dvh w-screen ps-(--safe-left) pe-(--safe-right) outline-hidden'
+					className='fixed inset-0 z-50 h-dvh w-screen ps-(--safe-left) pe-(--safe-right) pt-(--safe-top) outline-hidden'
 				>
 					<DialogPrimitive.Title className='sr-only'>
 						{item?.fileName ?? t('photos-item.viewer-title')}

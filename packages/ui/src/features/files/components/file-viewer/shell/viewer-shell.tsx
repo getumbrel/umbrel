@@ -375,7 +375,7 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 					// floating islands and toasts, and pressing those isn't leaving
 					onPointerDownOutside={(event) => event.preventDefault()}
 					onInteractOutside={(event) => event.preventDefault()}
-					className='fixed inset-0 z-50 flex h-dvh w-screen flex-col ps-(--safe-left) pe-(--safe-right) outline-hidden'
+					className='fixed inset-0 z-50 flex h-dvh w-screen flex-col ps-(--safe-left) pe-(--safe-right) pt-(--safe-top) outline-hidden'
 				>
 					<DialogPrimitive.Title className='sr-only'>{file.name}</DialogPrimitive.Title>
 					<DialogPrimitive.Description className='sr-only'>{subtitle}</DialogPrimitive.Description>

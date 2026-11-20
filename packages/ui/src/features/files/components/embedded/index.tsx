@@ -68,7 +68,7 @@ export function EmbeddedFiles({
 						onClose={() => setIsMobileSidebarOpen(false)}
 						label={t('files-sidebar.navigation')}
 					>
-						<Sidebar className='h-[calc(100svh-140px)]' />
+						<Sidebar className='h-[calc(100svh-140px-var(--safe-top))]' />
 					</MobileSidebarWrapper>
 				) : (
 					<Sidebar className='h-[calc(100vh-300px)]' />

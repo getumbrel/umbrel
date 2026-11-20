@@ -104,6 +104,9 @@ final class BrowserPage: NSObject, Identifiable {
 	// BrowserContext.seeThroughScript), so it can run under iPhone Duo's side column
 	private(set) var keepsClearOfSides = false
 
+	// It also keeps clear of the top by itself, so it can run under the toolbar
+	private(set) var keepsClearOfTop = false
+
 	init(origin: String, identity: Identity, context: BrowserContext, seeThrough: Bool = false) {
 		self.origin = origin
 		self.identity = identity
@@ -121,6 +124,14 @@ final class BrowserPage: NSObject, Identifiable {
 					}
 				},
 				contentWorld: BrowserContext.world, name: "keepsClearOfSides")
+			webView.configuration.userContentController.add(
+				MessageHandler { [weak self] body in
+					MainActor.assumeIsolated {
+						guard let self, let keepsClear = body as? Bool, self.keepsClearOfTop != keepsClear else { return }
+						self.keepsClearOfTop = keepsClear
+					}
+				},
+				contentWorld: BrowserContext.world, name: "keepsClearOfTop")
 		}
 		webView.uiDelegate = self
 		observations = [

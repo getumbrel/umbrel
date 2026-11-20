@@ -236,11 +236,14 @@ html {
 	--safe-x: calc(var(--safe-left) + var(--safe-right));
 	/* Moves something centred on the screen to the centre of the safe area */
 	--safe-center-shift: calc((var(--safe-left) - var(--safe-right)) / 2);
+	/* And at the top: the status bar in a web app on the Home Screen, or the toolbar of
+	   an app showing umbrelOS. Viewport heights (100dvh) include it. */
+	--safe-top: env(safe-area-inset-top, 0px);
 
 	/* Pixels added to every text size: Settings > Accessibility > Text size */
 	--text-boost: 0px;
 	/* Space above the sheet. Putting here because it's used in multiple places for calculations */
-	--sheet-top: 2vh;
+	--sheet-top: calc(2vh + var(--safe-top));
 	--wallpaper-blur: 12px;
 	/* Covers the viewport with the browser's bars tucked away, and reaches further
 	   on an iPhone, which sets the screen's height (see useWallpaperHeight) */

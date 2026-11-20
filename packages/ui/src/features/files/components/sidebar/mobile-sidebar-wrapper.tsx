@@ -84,7 +84,7 @@ export function MobileSidebarWrapper({children, isOpen, onClose, label}: MobileS
 						exit={{x: '-100%'}}
 						transition={{type: 'spring', damping: 20, stiffness: 200}}
 						style={{x}}
-						className='fixed inset-y-0 left-0 z-50 -ml-10 w-[256px] border-r border-white/10 bg-black pl-14 outline-hidden md:-ml-3'
+						className='fixed inset-y-0 left-0 z-50 -ml-10 w-[256px] border-r border-white/10 bg-black pt-(--safe-top) pl-14 outline-hidden md:-ml-3'
 					>
 						{/* Close button */}
 						<div className='absolute top-4 right-3'>

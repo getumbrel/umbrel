@@ -229,7 +229,10 @@ export function Listing({
 		// original height so snapshots render unchanged.
 		<div
 			ref={listingRef}
-			className={cn('flex flex-col', isEmbedded ? 'h-[calc(100svh-226px)] lg:h-[calc(100vh-312px)]' : 'h-full')}
+			className={cn(
+				'flex flex-col',
+				isEmbedded ? 'h-[calc(100svh-226px-var(--safe-top))] lg:h-[calc(100vh-312px)]' : 'h-full',
+			)}
 		>
 			{topBanner}
 			<ListingContent

@@ -153,11 +153,16 @@ final class BrowserContext {
 				// Runs under the home indicator like a page in Safari, so umbrelOS's sheets
 				// reach the bottom, and the dock reads the safe area to keep clear of it.
 				// An umbrelOS that runs edge to edge by itself also keeps clear of the
-				// screen's sides, so it can run under iPhone Duo's side column. Decided as
-				// soon as the tag is parsed: WebKit can finish loading before DOMContentLoaded.
-				const settle = (viewport) => {
+				// screen's sides, so it can run under iPhone Duo's side column, and one that
+				// says so keeps clear of the top too, so it can run under the toolbar. Decided
+				// once the head is parsed: WebKit can finish loading before DOMContentLoaded.
+				const settle = () => {
+					const viewport = document.querySelector('meta[name=viewport]')
+					if (!viewport) return
 					const keepsClearOfSides = viewport.content.includes('viewport-fit=cover')
+					const safeArea = document.querySelector('meta[name=umbrel-safe-area]')?.content ?? ''
 					webkit.messageHandlers.keepsClearOfSides.postMessage(keepsClearOfSides)
+					webkit.messageHandlers.keepsClearOfTop.postMessage(safeArea.split(/[ ,]+/).includes('top'))
 					// Older umbrelOS measures the safe area as it first lays out, so it only
 					// goes edge to edge after that, as it always has
 					if (!keepsClearOfSides) {
@@ -166,11 +171,10 @@ final class BrowserContext {
 						})
 					}
 				}
-				const viewport = () => document.querySelector('meta[name=viewport]')
 				const observer = new MutationObserver(() => {
-					if (!viewport()) return
+					if (!document.body) return
 					observer.disconnect()
-					settle(viewport())
+					settle()
 				})
 				observer.observe(document, {childList: true, subtree: true})
 			})()

@@ -66,7 +66,7 @@ export function UpdatesDialog({
 		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent
-					className='umbrel-app-store-modal top-[10%] max-h-[calc(100vh-20%)] translate-y-0 gap-0 p-0 py-5 data-[state=closed]:slide-out-to-top-[0%] data-[state=open]:slide-in-from-top-[0%]'
+					className='umbrel-app-store-modal top-[calc(10%+var(--safe-top))] max-h-[calc(100vh-20%-var(--safe-top))] translate-y-0 gap-0 p-0 py-5 data-[state=closed]:slide-out-to-top-[0%] data-[state=open]:slide-in-from-top-[0%]'
 					slide={false}
 				>
 					<DialogHeader className='px-5 pb-5'>

@@ -68,7 +68,7 @@ export function RootErrorFallback({error}: {error: unknown}) {
 	}
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black'>
+		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black pt-(--safe-top)'>
 			{/* Self-contained dialog card — mirrors AlertDialogContent styling but without
 			    depending on Radix or any providers. Uses the same design tokens (rounded-20,
 			    bg-dialog-content, shadow-dialog, backdrop-blur) for visual consistency. */}

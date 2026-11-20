@@ -170,7 +170,7 @@ export default function FilesLayout() {
 												onClose={() => setIsMobileSidebarOpen(false)}
 												label={t('files-sidebar.navigation')}
 											>
-												<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
+												<Sidebar className='h-[calc(100svh-140px-var(--safe-top))] low:h-[calc(100svh-56px-var(--safe-top))]' />
 											</MobileSidebarWrapper>
 										) : (
 											// Beside the listing. On a tablet it ends above the dock, so Trash

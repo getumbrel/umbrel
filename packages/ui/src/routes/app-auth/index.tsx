@@ -228,7 +228,7 @@ export default function LoginWithUmbrel() {
 				// No overflow clip here: any clip boundary slices the plucked lens
 				// and the dock's w-screen strip mid-screen. The dock clamps the
 				// lens inside the viewport itself, which keeps scrollbars away.
-				<div className='relative z-10 flex min-h-[100dvh] w-full animate-in flex-col items-center justify-center duration-300 fade-in'>
+				<div className='relative z-10 flex min-h-[100dvh] w-full animate-in flex-col items-center justify-center pt-(--safe-top) duration-300 fade-in'>
 					{effectiveStep === '2fa' ? (
 						<div className='flex w-full animate-in flex-col items-center gap-5 duration-300 fade-in'>
 							<div className='flex flex-col items-center gap-1.5'>

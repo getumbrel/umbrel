@@ -55,7 +55,7 @@ export function AppLaunchDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogContent
-				className='max-h-[calc(100dvh_-_2rem)] max-w-[calc(100vw_-_2rem)] p-0'
+				className='max-h-[calc(100dvh_-_2rem_-_var(--safe-top))] max-w-[calc(100vw_-_2rem)] p-0'
 				onOpenAutoFocus={(event) => {
 					// Keep credential fields from taking focus automatically.
 					if (showCredentials) event.preventDefault()

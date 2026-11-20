@@ -70,7 +70,7 @@ export default function FullscreenConsole() {
 	const isBusy = machine.state === 'starting' || machine.state === 'stopping' || machine.state === 'restarting'
 
 	return (
-		<div className='flex h-dvh flex-col bg-black'>
+		<div className='flex h-dvh flex-col bg-black pt-(--safe-top)'>
 			{/* Three columns, with equal sides so the middle label stays centred: a
 			    long machine name truncates in its own column instead of running
 			    under the label. Phones have no label, so the name gets the room. */}

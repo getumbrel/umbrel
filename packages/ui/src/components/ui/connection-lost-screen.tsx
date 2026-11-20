@@ -15,7 +15,7 @@ export function ConnectionLostScreen({error, onReconnect}: {error?: unknown; onR
 	const [showDetails, setShowDetails] = useState(false)
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black'>
+		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black pt-(--safe-top)'>
 			<div className='flex w-full max-w-[calc(100%-40px)] flex-col items-center gap-5 rounded-20 bg-dialog-content/70 p-8 shadow-dialog backdrop-blur-3xl sm:max-w-md'>
 				<div className='flex flex-col items-center gap-1.5'>
 					<h2 className='text-15 leading-tight font-semibold -tracking-4'>{t('connection-lost')}</h2>

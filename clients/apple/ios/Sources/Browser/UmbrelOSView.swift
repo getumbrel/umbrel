@@ -19,7 +19,8 @@ struct UmbrelOSView: View {
 		// Safari's bars: WebKit is told what the toolbar covers and lays umbrelOS out
 		// clear of it, while its sheets and backdrops still reach the screen's edges.
 		// Like Safari on iPhone Duo, it stops at the side column, unless umbrelOS keeps
-		// clear of the safe area itself. Then it runs under the column too.
+		// clear of the safe area itself. Then it runs under the column too, and an
+		// umbrelOS that also keeps clear of the top lays itself out under the toolbar.
 		GeometryReader { proxy in
 			ZStack {
 				BrowserWebView(webView: page.webView) { page.webViewDidLayout() }
@@ -111,7 +112,7 @@ struct UmbrelOSView: View {
 	// indicator through the page's safe area.
 	private func coveredEdges(_ insets: EdgeInsets) -> UIEdgeInsets {
 		UIEdgeInsets(
-			top: isInSideColumn ? 0 : insets.top,
+			top: isInSideColumn || page.keepsClearOfTop ? 0 : insets.top,
 			left: 0,
 			bottom: page.keepsClearOfHomeIndicator ? 0 : insets.bottom,
 			right: 0)
