@@ -8,6 +8,7 @@ data class SavedAccountProfile(
 	val wallpaperId: String,
 	val wallpaperBrandColorHsl: String? = null,
 	val role: String,
+	val wallpaperHash: String? = null,
 )
 
 /**
@@ -22,8 +23,9 @@ data class SavedDevice(
 	val addresses: List<String> = emptyList(),
 	val model: String? = null,
 	val userName: String? = null,
-	// Cached wallpaper ID for rendering the device card while offline.
+	// Cached wallpaper ID and hash for rendering the device card while offline.
 	val wallpaperId: String? = null,
+	val wallpaperHash: String? = null,
 	// Identity and wallpaper belong to an account, not to the physical Umbrel. The
 	// top-level fields cache the last-used presentation for device lists.
 	val accountProfiles: Map<String, SavedAccountProfile>? = null,
@@ -86,15 +88,17 @@ data class SavedDevice(
 		wallpaperId: String,
 		wallpaperBrandColorHsl: String? = null,
 		role: String,
+		wallpaperHash: String? = null,
 	): SavedDevice {
 		val profiles = (accountProfiles ?: emptyMap()) +
-			(accountId to SavedAccountProfile(name, wallpaperId, wallpaperBrandColorHsl, role))
+			(accountId to SavedAccountProfile(name, wallpaperId, wallpaperBrandColorHsl, role, wallpaperHash))
 		return copy(
 			accountProfiles = profiles,
 			lastAccountId = accountId,
 			// Device cards deliberately show the last-used account while signed out.
 			userName = name,
 			wallpaperId = wallpaperId,
+			wallpaperHash = wallpaperHash,
 		)
 	}
 

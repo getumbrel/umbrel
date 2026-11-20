@@ -115,6 +115,35 @@ public enum Umbreld {
 	public struct Wallpaper: Decodable, Sendable, Equatable {
 		public let id: String
 		public let brandColorHsl: String
+		// A hash of the wallpaper's files, sent by umbrelOS releases that version them.
+		// It changes when the files do, so caches key on it.
+		public let hash: String?
+
+		public init(id: String, brandColorHsl: String, hash: String? = nil) {
+			self.id = id
+			self.brandColorHsl = brandColorHsl
+			self.hash = Self.validHash(hash)
+		}
+
+		public init(from decoder: Decoder) throws {
+			let container = try decoder.container(keyedBy: CodingKeys.self)
+			id = try container.decode(String.self, forKey: .id)
+			brandColorHsl = try container.decode(String.self, forKey: .brandColorHsl)
+			hash = Self.validHash(try? container.decodeIfPresent(String.self, forKey: .hash))
+		}
+
+		private enum CodingKeys: String, CodingKey {
+			case id, brandColorHsl, hash
+		}
+
+		// The hash comes from the Umbrel and ends up in cache filenames, so anything but
+		// short lowercase hex is treated as absent.
+		public static func validHash(_ value: String?) -> String? {
+			guard let value, (8...64).contains(value.count),
+				value.allSatisfy({ ("0"..."9").contains($0) || ("a"..."f").contains($0) })
+			else { return nil }
+			return value
+		}
 	}
 
 	public enum WallpaperImageRendition: Sendable {

@@ -167,6 +167,7 @@ final class OnboardingModel {
 				name: account.name,
 				wallpaperId: account.wallpaper.id,
 				wallpaperBrandColorHsl: account.wallpaper.brandColorHsl,
+				wallpaperHash: account.wallpaper.hash,
 				role: account.userId == "0" ? "owner" : "member"
 			)
 		}
@@ -207,6 +208,7 @@ final class OnboardingModel {
 								name: info.name,
 								wallpaperId: info.wallpaper.id,
 								wallpaperBrandColorHsl: info.wallpaper.brandColorHsl,
+								wallpaperHash: info.wallpaper.hash,
 								role: info.role
 							)
 						}
@@ -214,7 +216,7 @@ final class OnboardingModel {
 						configStorageIssue = (error as? Config.StorageIssue) ?? .saveFailed
 					}
 				}
-				_ = await WallpaperStore.shared.load(id: info.wallpaper.id, target: target)
+				_ = await WallpaperStore.shared.load(id: info.wallpaper.id, hash: info.wallpaper.hash, target: target)
 			}
 			// Only snapshot when the app list arrived; a half-failed prefetch shouldn't
 			// suppress Home's skeletons with empty content.

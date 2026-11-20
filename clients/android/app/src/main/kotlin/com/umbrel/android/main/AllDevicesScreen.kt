@@ -221,7 +221,7 @@ private fun DeviceCard(device: SavedDevice, signedIn: Boolean, connection: Devic
 		lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
 			val device = currentDevice
 			// Restore the cached wallpaper first, even when offline.
-			device.wallpaperId?.let { id -> container.wallpapers.cachedCard(id)?.let { wallpaper = it.asImageBitmap() } }
+			device.wallpaperId?.let { id -> container.wallpapers.cachedCard(id, device.wallpaperHash)?.let { wallpaper = it.asImageBitmap() } }
 			// Then refresh the name and wallpaper from the device if it's reachable, and persist
 			// them so this card still renders correctly next launch and offline.
 			if (!currentSignedIn || store.connections.isFresh(device.id)) return@repeatOnLifecycle
@@ -234,10 +234,10 @@ private fun DeviceCard(device: SavedDevice, signedIn: Boolean, connection: Devic
 					val user = result.user
 					store.connections.record(device.id, ConnectionState.CONNECTED)
 					userName = user.name
-					container.wallpapers.loadCard(user.wallpaper.id, target)?.let { wallpaper = it.asImageBitmap() }
+					container.wallpapers.loadCard(user.wallpaper.id, user.wallpaper.hash, target)?.let { wallpaper = it.asImageBitmap() }
 					try {
 						store.update(device.id) {
-							it.saveAccountProfile(user.userId, user.name, user.wallpaper.id, user.wallpaper.brandColorHsl, user.role)
+							it.saveAccountProfile(user.userId, user.name, user.wallpaper.id, user.wallpaper.brandColorHsl, user.role, user.wallpaper.hash)
 						}
 					} catch (error: Config.StorageException) {
 						// DeviceStore reports it; the storage alert shows over the list.

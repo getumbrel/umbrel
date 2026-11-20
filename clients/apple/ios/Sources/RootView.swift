@@ -149,6 +149,7 @@ struct RootView: View {
 									name: account.name,
 									wallpaperId: account.wallpaper.id,
 									wallpaperBrandColorHsl: account.wallpaper.brandColorHsl,
+									wallpaperHash: account.wallpaper.hash,
 									role: account.userId == "0" ? "owner" : "member"
 								)
 							} else if let profile = $0.accountProfile(for: session.accountId) {
@@ -157,6 +158,7 @@ struct RootView: View {
 									name: profile.name,
 									wallpaperId: profile.wallpaperId,
 									wallpaperBrandColorHsl: profile.wallpaperBrandColorHsl,
+									wallpaperHash: profile.wallpaperHash,
 									role: profile.role
 								)
 							} else {

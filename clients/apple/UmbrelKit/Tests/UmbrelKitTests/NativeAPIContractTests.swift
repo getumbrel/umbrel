@@ -36,6 +36,19 @@ final class NativeAPIContractTests: XCTestCase {
 		XCTAssertNil(accounts[1].avatarUrl)
 	}
 
+	// The hash names cache files, so a hostile Umbrel mustn't be able to steer it into a path.
+	func testWallpaperHashIsKeptOnlyWhenItIsShortLowercaseHex() throws {
+		func hash(_ json: String) throws -> String? {
+			let wallpaper: Umbreld.Wallpaper = try decode(#"{"result":{"data":"# + json + "}}")
+			return wallpaper.hash
+		}
+		XCTAssertEqual(try hash(#"{"id":"23","brandColorHsl":"24 90% 50%","hash":"d9c1579f1571"}"#), "d9c1579f1571")
+		XCTAssertNil(try hash(#"{"id":"23","brandColorHsl":"24 90% 50%"}"#))
+		for invalid in [#""../../x""#, #""D9C1579F1571""#, #""abc""#, #""d9c1579f1571/""#, "12", "null"] {
+			XCTAssertNil(try hash(#"{"id":"23","brandColorHsl":"24 90% 50%","hash":"# + invalid + "}"), invalid)
+		}
+	}
+
 	func testInternalStorageDevicesDecodeAndMarkRAIDCandidates() throws {
 		let devices: [Umbreld.InternalStorageDevice] = try decode(
 			#"{"result":{"data":[{"type":"ssd","device":"nvme0n1","id":"nvme-system","isSystemDrive":true,"future":1},{"type":"hdd","device":"sda","id":"ata-disk"},{"type":"ssd","device":"nvme1n1","isSystemDrive":false}]}}"#)

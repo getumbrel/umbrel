@@ -158,7 +158,7 @@ private struct DeviceCard: View {
 			guard scenePhase == .active else { return }
 			// Restore the cached wallpaper first, even when offline.
 			if let id = device.wallpaperId {
-				if let cached = await WallpaperStore.shared.cachedCard(id: id) {
+				if let cached = await WallpaperStore.shared.cachedCard(id: id, hash: device.wallpaperHash) {
 					withAnimation(.easeOut(duration: 0.2)) { wallpaper = cached }
 				}
 			}
@@ -202,6 +202,7 @@ private struct DeviceCard: View {
 			userName = info.name
 			if let loaded = await WallpaperStore.shared.loadCard(
 				id: info.wallpaper.id,
+				hash: info.wallpaper.hash,
 				target: target
 			) {
 				withAnimation(.easeOut(duration: 0.2)) { wallpaper = loaded }
@@ -219,6 +220,7 @@ private struct DeviceCard: View {
 						name: info.name,
 						wallpaperId: info.wallpaper.id,
 						wallpaperBrandColorHsl: info.wallpaper.brandColorHsl,
+						wallpaperHash: info.wallpaper.hash,
 						role: info.role
 					)
 				}

@@ -144,10 +144,13 @@ internal fun SavedDevice.signedIn(session: Umbreld.Session, account: Umbreld.Acc
 			wallpaperId = account.wallpaper.id,
 			wallpaperBrandColorHsl = account.wallpaper.brandColorHsl,
 			role = if (account.userId == "0") "owner" else "member",
+			wallpaperHash = account.wallpaper.hash,
 		)
 	}
 	val profile = accountProfile(session.accountId) ?: return copy(lastAccountId = session.accountId)
-	return saveAccountProfile(session.accountId, profile.name, profile.wallpaperId, profile.wallpaperBrandColorHsl, profile.role)
+	return saveAccountProfile(
+		session.accountId, profile.name, profile.wallpaperId, profile.wallpaperBrandColorHsl, profile.role, profile.wallpaperHash,
+	)
 }
 
 /** Removing one saved Umbrel, step by step, in the order [SavedDeviceRemovals.remove] runs them. */

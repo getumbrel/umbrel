@@ -70,6 +70,7 @@ data class MainUiState(
 	val accountRole: String = if (session?.accountId == "0") "owner" else "member",
 	val brandColorHsl: String? = null,
 	val wallpaperId: String? = null,
+	val wallpaperHash: String? = null,
 	val wallpaper: ImageBitmap? = null,
 	val blurredWallpaper: ImageBitmap? = null,
 	val apps: List<Umbreld.AppSummary> = emptyList(),
@@ -230,9 +231,10 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	private var remoteRefreshInProgress = false
 	private var completedActivationRefresh = false
 	private var refreshTimes = RefreshPlan.Times()
-	private var renderedWallpaperId: String? = null
+	// The id and hash of the wallpaper on screen, so a changed hash loads the new files
+	private var renderedWallpaper: String? = null
 	private var wallpaperLoad: Job? = null
-	private var wallpaperLoadId: String? = null
+	private var wallpaperLoadVersion: String? = null
 	private var shownWallpaper: Bitmap? = null
 	private var shownBlurredWallpaper: Bitmap? = null
 
@@ -251,7 +253,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		val stored = SecretStore.readSession(deviceId)
 		if (stored !is SecretStore.SessionReadResult.Unavailable) backup.releaseStaleConfiguration(deviceId, stored.sessionOrCached?.accountId)
 		viewModelScope.launch { backup.state.collect { refreshBackupPresentation() } }
-		_state.value.wallpaperId?.let(::restoreCachedWallpaper)
+		_state.value.let { state -> state.wallpaperId?.let { restoreCachedWallpaper(it, state.wallpaperHash) } }
 	}
 
 	/**
@@ -262,10 +264,11 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	private fun initialState(device: SavedDevice, session: Umbreld.Session?): MainUiState {
 		val profile = session?.let { device.accountProfile(it.accountId) }
 		val wallpaperId = profile?.wallpaperId
-		val fullScreen = wallpaperId?.let(wallpapers::memoryCached)
-		val image = fullScreen ?: wallpaperId?.let(wallpapers::memoryCachedCard)
-		val blurred = wallpaperId?.let(wallpapers::memoryBlurred)
-		if (fullScreen != null) renderedWallpaperId = wallpaperId
+		val wallpaperHash = profile?.wallpaperHash
+		val fullScreen = wallpaperId?.let { wallpapers.memoryCached(it, wallpaperHash) }
+		val image = fullScreen ?: wallpaperId?.let { wallpapers.memoryCachedCard(it, wallpaperHash) }
+		val blurred = wallpaperId?.let { wallpapers.memoryBlurred(it, wallpaperHash) }
+		if (fullScreen != null) renderedWallpaper = wallpaperId?.let { wallpaperVersion(it, wallpaperHash) }
 		shownWallpaper = image
 		shownBlurredWallpaper = blurred
 		val snapshot = session?.let { deviceData.load(device.id, it.accountId) }
@@ -276,6 +279,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 			accountRole = profile?.role ?: if (session?.accountId == "0") "owner" else "member",
 			brandColorHsl = profile?.wallpaperBrandColorHsl,
 			wallpaperId = wallpaperId,
+			wallpaperHash = wallpaperHash,
 			wallpaper = image?.asImageBitmap(),
 			blurredWallpaper = blurred?.asImageBitmap(),
 			apps = snapshot?.apps.orEmpty(),
@@ -289,14 +293,14 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		)
 	}
 
-	private fun restoreCachedWallpaper(id: String) {
+	private fun restoreCachedWallpaper(id: String, hash: String?) {
 		viewModelScope.launch {
-			val fullScreen = wallpapers.cached(id)
-			val card = if (fullScreen == null) wallpapers.cachedCard(id) else null
-			val blurred = wallpapers.blurred(id)
-			if (_state.value.wallpaperId != id) return@launch
+			val fullScreen = wallpapers.cached(id, hash)
+			val card = if (fullScreen == null) wallpapers.cachedCard(id, hash) else null
+			val blurred = wallpapers.blurred(id, hash)
+			if (_state.value.wallpaperId != id || _state.value.wallpaperHash != hash) return@launch
 			showWallpaper(fullScreen ?: card, blurred, keepExisting = true)
-			if (fullScreen != null) renderedWallpaperId = id
+			if (fullScreen != null) renderedWallpaper = wallpaperVersion(id, hash)
 		}
 	}
 
@@ -599,19 +603,29 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		if (info.userId != _state.value.session?.accountId) return
 		val state = _state.value
 		val identityChanged = state.userName != info.name || state.wallpaperId != info.wallpaper.id ||
-			state.brandColorHsl != info.wallpaper.brandColorHsl || state.accountRole != info.role
+			state.wallpaperHash != info.wallpaper.hash || state.brandColorHsl != info.wallpaper.brandColorHsl ||
+			state.accountRole != info.role
 		if (identityChanged) {
 			_state.update {
-				it.copy(userName = info.name, wallpaperId = info.wallpaper.id, brandColorHsl = info.wallpaper.brandColorHsl, accountRole = info.role)
+				it.copy(
+					userName = info.name,
+					wallpaperId = info.wallpaper.id,
+					wallpaperHash = info.wallpaper.hash,
+					brandColorHsl = info.wallpaper.brandColorHsl,
+					accountRole = info.role,
+				)
 			}
 		}
-		if (renderedWallpaperId != info.wallpaper.id || shownWallpaper == null || shownBlurredWallpaper == null) {
-			startWallpaperLoad(info.wallpaper.id, target)
+		val version = wallpaperVersion(info.wallpaper.id, info.wallpaper.hash)
+		if (renderedWallpaper != version || shownWallpaper == null || shownBlurredWallpaper == null) {
+			startWallpaperLoad(info.wallpaper.id, info.wallpaper.hash, target)
 		}
 		if (!identityChanged) return
 		// Persist identity changes so the device list and the next launch match.
 		persist {
-			store.update(deviceId) { it.saveAccountProfile(info.userId, info.name, info.wallpaper.id, info.wallpaper.brandColorHsl, info.role) }
+			store.update(deviceId) {
+				it.saveAccountProfile(info.userId, info.name, info.wallpaper.id, info.wallpaper.brandColorHsl, info.role, info.wallpaper.hash)
+			}
 		}
 	}
 
@@ -620,11 +634,12 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	 * decode and blur of a wallpaper run on the CPU, and the apps and files shouldn't wait
 	 * behind them.
 	 */
-	private fun startWallpaperLoad(id: String, target: Umbreld.Target) {
-		if (wallpaperLoad?.isActive == true && wallpaperLoadId == id) return
+	private fun startWallpaperLoad(id: String, hash: String?, target: Umbreld.Target) {
+		val version = wallpaperVersion(id, hash)
+		if (wallpaperLoad?.isActive == true && wallpaperLoadVersion == version) return
 		wallpaperLoad?.cancel()
-		wallpaperLoadId = id
-		wallpaperLoad = viewModelScope.launch { loadWallpaperImages(id, target) }
+		wallpaperLoadVersion = version
+		wallpaperLoad = viewModelScope.launch { loadWallpaperImages(id, hash, target) }
 	}
 
 	/**
@@ -632,13 +647,15 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	 * align with the sharp backdrop. Both are cached on disk, so this only downloads the
 	 * first time a wallpaper is seen.
 	 */
-	private suspend fun loadWallpaperImages(id: String, target: Umbreld.Target) {
-		val image = wallpapers.load(id, target) ?: return
-		val blurred = wallpapers.blurred(id)
-		if (_state.value.wallpaperId != id) return
-		renderedWallpaperId = id
+	private suspend fun loadWallpaperImages(id: String, hash: String?, target: Umbreld.Target) {
+		val image = wallpapers.load(id, hash, target) ?: return
+		val blurred = wallpapers.blurred(id, hash)
+		if (_state.value.wallpaperId != id || _state.value.wallpaperHash != hash) return
+		renderedWallpaper = wallpaperVersion(id, hash)
 		showWallpaper(image, blurred)
 	}
+
+	private fun wallpaperVersion(id: String, hash: String?): String = "$id#${hash.orEmpty()}"
 
 	/** Applies one server response, touching state only for values that changed. */
 	private fun applyDeviceData(apps: List<Umbreld.AppSummary>?, disk: Umbreld.DiskUsage?, favorites: List<String>?, updateIds: List<String>?): Boolean {

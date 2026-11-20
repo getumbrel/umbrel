@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -84,7 +85,22 @@ object Umbreld {
 	data class DiscoveryInfo(val id: String, val device: String, val onboarded: Boolean)
 
 	@Serializable
-	data class Wallpaper(val id: String, val brandColorHsl: String)
+	data class Wallpaper(
+		val id: String,
+		val brandColorHsl: String,
+		@SerialName("hash") private val rawHash: JsonElement? = null,
+	) {
+		/** A hash of the wallpaper's files, sent by umbrelOS releases that version them. */
+		val hash: String?
+			get() = validWallpaperHash((rawHash as? JsonPrimitive)?.takeIf { it.isString }?.content)
+	}
+
+	/**
+	 * The hash comes from the Umbrel and ends up in cache file names, so anything but short
+	 * lowercase hex is treated as absent.
+	 */
+	fun validWallpaperHash(value: String?): String? =
+		value?.takeIf { it.length in 8..64 && it.all { char -> char in '0'..'9' || char in 'a'..'f' } }
 
 	@Serializable
 	data class Account(val userId: String, val name: String, val wallpaper: Wallpaper, val avatarUrl: String? = null)

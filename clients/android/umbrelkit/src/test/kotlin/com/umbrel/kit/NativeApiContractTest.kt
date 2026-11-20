@@ -21,6 +21,17 @@ class NativeApiContractTest {
 	)
 	private val nativeClientJson = """{"id":"umbrel","platform":"android","deviceClass":"phone","appVersion":"0.1","appBuild":"20","osVersion":"16"}"""
 
+	// The hash names cache files, so a hostile Umbrel mustn't be able to steer it into a path.
+	@Test
+	fun wallpaperHashIsKeptOnlyWhenItIsShortLowercaseHex() {
+		fun hash(json: String): String? = decode<Umbreld.Wallpaper>("""{"result":{"data":$json}}""").hash
+		assertEquals("d9c1579f1571", hash("""{"id":"23","brandColorHsl":"24 90% 50%","hash":"d9c1579f1571"}"""))
+		assertNull(hash("""{"id":"23","brandColorHsl":"24 90% 50%"}"""))
+		for (invalid in listOf("\"../../x\"", "\"D9C1579F1571\"", "\"abc\"", "\"d9c1579f1571/\"", "12", "null", "{}")) {
+			assertNull(invalid, hash("""{"id":"23","brandColorHsl":"24 90% 50%","hash":$invalid}"""))
+		}
+	}
+
 	@Test
 	fun identityAndAccountResponsesDecodeWithAdditionalFields() {
 		val localIdentity: Umbreld.LocalHttpsIdentity = decode("""{"result":{"data":{"id":"device-id","caCertificate":"pem","future":true}}}""")

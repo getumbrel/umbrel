@@ -3,7 +3,9 @@ import SwiftUI
 import UIKit
 import UmbrelKit
 
-// Wallpaper ids are content-stable across Umbrels, so one disk cache serves every device.
+// A wallpaper's id and hash name the same files on every Umbrel, so one disk cache
+// serves every device. umbrelOS releases before wallpaper hashes send none, and those
+// wallpapers are cached under their id alone.
 // Memory is deliberately evictable: the active model retains what it is showing, while
 // NSCache can discard other decoded bitmaps under pressure and recreate them from disk.
 @MainActor
@@ -48,49 +50,54 @@ final class WallpaperStore {
 	// SwiftUI recreates MainModel when the user leaves and re-enters a device. A
 	// synchronous memory hit lets that new screen render its wallpaper immediately;
 	// disk and network work remain asynchronous below.
-	func memoryCached(id: String) -> UIImage? {
-		memory.object(forKey: cacheKey(id: id, variant: .fullScreen) as NSString)
+	func memoryCached(id: String, hash: String?) -> UIImage? {
+		cacheKey(id: id, hash: hash, variant: .fullScreen).flatMap { memory.object(forKey: $0 as NSString) }
 	}
 
-	func memoryCachedCard(id: String) -> UIImage? {
-		memory.object(forKey: cacheKey(id: id, variant: .deviceCard) as NSString)
+	func memoryCachedCard(id: String, hash: String?) -> UIImage? {
+		cacheKey(id: id, hash: hash, variant: .deviceCard).flatMap { memory.object(forKey: $0 as NSString) }
 	}
 
-	func memoryBlurred(id: String) -> UIImage? {
-		memory.object(forKey: "\(id)-blur" as NSString)
+	func memoryBlurred(id: String, hash: String?) -> UIImage? {
+		blurKey(id: id, hash: hash).flatMap { memory.object(forKey: $0 as NSString) }
 	}
 
-	func cached(id: String) async -> UIImage? {
-		await cached(id: id, variant: .fullScreen)
+	func cached(id: String, hash: String?) async -> UIImage? {
+		await cached(id: id, hash: hash, variant: .fullScreen)
 	}
 
-	func cachedCard(id: String) async -> UIImage? {
-		if let image = await cached(id: id, variant: .deviceCard) { return image }
+	func cachedCard(id: String, hash: String?) async -> UIImage? {
+		if let image = await cached(id: id, hash: hash, variant: .deviceCard) { return image }
 		// A prior full-screen load is also a valid compressed source for a smaller card.
-		guard let data = await disk.data(for: cacheKey(id: id, variant: .fullScreen)),
+		guard let cardKey = cacheKey(id: id, hash: hash, variant: .deviceCard),
+			let fullScreenKey = cacheKey(id: id, hash: hash, variant: .fullScreen),
+			let data = await disk.data(for: fullScreenKey),
 			let prepared = await WallpaperImageProcessor.decode(
 				data,
 				maxPixelSize: Variant.deviceCard.maxPixelSize
 			)
 		else { return nil }
-		storeInMemory(prepared.image, for: cacheKey(id: id, variant: .deviceCard))
+		storeInMemory(prepared.image, for: cardKey)
 		return prepared.image
 	}
 
-	func load(id: String, target: Umbreld.Target) async -> UIImage? {
-		guard let image = await load(id: id, target: target, variant: .fullScreen)
+	func load(id: String, hash: String?, target: Umbreld.Target) async -> UIImage? {
+		guard let image = await load(id: id, hash: hash, target: target, variant: .fullScreen)
 		else { return nil }
-		_ = await blurred(id: id)
+		_ = await blurred(id: id, hash: hash)
 		return image
 	}
 
-	func loadCard(id: String, target: Umbreld.Target) async -> UIImage? {
-		if let image = await cachedCard(id: id) { return image }
-		return await load(id: id, target: target, variant: .deviceCard)
+	func loadCard(id: String, hash: String?, target: Umbreld.Target) async -> UIImage? {
+		if let image = await cachedCard(id: id, hash: hash) { return image }
+		return await load(id: id, hash: hash, target: target, variant: .deviceCard)
 	}
 
-	func blurred(id: String) async -> UIImage? {
-		let key = "\(id)-blur"
+	func blurred(id: String, hash: String?) async -> UIImage? {
+		guard let key = blurKey(id: id, hash: hash),
+			let fullScreenKey = cacheKey(id: id, hash: hash, variant: .fullScreen),
+			let cardKey = cacheKey(id: id, hash: hash, variant: .deviceCard)
+		else { return nil }
 		if let hit = memory.object(forKey: key as NSString) { return hit }
 		if let data = await disk.data(for: key),
 			let prepared = await WallpaperImageProcessor.decode(
@@ -104,10 +111,10 @@ final class WallpaperStore {
 		// Decode a smaller copy directly from the compressed source before blurring it.
 		// The frost is intentionally soft and does not need the full-screen pixel count.
 		let sourceData: Data?
-		if let fullScreen = await disk.data(for: cacheKey(id: id, variant: .fullScreen)) {
+		if let fullScreen = await disk.data(for: fullScreenKey) {
 			sourceData = fullScreen
 		} else {
-			sourceData = await disk.data(for: cacheKey(id: id, variant: .deviceCard))
+			sourceData = await disk.data(for: cardKey)
 		}
 		guard let data = sourceData,
 			let source = await WallpaperImageProcessor.decode(
@@ -121,11 +128,12 @@ final class WallpaperStore {
 		else { return nil }
 		storeInMemory(result.image, for: key)
 		await disk.store(result.encodedData, for: key)
+		await disk.trimVersions(of: id, suffix: "blur")
 		return result.image
 	}
 
-	private func cached(id: String, variant: Variant) async -> UIImage? {
-		let key = cacheKey(id: id, variant: variant)
+	private func cached(id: String, hash: String?, variant: Variant) async -> UIImage? {
+		guard let key = cacheKey(id: id, hash: hash, variant: variant) else { return nil }
 		if let hit = memory.object(forKey: key as NSString) { return hit }
 		guard let data = await disk.data(for: key),
 			let prepared = await WallpaperImageProcessor.decode(
@@ -137,9 +145,9 @@ final class WallpaperStore {
 		return prepared.image
 	}
 
-	private func load(id: String, target: Umbreld.Target, variant: Variant) async -> UIImage? {
-		if let hit = await cached(id: id, variant: variant) { return hit }
-		let key = cacheKey(id: id, variant: variant)
+	private func load(id: String, hash: String?, target: Umbreld.Target, variant: Variant) async -> UIImage? {
+		guard let key = cacheKey(id: id, hash: hash, variant: variant) else { return nil }
+		if let hit = await cached(id: id, hash: hash, variant: variant) { return hit }
 		let preferred = await fetch(
 			id: id,
 			target: target,
@@ -162,6 +170,7 @@ final class WallpaperStore {
 		guard let loaded else { return nil }
 		storeInMemory(loaded.image.image, for: key)
 		await disk.store(loaded.data, for: key)
+		await disk.trimVersions(of: id, suffix: variant.suffix)
 		return loaded.image.image
 	}
 
@@ -188,8 +197,12 @@ final class WallpaperStore {
 		}
 	}
 
-	private func cacheKey(id: String, variant: Variant) -> String {
-		"\(id)-\(variant.suffix)"
+	private func cacheKey(id: String, hash: String?, variant: Variant) -> String? {
+		WallpaperDiskCache.versionKey(id: id, hash: hash).map { "\($0)-\(variant.suffix)" }
+	}
+
+	private func blurKey(id: String, hash: String?) -> String? {
+		WallpaperDiskCache.versionKey(id: id, hash: hash).map { "\($0)-blur" }
 	}
 
 	private func storeInMemory(_ image: UIImage, for key: String) {
@@ -261,8 +274,50 @@ private actor WallpaperDiskCache {
 		try? data.write(to: fileURL(key), options: .atomic)
 	}
 
+	// Umbrels on different umbrelOS releases can show the same wallpaper with different
+	// files, and each device card needs its own copy offline, so a few versions of each
+	// wallpaper are kept. Beyond that the oldest are removed, so hashes that keep
+	// changing can't fill the disk.
+	func trimVersions(of id: String, suffix: String) {
+		let ending = "-\(suffix).image"
+		let fileManager = FileManager.default
+		guard let urls = try? fileManager.contentsOfDirectory(
+			at: directory,
+			includingPropertiesForKeys: [.contentModificationDateKey]
+		) else { return }
+		let versions = urls.filter { url in
+			let name = url.lastPathComponent
+			guard name.hasSuffix(ending) else { return false }
+			let version = String(name.dropLast(ending.count))
+			return version == id
+				|| (version.hasPrefix("\(id)-")
+					&& Umbreld.Wallpaper.validHash(String(version.dropFirst(id.count + 1))) != nil)
+		}
+		guard versions.count > Self.versionsKept else { return }
+		let newestFirst = versions.sorted {
+			let first = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+			let second = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+			return first > second
+		}
+		for url in newestFirst.dropFirst(Self.versionsKept) { try? fileManager.removeItem(at: url) }
+	}
+
+	private static let versionsKept = 3
+
+	// Keys become filenames. Ids are numeric presets and hashes short lowercase hex, and
+	// both are checked here because they come from the Umbrel; anything else isn't cached.
+	static func versionKey(id: String, hash: String?) -> String? {
+		guard !id.isEmpty, id.allSatisfy(\.isASCIIDigit) else { return nil }
+		guard let hash else { return id }
+		guard let valid = Umbreld.Wallpaper.validHash(hash) else { return id }
+		return "\(id)-\(valid)"
+	}
+
 	private func fileURL(_ key: String) -> URL {
-		// Wallpaper ids are a controlled numeric preset set, so they're safe as filenames.
 		directory.appendingPathComponent(key, isDirectory: false).appendingPathExtension("image")
 	}
+}
+
+private extension Character {
+	var isASCIIDigit: Bool { ("0"..."9").contains(self) }
 }

@@ -208,7 +208,9 @@ final class MainModel {
 	private(set) var blurredWallpaper: UIImage?
 	private(set) var wallpaperId: String?
 	private(set) var wallpaperBrandColorHsl: String?
-	@ObservationIgnored private var renderedWallpaperId: String?
+	@ObservationIgnored private var wallpaperHash: String?
+	// The id and hash of the wallpaper on screen, so a changed hash loads the new files
+	@ObservationIgnored private var renderedWallpaper: String?
 	private(set) var accountRole: String?
 	private(set) var backupPhotosEnabled = false
 	private(set) var backupVideosEnabled = false
@@ -382,23 +384,25 @@ final class MainModel {
 		let accountProfile = session.flatMap { device.accountProfile(for: $0.accountId) }
 		userName = accountProfile?.name
 		wallpaperId = accountProfile?.wallpaperId
+		wallpaperHash = accountProfile?.wallpaperHash
 		wallpaperBrandColorHsl = accountProfile?.wallpaperBrandColorHsl
 		accountRole = accountProfile?.role ?? (session?.accountId == "0" ? "owner" : "member")
 		if let id = accountProfile?.wallpaperId {
-			let fullScreen = WallpaperStore.shared.memoryCached(id: id)
-			wallpaperImage = fullScreen ?? WallpaperStore.shared.memoryCachedCard(id: id)
-			blurredWallpaper = WallpaperStore.shared.memoryBlurred(id: id)
-			if fullScreen != nil { renderedWallpaperId = id }
+			let hash = accountProfile?.wallpaperHash
+			let fullScreen = WallpaperStore.shared.memoryCached(id: id, hash: hash)
+			wallpaperImage = fullScreen ?? WallpaperStore.shared.memoryCachedCard(id: id, hash: hash)
+			blurredWallpaper = WallpaperStore.shared.memoryBlurred(id: id, hash: hash)
+			if fullScreen != nil { renderedWallpaper = Self.wallpaperVersion(id: id, hash: hash) }
 			Task { @MainActor [weak self] in
-				let fullScreen = await WallpaperStore.shared.cached(id: id)
+				let fullScreen = await WallpaperStore.shared.cached(id: id, hash: hash)
 				let card = fullScreen == nil
-					? await WallpaperStore.shared.cachedCard(id: id)
+					? await WallpaperStore.shared.cachedCard(id: id, hash: hash)
 					: nil
-				let blur = await WallpaperStore.shared.blurred(id: id)
-				guard let self, self.wallpaperId == id else { return }
+				let blur = await WallpaperStore.shared.blurred(id: id, hash: hash)
+				guard let self, self.wallpaperId == id, self.wallpaperHash == hash else { return }
 				if let image = fullScreen ?? card { wallpaperImage = image }
 				if let blur { blurredWallpaper = blur }
-				if fullScreen != nil { renderedWallpaperId = id }
+				if fullScreen != nil { renderedWallpaper = Self.wallpaperVersion(id: id, hash: hash) }
 			}
 		}
 		// Seed the tab data from the last-known snapshot (written by every load, and
@@ -1595,19 +1599,21 @@ final class MainModel {
 		guard info.userId == session?.accountId else { return }
 		let identityChanged = userName != info.name
 			|| wallpaperId != info.wallpaper.id
+			|| wallpaperHash != info.wallpaper.hash
 			|| wallpaperBrandColorHsl != info.wallpaper.brandColorHsl
 			|| accountRole != info.role
 		if userName != info.name { userName = info.name }
 		if wallpaperId != info.wallpaper.id { wallpaperId = info.wallpaper.id }
+		wallpaperHash = info.wallpaper.hash
 		if wallpaperBrandColorHsl != info.wallpaper.brandColorHsl {
 			wallpaperBrandColorHsl = info.wallpaper.brandColorHsl
 		}
 		if accountRole != info.role { accountRole = info.role }
-		if renderedWallpaperId != info.wallpaper.id
+		if renderedWallpaper != Self.wallpaperVersion(id: info.wallpaper.id, hash: info.wallpaper.hash)
 			|| wallpaperImage == nil
 			|| blurredWallpaper == nil
 		{
-			await loadWallpaperImages(id: info.wallpaper.id, target: target)
+			await loadWallpaperImages(id: info.wallpaper.id, hash: info.wallpaper.hash, target: target)
 		}
 		guard identityChanged else { return }
 		// Persist identity changes so the all-devices list and next launch match.
@@ -1618,6 +1624,7 @@ final class MainModel {
 					name: info.name,
 					wallpaperId: info.wallpaper.id,
 					wallpaperBrandColorHsl: info.wallpaper.brandColorHsl,
+					wallpaperHash: info.wallpaper.hash,
 					role: info.role
 				)
 			}
@@ -2747,14 +2754,18 @@ final class MainModel {
 	// blurred companion used to frost the cards. Both come from the same image so the
 	// frosted cards align with the sharp backdrop; both are cached on disk, so this only
 	// does work the very first time a wallpaper is ever seen.
-	private func loadWallpaperImages(id: String, target: Umbreld.Target) async {
-		guard let image = await WallpaperStore.shared.load(id: id, target: target)
+	private func loadWallpaperImages(id: String, hash: String?, target: Umbreld.Target) async {
+		guard let image = await WallpaperStore.shared.load(id: id, hash: hash, target: target)
 		else { return }
-		let blur = await WallpaperStore.shared.blurred(id: id)
-		guard wallpaperId == id else { return }
+		let blur = await WallpaperStore.shared.blurred(id: id, hash: hash)
+		guard wallpaperId == id, wallpaperHash == hash else { return }
 		wallpaperImage = image
 		blurredWallpaper = blur
-		renderedWallpaperId = id
+		renderedWallpaper = Self.wallpaperVersion(id: id, hash: hash)
+	}
+
+	private static func wallpaperVersion(id: String, hash: String?) -> String {
+		"\(id)#\(hash ?? "")"
 	}
 
 	func signOut() {

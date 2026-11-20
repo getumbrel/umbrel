@@ -228,7 +228,7 @@ fun OnboardingFlow(mode: OnboardingMode, onFinished: (String) -> Unit, onCancel:
 				if (account != null && account.userId == session.accountId) {
 					device = device.saveAccountProfile(
 						session.accountId, account.name, account.wallpaper.id, account.wallpaper.brandColorHsl,
-						if (session.accountId == "0") "owner" else "member",
+						if (session.accountId == "0") "owner" else "member", account.wallpaper.hash,
 					)
 				}
 				store.save(device)
