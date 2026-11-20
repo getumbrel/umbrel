@@ -32,10 +32,10 @@ export function PhotosUploadIsland() {
 			sizes={sizes}
 			expandKey={enqueuedBatches}
 			minimizeAfter={2000}
+			edgeInset={20}
 			// overflow-visible lets the current photo float past the pill's top
-			// edge; the expanded content instead fades in a beat late, so the
-			// growing pill doesn't spill it mid-spring
-			expandedClassName='max-w-[calc(100vw-40px)] overflow-visible bg-black/25 settings-edge-material backdrop-blur-xl backdrop-saturate-150 contrast-more:bg-black contrast-more:backdrop-blur-none contrast-more:backdrop-saturate-100'
+			// edge once the card has opened
+			expandedClassName='overflow-visible bg-black/25 settings-edge-material backdrop-blur-xl backdrop-saturate-150 contrast-more:bg-black contrast-more:backdrop-blur-none contrast-more:backdrop-saturate-100'
 		>
 			<IslandMinimized>
 				<MinimizedContent />

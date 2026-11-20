@@ -3,49 +3,46 @@ import {useLayoutEffect, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
 import {useTranslation} from 'react-i18next'
 import {useLocation} from 'react-router-dom'
-import {useWindowSize} from 'react-use'
 
 import {useCmdkOpen} from '@/components/cmdk'
 import {Orb, useOrbPalette} from '@/components/orb/orb'
 import {darkTooltipClass} from '@/components/ui/dark-tooltip'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
-import {islandSizes} from '@/modules/floating-island/bare-island'
-import {LANE_GAP, SEARCH_HEIGHT, searchShift, searchWidth, useLaneStore} from '@/modules/floating-island/lane'
+import {attachSearch, SEARCH_HEIGHT, useLaneStore} from '@/modules/floating-island/lane'
+import {LaneItem} from '@/modules/floating-island/row'
 import {useImmersiveDialogOpen} from '@/providers/immersive-dialog'
 import {useWallpaper} from '@/providers/wallpaper'
 import {focusRingOnWallpaperClass} from '@/utils/element-classes'
 import {cmdOrCtrl, platform} from '@/utils/misc'
 
-// Roughly the full pill's width, for deciding when the shared row is crowded
-const SEARCH_FULL_WIDTH = 140
 const condenseTransition = {type: 'spring' as const, stiffness: 400, damping: 40}
 
 // The Home screen's search pill, with a small orb of the wallpaper's colour
 // that stays still until hovered.
 //
 // It shares its row with the floating islands (modules/floating-island/lane.ts):
-// while any are up it steps aside so the pair stays centred, and when the row
-// gets crowded it shrinks to just its orb. On phones it joins the islands'
-// sideways-scrolling row as that orb, and steps out while a card is open so
-// the card can take the row.
+// while any are up it steps aside so the pair stays centred, when the row gets
+// crowded it shrinks to just its orb, and when there is no room even for that
+// it steps out. On phones it joins the islands' sideways-scrolling row as that
+// orb, and steps out while a card is open so the card can take the row.
 export function Search({onClick, visible = true}: {onClick?: () => void; visible?: boolean}) {
 	const {t} = useTranslation()
 	const isMobile = useIsSmallMobile()
 	const {open} = useCmdkOpen()
 	const palette = useOrbPalette()
 	const [hovered, setHovered] = useState(false)
-	const {width: windowWidth} = useWindowSize()
 
 	const islandCount = useLaneStore((state) => state.islandCount)
 	const expandedCount = useLaneStore((state) => state.expandedCount)
 	const setSearchShown = useLaneStore((state) => state.setSearchShown)
 	const rowSlot = useLaneStore((state) => state.searchSlot)
+	const crowded = useLaneStore((state) => state.crowded)
+	const full = useLaneStore((state) => state.full)
 	const isImmersiveDialogOpen = useImmersiveDialogOpen()
 
-	const rowWidth = SEARCH_FULL_WIDTH + islandCount * (islandSizes.minimized.width + LANE_GAP)
-	const condensed = islandCount > 0 && (isMobile || rowWidth > windowWidth - 32)
-	const steppedOut = isMobile && expandedCount > 0
+	const condensed = islandCount > 0 && (isMobile || crowded)
+	const steppedOut = isMobile ? expandedCount > 0 : islandCount > 0 && full
 	const shown = visible && !isImmersiveDialogOpen && !steppedOut
 	// Phones with islands up: Search lives in their scrolling row
 	const inRow = isMobile && islandCount > 0 && rowSlot !== null
@@ -53,21 +50,14 @@ export function Search({onClick, visible = true}: {onClick?: () => void; visible
 	useLayoutEffect(() => setSearchShown(shown), [shown, setSearchShown])
 	useLayoutEffect(() => () => setSearchShown(false), [setSearchShown])
 
-	// Live width for the lane, so the islands sit exactly beside it. The pill
-	// remounts when it moves into or out of the phone row, so measure again.
+	// Outside the islands' row the lane places Search beside them, from its
+	// live width. Inside the row, layout does.
+	const moverRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
 	useLayoutEffect(() => {
-		const el = buttonRef.current
-		if (!el) return
-		const measure = () => searchWidth.set(el.offsetWidth)
-		measure()
-		const observer = new ResizeObserver(measure)
-		observer.observe(el)
-		return () => {
-			observer.disconnect()
-			searchWidth.set(0)
-		}
-	}, [inRow, shown])
+		if (inRow || !moverRef.current || !buttonRef.current) return
+		return attachSearch(moverRef.current, buttonRef.current)
+	}, [inRow])
 
 	const pill = (
 		<motion.button
@@ -108,7 +98,7 @@ export function Search({onClick, visible = true}: {onClick?: () => void; visible
 
 	// Coming back to Home with islands up, they first slide over from the
 	// centre to make room: Search waits a beat so it never fades in under one
-	const waitForIslands = islandCount > 0 ? 0.14 : 0
+	const waitForIslands = islandCount > 0 ? 0.2 : 0
 
 	if (inRow) {
 		return (
@@ -116,20 +106,8 @@ export function Search({onClick, visible = true}: {onClick?: () => void; visible
 				{/* Holds Search's place in the desktop column so the app grid keeps its size */}
 				<div style={{height: SEARCH_HEIGHT}} />
 				{createPortal(
-					<AnimatePresence mode='popLayout'>
-						{shown && (
-							<motion.div
-								key='search'
-								layout='position'
-								className='pointer-events-auto'
-								initial={{opacity: 0}}
-								animate={{opacity: 1, transition: {duration: 0.15, ease: 'easeOut', delay: waitForIslands}}}
-								exit={{opacity: 0, transition: {duration: 0.1}}}
-							>
-								{pill}
-							</motion.div>
-						)}
-					</AnimatePresence>,
+					// Its place in the row opens and closes like an island's
+					<AnimatePresence initial={false}>{shown && <LaneItem key='search'>{pill}</LaneItem>}</AnimatePresence>,
 					rowSlot,
 				)}
 			</>
@@ -140,8 +118,8 @@ export function Search({onClick, visible = true}: {onClick?: () => void; visible
 
 	return (
 		<motion.div
+			ref={moverRef}
 			className='z-10'
-			style={{x: searchShift}}
 			initial={false}
 			animate={{opacity: hidden ? 0 : 1}}
 			transition={{duration: 0.15, ease: 'easeOut', delay: hidden ? 0 : waitForIslands}}
