@@ -156,16 +156,40 @@ type _logout = Expect<ServerProvides<Outputs['user']['logout'], boolean>>
 
 // MARK: - In-app browser sessions
 //
-// The iOS app shows umbrelOS and its apps in an in-app browser. At sign-in it also
-// logs in the way a browser does, then replays the result into its web view: the
-// returned dashboard token goes into localStorage under `umbrel-auth-token`, and
-// the browser-session and app-gateway cookies are set for whichever of the
-// Umbrel's addresses is in use. Beyond these shapes it relies on the HTTPS cookie
-// names pinned below, on credentials not rotating on renewal, on renewToken
-// answering 401 or 403 once a session has ended, and on one 2FA code being accepted
-// for both the native login and this one (sign-in sends the same code to each). A
-// client without a usable session falls back to umbrelOS's own login page, so a
+// The iOS and Android apps show umbrelOS and its apps in an in-app browser. They get
+// its session by refreshing native access with `browserSession: true`, then replay the
+// result into the web view: the returned dashboard token goes into localStorage under
+// `umbrel-auth-token`, and the browser-session and app-gateway cookies are set for
+// whichever of the Umbrel's addresses is in use. Beyond these shapes they rely on the
+// HTTPS cookie names pinned below, on credentials not rotating on renewal, and on
+// renewToken answering 401 or 403 once a session has ended. Against an umbrelOS whose
+// refresh ignores the flag and returns no dashboard token, they log in the way a
+// browser does at sign-in instead, sending the same 2FA code they sent to loginNative.
+// A client without a usable session falls back to umbrelOS's own login page, so a
 // break here costs a second sign-in rather than access.
+type _nativeRefreshWithBrowserSessionInput = Expect<
+	ServerAccepts<
+		Inputs['user']['refreshNativeAccess'],
+		{
+			deviceToken: string
+			client: {
+				id: string
+				platform: string
+				deviceClass: string
+				appVersion: string
+				appBuild: string
+				osVersion: string
+			}
+			browserSession: boolean
+		}
+	>
+>
+type _nativeRefreshWithBrowserSessionOutput = Expect<
+	ServerProvides<
+		Outputs['user']['refreshNativeAccess'],
+		{accessToken: string; accessExpiresAt: number; dashboardToken?: string}
+	>
+>
 type _browserLoginInput = Expect<
 	ServerAccepts<Inputs['user']['login'], {userId: string; password: string; totpToken?: string}>
 >

@@ -284,7 +284,7 @@ export default router({
 			// Skip password validation in recovery mode (RAID mount failure) since user data is inaccessible
 			const raidMountFailure = await ctx.umbreld.hardware.raid.checkRaidMountFailure()
 			if (!raidMountFailure) {
-				const session = ctx.principal?.sessionId ?? ''
+				const session = ctx.principal ? ctx.umbreld.auth.loginId(ctx.principal) : ''
 				if (!input.password || !(await ctx.user.validateAccountPassword(OWNER_USER_ID, input.password, session))) {
 					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
 				}

@@ -270,3 +270,89 @@ test('native login preserves the HTTP 401 and message used to request a 2FA code
 	expect(response.statusCode).toBe(401)
 	expect(response.body).toMatchObject({error: {message: 'Missing 2FA code'}})
 })
+
+test('a native app gets its browser session from a refresh, as one login it loses with the app', async () => {
+	type NativeSession = {accessToken: string; deviceToken: string}
+	const login = await umbreld.unauthenticatedApi.post('../trpc/user.loginNative', {
+		json: {...credentials, client: nativeClient},
+	})
+	const native = trpcResult<NativeSession>(login.body)
+	if (!native) throw new Error('Native login did not return credentials')
+	// The Umbrel's LAN ingress tells umbreld a request arrived over HTTPS this way.
+	const https = {'x-forwarded-proto': 'https'}
+
+	const overHttp = await umbreld.unauthenticatedApi.post('../trpc/user.refreshNativeAccess', {
+		json: {deviceToken: native.deviceToken, client: nativeClient, browserSession: true},
+		throwHttpErrors: false,
+	})
+	expect(overHttp.statusCode).toBe(400)
+
+	const refresh = await umbreld.unauthenticatedApi.post('../trpc/user.refreshNativeAccess', {
+		json: {deviceToken: native.deviceToken, client: nativeClient, browserSession: true},
+		headers: https,
+	})
+	const refreshed = trpcResult<{accessToken: string; dashboardToken?: string}>(refresh.body)
+	if (!refreshed?.dashboardToken) throw new Error('Refresh did not return a browser session')
+	expect(refresh.headers['cache-control']).toBe('no-store')
+	const cookies = (refresh.headers['set-cookie'] ?? []).map((cookie) => cookie.split(';')[0])
+	expect(cookies.map((cookie) => cookie.split('=')[0]).sort()).toEqual([
+		'__Host-UMBREL_APP_SESSION_HTTPS',
+		'__Host-UMBREL_BROWSER_SESSION_HTTPS',
+	])
+	const browser = {...https, Authorization: `Bearer ${refreshed.dashboardToken}`, cookie: cookies.join('; ')}
+
+	const user = await umbreld.unauthenticatedApi.get('../trpc/user.get', {headers: browser})
+	expect(trpcResult<{name: string}>(user.body)).toMatchObject({name: credentials.name})
+	const sessions = await umbreld.unauthenticatedApi.get('../trpc/user.listSessions', {headers: browser})
+	const listed = trpcResult<Array<{client: {type: string}; current: boolean}>>(sessions.body)
+	// The app and the browser login from beforeEach: the app's browser session is part of the app.
+	expect(listed).toHaveLength(2)
+	expect(listed?.find((session) => session.current)?.client.type).toBe('native')
+
+	await umbreld.unauthenticatedApi.post('../trpc/user.logout', {
+		json: null,
+		headers: {Authorization: `Bearer ${refreshed.accessToken}`},
+	})
+	const afterAppSignOut = await umbreld.unauthenticatedApi.get('../trpc/user.get', {
+		headers: browser,
+		throwHttpErrors: false,
+	})
+	expect(afterAppSignOut.statusCode).toBe(401)
+	await expect(umbreld.client.user.get.query()).resolves.toMatchObject({name: credentials.name})
+})
+
+test('a native app gets no more wrong password guesses by making another browser session', async () => {
+	const login = await umbreld.unauthenticatedApi.post('../trpc/user.loginNative', {
+		json: {...credentials, client: nativeClient},
+	})
+	const native = trpcResult<{deviceToken: string}>(login.body)
+	if (!native) throw new Error('Native login did not return credentials')
+	const https = {'x-forwarded-proto': 'https'}
+	const makeBrowserSession = async () => {
+		const refresh = await umbreld.unauthenticatedApi.post('../trpc/user.refreshNativeAccess', {
+			json: {deviceToken: native.deviceToken, client: nativeClient, browserSession: true},
+			headers: https,
+		})
+		const refreshed = trpcResult<{dashboardToken?: string}>(refresh.body)
+		if (!refreshed?.dashboardToken) throw new Error('Refresh did not return a browser session')
+		const cookies = (refresh.headers['set-cookie'] ?? []).map((cookie) => cookie.split(';')[0])
+		return {...https, Authorization: `Bearer ${refreshed.dashboardToken}`, cookie: cookies.join('; ')}
+	}
+	const verifyPassword = (browser: Record<string, string>, password: string) =>
+		umbreld.unauthenticatedApi.post('../trpc/user.verifyPassword', {
+			json: {password},
+			headers: browser,
+			throwHttpErrors: false,
+		})
+
+	// Ten wrong guesses are answered normally, then the login is told to wait
+	const first = await makeBrowserSession()
+	for (let attempt = 1; attempt <= 10; attempt++) {
+		expect((await verifyPassword(first, 'wrong password')).statusCode).toBe(401)
+	}
+	expect((await verifyPassword(first, credentials.password)).statusCode).toBe(429)
+
+	// A new browser session is the same login, so it waits too, even with the right password
+	const second = await makeBrowserSession()
+	expect((await verifyPassword(second, credentials.password)).statusCode).toBe(429)
+})
