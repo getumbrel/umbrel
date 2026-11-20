@@ -1,3 +1,10 @@
+import largeAv1 from '@/assets/wallpaper-23/wallpaper-23-large-av1.webm'
+import largeVp9 from '@/assets/wallpaper-23/wallpaper-23-large-vp9.webm'
+import largeH264 from '@/assets/wallpaper-23/wallpaper-23-large.mp4'
+import mediumAv1 from '@/assets/wallpaper-23/wallpaper-23-medium-av1.webm'
+import mediumVp9 from '@/assets/wallpaper-23/wallpaper-23-medium-vp9.webm'
+import mediumH264 from '@/assets/wallpaper-23/wallpaper-23-medium.mp4'
+
 // Shared by onboarding and the selected wallpaper. Let the browser exhaust this
 // ordered list: Safari may reject WebM candidates before successfully loading H.264.
 //
@@ -15,22 +22,22 @@ export function Wallpaper23VideoSources() {
 		<>
 			<source
 				media='(min-width: 1200px) and (-webkit-min-device-pixel-ratio: 1.5), (min-width: 1200px) and (min-resolution: 1.5dppx), (min-width: 2000px)'
-				src='/assets/onboarding/wallpaper-23-large-vp9.webm'
+				src={largeVp9}
 				type='video/webm; codecs="vp9"'
 			/>
 			<source
 				media='(min-width: 1200px) and (-webkit-min-device-pixel-ratio: 1.5), (min-width: 1200px) and (min-resolution: 1.5dppx), (min-width: 2000px)'
-				src='/assets/onboarding/wallpaper-23-large-av1.webm'
+				src={largeAv1}
 				type='video/webm; codecs="av01.0.12M.08"'
 			/>
 			<source
 				media='(min-width: 1200px) and (-webkit-min-device-pixel-ratio: 1.5), (min-width: 1200px) and (min-resolution: 1.5dppx), (min-width: 2000px)'
-				src='/assets/onboarding/wallpaper-23-large.mp4'
+				src={largeH264}
 				type='video/mp4; codecs="avc1.640033"'
 			/>
-			<source src='/assets/onboarding/wallpaper-23-medium-vp9.webm' type='video/webm; codecs="vp9"' />
-			<source src='/assets/onboarding/wallpaper-23-medium-av1.webm' type='video/webm; codecs="av01.0.08M.08"' />
-			<source src='/assets/onboarding/wallpaper-23-medium.mp4' type='video/mp4; codecs="avc1.640029"' />
+			<source src={mediumVp9} type='video/webm; codecs="vp9"' />
+			<source src={mediumAv1} type='video/webm; codecs="av01.0.08M.08"' />
+			<source src={mediumH264} type='video/mp4; codecs="avc1.640029"' />
 		</>
 	)
 }

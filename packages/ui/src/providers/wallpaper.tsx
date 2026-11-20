@@ -20,12 +20,23 @@ import {trpcReact} from '@/trpc/trpc'
 import {IS_IPHONE_BROWSER, keyBy} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
-import {wallpapers as wallpaperDefinitions, type WallpaperId} from '../../../umbreld/source/modules/user/wallpapers'
+import {
+	wallpapers as wallpaperDefinitions,
+	wallpapersKeyed as wallpaperDefinitionsKeyed,
+	type WallpaperId,
+} from '../../../umbreld/source/modules/user/wallpapers'
 
 export type WallpaperAvifTier = 'large' | 'medium' | 'small' | 'thumbnails'
 
+// The files keep their names when their content changes and are cached as immutable,
+// so the hash in the query is what makes a browser fetch a changed file.
+function versioned(path: string, id: WallpaperId | undefined) {
+	const hash = id && wallpaperDefinitionsKeyed[id]?.hash
+	return hash ? `${path}?v=${hash}` : path
+}
+
 export function getWallpaperJpgUrl(id: WallpaperId) {
-	return `/assets/wallpapers/${id}.jpg`
+	return versioned(`/assets/wallpapers/${id}.jpg`, id)
 }
 
 export const wallpapers = wallpaperDefinitions.map((wallpaper) => ({
@@ -37,7 +48,7 @@ export const wallpaperIds = wallpapers.map((wallpaper) => wallpaper.id)
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 
 export function getWallpaperAvifUrl(wallpaper: Wallpaper | typeof nullWallpaper, tier: WallpaperAvifTier) {
-	return `/assets/wallpapers/generated-avif/${tier}/${wallpaper.id}.avif`
+	return versioned(`/assets/wallpapers/generated-avif/${tier}/${wallpaper.id}.avif`, wallpaper.id)
 }
 
 export function WallpaperAvifSource({

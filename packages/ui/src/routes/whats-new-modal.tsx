@@ -3,6 +3,22 @@ import {useTranslation} from 'react-i18next'
 import {IoLogoApple} from 'react-icons/io5'
 import {TbChevronLeft, TbChevronRight, TbPlayerPlayFilled} from 'react-icons/tb'
 
+import aiAgentsVideo from '@/assets/whats-new/ai-agents.mp4'
+import aiAgentsPoster from '@/assets/whats-new/ai-agents.webp'
+import appSettingsImage from '@/assets/whats-new/app-settings.webp'
+import cloudVideo from '@/assets/whats-new/cloud.mp4'
+import cloudPoster from '@/assets/whats-new/cloud.webp'
+import gpuImage from '@/assets/whats-new/gpu.webp'
+import macAppImage from '@/assets/whats-new/mac-app.webp'
+import machinesVideo from '@/assets/whats-new/machines.mp4'
+import machinesPoster from '@/assets/whats-new/machines.webp'
+import multiUserVideo from '@/assets/whats-new/multi-user.mp4'
+import multiUserPoster from '@/assets/whats-new/multi-user.webp'
+import photosVideo from '@/assets/whats-new/photos.mp4'
+import photosPoster from '@/assets/whats-new/photos.webp'
+import storageManagerImage from '@/assets/whats-new/storage-manager.webp'
+import welcomeVideo from '@/assets/whats-new/welcome.mp4'
+import welcomePoster from '@/assets/whats-new/welcome.webp'
 import {FadeScroller} from '@/components/fade-scroller'
 import {Button} from '@/components/ui/button'
 import {
@@ -86,8 +102,8 @@ type Feature = {
 const FEATURES: Feature[] = [
 	{
 		id: 'redesign',
-		video: '/assets/whats-new/welcome.mp4',
-		poster: '/assets/whats-new/welcome.webp',
+		video: welcomeVideo,
+		poster: welcomePoster,
 		loop: true,
 		link: {
 			href: 'https://youtu.be/lBsKk_NNg2A',
@@ -101,8 +117,8 @@ const FEATURES: Feature[] = [
 	},
 	{
 		id: 'photos',
-		video: '/assets/whats-new/photos.mp4',
-		poster: '/assets/whats-new/photos.webp',
+		video: photosVideo,
+		poster: photosPoster,
 		titleTKey: 'whats-new-umbrelos-2-0.photos-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.photos-description',
 		link: {
@@ -113,28 +129,28 @@ const FEATURES: Feature[] = [
 	},
 	{
 		id: 'ai-agents',
-		video: '/assets/whats-new/ai-agents.mp4',
-		poster: '/assets/whats-new/ai-agents.webp',
+		video: aiAgentsVideo,
+		poster: aiAgentsPoster,
 		titleTKey: 'whats-new-umbrelos-2-0.ai-agents-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.ai-agents-description',
 	},
 	{
 		id: 'machines',
-		video: '/assets/whats-new/machines.mp4',
-		poster: '/assets/whats-new/machines.webp',
+		video: machinesVideo,
+		poster: machinesPoster,
 		titleTKey: 'whats-new-umbrelos-2-0.machines-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.machines-description',
 	},
 	{
 		id: 'multi-user',
-		video: '/assets/whats-new/multi-user.mp4',
-		poster: '/assets/whats-new/multi-user.webp',
+		video: multiUserVideo,
+		poster: multiUserPoster,
 		titleTKey: 'whats-new-umbrelos-2-0.multi-user-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.multi-user-description',
 	},
 	{
 		id: 'storage-manager',
-		image: '/assets/whats-new/storage-manager.webp',
+		image: storageManagerImage,
 		titleTKey: 'whats-new-umbrelos-2-0.storage-manager-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.storage-manager-description',
 		noteTKey: 'whats-new-umbrelos-2-0.storage-manager-note',
@@ -142,26 +158,26 @@ const FEATURES: Feature[] = [
 	},
 	{
 		id: 'cloud',
-		video: '/assets/whats-new/cloud.mp4',
-		poster: '/assets/whats-new/cloud.webp',
+		video: cloudVideo,
+		poster: cloudPoster,
 		titleTKey: 'whats-new-umbrelos-2-0.cloud-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.cloud-description',
 	},
 	{
 		id: 'gpu',
-		image: '/assets/whats-new/gpu.webp',
+		image: gpuImage,
 		titleTKey: 'whats-new-umbrelos-2-0.gpu-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.gpu-description',
 	},
 	{
 		id: 'app-settings',
-		image: '/assets/whats-new/app-settings.webp',
+		image: appSettingsImage,
 		titleTKey: 'whats-new-umbrelos-2-0.app-settings-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.app-settings-description',
 	},
 	{
 		id: 'mac-app',
-		image: '/assets/whats-new/mac-app.webp',
+		image: macAppImage,
 		titleTKey: 'whats-new-umbrelos-2-0.mac-app-heading',
 		descriptionTKey: 'whats-new-umbrelos-2-0.mac-app-description',
 		link: {

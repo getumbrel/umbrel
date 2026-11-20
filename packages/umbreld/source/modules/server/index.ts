@@ -321,8 +321,10 @@ class Server {
 			const currentDirname = dirname(currentFilename)
 			const uiPath = join(currentDirname, '../../../ui')
 
-			// Built assets include a hash of the contents in the filename and
-			// wallpapers do not ever change, so we can cache these aggressively
+			// Built assets include a hash of the contents in the filename, so we can
+			// cache these aggressively. Files copied from the UI's public/ directory
+			// keep their names when they change, so anything that links to one must
+			// version the URL itself, as wallpapers do with `?v=<hash>`.
 			const cacheAggressively: express.RequestHandler = (_, response, next) => {
 				const approximatelyOneYearInSeconds = 365 * 24 * 60 * 60 // RFC 2616, 14.21
 				response.set('Cache-Control', `public, max-age=${approximatelyOneYearInSeconds}, immutable`)

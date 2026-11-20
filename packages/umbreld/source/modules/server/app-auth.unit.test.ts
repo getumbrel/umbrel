@@ -9,6 +9,7 @@ import {afterAll, beforeAll, describe, expect, test} from 'vitest'
 
 import Umbreld from '../../index.ts'
 import temporaryDirectory from '../utilities/temporary-directory.ts'
+import {resolveWallpaperAppearance} from '../user/wallpapers.ts'
 import createAppAuthRouter, {rewriteAppAuthDevProxyPath} from './app-auth.ts'
 
 const accountAvatarPath = (umbreld: Umbreld, userId: string, hash: string) =>
@@ -67,7 +68,7 @@ describe('app auth account avatars', () => {
 		expect(response.body).toEqual([
 			expect.objectContaining({
 				userId: '0',
-				wallpaper: {id: '16', brandColorHsl: '265 100% 42%'},
+				wallpaper: resolveWallpaperAppearance('16'),
 				avatarUrl: `/v1/account/avatar/0/${hash}.webp`,
 			}),
 		])
@@ -84,6 +85,6 @@ describe('app auth account avatars', () => {
 
 	test('returns the account wallpaper appearance', async () => {
 		const response = await got(`${origin}/v1/account/wallpaper`, {responseType: 'json'})
-		expect(response.body).toEqual({id: '16', brandColorHsl: '265 100% 42%'})
+		expect(response.body).toEqual(resolveWallpaperAppearance('16'))
 	})
 })
