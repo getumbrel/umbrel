@@ -24,7 +24,7 @@ final class BrowserContext {
 	private var openWebViews: [OpenWebView] = []
 
 	// Web content only ever sees the session's fingerprint, never this world.
-	private static let world = WKContentWorld.world(name: "umbrel")
+	static let world = WKContentWorld.world(name: "umbrel")
 
 	init(deviceId: String, accountId: String, hosts: [String]) {
 		self.deviceId = deviceId
@@ -151,13 +151,28 @@ final class BrowserContext {
 				`
 				document.documentElement.appendChild(style)
 				// Runs under the home indicator like a page in Safari, so umbrelOS's sheets
-				// reach the bottom, and the dock reads the safe area to keep clear of it
-				document.addEventListener('DOMContentLoaded', () => {
-					const viewport = document.querySelector('meta[name=viewport]')
-					if (viewport && !viewport.content.includes('viewport-fit')) {
-						viewport.content += ', viewport-fit=cover'
+				// reach the bottom, and the dock reads the safe area to keep clear of it.
+				// An umbrelOS that runs edge to edge by itself also keeps clear of the
+				// screen's sides, so it can run under iPhone Duo's side column. Decided as
+				// soon as the tag is parsed: WebKit can finish loading before DOMContentLoaded.
+				const settle = (viewport) => {
+					const keepsClearOfSides = viewport.content.includes('viewport-fit=cover')
+					webkit.messageHandlers.keepsClearOfSides.postMessage(keepsClearOfSides)
+					// Older umbrelOS measures the safe area as it first lays out, so it only
+					// goes edge to edge after that, as it always has
+					if (!keepsClearOfSides) {
+						document.addEventListener('DOMContentLoaded', () => {
+							viewport.content += ', viewport-fit=cover'
+						})
 					}
+				}
+				const viewport = () => document.querySelector('meta[name=viewport]')
+				const observer = new MutationObserver(() => {
+					if (!viewport()) return
+					observer.disconnect()
+					settle(viewport())
 				})
+				observer.observe(document, {childList: true, subtree: true})
 			})()
 			"""
 		return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Self.world)

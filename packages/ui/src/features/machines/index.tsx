@@ -138,7 +138,7 @@ function MachinesLayoutContent() {
 			initial={{opacity: 0}}
 			animate={{opacity: closing ? 0 : 1}}
 			transition={{duration: 0.15, ease: 'easeOut'}}
-			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xl'
+			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 ps-(--safe-left) pe-(--safe-right) backdrop-blur-xl'
 			onClick={!closing && canImplicitlyDismiss ? close : undefined}
 		>
 			<motion.div

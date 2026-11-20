@@ -51,7 +51,7 @@ function DrawerContent({
 			<DrawerPrimitive.Content
 				ref={mergeRefs([ref, setDrawer])}
 				className={cn(
-					'umbrel-window-shadow umbrel-window-surface-top fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col gap-5 bg-[#0A0A0A] p-5 outline-hidden low:mt-3 low:max-h-[calc(100%-12px)]',
+					'umbrel-window-shadow umbrel-window-surface-top fixed right-(--safe-right) bottom-0 left-(--safe-left) z-50 mt-24 flex h-auto flex-col gap-5 bg-[#0A0A0A] p-5 outline-hidden low:mt-3 low:max-h-[calc(100%-12px)]',
 					// With the keyboard up it ends where the keyboard starts, and has what's
 					// left above it to fit in
 					'data-keyboard:bottom-(--visible-bottom) data-keyboard:max-h-[calc(100%-var(--visible-top)-var(--visible-bottom)-12px)] data-low:mt-3',

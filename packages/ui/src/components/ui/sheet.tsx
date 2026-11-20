@@ -28,7 +28,7 @@ const sheetVariants = cva('fixed z-30 gap-4 contrast-more:bg-black overflow-hidd
 		side: {
 			top: `inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top ${slideSheetAnimation}`,
 			bottom: `inset-x-0 bottom-0 data-[state=closed]:slide-out-to-bottom-1/2 data-[state=open]:slide-in-from-bottom-1/2 ${slideSheetAnimation}`,
-			'bottom-zoom': 'inset-x-0 bottom-0 umbrel-sheet-zoom',
+			'bottom-zoom': 'left-(--safe-left) right-(--safe-right) bottom-0 umbrel-sheet-zoom',
 			left: `inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm ${slideSheetAnimation}`,
 			right: `inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm ${slideSheetAnimation}`,
 		},

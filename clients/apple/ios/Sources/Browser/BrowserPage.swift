@@ -100,6 +100,10 @@ final class BrowserPage: NSObject, Identifiable {
 	// WebKit doesn't give the page its bottom safe area back once it has been covered.
 	private(set) var keepsClearOfHomeIndicator = true
 
+	// The page keeps its content clear of the screen's sides by itself (see
+	// BrowserContext.seeThroughScript), so it can run under iPhone Duo's side column
+	private(set) var keepsClearOfSides = false
+
 	init(origin: String, identity: Identity, context: BrowserContext, seeThrough: Bool = false) {
 		self.origin = origin
 		self.identity = identity
@@ -108,6 +112,16 @@ final class BrowserPage: NSObject, Identifiable {
 		webView = context.makeWebView(seeThrough: seeThrough)
 		super.init()
 		webView.navigationDelegate = self
+		if seeThrough {
+			webView.configuration.userContentController.add(
+				MessageHandler { [weak self] body in
+					MainActor.assumeIsolated {
+						guard let self, let keepsClear = body as? Bool, self.keepsClearOfSides != keepsClear else { return }
+						self.keepsClearOfSides = keepsClear
+					}
+				},
+				contentWorld: BrowserContext.world, name: "keepsClearOfSides")
+		}
 		webView.uiDelegate = self
 		observations = [
 			webView.observe(\.estimatedProgress) { [weak self] view, _ in
@@ -742,6 +756,19 @@ private final class PasswordEntryHandler: NSObject, WKScriptMessageHandler {
 	func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
 		guard message.frameInfo.isMainFrame, let value = message.body as? String else { return }
 		handler(value)
+	}
+}
+
+private final class MessageHandler: NSObject, WKScriptMessageHandler {
+	private let handler: (Any) -> Void
+
+	init(_ handler: @escaping (Any) -> Void) {
+		self.handler = handler
+	}
+
+	func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+		guard message.frameInfo.isMainFrame else { return }
+		handler(message.body)
 	}
 }
 

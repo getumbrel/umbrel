@@ -220,8 +220,23 @@ button,
 	cursor: default;
 }
 
+body {
+	padding-right: var(--safe-right);
+	padding-left: var(--safe-left);
+}
+
 html {
 	--font-inter: 'Inter';
+	/* The screen's safe area at the sides: a notch or Dynamic Island on an iPhone held
+	   sideways, or a side column of controls in an app showing umbrelOS. The page runs
+	   edge to edge (viewport-fit=cover in index.html); content and windows keep clear of
+	   these, while the wallpaper, dims and blurs behind them run to the screen's edges. */
+	--safe-left: env(safe-area-inset-left, 0px);
+	--safe-right: env(safe-area-inset-right, 0px);
+	--safe-x: calc(var(--safe-left) + var(--safe-right));
+	/* Moves something centred on the screen to the centre of the safe area */
+	--safe-center-shift: calc((var(--safe-left) - var(--safe-right)) / 2);
+
 	/* Pixels added to every text size: Settings > Accessibility > Text size */
 	--text-boost: 0px;
 	/* Space above the sheet. Putting here because it's used in multiple places for calculations */

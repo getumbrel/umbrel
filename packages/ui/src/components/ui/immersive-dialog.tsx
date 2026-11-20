@@ -172,8 +172,8 @@ export function ImmersiveDialogSplitContent({
 	)
 }
 
-const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[calc(100dvh-40px)]`
-const immersiveContentTallClass = tw`max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-40px)]`
+const immersiveContentShortClass = tw`w-[calc(100%-40px-var(--safe-x))] max-w-[800px] max-h-[calc(100dvh-40px)]`
+const immersiveContentTallClass = tw`max-h-[800px] w-[calc(100%-40px-var(--safe-x))] max-w-[800px] h-[calc(100dvh-40px)]`
 const immersiveScrollAreaContentsClass = tw`flex h-full flex-col gap-6 px-6 py-4 md:p-8`
 
 export function ImmersiveDialogOverlay({ref}: {ref?: React.Ref<HTMLDivElement>}) {

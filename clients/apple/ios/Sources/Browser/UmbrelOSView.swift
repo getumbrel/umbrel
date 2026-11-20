@@ -18,8 +18,8 @@ struct UmbrelOSView: View {
 		// umbrelOS runs from the top of the screen to the bottom, like a page under
 		// Safari's bars: WebKit is told what the toolbar covers and lays umbrelOS out
 		// clear of it, while its sheets and backdrops still reach the screen's edges.
-		// Like Safari on iPhone Duo, it stops at the side column. Running under the
-		// column needs umbrelOS itself to keep clear of the safe area.
+		// Like Safari on iPhone Duo, it stops at the side column, unless umbrelOS keeps
+		// clear of the safe area itself. Then it runs under the column too.
 		GeometryReader { proxy in
 			ZStack {
 				BrowserWebView(webView: page.webView) { page.webViewDidLayout() }
@@ -28,7 +28,7 @@ struct UmbrelOSView: View {
 						page.webViewDidLayout()
 					}
 					.opacity(isReady ? 1 : 0)
-					.ignoresSafeArea(edges: .vertical)
+					.ignoresSafeArea(edges: page.keepsClearOfSides ? .all : .vertical)
 				if let failure = page.failure {
 					failureCard(failure)
 				} else if !page.isRevealed, showsProgress {

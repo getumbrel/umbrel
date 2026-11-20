@@ -1,5 +1,5 @@
 import {motion, useMotionValue, useReducedMotion} from 'motion/react'
-import React, {useLayoutEffect, useState} from 'react'
+import React, {useSyncExternalStore} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 import {useWindowSize} from 'react-use'
@@ -59,18 +59,36 @@ type DockDimensionsPx = {
 }
 
 // The window's bottom safe area: on an iPhone on its side, what Safari keeps
-// clear for the home indicator. Only CSS can read it, so ask a throwaway element.
-function useSafeAreaBottom() {
-	const {width, height} = useWindowSize()
-	const [safeAreaBottom, setSafeAreaBottom] = useState(0)
-	useLayoutEffect(() => {
+// clear for the home indicator. Only CSS can read it, so a hidden element that tracks
+// it is measured, once for every dock, spacer and positioner. It's kept current: the
+// safe area can change without the window resizing, as when an app showing umbrelOS
+// changes what its own bars cover, and a stale value puts the dock and its spacer out
+// of step.
+let safeAreaBottom = 0
+const safeAreaListeners = new Set<() => void>()
+let safeAreaProbe: HTMLDivElement | undefined
+
+function subscribeToSafeAreaBottom(listener: () => void) {
+	safeAreaListeners.add(listener)
+	if (!safeAreaProbe) {
 		const probe = document.createElement('div')
-		probe.style.cssText = 'position:fixed;visibility:hidden;padding-bottom:env(safe-area-inset-bottom)'
+		probe.style.cssText =
+			'position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none'
 		document.body.append(probe)
-		setSafeAreaBottom(parseFloat(getComputedStyle(probe).paddingBottom) || 0)
-		probe.remove()
-	}, [width, height])
-	return safeAreaBottom
+		new ResizeObserver(() => {
+			const height = probe.getBoundingClientRect().height
+			if (height === safeAreaBottom) return
+			safeAreaBottom = height
+			safeAreaListeners.forEach((notify) => notify())
+		}).observe(probe)
+		safeAreaBottom = probe.getBoundingClientRect().height
+		safeAreaProbe = probe
+	}
+	return () => safeAreaListeners.delete(listener)
+}
+
+function useSafeAreaBottom() {
+	return useSyncExternalStore(subscribeToSafeAreaBottom, () => safeAreaBottom)
 }
 
 function useDockDimensions(options?: {isPreview?: boolean}): DockDimensionsPx {
@@ -292,7 +310,7 @@ export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 		// Held off the edge rather than padded down to it: Safari on an iPhone reads the
 		// colour for the band under its bar from the layer it finds in that gap, and a
 		// sheet has one there for it (see SheetContent)
-		<div className='fixed left-1/2 z-50 -translate-x-1/2' style={{bottom}}>
+		<div className='fixed left-[calc(50%+var(--safe-center-shift))] z-50 -translate-x-1/2' style={{bottom}}>
 			{children}
 		</div>
 	)
