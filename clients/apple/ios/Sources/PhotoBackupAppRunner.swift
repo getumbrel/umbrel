@@ -291,6 +291,11 @@ final class PhotoBackupAppRunner {
 		guard case .found(let configuration) = PhotoBackupStore.configurationRead(),
 			PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
 		else { return nil }
+		// PhotoKit's extension creates no uploads without its copy of the Umbrel's pin.
+		// Setup gives it one; this gives it to backups set up before it needed one.
+		if configuration.route == .tailscale {
+			Keychain.sharePhotoBackupCA(deviceId: configuration.deviceId)
+		}
 		// A network change starts the next pass
 		guard configuration.allowsCellularAccess || !onlyCellular else {
 			activity = .waitingForWiFi

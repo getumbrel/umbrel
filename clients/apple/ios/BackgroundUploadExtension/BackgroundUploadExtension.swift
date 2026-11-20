@@ -6,9 +6,17 @@ import Photos
 import UmbrelKit
 import UniformTypeIdentifiers
 
-// PhotoKit is the only uploader. Each invocation advances a small durable state
-// machine: ingest library changes, reconcile PhotoKit's jobs with the durable
-// ledger, then fill the system's inflight queue. The host app never uploads.
+// PhotoKit uploads while the app is closed. Each invocation advances a small durable
+// state machine: ingest library changes, reconcile PhotoKit's jobs with the durable
+// ledger, then fill the system's inflight queue.
+//
+// PhotoKit's jobs send plain HTTP to the Umbrel's Tailscale address, since they can't
+// check the Umbrel's certificate. So each invocation first has the Umbrel prove, over
+// HTTPS with its pin, that it answers at that address, and asks it over that connection
+// which reported uploads it really has. Without that proof, nothing is believed or sent
+// and the queued jobs are cancelled. A job queued while the Umbrel was proven can still
+// be sent after Tailscale drops, until the next invocation, and iOS can leave hours
+// between invocations while it keeps trying its queue.
 @main
 final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 	private static let logger = Logger(
@@ -17,6 +25,8 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 	)
 	private let terminationLock = NSLock()
 	private var terminated = false
+	// Uploads PhotoKit reported as sent that the Umbrel says it doesn't have
+	private var missingUploads = Set<String>()
 
 	required init() {}
 
@@ -28,27 +38,31 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 		terminationLock.lock()
 		terminated = false
 		terminationLock.unlock()
+		missingUploads = []
 		let configuration: PhotoBackupConfiguration
 		switch PhotoBackupStore.configurationRead() {
 		case .found(let storedConfiguration):
 			configuration = storedConfiguration
 		case .missing:
 			Self.logger.notice("Invocation completed because backup is not configured")
+			standDown(ledger: nil)
 			return .completed
 		case .unavailable:
 			Self.logger.error("Invocation failed because backup configuration is unavailable")
 			return .failure
 		}
 		// The app sends backup itself on its own route. An activation left over from
-		// the Tailscale route has nothing to do.
+		// the Tailscale route only cancels what that route queued.
 		guard configuration.route == .tailscale else {
 			Self.logger.notice("Invocation completed because the app sends this backup")
+			standDown(ledger: nil)
 			return .completed
 		}
 		// Refuse malformed or non-Tailscale configuration before reading a credential or
-		// touching the photo library. The host app applies the same validation on save.
+		// the photo library. The host app applies the same validation on save.
 		guard configuration.isTailscaleDestination else {
 			Self.logger.error("Invocation rejected an invalid upload destination")
+			standDown(ledger: nil)
 			return .failure
 		}
 		let initialSnapshot = PhotoBackupStore.snapshot
@@ -99,6 +113,7 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 				PhotoBackupStore.clearRecoveryRetryRequest(for: configuration.source.id)
 			}
 			Self.logger.error("Invocation failed because the backup credential is missing")
+			standDown(ledger: ledger)
 			publish(
 				.needsAttention,
 				sourceId: configuration.source.id,
@@ -123,6 +138,21 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 		}
 
 		do {
+			// Read before the proof, which confirms the uploads among them PhotoKit reports
+			// as sent
+			let allTerminal = jobs(for: .acknowledge)
+			let routeCheck = checkRoute(terminal: allTerminal, configuration: configuration, grant: grant)
+			switch routeCheck {
+			case .proven(let receipts, let missing):
+				try ledger.recordConfirmedResources(receipts.map { .init(resourceKey: $0.resourceKey, bytes: $0.bytes) })
+				missingUploads = missing
+			case .unconfirmed:
+				// The Umbrel answers, so the queue stays. What finished waits, unbelieved,
+				// for an activation in which the Umbrel says what it has.
+				break
+			case .unproven:
+				standDown(ledger: ledger)
+			}
 			let changeResult = try ingestLibraryChanges(ledger: ledger, configuration: configuration)
 			if changeResult == .tokenReset {
 				Self.logger.notice("PhotoKit change history expired; scheduled a fresh library inventory")
@@ -133,11 +163,34 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 				)
 				return .processing
 			}
+			guard case .proven = routeCheck else {
+				if recoveryRetryRequested {
+					try ledger.requeueFailedAssets(
+						deviceId: configuration.source.id,
+						includePhotos: configuration.includePhotos,
+						includeVideos: configuration.includeVideos
+					)
+					PhotoBackupStore.clearRecoveryRetryRequest(for: configuration.source.id)
+					authenticationIssue = nil
+				}
+				let stats = try statistics(ledger: ledger, configuration: configuration)
+				let hasRemainingWork = changeResult == .moreWork
+					|| (!recovery.storagePaused && (stats.queuedCount > 0 || stats.preparedCount > 0))
+				let phase = phase(
+					authenticationIssue: authenticationIssue,
+					recovery: recovery,
+					statistics: stats,
+					uploading: false,
+					hasWork: hasRemainingWork
+				)
+				publish(phase, sourceId: configuration.source.id, statistics: stats, issue: recovery.issue ?? authenticationIssue)
+				Self.logger.notice("Invocation finished without sending; phase=\(phase.rawValue, privacy: .public)")
+				return authenticationIssue != nil ? .failure : hasRemainingWork ? .processing : .completed
+			}
 
 			let retryable = recovery.storagePaused
 				? []
 				: try retryableJobs(ledger: ledger, configuration: configuration)
-			let allTerminal = jobs(for: .acknowledge)
 			let terminalResourceKeys = Set(allTerminal.compactMap(resourceKey))
 			let currentTerminalResourceKeys = try ledger.currentResourceKeys(
 				from: terminalResourceKeys,
@@ -182,7 +235,10 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 			} else if foundAuthenticationFailure {
 				authenticationIssue = .authenticationRequired
 			}
-			let foundConnectivityFailure = unresolvedTerminal.contains(where: isConnectivityFailure)
+			// An upload the Umbrel doesn't have is queued again without the one-file
+			// connectivity probe: the Umbrel has just answered, and iOS can leave hours
+			// between invocations
+			let foundConnectivityFailure = unresolvedTerminal.contains { isConnectivityFailure($0) && !isMissing($0) }
 			recovery.observeTerminalBatch(
 				foundStorageFailure: foundStorageFailure,
 				foundConnectivityFailure: foundConnectivityFailure,
@@ -353,20 +409,13 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 				// The resource may have been removed or excluded while waiting.
 				recovery.finishConnectivityRecoveryWithoutWork()
 			}
-			let phase: PhotoBackupPhase
-			if authenticationIssue != nil {
-				phase = .needsAttention
-			} else if recovery.storagePaused || recovery.connectivityRecovering || recovery.storageProbing {
-				phase = recovery.phase
-			} else if stats.failedCount > 0, stats.queuedCount == 0, stats.preparedCount == 0 {
-				phase = .needsAttention
-			} else if activeCounts.pending > 0 {
-				phase = .uploading
-			} else if changeResult == .moreWork || hasInflightJobs || stats.queuedCount > 0 || stats.preparedCount > 0 {
-				phase = .waiting
-			} else {
-				phase = .upToDate
-			}
+			let phase = phase(
+				authenticationIssue: authenticationIssue,
+				recovery: recovery,
+				statistics: stats,
+				uploading: activeCounts.pending > 0,
+				hasWork: changeResult == .moreWork || hasInflightJobs || stats.queuedCount > 0 || stats.preparedCount > 0
+			)
 			publish(
 				phase,
 				sourceId: configuration.source.id,
@@ -378,7 +427,7 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 			)
 
 			// Backup ran: the app's "hasn't backed up" reminder moves a week out
-			if phase == .upToDate || terminalCounts.succeeded > 0 {
+			if phase == .upToDate || terminal.contains(where: isSuccessful) {
 				PhotoBackupReminder.push()
 			}
 
@@ -423,6 +472,55 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 				)
 			}
 			return .failure
+		}
+	}
+
+	private func phase(
+		authenticationIssue: PhotoBackupIssue?,
+		recovery: PhotoBackupRecoveryState,
+		statistics stats: PhotoBackupStatistics,
+		uploading: Bool,
+		hasWork: Bool
+	) -> PhotoBackupPhase {
+		if authenticationIssue != nil { return .needsAttention }
+		if recovery.storagePaused || recovery.connectivityRecovering || recovery.storageProbing { return recovery.phase }
+		if stats.failedCount > 0, stats.queuedCount == 0, stats.preparedCount == 0 { return .needsAttention }
+		if uploading { return .uploading }
+		return hasWork ? .waiting : .upToDate
+	}
+
+	// Unproven, queued uploads are cancelled instead of left to resume by themselves:
+	// iOS would send them, grant included, to whatever answers at that address on the
+	// next network. Finished ones are released without believing their answers, and
+	// their files queued again. With claims, the next proven activation asks the Umbrel
+	// which it already has before sending any again.
+	private func standDown(ledger: PhotoBackupLedger?) {
+		// A job that finishes between the fetch and the change can't be cancelled, which
+		// may fail the change. Fetched again, it's acknowledged instead.
+		for attempt in 1...2 {
+			let queued = jobs(for: .process)
+			let finished = jobs(for: .acknowledge)
+			guard !queued.isEmpty || !finished.isEmpty else { return }
+			do {
+				try PHPhotoLibrary.shared().performChangesAndWait {
+					for job in queued {
+						PHAssetResourceUploadJobChangeRequest(for: job)?.cancel()
+					}
+					for job in finished {
+						PHAssetResourceUploadJobChangeRequest(for: job)?.acknowledge()
+					}
+				}
+				try ledger?.releaseRegisteredResources(Set((queued + finished).compactMap(resourceKey)))
+				Self.logger.notice(
+					"Stood down: cancelled=\(queued.count, privacy: .public) released=\(finished.count, privacy: .public)"
+				)
+				return
+			} catch {
+				let nsError = error as NSError
+				Self.logger.error(
+					"Couldn't stand down: attempt=\(attempt, privacy: .public) domain=\(nsError.domain, privacy: .public) code=\(nsError.code, privacy: .public)"
+				)
+			}
 		}
 	}
 
@@ -506,6 +604,7 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 
 	private func successfulReceipt(for job: PHAssetResourceUploadJob) -> (resourceKey: String, bytes: Int64)? {
 		guard let key = resourceKey(for: job),
+			!missingUploads.contains(key),
 			job.state == .succeeded,
 			job.responseHeaderFields?["x-umbrel-photo-backup-key"] == key,
 			let bytes = Int64(job.responseHeaderFields?["x-umbrel-upload-bytes"] ?? ""),
@@ -515,7 +614,13 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 	}
 
 	private func isConnectivityFailure(_ job: PHAssetResourceUploadJob) -> Bool {
-		PhotoBackupTransportFailure.isConnectivityFailure(job.error)
+		// A file the Umbrel doesn't have after PhotoKit reported it sent is queued again,
+		// like one that never arrived
+		isMissing(job) || PhotoBackupTransportFailure.isConnectivityFailure(job.error)
+	}
+
+	private func isMissing(_ job: PHAssetResourceUploadJob) -> Bool {
+		resourceKey(for: job).map(missingUploads.contains) == true
 	}
 
 	private func issue(for job: PHAssetResourceUploadJob) -> PhotoBackupIssue? {
@@ -587,8 +692,11 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 			includePhotos: configuration.includePhotos,
 			includeVideos: configuration.includeVideos
 		)
+		// A file the app already sent itself needs no queued upload that keeps trying
+		let backedUpKeys = try ledger.succeededResourceKeys(from: currentKeys)
 		let retainedJobsAndKeys = jobsAndKeys.filter { job, key in
 			currentKeys.contains(key)
+				&& !backedUpKeys.contains(key)
 				&& configuration.matchesUploadDestination(job.destination, grant: grant)
 		}
 		let retainedJobs = Set(retainedJobsAndKeys.map { ObjectIdentifier($0.job) })
@@ -623,7 +731,9 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 		try ledger.markResourcesRegistered(remainingKeys)
 		try ledger.releaseOrphanedRegisteredResources(
 			deviceId: configuration.source.id,
-			activeResourceKeys: remainingKeys,
+			// A job that finished since this invocation read the finished ones still has
+			// its file registered
+			activeResourceKeys: remainingKeys.union(jobs(for: .acknowledge).compactMap(resourceKey)),
 			includePhotos: configuration.includePhotos,
 			includeVideos: configuration.includeVideos
 		)
@@ -681,9 +791,9 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 	) throws -> Int {
 		var remainingSlots = limit
 		var created = 0
-		// Until the Umbrel doesn't answer a claim, as umbrelOS before claims doesn't
+		// Until the Umbrel declines a claim, as umbrelOS before claims does
 		var claiming = claiming
-		while remainingSlots > 0, !isTerminated {
+		creation: while remainingSlots > 0, !isTerminated {
 			let candidates = try ledger.nextAssets(
 				deviceId: configuration.source.id,
 				includePhotos: configuration.includePhotos,
@@ -736,14 +846,20 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 
 			var claimed = Set<String>()
 			if claiming, !pending.isEmpty {
-				let answer = claim(
+				switch claim(
 					pending.map { $0.plan.claim(cloudIdentifier: $0.cloudIdentifier) },
 					configuration: configuration,
 					grant: grant
-				)
-				try ledger.recordConfirmedResources(answer.receipts.map { .init(resourceKey: $0.resourceKey, bytes: $0.bytes) })
-				claimed = Set(answer.receipts.map(\.resourceKey))
-				claiming = answer.answered
+				) {
+				case .receipts(let receipts):
+					try ledger.recordConfirmedResources(receipts.map { .init(resourceKey: $0.resourceKey, bytes: $0.bytes) })
+					claimed = Set(receipts.map(\.resourceKey))
+				case .declined:
+					claiming = false
+				case .unanswered:
+					// What was prepared stays pending, to be asked about when the Umbrel answers
+					break creation
+				}
 			}
 
 			// The app may have sent a file while this batch was looked up and claimed
@@ -784,53 +900,72 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 		return created
 	}
 
-	private final class ClaimResponse: @unchecked Sendable {
-		var statusCode: Int?
-		var data = Data()
-	}
-
-	// The files this backup already has, which the Umbrel recorded under this iPhone's keys.
-	// Not answered when it couldn't be reached or doesn't take claims, and the files
-	// upload as before.
+	// The files this backup already has, which the Umbrel recorded under this iPhone's keys,
+	// asked over its pinned connection
 	private func claim(
 		_ claims: [Umbreld.PhotoBackupResourceClaim],
 		configuration: PhotoBackupConfiguration,
 		grant: String
-	) -> (receipts: [Umbreld.PhotoBackupResourceReceipt], answered: Bool) {
-		guard configuration.isTailscaleDestination, let base = URL(string: configuration.uploadBaseURL) else {
-			return ([], false)
+	) -> PhotoBackupUpload.ClaimAnswer {
+		guard let host = URL(string: configuration.uploadBaseURL)?.host else { return .unanswered }
+		let deviceId = configuration.deviceId
+		let answer = wait {
+			await Umbreld.claimPhotoBackupResources(host: host, deviceId: deviceId, grant: grant, resources: claims)
 		}
-		let url = base.appending(path: PhotoBackupUpload.claimPath)
-		var receipts = [Umbreld.PhotoBackupResourceReceipt]()
-		for start in stride(from: 0, to: claims.count, by: PhotoBackupUpload.claimsPerRequest) {
-			guard !isTerminated else { return (receipts, false) }
-			let batch = Array(claims[start..<min(start + PhotoBackupUpload.claimsPerRequest, claims.count)])
-			guard var request = try? PhotoBackupUpload.claimRequest(url: url, grant: grant, resources: batch) else {
-				return (receipts, false)
-			}
-			request.allowsCellularAccess = configuration.allowsCellularAccess
-			// process() waits for the answer, and PhotoKit gives it about a minute
-			request.timeoutInterval = 15
-			let response = ClaimResponse()
-			let done = DispatchSemaphore(value: 0)
-			URLSession.shared.dataTask(with: request) { data, answer, _ in
-				response.statusCode = (answer as? HTTPURLResponse)?.statusCode
-				response.data = data ?? Data()
-				done.signal()
-			}.resume()
-			done.wait()
-			guard let statusCode = response.statusCode,
-				let found = PhotoBackupUpload.claimedResources(statusCode: statusCode, data: response.data, requested: batch)
-			else {
-				Self.logger.notice(
-					"Photo backup claim wasn't answered: status=\(response.statusCode.map(String.init) ?? "none", privacy: .public)"
-				)
-				return (receipts, false)
-			}
-			receipts += found
+		switch answer {
+		case .receipts(let receipts):
+			Self.logger.notice("Photo backup claimed \(receipts.count, privacy: .public) of \(claims.count, privacy: .public) files")
+		case .declined:
+			Self.logger.notice("Photo backup claim declined")
+		case .unanswered:
+			Self.logger.notice("Photo backup claim wasn't answered")
 		}
-		Self.logger.notice("Photo backup claimed \(receipts.count, privacy: .public) of \(claims.count, privacy: .public) files")
-		return (receipts, true)
+		return answer
+	}
+
+	// Whether the Umbrel itself answers at the Tailscale address PhotoKit's jobs go to, and
+	// which of the uploads PhotoKit reports as sent it has
+	private func checkRoute(
+		terminal: [PHAssetResourceUploadJob],
+		configuration: PhotoBackupConfiguration,
+		grant: String
+	) -> Umbreld.PhotoBackupRouteCheck {
+		guard let host = URL(string: configuration.uploadBaseURL)?.host else { return .unproven }
+		var keys = Set<String>()
+		let sent = terminal.filter(isSuccessful)
+			.compactMap { PhotoBackupUpload.sentClaim(for: $0.destination) }
+			.filter { keys.insert($0.resourceKey).inserted }
+		let deviceId = configuration.deviceId
+		let check = wait {
+			await Umbreld.photoBackupRouteCheck(host: host, deviceId: deviceId, grant: grant, sent: sent)
+		}
+		switch check {
+		case .proven(let receipts, let missing):
+			Self.logger.notice(
+				"The Umbrel answered at its Tailscale address: sent=\(sent.count, privacy: .public) confirmed=\(receipts.count, privacy: .public) missing=\(missing.count, privacy: .public)"
+			)
+		case .unconfirmed:
+			Self.logger.notice("The Umbrel answered at its Tailscale address but not which uploads it has: sent=\(sent.count, privacy: .public)")
+		case .unproven:
+			Self.logger.notice("The Umbrel didn't prove it answers at its Tailscale address")
+		}
+		return check
+	}
+
+	private final class Answer<Value>: @unchecked Sendable {
+		var value: Value?
+	}
+
+	// process() is synchronous
+	private func wait<Value: Sendable>(_ operation: @escaping @Sendable () async -> Value) -> Value {
+		let answer = Answer<Value>()
+		let done = DispatchSemaphore(value: 0)
+		Task.detached {
+			answer.value = await operation()
+			done.signal()
+		}
+		done.wait()
+		return answer.value!
 	}
 
 	private func destination(

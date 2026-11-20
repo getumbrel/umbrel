@@ -120,8 +120,22 @@ enum LocalHTTPSTransport {
 	// Candidate anchors remain in memory until the live HTTPS endpoint proves both
 	// possession of the corresponding private key and the same discovery id.
 	static func data(for request: URLRequest, candidateCertificate: Data) async throws -> (Data, URLResponse) {
+		try await data(
+			for: request,
+			anchorCertificate: candidateCertificate,
+			maximumBytes: candidateResponseMaximumBytes
+		)
+	}
+
+	// One request trusting the CA it's given rather than this device's pin: a first-use
+	// candidate, or the copy of the pin PhotoKit's extension is given
+	static func data(
+		for request: URLRequest,
+		anchorCertificate: Data,
+		maximumBytes: Int
+	) async throws -> (Data, URLResponse) {
 		guard let host = request.url?.host,
-			let anchor = SecCertificateCreateWithData(nil, candidateCertificate as CFData)
+			let anchor = SecCertificateCreateWithData(nil, anchorCertificate as CFData)
 		else { throw LocalHTTPSTransportError.invalidCertificate }
 
 		let delegate = LocalHTTPSSessionDelegate(expectedHost: host, anchor: anchor)
@@ -134,7 +148,7 @@ enum LocalHTTPSTransport {
 		return try await boundedData(
 			for: request,
 			session: session,
-			maximumBytes: candidateResponseMaximumBytes,
+			maximumBytes: maximumBytes,
 			taskDelegate: delegate
 		)
 	}
@@ -196,6 +210,7 @@ enum LocalHTTPSTransport {
 
 	static func forget(deviceId: String) async {
 		Keychain.deleteLocalHTTPSCA(deviceId: deviceId)
+		Keychain.deletePhotoBackupCA(deviceId: deviceId)
 		await sessions.remove(deviceId: deviceId)
 	}
 

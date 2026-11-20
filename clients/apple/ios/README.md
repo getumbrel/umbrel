@@ -80,9 +80,12 @@ uploads the signed build to App Store Connect.
 ## Photo backup transport
 
 PhotoKit performs queued uploads outside the app's custom HTTPS transport, so
-backup uses HTTP only to the Tailscale address verified during setup. That
-destination is pinned for queued jobs; uploads pause instead of being retargeted
-when it is unreachable.
+they go over HTTP to the Umbrel's Tailscale address. Each time PhotoKit runs the
+extension, the Umbrel first has to answer at that address over HTTPS pinned to its
+CA. Without that, the extension sends nothing, believes no answer and cancels the
+uploads PhotoKit holds. With it, claims go over that connection and a finished
+upload counts once the Umbrel confirms it has the file (umbrelOS before claims
+can't, and there PhotoKit's answer stands).
 
 ## Physical-device release check
 

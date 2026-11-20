@@ -2550,6 +2550,11 @@ final class MainModel {
 				includeVideos: includeVideos,
 				allowsCellularAccess: allowsCellularAccess
 			)
+			// PhotoKit's extension proves the Umbrel answers at its Tailscale address with
+			// this before creating uploads, and creates none without it
+			if route == .tailscale, !Keychain.sharePhotoBackupCA(deviceId: device.id) {
+				throw PhotoBackupSetupError.credentialStorageFailed
+			}
 			guard let ledgerURL = PhotoBackupStore.ledgerURL,
 				let ledger = PhotoBackupLedger(url: ledgerURL)
 			else { throw PhotoBackupSetupError.sharedStorageFailed }
@@ -2762,6 +2767,10 @@ final class MainModel {
 			if PhotoBackupStore.configuration()?.deviceId == id {
 				disablePhotoBackupLocally(deviceId: id)
 			}
+			// Even without a configuration: setup stores the grant before it saves one
+			if let accountId = sessionToRevoke?.accountId {
+				Keychain.deletePhotoBackupGrant(deviceId: id, accountId: accountId)
+			}
 			Keychain.deleteSession(deviceId: id)
 			self.session = nil
 		}
@@ -2812,6 +2821,9 @@ final class MainModel {
 		PhotoBackupPreferenceStore.removeDevice(device.id)
 
 		let session = Keychain.readSession(deviceId: device.id).session
+		if let session {
+			Keychain.deletePhotoBackupGrant(deviceId: device.id, accountId: session.accountId)
+		}
 		// Before the pinned CA is forgotten below: ending the browser session needs it.
 		await BrowserContext.signOut(target: device.nativeTarget, accountId: session?.accountId)
 		if let session {
@@ -2832,6 +2844,9 @@ final class MainModel {
 		if let target = nativeTarget {
 			let accountId = session?.accountId
 			Task { await BrowserContext.signOut(target: target, accountId: accountId) }
+		}
+		if let accountId = session?.accountId {
+			Keychain.deletePhotoBackupGrant(deviceId: deviceId, accountId: accountId)
 		}
 		Keychain.deleteSession(deviceId: deviceId)
 		session = nil

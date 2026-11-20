@@ -1745,6 +1745,127 @@ public enum Umbreld {
 		}
 	}
 
+	// What PhotoKit's extension knows at the start of an activation
+	public enum PhotoBackupRouteCheck: Equatable, Sendable {
+		case unproven
+		// The Umbrel answered, but not which of the uploads PhotoKit reports as sent it has
+		case unconfirmed
+		// missing: reported as sent, and the Umbrel doesn't have them
+		case proven(receipts: [PhotoBackupResourceReceipt], missing: Set<String>)
+	}
+
+	// PhotoKit's jobs send plain HTTP to the Umbrel's Tailscale address, and an address
+	// in Tailscale's range doesn't show packets go through Tailscale. So the extension
+	// believes and sends nothing until the Umbrel proves itself there over HTTPS, with the
+	// copy of its pin the app shares (Keychain.sharePhotoBackupCA).
+	public static func photoBackupRouteCheck(
+		host: String,
+		deviceId: String,
+		grant: String,
+		sent: [PhotoBackupResourceClaim]
+	) async -> PhotoBackupRouteCheck {
+		await photoBackupRouteCheck(
+			sent: sent,
+			answers: { await photoBackupUmbrelAnswers(host: host, deviceId: deviceId) },
+			claim: { await claimPhotoBackupResources(host: host, deviceId: deviceId, grant: grant, resources: $0) }
+		)
+	}
+
+	static func photoBackupRouteCheck(
+		sent: [PhotoBackupResourceClaim],
+		answers: () async -> Bool,
+		claim: ([PhotoBackupResourceClaim]) async -> PhotoBackupUpload.ClaimAnswer
+	) async -> PhotoBackupRouteCheck {
+		guard await answers() else { return .unproven }
+		guard !sent.isEmpty else { return .proven(receipts: [], missing: []) }
+		switch await claim(sent) {
+		case .receipts(let receipts):
+			return .proven(
+				receipts: receipts,
+				missing: Set(sent.map(\.resourceKey)).subtracting(receipts.map(\.resourceKey))
+			)
+		case .declined:
+			// umbrelOS before claims can't say which files it has, so PhotoKit's word stands
+			// there. Sending them again would never end.
+			return .proven(receipts: [], missing: [])
+		case .unanswered:
+			return .unconfirmed
+		}
+	}
+
+	static func photoBackupUmbrelAnswers(host: String, deviceId: String) async -> Bool {
+		do {
+			let request = try httpsRequest(
+				host: host,
+				path: "system.localHttpsIdentity",
+				timeout: photoBackupRouteProofTimeout
+			)
+			let (data, response) = try await photoBackupPinnedData(
+				for: request,
+				deviceId: deviceId,
+				maximumBytes: 64 * 1_024
+			)
+			try requireIdentity(deviceId, data: data, response: response)
+			return true
+		} catch {
+			return false
+		}
+	}
+
+	// The extension's claims, over the same pinned connection, so nothing that answers
+	// the plain HTTP address can say the Umbrel already has a file. These checks ignore
+	// the cellular setting: they are small, and say nothing about the network a queued
+	// upload later goes out on.
+	public static func claimPhotoBackupResources(
+		host: String,
+		deviceId: String,
+		grant: String,
+		resources: [PhotoBackupResourceClaim]
+	) async -> PhotoBackupUpload.ClaimAnswer {
+		guard let url = URL(string: "https://\(host)\(PhotoBackupUpload.claimPath)") else { return .unanswered }
+		var receipts = [PhotoBackupResourceReceipt]()
+		for start in stride(from: 0, to: resources.count, by: PhotoBackupUpload.claimsPerRequest) {
+			let batch = Array(resources[start..<min(start + PhotoBackupUpload.claimsPerRequest, resources.count)])
+			guard var request = try? PhotoBackupUpload.claimRequest(url: url, grant: grant, resources: batch) else {
+				return .unanswered
+			}
+			// process() waits for the answer, and PhotoKit gives it about a minute
+			request.timeoutInterval = 15
+			let answer = try? await photoBackupPinnedData(
+				for: request,
+				deviceId: deviceId,
+				// umbreld's largest claim answer is about 30 KiB
+				maximumBytes: 1_024 * 1_024
+			)
+			switch PhotoBackupUpload.claimAnswer(
+				statusCode: (answer?.1 as? HTTPURLResponse)?.statusCode,
+				data: answer?.0 ?? Data(),
+				requested: batch
+			) {
+			case .receipts(let found):
+				receipts += found
+			case let other:
+				return other
+			}
+		}
+		return .receipts(receipts)
+	}
+
+	private static func photoBackupPinnedData(
+		for request: URLRequest,
+		deviceId: String,
+		maximumBytes: Int
+	) async throws -> (Data, URLResponse) {
+		guard case .found(let certificate) = Keychain.readPhotoBackupCA(deviceId: deviceId) else {
+			throw LocalHTTPSTransportError.notEnrolled
+		}
+		return try await LocalHTTPSTransport.data(
+			for: request,
+			anchorCertificate: certificate,
+			maximumBytes: maximumBytes
+		)
+	}
+
 	public static func photoSources(host: String, session: Session) async throws -> [PhotoSourceSummary] {
 		// The server totals the whole library for this, which can take a while
 		try await query(host: host, path: "photos.sources.list", session: session, timeout: 30)
@@ -2300,6 +2421,8 @@ public enum Umbreld {
 	// Short timeout for identity probes: sweeps hit several hosts in parallel and
 	// nonexistent .local hostnames should fail fast
 	private static let probeTimeout: TimeInterval = 3
+	// Longer for PhotoKit's extension, which cancels its queued uploads when the check fails
+	private static let photoBackupRouteProofTimeout: TimeInterval = 10
 	// discoveryInfo after the host has proven itself. It reads the hardware, which can
 	// take seconds on a busy umbrelOS 2.0.0.
 	private static let identityResponseTimeout: TimeInterval = 8

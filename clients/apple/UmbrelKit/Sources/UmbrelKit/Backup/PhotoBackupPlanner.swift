@@ -100,6 +100,36 @@ public enum PhotoBackupUpload {
 		return receipts.filter { keys.contains($0.resourceKey) && PhotoBackupLedger.isValidResourceByteCount($0.bytes) }
 	}
 
+	public enum ClaimAnswer: Equatable, Sendable {
+		case receipts([Umbreld.PhotoBackupResourceReceipt])
+		// 401: umbrelOS before claims, or a grant the Umbrel no longer takes
+		case declined
+		// No answer, or one that says nothing, such as a server error
+		case unanswered
+	}
+
+	public static func claimAnswer(
+		statusCode: Int?,
+		data: Data,
+		requested: [Umbreld.PhotoBackupResourceClaim]
+	) -> ClaimAnswer {
+		guard let statusCode else { return .unanswered }
+		if let receipts = claimedResources(statusCode: statusCode, data: data, requested: requested) {
+			return .receipts(receipts)
+		}
+		return statusCode == 401 ? .declined : .unanswered
+	}
+
+	// The claim for a file PhotoKit sent, read back from its upload's headers
+	public static func sentClaim(for request: URLRequest) -> Umbreld.PhotoBackupResourceClaim? {
+		guard let key = request.value(forHTTPHeaderField: "X-Umbrel-Photo-Backup-Key"),
+			PhotoBackupResourceKey.isValid(key),
+			let fileExtension = request.value(forHTTPHeaderField: "X-Umbrel-Photo-Backup-Extension")
+				.flatMap(validFileExtension)
+		else { return nil }
+		return Umbreld.PhotoBackupResourceClaim(resourceKey: key, fileExtension: fileExtension, identity: nil)
+	}
+
 	public static func fileExtension(originalFilename: String, preferredFilenameExtension: String?) -> String {
 		let originalExtension = URL(fileURLWithPath: originalFilename).pathExtension.lowercased()
 		let preferredExtension = preferredFilenameExtension?.lowercased() ?? ""
