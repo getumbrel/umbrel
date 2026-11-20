@@ -105,8 +105,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.zIndex
 import androidx.core.view.WindowCompat
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.umbrel.android.R
 import com.umbrel.android.main.AppIconView
 import com.umbrel.android.ui.AppleType
@@ -115,7 +113,6 @@ import com.umbrel.android.ui.GlassMenuDivider
 import com.umbrel.android.ui.GlassMenuHost
 import com.umbrel.android.ui.GlassMenuItem
 import com.umbrel.android.ui.LocalBrandColor
-import com.umbrel.android.ui.LocalGlassBackdrop
 import com.umbrel.android.ui.MainTheme
 import com.umbrel.android.ui.PillButton
 import com.umbrel.android.ui.PrimaryActionButton
@@ -473,17 +470,16 @@ internal fun BrowserPageView(
 	// The page's menu draws over the page, blurring it the way an iOS menu does.
 	GlassMenuHost(modifier) {
 		if (isImmersive) {
-			val underControls = rememberLayerBackdrop()
 			Box(Modifier.fillMaxSize().background(Color.Black)) {
-				PageContent(page, Modifier.fillMaxSize().imePadding().layerBackdrop(underControls))
-				// The bar's controls on their own, as glass, tucked into the top corners of the
-				// card umbrelOS floats 20 in from the edges of its window.
-				CompositionLocalProvider(LocalGlassBackdrop provides underControls) {
-					Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 28.dp).padding(top = 28.dp)) {
-						PageMenu(page, onOpenInBrowser, foreground = Color.White, isImmersive = true)
-						Spacer(Modifier.weight(1f))
-						BarButton(Symbols.CloseSemibold, "Close", Color.White, isImmersive = true, onClick = onClose)
-					}
+				PageContent(page, Modifier.fillMaxSize().imePadding())
+				// The bar's controls on their own, tucked into the top corners of the card umbrelOS
+				// floats 20 in from the edges of its window. They take glass's translucent fill
+				// rather than blurring the page: capturing the WebView for their blur crashed
+				// WebView's renderer on setup's video background.
+				Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 28.dp).padding(top = 28.dp)) {
+					PageMenu(page, onOpenInBrowser, foreground = Color.White, isImmersive = true)
+					Spacer(Modifier.weight(1f))
+					BarButton(Symbols.CloseSemibold, "Close", Color.White, isImmersive = true, onClick = onClose)
 				}
 			}
 		} else {
