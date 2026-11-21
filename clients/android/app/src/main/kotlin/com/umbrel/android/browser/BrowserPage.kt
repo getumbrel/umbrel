@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.core.net.toUri
 import androidx.webkit.ScriptHandler
@@ -643,6 +644,34 @@ internal class BrowserPage(
 		WebViewCompat.addDocumentStartJavaScript(view, SAFE_AREA_SCRIPT, origins)
 	}
 
+	// The script that pins the wallpaper, sent again after every load.
+	private var pinnedWallpaper: String? = null
+
+	/**
+	 * umbrelOS draws the glass behind its widgets and dock from its own copy of the wallpaper,
+	 * which the app hides and draws natively instead. That copy fills umbrelOS's page, while the
+	 * app's wallpaper fills the window. So it's pinned to [rect], where the app's wallpaper is
+	 * relative to the page, in the page's CSS pixels (density-independent pixels in a web view),
+	 * and the glass shows what's really behind it. A load starts the page's styles afresh, so
+	 * it's pinned again after each. umbrelOS's still of a video wallpaper is left in place: it
+	 * has to match the moving wallpaper umbrelOS draws in its own page.
+	 */
+	fun pinWallpaper(rect: Rect) {
+		val script = """
+			(() => {
+				const root = document.documentElement
+				root.style.setProperty('--umbrel-app-wallpaper-left', '${rect.left}px')
+				root.style.setProperty('--umbrel-app-wallpaper-top', '${rect.top}px')
+				root.style.setProperty('--umbrel-app-wallpaper-width', '${rect.width}px')
+				root.style.setProperty('--umbrel-app-wallpaper-height', '${rect.height}px')
+				root.setAttribute('data-umbrel-app-wallpaper', '')
+			})()
+		""".trimIndent()
+		if (script == pinnedWallpaper) return
+		pinnedWallpaper = script
+		webView.evaluateJavascript(script, null)
+	}
+
 	private fun installPasswordEntry(view: WebView) {
 		val handler = passwordEntry ?: return
 		val origins = context.hosts.map { "https://${BrowserContext.bracketed(it)}" }.toSet()
@@ -758,6 +787,7 @@ internal class BrowserPage(
 			settleDeadline = SystemClock.uptimeMillis() + 1_500
 			reveal(SETTLE_MILLIS)
 			watchColors()
+			pinnedWallpaper?.let { view.evaluateJavascript(it, null) }
 			scope.launch { context.adoptSession(view) }
 		}
 

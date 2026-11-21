@@ -175,7 +175,7 @@ private fun TwoColumnHome(
 				}
 				Spacer(Modifier.width(columns[1].x - columns[0].x - columns[0].width))
 				Column(Modifier.width(columns[1].width), verticalArrangement = Arrangement.spacedBy(MainTheme.sectionGap)) {
-					LibraryPreviewSection(model, library, state, onShowLibrary, wide = true, cardHeight = appsCardHeight)
+					LibraryPreviewSection(model, library, state, onShowLibrary, cardHeight = appsCardHeight)
 					// Without favorites there's no Files card, and Storage keeps its own height
 					StorageSection(model, state, filesCardHeight?.takeIf { showsFilesSection(state) }?.let { Modifier.heightIn(min = it) } ?: Modifier)
 				}
@@ -445,17 +445,13 @@ fun statusColor(status: PhotoBackupStatus): Color = when (status.tone) {
 	PhotoBackupStatus.Tone.PROBLEM -> MainTheme.red
 }
 
-/**
- * In a wide window ([wide]) the card takes [cardHeight], the height of the Apps card beside it,
- * and View All in Photos stays on the Library tab, as on iOS.
- */
+/** In a wide window the card takes [cardHeight], the height of the Apps card beside it. */
 @Composable
 private fun LibraryPreviewSection(
 	model: MainViewModel,
 	library: PhotoLibraryViewModel,
 	state: MainUiState,
 	onShowLibrary: () -> Unit,
-	wide: Boolean = false,
 	cardHeight: Dp? = null,
 ) {
 	val libraryState by library.state.collectAsStateWithLifecycle()
@@ -479,7 +475,6 @@ private fun LibraryPreviewSection(
 			SectionHeader("Photos", showsChevron = true, onClick = onShowLibrary)
 			PhotoBackupSetupCard(model, state, modifier = cardHeight?.let { Modifier.heightIn(min = it) } ?: Modifier)
 		}
-		if (!wide) ViewAllInPhotosButton(model, Modifier.padding(top = 4.dp))
 	}
 }
 

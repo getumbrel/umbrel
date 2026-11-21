@@ -113,6 +113,7 @@ import com.umbrel.android.ui.GlassMenuDivider
 import com.umbrel.android.ui.GlassMenuHost
 import com.umbrel.android.ui.GlassMenuItem
 import com.umbrel.android.ui.LocalBrandColor
+import com.umbrel.android.ui.LocalWallpaperViewport
 import com.umbrel.android.ui.MainTheme
 import com.umbrel.android.ui.PillButton
 import com.umbrel.android.ui.PrimaryActionButton
@@ -171,6 +172,15 @@ internal fun UmbrelOSLayer(page: BrowserPage, isShown: Boolean, modifier: Modifi
 	val underHeader = page.keepsClearOfTop && remember { reportsSafeArea(context) }
 	val density = LocalDensity.current
 	val headerBottom = with(density) { WindowInsets.statusBars.getTop(this) + BrowserBarHeight.roundToPx() }
+	// umbrelOS's glass samples its own copy of the wallpaper, which fills the page, so it's pinned
+	// to where the app's wallpaper is: the whole window, from the page's top. Taken from layout
+	// rather than the web view's place on screen, which the scale below moves.
+	val viewport = LocalWallpaperViewport.current
+	val pageTop = if (underHeader) 0 else headerBottom
+	LaunchedEffect(page, viewport, pageTop, density) {
+		if (viewport.isEmpty()) return@LaunchedEffect
+		with(density) { page.pinWallpaper(Rect(Offset(0f, -pageTop.toDp().value), Size(viewport.width.toDp().value, viewport.height.toDp().value))) }
+	}
 	Column(
 		modifier
 			.fillMaxSize()

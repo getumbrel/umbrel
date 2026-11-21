@@ -352,7 +352,8 @@ internal class BrowserContext private constructor(
 		 * showing that wallpaper, edge to edge, so umbrelOS's copy is made invisible and its
 		 * page background cleared: one wallpaper, with umbrelOS's interface on top of it. The
 		 * images stay in the page (umbrelOS samples them for its glass), they are simply not
-		 * drawn. Wallpaper previews in Settings are positioned differently and are left alone.
+		 * drawn, and the page pins them over the app's wallpaper so the glass matches what's
+		 * behind it (see BrowserPage.pinWallpaper). Wallpaper previews in Settings are positioned differently and are left alone.
 		 * A video wallpaper is left alone too: the app only has a still of it, so umbrelOS
 		 * keeps drawing its own, moving one within its page.
 		 *
@@ -374,6 +375,14 @@ internal class BrowserContext private constructor(
 					picture > img.fixed.inset-0:not(.absolute),
 					img[data-wallpaper-full]:not(.absolute) { opacity: 0 !important; }
 					.umbrel-window-wallpaper { animation: none !important; opacity: 1 !important; }
+					html[data-umbrel-app-wallpaper] img[data-wallpaper-full]:not(.absolute) {
+						position: fixed !important;
+						inset: auto !important;
+						left: var(--umbrel-app-wallpaper-left) !important;
+						top: var(--umbrel-app-wallpaper-top) !important;
+						width: var(--umbrel-app-wallpaper-width) !important;
+						height: var(--umbrel-app-wallpaper-height) !important;
+					}
 				`
 				document.documentElement.appendChild(style)
 			})()
