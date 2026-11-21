@@ -62,25 +62,26 @@ private val Context.activity: Activity?
  * The safe area a web view reports to its page as env(safe-area-inset-*). WebView takes it
  * from the window insets it receives (system bars and display cutout, from WebView 144),
  * so the container hands it insets describing what actually covers the page: [top] at the
- * top, the display cutout at the sides, and nothing below, where the layout already keeps
- * the page clear of the navigation bar and keyboard.
+ * top, the display cutout at the sides, and the navigation bar when the page runs under it
+ * ([underNavigationBar]), at the bottom only while the keyboard isn't up. Otherwise the layout
+ * already keeps the page clear of the bar and the keyboard.
  */
-internal class WebViewInsets(private val top: Int) {
+internal data class WebViewInsets(private val top: Int, private val underNavigationBar: Boolean) {
 	fun apply(container: View) {
 		ViewCompat.setOnApplyWindowInsetsListener(container) { _, windowInsets ->
 			val cutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
+			// The bar can be at a side on some large screens. The layout pads the page above the
+			// keyboard, which covers the bar when it's up.
+			val bar = if (underNavigationBar) windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars()) else Insets.NONE
+			val bottom = maxOf(0, bar.bottom - windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom)
 			WindowInsetsCompat.Builder(windowInsets)
-				.setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(0, top, 0, 0))
+				.setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(bar.left, top, bar.right, bottom))
 				.setInsets(WindowInsetsCompat.Type.displayCutout(), Insets.of(cutout.left, 0, cutout.right, 0))
 				.setInsets(WindowInsetsCompat.Type.ime(), Insets.NONE)
 				.build()
 		}
 		container.requestApplyInsets()
 	}
-
-	override fun equals(other: Any?) = other is WebViewInsets && other.top == top
-
-	override fun hashCode() = top
 }
 
 /**
