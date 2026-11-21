@@ -2603,7 +2603,6 @@
   "shut-down.confirm.title": "Are you sure you want to shut down your Umbrel?",
   "shut-down.shutting-down": "Shutting down",
   "shut-down.shutting-down-message": "Please do not refresh this page or unplug your Umbrel until it has shut down.",
-  "software-update.callout": "Please do not refresh this page or turn off your Umbrel while it is updating.",
   "software-update.check": "Check for update",
   "software-update.checking": "Checking for update…",
   "software-update.current-running": "You are on",

@@ -1,10 +1,8 @@
 import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {TbAlertCircle} from 'react-icons/tb'
 import {Navigate} from 'react-router-dom'
 
-import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
+import {Cover} from '@/components/ui/cover'
 import {trpcReact} from '@/trpc/trpc'
 
 // This page is loaded in a new tab by the static IP flow. Its mere ability to load at
@@ -54,20 +52,19 @@ export default function ConfirmStaticIp() {
 
 	if (status === 'error') {
 		return (
-			<BareCoverMessage>
-				<div className='flex flex-col items-center gap-2'>
-					<TbAlertCircle className='size-12 text-destructive2-lightest' />
-					<h2 className='text-15 font-semibold -tracking-2'>{t('confirm-static-ip.error-title')}</h2>
-					<CoverMessageParagraph>{t('confirm-static-ip.error-description')}</CoverMessageParagraph>
-				</div>
-			</BareCoverMessage>
+			<Cover
+				mark='warning'
+				title={t('confirm-static-ip.error-title')}
+				description={t('confirm-static-ip.error-description')}
+			/>
 		)
 	}
 
 	return (
-		<BareCoverMessage>
-			<Loading>{t('confirm-static-ip.confirming')}</Loading>
-			<CoverMessageParagraph>{t('confirm-static-ip.confirming-description', {ip})}</CoverMessageParagraph>
-		</BareCoverMessage>
+		<Cover
+			title={t('confirm-static-ip.confirming')}
+			progress='spinner'
+			note={t('confirm-static-ip.confirming-description', {ip})}
+		/>
 	)
 }

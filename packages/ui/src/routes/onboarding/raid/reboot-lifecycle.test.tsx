@@ -48,6 +48,11 @@ vi.mock('@/components/ui/cover-message', () => ({
 	CoverMessage: ({children}: PropsWithChildren) => children,
 	CoverMessageParagraph: ({children}: PropsWithChildren) => children,
 }))
+vi.mock('@/components/ui/cover', () => ({
+	Cover: ({title}: {title: string}) => title,
+	CoverRetryActions: () => null,
+	LoadingCover: () => null,
+}))
 vi.mock('@/components/ui/connection-lost-screen', () => ({ConnectionLostScreen: () => <div>connection-lost</div>}))
 vi.mock('@/components/ui/loading', () => ({Loading: () => null, Spinner: () => null}))
 vi.mock('@/components/ui/toast', () => ({toast: {error: () => {}}}))

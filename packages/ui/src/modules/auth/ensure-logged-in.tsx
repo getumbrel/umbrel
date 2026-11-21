@@ -1,6 +1,7 @@
 import {useTranslation} from 'react-i18next'
 
-import {BareCoverMessage} from '@/components/ui/cover-message'
+import {Button} from '@/components/ui/button'
+import {Cover, LoadingCover} from '@/components/ui/cover'
 import {trpcReact} from '@/trpc/trpc'
 
 import {RedirectHome, RedirectLogin} from './redirects'
@@ -39,11 +40,23 @@ function EnsureLoggedInState({
 	// ---
 
 	if (isLoggedInQ.isLoading) {
-		return <BareCoverMessage delayed>{t('auth.checking-backend-for-user')}</BareCoverMessage>
+		return <LoadingCover label={t('auth.checking-backend-for-user')} />
 	}
 
 	if (isLoggedInQ.isError) {
-		return <BareCoverMessage>{t('auth.failed-checking-if-user-logged-in')}</BareCoverMessage>
+		return (
+			<Cover
+				surface='black'
+				mark='logo-dimmed'
+				title={t('connection-lost')}
+				description={t('auth.failed-checking-if-user-logged-in')}
+				actions={
+					<Button size='dialog' variant='secondary' onClick={() => void isLoggedInQ.refetch()}>
+						{t('reconnect')}
+					</Button>
+				}
+			/>
+		)
 	}
 
 	if (isLoggedIn === wantsLoggedIn) {

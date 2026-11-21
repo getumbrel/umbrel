@@ -1,7 +1,6 @@
 import {useTranslation} from 'react-i18next'
 
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
+import {Cover} from '@/components/ui/cover'
 import {isFailsafeRestart} from '@/features/storage/restart-reason'
 import {trpcReact, type RouterError} from '@/trpc/trpc'
 
@@ -30,11 +29,11 @@ export function useRestart({
 export function RestartingCover() {
 	const {t} = useTranslation()
 	return (
-		<CoverMessage>
-			<Loading>{t('restart.restarting')}</Loading>
-			{/* A switch to FailSafe restarts umbrelOS by itself: say so, or it looks like a crash */}
-			{isFailsafeRestart() && <CoverMessageParagraph>{t('storage-mgr.restart.reason')}</CoverMessageParagraph>}
-			<CoverMessageParagraph>{t('restart.restarting-message')}</CoverMessageParagraph>
-		</CoverMessage>
+		<Cover
+			title={t('restart.restarting')}
+			// A switch to FailSafe restarts umbrelOS by itself: say so, or it looks like a crash
+			description={isFailsafeRestart() ? t('storage-mgr.restart.reason') : undefined}
+			progress='spinner'
+		/>
 	)
 }

@@ -5,7 +5,7 @@ import {JSONTree} from 'react-json-tree'
 import {usePreviousDistinct} from 'react-use'
 
 import {ConnectionLostScreen} from '@/components/ui/connection-lost-screen'
-import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {Cover, LoadingCover} from '@/components/ui/cover'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {toast} from '@/components/ui/toast'
 import {usePrefixedLocalStorage} from '@/hooks/use-prefixed-local-storage'
@@ -284,7 +284,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	if (systemStatusQ.isLoading) {
 		return (
 			<>
-				<BareCoverMessage delayed>{t('trpc.checking-backend')}</BareCoverMessage>
+				<LoadingCover />
 				{debugInfo}
 			</>
 		)
@@ -323,10 +323,12 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case 'shutting-down': {
 			if (shutdownComplete) {
 				return (
-					<BareCoverMessage>
-						{t('shut-down.complete')}
-						<CoverMessageParagraph>{t('shut-down.complete-text')}</CoverMessageParagraph>
-					</BareCoverMessage>
+					<Cover
+						surface='black'
+						mark='logo-dimmed'
+						title={t('shut-down.complete')}
+						description={t('shut-down.complete-text')}
+					/>
 				)
 			} else {
 				return (

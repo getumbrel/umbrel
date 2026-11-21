@@ -194,6 +194,12 @@ export default {
 					from: {backgroundPosition: '100% 0'},
 					to: {backgroundPosition: '0% 0'},
 				},
+				// The light in a cover's progress bar while there is nothing to measure: from one end
+				// of the track to the other and back, never out of sight (see components/ui/cover.tsx)
+				'cover-glide': {
+					from: {translate: '0'},
+					to: {translate: '100%'},
+				},
 				'files-folder-blink-on-drag-hover': {
 					'0%, 100%': {backgroundColor: 'hsl(var(--color-brand))'},
 					'25%, 75%': {backgroundColor: 'transparent'},
@@ -206,6 +212,7 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				shake: 'shake 0.7s ease-out both',
 				'sliding-loader': 'sliding-loader 1s ease infinite',
+				'cover-glide': 'cover-glide 1.6s ease-in-out infinite alternate',
 				'files-folder-blink-on-drag-hover': 'files-folder-blink-on-drag-hover 0.4s linear',
 				'text-shine': 'text-shine 2.8s cubic-bezier(0.33, 0, 0.15, 1) 0.2s 1',
 			},

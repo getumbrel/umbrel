@@ -6,12 +6,11 @@ import {useParams, useSearchParams} from 'react-router-dom'
 
 import {AnimatedHeight} from '@/components/ui/animated-height'
 import {CopyableField} from '@/components/ui/copyable-field'
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {Cover} from '@/components/ui/cover'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '@/components/ui/drawer'
 import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
-import {Loading} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
 import {toast} from '@/components/ui/toast'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
@@ -123,12 +122,11 @@ export default function AdvancedSettingsDrawerOrDialog() {
 	// Show loading cover state while enabling/disabling Tor
 	if (tor.isMutLoading) {
 		return (
-			<CoverMessage>
-				<Loading>{torEnabling ? t('enabling-tor') : t('tor.disable.progress')}</Loading>
-				<CoverMessageParagraph>
-					{torEnabling ? t('tor.enable.description') : t('tor.disable.description')}
-				</CoverMessageParagraph>
-			</CoverMessage>
+			<Cover
+				title={torEnabling ? t('enabling-tor') : t('tor.disable.progress')}
+				progress='spinner'
+				note={torEnabling ? t('tor.enable.description') : t('tor.disable.description')}
+			/>
 		)
 	}
 

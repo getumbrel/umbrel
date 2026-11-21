@@ -1,9 +1,9 @@
-import {ChevronDown, ChevronUp} from 'lucide-react'
-import {useEffect, useState} from 'react'
+import {useEffect} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {ConnectionLostScreen} from '@/components/ui/connection-lost-screen'
+import {Cover} from '@/components/ui/cover'
 import {downloadLogs} from '@/utils/logs'
 
 function getErrorMessage(error: unknown): string {
@@ -32,7 +32,8 @@ function isNetworkError(error: unknown): boolean {
 // Last-resort error fallback rendered when all inner error boundaries fail.
 // This is the outermost catch — it sits above every provider (trpc, wallpaper, router, etc.)
 // so it can't rely on any of them. The UI is self-contained: no providers, no router, just
-// plain React + Tailwind + i18n keys.
+// plain React + Tailwind + i18n keys. Both covers are drawn in place (`standalone`), because the
+// cover target went with the tree that failed.
 //
 // Two modes:
 // - Network errors (failed to fetch, connection lost): Shows "Connection lost" with an
@@ -44,7 +45,6 @@ function isNetworkError(error: unknown): boolean {
 // This handles the most common scenario: user switches away, connection drops, they come back
 export function RootErrorFallback({error}: {error: unknown}) {
 	const {t} = useTranslation()
-	const [showDetails, setShowDetails] = useState(false)
 	const isNetwork = isNetworkError(error)
 
 	// Auto-reload when the tab becomes visible again. Uses the Page Visibility API to detect
@@ -68,42 +68,24 @@ export function RootErrorFallback({error}: {error: unknown}) {
 	}
 
 	return (
-		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black pt-(--safe-top)'>
-			{/* Self-contained dialog card — mirrors AlertDialogContent styling but without
-			    depending on Radix or any providers. Uses the same design tokens (rounded-20,
-			    bg-dialog-content, shadow-dialog, backdrop-blur) for visual consistency. */}
-			<div className='flex w-full max-w-[calc(100%-40px)] flex-col items-center gap-5 rounded-20 bg-dialog-content/70 p-8 shadow-dialog backdrop-blur-3xl sm:max-w-md'>
-				<div className='flex flex-col items-center gap-1.5'>
-					<h2 className='text-15 leading-tight font-semibold -tracking-4'>{t('something-went-wrong')}</h2>
-				</div>
-				<div className='flex w-full flex-col gap-2.5 md:flex-row md:justify-center'>
-					{/* Uses variant='default' (not 'primary') because the brand color CSS variable
-					    is set by the wallpaper provider, which isn't available at this level. */}
-					<Button size='dialog' variant='default' onClick={() => window.location.reload()}>
+		<Cover
+			standalone
+			surface='black'
+			mark='warning'
+			// The string starts with a warning sign of its own, which the mark replaces
+			title={t('something-went-wrong').replace(/^⚠\s*/, '')}
+			actions={
+				// Not the brand colour: the wallpaper provider sets it, and it isn't available at this level
+				<>
+					<Button size='dialog' variant='secondary' onClick={() => window.location.reload()}>
 						{t('reload')}
 					</Button>
 					<Button size='dialog' variant='default' onClick={() => downloadLogs()}>
 						{t('download-logs')}
 					</Button>
-				</div>
-				{error != null && (
-					<div className='-mb-4 flex flex-col items-center'>
-						<button
-							type='button'
-							onClick={() => setShowDetails((prev) => !prev)}
-							className='flex items-center gap-0.5 text-11 text-white/30 transition-opacity duration-300 hover:text-white/50'
-						>
-							{showDetails ? t('hide-details') : t('show-details')}
-							{showDetails ? <ChevronUp className='size-3' /> : <ChevronDown className='size-3' />}
-						</button>
-						{showDetails && (
-							<p className='mt-1 max-h-40 w-full overflow-y-auto text-11 break-all text-white/30'>
-								{getErrorMessage(error)}
-							</p>
-						)}
-					</div>
-				)}
-			</div>
-		</div>
+				</>
+			}
+			details={error != null ? getErrorMessage(error) : undefined}
+		/>
 	)
 }

@@ -9,7 +9,7 @@ import {cn} from '@/lib/utils'
 // Preserved from the 2026-08 onboarding design exploration ("Breeze" concept's
 // setup screen) — intended as a future replacement for the covers that show
 // long-running system operations (umbrelOS updates, migration, backup restore,
-// RAID setup) currently rendered via ProgressLayout. Not wired up anywhere yet.
+// RAID setup). Not wired up anywhere yet.
 //
 // Purely presentational: the caller owns translation and progress state.
 
