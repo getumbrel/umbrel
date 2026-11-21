@@ -696,8 +696,8 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 
 	/** A revoked session stops backup but keeps the preference, so signing in again resumes it. */
 	private fun sessionInvalidated(deviceId: String) {
-		backup.disableLocally(deviceId)
 		val state = _state.value
+		backup.disableLocally(deviceId, state.session?.accountId?.takeIf { state.device.id == deviceId })
 		if (state.device.id == deviceId) {
 			val accountId = state.session?.accountId
 			container.applicationScope.launch { runCatching { BrowserSessions.signOut(state.device.nativeTarget, accountId) } }
@@ -712,7 +712,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		val device = state.device
 		val session = state.session
 		// The backup preference survives sign-out so a deliberate sign-in resumes it.
-		backup.disableLocally(device.id)
+		backup.disableLocally(device.id, session?.accountId)
 		// Deleted before the Umbrel is told, so nothing usable stays on the phone if it can't be
 		// reached. The log-out below isn't retried: that would mean keeping the token.
 		SecretStore.deleteSession(device.id)
@@ -1118,7 +1118,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 			return store.removals.remove(device, container.applicationScope, addsDevice, object : SavedDeviceRemovalSteps {
 				override fun removeSaved() = store.remove(deviceId)
 
-				override fun removeBackup() = container.backup.removeDevice(deviceId)
+				override fun removeBackup() = container.backup.removeDevice(deviceId, session?.accountId)
 
 				// Best effort: the device is removed whether or not the Umbrel answers.
 				override suspend fun signOutBrowser() {

@@ -406,10 +406,13 @@ class PhotoBackupManager internal constructor(
 	/**
 	 * Sign-out and a revoked session stop backup on this phone but keep the saved
 	 * preference, so signing in again resumes it. New work never starts without a grant.
+	 * [accountId]'s grant goes even without a configuration: setup stores the grant before
+	 * it saves one.
 	 */
-	fun disableLocally(deviceId: String) {
+	fun disableLocally(deviceId: String, accountId: String?) {
 		setupRevision++
 		setSetup(inProgress = false, failure = null)
+		if (accountId != null) secrets.deleteGrant(deviceId, accountId)
 		val configuration = preferences.configuration
 		if (configuration == null || configuration.deviceId != deviceId) return
 		work.cancel()
@@ -434,7 +437,9 @@ class PhotoBackupManager internal constructor(
 	 * Removing a saved Umbrel clears its backup intent as well. The source id and local
 	 * receipts stay so a future enable resumes the same folder without duplicates.
 	 */
-	fun removeDevice(deviceId: String) {
+	fun removeDevice(deviceId: String, accountId: String?) {
+		// Even without a configuration, as in disableLocally.
+		if (accountId != null) secrets.deleteGrant(deviceId, accountId)
 		val configuration = preferences.configuration
 		if (configuration?.deviceId == deviceId) {
 			setupRevision++

@@ -302,7 +302,7 @@ class PhotoBackupManagerTest {
 		advanceUntilIdle()
 		val sourceId = preferences.configuration!!.source.id
 
-		manager.disableLocally(device.id)
+		manager.disableLocally(device.id, session.accountId)
 
 		assertNull(preferences.configuration)
 		assertNull(secrets.grants["umbrel:0"])
@@ -706,11 +706,25 @@ class PhotoBackupManagerTest {
 		manager.setPreference(device, session, photos)
 		advanceUntilIdle()
 
-		manager.removeDevice(device.id)
+		manager.removeDevice(device.id, session.accountId)
 
 		assertNull(preferences.configuration)
 		assertFalse(preferences.preference(device.id, session.accountId).isEnabled)
 		assertNotNull(secrets.sourceIds["umbrel:0"])
+	}
+
+	// Setup stores the grant before it saves the configuration, so a sign-out or removal in
+	// between, or after the process died there, finds a grant and no configuration.
+	@Test
+	fun signingOutOrRemovingDeletesAGrantThatHasNoConfiguration() = runTest {
+		val manager = manager()
+		secrets.setGrant("grant", device.id, session.accountId)
+		manager.disableLocally(device.id, session.accountId)
+		assertNull(secrets.grants["umbrel:0"])
+
+		secrets.setGrant("grant", device.id, session.accountId)
+		manager.removeDevice(device.id, session.accountId)
+		assertNull(secrets.grants["umbrel:0"])
 	}
 
 	// ── A new phone ──
