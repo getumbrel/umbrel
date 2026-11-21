@@ -14,7 +14,15 @@ import {locationName} from '@/features/photos/components/map/atlas'
 import {Attribution} from '@/features/photos/components/map/attribution'
 import {MARKER_SIZE, padBounds, type Clustering, type MercatorBox} from '@/features/photos/components/map/cluster'
 import {attachMapGestures, holdWithinWorld} from '@/features/photos/components/map/gestures'
-import {globeness, globeZoom, horizon, locate, mapCamera, viewSize} from '@/features/photos/components/map/globe'
+import {
+	fadeNamesAtHorizon,
+	globeness,
+	globeZoom,
+	horizon,
+	locate,
+	mapCamera,
+	viewSize,
+} from '@/features/photos/components/map/globe'
 import {GlobeLight} from '@/features/photos/components/map/globe-light'
 import {fadeInLand, FLAT_ZOOM, mapLanguage, settlementNear, SPACE} from '@/features/photos/components/map/map-style'
 import {MapMarkers, SETTLE_RECLUSTER_MS, type MarkerTarget} from '@/features/photos/components/map/markers'
@@ -162,12 +170,15 @@ function MapStage({frame: listingFrame}: {frame: Frame}) {
 		// Handed on once its style is in, not at 'load', which waits for every
 		// tile of the first view: the globe comes in without them
 		let stopLandFade = () => {}
+		let stopNameFade = () => {}
 		instance.once('style.load', () => {
 			stopLandFade = fadeInLand(instance)
+			stopNameFade = fadeNamesAtHorizon(instance)
 			setMap(instance)
 		})
 		return () => {
 			stopLandFade()
+			stopNameFade()
 			// Left before it had arrived, it is found afresh next time
 			if (arrival.current.landed) {
 				const center = instance.getCenter()

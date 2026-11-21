@@ -1,7 +1,8 @@
-import type {Map as MapLibreMap} from 'maplibre-gl'
+import type {FeatureIdentifier, Map as MapLibreMap} from 'maplibre-gl'
 
 import {FLAT_ZOOM, GLOBE_ZOOM} from '@/features/photos/components/map/map-style'
 import {mercatorX, mercatorY, WORLD_SIZE} from '@/features/photos/components/map/points'
+import {direction} from '@/features/photos/components/map/sun'
 
 const RADIANS = Math.PI / 180
 
@@ -99,6 +100,62 @@ export function globeZoom(across: number, latitude: number, height: number) {
 	const edge = across / 2
 	const radius = (edge * edge + edge * Math.hypot(edge, focal)) / focal
 	return Math.log2((2 * Math.PI * radius * Math.cos(latitude * RADIANS)) / WORLD_SIZE)
+}
+
+// How far inside the horizon a name is gone by, and whole from, in how
+// squarely its place faces the camera. A name runs out on either side of its
+// place, so one whose place is near the edge would hang out past the globe
+// into space: it fades well before its place does
+const NAMES = {gone: 0.16, whole: 0.38}
+
+// Fades the map's names out as they come round to the globe's edge, by the
+// 'shown' state the style's names are drawn with. Set only where it changed,
+// so setting it, which draws the map again, settles. Laid flat the map has no
+// edge to come to, and its names aren't asked after: what was set is taken
+// off, and they show whole. Returns what stops it.
+export function fadeNamesAtHorizon(map: MapLibreMap) {
+	// The style's names: it is the map's for as long as the map is
+	const layers = map
+		.getStyle()
+		.layers.filter((layer) => layer.type === 'symbol')
+		.map((layer) => layer.id)
+	if (layers.length === 0) return () => {}
+	const set = new Map<string, {name: FeatureIdentifier; shown: number}>()
+	let frame = 0
+	const fade = () => {
+		frame = 0
+		const camera = mapCamera(map)
+		if (camera.globeness === 0) {
+			for (const {name, shown} of set.values()) if (shown !== 1) map.removeFeatureState(name, 'shown')
+			set.clear()
+			return
+		}
+		const horizon = camera.radius / (camera.radius + camera.focal)
+		for (const {id, source, sourceLayer, geometry} of map.queryRenderedFeatures({layers})) {
+			if (id === undefined || geometry.type !== 'Point') continue
+			const [lng, lat] = geometry.coordinates as [number, number]
+			const along = (dot(direction(lng, lat), camera.out) - horizon - NAMES.gone) / (NAMES.whole - NAMES.gone)
+			const eased = Math.min(1, Math.max(0, along))
+			// Unrolling, the fade goes with the globe
+			const shown = Math.round((1 - camera.globeness * (1 - eased * eased * (3 - 2 * eased))) * 50) / 50
+			const key = `${sourceLayer}/${id}`
+			if (set.get(key)?.shown === shown) continue
+			const name = {source, sourceLayer, id}
+			set.set(key, {name, shown})
+			map.setFeatureState(name, {shown})
+		}
+	}
+	const schedule = () => {
+		frame ||= requestAnimationFrame(fade)
+	}
+	map.on('move', schedule)
+	map.on('idle', schedule)
+	schedule()
+	return () => {
+		cancelAnimationFrame(frame)
+		map.off('move', schedule)
+		map.off('idle', schedule)
+	}
 }
 
 // How far round the globe from the middle of the view its edge is, in degrees

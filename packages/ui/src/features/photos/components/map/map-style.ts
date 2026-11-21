@@ -157,15 +157,57 @@ const CITIES_FROM_ZOOM = 3.5
 const HIGHWAYS = /^roads_(tunnels_|bridges_)?highway/
 function fromAfar(layer: LayerSpecification): LayerSpecification {
 	if (layer.id === 'places_locality') return {...layer, minzoom: CITIES_FROM_ZOOM}
-	if (layer.id === 'places_country') {
-		const paint = {...layer.paint, 'text-opacity': ['interpolate', ['linear'], ['zoom'], EARTH_ZOOM, 0.85, MAP_ZOOM, 1]}
-		return {...layer, layout: {...layer.layout, 'text-letter-spacing': 0.06}, paint} as LayerSpecification
-	}
 	if (HIGHWAYS.test(layer.id)) {
 		const paint = {...layer.paint, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0, 7, 1]}
 		return {...layer, paint} as LayerSpecification
 	}
 	return layer
+}
+
+// Names of places and waters: written as they're spelled, not in capitals,
+// in white with a soft dark line round them, which is what they are read by
+// on ice and sand, and goes unseen on the dark of land and sea. Countries and
+// cities in full white, the seas, regions and neighbourhoods between them a
+// step back. Road names keep the greys of the streets they run along. Each
+// fades by its 'shown' state, which the globe turns down as it comes to the
+// horizon (see fadeNamesAtHorizon), and is set a size smaller than the
+// basemap's, to sit lightly over the photos
+const NAME = {
+	size: 0.8,
+	white: '#ffffff',
+	softer: 'rgb(255 255 255 / 0.72)',
+	line: 'rgb(28 28 30 / 0.5)',
+}
+const SOFTER_NAMES = new Set([
+	'water_label_ocean',
+	'water_label_lakes',
+	'water_waterway_label',
+	'places_region',
+	'places_subplace',
+	'earth_label_islands',
+])
+function named(layer: LayerSpecification): LayerSpecification {
+	if (layer.type !== 'symbol' || layer.id.startsWith('roads_')) return layer
+	return {
+		...layer,
+		layout: {...layer.layout, 'text-transform': 'none', 'text-size': scaled(layer.layout?.['text-size'], NAME.size)},
+		paint: {
+			...layer.paint,
+			'text-color': SOFTER_NAMES.has(layer.id) ? NAME.softer : NAME.white,
+			'text-halo-color': NAME.line,
+			'text-halo-width': 1,
+			'text-halo-blur': 0.5,
+			'text-opacity': ['coalesce', ['feature-state', 'shown'], 1],
+		},
+	} as LayerSpecification
+}
+
+// A text size by a share: a size, or each size a zoom's curve passes through
+// (a zoom can't be scaled from outside its curve)
+function scaled(size: unknown, by: number): unknown {
+	if (typeof size === 'number') return size * by
+	if (!Array.isArray(size) || size[0] !== 'interpolate') return size
+	return size.map((value, i) => (i < 4 || i % 2 ? value : typeof value === 'number' ? value * by : ['*', by, value]))
 }
 
 // Layers that need a sprite we don't ship, or that are noise on this map
@@ -239,7 +281,7 @@ export function mapStyle({
 		layers: layers(BASEMAP, NIGHT, {lang})
 			.filter((layer) => !LEFT_OUT.has(layer.id))
 			.flatMap(earthly)
-			.map((layer) => oneName(withoutIcons(settled(fromAfar(layer))), lang)),
+			.map((layer) => named(oneName(withoutIcons(settled(fromAfar(layer))), lang))),
 	}
 }
 
