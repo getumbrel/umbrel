@@ -57,11 +57,21 @@ struct LibraryView: View {
 					)
 				}
 			}
+			// Partly folded, it all stays on the left page, like onboarding and the
+			// system's own sheets, so the setup card's button isn't on the crease
+			.frame(maxWidth: leftPageWidth(of: width), alignment: .leading)
 			.frame(maxWidth: .infinity, alignment: .leading)
+			// Measured before the padding, in the content's own coordinates
+			.trackingFold($fold)
 			.padding(.horizontal, Theme.contentInset)
 			.modifier(TopClearancePadding())
 			.padding(.bottom, 32)
 		}
+	}
+
+	private func leftPageWidth(of width: CGFloat) -> CGFloat {
+		guard !model.showsPhotoLibrary, let fold, fold.lowerBound > Theme.sectionGap, fold.upperBound < width else { return .infinity }
+		return fold.lowerBound - Theme.sectionGap / 2
 	}
 
 	// The inner display opened like a book: backup on the left and the library on the

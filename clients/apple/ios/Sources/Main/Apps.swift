@@ -25,6 +25,9 @@ struct AppsView: View {
 					if model.canManageApps { storeButton }
 				}
 				.frame(maxWidth: .infinity, alignment: .leading)
+				// Measured here rather than on the grid, which has no size while there are no
+				// apps yet and would leave the store button centred on the fold.
+				.trackingFold($fold)
 				.padding(.horizontal, Theme.contentInset)
 				.modifier(TopClearancePadding())
 				.padding(.bottom, 32)
@@ -114,14 +117,12 @@ struct AppsView: View {
 					tile(app)
 				}
 			}
-			.trackingFold($fold)
 		} else {
 			LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: columns), spacing: 4) {
 				ForEach(model.installedApps) { app in
 					tile(app)
 				}
 			}
-			.trackingFold($fold)
 		}
 	}
 
@@ -152,7 +153,7 @@ struct AppsView: View {
 		}
 		.buttonStyle(.plain)
 		// Partly folded, it centres under the grid's left half rather than on the crease.
-		// The grid shares this width and origin, so its fold applies here too.
+		// The grid shares this width and origin, so the fold measured above applies to both.
 		.frame(maxWidth: fold?.lowerBound ?? .infinity)
 		.frame(maxWidth: .infinity, alignment: .leading)
 	}
