@@ -1765,6 +1765,9 @@ export default class Raid {
 		// refuses the new device has already been wiped
 		if (pool.topology === 'raidz' && pool.status !== 'ONLINE')
 			throw new Error('Cannot add a RAID device until the RAID array is healthy')
+		// An array stays healthy while a device that still works is being replaced
+		if (pool.topology === 'raidz' && pool.rebuild?.state === 'rebuilding')
+			throw new Error('Cannot add a RAID device while a RAID rebuild is in progress')
 
 		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
 		const device = `/dev/disk/by-umbrel-id/${deviceId}`
