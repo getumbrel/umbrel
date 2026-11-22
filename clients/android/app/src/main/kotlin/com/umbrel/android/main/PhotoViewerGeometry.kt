@@ -4,7 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
-import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -82,9 +82,49 @@ internal data class PageZoom(val scale: Float = 1f, val offset: Offset = Offset.
 
 private val Size.center: Offset get() = Offset(width / 2, height / 2)
 
-/** The info sheet's coordinates, to five decimal places (about a meter) like iOS. */
-internal fun formatCoordinates(latitude: Double, longitude: Double): String =
-	String.format(Locale.ROOT, "%.5f, %.5f", latitude, longitude)
+/**
+ * Where a photo rests with Info open, the port of iOS's PhotoViewerInfoLayout: in a square at
+ * the top of the screen, or the top half of a wide one. A photo shorter than that grows to
+ * fill it, and a taller one shows its lower part. [width] and [height] are the photo's, or
+ * zero while they aren't known.
+ */
+internal class PhotoViewerInfoLayout(val container: Size, width: Int, height: Int) {
+	private val fittedHeight: Float =
+		if (width > 0 && height > 0) max(min(container.height, container.width * height / width), 1f) else max(container.height, 1f)
+
+	val photoHeight: Float get() = min(container.width, container.height / 2)
+
+	/** How far the page scrolls to open Info. */
+	val openOffset: Float get() = container.height - photoHeight
+
+	private val openScale: Float get() = max(1f, photoHeight / fittedHeight)
+
+	fun progress(offset: Float): Float = (offset / max(openOffset, 1f)).coerceIn(0f, 1f)
+
+	fun scale(progress: Float): Float = 1f + progress * (openScale - 1f)
+
+	/** Moves the photo from the middle of its page to rest on the page's bottom edge. */
+	fun shift(progress: Float): Float = progress * (container.height - fittedHeight * openScale) / 2
+}
+
+/**
+ * Where a released swipe comes to rest, the port of iOS's PhotoViewerInfoSnap: on the photo
+ * (0) or on Info ([openOffset]), or null to scroll freely through Info below that. [start] is
+ * the offset the swipe began at, [projected] where it would coast to, and [velocity] is in
+ * pixels per second, positive toward Info. [flick] is the speed under which a release is a
+ * slow drag. [holdsInfo] is whether the page was resting on Info.
+ */
+internal fun infoSnapTarget(start: Float, projected: Float, velocity: Float, openOffset: Float, holdsInfo: Boolean, flick: Float): Float? {
+	if (projected >= openOffset) return null
+	val opens = when {
+		// Scrolling back up through Info stops at its top, and only the next swipe closes it
+		holdsInfo && start > openOffset + 1 -> true
+		abs(velocity) > flick -> velocity > 0
+		// A slow drag commits once it has clearly left where it started
+		else -> projected > openOffset * (if (start < openOffset / 2) 0.15f else 0.85f)
+	}
+	return if (opens) openOffset else 0f
+}
 
 /**
  * What the viewer says about an item's backup, from its receipt and the backup toggles. iOS

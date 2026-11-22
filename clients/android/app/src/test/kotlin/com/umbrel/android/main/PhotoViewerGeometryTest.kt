@@ -99,8 +99,35 @@ class PhotoViewerGeometryTest {
 	}
 
 	@Test
-	fun coordinatesShowFiveDecimalPlaces() {
-		assertEquals("37.42190, -122.08400", formatCoordinates(37.4219, -122.084))
-		assertEquals("-33.86882, 151.20930", formatCoordinates(-33.868820, 151.209296))
+	fun infoRestsThePhotoInASquareOrTheTopHalf() {
+		// A phone: a landscape photo grows to fill the square and rests on its bottom edge.
+		val phone = PhotoViewerInfoLayout(screen, 3000, 2000)
+		assertEquals(1000f, phone.photoHeight, 0.01f)
+		assertEquals(1000f, phone.openOffset, 0.01f)
+		assertEquals(1.5f, phone.scale(1f), 0.001f)
+		assertEquals(500f, phone.shift(1f), 0.01f)
+		assertEquals(1f, phone.scale(0f), 0.001f)
+		// A wide screen: the top half, and a photo taller than it keeps its size.
+		val wide = PhotoViewerInfoLayout(Size(2000f, 1600f), 1000, 1000)
+		assertEquals(800f, wide.photoHeight, 0.01f)
+		assertEquals(1f, wide.scale(1f), 0.001f)
+		assertEquals(0f, wide.shift(1f), 0.01f)
+	}
+
+	@Test
+	fun aReleasedSwipeRestsOnThePhotoOrOnInfo() {
+		fun target(start: Float, projected: Float, velocity: Float, holdsInfo: Boolean = false) =
+			infoSnapTarget(start, projected, velocity, openOffset = 1000f, holdsInfo = holdsInfo, flick = 100f)
+		// A flick decides by its direction, wherever it would have stopped.
+		assertEquals(1000f, target(0f, 300f, 800f))
+		assertEquals(0f, target(1000f, 700f, -800f, holdsInfo = true))
+		// A slow drag commits once it has clearly left where it started.
+		assertEquals(1000f, target(0f, 200f, 50f))
+		assertEquals(0f, target(0f, 100f, 50f))
+		assertEquals(0f, target(1000f, 800f, -50f, holdsInfo = true))
+		assertEquals(1000f, target(1000f, 900f, -50f, holdsInfo = true))
+		// Scrolling back up through Info stops at its top, and below that it scrolls freely.
+		assertEquals(1000f, target(1600f, 200f, -3000f, holdsInfo = true))
+		assertNull(target(1600f, 1200f, -300f, holdsInfo = true))
 	}
 }

@@ -3,13 +3,21 @@ package com.umbrel.android.main
 import android.content.Context
 import android.view.Window
 import androidx.activity.BackEventCompat
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateTo
+import androidx.compose.animation.core.calculateTargetValue
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.rememberSplineBasedDecay
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -21,55 +29,56 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -78,7 +87,6 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -90,10 +98,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.scrollBy
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Dialog
@@ -110,35 +119,30 @@ import coil3.request.ImageRequest
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.umbrel.android.ui.AppleEaseInOut
+import com.umbrel.android.ui.AppleEaseOut
 import com.umbrel.android.ui.AppleType
 import com.umbrel.android.ui.CircleIconButton
-import com.umbrel.android.ui.LocalBrandColor
+import com.umbrel.android.ui.CircleIconButtonSize
 import com.umbrel.android.ui.LocalGlassBackdrop
 import com.umbrel.android.ui.MainTheme
-import com.umbrel.android.ui.PageSheet
-import com.umbrel.android.ui.SettingsDivider
-import com.umbrel.android.ui.SettingsSection
-import com.umbrel.android.ui.SheetToolbar
 import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.glassControl
 import com.umbrel.android.ui.glassSurface
-import com.umbrel.android.ui.mediumSheetHeight
-import com.umbrel.kit.backup.PhotoBackupFolders
+import com.umbrel.android.ui.isWideWindow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
 import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 // SwiftUI's default spring (0.5 s, no bounce), which its zoom transition uses.
 private val ZoomSpring = spring<Float>(dampingRatio = 1f, stiffness = 157.9f)
 
 /**
  * The full-screen viewer, the port of iOS's PhotoViewer: pages through the whole library,
- * zooms photos, plays videos, and shows each item's backup status. iOS presents it as a
+ * zooms photos, plays videos, and shows each item's details and backup status. iOS presents it as a
  * full-screen cover zooming from the tapped tile; Android's modal equivalent is a
  * full-screen dialog window, which also keeps TalkBack inside it. The zoom between tile and
  * photo is drawn here, since a dialog is a separate window from the grid.
@@ -192,7 +196,12 @@ private fun PhotoViewerContent(
 	val scope = rememberCoroutineScope()
 	val density = LocalDensity.current
 	var showsControls by remember { mutableStateOf(true) }
-	var showsInfo by remember { mutableStateOf(false) }
+	// Shared by every page, so Info stays open while swiping between photos, like Photos'.
+	// Saved, so it also stays open when the screen turns or a foldable changes screens.
+	val infoShown = rememberSaveable { mutableStateOf(false) }
+	// A wide window keeps the top bar, and Info's button in it, while Info is open: iOS does
+	// the same on iPhone Duo, and it keeps the button off a foldable's hinge.
+	val wide = isWideWindow()
 	var playing by remember { mutableStateOf<LocalMediaItem?>(null) }
 	var zoomed by remember { mutableStateOf(false) }
 	val presentation = remember { Animatable(0f) }
@@ -219,8 +228,8 @@ private fun PhotoViewerContent(
 		if (exiting) return
 		exiting = true
 		scope.launch {
-			// A zoomed photo no longer matches its tile, so it fades instead.
-			source = currentItem?.takeIf { !zoomed }?.let { tiles.bounds(it.localIdentifier) }
+			// A zoomed photo, or one moved up for Info, no longer matches its tile, so it fades instead.
+			source = currentItem?.takeIf { !zoomed && !infoShown.value }?.let { tiles.bounds(it.localIdentifier) }
 			presentation.animateTo(0f, ZoomSpring)
 			onDismissed()
 		}
@@ -230,7 +239,11 @@ private fun PhotoViewerContent(
 	LaunchedEffect(assets.size) { if (assets.size == 0) dismiss() }
 	// Video controls are the play button, so a video page always shows them.
 	LaunchedEffect(current?.localIdentifier) { if (current?.isVideo == true) showsControls = true }
-	StatusBarVisibility(window, visible = showsControls)
+	// Swiping up opens Info even with the controls hidden, and its button closes it.
+	LaunchedEffect(infoShown.value) { if (infoShown.value) showsControls = true }
+	// Like Photos, Info takes the top bar's place and leaves its own button to close it.
+	val showsTopBar = showsControls && (!infoShown.value || wide)
+	StatusBarVisibility(window, visible = showsTopBar)
 
 	PredictiveBackHandler(enabled = !exiting) { progress ->
 		try {
@@ -249,8 +262,17 @@ private fun PhotoViewerContent(
 		}
 	}
 
+	BackHandler(enabled = infoShown.value && !exiting) { infoShown.value = false }
+
 	val glassBackdrop = rememberLayerBackdrop()
-	Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionOnScreen() }) {
+	val navigationBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+	var pageHeight by remember { mutableFloatStateOf(1f) }
+	Box(
+		Modifier.fillMaxSize().onGloballyPositioned {
+			origin = it.positionOnScreen()
+			pageHeight = it.size.height.toFloat().coerceAtLeast(1f)
+		},
+	) {
 		val dragFraction = min(1f, abs(drag.y) / with(density) { 400.dp.toPx() })
 		val item = current
 		val tile = source?.takeIf { origin.isSpecified }?.translate(-origin)
@@ -271,7 +293,8 @@ private fun PhotoViewerContent(
 					.drawWithContent {
 						val fit = item?.let { fitRect(it.width, it.height, size) }
 						val full = fit?.let { dragged(it, drag, dragScale) }
-						if (tile == null || fit == null || full == null || !morphs) {
+						// Once the zoom has landed the page draws whole: the frame would clip Info's cards.
+						if (tile == null || fit == null || full == null || !morphs || presentation.value >= 1f) {
 							withTransform({
 								translate(drag.x, drag.y)
 								scale(dragScale, dragScale)
@@ -288,30 +311,6 @@ private fun PhotoViewerContent(
 								scale(scale, scale, Offset.Zero)
 							}) { this@drawWithContent.drawContent() }
 						}
-					}
-					.pointerInput(zoomed, exiting) {
-						if (zoomed || exiting) return@pointerInput
-						detectDismissDrag(
-							onDrag = { offset ->
-								settle?.cancel()
-								drag = offset
-								dragScale = 1f - 0.25f * min(1f, abs(offset.y) / size.height)
-							},
-							onEnd = { offset, velocity ->
-								if (offset.y > with(density) { 100.dp.toPx() } || velocity > with(density) { 1000.dp.toPx() }) {
-									dismiss()
-								} else {
-									settle = scope.launch {
-										val start = drag
-										val startScale = dragScale
-										Animatable(0f).animateTo(1f, spring(stiffness = 400f)) {
-											drag = start * (1f - value)
-											dragScale = startScale + (1f - startScale) * value
-										}
-									}
-								}
-							},
-						)
 					},
 				userScrollEnabled = !zoomed && !exiting,
 				key = { assets.items.getOrNull(it)?.localIdentifier ?: it },
@@ -319,76 +318,78 @@ private fun PhotoViewerContent(
 				val pageItem = assets.items[page]
 				PhotoViewerPage(
 					pageItem,
-					onTap = { showsControls = !showsControls },
+					isActive = page == pager.currentPage,
+					infoShown = infoShown,
+					// The cards end clear of the navigation bar, and of Info's button above it on a phone.
+					bottomInset = navigationBar + if (wide) 0.dp else InfoButtonSpace,
+					gesturesEnabled = !exiting,
+					onTap = { if (!infoShown.value) showsControls = !showsControls },
 					onPlay = { playing = pageItem },
 					onZoomChange = { if (page == pager.currentPage) zoomed = it },
-				)
-			}
-		}
-		CompositionLocalProvider(LocalGlassBackdrop provides glassBackdrop) {
-			AnimatedVisibility(
-				visible = showsControls && item != null,
-				modifier = Modifier.graphicsLayer { alpha = presentation.value * (1f - dragFraction) },
-				enter = fadeIn(tween(180, easing = AppleEaseInOut)),
-				exit = fadeOut(tween(180, easing = AppleEaseInOut)),
-			) {
-				if (item != null) {
-					ViewerControls(
-						item,
+					onDismissDrag = { offset ->
+						settle?.cancel()
+						drag = offset
+						dragScale = 1f - 0.25f * min(1f, abs(offset.y) / pageHeight)
+					},
+					onDismissDragEnd = { offset, velocity ->
+						if (offset.y > with(density) { 100.dp.toPx() } || velocity > with(density) { 1000.dp.toPx() }) {
+							dismiss()
+						} else {
+							settle = scope.launch {
+								val start = drag
+								val startScale = dragScale
+								Animatable(0f).animateTo(1f, spring(stiffness = 400f)) {
+									drag = start * (1f - value)
+									dragScale = startScale + (1f - startScale) * value
+								}
+							}
+						}
+					},
+				) {
+					PhotoViewerInfo(
+						pageItem,
 						library,
 						state,
-						onBack = ::dismiss,
-						onInfo = { showsInfo = true },
+						folder = libraryState.folders.firstOrNull { it.key == pageItem.folder },
+						onSkipFolder = onSkipFolder,
 					)
 				}
 			}
 		}
+		CompositionLocalProvider(LocalGlassBackdrop provides glassBackdrop) {
+			val controlsAlpha = Modifier.graphicsLayer { alpha = presentation.value * (1f - dragFraction) }
+			val fadesIn = fadeIn(tween(180, easing = AppleEaseInOut))
+			val fadesOut = fadeOut(tween(180, easing = AppleEaseInOut))
+			val infoButton: @Composable () -> Unit = {
+				CircleIconButton(
+					if (infoShown.value) Symbols.InfoFilledMedium else Symbols.InfoMedium,
+					contentDescription = "Photo information",
+					iconSize = 24.dp,
+					onClick = { infoShown.value = !infoShown.value },
+				)
+			}
+			AnimatedVisibility(visible = showsTopBar && item != null, modifier = controlsAlpha, enter = fadesIn, exit = fadesOut) {
+				if (item != null) {
+					// Info's own card says the status.
+					ViewerTopBar(item, library, state, showsStatus = !infoShown.value, onBack = ::dismiss, trailing = infoButton.takeIf { wide })
+				}
+			}
+			// Where Photos has Info on a phone: in the bottom bar.
+			AnimatedVisibility(
+				visible = showsControls && item != null && !wide,
+				modifier = controlsAlpha.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = InfoButtonInset),
+				enter = fadesIn,
+				exit = fadesOut,
+			) { infoButton() }
+		}
 	}
 
-	val infoItem = current
-	if (showsInfo && infoItem != null) {
-		PhotoViewerInfoSheet(
-			infoItem,
-			library,
-			state,
-			folder = libraryState.folders.firstOrNull { it.key == infoItem.folder },
-			onSkipFolder = onSkipFolder,
-			onDismiss = { showsInfo = false },
-		)
-	}
 	playing?.let { VideoPlayer(it, onDismiss = { playing = null }) }
 }
 
-/**
- * A vertical drag on an unzoomed page pulls the photo away to dismiss, as iOS's zoom
- * transition allows. The pager keeps horizontal drags; whichever axis passes the touch slop
- * first owns the gesture.
- */
-private suspend fun PointerInputScope.detectDismissDrag(
-	onDrag: (Offset) -> Unit,
-	onEnd: (offset: Offset, velocity: Float) -> Unit,
-) {
-	awaitEachGesture {
-		val down = awaitFirstDown(requireUnconsumed = false)
-		val start = awaitVerticalTouchSlopOrCancellation(down.id) { change, _ -> change.consume() } ?: return@awaitEachGesture
-		val tracker = VelocityTracker()
-		tracker.addPosition(start.uptimeMillis, start.position)
-		var offset = start.position - down.position
-		onDrag(offset)
-		while (true) {
-			val event = awaitPointerEvent()
-			val change = event.changes.firstOrNull { it.id == down.id } ?: break
-			if (!change.pressed) break
-			if (change.positionChanged()) {
-				offset += change.position - change.previousPosition
-				tracker.addPosition(change.uptimeMillis, change.position)
-				change.consume()
-				onDrag(offset)
-			}
-		}
-		onEnd(offset, tracker.calculateVelocity().y)
-	}
-}
+// Info's button and the space around it at the bottom of a phone.
+private val InfoButtonInset = 8.dp
+private val InfoButtonSpace = CircleIconButtonSize + InfoButtonInset * 2
 
 /** Hides the status bar with the controls, as iOS does; a swipe from the edge shows it briefly. */
 @Composable
@@ -405,10 +406,17 @@ private fun StatusBarVisibility(window: Window?, visible: Boolean) {
 	}
 }
 
-/** Back, the item's backup status, and info, over the top of the photo. */
+/** Back and the item's backup status over the top of the photo, with Info's button in a wide window. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ViewerControls(item: LocalMediaItem, library: PhotoLibraryViewModel, state: MainUiState, onBack: () -> Unit, onInfo: () -> Unit) {
+private fun ViewerTopBar(
+	item: LocalMediaItem,
+	library: PhotoLibraryViewModel,
+	state: MainUiState,
+	showsStatus: Boolean,
+	onBack: () -> Unit,
+	trailing: (@Composable () -> Unit)?,
+) {
 	Box(
 		Modifier
 			.fillMaxWidth()
@@ -417,18 +425,18 @@ private fun ViewerControls(item: LocalMediaItem, library: PhotoLibraryViewModel,
 			.padding(top = 8.dp)
 			.padding(horizontal = MainTheme.contentInset),
 	) {
-		BackupStatusCapsule(item, library, state, Modifier.align(Alignment.Center))
+		if (showsStatus) BackupStatusCapsule(item, library, state, Modifier.align(Alignment.Center))
 		Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
 			CircleIconButton(Symbols.ArrowBackIosNewMedium, contentDescription = "Back to Photos", iconSize = 18.dp, onClick = onBack)
 			Spacer(Modifier.weight(1f))
-			CircleIconButton(Symbols.InfoIMedium, contentDescription = "Photo information", iconSize = 21.dp, onClick = onInfo)
+			trailing?.invoke()
 		}
 	}
 }
 
 /** The item's backup status, read again whenever the backup state or the item changes. */
 @Composable
-private fun rememberBackupStatus(item: LocalMediaItem, library: PhotoLibraryViewModel, state: MainUiState): ViewerBackupStatus? {
+internal fun rememberBackupStatus(item: LocalMediaItem, library: PhotoLibraryViewModel, state: MainUiState): ViewerBackupStatus? {
 	val enabled = backupIncludes(state, item)
 	// Usually known already (the grid asked as it showed the item, and the viewer asks for
 	// its neighbors), so the pill shows from the first frame rather than blinking out
@@ -442,19 +450,12 @@ private fun rememberBackupStatus(item: LocalMediaItem, library: PhotoLibraryView
 	return status
 }
 
-// Semibold in the status pill and regular in the Info sheet, as iOS draws them.
+// Semibold in the status pill, as iOS draws it.
 private val ViewerBackupStatus.pillIcon: ImageVector
 	get() = when (this) {
 		ViewerBackupStatus.BACKED_UP -> Symbols.CheckCircleSemibold
 		ViewerBackupStatus.WAITING -> Symbols.ScheduleSemibold
 		ViewerBackupStatus.NOT_BACKED_UP -> Symbols.RemoveCircleOutlineSemibold
-	}
-
-private val ViewerBackupStatus.sheetIcon: ImageVector
-	get() = when (this) {
-		ViewerBackupStatus.BACKED_UP -> Symbols.CheckCircle
-		ViewerBackupStatus.WAITING -> Symbols.Schedule
-		ViewerBackupStatus.NOT_BACKED_UP -> Symbols.RemoveCircleOutline
 	}
 
 @Composable
@@ -480,32 +481,240 @@ private fun BackupStatusCapsule(item: LocalMediaItem, library: PhotoLibraryViewM
 
 // ── Pages ──
 
+
+// SwiftUI's snappy spring (0.5 s, a little bounce), which moves the page when Info's button is tapped.
+private val SnappySpring = spring<Float>(dampingRatio = 0.85f, stiffness = 157.9f)
+
+// Where a released swipe settles: critically damped, carrying on from the finger's speed.
+private val SettleSpring = spring<Float>(dampingRatio = 1f, stiffness = 220f)
+
+/**
+ * One page of the viewer. Like Photos, Info isn't a sheet: it sits under the photo on the
+ * same page, and opening it scrolls the photo up to make room.
+ */
 @Composable
-private fun PhotoViewerPage(item: LocalMediaItem, onTap: () -> Unit, onPlay: () -> Unit, onZoomChange: (Boolean) -> Unit) {
+private fun PhotoViewerPage(
+	item: LocalMediaItem,
+	isActive: Boolean,
+	infoShown: MutableState<Boolean>,
+	bottomInset: Dp,
+	gesturesEnabled: Boolean,
+	onTap: () -> Unit,
+	onPlay: () -> Unit,
+	onZoomChange: (Boolean) -> Unit,
+	onDismissDrag: (Offset) -> Unit,
+	onDismissDragEnd: (offset: Offset, velocity: Float) -> Unit,
+	infoContent: @Composable () -> Unit,
+) {
 	val context = LocalContext.current
 	val request = remember(item.localIdentifier, item.generation) { fullImageRequest(context, item) }
 	var loading by remember(item.localIdentifier) { mutableStateOf(true) }
-	val onState: (AsyncImagePainter.State) -> Unit = { loading = it is AsyncImagePainter.State.Loading && it.painter == null }
-	Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-		if (item.isVideo) {
-			Box(
-				Modifier
-					.fillMaxSize()
-					.clickable(interactionSource = null, indication = null, role = Role.Button, onClick = onPlay)
-					.semantics { contentDescription = "Play video" },
-				contentAlignment = Alignment.Center,
-			) {
-				AsyncImage(request, contentDescription = null, contentScale = ContentScale.Fit, onState = onState, modifier = Modifier.fillMaxSize())
-				if (!loading) {
-					Box(Modifier.size(72.dp).clip(CircleShape).glassControl(CircleShape), contentAlignment = Alignment.Center) {
-						Icon(Symbols.PlayArrowSemibold, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
-					}
+	// MediaStore doesn't always know a photo's size; the decoded image says its shape then.
+	var decoded by remember(item.localIdentifier) { mutableStateOf(IntSize.Zero) }
+	val onState: (AsyncImagePainter.State) -> Unit = {
+		loading = it is AsyncImagePainter.State.Loading && it.painter == null
+		if (it is AsyncImagePainter.State.Success) {
+			val size = it.painter.intrinsicSize
+			if (size.isSpecified && size.width > 0 && size.height > 0) decoded = IntSize(size.width.roundToInt(), size.height.roundToInt())
+		}
+	}
+	BoxWithConstraints(Modifier.fillMaxSize()) {
+		val known = item.width > 0 && item.height > 0
+		val photoWidth = if (known) item.width else decoded.width
+		val photoHeight = if (known) item.height else decoded.height
+		val layout = remember(constraints.maxWidth, constraints.maxHeight, photoWidth, photoHeight) {
+			PhotoViewerInfoLayout(Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat()), photoWidth, photoHeight)
+		}
+		val pageWidth = maxWidth
+		val pageHeight = maxHeight
+		val scope = rememberCoroutineScope()
+		val decay = rememberSplineBasedDecay<Float>()
+		// A page swiped to while Info is open arrives with it open. Not saved with the page:
+		// one swiped away and back follows Info as it is now, not as the page was left.
+		val scroll = remember { ScrollState(initial = if (infoShown.value) layout.openOffset.roundToInt() else 0) }
+		// Where this page is resting or heading, which a scroll in flight doesn't show yet.
+		var restsOnInfo by remember { mutableStateOf(infoShown.value) }
+		val isInfoInView by remember { derivedStateOf { scroll.value > 0 } }
+		// The details are only read once Info starts to show, not for every page swiped past.
+		var loadsInfo by remember { mutableStateOf(infoShown.value) }
+		var isZoomed by remember { mutableStateOf(false) }
+		val active by rememberUpdatedState(isActive)
+		val currentLayout by rememberUpdatedState(layout)
+		val dismissDrag by rememberUpdatedState(onDismissDrag)
+		val dismissDragEnd by rememberUpdatedState(onDismissDragEnd)
+
+		// The one thing moving the page when no finger is: cancelled the moment one lands, so
+		// nothing fights the drag and the drag starts from where the page really is.
+		var motion by remember { mutableStateOf<Job?>(null) }
+		fun move(block: suspend () -> Unit) {
+			motion?.cancel()
+			motion = scope.launch { block() }
+		}
+
+		// Only where the page comes to rest decides whether Info is open: partway through, the
+		// offset says nothing reliable.
+		fun rest() {
+			restsOnInfo = scroll.value > currentLayout.openOffset / 2
+			if (active) infoShown.value = restsOnInfo
+		}
+
+		LaunchedEffect(isInfoInView) { if (isInfoInView) loadsInfo = true }
+		LaunchedEffect(infoShown.value) {
+			if (restsOnInfo == infoShown.value) return@LaunchedEffect
+			restsOnInfo = infoShown.value
+			val target = if (infoShown.value) layout.openOffset.roundToInt() else 0
+			move { if (active) scroll.animateScrollTo(target, SnappySpring) else scroll.scrollTo(target) }
+		}
+		// A page dragged while it was still arriving settled before it was the one in front.
+		LaunchedEffect(isActive) { if (isActive && motion?.isActive != true) infoShown.value = restsOnInfo }
+		// The screen turned or folded: the page keeps to whichever of the two it rested on.
+		LaunchedEffect(layout.openOffset) {
+			restsOnInfo = infoShown.value
+			if (infoShown.value) scroll.scrollTo(layout.openOffset.roundToInt())
+		}
+
+		fun settle(start: Float, velocity: Float, flick: Float) = move {
+			val openOffset = currentLayout.openOffset
+			val from = scroll.value.toFloat()
+			val target = infoSnapTarget(start, decay.calculateTargetValue(from, velocity), velocity, openOffset, restsOnInfo, flick)
+			var last = from
+			val state = AnimationState(from, velocity)
+			if (target == null) {
+				state.animateDecay(decay) {
+					val moved = scroll.dispatchRawDelta(value - last)
+					// The end of the cards: nothing is left to coast through.
+					if (abs(value - last - moved) > 0.5f) cancelAnimation()
+					last = value
+				}
+			} else {
+				state.animateTo(target, SettleSpring) {
+					scroll.dispatchRawDelta(value - last)
+					last = value
 				}
 			}
-		} else {
-			ZoomablePhoto(request, onTap, onZoomChange, onState)
+			rest()
 		}
-		if (loading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp), strokeWidth = 2.5.dp)
+
+		Column(
+			Modifier
+				.fillMaxSize()
+				.pointerInput(gesturesEnabled) {
+					if (!gesturesEnabled) return@pointerInput
+					// Under this a release is a slow drag, not a flick.
+					val flick = 100.dp.toPx()
+					awaitEachGesture {
+						val down = awaitFirstDown(requireUnconsumed = false)
+						// A touch catches a page in flight, which then settles from where it was caught.
+						val caught = motion?.isActive == true
+						motion?.cancel()
+						val start = scroll.value.toFloat()
+						// A zoomed photo pans, and the pager keeps horizontal drags: whichever
+						// axis passes the touch slop first owns the gesture.
+						val slop = awaitVerticalTouchSlopOrCancellation(down.id) { change, _ -> change.consume() }
+						if (slop == null || isZoomed) {
+							if (caught) settle(start, 0f, flick)
+							return@awaitEachGesture
+						}
+						val tracker = VelocityTracker()
+						tracker.addPosition(down.uptimeMillis, down.position)
+						tracker.addPosition(slop.uptimeMillis, slop.position)
+						// Pulling an unopened photo down drags it away to dismiss, as iOS's zoom
+						// transition allows. Anything else scrolls the page.
+						val dismisses = start <= 0f && slop.position.y > down.position.y
+						var offset = slop.position - down.position
+						if (dismisses) dismissDrag(offset)
+						while (true) {
+							val event = awaitPointerEvent()
+							val change = event.changes.firstOrNull { it.id == down.id } ?: break
+							if (!change.pressed) break
+							if (change.positionChanged()) {
+								val delta = change.position - change.previousPosition
+								offset += delta
+								tracker.addPosition(change.uptimeMillis, change.position)
+								change.consume()
+								if (dismisses) dismissDrag(offset) else scroll.dispatchRawDelta(-delta.y)
+							}
+						}
+						val velocity = tracker.calculateVelocity().y
+						if (dismisses) dismissDragEnd(offset, velocity) else settle(start, -velocity, flick)
+					}
+				}
+				.verticalScroll(scroll, enabled = false)
+				// The page moves by its own gesture above, so the scroll modifier offers
+				// accessibility services nothing to scroll with. This does, and rests like a swipe.
+				.semantics {
+					scrollBy { _, y ->
+						move {
+							val openOffset = currentLayout.openOffset
+							val target = (scroll.value + y).coerceIn(0f, scroll.maxValue.toFloat())
+							scroll.animateScrollTo((if (target < openOffset) (if (y > 0) openOffset else 0f) else target).roundToInt())
+							rest()
+						}
+						true
+					}
+				},
+		) {
+			Box(
+				Modifier.size(pageWidth, pageHeight).clipToBounds(),
+				contentAlignment = Alignment.Center,
+			) {
+				// Follows the scroll in the draw phase, without recomposing the page as it moves.
+				Box(
+					Modifier.fillMaxSize().graphicsLayer {
+						val progress = layout.progress(scroll.value.toFloat())
+						scaleX = layout.scale(progress)
+						scaleY = scaleX
+						translationY = layout.shift(progress)
+					},
+					contentAlignment = Alignment.Center,
+				) {
+					if (item.isVideo) {
+						Box(
+							Modifier
+								.fillMaxSize()
+								.clickable(interactionSource = null, indication = null, enabled = !isInfoInView, role = Role.Button, onClick = onPlay)
+								.semantics { contentDescription = "Play video" },
+							contentAlignment = Alignment.Center,
+						) {
+							AsyncImage(request, contentDescription = null, contentScale = ContentScale.Fit, onState = onState, modifier = Modifier.fillMaxSize())
+							if (!loading) {
+								val playAlpha by animateFloatAsState(if (isInfoInView) 0f else 1f, tween(150, easing = AppleEaseOut))
+								Box(
+									Modifier.graphicsLayer { alpha = playAlpha }.size(72.dp).clip(CircleShape).glassControl(CircleShape),
+									contentAlignment = Alignment.Center,
+								) {
+									Icon(Symbols.PlayArrowSemibold, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+								}
+							}
+						}
+					} else {
+						ZoomablePhoto(
+							request,
+							allowsZoom = !isInfoInView,
+							onTap = onTap,
+							onZoomChange = {
+								isZoomed = it
+								onZoomChange(it)
+							},
+							onState = onState,
+						)
+					}
+				}
+				if (loading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp), strokeWidth = 2.5.dp)
+			}
+			Box(
+				Modifier.fillMaxWidth().heightIn(min = with(LocalDensity.current) { layout.openOffset.toDp() }),
+				contentAlignment = Alignment.TopCenter,
+			) {
+				if (loadsInfo) {
+					Box(
+						Modifier
+							.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp + bottomInset)
+							.widthIn(max = PhotoViewerInfoMaxWidth),
+					) { infoContent() }
+				}
+			}
+		}
 	}
 }
 
@@ -521,30 +730,39 @@ private fun fullImageRequest(context: Context, item: LocalMediaItem): ImageReque
 		.build()
 
 @Composable
-private fun ZoomablePhoto(request: ImageRequest, onTap: () -> Unit, onZoomChange: (Boolean) -> Unit, onState: (AsyncImagePainter.State) -> Unit) {
+private fun ZoomablePhoto(
+	request: ImageRequest,
+	allowsZoom: Boolean,
+	onTap: () -> Unit,
+	onZoomChange: (Boolean) -> Unit,
+	onState: (AsyncImagePainter.State) -> Unit,
+) {
 	val scope = rememberCoroutineScope()
 	var zoom by remember { mutableStateOf(PageZoom()) }
 	val animation = remember { Animatable(0f) }
 	val currentOnTap by rememberUpdatedState(onTap)
+	val zooms by rememberUpdatedState(allowsZoom)
+	fun animateZoom(target: PageZoom) {
+		val start = zoom
+		scope.launch {
+			animation.snapTo(0f)
+			animation.animateTo(1f, tween(300, easing = AppleEaseInOut)) {
+				zoom = PageZoom(
+					start.scale + (target.scale - start.scale) * value,
+					start.offset + (target.offset - start.offset) * value,
+				)
+			}
+		}
+	}
 	LaunchedEffect(zoom.isZoomed) { onZoomChange(zoom.isZoomed) }
+	// Info opened from its button while zoomed: the photo goes back to fit under it.
+	LaunchedEffect(allowsZoom) { if (!allowsZoom && zoom.isZoomed) animateZoom(PageZoom()) }
 	Box(
 		Modifier
 			.fillMaxSize()
 			.pointerInput(Unit) {
 				detectTapGestures(
-					onDoubleTap = { point ->
-						val start = zoom
-						val target = start.toggled(point, size.toSize())
-						scope.launch {
-							animation.snapTo(0f)
-							animation.animateTo(1f, tween(300, easing = AppleEaseInOut)) {
-								zoom = PageZoom(
-									start.scale + (target.scale - start.scale) * value,
-									start.offset + (target.offset - start.offset) * value,
-								)
-							}
-						}
-					},
+					onDoubleTap = { point -> if (zooms) animateZoom(zoom.toggled(point, size.toSize())) },
 					onTap = { currentOnTap() },
 				)
 			}
@@ -554,8 +772,8 @@ private fun ZoomablePhoto(request: ImageRequest, onTap: () -> Unit, onZoomChange
 					do {
 						val event = awaitPointerEvent()
 						val fingers = event.changes.count { it.pressed }
-						// One finger on an unzoomed photo belongs to paging and dismissal.
-						if (fingers >= 2 || zoom.isZoomed) {
+						// One finger on an unzoomed photo belongs to paging, Info and dismissal.
+						if (zooms && (fingers >= 2 || zoom.isZoomed)) {
 							val centroid = event.calculateCentroid(useCurrent = true)
 							if (centroid.isSpecified) {
 								if (animation.isRunning) scope.launch { animation.stop() }
@@ -575,120 +793,5 @@ private fun ZoomablePhoto(request: ImageRequest, onTap: () -> Unit, onZoomChange
 			},
 	) {
 		AsyncImage(request, contentDescription = null, contentScale = ContentScale.Fit, onState = onState, modifier = Modifier.fillMaxSize())
-	}
-}
-
-// ── Info ──
-
-/** The item's metadata and backup status, at about half the screen like iOS's medium detent. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PhotoViewerInfoSheet(
-	item: LocalMediaItem,
-	library: PhotoLibraryViewModel,
-	state: MainUiState,
-	folder: LibraryFolder?,
-	onSkipFolder: ((LibraryFolder) -> Unit)?,
-	onDismiss: () -> Unit,
-) {
-	val context = LocalContext.current
-	val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-	var confirmingSkip by remember { mutableStateOf(false) }
-	val status = rememberBackupStatus(item, library, state)
-	val details by produceState<LocalMediaDetails?>(null, item.localIdentifier) { value = PhotoLibrary.details(context, item) }
-	PageSheet(onDismissRequest = onDismiss, sheetState = sheetState, floating = true) {
-		Column(Modifier.height(mediumSheetHeight()).navigationBarsPadding()) {
-			SheetToolbar("Info", onClose = null)
-			Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
-				SettingsSection("Backup") {
-					InfoRow {
-						Icon(
-							status?.sheetIcon ?: Symbols.Schedule,
-							contentDescription = null,
-							tint = Color.White,
-							modifier = Modifier.size(22.dp),
-						)
-						Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-							Text(status?.text ?: "Checking backup", style = AppleType.body, color = Color.White)
-							if (status == ViewerBackupStatus.NOT_BACKED_UP) {
-								Text(
-									if (item.isVideo) "Video backup is turned off." else "Photo backup is turned off.",
-									style = AppleType.subheadline,
-									color = MainTheme.gray,
-								)
-							}
-						}
-					}
-					if (folder != null && onSkipFolder != null) {
-						SettingsDivider()
-						InfoRow(Modifier.clickable(role = Role.Button) { confirmingSkip = true }) {
-							Text("Skip This Folder", style = AppleType.body, color = LocalBrandColor.current)
-						}
-					}
-				}
-				SettingsSection("Details") {
-					val rows = buildList {
-						if (item.takenAtMs > 0) {
-							add("Captured" to DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT).format(Date(item.takenAtMs)))
-						}
-						details?.displayName?.let { add("Filename" to it) }
-						add("Folder" to (folder?.name ?: PhotoBackupFolders.name(item.folderPath)))
-						add("Type" to if (item.isVideo) "Video" else "Photo")
-						if (item.width > 0 && item.height > 0) add("Dimensions" to "${item.width} × ${item.height}")
-						item.durationMs?.let { add("Duration" to PhotoLibrary.formatLongDuration(it)) }
-					}
-					rows.forEachIndexed { index, (label, value) ->
-						if (index > 0) SettingsDivider()
-						LabeledRow(label, value, middleTruncates = label == "Filename")
-					}
-				}
-				details?.location?.let { (latitude, longitude) ->
-					SettingsSection("Location") { LabeledRow("Coordinates", formatCoordinates(latitude, longitude), middleTruncates = false) }
-				}
-			}
-		}
-	}
-	if (confirmingSkip && folder != null && onSkipFolder != null) {
-		AlertDialog(
-			onDismissRequest = { confirmingSkip = false },
-			title = { Text("Skip ${folder.name}?") },
-			text = {
-				Text("${LibraryFolders.contents(folder.photoCount, folder.videoCount, separator = " and ")} in this folder won’t be backed up. Anything already on your Umbrel stays there.")
-			},
-			confirmButton = {
-				TextButton(onClick = {
-					confirmingSkip = false
-					onSkipFolder(folder)
-				}) { Text("Skip Folder") }
-			},
-			dismissButton = { TextButton(onClick = { confirmingSkip = false }) { Text("Cancel") } },
-		)
-	}
-}
-
-@Composable
-private fun InfoRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
-	Row(
-		modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp).padding(horizontal = 16.dp, vertical = 11.dp),
-		horizontalArrangement = Arrangement.spacedBy(12.dp),
-		verticalAlignment = Alignment.CenterVertically,
-		content = content,
-	)
-}
-
-/** iOS's LabeledContent: the label leading, the value trailing in gray. */
-@Composable
-private fun LabeledRow(label: String, value: String, middleTruncates: Boolean) {
-	InfoRow {
-		Text(label, style = AppleType.body, color = Color.White)
-		Text(
-			value,
-			style = AppleType.body,
-			color = MainTheme.gray,
-			textAlign = TextAlign.End,
-			maxLines = if (middleTruncates) 1 else Int.MAX_VALUE,
-			overflow = if (middleTruncates) TextOverflow.MiddleEllipsis else TextOverflow.Clip,
-			modifier = Modifier.weight(1f),
-		)
 	}
 }

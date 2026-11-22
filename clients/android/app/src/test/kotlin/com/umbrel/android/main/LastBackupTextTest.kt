@@ -21,12 +21,13 @@ class LastBackupTextTest {
 
 	private fun text(atMs: Long, is24Hour: Boolean = false) = lastBackupText(atMs, now, zone, Locale.US, is24Hour)
 
+	// ICU puts a narrow no-break space before AM and PM, as iOS does.
 	@Test
 	fun recentBackupsReadAsADayAndATime() {
-		assertEquals("Today at 3:04 PM", text(at(2026, 10, 15, 15, 4)))
+		assertEquals("Today at 3:04\u202FPM", text(at(2026, 10, 15, 15, 4)))
 		assertEquals("Today at 15:04", text(at(2026, 10, 15, 15, 4), is24Hour = true))
-		assertEquals("Yesterday at 11:58 PM", text(at(2026, 10, 14, 23, 58)))
-		assertEquals("Friday at 9:00 AM", text(at(2026, 10, 9, 9, 0)))
+		assertEquals("Yesterday at 11:58\u202FPM", text(at(2026, 10, 14, 23, 58)))
+		assertEquals("Friday at 9:00\u202FAM", text(at(2026, 10, 9, 9, 0)))
 	}
 
 	@Test

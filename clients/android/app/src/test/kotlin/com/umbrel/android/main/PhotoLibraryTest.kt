@@ -45,13 +45,6 @@ class PhotoLibraryTest {
 	}
 
 	@Test
-	fun videoLocationsParseFromIso6709() {
-		assertEquals(37.4219 to -122.084, PhotoLibrary.parseIso6709("+37.4219-122.0840/"))
-		assertEquals(-33.8688 to 151.2093, PhotoLibrary.parseIso6709("-33.8688+151.2093+012.500/"))
-		assertEquals(null, PhotoLibrary.parseIso6709("unknown"))
-	}
-
-	@Test
 	fun countsAbbreviateThousandsLikeIOS() {
 		assertEquals("0", formatCount(0))
 		assertEquals("999", formatCount(999))

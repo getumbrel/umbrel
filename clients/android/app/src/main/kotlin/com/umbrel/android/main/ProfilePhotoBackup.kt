@@ -58,13 +58,13 @@ import com.umbrel.android.ui.SettingsSection
 import com.umbrel.android.ui.SettingsToggleRow
 import com.umbrel.android.ui.SettingsValue
 import com.umbrel.android.ui.Symbols
+import com.umbrel.android.ui.formatDateSkeleton
 import com.umbrel.android.ui.openAppSettings
 import com.umbrel.android.ui.openNotificationSettings
 import com.umbrel.kit.backup.PhotoBackupPreference
 import com.umbrel.kit.backup.PhotoLibraryAccess
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.coroutines.resume
@@ -387,7 +387,7 @@ internal fun lastBackupText(
 ): String {
 	val date = Instant.ofEpochMilli(atMs).atZone(zone)
 	val now = Instant.ofEpochMilli(nowMs).atZone(zone)
-	fun format(skeleton: String) = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(date)
+	fun format(skeleton: String) = formatDateSkeleton(skeleton, date.toInstant(), zone, locale)
 	val time = format(if (is24Hour) "Hm" else "hm")
 	val days = ChronoUnit.DAYS.between(date.toLocalDate(), now.toLocalDate())
 	return when {

@@ -1,9 +1,7 @@
 import AVFoundation
 import AVKit
-import CoreLocation
 import Foundation
 import ImageIO
-import MapKit
 import Observation
 import OSLog
 import Photos
@@ -853,8 +851,8 @@ private struct ZoomablePhoto: UIViewRepresentable {
 	}
 }
 
-// Photos' Info cards, without what this app can't edit (caption, date, location and
-// keywords), and with the backup status Photos doesn't have.
+// Photos' Info cards, without what this app can't edit (caption, date and keywords) or
+// leaves out (location), and with the backup status Photos doesn't have.
 private struct PhotoViewerInfo: View {
 	let asset: PHAsset
 
@@ -868,9 +866,6 @@ private struct PhotoViewerInfo: View {
 				PhotoViewerBackupStatus(asset: asset, style: .details)
 					.padding(.horizontal, 16)
 					.padding(.vertical, 14)
-			}
-			if let location = asset.location {
-				PhotoViewerLocationCard(asset: asset, location: location)
 			}
 		}
 		.task(id: asset.localIdentifier) {
@@ -1038,96 +1033,6 @@ private struct PhotoViewerBadge: View {
 			.padding(.horizontal, 8)
 			.padding(.vertical, 3)
 			.background(.fill.secondary, in: Capsule())
-	}
-}
-
-private struct PhotoViewerLocationCard: View {
-	let asset: PHAsset
-	let location: CLLocation
-
-	@State private var placeName: String?
-	@State private var thumbnail: UIImage?
-
-	var body: some View {
-		PhotoViewerInfoCard {
-			VStack(alignment: .leading, spacing: 0) {
-				Map(initialPosition: .camera(MapCamera(centerCoordinate: location.coordinate, distance: 3000)), interactionModes: []) {
-					Annotation("", coordinate: location.coordinate, anchor: .bottom) {
-						pin
-					}
-				}
-				.frame(height: 156)
-				.allowsHitTesting(false)
-
-				Text(placeName ?? coordinates)
-					.font(.subheadline)
-					.lineLimit(1)
-					.padding(.horizontal, 16)
-					.padding(.vertical, 12)
-			}
-		}
-		.accessibilityElement(children: .ignore)
-		.accessibilityLabel("Location, \(placeName ?? coordinates)")
-		.task(id: asset.localIdentifier) {
-			async let place = Self.placeName(for: location)
-			thumbnail = await Self.thumbnail(for: asset)
-			placeName = await place
-		}
-	}
-
-	// Photos marks the spot with the photo itself, in a white frame that points at it.
-	private var pin: some View {
-		VStack(spacing: -1) {
-			Group {
-				if let thumbnail {
-					Image(uiImage: thumbnail).resizable().scaledToFill()
-				} else {
-					Color.secondary
-				}
-			}
-			.frame(width: 44, height: 44)
-			.clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-			.padding(3)
-			.background(.white, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-			Image(systemName: "arrowtriangle.down.fill")
-				.font(.system(size: 9))
-				.foregroundStyle(.white)
-		}
-		.shadow(color: .black.opacity(0.3), radius: 3, y: 1)
-	}
-
-	// Written as umbrelOS writes them: "63.5321° N, 19.5114° W"
-	private var coordinates: String {
-		let latitude = location.coordinate.latitude
-		let longitude = location.coordinate.longitude
-		return String(
-			format: "%.4f° %@, %.4f° %@",
-			abs(latitude), latitude < 0 ? "S" : "N",
-			abs(longitude), longitude < 0 ? "W" : "E"
-		)
-	}
-
-	private static func placeName(for location: CLLocation) async -> String? {
-		guard let request = MKReverseGeocodingRequest(location: location),
-		      let item = try? await request.mapItems.first else { return nil }
-		return item.addressRepresentations?.cityWithContext ?? item.name
-	}
-
-	private static func thumbnail(for asset: PHAsset) async -> UIImage? {
-		let options = PHImageRequestOptions()
-		options.deliveryMode = .highQualityFormat
-		options.resizeMode = .fast
-		options.isNetworkAccessAllowed = false
-		return await withCheckedContinuation { continuation in
-			PHImageManager.default().requestImage(
-				for: asset,
-				targetSize: CGSize(width: 132, height: 132),
-				contentMode: .aspectFill,
-				options: options
-			) { image, _ in
-				continuation.resume(returning: image)
-			}
-		}
 	}
 }
 
@@ -1341,7 +1246,7 @@ private struct PhotoViewerBackupStatus: View {
 		HStack(spacing: 12) {
 			Image(systemName: status.icon)
 				.font(.title3)
-				.foregroundStyle(status.tint)
+				.foregroundStyle(.primary)
 				.frame(width: 28)
 			VStack(alignment: .leading, spacing: 2) {
 				Text(status.text)
@@ -1433,14 +1338,6 @@ private struct PhotoViewerBackupStatus: View {
 			case .waiting: "clock"
 			case .notBackedUp: "minus.circle"
 			case .failed: "exclamationmark.triangle.fill"
-			}
-		}
-
-		var tint: Color {
-			switch self {
-			case .backedUp: .green
-			case .failed: .orange
-			case .waiting, .notBackedUp: .secondary
 			}
 		}
 

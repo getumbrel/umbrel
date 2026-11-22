@@ -1,5 +1,7 @@
 package com.umbrel.android.ui
 
+import android.icu.text.DateFormat as IcuDateFormat
+import android.icu.util.TimeZone as IcuTimeZone
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.RepeatMode
@@ -76,6 +78,9 @@ import com.umbrel.kit.UmbrelDeviceKind
 import kotlinx.coroutines.launch
 import java.math.RoundingMode
 import java.text.NumberFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.util.Date
 import java.util.Locale
 
 // SwiftUI's easeOut and easeInOut curves.
@@ -397,12 +402,14 @@ fun EmptyStateCard(
 	}
 }
 
+val CircleIconButtonSize = 42.dp
+
 /** A round glass control (header back button, sheet actions). */
 @Composable
 fun CircleIconButton(icon: ImageVector, contentDescription: String, modifier: Modifier = Modifier, iconSize: Dp = 20.dp, onClick: () -> Unit) {
 	Box(
 		modifier
-			.size(42.dp)
+			.size(CircleIconButtonSize)
 			.clip(CircleShape)
 			.glassControl(CircleShape)
 			.clickable(role = Role.Button, onClick = onClick),
@@ -725,3 +732,13 @@ fun formatStorageSize(bytes: Double, locale: Locale = Locale.getDefault()): Stri
 	}
 	return format.format(scaled) + units[unit]
 }
+
+/**
+ * A moment written the way [locale] writes the fields of an ICU [skeleton] ("yMMMd", "hm"),
+ * like iOS's Date.FormatStyle. ICU formats its own pattern: handing it to java.time crashes on
+ * Android 11 to 13, where java.time doesn't know letters ICU uses, like zh-TW's day period "B".
+ */
+fun formatDateSkeleton(skeleton: String, instant: Instant, zone: ZoneId, locale: Locale = Locale.getDefault()): String =
+	IcuDateFormat.getInstanceForSkeleton(skeleton, locale)
+		.apply { timeZone = IcuTimeZone.getTimeZone(zone.id) }
+		.format(Date.from(instant))
