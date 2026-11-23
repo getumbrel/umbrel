@@ -54,6 +54,13 @@ public final class PhotoBackupLedger {
 		public let state: AssetState
 		public let modificationDate: Date
 		public let uploadedBytes: Int64
+		// Nil unless the asset failed
+		public let failureReason: PhotoBackupFailureReason?
+	}
+
+	public struct FailedAsset: Equatable, Sendable {
+		public let localIdentifier: String
+		public let reason: PhotoBackupFailureReason
 	}
 
 	// One page of a walk over the ledger's assets, and where the next page starts
@@ -1383,7 +1390,7 @@ public final class PhotoBackupLedger {
 		try queue.sync {
 			let statement = try prepare(
 				"""
-				SELECT state, modificationDate, uploadedBytes
+				SELECT state, modificationDate, uploadedBytes, lastError
 				FROM photo_assets
 				WHERE deviceId = ? AND localIdentifier = ? AND state != ?
 				""")
@@ -1395,16 +1402,53 @@ public final class PhotoBackupLedger {
 			case SQLITE_DONE:
 				return nil
 			case SQLITE_ROW:
-				guard let state = AssetState(rawValue: sqlite3_column_int64(statement, 0)) else {
-					throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup asset has an invalid state")
-				}
-				return AssetRecord(
-					state: state,
-					modificationDate: Date(timeIntervalSince1970: sqlite3_column_double(statement, 1)),
-					uploadedBytes: sqlite3_column_int64(statement, 2)
-				)
+				return try assetRecord(in: statement, from: 0)
 			case let result:
 				throw databaseError(result)
+			}
+		}
+	}
+
+	// The assets statistics counts as failed, newest first, each with why. Reads every
+	// asset of the device, so it belongs off the main thread.
+	public func failedAssets(
+		deviceId: String,
+		includePhotos: Bool,
+		includeVideos: Bool
+	) throws -> [FailedAsset] {
+		var mediaTypes = [Int64]()
+		if includePhotos { mediaTypes.append(1) }
+		if includeVideos { mediaTypes.append(2) }
+		guard !mediaTypes.isEmpty else { return [] }
+
+		return try queue.sync {
+			let placeholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
+			let statement = try prepare(
+				"""
+				SELECT localIdentifier, lastError FROM photo_assets
+				WHERE deviceId = ? AND state = ? AND mediaType IN (\(placeholders))
+				ORDER BY creationDate DESC, rowid
+				""")
+			defer { sqlite3_finalize(statement) }
+			try bind(deviceId, at: 1, in: statement)
+			try bind(Self.assetFailed, at: 2, in: statement)
+			for (offset, mediaType) in mediaTypes.enumerated() {
+				try bind(mediaType, at: Int32(3 + offset), in: statement)
+			}
+			var assets = [FailedAsset]()
+			while true {
+				switch sqlite3_step(statement) {
+				case SQLITE_ROW:
+					assets.append(
+						FailedAsset(
+							localIdentifier: try requiredText(at: 0, in: statement),
+							reason: PhotoBackupFailureReason(message: optionalText(at: 1, in: statement))
+						))
+				case SQLITE_DONE:
+					return assets
+				case let result:
+					throw databaseError(result)
+				}
 			}
 		}
 	}
@@ -1415,7 +1459,10 @@ public final class PhotoBackupLedger {
 	public func assetRecords(deviceId: String) throws -> [String: AssetRecord] {
 		try queue.sync {
 			let statement = try prepare(
-				"SELECT localIdentifier, state, modificationDate, uploadedBytes FROM photo_assets WHERE deviceId = ? AND state != ?")
+				"""
+				SELECT localIdentifier, state, modificationDate, uploadedBytes, lastError
+				FROM photo_assets WHERE deviceId = ? AND state != ?
+				""")
 			defer { sqlite3_finalize(statement) }
 			try bind(deviceId, at: 1, in: statement)
 			try bind(Self.assetDeleted, at: 2, in: statement)
@@ -1423,15 +1470,7 @@ public final class PhotoBackupLedger {
 			while true {
 				switch sqlite3_step(statement) {
 				case SQLITE_ROW:
-					let identifier = try requiredText(at: 0, in: statement)
-					guard let state = AssetState(rawValue: sqlite3_column_int64(statement, 1)) else {
-						throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup asset has an invalid state")
-					}
-					records[identifier] = AssetRecord(
-						state: state,
-						modificationDate: Date(timeIntervalSince1970: sqlite3_column_double(statement, 2)),
-						uploadedBytes: sqlite3_column_int64(statement, 3)
-					)
+					records[try requiredText(at: 0, in: statement)] = try assetRecord(in: statement, from: 1)
 				case SQLITE_DONE:
 					return records
 				case let result:
@@ -1443,6 +1482,21 @@ public final class PhotoBackupLedger {
 
 	public func assetStates(deviceId: String) throws -> [String: AssetState] {
 		try assetRecords(deviceId: deviceId).mapValues(\.state)
+	}
+
+	// From the state, modificationDate, uploadedBytes and lastError columns, in that order
+	private func assetRecord(in statement: OpaquePointer, from column: Int32) throws -> AssetRecord {
+		guard let state = AssetState(rawValue: sqlite3_column_int64(statement, column)) else {
+			throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup asset has an invalid state")
+		}
+		return AssetRecord(
+			state: state,
+			modificationDate: Date(timeIntervalSince1970: sqlite3_column_double(statement, column + 1)),
+			uploadedBytes: sqlite3_column_int64(statement, column + 2),
+			failureReason: state == .failed
+				? PhotoBackupFailureReason(message: optionalText(at: column + 3, in: statement))
+				: nil
+		)
 	}
 
 	private struct AssetRow {

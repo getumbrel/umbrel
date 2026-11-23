@@ -57,8 +57,8 @@ final class MainModel {
 		case error
 		case backingUp(Int?)
 		case upToDate
-		// Only failed items remain. The extension retries them, and until the app can list
-		// them there's nothing for the user to do.
+		// Only failed items remain. They're retried once other backups make progress, and
+		// Profile lists them.
 		case upToDateExceptFailures
 
 		var text: String {
@@ -861,6 +861,43 @@ final class MainModel {
 	// Nil until backup is set up. The app backs up while it's open on either route; on
 	// .tailscale, PhotoKit also does while it's closed.
 	var photoBackupRoute: PhotoBackupConfiguration.Route? { photoBackupPresentationConfiguration?.route }
+
+	// The media backup to this Umbrel includes, which is whose failures the app shows.
+	// Neither while backup isn't set up here, when nothing tries them again.
+	var photoBackupMedia: PhotoBackupMedia {
+		PhotoBackupMedia(
+			photos: photoBackupPresentationConfiguration?.includePhotos ?? false,
+			videos: photoBackupPresentationConfiguration?.includeVideos ?? false
+		)
+	}
+
+	// How many items the ledger counts as failed for the media backup includes. Profile
+	// lists those of them the Library still shows. None while backup isn't set up here.
+	var photoBackupFailedCount: Int {
+		photoBackupPresentationConfiguration == nil ? 0 : photoBackup.statistics?.failedCount ?? 0
+	}
+
+	// Automatic retries stop while backup is paused or stopped, until its own Try Again
+	var photoBackupRetriesFailuresByItself: Bool {
+		photoBackupStatus != .paused && photoBackupStatus != .error
+	}
+
+	// That Try Again is under way: the failed items are being requeued, or backup is
+	// starting again or checking storage first
+	var photoBackupRetryInProgress: Bool {
+		photoBackupFailuresRequeueing || photoBackupStatus == .settingUp || photoBackupStatus == .checkingStorage
+	}
+
+	// The items photoBackupFailedCount counts, newest first, read off the main thread.
+	// Nil when the ledger can't be read.
+	func photoBackupFailedAssets() async -> [PhotoBackupLedger.FailedAsset]? {
+		guard let configuration = photoBackupPresentationConfiguration else { return [] }
+		return await photoBackupReceipts.failedAssets(
+			sourceId: configuration.source.id,
+			includePhotos: configuration.includePhotos,
+			includeVideos: configuration.includeVideos
+		)
+	}
 
 	var photoBackupBackgroundRefreshUnavailable: Bool {
 		switch backgroundRefreshStatus {
@@ -2013,6 +2050,61 @@ final class MainModel {
 			for: configuration,
 			renewGrant: photoBackup.issue == .authenticationRequired
 		)
+	}
+
+	// Try Again on the items that couldn't back up, which has to work while backup itself
+	// is fine. Like a change to the backup settings, it returns them to the queue: the
+	// app sends them from now, and with Tailscale PhotoKit's extension takes any that are
+	// left when iOS next runs it. A backup that's paused or stopped is retried its own
+	// way instead, which requeues them too.
+	func retryFailedPhotoBackups() {
+		switch photoBackupStatus {
+		case .paused:
+			retryPhotoBackupAfterInsufficientStorage()
+			return
+		case .error:
+			retryPhotoBackupAfterError()
+			return
+		default:
+			break
+		}
+		// One request at a time, however often the button is tapped
+		guard !photoBackupFailuresRequeueing else { return }
+		photoBackupFailuresRequeueing = true
+		Task {
+			await requeueFailedPhotoBackups()
+			photoBackupFailuresRequeueing = false
+		}
+	}
+
+	private(set) var photoBackupFailuresRequeueing = false
+
+	private func requeueFailedPhotoBackups() async {
+		guard let configuration = photoBackupPresentationConfiguration,
+			let ledgerURL = PhotoBackupStore.ledgerURL,
+			let ledger = PhotoBackupLedger(url: ledgerURL)
+		else { return }
+		// Lets go of the shared ledger before iOS suspends the app, which it would
+		// otherwise end (0xdead10cc)
+		let backgroundTime = BackgroundTaskAssertion(name: "Requeue failed photo backup assets") {
+			ledger.stop()
+		}
+		// Finding the failed assets reads every asset, so it's kept off the main thread
+		let requeued = await Task.detached {
+			(try? ledger.requeueFailedAssets(
+				deviceId: configuration.source.id,
+				includePhotos: configuration.includePhotos,
+				includeVideos: configuration.includeVideos
+			)) != nil
+		}.value
+		backgroundTime.end()
+		guard requeued else {
+			Self.logger.error("Could not requeue the failed photo backup assets")
+			return
+		}
+		presentationSnapshotDate = nil
+		refreshPhotoBackupPresentation()
+		PhotoBackupAppRunner.shared.run()
 	}
 
 	private func requestPhotoBackupRecovery(

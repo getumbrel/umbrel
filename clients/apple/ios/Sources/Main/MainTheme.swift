@@ -232,14 +232,21 @@ struct InfoPageDivider: View {
 // MARK: - Settings lists
 
 // A gray section header above a rounded #2c2c2e card of rows, optionally with a
-// How it works link at the header's trailing edge.
+// value or a How it works link at the header's trailing edge.
 struct SettingsSection<Content: View>: View {
 	let title: String
+	let value: String?
 	let learnMore: (() -> Void)?
 	@ViewBuilder var content: Content
 
-	init(_ title: String, learnMore: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
+	init(
+		_ title: String,
+		value: String? = nil,
+		learnMore: (() -> Void)? = nil,
+		@ViewBuilder content: () -> Content
+	) {
 		self.title = title
+		self.value = value
 		self.learnMore = learnMore
 		self.content = content()
 	}
@@ -250,6 +257,12 @@ struct SettingsSection<Content: View>: View {
 				Text(title)
 					.font(.subheadline.weight(.medium))
 					.foregroundStyle(Theme.gray)
+				if let value {
+					Spacer(minLength: 0)
+					Text(value)
+						.font(.subheadline.weight(.medium))
+						.foregroundStyle(Theme.gray)
+				}
 				if let learnMore {
 					Spacer(minLength: 0)
 					Button(action: learnMore) {

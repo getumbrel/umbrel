@@ -56,6 +56,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
@@ -325,7 +326,7 @@ private object CardBoundaryCrop : Shape {
 	}
 }
 
-private fun accessibilityLabel(item: LocalMediaItem): String {
+internal fun accessibilityLabel(item: LocalMediaItem): String {
 	val kind = if (item.isVideo) "Video" else "Photo"
 	if (item.takenAtMs <= 0) return kind
 	return "$kind, ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(item.takenAtMs))}"
@@ -333,20 +334,32 @@ private fun accessibilityLabel(item: LocalMediaItem): String {
 
 /**
  * A photo-library thumbnail shared by Home and Library: MediaStore's own thumbnail sized to
- * the cell, the video length, and one badge with one meaning, a completed upload receipt
- * for the item's current version.
+ * the cell, the video length, and a badge for the item's current version: a checkmark for a
+ * completed upload receipt, an amber mark when it couldn't back up. No [receipts], no badge.
+ * [onPicture] hears whether the item has a picture to show, for a caller that shows something
+ * in its place.
  */
 @Composable
-fun AssetThumbnail(item: LocalMediaItem, shape: Shape, receipts: PhotoBackupReceipts, modifier: Modifier = Modifier) {
+fun AssetThumbnail(
+	item: LocalMediaItem,
+	shape: Shape,
+	receipts: PhotoBackupReceipts?,
+	modifier: Modifier = Modifier,
+	onPicture: ((Boolean) -> Unit)? = null,
+) {
 	val context = LocalContext.current
-	var backedUp by remember(item.localIdentifier) { mutableStateOf(false) }
-	LaunchedEffect(item.localIdentifier, item.generation, receipts.generation) { backedUp = receipts.isBackedUp(item) }
+	var receipt by remember(item.localIdentifier) { mutableStateOf<BackupReceipt>(BackupReceipt.None) }
+	if (receipts != null) {
+		LaunchedEffect(item.localIdentifier, item.generation, receipts.generation) { receipt = receipts.receipt(item) }
+	}
 	Box(modifier.aspectRatio(1f).clip(shape).background(Color.White.copy(alpha = 0.06f))) {
 		AsyncImage(
 			model = remember(item.localIdentifier, item.generation) { thumbnailRequest(context, item) },
 			contentDescription = null,
 			contentScale = ContentScale.Crop,
 			modifier = Modifier.fillMaxSize(),
+			onSuccess = { onPicture?.invoke(true) },
+			onError = { onPicture?.invoke(false) },
 		)
 		item.durationMs?.let {
 			Text(
@@ -360,19 +373,26 @@ fun AssetThumbnail(item: LocalMediaItem, shape: Shape, receipts: PhotoBackupRece
 					.padding(horizontal = 5.dp, vertical = 3.dp),
 			)
 		}
-		if (backedUp) {
-			Icon(
-				Symbols.CheckCircleSemibold,
-				contentDescription = "Backed up",
-				tint = Color.White.copy(alpha = 0.8f),
-				modifier = Modifier
-					.align(Alignment.BottomEnd)
-					.padding(6.dp)
-					.shadow(2.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.55f), spotColor = Color.Black.copy(alpha = 0.55f))
-					.size(20.dp),
-			)
+		when (receipt) {
+			BackupReceipt.BackedUp -> BackupBadge(Symbols.CheckCircleSemibold, "Backed up", Color.White.copy(alpha = 0.8f))
+			is BackupReceipt.Failed -> BackupBadge(Symbols.ErrorSemibold, "Couldn’t back up", MainTheme.orange)
+			BackupReceipt.None -> Unit
 		}
 	}
+}
+
+@Composable
+private fun BoxScope.BackupBadge(icon: ImageVector, description: String, tint: Color) {
+	Icon(
+		icon,
+		contentDescription = description,
+		tint = tint,
+		modifier = Modifier
+			.align(Alignment.BottomEnd)
+			.padding(6.dp)
+			.shadow(2.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.55f), spotColor = Color.Black.copy(alpha = 0.55f))
+			.size(20.dp),
+	)
 }
 
 // ── Thumbnails ──

@@ -3,6 +3,7 @@ package com.umbrel.android.main
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import com.umbrel.kit.backup.PhotoBackupFailureReason
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -93,9 +94,18 @@ class PhotoViewerGeometryTest {
 
 	@Test
 	fun viewerStatusPrefersAReceiptOverTheToggle() {
-		assertEquals(ViewerBackupStatus.BACKED_UP, ViewerBackupStatus.of(backedUp = true, backupEnabled = false))
-		assertEquals(ViewerBackupStatus.NOT_BACKED_UP, ViewerBackupStatus.of(backedUp = false, backupEnabled = false))
-		assertEquals(ViewerBackupStatus.WAITING, ViewerBackupStatus.of(backedUp = false, backupEnabled = true))
+		assertEquals(ViewerBackupStatus.BACKED_UP, ViewerBackupStatus.of(BackupReceipt.BackedUp, backupEnabled = false))
+		assertEquals(ViewerBackupStatus.NOT_BACKED_UP, ViewerBackupStatus.of(BackupReceipt.None, backupEnabled = false))
+		assertEquals(ViewerBackupStatus.WAITING, ViewerBackupStatus.of(BackupReceipt.None, backupEnabled = true))
+	}
+
+	@Test
+	fun viewerStatusSaysAnItemCouldntBackUpOnlyWhileItsBackupIsOn() {
+		val failed = BackupReceipt.Failed(PhotoBackupFailureReason.UNREADABLE)
+		assertEquals(ViewerBackupStatus.FAILED, ViewerBackupStatus.of(failed, backupEnabled = true))
+		assertEquals("Couldn’t back up", ViewerBackupStatus.FAILED.text)
+		// Its media type is turned off, which is why it isn't backed up now
+		assertEquals(ViewerBackupStatus.NOT_BACKED_UP, ViewerBackupStatus.of(failed, backupEnabled = false))
 	}
 
 	@Test

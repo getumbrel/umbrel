@@ -574,7 +574,7 @@ class PhotoBackupEngine(
 		} catch (error: IOException) {
 			return Attempt.Unreadable(error.message ?: UNREADABLE_MESSAGE)
 		}
-		if (length <= 0) return Attempt.Failed("This item has no uploadable data")
+		if (length <= 0) return Attempt.Failed(PhotoBackupFailureReason.NOTHING_TO_UPLOAD_MESSAGE)
 		return try {
 			Attempt.Sent(server.upload(endpoint, grant, upload, UploadSource(length) { library.open(work.localIdentifier) }))
 		} catch (error: PhotoBackupSourceException) {

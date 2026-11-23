@@ -845,6 +845,7 @@ private extension LibraryPreviewSection {
 							receiptCache: model.photoBackupReceipts,
 							backupSourceId: model.photoBackup.sourceId,
 							backupRevision: model.photoBackupReceiptRevision,
+							backupMedia: model.photoBackupMedia,
 							thumbnailTargetSize: CGSize(width: 300, height: 300)
 						)
 						.id(asset.localIdentifier)

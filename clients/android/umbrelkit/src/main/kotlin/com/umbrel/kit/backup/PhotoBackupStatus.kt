@@ -23,8 +23,7 @@ sealed class PhotoBackupStatus {
 
 	/**
 	 * Only failed items remain: ones the Umbrel refused or kept failing on after other uploads
-	 * got through. Until the app can list them there's nothing for the user to do, and the
-	 * photo viewer still marks each one.
+	 * got through. Profile lists them, with their Try Again.
 	 */
 	data object UpToDateExceptFailures : PhotoBackupStatus()
 
@@ -111,6 +110,11 @@ data class PhotoBackupPresentation(
 	/** The source whose receipts and totals belong to this account, kept after backup is turned off. */
 	val sourceId: String?,
 	val statistics: PhotoBackupStatistics?,
+	/**
+	 * How many items couldn't back up, failed or unreadable, which [PhotoBackupManager.failedAssets]
+	 * lists. None while backup isn't set up for this account, when nothing tries them again.
+	 */
+	val failedCount: Long = 0,
 	/** The name this phone has in Photos on the Umbrel, known only while backup is set up. */
 	val sourceName: String? = null,
 	/** The backup this phone took over from the phone it was set up from, until it's first up to date. */
@@ -156,6 +160,7 @@ data class PhotoBackupPresentation(
 				notice(inputs, status, snapshot),
 				inputs.sourceId,
 				snapshot.statistics,
+				if (inputs.configuration == null) 0 else snapshot.statistics?.let { it.failedCount + it.unreadableCount } ?: 0,
 				inputs.configuration?.source?.name,
 				inputs.continuingName,
 				inputs.sourceResolved,

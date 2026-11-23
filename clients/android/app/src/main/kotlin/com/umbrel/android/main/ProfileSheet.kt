@@ -73,7 +73,7 @@ import com.umbrel.android.ui.openUrl
 import kotlinx.coroutines.launch
 
 /** The pages pushed inside the Profile sheet. */
-enum class ProfileDestination { REMOTE_ACCESS, CONNECTION, FOLDERS, FOLDER_SETUP }
+enum class ProfileDestination { REMOTE_ACCESS, CONNECTION, FOLDERS, FOLDER_SETUP, FAILED_UPLOADS }
 
 // The device render's shadow on the Profile card.
 private val ProfileRenderShadow = RenderShadow(opacity = 0.16f, radius = 8.dp, y = 16.dp)
@@ -90,6 +90,10 @@ private val ProfileRenderShadow = RenderShadow(opacity = 0.16f, radius = 8.dp, y
 fun ProfileSheet(
 	model: MainViewModel,
 	state: MainUiState,
+	/** The library's items, which what couldn't back up is listed from. */
+	library: PhotoLibraryAssets,
+	/** Opens one of those items in the viewer. */
+	photoLibrary: PhotoLibraryViewModel,
 	folders: List<LibraryFolder>,
 	choosingFolders: Boolean,
 	destination: ProfileDestination?,
@@ -100,6 +104,8 @@ fun ProfileSheet(
 	var page by rememberSaveable { mutableStateOf(destination) }
 	// The root keeps its scroll position under a pushed page, as a navigation stack does.
 	val pageStates = rememberSaveableStateHolder()
+	// Read here, above the pages, so the row's count and the page it opens are one list
+	val failedUploads = rememberFailedUploads(model, state, library)
 	LaunchedEffect(choosingFolders) {
 		if (choosingFolders) page = ProfileDestination.FOLDER_SETUP else if (page == ProfileDestination.FOLDER_SETUP) page = null
 	}
@@ -133,7 +139,7 @@ fun ProfileSheet(
 					when (current) {
 						null -> {
 							SheetToolbar("Profile", onClose = ::close)
-							ProfileRoot(model, state, folders, onOpen = { page = it }, onSignOut = { model.signOut(onDismiss) })
+							ProfileRoot(model, state, folders, failedUploads?.count ?: 0, onOpen = { page = it }, onSignOut = { model.signOut(onDismiss) })
 						}
 						ProfileDestination.REMOTE_ACCESS -> {
 							SheetToolbar("Tailscale", onClose = null, onBack = { page = null })
@@ -151,6 +157,10 @@ fun ProfileSheet(
 							SheetToolbar("Photo Backup", onClose = null)
 							FolderSetupPage(model, state, folders, onStart = model::confirmFolderChoice, modifier = Modifier.weight(1f))
 						}
+						ProfileDestination.FAILED_UPLOADS -> {
+							SheetToolbar("Couldn’t Back Up", onClose = null, onBack = { page = null })
+							FailedUploadsPage(model, photoLibrary, state, failedUploads, folders)
+						}
 					}
 				}
 			}
@@ -163,6 +173,7 @@ private fun ProfileRoot(
 	model: MainViewModel,
 	state: MainUiState,
 	folders: List<LibraryFolder>,
+	failedUploadCount: Int,
 	onOpen: (ProfileDestination) -> Unit,
 	onSignOut: () -> Unit,
 ) {
@@ -174,7 +185,15 @@ private fun ProfileRoot(
 	) {
 		DeviceCard(state, Modifier.padding(top = 20.dp, bottom = 10.dp))
 		ConnectionSection(state, onOpen)
-		PhotosSection(model, state, photoBackup, folders, onOpenFolders = { onOpen(ProfileDestination.FOLDERS) })
+		PhotosSection(
+			model,
+			state,
+			photoBackup,
+			folders,
+			failedUploadCount,
+			onOpenFolders = { onOpen(ProfileDestination.FOLDERS) },
+			onOpenFailedUploads = { onOpen(ProfileDestination.FAILED_UPLOADS) },
+		)
 		PermissionsSection(photoBackup)
 		SignOutButton(Modifier.padding(vertical = 10.dp)) { confirmingSignOut = true }
 		Footer()

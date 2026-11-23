@@ -107,6 +107,10 @@ data class MainUiState(
 	val backupNotice: PhotoBackupNotice? = null,
 	val backupSetupInProgress: Boolean = false,
 	val backupStatistics: PhotoBackupStatistics? = null,
+	/** How many items the ledger says couldn't back up. Profile lists those the library still shows. */
+	val backupFailedCount: Long = 0,
+	/** Try Again is returning those items to the queue. */
+	val backupFailureRetryInProgress: Boolean = false,
 	/** The account's backup source, kept after backup is turned off so receipts stay visible. */
 	val backupSourceId: String? = null,
 	/** How this phone appears in Photos on the Umbrel, when the app knows. */
@@ -973,6 +977,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 					backupNotice = presentation.notice,
 					backupSetupInProgress = manager.setupInProgress,
 					backupStatistics = presentation.statistics,
+					backupFailedCount = presentation.failedCount,
 					backupSourceId = presentation.sourceId,
 					backupSourceName = backupSourceName(presentation.sourceName, presentation.sourceId) { PhotoBackupSourceName.current(appContext) },
 					backupSourceResolved = presentation.sourceResolved,
@@ -1066,6 +1071,47 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		backup.retryAfterError(_state.value.device, session)
 	}
 
+	/**
+	 * Try Again on the items that couldn't back up. While backup is fine they return to the
+	 * queue at once and a transfer starts. A backup that's paused for storage or stopped is
+	 * retried as its notice's button retries it, which requeues them too.
+	 */
+	fun retryFailedBackups() {
+		when (failedUploadRetry(_state.value.backupNotice)) {
+			FailedUploadRetry.STORAGE -> retryBackupAfterStorage()
+			FailedUploadRetry.RECOVERY -> retryBackupAfterError()
+			FailedUploadRetry.REQUEUE -> requeueFailedBackups()
+		}
+	}
+
+	private fun requeueFailedBackups() {
+		val state = _state.value
+		val session = state.session ?: return
+		// One request at a time, however often the button is tapped
+		if (state.backupFailureRetryInProgress) return
+		_state.update { it.copy(backupFailureRetryInProgress = true) }
+		viewModelScope.launch {
+			try {
+				backup.retryFailedUploads(state.device, session)
+			} finally {
+				_state.update { it.copy(backupFailureRetryInProgress = false) }
+			}
+		}
+	}
+
+	/** The items [MainUiState.backupFailedCount] counts, newest first. Null when the ledger can't be read. */
+	suspend fun failedBackups(): List<PhotoBackupLedger.FailedAsset>? {
+		val state = _state.value
+		val session = state.session ?: return emptyList()
+		return withContext(Dispatchers.IO) {
+			try {
+				openLedger()?.let { backup.failedAssets(state.device, session.accountId, it) }
+			} catch (error: Exception) {
+				null
+			}
+		}
+	}
+
 	fun clearError() = _state.update { it.copy(error = null) }
 
 	// ── Local library ──
@@ -1084,13 +1130,13 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		null
 	}
 
-	/** Whether the item's current revision has a completed upload receipt. Reads the ledger. */
-	fun isBackedUp(item: LocalMediaItem): Boolean {
-		val sourceId = _state.value.backupSourceId ?: return false
+	/** The ledger's record of the item's current revision, if it has one. Reads the ledger. */
+	fun backupRecord(item: LocalMediaItem): PhotoBackupLedger.AssetRecord? {
+		val sourceId = _state.value.backupSourceId ?: return null
 		return try {
-			openLedger()?.assetRecord(sourceId, item.localIdentifier)?.state == PhotoBackupLedger.AssetState.UPLOADED
+			openLedger()?.assetRecord(sourceId, item.localIdentifier)
 		} catch (error: Exception) {
-			false
+			null
 		}
 	}
 

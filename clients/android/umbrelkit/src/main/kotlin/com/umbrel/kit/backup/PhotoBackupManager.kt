@@ -202,6 +202,20 @@ class PhotoBackupManager internal constructor(
 		)
 	}
 
+	/**
+	 * The items [presentation] counts in [PhotoBackupPresentation.failedCount], with the same
+	 * media and folders. Reads [ledger], so call it off the main thread.
+	 */
+	fun failedAssets(device: SavedDevice, accountId: String, ledger: PhotoBackupLedger): List<PhotoBackupLedger.FailedAsset> {
+		val configuration = configuration(device.id, accountId) ?: return emptyList()
+		return ledger.failedAssets(
+			configuration.source.id,
+			configuration.includePhotos,
+			configuration.includeVideos,
+			PhotoBackupFolders.skipped(configuration.skippedFolders, libraryAccess()),
+		)
+	}
+
 	fun openLedger(): PhotoBackupLedger = PhotoBackupLedger(ledgerFile)
 
 	private fun configuration(deviceId: String, accountId: String): PhotoBackupConfiguration? =
@@ -401,6 +415,33 @@ class PhotoBackupManager internal constructor(
 		} else {
 			scope.launch { work.startUserInitiatedTransfer() }
 		}
+	}
+
+	/**
+	 * Try Again on the items that couldn't back up, while backup itself is fine. They return to
+	 * the queue here, as on iOS, and a transfer starts. [retryAfterError] leaves the requeue to
+	 * the next pass and shows backup as starting until that pass runs. That suits a backup that
+	 * stopped, but not this: offline, or behind a pass in flight, the next pass can be a long
+	 * way off.
+	 *
+	 * A pass in flight isn't disturbed. Only failed items change, and the one it's sending is
+	 * prepared, not failed, so the pass still records how it ends. It sends each item once: one
+	 * that failed earlier in the same pass waits for the next.
+	 */
+	suspend fun retryFailedUploads(device: SavedDevice, session: Umbreld.Session) {
+		val configuration = configuration(device.id, session.accountId) ?: return
+		try {
+			withContext(ioDispatcher) {
+				PhotoBackupLedger(ledgerFile).use { it.requeueFailedAssets(configuration.source.id, configuration.includePhotos, configuration.includeVideos) }
+			}
+		} catch (cancelled: CancellationException) {
+			throw cancelled
+		} catch (error: Exception) {
+			// Nothing was requeued: what failed stays listed, with its Try Again
+			return
+		}
+		bump()
+		work.startUserInitiatedTransfer()
 	}
 
 	/**

@@ -5,6 +5,7 @@ import androidx.sqlite.execSQL
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.umbrel.kit.backup.PhotoBackupLedger.AssetCandidate
 import com.umbrel.kit.backup.PhotoBackupLedger.AssetState
+import com.umbrel.kit.backup.PhotoBackupLedger.FailedAsset
 import com.umbrel.kit.backup.PhotoBackupLedger.ResourcePlan
 import com.umbrel.kit.backup.PhotoBackupLedger.ResourceReceipt
 import com.umbrel.kit.backup.PhotoBackupLedger.ResourceReceiptQuery
@@ -635,6 +636,98 @@ class PhotoBackupLedgerTest {
 		assertEquals(listOf("photo"), ledger.nextAssets("device", includePhotos = true, includeVideos = true, limit = 1).map { it.localIdentifier })
 		ledger.prepareAsset("device", "photo", 1, listOf(plan("resource", "/photo.jpg")))
 		assertEquals(AssetState.PREPARED, ledger.assetRecord("device", "photo")?.state)
+	}
+
+	// The app counts what couldn't back up from statistics and lists it from here, so both
+	// have to pick the same items
+	@Test
+	fun failedAssetsAreTheOnesStatisticsCountsNewestFirstWithWhy() {
+		val ledger = makeLedger()
+		ledger.seedInventory(
+			listOf(
+				candidate("unreadable", 1, creationTime = 1),
+				candidate("empty", 1, creationTime = 2),
+				candidate("refused", 2, creationTime = 3),
+				candidate("skipped", 1, creationTime = 4, folder = WHATSAPP),
+				candidate("removed", 1, creationTime = 5),
+				candidate("uploaded", 1, creationTime = 6),
+				candidate("waiting", 2, creationTime = 7),
+			),
+			"device",
+		)
+		ledger.seedInventory(listOf(candidate("elsewhere", 1)), "other-source")
+		for (identifier in listOf("unreadable", "empty", "refused", "skipped", "removed", "uploaded")) {
+			ledger.prepareAsset("device", identifier, 1, listOf(plan(identifier, "/$identifier.jpg")))
+		}
+		ledger.markAssetUnreadable("device", "unreadable", 1, "Couldn’t read this item")
+		ledger.recordResourceFailed("empty", PhotoBackupFailureReason.NOTHING_TO_UPLOAD_MESSAGE)
+		for (identifier in listOf("refused", "skipped", "removed")) ledger.recordResourceFailed(identifier, "Umbrel rejected the upload (415)")
+		ledger.markDeleted("device", "removed")
+		ledger.recordResourceSucceeded("uploaded", 10)
+		ledger.markAssetFailed("other-source", "elsewhere", 1, "Umbrel rejected the upload (415)")
+
+		fun failed(photos: Boolean, videos: Boolean, skipped: Set<String> = emptySet()): List<FailedAsset> {
+			val assets = ledger.failedAssets("device", photos, videos, skipped)
+			val stats = ledger.statistics("device", photos, videos, skipped)
+			assertEquals("photos $photos, videos $videos, skipped $skipped", stats.failedCount + stats.unreadableCount, assets.size.toLong())
+			return assets
+		}
+		assertEquals(
+			listOf(
+				FailedAsset("skipped", PhotoBackupFailureReason.GENERAL),
+				FailedAsset("refused", PhotoBackupFailureReason.GENERAL),
+				FailedAsset("empty", PhotoBackupFailureReason.NOTHING_TO_UPLOAD),
+				FailedAsset("unreadable", PhotoBackupFailureReason.UNREADABLE),
+			),
+			failed(photos = true, videos = true),
+		)
+		assertEquals(listOf("refused", "empty", "unreadable"), failed(photos = true, videos = true, skipped = setOf(WHATSAPP)).map { it.localIdentifier })
+		assertEquals(listOf("empty", "unreadable"), failed(photos = true, videos = false, skipped = setOf(WHATSAPP)).map { it.localIdentifier })
+		assertEquals(listOf("refused"), failed(photos = false, videos = true).map { it.localIdentifier })
+		assertTrue(failed(photos = false, videos = false).isEmpty())
+	}
+
+	// The reason is read from what's already in people's ledgers, so the texts here are as
+	// builds have stored them, not the constant
+	@Test
+	fun failureReasonIsReadFromTheStateAndTheStoredMessage() {
+		assertEquals(PhotoBackupFailureReason.UNREADABLE, PhotoBackupFailureReason.of(AssetState.UNREADABLE, "Couldn’t read this item"))
+		assertEquals(PhotoBackupFailureReason.UNREADABLE, PhotoBackupFailureReason.of(AssetState.UNREADABLE, null))
+		assertEquals(PhotoBackupFailureReason.NOTHING_TO_UPLOAD, PhotoBackupFailureReason.of(AssetState.FAILED, "This item has no uploadable data"))
+		val otherMessages = listOf(
+			"Umbrel rejected the upload (415)",
+			"Umbrel rejected the upload (507)",
+			"Umbrel couldn’t save this item (500)",
+			"Umbrel didn’t confirm this item",
+			"The upload failed",
+			// A file that kept changing while it was read
+			"Couldn’t read this item",
+			"",
+			null,
+		)
+		for (message in otherMessages) assertEquals(message, PhotoBackupFailureReason.GENERAL, PhotoBackupFailureReason.of(AssetState.FAILED, message))
+		for (state in listOf(AssetState.PENDING, AssetState.PREPARED, AssetState.UPLOADED, AssetState.DELETED)) {
+			assertNull(state.name, PhotoBackupFailureReason.of(state, "This item has no uploadable data"))
+		}
+	}
+
+	@Test
+	fun assetRecordSaysWhyOnlyWhileTheItemCouldntBackUp() {
+		val ledger = makeLedger()
+		ledger.seedInventory(listOf(candidate("photo", 1)), "device")
+		ledger.prepareAsset("device", "photo", 1, listOf(plan("resource", "/photo.jpg")))
+		assertNull(ledger.assetRecord("device", "photo")?.failureReason)
+
+		ledger.markAssetUnreadable("device", "photo", 1, "Couldn’t read this item")
+		assertEquals(PhotoBackupFailureReason.UNREADABLE, ledger.assetRecord("device", "photo")?.failureReason)
+
+		ledger.prepareAsset("device", "photo", 1, listOf(plan("resource", "/photo.jpg")))
+		ledger.recordResourceFailed("resource", PhotoBackupFailureReason.NOTHING_TO_UPLOAD_MESSAGE)
+		assertEquals(PhotoBackupFailureReason.NOTHING_TO_UPLOAD, ledger.assetRecord("device", "photo")?.failureReason)
+
+		ledger.requeueFailedAssets("device", includePhotos = true, includeVideos = true)
+		assertEquals(AssetState.PENDING, ledger.assetRecord("device", "photo")?.state)
+		assertNull(ledger.assetRecord("device", "photo")?.failureReason)
 	}
 
 	@Test

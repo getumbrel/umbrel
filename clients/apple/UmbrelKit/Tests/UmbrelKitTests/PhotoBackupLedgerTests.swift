@@ -938,6 +938,97 @@ final class PhotoBackupLedgerTests: XCTestCase {
 		XCTAssertNil(try ledger.assetRecord(deviceId: "source", localIdentifier: "photo"))
 	}
 
+	// The app counts what couldn't back up from statistics and lists it from here, so
+	// both have to pick the same assets
+	func testFailedAssetsAreTheOnesStatisticsCountsNewestFirstWithWhy() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory(
+			[
+				candidate("unreadable", mediaType: 1, creationTime: 1),
+				candidate("empty", mediaType: 1, creationTime: 2),
+				candidate("refused", mediaType: 2, creationTime: 3),
+				candidate("removed", mediaType: 1, creationTime: 4),
+				candidate("uploaded", mediaType: 1, creationTime: 5),
+				candidate("waiting", mediaType: 2, creationTime: 6),
+			],
+			deviceId: "device",
+			changeToken: Data()
+		)
+		try ledger.seedInventory([candidate("elsewhere", mediaType: 1)], deviceId: "other-source", changeToken: Data())
+		for identifier in ["unreadable", "refused", "removed", "uploaded"] {
+			try prepare(ledger, identifier)
+		}
+		try ledger.recordResourceFailed(resourceKey: "unreadable", message: PhotoBackupFailureMessage.unreadable)
+		try ledger.recordResourceFailed(resourceKey: "refused", message: "The Umbrel rejected this file (415)")
+		try ledger.markAssetFailed(
+			deviceId: "device",
+			localIdentifier: "empty",
+			revision: 1,
+			message: PhotoBackupFailureMessage.nothingToUpload
+		)
+		try ledger.recordResourceFailed(resourceKey: "removed", message: "server error")
+		try ledger.markDeleted(deviceId: "device", localIdentifier: "removed")
+		try ledger.recordResourceSucceeded(resourceKey: "uploaded", bytes: 10)
+		try ledger.markAssetFailed(deviceId: "other-source", localIdentifier: "elsewhere", revision: 1, message: "server error")
+
+		func failed(photos: Bool, videos: Bool) throws -> [PhotoBackupLedger.FailedAsset] {
+			let assets = try ledger.failedAssets(deviceId: "device", includePhotos: photos, includeVideos: videos)
+			let counted = try ledger.statistics(deviceId: "device", includePhotos: photos, includeVideos: videos).failedCount
+			XCTAssertEqual(assets.count, counted, "photos: \(photos), videos: \(videos)")
+			return assets
+		}
+		XCTAssertEqual(
+			try failed(photos: true, videos: true),
+			[
+				.init(localIdentifier: "refused", reason: .general),
+				.init(localIdentifier: "empty", reason: .nothingToUpload),
+				.init(localIdentifier: "unreadable", reason: .unreadable),
+			]
+		)
+		XCTAssertEqual(try failed(photos: true, videos: false).map(\.localIdentifier), ["empty", "unreadable"])
+		XCTAssertEqual(try failed(photos: false, videos: true).map(\.localIdentifier), ["refused"])
+		XCTAssertEqual(try failed(photos: false, videos: false), [])
+	}
+
+	// The reason is read from text already in people's ledgers, so these are the texts
+	// as builds have stored them, not the constants
+	func testFailureReasonIsReadFromTheStoredMessage() {
+		XCTAssertEqual(
+			PhotoBackupFailureReason(message: "Couldn\u{2019}t read this file from the photo library"),
+			.unreadable
+		)
+		XCTAssertEqual(PhotoBackupFailureReason(message: "This asset has no uploadable resource"), .nothingToUpload)
+		for message in [
+			"The Umbrel couldn\u{2019}t save this file",
+			"The Umbrel rejected this file (415)",
+			"The Umbrel is out of space",
+			"The upload server rejected this resource",
+			"PhotoKit could not upload this asset",
+			// A PhotoKit job's own error
+			"The operation couldn\u{2019}t be completed.",
+			"",
+		] {
+			XCTAssertEqual(PhotoBackupFailureReason(message: message), .general, message)
+		}
+		XCTAssertEqual(PhotoBackupFailureReason(message: nil), .general)
+	}
+
+	func testAssetRecordSaysWhyOnlyWhileTheAssetIsFailed() throws {
+		let ledger = try makeLedger()
+		try ledger.seedInventory([candidate("photo", mediaType: 1)], deviceId: "device", changeToken: Data())
+		try prepare(ledger, "photo")
+		XCTAssertNil(try ledger.assetRecord(deviceId: "device", localIdentifier: "photo")?.failureReason)
+
+		try ledger.recordResourceFailed(resourceKey: "photo", message: PhotoBackupFailureMessage.unreadable)
+		XCTAssertEqual(try ledger.assetRecord(deviceId: "device", localIdentifier: "photo")?.failureReason, .unreadable)
+		XCTAssertEqual(try ledger.assetRecords(deviceId: "device")["photo"]?.failureReason, .unreadable)
+
+		try ledger.requeueFailedAssets(deviceId: "device", includePhotos: true, includeVideos: true)
+		let requeued = try XCTUnwrap(try ledger.assetRecord(deviceId: "device", localIdentifier: "photo"))
+		XCTAssertEqual(requeued.state, .pending)
+		XCTAssertNil(requeued.failureReason)
+	}
+
 	func testReceiptCacheStaysBoundedAndInvalidatesForANewRevision() async throws {
 		let ledger = try makeLedger()
 		try ledger.seedInventory(

@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.umbrel.android.ui.AppleType
 import com.umbrel.android.ui.LocalBrandColor
 import com.umbrel.android.ui.MainTheme
+import com.umbrel.android.ui.PillButton
 import com.umbrel.android.ui.Symbols
 
 /** Photos' column of cards on a screen wider than a phone's. */
@@ -69,6 +70,7 @@ internal fun PhotoViewerInfo(
 	state: MainUiState,
 	folder: LibraryFolder?,
 	onSkipFolder: ((LibraryFolder) -> Unit)?,
+	onRetryBackup: () -> Unit,
 	modifier: Modifier = Modifier,
 ) {
 	val context = LocalContext.current
@@ -78,7 +80,7 @@ internal fun PhotoViewerInfo(
 	}
 	Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
 		DetailsCard(item, metadata)
-		BackupCard(item, library, state, folder, onSkipFolder)
+		BackupCard(item, library, state, folder, onSkipFolder, onRetryBackup)
 	}
 }
 
@@ -227,6 +229,7 @@ private val ViewerBackupStatus.cardIcon
 		ViewerBackupStatus.BACKED_UP -> Symbols.CheckCircle
 		ViewerBackupStatus.WAITING -> Symbols.Schedule
 		ViewerBackupStatus.NOT_BACKED_UP -> Symbols.RemoveCircleOutline
+		ViewerBackupStatus.FAILED -> Symbols.Warning
 	}
 
 @Composable
@@ -236,14 +239,22 @@ private fun BackupCard(
 	state: MainUiState,
 	folder: LibraryFolder?,
 	onSkipFolder: ((LibraryFolder) -> Unit)?,
+	onRetryBackup: () -> Unit,
 ) {
 	var confirmingSkip by remember { mutableStateOf(false) }
-	val status = rememberBackupStatus(item, library, state)
+	val receipt = rememberBackupReceipt(item, library)
+	val status = receipt?.let { ViewerBackupStatus.of(it, backupIncludes(state, item)) }
+	val failure = (receipt as? BackupReceipt.Failed)?.reason?.takeIf { status == ViewerBackupStatus.FAILED }
+	val offersRetry = failure?.offersRetry == true
 	InfoCard {
 		Row(
-			Modifier.padding(horizontal = 16.dp, vertical = 14.dp).semantics(mergeDescendants = true) {},
+			// PillButton keeps a 7 dp margin under its capsule for its 44 dp tap target
+			Modifier
+				.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = if (offersRetry) 7.dp else 14.dp)
+				.semantics(mergeDescendants = true) {},
 			horizontalArrangement = Arrangement.spacedBy(if (status == null) 8.dp else 12.dp),
-			verticalAlignment = Alignment.CenterVertically,
+			// A failure's sentence runs to a few lines, so its icon sits by the title
+			verticalAlignment = if (failure == null) Alignment.CenterVertically else Alignment.Top,
 		) {
 			if (status == null) {
 				Icon(Symbols.Schedule, contentDescription = null, tint = MainTheme.gray, modifier = Modifier.size(18.dp))
@@ -263,8 +274,12 @@ private fun BackupCard(
 						ViewerBackupStatus.BACKED_UP -> "Saved to your Umbrel"
 						ViewerBackupStatus.NOT_BACKED_UP -> if (item.isVideo) "Video backup is turned off." else "Photo backup is turned off."
 						ViewerBackupStatus.WAITING -> null
+						ViewerBackupStatus.FAILED -> failure?.detail(backupRetriesFailuresByItself(state.backupStatus))
 					}
 					if (detail != null) Text(detail, style = AppleType.footnote, color = MainTheme.gray)
+					if (offersRetry) {
+						PillButton("Try Again", Modifier.padding(top = 4.dp), isLoading = backupRetryInProgress(state), onClick = onRetryBackup)
+					}
 				}
 			}
 		}

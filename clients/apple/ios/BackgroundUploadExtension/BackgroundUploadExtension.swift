@@ -817,7 +817,7 @@ final class BackgroundUploadExtension: PHBackgroundResourceUploadExtension {
 						deviceId: configuration.source.id,
 						localIdentifier: work.localIdentifier,
 						revision: work.revision,
-						message: "This asset has no uploadable resource"
+						message: PhotoBackupFailureMessage.nothingToUpload
 					)
 					continue
 				}

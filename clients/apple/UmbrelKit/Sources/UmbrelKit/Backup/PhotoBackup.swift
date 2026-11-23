@@ -351,6 +351,30 @@ public enum PhotoBackupIssue: String, Codable, Equatable, Sendable {
 	}
 }
 
+// The texts stored as a failed asset's lastError that say why it failed. They're matched
+// as stored, so changing one loses the reason of every asset an earlier build recorded.
+public enum PhotoBackupFailureMessage {
+	public static let unreadable = "Couldn\u{2019}t read this file from the photo library"
+	public static let nothingToUpload = "This asset has no uploadable resource"
+}
+
+// Why an asset couldn't back up, in the order the app lists them. Any other stored text
+// is general: the Umbrel refusing or failing to save a file, or PhotoKit's own error.
+public enum PhotoBackupFailureReason: Equatable, Sendable, CaseIterable {
+	// The photo library couldn't hand over the file
+	case unreadable
+	case general
+	case nothingToUpload
+
+	public init(message: String?) {
+		switch message {
+		case PhotoBackupFailureMessage.unreadable: self = .unreadable
+		case PhotoBackupFailureMessage.nothingToUpload: self = .nothingToUpload
+		default: self = .general
+		}
+	}
+}
+
 // Compact, durable presentation totals maintained by the background extension's
 // incremental ledger. The host app reads these instead of walking the PhotoKit
 // library whenever it needs to render backup status.

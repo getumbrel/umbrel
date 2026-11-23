@@ -10,6 +10,8 @@ final class PhotoBackupAppPassTests: XCTestCase {
 	private var umbrel: FakeUmbrel!
 	private var liveIdentifiers: Set<String> = []
 	private var unreadable: Set<String> = []
+	// Assets with no file to back up
+	private var empty: Set<String> = []
 	private var lookups: [String] = []
 	private var leaving = false
 	private var leaveAfterUploads: Int?
@@ -24,6 +26,7 @@ final class PhotoBackupAppPassTests: XCTestCase {
 		umbrel = FakeUmbrel()
 		liveIdentifiers = []
 		unreadable = []
+		empty = []
 		lookups = []
 		leaving = false
 		leaveAfterUploads = nil
@@ -409,6 +412,80 @@ final class PhotoBackupAppPassTests: XCTestCase {
 		XCTAssertEqual(shared.snapshot.statistics?.uploadedCount, 2)
 	}
 
+	// What the app lists under "Couldn't back up", and its Try Again: requeueing in the
+	// ledger is all the app needs to send them again, with PhotoKit's extension on too
+	func testFailuresKeepTheirReasonAndAreSentAgainOnceRequeued() async throws {
+		route = .tailscale
+		try seed(["unreadable": 3, "refused": 2, "empty": 1])
+		unreadable = ["unreadable.photo"]
+		umbrel.responses = ["refused.photo": .status(415)]
+		empty = ["empty"]
+
+		// Each is tried once more by itself, then left failed
+		try await expectPass(.moreWork)
+		try await expectPass(.completed)
+		XCTAssertEqual(
+			try ledger.failedAssets(deviceId: sourceId, includePhotos: true, includeVideos: true),
+			[
+				.init(localIdentifier: "unreadable", reason: .unreadable),
+				.init(localIdentifier: "refused", reason: .general),
+				.init(localIdentifier: "empty", reason: .nothingToUpload),
+			]
+		)
+
+		unreadable = []
+		umbrel.responses = [:]
+		try ledger.requeueFailedAssets(deviceId: sourceId, includePhotos: true, includeVideos: true)
+		try await expectPass(.moreWork)
+		try await expectPass(.completed)
+
+		XCTAssertEqual(umbrel.sent.map(\.name), ["refused.photo", "refused.photo", "unreadable.photo", "refused.photo"])
+		XCTAssertEqual(
+			try ledger.failedAssets(deviceId: sourceId, includePhotos: true, includeVideos: true),
+			[.init(localIdentifier: "empty", reason: .nothingToUpload)]
+		)
+	}
+
+	// Try Again requeues from the app on its own connection, also while a pass is uploading.
+	// The upload in flight is prepared, not failed, so it's left alone and the pass still
+	// records how it ends. What was requeued is sent once, in its turn.
+	func testAssetsRequeuedWhileAPassUploadsAreSentOnceAndTheUploadInFlightIsStillRecorded() async throws {
+		try seed(["refused": 1])
+		umbrel.responses = ["refused.photo": .status(415)]
+		// Tried once more by itself, then left failed
+		try await expectPass(.moreWork)
+		try await expectPass(.completed)
+		XCTAssertEqual(umbrel.sent.map(\.name), ["refused.photo", "refused.photo"])
+
+		_ = try ledger.recordObservedChanges(
+			inserted: [candidate("sending", created: 3), candidate("waiting", created: 2)],
+			contentChanged: [],
+			metadataChanged: [],
+			deviceId: sourceId
+		)
+		umbrel.responses = ["sending.photo": .status(415)]
+		onUpload = { [unowned self] in
+			guard umbrel.sent.last?.name == "sending.photo", umbrel.sent.count == 3 else { return }
+			let app = try XCTUnwrap(PhotoBackupLedger(url: directory.appendingPathComponent("photo-backup.sqlite")))
+			try app.requeueFailedAssets(deviceId: sourceId, includePhotos: true, includeVideos: true)
+		}
+
+		// Other backups got through, so what failed gets its one automatic retry
+		try await expectPass(.moreWork)
+		XCTAssertEqual(umbrel.sent.dropFirst(2).map(\.name), ["sending.photo", "waiting.photo", "refused.photo"])
+		XCTAssertEqual(try ledger.assetRecord(deviceId: sourceId, localIdentifier: "refused")?.state, .uploaded)
+		XCTAssertEqual(try ledger.assetRecord(deviceId: sourceId, localIdentifier: "waiting")?.state, .uploaded)
+
+		try await expectPass(.completed)
+		// Still refused, and nothing tries it again until other backups make progress
+		try await expectPass(.completed)
+		XCTAssertEqual(umbrel.sent.dropFirst(5).map(\.name), ["sending.photo"])
+		XCTAssertEqual(
+			try ledger.failedAssets(deviceId: sourceId, includePhotos: true, includeVideos: true),
+			[.init(localIdentifier: "sending", reason: .general)]
+		)
+	}
+
 	// MARK: - Harness
 
 	private func makePass() -> PhotoBackupAppPass {
@@ -429,6 +506,7 @@ final class PhotoBackupAppPassTests: XCTestCase {
 				lookup: { [unowned self] work, grant in
 					lookups.append(work.localIdentifier)
 					if umbrel.removed.contains(work.localIdentifier) { return .removed }
+					if empty.contains(work.localIdentifier) { return .resources([]) }
 					let names = liveIdentifiers.contains(work.localIdentifier)
 						? ["\(work.localIdentifier).photo", "\(work.localIdentifier).motion"]
 						: ["\(work.localIdentifier).photo"]
@@ -503,6 +581,16 @@ final class PhotoBackupAppPassTests: XCTestCase {
 			},
 			deviceId: sourceId,
 			changeToken: Data()
+		)
+	}
+
+	// An asset the library gains after the inventory
+	private func candidate(_ identifier: String, created: TimeInterval) -> PhotoBackupLedger.AssetCandidate {
+		.init(
+			localIdentifier: identifier,
+			mediaType: 1,
+			creationDate: Date(timeIntervalSince1970: created),
+			modificationDate: Date(timeIntervalSince1970: created)
 		)
 	}
 

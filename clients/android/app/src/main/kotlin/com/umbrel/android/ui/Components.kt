@@ -598,20 +598,27 @@ fun SheetToolbar(title: String, onClose: (() -> Unit)?, modifier: Modifier = Mod
 @Composable
 fun SettingsSection(title: String, modifier: Modifier = Modifier, learnMore: (() -> Unit)? = null, content: @Composable () -> Unit) {
 	Column(modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-		Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-			Text(title, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray, modifier = Modifier.weight(1f))
-			if (learnMore != null) {
-				Row(
-					Modifier.clickable(role = Role.Button, onClick = learnMore),
-					horizontalArrangement = Arrangement.spacedBy(4.dp),
-					verticalAlignment = Alignment.CenterVertically,
-				) {
-					Text("How it works", style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.65f))
-					Icon(Symbols.ArrowForwardIosSemibold, contentDescription = null, tint = Color.White.copy(alpha = 0.65f), modifier = Modifier.size(12.dp))
-				}
+		SettingsSectionHeader(title, learnMore = learnMore)
+		Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MainTheme.sheetRow)) { content() }
+	}
+}
+
+/** A section's gray header on its own, for a card a lazy list builds: its title, and a [value] or "How it works" at the end. */
+@Composable
+fun SettingsSectionHeader(title: String, modifier: Modifier = Modifier, value: String? = null, learnMore: (() -> Unit)? = null) {
+	Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+		Text(title, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray, modifier = Modifier.weight(1f))
+		if (value != null) Text(value, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray)
+		if (learnMore != null) {
+			Row(
+				Modifier.clickable(role = Role.Button, onClick = learnMore),
+				horizontalArrangement = Arrangement.spacedBy(4.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				Text("How it works", style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.65f))
+				Icon(Symbols.ArrowForwardIosSemibold, contentDescription = null, tint = Color.White.copy(alpha = 0.65f), modifier = Modifier.size(12.dp))
 			}
 		}
-		Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MainTheme.sheetRow)) { content() }
 	}
 }
 

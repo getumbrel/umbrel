@@ -152,10 +152,17 @@ fun PhotoViewer(
 	library: PhotoLibraryViewModel,
 	state: MainUiState,
 	initialItem: String,
-	tiles: PhotoTileLocator,
+	// Where the grid's tiles are, to zoom from and back to. Without them the viewer fades.
+	tiles: PhotoTileLocator?,
 	onDismissed: () -> Unit,
 	// Offered while this phone backs up with access to all its photos.
 	onSkipFolder: ((LibraryFolder) -> Unit)? = null,
+	// Try Again on an item that couldn't back up.
+	onRetryBackup: () -> Unit = {},
+	// Opens with Info already showing, for an item opened to see which it is.
+	showsInfo: Boolean = false,
+	// What TalkBack calls the button that closes it, which says where that leads.
+	backDescription: String = "Back to Photos",
 ) {
 	Dialog(
 		onDismissRequest = {},
@@ -175,7 +182,7 @@ fun PhotoViewer(
 			window?.setDimAmount(0f)
 			window?.setWindowAnimations(0)
 		}
-		PhotoViewerContent(library, state, initialItem, tiles, window, onDismissed, onSkipFolder)
+		PhotoViewerContent(library, state, initialItem, tiles, window, onDismissed, onSkipFolder, onRetryBackup, showsInfo, backDescription)
 	}
 }
 
@@ -184,10 +191,13 @@ private fun PhotoViewerContent(
 	library: PhotoLibraryViewModel,
 	state: MainUiState,
 	initialItem: String,
-	tiles: PhotoTileLocator,
+	tiles: PhotoTileLocator?,
 	window: Window?,
 	onDismissed: () -> Unit,
 	onSkipFolder: ((LibraryFolder) -> Unit)?,
+	onRetryBackup: () -> Unit,
+	showsInfo: Boolean,
+	backDescription: String,
 ) {
 	val libraryState by library.state.collectAsStateWithLifecycle()
 	val assets = libraryState.assets
@@ -198,14 +208,15 @@ private fun PhotoViewerContent(
 	var showsControls by remember { mutableStateOf(true) }
 	// Shared by every page, so Info stays open while swiping between photos, like Photos'.
 	// Saved, so it also stays open when the screen turns or a foldable changes screens.
-	val infoShown = rememberSaveable { mutableStateOf(false) }
+	val infoShown = rememberSaveable { mutableStateOf(showsInfo) }
 	// A wide window keeps the top bar, and Info's button in it, while Info is open: iOS does
 	// the same on iPhone Duo, and it keeps the button off a foldable's hinge.
 	val wide = isWideWindow()
 	var playing by remember { mutableStateOf<LocalMediaItem?>(null) }
 	var zoomed by remember { mutableStateOf(false) }
 	val presentation = remember { Animatable(0f) }
-	var source by remember { mutableStateOf(tiles.bounds(initialItem)) }
+	// A photo that opens moved up for Info doesn't match its tile, so it fades in.
+	var source by remember { mutableStateOf(if (showsInfo) null else tiles?.bounds(initialItem)) }
 	var origin by remember { mutableStateOf(Offset.Unspecified) }
 	var drag by remember { mutableStateOf(Offset.Zero) }
 	var dragScale by remember { mutableFloatStateOf(1f) }
@@ -219,7 +230,7 @@ private fun PhotoViewerContent(
 		val page = pager.currentPage
 		snapshotFlow { library.receipts.generation }.collectLatest {
 			for (neighbor in listOf(page - 1, page + 1)) {
-				currentAssets.items.getOrNull(neighbor)?.let { launch { library.receipts.isBackedUp(it) } }
+				currentAssets.items.getOrNull(neighbor)?.let { launch { library.receipts.receipt(it) } }
 			}
 		}
 	}
@@ -229,7 +240,7 @@ private fun PhotoViewerContent(
 		exiting = true
 		scope.launch {
 			// A zoomed photo, or one moved up for Info, no longer matches its tile, so it fades instead.
-			source = currentItem?.takeIf { !zoomed && !infoShown.value }?.let { tiles.bounds(it.localIdentifier) }
+			source = currentItem?.takeIf { !zoomed && !infoShown.value }?.let { tiles?.bounds(it.localIdentifier) }
 			presentation.animateTo(0f, ZoomSpring)
 			onDismissed()
 		}
@@ -352,6 +363,7 @@ private fun PhotoViewerContent(
 						state,
 						folder = libraryState.folders.firstOrNull { it.key == pageItem.folder },
 						onSkipFolder = onSkipFolder,
+						onRetryBackup = onRetryBackup,
 					)
 				}
 			}
@@ -371,7 +383,7 @@ private fun PhotoViewerContent(
 			AnimatedVisibility(visible = showsTopBar && item != null, modifier = controlsAlpha, enter = fadesIn, exit = fadesOut) {
 				if (item != null) {
 					// Info's own card says the status.
-					ViewerTopBar(item, library, state, showsStatus = !infoShown.value, onBack = ::dismiss, trailing = infoButton.takeIf { wide })
+					ViewerTopBar(item, library, state, showsStatus = !infoShown.value, backDescription = backDescription, onBack = ::dismiss, trailing = infoButton.takeIf { wide })
 				}
 			}
 			// Where Photos has Info on a phone: in the bottom bar.
@@ -414,6 +426,7 @@ private fun ViewerTopBar(
 	library: PhotoLibraryViewModel,
 	state: MainUiState,
 	showsStatus: Boolean,
+	backDescription: String,
 	onBack: () -> Unit,
 	trailing: (@Composable () -> Unit)?,
 ) {
@@ -427,28 +440,29 @@ private fun ViewerTopBar(
 	) {
 		if (showsStatus) BackupStatusCapsule(item, library, state, Modifier.align(Alignment.Center))
 		Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-			CircleIconButton(Symbols.ArrowBackIosNewMedium, contentDescription = "Back to Photos", iconSize = 18.dp, onClick = onBack)
+			CircleIconButton(Symbols.ArrowBackIosNewMedium, contentDescription = backDescription, iconSize = 18.dp, onClick = onBack)
 			Spacer(Modifier.weight(1f))
 			trailing?.invoke()
 		}
 	}
 }
 
-/** The item's backup status, read again whenever the backup state or the item changes. */
+/** The item's receipt, read again whenever the backup state or the item changes. */
 @Composable
-internal fun rememberBackupStatus(item: LocalMediaItem, library: PhotoLibraryViewModel, state: MainUiState): ViewerBackupStatus? {
-	val enabled = backupIncludes(state, item)
+internal fun rememberBackupReceipt(item: LocalMediaItem, library: PhotoLibraryViewModel): BackupReceipt? {
 	// Usually known already (the grid asked as it showed the item, and the viewer asks for
 	// its neighbors), so the pill shows from the first frame rather than blinking out
 	// between photos.
-	var status by remember(item.localIdentifier) {
-		mutableStateOf(library.receipts.cachedBackedUp(item)?.let { ViewerBackupStatus.of(it, enabled) })
+	var receipt by remember(item.localIdentifier) { mutableStateOf(library.receipts.cached(item)) }
+	LaunchedEffect(item.localIdentifier, item.generation, library.receipts.generation) {
+		receipt = library.receipts.receipt(item)
 	}
-	LaunchedEffect(item.localIdentifier, item.generation, library.receipts.generation, enabled) {
-		status = ViewerBackupStatus.of(library.receipts.isBackedUp(item), enabled)
-	}
-	return status
+	return receipt
 }
+
+@Composable
+internal fun rememberBackupStatus(item: LocalMediaItem, library: PhotoLibraryViewModel, state: MainUiState): ViewerBackupStatus? =
+	rememberBackupReceipt(item, library)?.let { ViewerBackupStatus.of(it, backupIncludes(state, item)) }
 
 // Semibold in the status pill, as iOS draws it.
 private val ViewerBackupStatus.pillIcon: ImageVector
@@ -456,6 +470,7 @@ private val ViewerBackupStatus.pillIcon: ImageVector
 		ViewerBackupStatus.BACKED_UP -> Symbols.CheckCircleSemibold
 		ViewerBackupStatus.WAITING -> Symbols.ScheduleSemibold
 		ViewerBackupStatus.NOT_BACKED_UP -> Symbols.RemoveCircleOutlineSemibold
+		ViewerBackupStatus.FAILED -> Symbols.WarningSemibold
 	}
 
 @Composable

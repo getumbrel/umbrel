@@ -319,6 +319,8 @@ fun MainScreen(device: SavedDevice, onSignedOut: () -> Unit, onShowAllDevices: (
 			ProfileSheet(
 				model = model,
 				state = state,
+				library = libraryState.assets,
+				photoLibrary = library,
 				folders = libraryState.folders,
 				choosingFolders = choosingFolders,
 				destination = profileDestination,

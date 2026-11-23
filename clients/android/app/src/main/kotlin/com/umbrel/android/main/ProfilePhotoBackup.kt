@@ -63,6 +63,7 @@ import com.umbrel.android.ui.openAppSettings
 import com.umbrel.android.ui.openNotificationSettings
 import com.umbrel.kit.backup.PhotoBackupPreference
 import com.umbrel.kit.backup.PhotoLibraryAccess
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -331,7 +332,16 @@ private fun needsNotificationPermission(context: Context): Boolean =
 		ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
 @Composable
-internal fun PhotosSection(model: MainViewModel, state: MainUiState, controls: PhotoBackupControls, folders: List<LibraryFolder>, onOpenFolders: () -> Unit) {
+internal fun PhotosSection(
+	model: MainViewModel,
+	state: MainUiState,
+	controls: PhotoBackupControls,
+	folders: List<LibraryFolder>,
+	/** How many items couldn't back up, as the page the row opens lists them. */
+	failedUploadCount: Int,
+	onOpenFolders: () -> Unit,
+	onOpenFailedUploads: () -> Unit,
+) {
 	// The same How it works as Library
 	var showsInfo by rememberSaveable { mutableStateOf(false) }
 	if (showsInfo) PhotoBackupInfoSheet(state.backupSourceName, onDismiss = { showsInfo = false })
@@ -368,6 +378,12 @@ internal fun PhotosSection(model: MainViewModel, state: MainUiState, controls: P
 			SettingsDivider()
 			SettingsRow(Symbols.History, "Last backed up", iconSize = 20.dp) {
 				SettingsValue(lastBackupText(uploadedAt, System.currentTimeMillis(), is24Hour = DateFormat.is24HourFormat(context)))
+			}
+		}
+		if (failedUploadCount > 0) {
+			SettingsDivider()
+			SettingsRow(Symbols.ErrorOutline, "Couldn’t back up", modifier = Modifier.clickable(role = Role.Button, onClick = onOpenFailedUploads)) {
+				SettingsValue(NumberFormat.getIntegerInstance().format(failedUploadCount), chevron = true)
 			}
 		}
 	}

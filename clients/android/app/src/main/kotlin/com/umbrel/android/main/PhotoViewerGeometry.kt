@@ -126,21 +126,19 @@ internal fun infoSnapTarget(start: Float, projected: Float, velocity: Float, ope
 	return if (opens) openOffset else 0f
 }
 
-/**
- * What the viewer says about an item's backup, from its receipt and the backup toggles. iOS
- * also says "Couldn’t back up" for a failed item; the receipts the app reads say only
- * whether an item is backed up.
- */
+/** What the viewer says about an item's backup, from its receipt and the backup toggles. */
 enum class ViewerBackupStatus(val text: String) {
 	BACKED_UP("Backed up"),
 	WAITING("Waiting to back up"),
 	NOT_BACKED_UP("Not backed up"),
+	FAILED("Couldn’t back up"),
 	;
 
 	companion object {
-		fun of(backedUp: Boolean, backupEnabled: Boolean): ViewerBackupStatus = when {
-			backedUp -> BACKED_UP
+		fun of(receipt: BackupReceipt, backupEnabled: Boolean): ViewerBackupStatus = when {
+			receipt == BackupReceipt.BackedUp -> BACKED_UP
 			!backupEnabled -> NOT_BACKED_UP
+			receipt is BackupReceipt.Failed -> FAILED
 			else -> WAITING
 		}
 	}

@@ -169,6 +169,119 @@ class PhotoBackupManagerTest {
 		assertEquals(listOf("start", "transfer"), work.events)
 	}
 
+	// Profile's count and its list are read apart, so they have to cover the same items
+	@Test
+	fun whatCouldntBackUpIsListedAsThePresentationCountsIt() = runTest {
+		val manager = manager()
+		manager.setPreference(device, session, photos.copy(includesVideos = false, skippedFolders = setOf(WHATSAPP_FOLDER)))
+		advanceUntilIdle()
+		val sourceId = preferences.configuration!!.source.id
+
+		manager.openLedger().use { ledger ->
+			ledger.seedInventory(
+				listOf(
+					candidate("refused", 1, creationTime = 1),
+					candidate("unreadable", 1, creationTime = 2),
+					candidate("skipped", 1, creationTime = 3, folder = WHATSAPP_FOLDER),
+					candidate("video", 2, creationTime = 4),
+				),
+				sourceId,
+			)
+			for (identifier in listOf("refused", "skipped", "video")) ledger.markAssetFailed(sourceId, identifier, 1, "Umbrel rejected the upload (415)")
+			ledger.markAssetUnreadable(sourceId, "unreadable", 1, "Couldn’t read this item")
+
+			assertEquals(listOf("unreadable", "refused"), manager.failedAssets(device, session.accountId, ledger).map { it.localIdentifier })
+			assertEquals(2L, manager.presentation(device, session.accountId, PhotoLibraryCounts(), ledger).failedCount)
+			// Another account on this Umbrel has no backup set up here
+			assertTrue(manager.failedAssets(device, "1", ledger).isEmpty())
+		}
+	}
+
+	// ── Try Again on the items that couldn't back up ──
+
+	private val threePhotos = PhotoLibraryCounts(photos = mapOf(CAMERA_FOLDER to 3))
+
+	/**
+	 * Backup as a finished pass leaves it with one photo backed up and two that failed, one of
+	 * them an empty file: up to date except for those. Returns the source id.
+	 */
+	private fun TestScope.upToDateExceptFailures(manager: PhotoBackupManager): String {
+		manager.setPreference(device, session, photos)
+		advanceUntilIdle()
+		val sourceId = preferences.configuration!!.source.id
+		manager.openLedger().use { ledger ->
+			ledger.seedInventory(listOf(candidate("uploaded", 1, creationTime = 3), candidate("refused", 1, creationTime = 2), candidate("empty", 1)), sourceId)
+			for (identifier in listOf("uploaded", "refused", "empty")) ledger.prepareAsset(sourceId, identifier, 1, listOf(plan(identifier, "/$identifier.jpg")))
+			ledger.recordResourceSucceeded("uploaded", 10)
+			ledger.recordResourceFailed("refused", "Umbrel rejected the upload (415)")
+			ledger.recordResourceFailed("empty", PhotoBackupFailureReason.NOTHING_TO_UPLOAD_MESSAGE)
+			preferences.publish(PhotoBackupSnapshot(PhotoBackupPhase.UP_TO_DATE, sourceId = sourceId, statistics = ledger.statistics(sourceId)))
+			assertEquals(PhotoBackupStatus.UpToDateExceptFailures, manager.presentation(device, session.accountId, threePhotos, ledger).status)
+		}
+		work.events.clear()
+		return sourceId
+	}
+
+	private fun PhotoBackupManager.statusOfThreePhotos(): PhotoBackupPresentation =
+		openLedger().use { presentation(device, session.accountId, threePhotos, it) }
+
+	private fun PhotoBackupManager.states(sourceId: String, vararg identifiers: String): List<PhotoBackupLedger.AssetState?> =
+		openLedger().use { ledger -> identifiers.map { ledger.assetRecord(sourceId, it)?.state } }
+
+	// The fake work runs no pass, as when Android holds the job back: the items are queued all
+	// the same, and the status counts them instead of saying that backup is starting.
+	@Test
+	fun tryAgainOnFailedItemsRequeuesThemWithoutWaitingForAPass() = runTest {
+		val manager = manager()
+		val sourceId = upToDateExceptFailures(manager)
+
+		manager.retryFailedUploads(device, session)
+
+		assertEquals(
+			listOf(PhotoBackupLedger.AssetState.UPLOADED, PhotoBackupLedger.AssetState.PENDING, PhotoBackupLedger.AssetState.PENDING),
+			manager.states(sourceId, "uploaded", "refused", "empty"),
+		)
+		assertEquals(listOf("transfer"), work.events)
+		// The request the notices' Try Again leaves for the next pass isn't made
+		assertFalse(preferences.recoveryRetryRequested(sourceId))
+		val presentation = manager.statusOfThreePhotos()
+		assertEquals(PhotoBackupStatus.BackingUp(2), presentation.status)
+		assertNull(presentation.notice)
+		assertEquals(0L, presentation.failedCount)
+	}
+
+	// A pass in flight holds its own connection to the ledger. The item it's sending isn't
+	// failed, so it's left alone, and the pass still records how that upload ends.
+	@Test
+	fun tryAgainOnFailedItemsLeavesAPassInFlightAlone() = runTest {
+		val manager = manager()
+		val sourceId = upToDateExceptFailures(manager)
+		manager.openLedger().use { pass ->
+			pass.applyChanges(listOf(candidate("sending", 1, creationTime = 4)), emptySet(), sourceId, null)
+			pass.prepareAsset(sourceId, "sending", 1, listOf(plan("sending", "/sending.jpg")))
+			pass.uploadStarted(sourceId, "sending")
+			preferences.publish(PhotoBackupSnapshot(PhotoBackupPhase.UPLOADING, sourceId = sourceId, statistics = pass.statistics(sourceId)))
+			work.events.clear()
+
+			manager.retryFailedUploads(device, session)
+
+			assertEquals(PhotoBackupLedger.AssetState.PREPARED, pass.assetRecord(sourceId, "sending")?.state)
+			assertEquals(PhotoBackupLedger.AssetState.PENDING, pass.assetRecord(sourceId, "refused")?.state)
+			assertEquals(listOf("refused", "empty"), pass.nextAssets(sourceId, includePhotos = true, includeVideos = true, limit = 10).map { it.localIdentifier }.filter { it != "sending" })
+			assertEquals(listOf("transfer"), work.events)
+			assertFalse(preferences.recoveryRetryRequested(sourceId))
+
+			pass.recordResourceFailed("sending", "Umbrel rejected the upload (415)")
+			pass.uploadFinished(sourceId, "sending")
+			assertEquals(PhotoBackupLedger.AssetState.FAILED, pass.assetRecord(sourceId, "sending")?.state)
+			// What Try Again requeued stays queued
+			assertEquals(PhotoBackupLedger.AssetState.PENDING, pass.assetRecord(sourceId, "refused")?.state)
+			val presentation = manager.presentation(device, session.accountId, PhotoLibraryCounts(photos = mapOf(CAMERA_FOLDER to 4)), pass)
+			assertEquals(PhotoBackupStatus.BackingUp(3), presentation.status)
+			assertEquals(1L, presentation.failedCount)
+		}
+	}
+
 	// The selection already decides what's backed up, so there's no folder choice to wait for.
 	@Test
 	fun setupWithSelectedPhotosStartsWithoutTheFolderChoice() = runTest {

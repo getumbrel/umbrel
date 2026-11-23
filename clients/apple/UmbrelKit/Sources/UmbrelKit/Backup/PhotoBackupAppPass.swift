@@ -459,7 +459,7 @@ public final class PhotoBackupAppPass {
 				deviceId: sourceId,
 				localIdentifier: work.localIdentifier,
 				revision: work.revision,
-				message: "This asset has no uploadable resource"
+				message: PhotoBackupFailureMessage.nothingToUpload
 			)
 			return nil
 		}
@@ -548,7 +548,7 @@ public final class PhotoBackupAppPass {
 				// Like a server error, a library that can't hand over files, as with iCloud
 				// unreachable or the iPhone out of space, ends the pass if it keeps happening
 				guard !heldByPhotoKit else { continue }
-				try ledger.recordResourceFailed(resourceKey: key, message: "Couldn\u{2019}t read this file from the photo library")
+				try ledger.recordResourceFailed(resourceKey: key, message: PhotoBackupFailureMessage.unreadable)
 				temporaryFailure = true
 			case .outcome(.insufficientStorage):
 				if !heldByPhotoKit { try ledger.recordResourceFailed(resourceKey: key, message: "The Umbrel is out of space") }

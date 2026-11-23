@@ -14,6 +14,7 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 	let transitionNamespace: Namespace.ID
 	let backupSourceId: String?
 	let backupRevision: Date
+	let backupMedia: PhotoBackupMedia
 	let columns: Int
 	let rows: Int
 	let bleeds: Bool
@@ -176,21 +177,10 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 				.id(asset.localIdentifier)
 			}
 			.margins(.all, 0)
-			cell.accessibilityLabel = accessibilityLabel(for: asset)
+			cell.accessibilityLabel = photoAccessibilityLabel(for: asset)
 			cell.accessibilityHint = "Opens full screen"
 			cell.accessibilityTraits = .button
 			cell.isAccessibilityElement = true
-		}
-
-		private func accessibilityLabel(for asset: PHAsset) -> String {
-			let mediaDescription: String
-			if asset.mediaSubtypes.contains(.photoLive) {
-				mediaDescription = "Live Photo"
-			} else {
-				mediaDescription = asset.mediaType == .video ? "Video" : "Photo"
-			}
-			guard let creationDate = asset.creationDate else { return mediaDescription }
-			return "\(mediaDescription), \(creationDate.formatted(date: .abbreviated, time: .shortened))"
 		}
 
 		func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -289,6 +279,9 @@ struct PhotoLibraryGrid: UIViewRepresentable {
 			}
 			if presentation.backupRevision != parent.backupRevision {
 				presentation.backupRevision = parent.backupRevision
+			}
+			if presentation.backupMedia != parent.backupMedia {
+				presentation.backupMedia = parent.backupMedia
 			}
 			if presentation.columns != parent.columns { presentation.columns = parent.columns }
 			if presentation.rows != parent.rows { presentation.rows = parent.rows }
@@ -593,6 +586,7 @@ fileprivate final class PhotoCell: UICollectionViewCell {
 private final class PhotoLibraryGridPresentation {
 	var backupSourceId: String?
 	var backupRevision: Date
+	var backupMedia: PhotoBackupMedia
 	var columns: Int
 	var rows: Int
 	var bleeds: Bool
@@ -601,6 +595,7 @@ private final class PhotoLibraryGridPresentation {
 	init(parent: PhotoLibraryGrid) {
 		backupSourceId = parent.backupSourceId
 		backupRevision = parent.backupRevision
+		backupMedia = parent.backupMedia
 		columns = parent.columns
 		rows = parent.rows
 		bleeds = parent.bleeds
@@ -630,6 +625,7 @@ private struct PhotoLibraryGridCell: View {
 			receiptCache: receiptCache,
 			backupSourceId: presentation.backupSourceId,
 			backupRevision: presentation.backupRevision,
+			backupMedia: presentation.backupMedia,
 			thumbnailTargetSize: presentation.thumbnailTargetSize
 		)
 		.matchedTransitionSource(id: asset.localIdentifier, in: transitionNamespace)

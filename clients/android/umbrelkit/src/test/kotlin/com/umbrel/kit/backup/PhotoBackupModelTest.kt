@@ -288,6 +288,17 @@ class PhotoBackupModelTest {
 		assertEquals(PhotoBackupStatus.UpToDate, PhotoBackupPresentation.resolve(inputs()).status)
 	}
 
+	// Failed and unreadable items both couldn't back up. Without a backup set up here
+	// nothing tries them again, so there's nothing to show.
+	@Test
+	fun thePresentationCountsWhatCouldntBackUpOnlyWhileBackupIsSetUp() {
+		val statistics = PhotoBackupStatistics(0, 0, 1, 0, failedCount = 2, uploadedBytes = 10, unreadableCount = 3)
+
+		assertEquals(5L, PhotoBackupPresentation.resolve(inputs(statistics = statistics)).failedCount)
+		assertEquals(0L, PhotoBackupPresentation.resolve(inputs(statistics = statistics, configured = false)).failedCount)
+		assertEquals(0L, PhotoBackupPresentation.resolve(inputs()).failedCount)
+	}
+
 	@Test
 	fun thePresentationNamesTheSourceOnlyWhileBackupIsSetUp() {
 		assertEquals(source.name, PhotoBackupPresentation.resolve(inputs()).sourceName)

@@ -10,6 +10,7 @@ import com.umbrel.kit.backup.PhotoBackupStatus
 import com.umbrel.kit.backup.PhotoBackupTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,6 +28,15 @@ class LibraryBackupPresentationTest {
 		backupStatus = status,
 		otherBackupDeviceName = other,
 	)
+
+	// Backup that's on but isn't set up here yet has nothing Profile lists, so nothing is marked
+	@Test
+	fun failuresAreMarkedOnlyWhileProfileCountsSome() {
+		assertNull(failureFilter(state()))
+		assertEquals(LibraryFilter(includesPhotos = true, includesVideos = true, skippedFolders = emptySet()), failureFilter(state().copy(backupFailedCount = 2)))
+		// Backup that's off covers nothing
+		assertNull(failureFilter(state(preference = PhotoBackupPreference(), status = PhotoBackupStatus.Off).copy(backupFailedCount = 2)))
+	}
 
 	// The notice under the title says where backup goes, so the status reads as Home's does.
 	@Test

@@ -851,6 +851,93 @@ class PhotoBackupEngineTest {
 		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", photo)?.state)
 	}
 
+	// What the app lists as not backed up: each item with the reason its pass recorded
+	@Test
+	fun itemsThatCouldntBackUpAreListedWithWhy() {
+		val refused = library.add(createdMs = 1_000)
+		val empty = library.add(createdMs = 2_000, bytes = ByteArray(0))
+		val unreadable = library.add(createdMs = 3_000)
+		library.items.getValue(unreadable).unreadable = true
+		server.respond = { PhotoUploadResult.Rejected(413, null) }
+
+		pass()
+
+		assertEquals(
+			listOf(
+				PhotoBackupLedger.FailedAsset(unreadable, PhotoBackupFailureReason.UNREADABLE),
+				PhotoBackupLedger.FailedAsset(empty, PhotoBackupFailureReason.NOTHING_TO_UPLOAD),
+				PhotoBackupLedger.FailedAsset(refused, PhotoBackupFailureReason.GENERAL),
+			),
+			ledger.failedAssets("source", includePhotos = true, includeVideos = true),
+		)
+		assertEquals(2L, preferences.snapshot.statistics?.failedCount)
+		assertEquals(1L, preferences.snapshot.statistics?.unreadableCount)
+	}
+
+	/** The app's Try Again, which requeues on its own connection while a pass may be uploading. */
+	private fun requeueFromTheApp() =
+		PhotoBackupLedger(File(directory, "photo-backup.sqlite")).use { it.requeueFailedAssets("source", includePhotos = true, includeVideos = true) }
+
+	private fun fileName(localIdentifier: String) = "IMG_${library.items.getValue(localIdentifier).id}.jpg"
+
+	// The upload in flight is prepared, not failed, so the requeue leaves it alone and the
+	// pass still records how it ends. The item that was requeued is sent once, in its turn.
+	@Test
+	fun itemsRequeuedWhileAPassUploadsAreSentOnceAndTheUploadInFlightIsStillRecorded() {
+		val refused = library.add(createdMs = 1_000)
+		server.respond = { PhotoUploadResult.Rejected(415, null) }
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", refused)?.state)
+
+		val sending = library.add(createdMs = 3_000)
+		val waiting = library.add(createdMs = 2_000)
+		server.uploads.clear()
+		server.respond = { upload ->
+			if (upload.filename == fileName(sending)) {
+				requeueFromTheApp()
+				PhotoUploadResult.Rejected(415, null)
+			} else {
+				PhotoUploadResult.Succeeded(10)
+			}
+		}
+
+		assertEquals(PassOutcome.Completed, pass())
+
+		assertEquals(listOf(sending, waiting, refused).map(::fileName), server.uploads.map { it.filename })
+		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", sending)?.state)
+		assertEquals(PhotoBackupLedger.AssetState.UPLOADED, ledger.assetRecord("source", waiting)?.state)
+		assertEquals(PhotoBackupLedger.AssetState.UPLOADED, ledger.assetRecord("source", refused)?.state)
+		assertEquals(1L, preferences.snapshot.statistics?.failedCount)
+	}
+
+	// A pass sends each item once. One it failed and Try Again then requeued waits for the
+	// next pass, which tries it once more and no further.
+	@Test
+	fun anItemRequeuedInThePassThatFailedItIsTriedOnceMoreInTheNext() {
+		val refused = library.add(createdMs = 2_000)
+		val other = library.add(createdMs = 1_000)
+		server.respond = { upload ->
+			if (upload.filename == fileName(refused)) {
+				PhotoUploadResult.Rejected(415, null)
+			} else {
+				requeueFromTheApp()
+				PhotoUploadResult.Succeeded(10)
+			}
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(listOf(refused, other).map(::fileName), server.uploads.map { it.filename })
+		assertEquals(PhotoBackupLedger.AssetState.PENDING, ledger.assetRecord("source", refused)?.state)
+
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(listOf(refused, other, refused).map(::fileName), server.uploads.map { it.filename })
+		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", refused)?.state)
+
+		// Still refused: nothing tries it again by itself
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(3, server.uploads.size)
+	}
+
 	@Test
 	fun aPassStopsUploadingAtItsDeadline() = runBlocking {
 		repeat(3) { library.add() }

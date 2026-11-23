@@ -278,6 +278,7 @@ struct LibraryView: View {
 						transitionNamespace: photoViewerTransition,
 						backupSourceId: model.photoBackup.sourceId,
 						backupRevision: model.photoBackupReceiptRevision,
+						backupMedia: model.photoBackupMedia,
 						columns: cols,
 						rows: rows,
 						bleeds: bleeds,
@@ -441,7 +442,7 @@ struct PhotoBackupInfoSheet: View {
 	PhotoBackupInfoSheet(sourceName: "Nate\u{2019}s iPhone")
 }
 
-private struct PhotoViewerSelection: Identifiable {
+struct PhotoViewerSelection: Identifiable {
 	let index: Int
 	let assetIdentifier: String
 	var id: String { assetIdentifier }
@@ -612,16 +613,22 @@ private struct LibraryStatTile: View {
 
 enum PhotoAssetBackupBadge: Equatable {
 	case backedUp
+	case failed
 }
 
-func photoBackupBadge(record: PhotoBackupLedger.AssetRecord?) -> PhotoAssetBackupBadge? {
-	guard let record, record.state == .uploaded else { return nil }
-	return .backedUp
+// A failed asset is marked only when backup includes its media type, which is when
+// Profile counts and lists it
+func photoBackupBadge(record: PhotoBackupLedger.AssetRecord?, showsFailure: Bool) -> PhotoAssetBackupBadge? {
+	switch record?.state {
+	case .uploaded: .backedUp
+	case .failed where showsFailure: .failed
+	default: nil
+	}
 }
 
-// A PhotoKit thumbnail shared by Home and Library. The one badge has one durable
+// A PhotoKit thumbnail shared by Home and Library. The checkmark has one durable
 // meaning: change ingestion has a completed upload receipt for this asset's
-// current durable ledger revision.
+// current durable ledger revision. The amber mark means that revision's upload failed.
 struct AssetThumbnail: View {
 	let asset: PHAsset
 	let imageManager: PHCachingImageManager
@@ -629,7 +636,10 @@ struct AssetThumbnail: View {
 	let receiptCache: PhotoBackupReceiptCache
 	let backupSourceId: String?
 	let backupRevision: Date
+	let backupMedia: PhotoBackupMedia
 	let thumbnailTargetSize: CGSize
+	// Set while Photos has no picture of the asset, for a caller that shows something else
+	var hasNoPicture: Binding<Bool>? = nil
 	@State private var image: UIImage?
 	@State private var requestID: PHImageRequestID?
 	@State private var representedIdentifier: String?
@@ -675,21 +685,22 @@ struct AssetThumbnail: View {
 			sourceId: backupSourceId,
 			revision: backupRevision,
 			localIdentifier: asset.localIdentifier,
-			modificationDate: asset.modificationDate ?? asset.creationDate ?? .distantPast
+			modificationDate: asset.modificationDate ?? asset.creationDate ?? .distantPast,
+			showsFailure: showsFailure
 		)
 	}
 
+	private var showsFailure: Bool { backupMedia.includes(asset.mediaType) }
+
 	@ViewBuilder
 	private var backupBadge: some View {
-		switch badge {
-		case .backedUp:
-			Image(systemName: "checkmark.circle.fill")
+		if let badge {
+			Image(systemName: badge == .backedUp ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
 				.font(.system(size: 18, weight: .semibold))
-				.foregroundStyle(.white.opacity(0.8))
+				.foregroundStyle(badge == .backedUp ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.orange))
 				.shadow(color: .black.opacity(0.55), radius: 2, y: 1)
 				.padding(6)
-		case nil:
-			EmptyView()
+				.accessibilityLabel(badge == .backedUp ? "Backed up" : "Couldn\u{2019}t back up")
 		}
 	}
 
@@ -705,6 +716,7 @@ struct AssetThumbnail: View {
 		if representedIdentifier != identifier {
 			representedIdentifier = identifier
 			image = nil
+			hasNoPicture?.wrappedValue = false
 		}
 		let options = PhotoThumbnailRequest.options()
 		requestID = imageManager.requestImage(
@@ -713,10 +725,15 @@ struct AssetThumbnail: View {
 			contentMode: .aspectFill,
 			options: options
 		) { result, info in
-			guard let result, info?[PHImageCancelledKey] as? Bool != true else { return }
+			guard info?[PHImageCancelledKey] as? Bool != true else { return }
 			Task { @MainActor in
 				guard generation == requestGeneration, representedIdentifier == identifier else { return }
+				guard let result else {
+					if image == nil { hasNoPicture?.wrappedValue = true }
+					return
+				}
 				image = result
+				hasNoPicture?.wrappedValue = false
 				if info?[PHImageResultIsDegradedKey] as? Bool != true { requestID = nil }
 			}
 		}
@@ -733,7 +750,7 @@ struct AssetThumbnail: View {
 			localIdentifier: asset.localIdentifier
 		)
 		guard !Task.isCancelled else { return }
-		badge = photoBackupBadge(record: record)
+		badge = photoBackupBadge(record: record, showsFailure: showsFailure)
 	}
 
 	private func cancelThumbnailRequest() {
@@ -741,6 +758,18 @@ struct AssetThumbnail: View {
 		requestID = nil
 		requestGeneration &+= 1
 	}
+}
+
+// What VoiceOver calls an asset's thumbnail
+func photoAccessibilityLabel(for asset: PHAsset) -> String {
+	let mediaDescription: String
+	if asset.mediaSubtypes.contains(.photoLive) {
+		mediaDescription = "Live Photo"
+	} else {
+		mediaDescription = asset.mediaType == .video ? "Video" : "Photo"
+	}
+	guard let creationDate = asset.creationDate else { return mediaDescription }
+	return "\(mediaDescription), \(creationDate.formatted(date: .abbreviated, time: .shortened))"
 }
 
 enum PhotoThumbnailRequest {
@@ -763,4 +792,5 @@ private struct PhotoBackupReceiptRequest: Hashable {
 	let revision: Date
 	let localIdentifier: String
 	let modificationDate: Date
+	let showsFailure: Bool
 }

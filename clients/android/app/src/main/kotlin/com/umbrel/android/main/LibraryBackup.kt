@@ -22,6 +22,7 @@ import com.umbrel.android.ui.NoticeCard
 import com.umbrel.android.ui.NoticeIconSize
 import com.umbrel.android.ui.Symbols
 import com.umbrel.kit.SavedDevice
+import com.umbrel.kit.backup.PhotoBackupLedger
 import com.umbrel.kit.backup.PhotoBackupNotice
 import com.umbrel.kit.backup.PhotoBackupStatus
 import com.umbrel.kit.backup.PhotoBackupTarget
@@ -47,10 +48,16 @@ class LibraryBackupReader(private val model: MainViewModel) {
 	/** Emits whenever receipts may have changed. */
 	val revisions: Flow<Any> = model.state.map { it.backupReceiptRevision to it.backupSourceId }.distinctUntilChanged()
 
-	/** The identifiers among [items] whose current version has a completed upload receipt. */
-	suspend fun backedUp(items: List<LocalMediaItem>): Set<String> = reads.withLock {
+	/** The receipt of each of [items] whose current version is backed up or couldn't be. */
+	suspend fun receipts(items: List<LocalMediaItem>): Map<String, BackupReceipt> = reads.withLock {
 		withContext(Dispatchers.IO) {
-			items.filter(model::isBackedUp).mapTo(HashSet()) { it.localIdentifier }
+			val filter = failureFilter(model.state.value)
+			buildMap {
+				for (item in items) {
+					val receipt = backupReceipt(model.backupRecord(item), covered = filter?.shows(item) == true)
+					if (receipt != BackupReceipt.None) put(item.localIdentifier, receipt)
+				}
+			}
 		}
 	}
 
@@ -61,6 +68,27 @@ class LibraryBackupReader(private val model: MainViewModel) {
 }
 
 // ── Presentation ──
+
+/**
+ * What backup covers, for marking an item that couldn't back up. Null while the ledger counts
+ * none for this account, as while backup is on but isn't set up here yet: Profile lists none
+ * then, so none is marked.
+ */
+internal fun failureFilter(state: MainUiState): LibraryFilter? = LibraryFilter.of(state).takeIf { state.backupFailedCount > 0 }
+
+/**
+ * What the grid and the viewer show for an item's ledger record. One that couldn't back up is
+ * marked only while backup is set up here and [covered] the item, its media type on and its
+ * folder not skipped, which is when Profile counts and lists it.
+ */
+internal fun backupReceipt(record: PhotoBackupLedger.AssetRecord?, covered: Boolean): BackupReceipt {
+	val failure = record?.failureReason
+	return when {
+		record?.state == PhotoBackupLedger.AssetState.UPLOADED -> BackupReceipt.BackedUp
+		covered && failure != null -> BackupReceipt.Failed(failure)
+		else -> BackupReceipt.None
+	}
+}
 
 /** Library's status row: how backup is going, or that it goes to another Umbrel, as on Home. */
 /** Library has room to name a backup this phone took over; Home keeps to the short status. */

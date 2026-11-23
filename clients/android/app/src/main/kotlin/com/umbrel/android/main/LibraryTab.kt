@@ -192,6 +192,7 @@ fun LibraryTab(model: MainViewModel, library: PhotoLibraryViewModel, state: Main
 			} else {
 				null
 			},
+			onRetryBackup = model::retryFailedBackups,
 		)
 	}
 	if (showsPhotoBackupInfo) PhotoBackupInfoSheet(state.backupSourceName, onDismiss = { showsPhotoBackupInfo = false })

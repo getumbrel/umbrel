@@ -183,5 +183,18 @@
  ],
  "InfoFilled": [
   500
+ ],
+ "Error": [
+  600
+ ],
+ "ErrorOutline": [
+  400
+ ],
+ "Warning": [
+  400,
+  600
+ ],
+ "Draft": [
+  400
  ]
 }

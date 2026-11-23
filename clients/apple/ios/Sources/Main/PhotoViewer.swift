@@ -16,6 +16,8 @@ struct PhotoViewer: View {
 	let initialIndex: Int
 	let initialAssetIdentifier: String
 	let transitionNamespace: Namespace.ID
+	// What VoiceOver calls the button that closes it, which says where that leads
+	let backLabel: String
 
 	@Environment(\.dismiss) private var dismiss
 	@Environment(MainModel.self) private var model
@@ -23,16 +25,25 @@ struct PhotoViewer: View {
 	@State private var visibleIndex: Int?
 	@State private var visibleAssetIdentifier: String
 	@State private var showsControls = true
-	@State private var info = PhotoViewerInfoState()
+	@State private var info: PhotoViewerInfoState
 	@State private var usesSideColumn = false
 	@State private var presentedVideoPlayer: AVPlayer?
 
-	init(initialIndex: Int, initialAssetIdentifier: String, transitionNamespace: Namespace.ID) {
+	// `showsInfo` opens it with Info already showing, for a photo opened to see which it is
+	init(
+		initialIndex: Int,
+		initialAssetIdentifier: String,
+		transitionNamespace: Namespace.ID,
+		showsInfo: Bool = false,
+		backLabel: String = "Back to Library"
+	) {
 		self.initialIndex = initialIndex
 		self.initialAssetIdentifier = initialAssetIdentifier
 		self.transitionNamespace = transitionNamespace
+		self.backLabel = backLabel
 		_visibleIndex = State(initialValue: initialIndex)
 		_visibleAssetIdentifier = State(initialValue: initialAssetIdentifier)
+		_info = State(initialValue: PhotoViewerInfoState(isShown: showsInfo))
 	}
 
 	var body: some View {
@@ -104,7 +115,7 @@ struct PhotoViewer: View {
 	private var toolbar: some ToolbarContent {
 		ToolbarItem(placement: .cancellationAction) {
 			Button { dismiss() } label: {
-				Label("Back to Library", systemImage: "chevron.left")
+				Label(backLabel, systemImage: "chevron.left")
 			}
 			.tint(.white)
 		}
@@ -288,7 +299,11 @@ private final class PhotoViewerPageState {
 @MainActor
 @Observable
 private final class PhotoViewerInfoState {
-	var isShown = false
+	var isShown: Bool
+
+	init(isShown: Bool) {
+		self.isShown = isShown
+	}
 }
 
 // UIKit's page controller is data-source driven: it creates neighboring pages
@@ -595,6 +610,8 @@ private struct PhotoViewerPage: View {
 			if loadsInfo {
 				PhotoViewerInfo(asset: asset)
 					.environment(model)
+					// For Try Again, as this page is hosted outside the app's own hierarchy
+					.environment(\.brandColor, BrandColor.color(model.wallpaperBrandColorHsl))
 					.frame(maxWidth: PhotoViewerInfoLayout.maxColumnWidth)
 					.padding(.horizontal, 16)
 					.padding(.top, 16)
@@ -1036,6 +1053,15 @@ private struct PhotoViewerBadge: View {
 	}
 }
 
+extension PHAsset {
+	// The resource an asset's file name is read from: the photo or video itself where
+	// there is one. It's read from the photo library, so not on the main thread.
+	var namingResource: PHAssetResource? {
+		let resources = PHAssetResource.assetResources(for: self)
+		return resources.first { $0.type == .photo || $0.type == .video } ?? resources.first
+	}
+}
+
 // The file and camera details Photos shows, read from the photo's own metadata.
 private struct PhotoViewerMetadata {
 	static let noExposure: [String?] = Array(repeating: nil, count: 5)
@@ -1057,8 +1083,7 @@ private struct PhotoViewerMetadata {
 		await withCheckedContinuation { continuation in
 			DispatchQueue.global(qos: .userInitiated).async {
 				var metadata = PhotoViewerMetadata()
-				let resources = PHAssetResource.assetResources(for: asset)
-				if let resource = resources.first(where: { $0.type == .photo || $0.type == .video }) ?? resources.first {
+				if let resource = asset.namingResource {
 					metadata.name = (resource.originalFilename as NSString).deletingPathExtension
 					metadata.format = format(of: resource)
 				}
@@ -1243,24 +1268,45 @@ private struct PhotoViewerBackupStatus: View {
 	}
 
 	private func detailsStatusLabel(_ status: Status) -> some View {
-		HStack(spacing: 12) {
-			Image(systemName: status.icon)
-				.font(.title3)
-				.foregroundStyle(.primary)
-				.frame(width: 28)
-			VStack(alignment: .leading, spacing: 2) {
-				Text(status.text)
-					.font(.subheadline.weight(.semibold))
-				if let detail = detailText(status) {
-					Text(detail)
-						.font(.footnote)
-						.foregroundStyle(.secondary)
+		VStack(alignment: .leading, spacing: 0) {
+			// A failure's sentence runs to a few lines, so its icon sits by the title
+			HStack(alignment: status.failureReason == nil ? .center : .top, spacing: 12) {
+				Image(systemName: status.icon)
+					.font(.title3)
+					.foregroundStyle(.primary)
+					.frame(width: 28)
+				VStack(alignment: .leading, spacing: 2) {
+					Text(status.text)
+						.font(.subheadline.weight(.semibold))
+					if let detail = detailText(status) {
+						Text(detail)
+							.font(.footnote)
+							.foregroundStyle(.secondary)
+							.fixedSize(horizontal: false, vertical: true)
+					}
 				}
+				Spacer(minLength: 0)
 			}
-			Spacer(minLength: 0)
+			.accessibilityElement(children: .combine)
+			if status.failureReason?.offersRetry == true, isListed {
+				PillButton(
+					title: "Try Again",
+					isLoading: model.photoBackupRetryInProgress,
+					action: model.retryFailedPhotoBackups
+				)
+					// Under the sentence, past the icon's column
+					.padding(.leading, 40)
+					.padding(.top, 4)
+					// PillButton keeps a 7pt margin around its capsule for its 44pt tap target
+					.padding(.bottom, -7)
+			}
 		}
-		.accessibilityElement(children: .combine)
 	}
+
+	// Whether Profile lists this item among those that couldn't back up, which is when
+	// Try Again reaches it and it's tried again by itself. Not while backup isn't set up
+	// here, or is still being set up to include its media type.
+	private var isListed: Bool { model.photoBackupMedia.includes(asset.mediaType) }
 
 	private func detailText(_ status: Status) -> String? {
 		switch status {
@@ -1269,8 +1315,10 @@ private struct PhotoViewerBackupStatus: View {
 			return "\(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) saved to your Umbrel"
 		case .notBackedUp:
 			return asset.mediaType == .video ? "Video backup is turned off." : "Photo backup is turned off."
-		case .waiting, .failed:
+		case .waiting:
 			return nil
+		case .failed(let reason):
+			return reason.detail(retriesByItself: isListed && model.photoBackupRetriesFailuresByItself)
 		}
 	}
 
@@ -1315,7 +1363,7 @@ private struct PhotoViewerBackupStatus: View {
 		} else if !backupEnabled {
 			status = .notBackedUp
 		} else if record?.state == .failed {
-			status = .failed
+			status = .failed(record?.failureReason ?? .general)
 		} else {
 			status = .waiting
 		}
@@ -1330,7 +1378,7 @@ private struct PhotoViewerBackupStatus: View {
 	}
 
 	private enum Status: Equatable {
-		case backedUp(bytes: Int64), waiting, notBackedUp, failed
+		case backedUp(bytes: Int64), waiting, notBackedUp, failed(PhotoBackupFailureReason)
 
 		var icon: String {
 			switch self {
@@ -1353,6 +1401,11 @@ private struct PhotoViewerBackupStatus: View {
 		var backupBytes: Int64? {
 			guard case let .backedUp(bytes) = self, bytes > 0 else { return nil }
 			return bytes
+		}
+
+		var failureReason: PhotoBackupFailureReason? {
+			guard case let .failed(reason) = self else { return nil }
+			return reason
 		}
 	}
 }

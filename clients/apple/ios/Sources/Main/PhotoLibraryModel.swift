@@ -47,6 +47,12 @@ final class PhotoLibraryModel: NSObject {
 			precondition(position >= startIndex && position < endIndex)
 			return result!.object(at: position)
 		}
+
+		// Nil for an asset the library doesn't hold
+		func index(of asset: PHAsset) -> Int? {
+			guard let index = result?.index(of: asset), index != NSNotFound else { return nil }
+			return index
+		}
 	}
 
 	private(set) var assets = Assets(result: nil, revision: 0, change: nil)

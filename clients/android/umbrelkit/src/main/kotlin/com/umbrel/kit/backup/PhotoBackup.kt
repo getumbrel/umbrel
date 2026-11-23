@@ -231,6 +231,33 @@ class PhotoBackupRecoveryState(snapshot: PhotoBackupSnapshot, sourceId: String, 
 	}
 }
 
+/**
+ * Why an item couldn't back up, in the order the app lists them. UNREADABLE is the ledger's
+ * state of that name, which every pass tries again. A failed item is GENERAL (the Umbrel
+ * refused it, or it kept failing) unless it had nothing to upload, and waits for Try Again.
+ */
+enum class PhotoBackupFailureReason {
+	UNREADABLE,
+	GENERAL,
+	NOTHING_TO_UPLOAD,
+	;
+
+	companion object {
+		/**
+		 * The error stored with an item that has nothing to upload. It's matched as stored, so
+		 * changing it loses the reason of every item an earlier build recorded.
+		 */
+		const val NOTHING_TO_UPLOAD_MESSAGE = "This item has no uploadable data"
+
+		/** Null for a state that isn't a failure. */
+		fun of(state: PhotoBackupLedger.AssetState, message: String?): PhotoBackupFailureReason? = when (state) {
+			PhotoBackupLedger.AssetState.UNREADABLE -> UNREADABLE
+			PhotoBackupLedger.AssetState.FAILED -> if (message == NOTHING_TO_UPLOAD_MESSAGE) NOTHING_TO_UPLOAD else GENERAL
+			else -> null
+		}
+	}
+}
+
 /** Durable presentation totals the worker maintains, so the app never walks the library for status. */
 @Serializable
 data class PhotoBackupStatistics(
