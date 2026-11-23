@@ -1,6 +1,6 @@
 import nodePath from 'node:path'
 import type {Stats} from 'node:fs'
-import {appendFile, chmod, link, lstat, readFile, symlink, utimes, writeFile} from 'node:fs/promises'
+import {appendFile, chmod, link, lstat, readFile, symlink, truncate, utimes, writeFile} from 'node:fs/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
 import fse from 'fs-extra'
@@ -8155,4 +8155,35 @@ test('drops the contents of a directory replaced by a file when the watcher repo
 	})
 	expect(await index.getEntryBySystemPath(directory)).toMatchObject({type: 'file'})
 	await expect(index.status()).resolves.toMatchObject({roots: [{virtualPath: '/Home', state: 'ready'}]})
+})
+
+test('hashes a new photo straight away but waits for a new large video to settle', async () => {
+	const hashed: string[] = []
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile: async (systemPath) => {
+				hashed.push(nodePath.basename(systemPath))
+				return Buffer.alloc(32, hashed.length)
+			},
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const photo = nodePath.join(homeDirectory, 'photo.jpg')
+	const video = nodePath.join(homeDirectory, 'download.mkv')
+	await writeFile(photo, 'photo')
+	await writeFile(video, '')
+	await truncate(video, 4_000_000_000)
+	const {ctimeMs} = await lstat(video)
+	await index.reconcileRoot('/Home', 'settle')
+	index.startBackgroundReconciliation()
+
+	await pRetry(async () => expect(hashed).toContain('photo.jpg'), {retries: 200, minTimeout: 10, maxTimeout: 20})
+	expect(hashed).not.toContain('download.mkv')
+	const database = new BetterSqlite3(index.databasePath, {readonly: true})
+	const {hash_retry_at} = database.prepare("SELECT hash_retry_at FROM entries WHERE name = 'download.mkv'").get() as {
+		hash_retry_at: number
+	}
+	database.close()
+	// Hashing 4 GB on a Raspberry Pi takes about 40 seconds
+	expect(Math.abs(hash_retry_at - (ctimeMs + 40_000))).toBeLessThanOrEqual(1)
 })

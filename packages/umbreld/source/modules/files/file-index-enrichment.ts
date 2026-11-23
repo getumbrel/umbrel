@@ -65,6 +65,16 @@ const ARTIFACT_MAINTENANCE_BATCH_SIZE = 256
 const ORPHAN_SWEEP_BATCH_SIZE = 256
 const ARTIFACT_IO_CONCURRENCY = 16
 export const BACKGROUND_QUIET_PERIOD_MS = 1_000
+// A file must sit unchanged for about as long as hashing it would take before
+// the background hashes it, so one that's still being written isn't read over
+// and over. The rate is roughly a Raspberry Pi 4 reading from a USB disk.
+const HASH_SETTLE_BYTES_PER_MS = 100_000
+const MAX_HASH_SETTLE_MS = 15 * 60 * 1000
+
+export function hashNotBefore(size: number, changedMs: number, now = Date.now()) {
+	const settle = Math.min(Math.max(BACKGROUND_QUIET_PERIOD_MS, size / HASH_SETTLE_BYTES_PER_MS), MAX_HASH_SETTLE_MS)
+	return Math.ceil(Math.min(changedMs, now) + settle)
+}
 // Each job has one core. The slowest decode measured, a 26 megapixel Fuji RAW
 // photo on a Raspberry Pi 4, takes 77 seconds of it.
 export const THUMBNAIL_GENERATION_TIMEOUT_MS = 180_000
@@ -2278,8 +2288,11 @@ export async function hashFileRevision(systemPath: string, expected: ContentFing
 	try {
 		await assertHandleContentRevision(handle, expected)
 		const hasher = new Blake3Hasher()
+		// Stop as soon as the file changes. Reading on to the end of a file that
+		// is still being written throws away the whole read.
 		for await (const chunk of handle.createReadStream({autoClose: false, highWaterMark: 1024 * 1024})) {
 			hasher.update(chunk)
+			await assertHandleContentRevision(handle, expected)
 		}
 		await assertHandleContentRevision(handle, expected)
 		return hasher.digestBuffer()

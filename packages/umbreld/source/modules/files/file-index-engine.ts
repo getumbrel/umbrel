@@ -21,7 +21,7 @@ import {
 	type PhotoScopeMode,
 } from '../photos/types.ts'
 import FileIndexEnrichment, {
-	BACKGROUND_QUIET_PERIOD_MS,
+	hashNotBefore,
 	assertPublishedRevision,
 	retryGivenUpEnrichmentAfterUpdate,
 	type FileIndexEnrichmentRuntime,
@@ -1571,7 +1571,8 @@ export default class FileIndexEngine {
 			modifiedNs: identity.modifiedNs,
 			ctimeNs: identity.ctimeNs,
 			thumbnailIdentityKind,
-			hashNotBefore: thumbnailIdentityKind === 'content' ? Date.now() + BACKGROUND_QUIET_PERIOD_MS : null,
+			hashNotBefore:
+				thumbnailIdentityKind === 'content' ? hashNotBefore(Number(stats.size), Number(stats.ctimeMs)) : null,
 			observedAt: root.scanEnabled === false ? Date.now() : null,
 			hidden: Number(this.#isHidden(name)),
 		}

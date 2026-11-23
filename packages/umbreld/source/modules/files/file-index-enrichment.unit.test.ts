@@ -1,5 +1,6 @@
 import {execFile} from 'node:child_process'
-import {lstat, mkdtemp, open, rm, writeFile, type FileHandle} from 'node:fs/promises'
+import {appendFileSync} from 'node:fs'
+import {lstat, mkdtemp, open, rm, truncate, writeFile, type FileHandle} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import nodePath from 'node:path'
 import {promisify} from 'node:util'
@@ -23,9 +24,11 @@ import {
 	generateThumbnailFile,
 	generateThumbnailFiles,
 	hashFileRevision,
+	hashNotBefore,
 	streamableImageCoder,
 	THUMBNAIL_GENERATION_TIMEOUT_MS,
 } from './file-index-enrichment.ts'
+import {Blake3Hasher} from './blake3.ts'
 
 vi.mock('../utilities/sandbox.ts')
 
@@ -292,6 +295,43 @@ test('rejects a FIFO thumbnail source without blocking its hash lane', async () 
 			modifiedNs: stats.mtimeNs.toString(),
 		}),
 	).rejects.toThrow('File revision no longer matches the index')
+})
+
+test('stops hashing as soon as the file changes instead of reading to the end', async () => {
+	const directory = await mkdtemp(nodePath.join(tmpdir(), 'umbrel-hash-changing-'))
+	temporaryDirectories.push(directory)
+	const video = nodePath.join(directory, 'download.mkv')
+	await writeFile(video, '')
+	await truncate(video, 64 * 1024 * 1024)
+	const stats = await lstat(video, {bigint: true})
+	// Another write lands while the first chunk is being hashed
+	const update = vi.spyOn(Blake3Hasher.prototype, 'update')
+	update.mockImplementationOnce(function (this: InstanceType<typeof Blake3Hasher>) {
+		appendFileSync(video, 'more')
+		return this
+	})
+
+	await expect(
+		hashFileRevision(video, {
+			inode: stats.ino.toString(),
+			size: Number(stats.size),
+			modifiedNs: stats.mtimeNs.toString(),
+		}),
+	).rejects.toThrow('File revision no longer matches the index')
+	expect(update).toHaveBeenCalledTimes(1)
+	update.mockRestore()
+})
+
+test('waits for a file to stay unchanged for about as long as hashing it takes', () => {
+	const now = 1_000_000_000
+	// Photos keep the one second quiet period
+	expect(hashNotBefore(5_000_000, now, now)).toBe(now + 1_000)
+	// Larger files wait longer, from when they last changed
+	expect(hashNotBefore(4_000_000_000, now - 10_000, now)).toBe(now + 30_000)
+	// A file that has sat unchanged for long enough is due already
+	expect(hashNotBefore(4_000_000_000, now - 60 * 60 * 1000, now)).toBeLessThan(now)
+	// The wait is capped, and a change time in the future counts as now
+	expect(hashNotBefore(1_000_000_000_000, now + 60 * 60 * 1000, now)).toBe(now + 15 * 60 * 1000)
 })
 
 test('extracts oriented photo metadata, capture offset, GPS, and Apple live identifier', async () => {
