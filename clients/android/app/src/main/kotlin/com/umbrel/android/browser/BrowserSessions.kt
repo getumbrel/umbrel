@@ -162,7 +162,12 @@ internal object BrowserSessions {
 	private suspend fun clearWebData(deviceId: String, accountId: String) = withContext(Dispatchers.Main) {
 		try {
 			if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
-				val profile = ProfileStore.getInstance().getProfile(profileName(deviceId, accountId)) ?: return@withContext
+				val store = ProfileStore.getInstance()
+				val name = profileName(deviceId, accountId)
+				// A WebView before 140 answers getProfile for a missing profile with a broken one,
+				// which androidx.webkit then hands back for the rest of the process.
+				if (name !in store.allProfileNames) return@withContext
+				val profile = store.getProfile(name) ?: return@withContext
 				profile.cookieManager.removeAllCookies(null)
 				deleteWebData(profile.webStorage)
 			} else {
