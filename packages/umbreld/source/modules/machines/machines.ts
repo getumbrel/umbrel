@@ -989,10 +989,13 @@ export function renderCloudInitUserData(
 		write_files: [{path: '/etc/cloud/cloud.cfg.d/99-umbrel-machine.cfg', content: 'manual_cache_clean: true\n'}],
 	}
 
-	if (provisioning.packages?.length) {
-		cloudConfig.package_update = true
-		cloudConfig.packages = provisioning.packages
-	}
+	// Catalog images are pinned releases that age between umbrelOS updates, so
+	// bring every package, kernel included, up to date before anything else is
+	// installed. A new machine then starts with current security fixes rather
+	// than whatever shipped in the image.
+	cloudConfig.package_update = true
+	cloudConfig.package_upgrade = true
+	if (provisioning.packages?.length) cloudConfig.packages = provisioning.packages
 
 	const commands = [...(provisioning.commands ?? [])]
 	if (provisioning.graphical) commands.push(['systemctl', 'set-default', 'graphical.target'])
@@ -1006,13 +1009,13 @@ export function renderCloudInitUserData(
 		}
 	}
 
-	if (provisioning.graphical) {
-		cloudConfig.power_state = {
-			delay: 'now',
-			mode: 'reboot',
-			message: 'Rebooting after machine setup',
-			condition: true,
-		}
+	// Reboot once setup has reported in, so the machine runs the kernel and
+	// libraries the upgrade installed, and graphical images start their desktop.
+	cloudConfig.power_state = {
+		delay: 'now',
+		mode: 'reboot',
+		message: 'Rebooting after machine setup',
+		condition: true,
 	}
 
 	return `#cloud-config\n${yaml.dump(cloudConfig, {noRefs: true, lineWidth: 120})}`

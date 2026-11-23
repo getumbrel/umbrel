@@ -107,7 +107,7 @@ describe('Machines cloud-init seed', () => {
 		}
 	})
 
-	test('reports server setup completion without forcing a reboot', () => {
+	test('upgrades every package and reboots into it once server setup has reported in', () => {
 		const document = renderCloudInitUserData(
 			'ubuntu',
 			'$6$test-hash',
@@ -115,16 +115,22 @@ describe('Machines cloud-init seed', () => {
 			'http://umbrel/api/machines/first-boot/id/token',
 		)
 		const config = yaml.load(document.replace(/^#cloud-config\n/, '')) as {
+			package_update: boolean
+			package_upgrade: boolean
+			packages?: string[]
 			phone_home: {url: string; post: string[]; tries: number}
-			power_state?: unknown
+			power_state: {mode: string; condition: boolean}
 		}
 
+		expect(config.package_update).toBe(true)
+		expect(config.package_upgrade).toBe(true)
+		expect(config).not.toHaveProperty('packages')
 		expect(config.phone_home).toEqual({
 			url: 'http://umbrel/api/machines/first-boot/id/token',
 			post: ['instance_id'],
 			tries: 60,
 		})
-		expect(config).not.toHaveProperty('power_state')
+		expect(config.power_state).toMatchObject({mode: 'reboot', condition: true})
 	})
 
 	test('installs the full Ubuntu desktop and reboots into the graphical target when requested', () => {
