@@ -5,7 +5,7 @@
 import {expect, test} from 'vitest'
 
 import {DeviceModel, Drive, DriveKind, Layout, TB} from './model'
-import {getOffers, getSwapPlan, MemberState, neededSize, Operation, StorageState, viewPool} from './state'
+import {getModes, getOffers, getSwapPlan, MemberState, neededSize, Operation, StorageState, viewPool} from './state'
 
 type Spec = {
 	kind?: DriveKind
@@ -289,4 +289,46 @@ test('nothing is advised about a drive that isn’t part of the storage', () => 
 	const state = storage({layout: 'raidz1', members: {a: {}, b: {}, c: {}}, loose: {spare: {}}})
 	expect(getSwapPlan(state, 'spare')).toEqual({kind: 'blocked', reason: 'leaned-on'})
 	expect(getSwapPlan(state, 'nowhere')).toEqual({kind: 'blocked', reason: 'leaned-on'})
+})
+
+// Storage Manager lists every mode FailSafe has, whatever the storage is made of, and says of
+// each one where it stands. A wrong word here tells someone their Umbrel can do less, or more,
+// than it can.
+const standings = (state: StorageState) =>
+	Object.fromEntries(getModes(state).map((entry) => [entry.layout, entry.standing]))
+const ssd: Spec = {kind: 'ssd', size: 4}
+
+test('hard drives with FailSafe on could have had either other mode, by starting over', () => {
+	const members = {a: {}, b: {}, c: {}, d: {}}
+	expect(standings(storage({layout: 'raidz1', members}))).toEqual({raidz1: 'current', raidz2: 'reset', mirror: 'reset'})
+	expect(standings(storage({layout: 'raidz2', members}))).toEqual({raidz1: 'reset', raidz2: 'current', mirror: 'reset'})
+	expect(standings(storage({layout: 'mirror', members}))).toEqual({raidz1: 'reset', raidz2: 'reset', mirror: 'current'})
+})
+
+test('SSDs have one mode, and the other two are listed as taking hard drives', () => {
+	const on = storage({device: 'pro', layout: 'raidz1', members: {a: ssd, b: ssd, c: ssd}})
+	expect(standings(on)).toEqual({raidz1: 'current', raidz2: 'hdd-only', mirror: 'hdd-only'})
+	// One SSD in Full Storage can still be given the one mode SSDs have
+	const one = storage({device: 'pro', layout: 'stripe', members: {a: ssd}})
+	expect(standings(one)).toEqual({raidz1: 'offered', raidz2: 'hdd-only', mirror: 'hdd-only'})
+	// Several can't: umbreld has nothing to copy them from
+	const several = storage({device: 'pro', layout: 'stripe', members: {a: ssd, b: ssd}})
+	expect(standings(several)).toEqual({raidz1: 'reset', raidz2: 'hdd-only', mirror: 'hdd-only'})
+})
+
+test('one hard drive in Full Storage can be given any mode, several only pairs', () => {
+	const one = storage({layout: 'stripe', members: {a: {}}})
+	expect(standings(one)).toEqual({raidz1: 'offered', raidz2: 'offered', mirror: 'offered'})
+	const several = storage({layout: 'stripe', members: {a: {}, b: {}, c: {}}})
+	expect(standings(several)).toEqual({raidz1: 'reset', raidz2: 'reset', mirror: 'offered'})
+})
+
+test('every mode is listed once, in the order setup offers them', () => {
+	for (const state of [
+		storage({layout: 'raidz1', members: {a: ssd, b: ssd}}),
+		storage({layout: 'stripe', members: {a: {}}}),
+		storage({layout: 'mirror', members: {a: {}, b: {}}}),
+	]) {
+		expect(getModes(state).map((entry) => entry.layout)).toEqual(['raidz1', 'raidz2', 'mirror'])
+	}
 })

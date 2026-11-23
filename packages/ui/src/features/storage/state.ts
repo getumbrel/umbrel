@@ -30,6 +30,7 @@ import {
 	Drive,
 	DriveKind,
 	FailsafeLayout,
+	failsafeLayoutsFor,
 	getCapacity,
 	isFailing,
 	Layout,
@@ -525,6 +526,40 @@ export function failsafeAction(plan: FailsafePlan, option: FailsafeOption): Stor
 		}
 	}
 	return {type: 'failsafe', to: option.to, newIds: option.needs.map((need) => need.drive!.id), accelId}
+}
+
+// ---------------------------------------------------------------------------
+// Every mode FailSafe has
+// ---------------------------------------------------------------------------
+
+// Storage Manager lists every mode umbrelOS has, also the ones this storage can't have, so that
+// nobody takes the mode they see for the only one there is. This is where each stands.
+export type ModeStanding =
+	// The mode the storage uses
+	| 'current'
+	// It can be turned on from here, perhaps once more drives are in: getFailsafePlan has the detail
+	| 'offered'
+	// Drives of this kind can have it, but only when the storage is set up again
+	| 'reset'
+	// It takes hard drives, and the storage is made of SSDs
+	| 'hdd-only'
+
+export type ModeEntry = {layout: FailsafeLayout; standing: ModeStanding}
+
+export function getModes(state: StorageState, plan: FailsafePlan = getFailsafePlan(state)): ModeEntry[] {
+	const {kind, layout} = state.pool
+	const own = failsafeLayoutsFor(kind)
+	// Hard drives have every mode there is
+	return failsafeLayoutsFor('hdd').map((mode) => ({
+		layout: mode,
+		standing: !own.includes(mode)
+			? 'hdd-only'
+			: layout === mode
+				? 'current'
+				: layout === 'stripe' && plan.options.some((option) => option.to === mode)
+					? 'offered'
+					: 'reset',
+	}))
 }
 
 // ---------------------------------------------------------------------------

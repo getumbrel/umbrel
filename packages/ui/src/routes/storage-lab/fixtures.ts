@@ -535,6 +535,11 @@ export const managerScenarios: ManagerScenario[] = [
 		members: 's2',
 		used: 0.3,
 	}),
+	scenario('nas-one', everyday, 'Hard drives · one drive, Full Storage', 'Every FailSafe Mode is still open to it.', {
+		layout: 'stripe',
+		members: 'h8',
+		used: 0.2,
+	}),
 	scenario('nas-z1', everyday, 'Hard drives · one-drive protection', 'Four 8TB drives.', {
 		layout: 'raidz1',
 		members: 'h8,h8,h8,h8',

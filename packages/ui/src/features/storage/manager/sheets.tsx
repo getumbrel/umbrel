@@ -3,6 +3,7 @@
 // umbreld refuses, stays open with one plain sentence and a way to try again.
 
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbArrowDown, TbCheck} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
@@ -10,8 +11,10 @@ import {cn} from '@/lib/utils'
 
 import {DriveTone, LevelGlyph} from '../art'
 import {DriveFacts, TemperatureAdvice} from '../drive-facts'
+import {LevelDetails} from '../level-details'
 import {
 	Drive,
+	DriveKind,
 	FailsafeLayout,
 	formatSize,
 	isFailing,
@@ -52,16 +55,19 @@ import {
 	FailsafeOption,
 	failsafeStep,
 	getFailsafePlan,
+	getModes,
 	getOffers,
 	getSwapPlan,
 	isBroken,
 	isSwitchTarget,
+	ModeEntry,
 	neededSize,
 	Offer,
 	offerAction,
 	peerDrives,
 	PoolView,
 	StepsVariant,
+	StorageState,
 	taskProgress,
 } from '../state'
 import {forKind, useStorageTranslation} from '../words'
@@ -94,7 +100,7 @@ export function Sheets({sheet, ...live}: SheetProps & {sheet: Sheet}) {
 	return (
 		<SheetRoot open={sheet !== null && stands} onOpenChange={(isOpen) => !isOpen && setSheet(null)}>
 			{sheet && stands && (
-				<SheetContent>
+				<SheetContent wide={sheet.type === 'failsafe'}>
 					<RequestingProvider value={report}>
 						{sheet.type === 'drive' && <DriveSheet {...props} id={sheet.id} />}
 						{sheet.type === 'replace' && <ReplaceSheet {...props} memberId={sheet.memberId} newId={sheet.newId} />}
@@ -758,11 +764,52 @@ function NewDrivesSheet({
 // FailSafe
 // ---------------------------------------------------------------------------
 
+// A mode is drawn with as many drives as the storage has, as far as the mode takes that many
+const drawnCount = (layout: FailsafeLayout, kind: DriveKind, count: number) =>
+	layout === 'raidz1' && kind === 'hdd' ? Math.min(count, MAX_HDD_RAIDZ1_DRIVES) : count
+
+// A mode this storage doesn't have and can't be given from here. It is listed all the same, with
+// what it costs and what it takes, so that the mode in use isn't taken for the only one there is.
+function OtherMode({entry, state}: {entry: ModeEntry; state: StorageState}) {
+	// A mode for hard drives is told about drives, also under storage made of SSDs
+	const {t} = useTranslation()
+	const {layout, standing} = entry
+	const kind = standing === 'hdd-only' ? 'hdd' : state.pool.kind
+	return (
+		<OptionCard
+			readable
+			selected={false}
+			icon={<LevelGlyph layout={layout} count={drawnCount(layout, kind, state.pool.members.length)} />}
+			iconCaption={layoutTech[layout]}
+			title={promise(t, layout, kind)}
+			description={t(
+				layout === 'raidz1' ? `storage-mgr.modes.about.raidz1.${kind}` : `storage-mgr.modes.about.${layout}`,
+			)}
+			disabledReason={t(standing === 'hdd-only' ? 'storage-ui.problem.hdd-only' : 'storage-mgr.modes.reset')}
+		/>
+	)
+}
+
+// Umbrel Pro's SSD slots
+const PRO_SLOTS = 4
+
+// How storage that has FailSafe on gets more room, in the mode it has
+function growKey(state: StorageState) {
+	const {kind, layout, members} = state.pool
+	// Umbrel Pro has no room for another SSD once the storage itself fills its slots. A new SSD
+	// waiting in a slot doesn't fill it: adding that SSD is how the storage grows.
+	if (kind === 'ssd') return state.device === 'pro' && members.length >= PRO_SLOTS ? 'replace.ssd' : 'ssd'
+	if (layout === 'mirror') return 'mirror'
+	if (layout === 'raidz1') return members.length >= MAX_HDD_RAIDZ1_DRIVES ? 'replace.hdd' : 'hdd-limit'
+	return 'hdd'
+}
+
 function FailsafeSheet(props: SheetProps) {
 	const {state, view, setSheet, run, onOpenBackups, supportUrl} = props
 	const {t, i18n} = useStorageTranslation()
 	const request = useRun()
 	const plan = getFailsafePlan(state)
+	const modes = getModes(state, plan)
 	const {kind, layout, members, accel} = state.pool
 	const [to, setTo] = useState(() => plan.options.find((option) => !failsafeBlocked(state, plan, option))?.to)
 	const chosen = plan.options.find((option) => option.to === to)
@@ -814,9 +861,10 @@ function FailsafeSheet(props: SheetProps) {
 		)
 	}
 
-	// FailSafe is on: what it is, in both vocabularies, and what can't be changed about it
+	// FailSafe is on: the mode it has, among every mode there is, and why the others are out of
+	// reach. Nothing here can be changed. It is laid out like the choice it once was so that it
+	// reads like one: this is what you have, and these are what else umbrelOS can do.
 	if (layout !== 'stripe' && !accelExposed(state)) {
-		const fullPro = state.device === 'pro' && view.freeSlots === 0
 		return (
 			<>
 				<SheetHeader>
@@ -825,23 +873,30 @@ function FailsafeSheet(props: SheetProps) {
 						{promiseSentence(t, layout, kind, accel.length)} {t('storage-mgr.failsafe.on.rebuilds')}
 					</SheetDescription>
 				</SheetHeader>
-				<Rows>
-					<Row label={t('storage-setup.protection')} trailing={<ModeMark layout={layout} count={members.length} />} />
-					<Row label={t('storage-mgr.failsafe.on.aside')} value={formatSize(view.capacity.protection)} />
-					<Row
-						label={t('storage-mgr.failsafe.on.grow')}
-						value={
-							fullPro
-								? t('storage-mgr.failsafe.on.grow.swap')
-								: layout === 'mirror'
-									? t('storage-setup.compare.grow.mirror')
-									: layout === 'raidz1' && kind === 'hdd'
-										? t('storage-setup.compare.grow.raidz1')
-										: t('storage-setup.compare.grow.raidz2')
-						}
-					/>
-				</Rows>
-				<Note>{t('storage-mgr.failsafe.on.permanent')}</Note>
+				<OptionGroup label={t('storage-setup.protection')} readOnly>
+					{modes.map((entry) =>
+						entry.standing === 'current' ? (
+							<OptionCard
+								key={entry.layout}
+								readable
+								selected
+								icon={<LevelGlyph layout={layout} count={members.length} />}
+								iconCaption={layoutTech[layout]}
+								title={promise(t, layout, kind)}
+								// What it costs and how it grows, as the other modes say it, but of this storage
+								description={`${t('storage-mgr.modes.yours.aside', {size: formatSize(view.capacity.protection)})} ${t(`storage-mgr.modes.yours.grow.${growKey(state)}`)}`}
+							/>
+						) : (
+							<OtherMode key={entry.layout} entry={entry} state={state} />
+						),
+					)}
+				</OptionGroup>
+				<Note>{t(kind === 'ssd' ? 'storage-mgr.modes.note.ssd-on' : 'storage-mgr.modes.note.switch')}</Note>
+				{kind === 'hdd' && (
+					<div className='@container'>
+						<LevelDetails layouts={modes.map((entry) => entry.layout)} selected={layout} />
+					</div>
+				)}
 				<SheetFooter>
 					<Done setSheet={setSheet} />
 				</SheetFooter>
@@ -870,6 +925,15 @@ function FailsafeSheet(props: SheetProps) {
 						)}
 					</SheetDescription>
 				</SheetHeader>
+				{/* A switch that stopped part way is trouble to get out of, not the place to read about modes */}
+				{!partly && (
+					<OptionGroup label={t('storage-setup.protection')} readOnly>
+						{modes.map((entry) => (
+							<OtherMode key={entry.layout} entry={entry} state={state} />
+						))}
+					</OptionGroup>
+				)}
+				{!partly && kind === 'ssd' && <Note>{t('storage-mgr.modes.note.ssd')}</Note>}
 				<Steps
 					steps={[
 						t('storage-mgr.failsafe.restart-over.1'),
@@ -910,7 +974,7 @@ function FailsafeSheet(props: SheetProps) {
 		const uses = t(`storage-mgr.failsafe.uses.${kind}`, {count: option.needs.length})
 		// A further new drive isn't lost: it can be added once FailSafe is on
 		return option.later.length > 0
-			? `${uses} ${t('storage-mgr.failsafe.later', {now: formatSize(option.after), later: formatSize(option.later.at(-1)!)})}`
+			? `${uses} ${t('storage-mgr.failsafe.later', {count: option.later.length, now: formatSize(option.after), later: formatSize(option.later.at(-1)!)})}`
 			: uses
 	}
 
@@ -924,11 +988,14 @@ function FailsafeSheet(props: SheetProps) {
 			</SheetHeader>
 
 			<OptionGroup label={t('storage-setup.protection')}>
-				{plan.options.map((option) => {
+				{modes.map((entry) => {
+					const option = plan.options.find((candidate) => candidate.to === entry.layout)
+					if (!option) return <OtherMode key={entry.layout} entry={entry} state={state} />
 					const blocked = blockedOf(option)
 					return (
 						<OptionCard
 							key={option.to}
+							readable
 							selected={to === option.to}
 							onSelect={() => setTo(option.to)}
 							icon={<LevelGlyph layout={option.to} count={members.length + option.needs.length} />}
@@ -941,6 +1008,17 @@ function FailsafeSheet(props: SheetProps) {
 					)
 				})}
 			</OptionGroup>
+			{/* Why the modes that can't be chosen here can't be */}
+			{modes.some((entry) => entry.standing === 'reset') ? (
+				<Note>{t('storage-mgr.modes.note.pairs-only')}</Note>
+			) : (
+				modes.some((entry) => entry.standing === 'hdd-only') && <Note>{t('storage-mgr.modes.note.ssd')}</Note>
+			)}
+			{kind === 'hdd' && (
+				<div className='@container'>
+					<LevelDetails layouts={modes.map((entry) => entry.layout)} selected={to ?? null} />
+				</div>
+			)}
 
 			{chosen && action && (
 				<>

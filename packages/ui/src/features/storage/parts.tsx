@@ -128,16 +128,20 @@ export function OptionGroup({
 	label,
 	children,
 	className,
+	readOnly,
 }: {
 	// What is being chosen, for screen readers
 	label: string
 	children: React.ReactNode
 	className?: string
+	// The choice was made earlier and is only shown here
+	readOnly?: boolean
 }) {
 	return (
 		<div
 			role='radiogroup'
 			aria-label={label}
+			aria-readonly={readOnly || undefined}
 			className={cn('flex flex-col gap-2 rounded-24 bg-white/5 p-2', className)}
 		>
 			{children}
@@ -155,9 +159,11 @@ export function OptionCard({
 	value,
 	description,
 	disabledReason,
+	readable,
 }: {
 	selected: boolean
-	onSelect: () => void
+	// Nothing to do in a list that is only shown
+	onSelect?: () => void
 	icon?: React.ReactNode
 	// The technical name of what the icon stands for, small beside or beneath it
 	iconCaption?: string
@@ -168,14 +174,25 @@ export function OptionCard({
 	description?: React.ReactNode
 	// A choice that can't be made says why, in a few words
 	disabledReason?: string | null
+	// For a list that is as much there to be read as to be chosen from, like Storage Manager's
+	// modes: a choice that can't be made keeps words that are easy to read, and says why at the
+	// card's edge, where a chosen one has its mark
+	readable?: boolean
 }) {
 	const disabled = !!disabledReason
+	// A card that is there to be read stays within reach of the keyboard and of a screen reader's
+	// Tab, and says that it can't be chosen. Otherwise it is skipped like any disabled button.
+	const pressable = {
+		onClick: disabled ? undefined : onSelect,
+		disabled: disabled && !readable,
+		'aria-disabled': (disabled && readable) || undefined,
+	}
 	const mark = icon && (
 		<span
 			className={cn(
 				'flex shrink-0 items-center transition-opacity',
 				selected ? 'text-white' : 'text-white/80',
-				disabled && 'opacity-35',
+				disabled && (readable ? 'opacity-55' : 'opacity-35'),
 			)}
 		>
 			{icon}
@@ -188,21 +205,27 @@ export function OptionCard({
 				<span
 					className={cn(
 						'text-15 font-semibold',
-						selected ? 'text-white' : disabled ? 'text-white/40' : 'text-white/80',
+						selected ? 'text-white' : disabled ? (readable ? 'text-white/65' : 'text-white/40') : 'text-white/80',
 					)}
 				>
 					{title}
 				</span>
 			</span>
-			{disabled ? (
-				<span className='rounded-full bg-white/10 px-2 py-px text-11 font-medium text-white/55'>{disabledReason}</span>
-			) : (
+			{!disabled ? (
 				badge
+			) : readable ? null : (
+				<span className='rounded-full bg-white/10 px-2 py-px text-11 font-medium text-white/55'>{disabledReason}</span>
 			)}
 		</>
 	)
-	// What choosing it gives, and whether it is chosen
-	const worth = !disabled && (
+	// What choosing it gives, and whether it is chosen. In a list to be read, why it can't be.
+	const worth = disabled ? (
+		readable && (
+			<span className='rounded-full bg-white/10 px-2 py-0.5 text-11 leading-[15px] font-medium whitespace-nowrap text-white/65'>
+				{disabledReason}
+			</span>
+		)
+	) : (
 		<>
 			{value !== undefined && (
 				<span className={cn('text-15 font-semibold', selected ? 'text-white' : 'text-white/60')}>{value}</span>
@@ -218,7 +241,12 @@ export function OptionCard({
 			)}
 		</>
 	)
-	const aboutClass = cn('text-13 leading-snug font-medium', disabled ? 'text-white/35' : 'text-white/60')
+	const aboutClass = cn(
+		'text-13 leading-snug font-medium',
+		disabled ? (readable ? 'text-white/45' : 'text-white/35') : 'text-white/60',
+		// Sentences to be read don't leave a last word on a line of its own
+		readable && 'text-pretty',
+	)
 	const cardClass = cn(
 		'w-full rounded-17 border px-4 py-3 text-left transition-[background-color,border-color] duration-200',
 		focusRing,
@@ -236,8 +264,7 @@ export function OptionCard({
 				type='button'
 				role='radio'
 				aria-checked={selected}
-				onClick={onSelect}
-				disabled={disabled}
+				{...pressable}
 				className={cn('@container block', cardClass)}
 			>
 				<span className='grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 @[340px]:grid-cols-[auto_minmax(0,1fr)_auto] @[340px]:gap-x-3.5 @[340px]:gap-y-1'>
@@ -246,7 +273,13 @@ export function OptionCard({
 						<span
 							className={cn(
 								'font-mono text-[10px] leading-none tracking-tight whitespace-nowrap',
-								disabled ? 'text-white/25' : selected ? 'text-white/60' : 'text-white/40',
+								disabled
+									? readable
+										? 'text-white/35'
+										: 'text-white/25'
+									: selected
+										? 'text-white/60'
+										: 'text-white/40',
 							)}
 						>
 							{iconCaption}
@@ -274,8 +307,7 @@ export function OptionCard({
 			type='button'
 			role='radio'
 			aria-checked={selected}
-			onClick={onSelect}
-			disabled={disabled}
+			{...pressable}
 			className={cn('flex flex-col gap-1.5', cardClass)}
 		>
 			<span className='flex w-full items-start gap-2'>
@@ -648,16 +680,24 @@ export function SheetRoot({
 	)
 }
 
-export function SheetContent({children}: {children: React.ReactNode}) {
+export function SheetContent({
+	children,
+	wide,
+}: {
+	children: React.ReactNode
+	// A window with more to lay side by side than a question and its answer
+	wide?: boolean
+}) {
 	const isDrawer = useContext(SheetIsDrawer)
 	if (isDrawer)
 		return (
 			<DrawerContent className='max-h-[calc(100%-48px)] gap-0 px-0 pb-0'>
-				<div className='sheet-drawer mt-3 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-5'>{children}</div>
+				{/* No padding at the foot: the buttons bring it (see SheetFooter) */}
+				<div className='sheet-drawer mt-3 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5'>{children}</div>
 			</DrawerContent>
 		)
 	return (
-		<DialogScrollableContent>
+		<DialogScrollableContent className={wide ? 'sm:max-w-[560px]' : undefined}>
 			<div className='flex flex-col gap-5 p-8'>{children}</div>
 		</DialogScrollableContent>
 	)
@@ -688,10 +728,14 @@ export function SheetDescription({children}: {children: React.ReactNode}) {
 	)
 }
 
-// In a drawer the buttons stay at its foot while what is above them scrolls underneath
+// In a drawer the buttons stay at its foot while what is above them scrolls underneath. The
+// footer runs to the drawer's very edge and brings the 40px under the buttons itself: a sticky
+// box stops short of its scroller's own padding, and padding there leaves a strip under the
+// buttons for the sheet to show through. It also closes the gap to what is above it, so the last
+// row ends under the fade the footer casts instead of standing clear of it.
 export function SheetFooter({children}: {children: React.ReactNode}) {
 	return useContext(SheetIsDrawer) ? (
-		<div className='sticky bottom-0 z-10 -mx-5 mt-auto -mb-5 flex shrink-0 flex-col gap-2.5 bg-[#0A0A0A] px-5 pt-3 pb-5 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-3 before:bg-linear-to-t before:from-[#0A0A0A] before:to-transparent'>
+		<div className='sticky bottom-0 z-10 -mx-5 -mt-5 flex shrink-0 flex-col gap-2.5 bg-[#0A0A0A] px-5 pt-3 pb-10 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-3 before:bg-linear-to-t before:from-[#0A0A0A] before:to-transparent'>
 			{children}
 		</div>
 	) : (
