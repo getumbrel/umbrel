@@ -103,7 +103,9 @@ if [[ "$SIGNED_APP_IDENTIFIER" != "$EXPECTED_APP_IDENTIFIER" \
 	exit 1
 fi
 
-if ! /usr/bin/lipo "$APP/Contents/MacOS/Umbrel" -verify_arch arm64 x86_64; then
+# Newer lipo accepts only one architecture per -verify_arch.
+if ! /usr/bin/lipo "$APP/Contents/MacOS/Umbrel" -verify_arch arm64 \
+	|| ! /usr/bin/lipo "$APP/Contents/MacOS/Umbrel" -verify_arch x86_64; then
 	echo "Umbrel.app is not a universal arm64/x86_64 build" >&2
 	exit 1
 fi

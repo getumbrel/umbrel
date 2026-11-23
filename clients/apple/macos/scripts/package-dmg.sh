@@ -35,7 +35,9 @@ if ! codesign --verify --deep --strict --verbose=2 "$APP"; then
 	exit 1
 fi
 
-if ! /usr/bin/lipo "$APP/Contents/MacOS/Umbrel" -verify_arch arm64 x86_64; then
+# Newer lipo accepts only one architecture per -verify_arch.
+if ! /usr/bin/lipo "$APP/Contents/MacOS/Umbrel" -verify_arch arm64 \
+	|| ! /usr/bin/lipo "$APP/Contents/MacOS/Umbrel" -verify_arch x86_64; then
 	echo "Umbrel.app must contain both arm64 and x86_64" >&2
 	exit 1
 fi

@@ -59,8 +59,16 @@ appcast with Sparkle's official tool:
 bash scripts/generate-appcast.sh /path/to/umbrel-macos-updates
 ```
 
-The signing key remains in Keychain under `umbrel-macos-updates`. Upload immutable
-artifacts first and publish `appcast.xml` last.
+The signing key remains in Keychain under `umbrel-macos-updates`.
+
+Upload these three files to `macos/` on the release bucket (download.umbrel.com):
+
+- `Umbrel-<version>-<build>.dmg`, the notarized DMG. The appcast points here.
+- `Umbrel.dmg`, an identical copy that replaces the previous one. The
+  public download link points here, so new installs get the latest version.
+- `appcast.xml`, which replaces the previous one. Upload it last, after both DMGs.
+
+The release notes Markdown file stays out of the upload, since the appcast embeds it.
 
 Release notes go in a Markdown file next to the DMG with the same name, for example
 `Umbrel-0.1.3-27.md`. The script embeds them in the appcast, and the update window
