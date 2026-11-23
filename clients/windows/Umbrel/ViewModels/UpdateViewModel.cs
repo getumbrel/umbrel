@@ -177,7 +177,7 @@ public sealed class UpdateViewModel : ObservableObject
 				PresentNotice("You’re up to date!", $"Umbrel {App.DisplayVersion} is currently the newest version available.", notes);
 				break;
 			case UpdateCheckStatus.NotSupported:
-				PresentNotice("Software update is unavailable", "This copy of Umbrel wasn’t installed with App Installer, so it can’t check for updates.");
+				PresentNotice("Software update is unavailable", "This copy of Umbrel isn’t an installed package, so it can’t check for updates.");
 				break;
 			default:
 				PresentNotice("An error occurred in retrieving update information. Please try again later.", null);

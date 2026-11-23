@@ -2,11 +2,16 @@
 <!--
   App Installer feed. There are no UpdateSettings, so Windows never updates Umbrel on its
   own: the app checks this file every 6 hours and when asked, and asks before installing,
-  as the macOS app does (see Services/UpdateChecker.cs). For packaged desktop apps
-  OnLaunch's ShowPrompt shows nothing, so OnLaunch and AutomaticBackgroundTask would
-  both install silently. Upload the .msix and its release notes (Umbrel-<version>.md,
-  see README.md) first and this file last, so no client ever sees a feed pointing at a
-  missing package. Version here must equal the MSIX identity version. The 2017/2 schema
+  as the macOS app does (see Services/UpdateChecker.cs). The app reads it from the address
+  fixed there, not from the Uri below, so it must stay published at that address. For
+  packaged desktop apps OnLaunch's ShowPrompt shows nothing, so OnLaunch and
+  AutomaticBackgroundTask would both install silently. Upload the .msix and its release
+  notes (Umbrel-<version>.md, see README.md) first and this file last, so no client ever
+  sees a feed pointing at a missing package. Version here must equal the MSIX identity
+  version. An installed app
+  updates from MainPackage's Version and Uri alone and never has Windows install from
+  this file (see Umbrel.Core/UpdateFeed.cs), so nothing else added here takes effect
+  for it, and it can't follow a MainBundle. The 2017/2 schema
   covers everything this file uses on every Windows 10 version Umbrel supports; 2021 only
   adds Windows 11 features.
 -->

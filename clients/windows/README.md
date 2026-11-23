@@ -98,10 +98,22 @@ mask a packaging error.
 The app is installed through `Umbrel.appinstaller`, which points at the published
 package. It has no `UpdateSettings`, so Windows never updates the app on its own.
 Umbrel checks every 6 hours like the Mac app, starting a minute after launch (Windows
-only reopens an updated app that ran for 60 s), and from Check for Updates, using
-`Package.CheckUpdateAvailabilityAsync` on the package looked up through
-`PackageManager` (calling it on `Package.Current` fails). It installs only after the
-user chooses Install Update, via `AddPackageByAppInstallerFileAsync`.
+only reopens an updated app that ran for 60 s), and from Check for Updates. It installs
+only after the user chooses Install Update.
+
+The app checks by reading the feed itself, from the address fixed in
+`Umbrel/Services/UpdateChecker.cs`, not from the address Windows recorded at install,
+which Windows doesn't always keep after an update. So the feed must stay at that
+address: installed apps look nowhere else.
+
+The feed isn't signed, so the app doesn't hand it to Windows to install from either. It
+accepts the feed only if it names Umbrel's own package and publisher, a four-part
+version and an HTTPS package address (`Umbrel.Core/UpdateFeed.cs`), and offers the
+update when that version is higher than the installed one. It then has Windows update
+from that package with `UpdatePackageAsync`, which installs only a higher version of a
+package that is already installed. So an installed app uses nothing from the feed but
+`MainPackage`'s `Version` and `Uri`: `UpdateSettings`, `Dependencies` or a `MainBundle`
+added there would not take effect for updates from the app.
 
 Every release must increment the versions in `Umbrel/Umbrel.csproj`,
 `Package.appxmanifest`, `app.manifest` and `Umbrel.appinstaller` together, including the

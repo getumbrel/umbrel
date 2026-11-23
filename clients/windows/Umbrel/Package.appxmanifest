@@ -6,8 +6,8 @@
   Signing certificate profile's. The Publisher is part of the package's identity, so if
   the subject changes (the company's legal name, city or state), installed copies stop
   getting updates.
-  Packaged builds get launch-at-login through windows.startupTask and updates through
-  App Installer (see Umbrel.appinstaller).
+  Packaged builds get launch-at-login through windows.startupTask and updates from the
+  published App Installer file (see Umbrel.appinstaller).
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
