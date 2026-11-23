@@ -225,15 +225,6 @@ internal fun FailedUploadsPage(
 			// No zoom from the tile: the viewer opens on Info, with the photo moved up to make room
 			tiles = null,
 			onDismissed = { viewerItem = null },
-			// Skipping takes the folder's items out of the library, this one included, so the viewer closes.
-			onSkipFolder = if (canChooseFolders(state)) {
-				{ folder ->
-					viewerItem = null
-					model.setFolderSkipped(folder.key, skipped = true)
-				}
-			} else {
-				null
-			},
 			onRetryBackup = model::retryFailedBackups,
 			showsInfo = true,
 			backDescription = "Back",

@@ -183,15 +183,6 @@ fun LibraryTab(model: MainViewModel, library: PhotoLibraryViewModel, state: Main
 			initialItem = id,
 			tiles = tiles,
 			onDismissed = { viewerItem = null },
-			// Skipping hides the folder's items from Library, this one included, so the viewer closes.
-			onSkipFolder = if (canChooseFolders(state)) {
-				{ folder ->
-					viewerItem = null
-					model.setFolderSkipped(folder.key, skipped = true)
-				}
-			} else {
-				null
-			},
 			onRetryBackup = model::retryFailedBackups,
 		)
 	}

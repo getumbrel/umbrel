@@ -155,8 +155,6 @@ fun PhotoViewer(
 	// Where the grid's tiles are, to zoom from and back to. Without them the viewer fades.
 	tiles: PhotoTileLocator?,
 	onDismissed: () -> Unit,
-	// Offered while this phone backs up with access to all its photos.
-	onSkipFolder: ((LibraryFolder) -> Unit)? = null,
 	// Try Again on an item that couldn't back up.
 	onRetryBackup: () -> Unit = {},
 	// Opens with Info already showing, for an item opened to see which it is.
@@ -182,7 +180,7 @@ fun PhotoViewer(
 			window?.setDimAmount(0f)
 			window?.setWindowAnimations(0)
 		}
-		PhotoViewerContent(library, state, initialItem, tiles, window, onDismissed, onSkipFolder, onRetryBackup, showsInfo, backDescription)
+		PhotoViewerContent(library, state, initialItem, tiles, window, onDismissed, onRetryBackup, showsInfo, backDescription)
 	}
 }
 
@@ -194,7 +192,6 @@ private fun PhotoViewerContent(
 	tiles: PhotoTileLocator?,
 	window: Window?,
 	onDismissed: () -> Unit,
-	onSkipFolder: ((LibraryFolder) -> Unit)?,
 	onRetryBackup: () -> Unit,
 	showsInfo: Boolean,
 	backDescription: String,
@@ -361,8 +358,6 @@ private fun PhotoViewerContent(
 						pageItem,
 						library,
 						state,
-						folder = libraryState.folders.firstOrNull { it.key == pageItem.folder },
-						onSkipFolder = onSkipFolder,
 						onRetryBackup = onRetryBackup,
 					)
 				}

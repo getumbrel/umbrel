@@ -69,7 +69,6 @@ class LibraryFoldersTest {
 		assertEquals("12 photos, 1 video", LibraryFolders.contents(12, 1))
 		assertEquals("1 photo", LibraryFolders.contents(1, 0))
 		assertEquals("3 videos", LibraryFolders.contents(0, 3))
-		assertEquals("2 photos and 3 videos", LibraryFolders.contents(2, 3, separator = " and "))
 	}
 
 	@Test

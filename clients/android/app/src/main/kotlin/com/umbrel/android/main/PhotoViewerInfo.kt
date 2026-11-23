@@ -1,7 +1,6 @@
 package com.umbrel.android.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,18 +14,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +30,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.umbrel.android.ui.AppleType
-import com.umbrel.android.ui.LocalBrandColor
 import com.umbrel.android.ui.MainTheme
 import com.umbrel.android.ui.PillButton
 import com.umbrel.android.ui.Symbols
@@ -68,8 +60,6 @@ internal fun PhotoViewerInfo(
 	item: LocalMediaItem,
 	library: PhotoLibraryViewModel,
 	state: MainUiState,
-	folder: LibraryFolder?,
-	onSkipFolder: ((LibraryFolder) -> Unit)?,
 	onRetryBackup: () -> Unit,
 	modifier: Modifier = Modifier,
 ) {
@@ -80,7 +70,7 @@ internal fun PhotoViewerInfo(
 	}
 	Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
 		DetailsCard(item, metadata)
-		BackupCard(item, library, state, folder, onSkipFolder, onRetryBackup)
+		BackupCard(item, library, state, onRetryBackup)
 	}
 }
 
@@ -237,11 +227,8 @@ private fun BackupCard(
 	item: LocalMediaItem,
 	library: PhotoLibraryViewModel,
 	state: MainUiState,
-	folder: LibraryFolder?,
-	onSkipFolder: ((LibraryFolder) -> Unit)?,
 	onRetryBackup: () -> Unit,
 ) {
-	var confirmingSkip by remember { mutableStateOf(false) }
 	val receipt = rememberBackupReceipt(item, library)
 	val status = receipt?.let { ViewerBackupStatus.of(it, backupIncludes(state, item)) }
 	val failure = (receipt as? BackupReceipt.Failed)?.reason?.takeIf { status == ViewerBackupStatus.FAILED }
@@ -283,34 +270,5 @@ private fun BackupCard(
 				}
 			}
 		}
-		// Android's library holds every app's folders, so backup can skip one from here.
-		if (folder != null && onSkipFolder != null) {
-			CardDivider()
-			Text(
-				"Skip This Folder",
-				style = AppleType.subheadline,
-				color = LocalBrandColor.current,
-				modifier = Modifier
-					.fillMaxWidth()
-					.clickable(role = Role.Button) { confirmingSkip = true }
-					.padding(horizontal = 16.dp, vertical = 13.dp),
-			)
-		}
-	}
-	if (confirmingSkip && folder != null && onSkipFolder != null) {
-		AlertDialog(
-			onDismissRequest = { confirmingSkip = false },
-			title = { Text("Skip ${folder.name}?") },
-			text = {
-				Text("${LibraryFolders.contents(folder.photoCount, folder.videoCount, separator = " and ")} in this folder won’t be backed up. Anything already on your Umbrel stays there.")
-			},
-			confirmButton = {
-				TextButton(onClick = {
-					confirmingSkip = false
-					onSkipFolder(folder)
-				}) { Text("Skip Folder") }
-			},
-			dismissButton = { TextButton(onClick = { confirmingSkip = false }) { Text("Cancel") } },
-		)
 	}
 }

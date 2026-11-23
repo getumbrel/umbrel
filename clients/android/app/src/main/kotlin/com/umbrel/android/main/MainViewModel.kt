@@ -1056,7 +1056,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		refreshBackupPresentation()
 	}
 
-	/** A folder's switch, on the Folders page or as a photo's "Skip This Folder". */
+	/** A folder's switch on the Folders page. */
 	fun setFolderSkipped(folder: String, skipped: Boolean) {
 		val preference = _state.value.backupPreference
 		val folders = if (skipped) preference.skippedFolders + folder else preference.skippedFolders - folder
