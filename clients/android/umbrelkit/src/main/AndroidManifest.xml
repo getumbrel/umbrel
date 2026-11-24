@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Only taken on devices before T extension 7, where the Wi-Fi stack filters mDNS. -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- The permission above implies Wi-Fi hardware. Discovery works without it, and
+         connecting by address or through Tailscale doesn't need Wi-Fi. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <!-- A transfer the user starts runs as a user-initiated data transfer job on Android 14+
          and as a WorkManager long-running worker with a dataSync foreground service on
          Android 11 to 13. Automatic backup runs as ordinary WorkManager jobs. -->
