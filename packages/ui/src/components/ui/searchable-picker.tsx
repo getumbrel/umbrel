@@ -12,6 +12,8 @@ import {floatingContentAnimationClass, materialSurfaceClasses} from './shared/ma
 export type SearchablePickerItem = {
 	value: string
 	label: string
+	// A short secondary value shown at the end of the row, such as a size
+	detail?: string
 	keywords?: string[]
 	icon?: ReactNode
 	// The item's language when it isn't the UI's, such as a language's own name
@@ -250,9 +252,13 @@ function PickerOptions({
 						</span>
 					)}
 					<span className='min-w-0 flex-1 truncate'>{item.label}</span>
-					<span className='flex size-4 shrink-0 items-center justify-center'>
-						{item.value === value && <Check className='size-4' aria-hidden='true' />}
-					</span>
+					{item.detail && <span className='shrink-0 font-normal text-white/60 tabular-nums'>{item.detail}</span>}
+					{/* The checkmark column is only held for pickers that show a saved choice */}
+					{value !== undefined && (
+						<span className='flex size-4 shrink-0 items-center justify-center'>
+							{item.value === value && <Check className='size-4' aria-hidden='true' />}
+						</span>
+					)}
 				</div>
 			))}
 		</div>
