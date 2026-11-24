@@ -17,7 +17,7 @@ android {
 		targetSdk = 36
 		// versionCode is the build number (CURRENT_PROJECT_VERSION on Apple); versionName is
 		// the marketing version. Increment versionCode for every Play upload.
-		versionCode = 6
+		versionCode = 8
 		versionName = "0.1"
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 	}
