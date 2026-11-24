@@ -158,6 +158,7 @@ function SearchBox({
 					ref={boxRef}
 					className={cn(
 						'settings-edge-material flex h-11 w-full items-center gap-2 rounded-24 bg-white/6 px-3 text-white/70 transition-colors duration-200 focus-within:bg-white/12 focus-within:text-white hover:bg-white/9',
+						slim && !expanded && 'justify-center gap-0 px-0',
 					)}
 					onClick={() => inputRef.current?.focus()}
 				>
@@ -195,7 +196,7 @@ function SearchBox({
 						spellCheck={false}
 						className={cn(
 							'h-full flex-1 bg-transparent text-12 text-white outline-hidden placeholder:text-white/50',
-							slim && !expanded ? 'w-0 min-w-0' : 'min-w-16',
+							slim && !expanded ? 'w-0 min-w-0 flex-none' : 'min-w-16',
 						)}
 					/>
 					{(search.text !== '' || search.tokens.length > 0) && (

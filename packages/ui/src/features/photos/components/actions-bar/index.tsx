@@ -209,6 +209,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 					'relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5',
 					selection.pickingFor && 'min-w-0',
 					timelineFace && 'md:min-w-0 md:shrink-[999]',
+					searchEngaged && 'lg:shrink-0',
 					timelineFace && !searchingHere && 'tablet:shrink-0',
 					// A search field is as wide as the bar can spare, and no wider than it needs
 					searchingHere && 'min-w-0 shrink basis-[380px]',

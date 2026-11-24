@@ -104,7 +104,7 @@ function SearchBox({
 			className={cn(
 				'settings-edge-material flex h-11 w-full cursor-text items-center gap-2 overflow-hidden rounded-24 bg-white/6 px-3 text-white/70 transition-colors duration-200 focus-within:bg-white/12 focus-within:text-white hover:bg-white/9',
 				// The glyph alone sits in the middle of its round pill
-				slim && !expanded && 'justify-center px-0',
+				slim && !expanded && 'justify-center gap-0 px-0',
 			)}
 		>
 			<Search className='size-4 shrink-0' aria-hidden='true' />
