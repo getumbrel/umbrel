@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -175,17 +176,11 @@ export function validateTranslations(state, {requireFresh = false} = {}) {
 	}
 }
 
-function validateGenerated(source, result, language) {
-	assertStrings(result, `${language} response`)
-	const expected = Object.keys(source).sort()
-	if (JSON.stringify(Object.keys(result).sort()) !== JSON.stringify(expected)) {
-		throw new Error(`${language} response must contain exactly the requested keys`)
-	}
-	for (const key of expected) {
-		if (!hasMatchingTokens(source[key], result[key])) {
-			throw new Error(`${language} response: ${key} has mismatched interpolation variables or component tags`)
-		}
-	}
+// What is wrong with one translation in a response, if anything
+function problem(english, translation) {
+	if (translation === undefined) return 'is missing'
+	if (typeof translation !== 'string' || !translation.trim()) return 'must be a nonempty string'
+	if (!hasMatchingTokens(english, translation)) return 'has mismatched interpolation variables or component tags'
 }
 
 // Splits pending keys into batches of about batchSize without splitting a plural group,
@@ -206,6 +201,26 @@ function batches(pending, keys, batchSize) {
 	return result
 }
 
+// Translations finished by a run that failed later, kept so the next run only asks for
+// the rest. Each line holds what one response got right, as key: [English, translation].
+// Lines from another model or prompt are left out, and so is a line cut short by a kill.
+async function readCache({path: file, version}) {
+	const cached = {}
+	const text = await fs.readFile(file, 'utf8').catch((error) => {
+		if (error.code !== 'ENOENT') throw error
+		return ''
+	})
+	for (const line of text.split('\n')) {
+		try {
+			const entry = JSON.parse(line)
+			if (entry.version === version) cached[entry.language] = {...cached[entry.language], ...entry.translations}
+		} catch {
+			continue
+		}
+	}
+	return cached
+}
+
 function serialize(data, indent = 2) {
 	return JSON.stringify(
 		Object.fromEntries(Object.entries(data).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
@@ -217,9 +232,10 @@ function serialize(data, indent = 2) {
 export async function updateTranslations({
 	directory = defaultDirectory,
 	generate = generateWithOpenAI,
-	concurrency = 4,
+	concurrency = 32,
 	batchSize = 100,
 	attempts = 3,
+	cache,
 } = {}) {
 	for (const [name, value] of Object.entries({concurrency, batchSize, attempts})) {
 		if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`)
@@ -228,49 +244,89 @@ export async function updateTranslations({
 	const plan = planTranslations(state)
 	if (plan.fresh) return plan
 
+	const cached = cache ? await readCache(cache) : {}
+	const reused = {}
 	const results = {}
-	const languages = Object.keys(state.locales)
+	// Every language's requests share one queue, so a large batch takes as long as its
+	// requests divided by the concurrency, however they are spread over the languages
+	const requests = []
+	for (const [language, existing] of Object.entries(state.locales)) {
+		const keys = localeKeys(state.english, language)
+		results[language] = Object.fromEntries(Object.entries(existing).filter(([key]) => Object.hasOwn(keys, key)))
+		const {pending} = plan.languages[language]
+		const finished = (key) => {
+			const entry = Object.hasOwn(cached[language] ?? {}, key) ? cached[language][key] : undefined
+			return Array.isArray(entry) && entry[0] === state.english[keys[key].source] && !problem(...entry)
+		}
+		// A plural form is only reused with all its siblings, so the forms read alike
+		const unfinished = new Set(pending.filter((key) => !finished(key)))
+		const groups = new Set([...unfinished].map((key) => keys[key].group).filter(Boolean))
+		const todo = pending.filter((key) => unfinished.has(key) || groups.has(keys[key].group))
+		const kept = pending.filter((key) => !todo.includes(key))
+		for (const key of kept) results[language][key] = cached[language][key][1]
+		if (kept.length) reused[language] = Object.fromEntries(kept.map((key) => [key, cached[language][key]]))
+		for (const batch of batches(todo, keys, batchSize)) requests.push({language, keys, batch})
+	}
+	const save = async (language, translations) => {
+		if (!cache) return
+		await fs.appendFile(cache.path, `${JSON.stringify({version: cache.version, language, translations})}\n`)
+	}
+	if (cache) {
+		// Start the file again with only what this run reuses, so it never outgrows a batch
+		await fs.writeFile(cache.path, '')
+		for (const [language, translations] of Object.entries(reused)) await save(language, translations)
+		const count = Object.values(reused).reduce((sum, translations) => sum + Object.keys(translations).length, 0)
+		if (count) console.log(`Reusing ${count} translations from a run that did not finish.`)
+	}
 	const controller = new AbortController()
+	// The model occasionally drops or renames a placeholder. Keep the strings it got right
+	// and ask again for the rest, before failing every language over one string.
+	const translate = async ({language, keys, batch}) => {
+		let remaining = batch
+		for (let attempt = 1; ; attempt++) {
+			controller.signal.throwIfAborted()
+			const source = Object.fromEntries(remaining.map((key) => [key, state.english[keys[key].source]]))
+			const response = await generate({
+				english: state.english,
+				source,
+				language,
+				existing: state.locales[language],
+				signal: controller.signal,
+			})
+			const translations = response && typeof response === 'object' ? response : {}
+			const problems = new Map()
+			for (const key of remaining) {
+				const reason = problem(source[key], Object.hasOwn(translations, key) ? translations[key] : undefined)
+				if (reason) problems.set(key, reason)
+			}
+			// A plural form is asked for again with its siblings, so the forms read alike
+			const groups = new Set([...problems.keys()].map((key) => keys[key].group).filter(Boolean))
+			const retry = remaining.filter((key) => problems.has(key) || groups.has(keys[key].group))
+			const accepted = remaining.filter((key) => !retry.includes(key))
+			for (const key of accepted) results[language][key] = translations[key]
+			if (accepted.length) {
+				await save(language, Object.fromEntries(accepted.map((key) => [key, [source[key], translations[key]]])))
+			}
+			if (!retry.length) return
+			const [[key, reason]] = problems
+			const others = problems.size > 1 ? ` (and ${problems.size - 1} more)` : ''
+			const message = `${language} response: ${key} ${reason}${others}`
+			if (attempt >= attempts) throw new Error(message)
+			console.warn(`${message}. Retrying (${attempt + 1}/${attempts}).`)
+			remaining = retry
+		}
+	}
 	let next = 0
 	let failure
 	const worker = async () => {
 		try {
-			while (!controller.signal.aborted && next < languages.length) {
-				const language = languages[next++]
-				const existing = state.locales[language]
-				const keys = localeKeys(state.english, language)
-				const result = Object.fromEntries(Object.entries(existing).filter(([key]) => Object.hasOwn(keys, key)))
-				for (const batch of batches(plan.languages[language].pending, keys, batchSize)) {
-					controller.signal.throwIfAborted()
-					const source = Object.fromEntries(batch.map((key) => [key, state.english[keys[key].source]]))
-					// The model occasionally drops or renames a placeholder, so ask again
-					// before failing every language over one bad string
-					for (let attempt = 1; ; attempt++) {
-						const generated = await generate({
-							english: state.english,
-							source,
-							language,
-							existing,
-							signal: controller.signal,
-						})
-						try {
-							validateGenerated(source, generated, language)
-							Object.assign(result, generated)
-							break
-						} catch (error) {
-							if (attempt >= attempts) throw error
-							console.warn(`${error.message}. Retrying (${attempt + 1}/${attempts}).`)
-						}
-					}
-				}
-				results[language] = result
-			}
+			while (!controller.signal.aborted && next < requests.length) await translate(requests[next++])
 		} catch (error) {
 			failure ??= error
 			controller.abort(error)
 		}
 	}
-	await Promise.all(Array.from({length: Math.min(concurrency, languages.length)}, worker))
+	await Promise.all(Array.from({length: Math.min(concurrency, requests.length)}, worker))
 	if (failure) throw failure
 	validateTranslations({english: state.english, snapshot: state.english, locales: results}, {requireFresh: true})
 
@@ -299,7 +355,9 @@ async function generateWithOpenAI({english, source, language, existing, signal})
 	}
 	if (!client) {
 		const {default: OpenAI} = await import('openai')
-		client = new OpenAI({apiKey: process.env.TRANSLATIONS_OPENAI_API_KEY, timeout: 120_000, maxRetries: 2})
+		// Requests run many at a time, so allow for waiting out a rate limit: before each
+		// retry the client waits as long as the API asks, or else backs off for up to 8 seconds
+		client = new OpenAI({apiKey: process.env.TRANSLATIONS_OPENAI_API_KEY, timeout: 120_000, maxRetries: 8})
 	}
 	const examples = [
 		'account-description',
@@ -361,6 +419,14 @@ export async function runCli(args) {
 			console.log(`${language}: ${pending.length} to translate, ${obsolete.length} to remove`)
 	}
 	if (args[0] === '--check') validateTranslations(state, {requireFresh: true})
-	if (args[0] === '--generate') await updateTranslations()
+	if (args[0] === '--generate') {
+		// A different model or prompt starts over rather than mixing two sets of translations
+		const settings = ['TRANSLATIONS_OPENAI_MODEL', 'TRANSLATIONS_SYSTEM_PROMPT', 'TRANSLATIONS_USER_PROMPT']
+		const version = createHash('sha256')
+			.update(JSON.stringify(settings.map((name) => process.env[name])))
+			.digest('hex')
+		const file = process.env.TRANSLATIONS_CACHE
+		await updateTranslations({cache: file ? {path: file, version} : undefined})
+	}
 	if (plan.fresh) console.log('Translations are up to date; nothing to generate.')
 }

@@ -143,7 +143,6 @@ for (const [name, generate] of Object.entries({
 		throw new Error('API failure')
 	},
 	'partial response': async () => ({stable: 'Translated'}),
-	'extra response key': async ({source}) => ({...source, unexpected: 'Unexpected'}),
 	'empty response value': async ({source}) => ({...source, stable: ''}),
 	'nonstring response value': async ({source}) => ({...source, stable: 42}),
 	'array response': async () => [],
@@ -161,24 +160,150 @@ for (const [name, generate] of Object.entries({
 				generate: (request) => (++calls === 1 ? translate(request) : generate(request)),
 			}),
 		)
-		// A bad response is retried before failing; an API error is not
+		// A bad string is asked for again before failing; an API error is not
 		assert.equal(calls, name === 'API failure' ? 2 : 4)
 		assert.deepEqual(await f.contents(), before)
 	})
 }
 
-test('a response with a broken placeholder is retried instead of failing the run', async (t) => {
+test('a response with a broken placeholder is asked again for only that string', async (t) => {
 	const f = await fixture(t, {snapshot: {}})
-	const failed = new Set()
+	const requests = {}
 	await updateTranslations({
 		directory: f.directory,
 		generate: async (request) => {
-			if (failed.has(request.language)) return translate(request)
-			failed.add(request.language)
-			return {...request.source, message: 'Hi {{someoneElse}}'}
+			const asked = (requests[request.language] ??= [])
+			asked.push(Object.keys(request.source))
+			return asked.length === 1 ? {...request.source, message: 'Hi {{someoneElse}}'} : translate(request)
 		},
 	})
+	for (const asked of Object.values(requests)) assert.deepEqual(asked, [['message', 'stable'], ['message']])
+	const state = await loadTranslations(f.directory)
+	// The string it got right the first time is kept, not the retry's
+	for (const locale of Object.values(state.locales)) {
+		assert.deepEqual(locale, {message: 'Translated: Hello {{name}}', stable: 'Stable'})
+	}
+	validateTranslations(state, {requireFresh: true})
+})
+
+test('a plural form that fails is asked for again together with its other forms', async (t) => {
+	const english = {files_one: '{{count}} file', files_other: '{{count}} files', stable: 'Stable'}
+	const f = await fixture(t, {english, snapshot: {}})
+	const asked = []
+	await updateTranslations({
+		directory: f.directory,
+		generate: async (request) => {
+			if (request.language !== 'pl') return translate(request)
+			asked.push(Object.keys(request.source))
+			return asked.length === 1 ? {...(await translate(request)), files_few: 'No count'} : translate(request)
+		},
+	})
+	assert.deepEqual(asked, [
+		['files_one', 'files_few', 'files_many', 'files_other', 'stable'],
+		['files_one', 'files_few', 'files_many', 'files_other'],
+	])
 	validateTranslations(await loadTranslations(f.directory), {requireFresh: true})
+})
+
+test('keys a response was not asked for are never written', async (t) => {
+	const f = await fixture(t, {
+		english: {message: 'Welcome {{name}}', stable: 'Stable'},
+		snapshot: {message: 'Hello {{name}}', stable: 'Stable'},
+		locale: {message: 'Old {{name}}', stable: 'Human correction'},
+	})
+	await updateTranslations({
+		directory: f.directory,
+		generate: async (request) => ({...(await translate(request)), stable: 'Overwritten', unexpected: 'Unexpected'}),
+	})
+	for (const locale of Object.values((await loadTranslations(f.directory)).locales)) {
+		assert.deepEqual(locale, {message: 'Translated: Welcome {{name}}', stable: 'Human correction'})
+	}
+})
+
+test('a run that fails keeps what it finished, and the next run only asks for the rest', async (t) => {
+	const f = await fixture(t, {snapshot: {}})
+	const before = await f.contents()
+	const cache = {path: path.join(f.directory, 'cache.jsonl'), version: 'model and prompts'}
+	// Languages are translated in the order of their files
+	const order = Object.keys((await loadTranslations(f.directory)).locales)
+	const [first, failing, last] = [order[0], ...order.slice(-2)]
+	await assert.rejects(
+		updateTranslations({
+			directory: f.directory,
+			cache,
+			concurrency: 1,
+			generate: async (request) => {
+				// One string of this language keeps failing, and the last language is never reached
+				if (request.language === failing) return {stable: 'First run'}
+				return {message: 'First run {{name}}', stable: 'First run'}
+			},
+		}),
+		/is missing/,
+	)
+	assert.deepEqual(await f.contents(), before)
+	// A damaged entry is asked for again, and a run that was killed mid-write leaves a cut-off line
+	const damaged = {version: cache.version, language: first, translations: {message: ['Hello {{name}}', 'No name']}}
+	await fs.appendFile(cache.path, `${JSON.stringify(damaged)}\n{"version":"model and prompts","language":"${last}`)
+
+	const asked = []
+	await updateTranslations({
+		directory: f.directory,
+		cache,
+		generate: async (request) => {
+			asked.push([request.language, Object.keys(request.source)])
+			return {message: 'Second run {{name}}', stable: 'Second run'}
+		},
+	})
+	assert.equal(asked.length, 3)
+	assert.deepEqual(Object.fromEntries(asked), {
+		[first]: ['message'],
+		[failing]: ['message'],
+		[last]: ['message', 'stable'],
+	})
+	const state = await loadTranslations(f.directory)
+	for (const [language, locale] of Object.entries(state.locales)) {
+		assert.deepEqual(
+			locale,
+			language === last
+				? {message: 'Second run {{name}}', stable: 'Second run'}
+				: {message: `${[first, failing].includes(language) ? 'Second' : 'First'} run {{name}}`, stable: 'First run'},
+		)
+	}
+	validateTranslations(state, {requireFresh: true})
+})
+
+test('a later run does not reuse translations of other English, a split plural, or another model or prompt', async (t) => {
+	const english = {message: 'Hello {{name}}', files_one: '{{count}} file', files_other: '{{count}} files'}
+	const f = await fixture(t, {english, snapshot: {}})
+	const cache = {path: path.join(f.directory, 'cache.jsonl'), version: 'model and prompts'}
+	// Languages are translated in the order of their files, so every run stops at the last one
+	const last = Object.keys((await loadTranslations(f.directory)).locales).at(-1)
+	const requests = () => {
+		const asked = {}
+		const generate = async (request) => {
+			if (request.language === last) throw new Error('API failure')
+			asked[request.language] = Object.keys(request.source)
+			return translate(request)
+		}
+		return {asked, run: (options) => assert.rejects(updateTranslations({directory: f.directory, generate, ...options}))}
+	}
+	await requests().run({cache, concurrency: 1})
+
+	// Unchanged English with the same model and prompts needs nothing asked again
+	const unchanged = requests()
+	await unchanged.run({cache, concurrency: 1})
+	assert.deepEqual(unchanged.asked, {})
+
+	// A reworded singular takes its plural with it, and leaves other strings reused
+	await f.write(englishPath, {...english, files_one: '{{count}} document'})
+	const reworded = requests()
+	await reworded.run({cache, concurrency: 1})
+	assert.deepEqual(reworded.asked.de, ['files_one', 'files_other'])
+	assert.deepEqual(reworded.asked.ja, undefined)
+
+	const otherPrompt = requests()
+	await otherPrompt.run({cache: {...cache, version: 'another prompt'}, concurrency: 1})
+	assert.deepEqual(otherPrompt.asked.de, ['message', 'files_one', 'files_other'])
 })
 
 test('uses bounded concurrency and batches a large source without losing keys', async (t) => {
@@ -203,6 +328,26 @@ test('uses bounded concurrency and batches a large source without losing keys', 
 	})
 	assert.equal(peak, 3)
 	assert.equal(calls, languages.length * 3)
+	validateTranslations(await loadTranslations(f.directory), {requireFresh: true})
+})
+
+test('requests for one language run at the same time as each other', async (t) => {
+	const english = Object.fromEntries(Array.from({length: 5}, (_, index) => [`key${index}`, `Text ${index}`]))
+	const f = await fixture(t, {english, snapshot: {}})
+	const active = {}
+	let peak = 0
+	await updateTranslations({
+		directory: f.directory,
+		batchSize: 2,
+		generate: async (request) => {
+			active[request.language] = (active[request.language] ?? 0) + 1
+			peak = Math.max(peak, active[request.language])
+			await new Promise((resolve) => setTimeout(resolve, 1))
+			active[request.language]--
+			return translate(request)
+		},
+	})
+	assert.equal(peak, 3)
 	validateTranslations(await loadTranslations(f.directory), {requireFresh: true})
 })
 

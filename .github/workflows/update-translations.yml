@@ -57,10 +57,20 @@ jobs:
         if: ${{ !inputs.plan_only }}
         working-directory: packages/ui
         run: npm ci
+      # A run that fails keeps the translations it finished, so the next run only
+      # pays for the rest. Each attempt saves under its own key, like the CI caches.
+      - name: Restore translations from a run that did not finish
+        if: ${{ !inputs.plan_only }}
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/translations.jsonl
+          key: translations-${{ inputs.target_branch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: translations-${{ inputs.target_branch }}-
       - name: Generate translations
         if: ${{ !inputs.plan_only }}
         working-directory: packages/ui
         env:
+          TRANSLATIONS_CACHE: ${{ runner.temp }}/translations.jsonl
           TRANSLATIONS_OPENAI_API_KEY: ${{ secrets.TRANSLATIONS_OPENAI_API_KEY }}
           TRANSLATIONS_OPENAI_MODEL: ${{ secrets.TRANSLATIONS_OPENAI_MODEL }}
           TRANSLATIONS_SYSTEM_PROMPT: ${{ secrets.TRANSLATIONS_SYSTEM_PROMPT }}
@@ -110,3 +120,9 @@ jobs:
           else
             echo 'Translations are already current; no PR is needed.' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Keep finished translations for the next run
+        if: ${{ !inputs.plan_only && (failure() || cancelled()) }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/translations.jsonl
+          key: translations-${{ inputs.target_branch }}-${{ github.run_id }}-${{ github.run_attempt }}

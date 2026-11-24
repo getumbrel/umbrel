@@ -7,3 +7,4 @@ Edit English strings in `public/locales/en.json`. The generator maintains `last-
 1. Open **Actions → Update translations → Run workflow**. The target branch defaults to `staging`; select **plan_only** to preview pending work without API calls.
 2. Run generation, then review and merge its translation PR before merging staging into master.
 3. Rerun if English changes. The workflow reuses the open PR and preserves unchanged translations, including reviewer corrections. Resolve any merge conflicts before retrying.
+4. Rerun if a run fails. It reuses the translations the failed run finished, unless the model or a prompt has changed since.
