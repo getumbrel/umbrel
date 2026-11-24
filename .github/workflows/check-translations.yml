@@ -26,6 +26,7 @@ jobs:
       # These checks use only Node built-ins, without npm install or API calls.
       - run: node --test packages/ui/scripts/test-translations.mjs
       - run: bash .github/scripts/prepare-translations.test.sh
+      - run: bash .github/scripts/check-translations-unchanged.test.sh
       - run: node packages/ui/update-translations.js --validate
 
   release-freshness:
