@@ -2799,6 +2799,12 @@ final class MainModel {
 	}
 
 	private func disablePhotoBackupLocally(deviceId: String) {
+		Self.disablePhotoBackupLocally(deviceId: deviceId)
+		refreshPhotoBackupPresentation()
+	}
+
+	// Also for a sign-in (RootView), where no model exists yet
+	static func disablePhotoBackupLocally(deviceId: String) {
 		let configuration = PhotoBackupStore.configuration()
 		guard configuration == nil || configuration?.deviceId == deviceId else { return }
 		PhotoBackupAppRunner.shared.forget()
@@ -2813,7 +2819,6 @@ final class MainModel {
 				accountId: configuration.source.accountId
 			)
 		}
-		refreshPhotoBackupPresentation()
 	}
 
 	private func photoBackupFailed(_ failure: PhotoBackupSetupFailure, revision: Int) {

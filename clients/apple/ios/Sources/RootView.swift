@@ -125,6 +125,12 @@ struct RootView: View {
 						await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
 						throw SignInError.sessionStorageFailed
 					}
+					// The login this replaces can have ended without the app clearing its backup
+					// (on the list of Umbrels no MainModel exists to do it). A grant ends with its
+					// login, so backup is cleared as MainModel does and set up again with a new one.
+					if PhotoBackupStore.configuration()?.deviceId == device.id {
+						MainModel.disablePhotoBackupLocally(deviceId: device.id)
+					}
 					// Reconnecting an account must not move the iPhone library away from
 					// another Umbrel. Backup ownership changes only through backup controls.
 					let result = Config.load()

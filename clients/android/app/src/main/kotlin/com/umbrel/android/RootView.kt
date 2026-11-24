@@ -194,6 +194,10 @@ fun RootView() {
 			preferredUserId = device.lastAccountId,
 			onPrepare = { Umbreld.prepareSavedDeviceForSignIn(device.nativeTarget) },
 			onSignedIn = { session, account ->
+				// The login this replaces can have ended without the app clearing its backup (on
+				// the list of Umbrels no MainViewModel exists to do it). A grant ends with its
+				// login, so backup is cleared the same way and set up again with a new one.
+				context.container.backup.disableLocally(device.id, session.accountId)
 				store.saveSignIn(device.id, session, account)
 				store.connections.record(device.id, ConnectionState.CONNECTED)
 				scope.launch {
