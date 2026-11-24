@@ -292,7 +292,12 @@ export default function api(umbreld: Umbreld, uploadDiskPreflight: UploadDiskPre
 					response.locals.photoBackupPrincipal = principal
 					next()
 				})
-				.catch(() => response.status(401).json({error: 'unauthorized'}))
+				.catch(() => {
+					// Answered once the whole upload has arrived: a refusal sent while a phone is
+					// still sending never reaches the app, which then retries as if unreachable.
+					request.resume()
+					request.once('end', () => response.status(401).json({error: 'unauthorized'}))
+				})
 		}
 		let authorization: Promise<Principal> | undefined
 		if (request.method === 'GET' && (path.startsWith('/thumb/') || path.startsWith('/map/'))) {
