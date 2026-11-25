@@ -16,6 +16,7 @@ import {queryClient} from '@/trpc/query-client'
 import {IS_DEV} from '@/utils/misc'
 
 import {httpOnlyPaths, type AppRouter} from '../../../umbreld/source/modules/server/trpc/common'
+import {WebSocketWithCloseTimeout} from './close-timeout'
 import {createReconnectResyncController} from './reconnect-resync'
 import {isTooLargeForSocket} from './socket-limit'
 
@@ -68,6 +69,9 @@ const reconnectResync = createReconnectResyncController({
 })
 
 const wsClient = createWSClient({
+	// tRPC closes a socket whose ping got no pong. This is what makes that take effect at once
+	// when the server is no longer there to answer the close either.
+	WebSocket: WebSocketWithCloseTimeout,
 	url: async () => {
 		try {
 			const ticket = await webSocketTicketClient.user.createWebSocketTicket.mutate({target: 'trpc'})
