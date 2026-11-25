@@ -9,6 +9,10 @@ SAS_STATE_FILE="$STATE_DIR/sas.json"
 USB_STATE_FILE="$STATE_DIR/usb.json"
 USB_SERIAL_STATE_FILE="$STATE_DIR/usb-serial.json"
 USB_NET_STATE_FILE="$STATE_DIR/usb-net.json"
+UFS_DISK_PATH="$STATE_DIR/ufs.qcow2"
+# The two small boot logical units real UFS storage has alongside the main one
+UFS_BOOT_LU_PATHS=("$STATE_DIR/ufs-boot-a.qcow2" "$STATE_DIR/ufs-boot-b.qcow2")
+UFS_BOOT_LU_SIZE="4M"
 QMP_SOCKET=""
 RUNNING_DEVICE_FILE="$STATE_DIR/running-device"
 
@@ -27,6 +31,7 @@ DEFAULT_HTTP_PORT=8080
 DEFAULT_NVME_SIZE="64G"
 DEFAULT_HDD_SIZE="1T"
 DEFAULT_USB_STORAGE_SIZE="64G"
+DEFAULT_UFS_SIZE="64G"
 MAX_NVME_SLOTS=8
 MAX_HDD_SLOTS=8
 MAX_SAS_SLOTS=8
@@ -104,8 +109,10 @@ Usage: $0 <command> [options]
 Commands:
     boot [image]                   Boot VM from the given image (defaults to native arch image)
     reflash                        Delete boot disk overlay (simulates reflashing the OS)
-    reset                          Delete all VM state (overlay, NVMe disks, SATA/SAS drives, UEFI vars)
+    reset                          Delete all VM state (overlay, NVMe disks, SATA/SAS drives, UFS storage, UEFI vars)
     power-button                   Press the power button of the running VM (ACPI power button event)
+    type <text>                    Type text on the running VM's keyboard, \n presses Enter. Supports
+                                   lowercase letters, digits, spaces and newlines.
 
     nvme list                      List all NVMe devices and their status
     nvme add <slot> [--size SIZE]  Add an NVMe device to slot (1-${MAX_NVME_SLOTS})
@@ -140,6 +147,11 @@ Commands:
     usb connect <slot>             Connect an existing USB storage device to the running VM
     usb disconnect <slot>          Disconnect USB storage from the running VM without deleting data
 
+    ufs add [--size SIZE]          Add onboard UFS storage, as fitted to some mini PCs. Like real UFS it
+                                   has 4096 byte logical blocks and two ${UFS_BOOT_LU_SIZE} boot logical units
+                                   alongside the main one, and it reports no serial number.
+    ufs destroy                    Destroy the UFS storage (deletes data)
+
     usb-serial list                Live USB serial adapters (FTDI, 0403:6001) and their status
     usb-serial add <slot> [--serial SERIAL]
                                    Add a USB serial adapter to slot (1-${MAX_USB_SERIAL_SLOTS}), plugged into port <slot>
@@ -165,6 +177,8 @@ Boot Options:
     --boot-disk <type>             Boot disk transport: default, emmc, nvme, usb, sdcard, none (default: default for device)
     --cdrom <path>                 Attach an ISO as a bootable CD-ROM (amd64 only), e.g. the USB installer
     --boot-nvme-slot <slot>        Boot from the NVMe device in this slot, e.g. after the USB installer flashed it
+    --boot-sata-slot <slot>        Boot from the SATA drive in this slot, e.g. after the USB installer flashed it
+    --boot-ufs                     Boot from the UFS storage, e.g. after the USB installer flashed it
     --arch <amd64|arm64>           CPU architecture (default: auto-detect from image name)
     --memory <MiB>                 RAM in MiB (default: ${DEFAULT_MEMORY})
     --cores <count>                CPU cores (default: ${DEFAULT_CORES})
@@ -175,7 +189,7 @@ Boot Options:
     --forward-port <host:guest>    Extra local TCP port forward to the VM, repeatable
 
 Disk Options:
-    --size <size>                  Disk size for nvme/sata/sas/usb add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata/sas, ${DEFAULT_USB_STORAGE_SIZE} usb)
+    --size <size>                  Disk size for nvme/sata/sas/usb/ufs add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata/sas, ${DEFAULT_USB_STORAGE_SIZE} usb, ${DEFAULT_UFS_SIZE} ufs)
     --type <hdd|ssd>               For sata/sas add only: set device type (default: hdd)
 
 Environment Variables:
@@ -1303,6 +1317,7 @@ build_usb_serial_args() {
 
 # Build QEMU HDD arguments for connected devices (SATA via AHCI)
 build_hdd_args() {
+  local boot_slot="${1:-}"
   local hdd_args=""
 
   for (( slot=1; slot<=MAX_HDD_SLOTS; slot++ )); do
@@ -1335,8 +1350,14 @@ build_hdd_args() {
         hdd_args="$hdd_args -device ahci,id=${controller} "
       fi
 
+      # Boot from this drive if requested (e.g. after the USB installer flashed an OS onto it)
+      local bootindex_arg=""
+      if [[ -n "$boot_slot" && "$slot" == "$boot_slot" ]]; then
+        bootindex_arg=",bootindex=0"
+      fi
+
       hdd_args="$hdd_args -drive file=${disk_path},format=qcow2,if=none,id=hdd${slot},cache=none,discard=unmap,aio=threads"
-      hdd_args="$hdd_args -device ide-hd,drive=hdd${slot},bus=${controller}.${port},serial=${serial},rotation_rate=${rotation_rate}"
+      hdd_args="$hdd_args -device ide-hd,drive=hdd${slot},bus=${controller}.${port},serial=${serial},rotation_rate=${rotation_rate}${bootindex_arg}"
     fi
   done
 
@@ -1479,6 +1500,69 @@ build_nvme_args() {
   done
 
   echo "$nvme_args"
+}
+
+ufs_add() {
+  local size="$1"
+  init_state
+
+  if [[ -f "$UFS_DISK_PATH" ]]; then
+    echo "Error: UFS storage already exists" >&2
+    echo "Use 'ufs destroy' to remove it first" >&2
+    exit 1
+  fi
+
+  echo "Creating UFS storage (${size})..."
+  qemu-img create -f qcow2 "$UFS_DISK_PATH" "$size" >/dev/null
+  local boot_lu_path
+  for boot_lu_path in "${UFS_BOOT_LU_PATHS[@]}"; do
+    qemu-img create -f qcow2 "$boot_lu_path" "$UFS_BOOT_LU_SIZE" >/dev/null
+  done
+  echo "Done. UFS storage created"
+}
+
+ufs_destroy() {
+  init_state
+
+  if [[ ! -f "$UFS_DISK_PATH" ]]; then
+    echo "Error: No UFS storage" >&2
+    exit 1
+  fi
+
+  echo "Destroying UFS storage..."
+  rm -f "$UFS_DISK_PATH" "${UFS_BOOT_LU_PATHS[@]}"
+  echo "Done. UFS storage destroyed"
+}
+
+# Build QEMU arguments for the UFS storage. Arguments: [boot]
+#
+# QEMU's UFS logical units have 4096 byte logical blocks, like real UFS. They're
+# attached with -blockdev rather than -drive, as QEMU reports the drive id as a
+# serial number and real UFS storage doesn't have to report one.
+#
+# The UEFI firmware has no UFS driver so it can't boot from UFS storage. To boot
+# from it the main logical unit is attached as an NVMe device with the same 4096
+# byte logical blocks instead, so the firmware and OS read the disk with the
+# same layout they would on UFS.
+build_ufs_args() {
+  local boot="${1:-}"
+
+  [[ -f "$UFS_DISK_PATH" ]] || return 0
+
+  local blockdev_args="driver=qcow2,file.driver=file,file.filename=${UFS_DISK_PATH},file.cache.direct=on,file.aio=threads,discard=unmap"
+  if [[ "$boot" == "true" ]]; then
+    echo "-blockdev ${blockdev_args},node-name=ufs_lu0 -device nvme,drive=ufs_lu0,serial=umbrel-ufs,logical_block_size=4096,physical_block_size=4096,bootindex=0"
+    return
+  fi
+
+  local args="-device ufs,id=ufs0 -blockdev ${blockdev_args},node-name=ufs_lu0 -device ufs-lu,bus=ufs0,drive=ufs_lu0,lun=0"
+  local lun=1 boot_lu_path
+  for boot_lu_path in "${UFS_BOOT_LU_PATHS[@]}"; do
+    args="$args -blockdev driver=qcow2,file.driver=file,file.filename=${boot_lu_path},node-name=ufs_lu${lun}"
+    args="$args -device ufs-lu,bus=ufs0,drive=ufs_lu${lun},lun=${lun}"
+    lun=$((lun + 1))
+  done
+  echo "$args"
 }
 
 # Build QEMU arguments for the boot disk.
@@ -1656,11 +1740,22 @@ boot_vm() {
   local boot_disk_transport="$9"
   local cdrom_iso="${10}"
   local boot_nvme_slot="${11}"
-  shift 11
+  local boot_sata_slot="${12}"
+  local boot_ufs="${13}"
+  shift 13
   local forward_ports=("$@")
 
-  if [[ -n "$cdrom_iso" && -n "$boot_nvme_slot" ]]; then
-    echo "Error: --cdrom and --boot-nvme-slot are mutually exclusive (both claim first boot priority)" >&2
+  local first_boot_devices=0
+  [[ -n "$cdrom_iso" ]] && first_boot_devices=$((first_boot_devices + 1))
+  [[ -n "$boot_nvme_slot" ]] && first_boot_devices=$((first_boot_devices + 1))
+  [[ -n "$boot_sata_slot" ]] && first_boot_devices=$((first_boot_devices + 1))
+  [[ "$boot_ufs" == "true" ]] && first_boot_devices=$((first_boot_devices + 1))
+  if (( first_boot_devices > 1 )); then
+    echo "Error: --cdrom, --boot-nvme-slot, --boot-sata-slot and --boot-ufs are mutually exclusive (each claims first boot priority)" >&2
+    exit 1
+  fi
+  if [[ "$boot_ufs" == "true" && ! -f "$UFS_DISK_PATH" ]]; then
+    echo "Error: --boot-ufs needs UFS storage, add it with 'ufs add'" >&2
     exit 1
   fi
 
@@ -1778,9 +1873,10 @@ boot_vm() {
   fi
 
   # Build disk arguments for data drives
-  local nvme_args hdd_args sas_args usb_args usb_serial_args usb_net_args
+  local nvme_args ufs_args hdd_args sas_args usb_args usb_serial_args usb_net_args
   nvme_args=$(build_nvme_args "$device" "$boot_nvme_slot")
-  hdd_args=$(build_hdd_args)
+  ufs_args=$(build_ufs_args "$boot_ufs")
+  hdd_args=$(build_hdd_args "$boot_sata_slot")
   sas_args=$(build_sas_args)
   usb_args=$(build_usb_args "$device")
   usb_serial_args=$(build_usb_serial_args "$device")
@@ -1902,6 +1998,7 @@ boot_vm() {
     $pi_usb_hub_args \
     -device ${network_device},netdev=net0 \
     $nvme_args \
+    $ufs_args \
     $hdd_args \
     $sas_args \
     $usb_args \
@@ -1951,6 +2048,33 @@ press_power_button() {
   echo "Power button pressed"
 }
 
+# Type text on the VM's keyboard, one key press per character
+type_text() {
+  local text="$1"
+  initialize_qmp_socket
+  if ! qmp_is_available; then
+    echo "Error: Text can only be typed while the VM is running" >&2
+    exit 1
+  fi
+
+  # Byte-wise matching, so [a-z] doesn't match uppercase letters in some locales
+  local LC_ALL=C
+  local index character qcode
+  for (( index=0; index<${#text}; index++ )); do
+    character="${text:index:1}"
+    case "$character" in
+      [a-z0-9]) qcode="$character" ;;
+      " ") qcode="spc" ;;
+      $'\n') qcode="ret" ;;
+      *)
+        echo "Error: Can't type '${character}'" >&2
+        exit 1
+        ;;
+    esac
+    qmp_execute "$(jq -cn --arg key "$qcode" '{execute:"send-key",arguments:{keys:[{type:"qcode",data:$key}]}}')"
+  done
+}
+
 # Reset all state
 reset_state() {
   remove_qmp_socket
@@ -1990,6 +2114,50 @@ case "$command" in
 
   power-button)
     press_power_button
+    exit 0
+    ;;
+
+  type)
+    if [[ $# -ne 1 ]]; then
+      echo "Usage: $0 type <text>" >&2
+      exit 1
+    fi
+    type_text "$1"
+    exit 0
+    ;;
+
+  ufs)
+    if [[ $# -lt 1 ]]; then
+      echo "Usage: $0 ufs <add|destroy> [args]" >&2
+      exit 1
+    fi
+    subcommand="$1"
+    shift
+    case "$subcommand" in
+      add)
+        size="$DEFAULT_UFS_SIZE"
+        while [[ $# -gt 0 ]]; do
+          case "$1" in
+            --size)
+              size="$2"
+              shift 2
+              ;;
+            *)
+              echo "Error: Unknown option: $1" >&2
+              exit 1
+              ;;
+          esac
+        done
+        ufs_add "$size"
+        ;;
+      destroy)
+        ufs_destroy
+        ;;
+      *)
+        echo "Error: Unknown ufs subcommand: $subcommand" >&2
+        exit 1
+        ;;
+    esac
     exit 0
     ;;
 
@@ -2288,6 +2456,8 @@ case "$command" in
     boot_disk_transport="default"
     cdrom_iso=""
     boot_nvme_slot=""
+    boot_sata_slot=""
+    boot_ufs="false"
     memory="$DEFAULT_MEMORY"
     cores="$DEFAULT_CORES"
     disk_size=""
@@ -2327,6 +2497,15 @@ case "$command" in
           boot_nvme_slot="$2"
           validate_slot "$boot_nvme_slot"
           shift 2
+          ;;
+        --boot-sata-slot)
+          boot_sata_slot="$2"
+          validate_slot "$boot_sata_slot" "$MAX_HDD_SLOTS"
+          shift 2
+          ;;
+        --boot-ufs)
+          boot_ufs="true"
+          shift
           ;;
         --arch)
           arch="$2"
@@ -2409,7 +2588,7 @@ case "$command" in
     fi
 
     # ${arr[@]+...} guard: empty array expansion errors under set -u on bash < 4.4 (stock macOS bash 3.2)
-    boot_vm "$image" "$arch" "$device" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port" "$boot_disk_transport" "$cdrom_iso" "$boot_nvme_slot" ${forward_ports[@]+"${forward_ports[@]}"}
+    boot_vm "$image" "$arch" "$device" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port" "$boot_disk_transport" "$cdrom_iso" "$boot_nvme_slot" "$boot_sata_slot" "$boot_ufs" ${forward_ports[@]+"${forward_ports[@]}"}
     ;;
 
   *)

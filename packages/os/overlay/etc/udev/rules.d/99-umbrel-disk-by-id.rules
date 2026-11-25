@@ -1,2 +1,8 @@
 SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL}"
 SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", IMPORT{parent}="ID_SERIAL", ENV{ID_SERIAL}=="?*", ENV{PARTN}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL}-part$env{PARTN}"
+
+# UFS storage doesn't have to report a serial number, and one it reports may be shared by its
+# logical units. It's soldered to the board, so its device path identifies each logical unit
+# just as stably, and umbreld uses this ID for UFS storage.
+SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ENV{ID_PATH}=="?*", DRIVERS=="ufshcd*", SYMLINK+="disk/by-umbrel-id/ufs-$env{ID_PATH}"
+SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_PATH}=="?*", ENV{PARTN}=="?*", DRIVERS=="ufshcd*", SYMLINK+="disk/by-umbrel-id/ufs-$env{ID_PATH}-part$env{PARTN}"

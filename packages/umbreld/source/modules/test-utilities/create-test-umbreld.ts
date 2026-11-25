@@ -498,16 +498,25 @@ export async function createTestVm({
 
 	// Boots the VM and waits for umbreld to respond. With `cdrom` an ISO is
 	// attached as the primary boot device (e.g. the USB installer). With
-	// `bootNvmeSlot` the VM boots from the NVMe device in that slot (e.g. after
-	// the USB installer flashed it). With `waitForShutdown` it instead waits
+	// `bootNvmeSlot` the VM boots from the NVMe device in that slot, with
+	// `bootSataSlot` from the SATA drive in that slot, and with `bootUfs` from
+	// the UFS storage (e.g. after the USB installer flashed them). With `waitForShutdown` it instead waits
 	// for the VM to power itself off, for boots that are expected to complete
 	// and shut down on their own (e.g. the USB installer auto-flashing a
 	// device).
 	async function powerOnOnce({
 		cdrom,
 		bootNvmeSlot,
+		bootSataSlot,
+		bootUfs = false,
 		waitForShutdown = false,
-	}: {cdrom?: string; bootNvmeSlot?: number; waitForShutdown?: boolean} = {}) {
+	}: {
+		cdrom?: string
+		bootNvmeSlot?: number
+		bootSataSlot?: number
+		bootUfs?: boolean
+		waitForShutdown?: boolean
+	} = {}) {
 		let vmOutput = ''
 		let vmExited = false
 		let vmExitCode: number | null = null
@@ -519,6 +528,8 @@ export async function createTestVm({
 		const coreArgs = cores ? ['--cores', String(cores)] : []
 		const cdromArgs = cdrom ? ['--cdrom', cdrom] : []
 		const bootNvmeSlotArgs = bootNvmeSlot ? ['--boot-nvme-slot', String(bootNvmeSlot)] : []
+		const bootSataSlotArgs = bootSataSlot ? ['--boot-sata-slot', String(bootSataSlot)] : []
+		const bootUfsArgs = bootUfs ? ['--boot-ufs'] : []
 		const forwardPortArgs = allocatedForwardPorts.flatMap(({hostPort, guestPort}) => [
 			'--forward-port',
 			`${hostPort}:${guestPort}`,
@@ -526,7 +537,7 @@ export async function createTestVm({
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot ${imageArgs} ${deviceArgs} ${bootDiskArgs} ${memoryArgs} ${coreArgs} ${cdromArgs} ${bootNvmeSlotArgs} ${forwardPortArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot ${imageArgs} ${deviceArgs} ${bootDiskArgs} ${memoryArgs} ${coreArgs} ${cdromArgs} ${bootNvmeSlotArgs} ${bootSataSlotArgs} ${bootUfsArgs} ${forwardPortArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcessPid = vmProcess.pid
 
 		// Capture output and track if process exits
@@ -596,7 +607,15 @@ export async function createTestVm({
 		)
 	}
 
-	async function powerOn(options: {cdrom?: string; bootNvmeSlot?: number; waitForShutdown?: boolean} = {}) {
+	async function powerOn(
+		options: {
+			cdrom?: string
+			bootNvmeSlot?: number
+			bootSataSlot?: number
+			bootUfs?: boolean
+			waitForShutdown?: boolean
+		} = {},
+	) {
 		await retryVmPortCollisions({
 			attempt: () => powerOnOnce(options),
 			refreshPorts: refreshDynamicPorts,
@@ -691,6 +710,16 @@ export async function createTestVm({
 
 	async function removeNvme({slot}: {slot: number}) {
 		await $({env})`${vmScript} nvme destroy ${slot}`
+	}
+
+	// Onboard UFS storage, as fitted to some mini PCs. Like real UFS it has 4096
+	// byte logical blocks and lsblk reports no transport for it.
+	async function addUfs({size}: {size?: string} = {}) {
+		await $({env})`${vmScript} ufs add ${size ? ['--size', size] : []}`
+	}
+
+	async function removeUfs() {
+		await $({env})`${vmScript} ufs destroy`
 	}
 
 	async function addBayDrive({
@@ -824,6 +853,12 @@ export async function createTestVm({
 	// Sends an ACPI power button event, like pressing the physical button
 	async function pressPowerButton() {
 		await $({env})`${vmScript} power-button`
+	}
+
+	// Types text on the keyboard, e.g. to answer the USB installer's prompts.
+	// Supports lowercase letters, digits, spaces and \n for Enter.
+	async function typeText(text: string) {
+		await $({env})`${vmScript} type ${text}`
 	}
 
 	async function cleanup() {
@@ -971,6 +1006,8 @@ printf '\\n${authFailureMarker}\\n'
 		forcePowerOff,
 		addNvme,
 		removeNvme,
+		addUfs,
+		removeUfs,
 		disconnectNvme,
 		connectNvme,
 		disconnectHdd,
@@ -994,6 +1031,7 @@ printf '\\n${authFailureMarker}\\n'
 		connectUsbNet,
 		reflash,
 		pressPowerButton,
+		typeText,
 		ssh,
 		sshAsRoot,
 	}

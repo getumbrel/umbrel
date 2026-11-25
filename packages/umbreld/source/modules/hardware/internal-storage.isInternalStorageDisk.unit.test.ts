@@ -5,7 +5,7 @@ import {isInternalStorageDisk} from './internal-storage.ts'
 const size = 2 * 1024 ** 4
 
 describe('isInternalStorageDisk', () => {
-	test.each(['nvme', 'sata', 'sas'])('includes %s disks', (tran) => {
+	test.each(['nvme', 'sata', 'sas', 'ufs'])('includes %s disks', (tran) => {
 		expect(isInternalStorageDisk({type: 'disk', tran, size})).toBe(true)
 	})
 
@@ -20,6 +20,13 @@ describe('isInternalStorageDisk', () => {
 
 	test.each(['part', 'rom', 'loop', 'zfs', 'enclosure'])('excludes %s block devices on internal transports', (type) => {
 		expect(isInternalStorageDisk({type, tran: 'sas', size})).toBe(false)
+	})
+
+	// UFS storage's boot logical units are a few megabytes each
+	test('excludes UFS disks smaller than 1 GiB', () => {
+		expect(isInternalStorageDisk({type: 'disk', tran: 'ufs', size: 4 * 1024 ** 2})).toBe(false)
+		expect(isInternalStorageDisk({type: 'disk', tran: 'ufs', size: 1024 ** 3 - 1})).toBe(false)
+		expect(isInternalStorageDisk({type: 'disk', tran: 'ufs', size: 1024 ** 3})).toBe(true)
 	})
 
 	// e.g. a SAS drive still formatted with 520 byte sectors from a storage array
