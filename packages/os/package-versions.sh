@@ -51,14 +51,10 @@ echo "## Other software"
 echo
 {
     echo "kopia $(kopia --version | awk '{ print $1 }')"
-    # LiteRT-LM, unpacked from its wheel
-    for metadata in /opt/litert-lm/litert_lm_api-*.dist-info; do
-        if [ -d "${metadata}" ]; then
-            echo "litert-lm $(basename "${metadata}" .dist-info | sed 's/^litert_lm_api-//')"
-        fi
-    done
+    # LiteRT-LM, which the build writes its version beside
+    echo "litert-lm $(cat /opt/litert-lm/version)"
     echo "node $(node --version | sed 's/^v//')"
-    # ... and transcribe.cpp, the same way
+    # transcribe.cpp, unpacked from its wheel
     for metadata in /opt/transcribe/transcribe_cpp-*.dist-info; do
         if [ -d "${metadata}" ]; then
             echo "transcribe.cpp $(basename "${metadata}" .dist-info | sed 's/^transcribe_cpp-//')"

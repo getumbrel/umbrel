@@ -16,9 +16,9 @@ ConditionPathExists=/home/umbrel/umbrel/models/installed
 ExecStart=/usr/bin/python3 /opt/umbrel-embeddings/server.py \
     --model /home/umbrel/umbrel/models/embeddinggemma-2-text-270m.litertlm \
     --romaniser /home/umbrel/umbrel/models
-# Not on a CPU the runtimes can't run on: one without AES, or on x86 without
-# AVX (see cpuRunsModels() in umbreld's embeddings.ts)
-ExecCondition=/bin/sh -c 'grep -qw aes /proc/cpuinfo && { [ "$(uname -m)" != x86_64 ] || grep -qw avx /proc/cpuinfo; }'
+# Not on a CPU the runtimes can't run on, one without AES (see cpuRunsModels()
+# in umbreld's embeddings.ts)
+ExecCondition=/bin/grep -qw aes /proc/cpuinfo
 Restart=on-failure
 RestartSec=5
 DynamicUser=yes

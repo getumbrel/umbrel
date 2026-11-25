@@ -1,0 +1,51 @@
+--- a/WORKSPACE
++++ b/WORKSPACE
+@@ -426,6 +426,8 @@
+         # third_party/py/numpy. Uses a shell loop rather than `find`, which may resolve
+         # to find.exe on Windows.
+         "for f in third_party/*/*; do if [ -f \"$f\" ]; then sed -i -e 's|\"@//third_party/|\"@litert//third_party/|g' \"$f\" || exit 1; fi; done",
++        # Bazel 7 has no strict_deps attribute
++        "sed -i -e '/strict_deps = False,/d' ml_drift_delegate/delegate/serialization_weight_cache/BUILD",
+     ],
+     sha256 = LITERT_SHA256,
+     strip_prefix = "LiteRT-" + LITERT_REF,
+@@ -629,4 +631,29 @@
+ """,
+     sha256 = "ae13e2effe077e829be759182396b931d8f85cfb9cfe9d49385516ea367ef7b2",
+     url = "https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-aarch64.tar.gz",
++)
++
++# ML Drift, which runs models on the GPU through WebGPU. LiteRT declares it
++# without saying where it comes from: this is the last ml-drift commit before
++# the LiteRT commit above.
++http_archive(
++    name = "ml_drift",
++    patch_args = ["-p1"],
++    patch_cmds = [
++        # LiteRT-LM names FP16 @FP16//:FP16
++        "sed -i -e 's|\"@fp16\"|\"@FP16//:FP16\"|g' ml_drift/common/BUILD",
++        # ml-drift expects LiteRT to be the main repository
++        "grep -rl '@//ml_drift_delegate' --include=BUILD . | xargs sed -i -e 's|@//ml_drift_delegate|@litert//ml_drift_delegate|g'",
++    ],
++    patches = ["@//third_party/umbrel:ml-drift-experts-remap-stub.patch"],
++    sha256 = "8b68da97e48a9d7ea254e466c05685f8bcf017ad03b416300158e34750902d0e",
++    strip_prefix = "ml-drift-3854fa662e193768fb5e7f068c917369ff79034c",
++    url = "https://github.com/google-ai-edge/ml-drift/archive/3854fa662e193768fb5e7f068c917369ff79034c.tar.gz",
++)
++
++# Dawn, the WebGPU implementation ML Drift runs on, built beforehand with CMake
++new_local_repository(
++    name = "dawn",
++    build_file = "@//third_party/umbrel:dawn.BUILD",
++    path = "/build/dawn",
+ )
+--- a/runtime/executor/BUILD
++++ b/runtime/executor/BUILD
+@@ -252,6 +252,7 @@
+         # If CAPI is linked dynamically, need to link the accelerator dynamically as well.
+         "@litert//litert:litert_runtime_link_mode_dynamic": [],
+         "//conditions:default": [
++            "@litert//litert/runtime/accelerators/gpu:ml_drift_webgpu_accelerator",
+         ],
+     }),
+ )

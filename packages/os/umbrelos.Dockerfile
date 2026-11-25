@@ -49,14 +49,19 @@ ARG LIBDE265_SNAPSHOT_DATE=20260919T000000Z
 ARG LIBDE265_SHA256_amd64=36115188a321806ac797218cb878be15e8df7584fc65b10ea50d52cad065c5f5
 ARG LIBDE265_SHA256_arm64=36c69add16a79fdffd85f284501b8f9ddd7128ccb8e078598818beb3e50109ec
 
-# LiteRT-LM, the runtime the embedding model runs in. 0.18.0 and not later:
-# measured on an Intel N150, 0.19.2 takes a fifth longer to read a photo. The
-# models themselves are not in the image: umbreld fetches them (see models.ts
-# in umbreld).
-ARG LITERT_LM_URL_amd64=https://files.pythonhosted.org/packages/c9/8f/eb7a5203be1d48440c6b8d6e6382c3f744dd6d338fe400555718b4d695a1/litert_lm_api-0.18.0-py3-none-manylinux_2_27_x86_64.whl
-ARG LITERT_LM_SHA256_amd64=b64e2cf6d7dcb90ff094b74af595cc5d53faa07e0889f967d15df8d3e696b53c
-ARG LITERT_LM_URL_arm64=https://files.pythonhosted.org/packages/cf/f2/60707ac6860248e5f3601926c7cfe44794db350b60c1f14cb6e7e8874ae4/litert_lm_api-0.18.0-py3-none-manylinux_2_27_aarch64.whl
-ARG LITERT_LM_SHA256_arm64=d066db0c2bcd832b2b9cf8532b5fff385f7cff8562a1b482f8da0b51f810c47c
+# LiteRT-LM, the runtime the embedding model runs in, built from source (see
+# the LiteRT-LM build stage). 0.18.0 and not later: measured on an Intel N150,
+# 0.19.2 takes a fifth longer to read a photo. The models themselves are not in
+# the image: umbreld fetches them (see models.ts in umbreld).
+ARG LITERT_LM_VERSION=0.18.0
+ARG LITERT_LM_COMMIT=b2f686e2ed4718fb84ec398a61dd59ca0f0aff27
+# What it's built with: the Bazel its .bazelversion names, and the Dawn its
+# LiteRT commit names
+ARG BAZEL_VERSION=7.6.1
+ARG BAZEL_SHA256_amd64=ac6249d1192aea9feaf49dfee2ab50c38cee2454b00cf29bbec985a11795c025
+ARG BAZEL_SHA256_arm64=2d86d36db0c9af15747ff02a80e6db11a45d68f868ea8f62f489505c474f0099
+ARG DAWN_VERSION=20260720.160313
+ARG DAWN_SHA256=8f2db59ad449043f5c80ac3d397963004c5ffa971bcc4ac50d53a0830aa485c1
 
 # transcribe.cpp, which runs the speech models on the CPU or, through Vulkan,
 # on a GPU: its Python bindings, which depend on nothing else, and the
@@ -483,6 +488,118 @@ RUN export DEB_BUILD_PROFILES="nogir pkg.avahi.nogui nocheck" DEB_BUILD_OPTIONS=
 
 
 #########################################################################
+# LiteRT-LM build stage
+#########################################################################
+
+# LiteRT-LM runs the embedding model. Google's builds of it use AVX throughout,
+# so they stop on x86 CPUs without it, such as the first Umbrel Home's Celeron
+# N5105. We build it from source instead, on x86 for CPUs with SSE4.2 and
+# AES-NI. The code that does its sums on the CPU, XNNPACK and ruy, still picks
+# AVX2, AVX-512 or Arm's dot product instructions as it runs, where the CPU has
+# them, so it reads as fast as Google's build there. Its GPU path, ML Drift on
+# WebGPU, is linked in as in Google's build, on a Dawn built here too: Google's
+# copy of Dawn uses AVX as well.
+#
+# Two things are left out, neither used by embedding models: constrained
+# decoding, for which Google only ships a prebuilt library, and ML Drift's
+# kernels for Mixture-of-Experts models, which aren't open source
+# (litert-lm/ml-drift-experts-remap-stub.patch).
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE}@${DEBIAN_IMAGE_DIGEST} AS litert-lm-build
+
+ARG APT_SNAPSHOT_DATE
+ARG TARGETARCH
+ARG LITERT_LM_VERSION
+ARG LITERT_LM_COMMIT
+ARG BAZEL_VERSION
+ARG BAZEL_SHA256_amd64
+ARG BAZEL_SHA256_arm64
+ARG DAWN_VERSION
+ARG DAWN_SHA256
+
+COPY packages/os/build-steps /build-steps
+
+RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
+
+RUN apt-get install --yes ca-certificates curl git python3 clang lld cmake ninja-build patch patchelf unzip zip
+
+RUN BAZEL_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x86_64") && \
+    BAZEL_SHA256=$(eval echo \$BAZEL_SHA256_${TARGETARCH}) && \
+    curl -fsSL "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-linux-${BAZEL_ARCH}" -o /usr/local/bin/bazel && \
+    echo "${BAZEL_SHA256} /usr/local/bin/bazel" | sha256sum -c && \
+    chmod +x /usr/local/bin/bazel
+
+# The least each architecture's CPUs are built for: on x86, x86-64-v2 (up to
+# SSE4.2) and AES-NI
+RUN case "${TARGETARCH}" in \
+        amd64) echo "-march=x86-64-v2 -mtune=generic -maes -mpclmul" ;; \
+        *) echo "" ;; \
+    esac > /cpu-flags
+
+# Dawn, as a library that only exports the WebGPU API, with only its Vulkan
+# backend
+COPY packages/os/litert-lm/dawn-exports.map /litert-lm/dawn-exports.map
+RUN set -eu; \
+    cpu_flags="$(cat /cpu-flags)"; \
+    curl -fsSL "https://github.com/google/dawn/archive/v${DAWN_VERSION}.tar.gz" -o /tmp/dawn.tar.gz; \
+    echo "${DAWN_SHA256} /tmp/dawn.tar.gz" | sha256sum -c; \
+    mkdir -p /build/dawn-source; \
+    tar -xzf /tmp/dawn.tar.gz -C /build/dawn-source --strip-components=1; \
+    rm /tmp/dawn.tar.gz; \
+    python3 /build/dawn-source/tools/fetch_dawn_dependencies.py --directory /build/dawn-source; \
+    cmake -S /build/dawn-source -B /build/dawn-build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+        -DCMAKE_C_FLAGS="${cpu_flags}" -DCMAKE_CXX_FLAGS="${cpu_flags}" \
+        -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--version-script=/litert-lm/dawn-exports.map -Wl,--gc-sections -Wl,-s" \
+        -DDAWN_FETCH_DEPENDENCIES=OFF \
+        -DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED \
+        -DDAWN_ENABLE_VULKAN=ON -DDAWN_ENABLE_NULL=ON \
+        -DDAWN_ENABLE_OPENGLES=OFF -DDAWN_ENABLE_DESKTOP_GL=OFF \
+        -DDAWN_USE_X11=OFF -DDAWN_USE_WAYLAND=OFF -DDAWN_USE_GLFW=OFF \
+        -DDAWN_ENABLE_SWIFTSHADER=OFF \
+        -DDAWN_BUILD_SAMPLES=OFF -DDAWN_BUILD_TESTS=OFF -DDAWN_BUILD_BENCHMARKS=OFF \
+        -DTINT_BUILD_TESTS=OFF -DTINT_BUILD_CMD_TOOLS=OFF -DTINT_BUILD_BENCHMARKS=OFF; \
+    ninja -C /build/dawn-build webgpu_dawn; \
+    mkdir -p /build/dawn/include /build/dawn/lib; \
+    cp -a /build/dawn-source/include/. /build/dawn-build/gen/include/. /build/dawn/include/; \
+    cp /build/dawn-build/src/dawn/native/libwebgpu_dawn.so /build/dawn/lib/; \
+    rm -rf /build/dawn-source /build/dawn-build
+
+COPY packages/os/litert-lm /litert-lm
+
+# LiteRT-LM with the GPU path linked in (litert-lm/litert-lm.patch), and its
+# Python bindings beside it, as in Google's wheel. Bazel's downloads are kept
+# between builds on the same machine.
+RUN --mount=type=cache,id=litert-lm-bazel-downloads-${TARGETARCH},target=/root/.cache/bazel-downloads \
+    set -eu; \
+    cpu_flags="$(cat /cpu-flags)"; \
+    git init --quiet /build/litert-lm; \
+    cd /build/litert-lm; \
+    git fetch --quiet --depth=1 https://github.com/google-ai-edge/LiteRT-LM.git "refs/tags/v${LITERT_LM_VERSION}"; \
+    git checkout --quiet FETCH_HEAD; \
+    test "$(git rev-parse HEAD)" = "${LITERT_LM_COMMIT}"; \
+    patch -p1 < /litert-lm/litert-lm.patch; \
+    mkdir third_party/umbrel; \
+    touch third_party/umbrel/BUILD; \
+    cp /litert-lm/dawn.BUILD /litert-lm/ml-drift-experts-remap-stub.patch third_party/umbrel/; \
+    bazel --output_user_root=/build/bazel build \
+        --repository_cache=/root/.cache/bazel-downloads \
+        --java_runtime_version=remotejdk_17 \
+        --define=LITERT_LM_FST_CONSTRAINTS_DISABLED=1 \
+        --nocheck_visibility \
+        $(for flag in ${cpu_flags}; do echo "--copt=${flag}"; done) \
+        //c:litert-lm; \
+    mkdir -p /opt/litert-lm/litert_lm; \
+    cp bazel-bin/c/liblitert-lm.so /build/dawn/lib/libwebgpu_dawn.so /opt/litert-lm/litert_lm/; \
+    patchelf --set-rpath '$ORIGIN' /opt/litert-lm/litert_lm/liblitert-lm.so; \
+    find python/litert_lm -maxdepth 1 -name '*.py' ! -name '*_test.py' -exec cp {} /opt/litert-lm/litert_lm/ \; ; \
+    chmod 644 /opt/litert-lm/litert_lm/*; \
+    echo "${LITERT_LM_VERSION}" > /opt/litert-lm/version; \
+    bazel --output_user_root=/build/bazel shutdown; \
+    rm -rf /build
+
+
+#########################################################################
 # umbrelos build stage
 #########################################################################
 
@@ -516,10 +633,6 @@ ARG LIBDE265_VERSION
 ARG LIBDE265_SNAPSHOT_DATE
 ARG LIBDE265_SHA256_amd64
 ARG LIBDE265_SHA256_arm64
-ARG LITERT_LM_URL_amd64
-ARG LITERT_LM_SHA256_amd64
-ARG LITERT_LM_URL_arm64
-ARG LITERT_LM_SHA256_arm64
 ARG TRANSCRIBE_URL
 ARG TRANSCRIBE_SHA256
 ARG TRANSCRIBE_NATIVE_URL_amd64
@@ -745,24 +858,20 @@ RUN apt-get install --yes fuse3 bindfs
 
 # Install what the models that read the library run in (see the
 # umbrel-embeddings units and servers in the overlay). LiteRT-LM runs the
-# embedding model. It is a Python package with no dependencies, so its wheel is
-# unpacked where the server finds it and nothing is installed with pip. It
-# reaches Intel and AMD GPUs through Mesa's Vulkan drivers, and uses the CPU
-# where there is no GPU. The models that find faces and read the text in
-# pictures run on the CPU in Debian's ONNX Runtime, and the speech models in
-# transcribe.cpp, unpacked the same way as LiteRT-LM with its libraries beside
-# it. Text is read out of PDFs by Poppler. The models are fetched by umbreld
-# once the device is running, and kept with its data.
+# embedding model. We build it (see the LiteRT-LM build stage), and it is a
+# Python package with no dependencies, so it is put where the server finds it
+# and nothing is installed with pip. It reaches Intel and AMD GPUs through
+# Mesa's Vulkan drivers, and uses the CPU where there is no GPU. The models
+# that find faces and read the text in pictures run on the CPU in Debian's ONNX
+# Runtime, and the speech models in transcribe.cpp, a Python package with its
+# libraries beside it, put in place the same way. Text is read out of PDFs by
+# Poppler. The models are fetched by umbreld once the device is running, and
+# kept with its data.
+COPY --from=litert-lm-build /opt/litert-lm /opt/litert-lm
 RUN set -e; \
     apt-get install --yes mesa-vulkan-drivers python3-onnxruntime poppler-utils; \
-    LITERT_LM_URL=$(eval echo \$LITERT_LM_URL_${TARGETARCH}); \
-    LITERT_LM_SHA256=$(eval echo \$LITERT_LM_SHA256_${TARGETARCH}); \
     TRANSCRIBE_NATIVE_URL=$(eval echo \$TRANSCRIBE_NATIVE_URL_${TARGETARCH}); \
     TRANSCRIBE_NATIVE_SHA256=$(eval echo \$TRANSCRIBE_NATIVE_SHA256_${TARGETARCH}); \
-    curl -fsSL "${LITERT_LM_URL}" -o /tmp/litert-lm.whl; \
-    echo "${LITERT_LM_SHA256} /tmp/litert-lm.whl" | sha256sum -c; \
-    python3 -m zipfile -e /tmp/litert-lm.whl /opt/litert-lm; \
-    rm /tmp/litert-lm.whl; \
     curl -fsSL "${TRANSCRIBE_URL}" -o /tmp/transcribe.whl; \
     curl -fsSL "${TRANSCRIBE_NATIVE_URL}" -o /tmp/transcribe-native.tar.gz; \
     echo "${TRANSCRIBE_SHA256} /tmp/transcribe.whl" | sha256sum -c; \

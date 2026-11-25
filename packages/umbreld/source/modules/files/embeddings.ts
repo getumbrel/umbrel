@@ -60,14 +60,12 @@ export function embeddingsAvailable() {
 	return existsSync('/opt/litert-lm') && cpuRunsModels()
 }
 
-// LiteRT-LM is built for CPUs with more than the least their architecture
-// guarantees, and stops as it loads on one without: on x86 it needs AVX and
-// AES-NI, which Intel's Celerons and Pentiums before the N100 lack (the first
-// Umbrel Home's N5105 is one), and on Arm the Armv8 cryptography extensions,
-// which the Raspberry Pi 4 lacks. Debian's ONNX Runtime also stops on the
-// Pi 4. The query service is kept from starting on these by the same test
-// (see umbrel-embeddings-query.service in packages/os).
-const NEEDED_CPU_FEATURES = process.arch === 'arm64' ? ['aes'] : ['avx', 'aes']
+// The runtimes stop as they load on a CPU without what they were built for:
+// our LiteRT-LM needs AES-NI on x86 (see its build stage in packages/os), and
+// Debian's ONNX Runtime stops on the Raspberry Pi 4, which lacks the Armv8
+// cryptography extensions. The query service is kept from starting on these
+// by the same test (see umbrel-embeddings-query.service in packages/os).
+const NEEDED_CPU_FEATURES = ['aes']
 let cpuFeaturesPresent: boolean | undefined
 function cpuRunsModels() {
 	if (cpuFeaturesPresent === undefined) {

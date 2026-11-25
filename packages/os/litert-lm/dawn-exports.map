@@ -1,0 +1,3 @@
+/* Export only the WebGPU C API. Dawn has its own copy of Abseil, which would
+   otherwise be mixed up with the copy in liblitert-lm.so. */
+{ global: wgpu*; local: *; };
