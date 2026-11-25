@@ -97,8 +97,24 @@ export const storeCardPaddedClass = tw`settings-edge-material rounded-24 bg-whit
 // Two columns from 560px and three from xl, but only while each card keeps
 // room for its name beside the action at the chosen text size: a track is the
 // larger of an even share (a little under it, so rounding never drops a
-// column) and that minimum, so a larger text size fits fewer.
+// column) and that minimum, so a larger text size fits fewer. The app-grid-2-up
+// and app-grid-3-up variants in index.css restate this rule: keep them in sync.
 export const appGridClass = tw`grid grid-cols-1 min-[560px]:grid-cols-[repeat(auto-fill,minmax(max(calc(50%-6px),calc(240px+20*var(--text-boost))),1fr))] xl:grid-cols-[repeat(auto-fill,minmax(max(calc(33.33%-8px),calc(240px+20*var(--text-boost))),1fr))] gap-x-2.5 gap-y-1.5`
+
+// For grids that only ever show complete rows (the storefront's editorial
+// sections, whose apps are all in the catalog below them too), the cards that
+// would be left on an unfinished last row hide, so a row never ends early. The
+// grid is the app-grid container that the app-grid-2-up and app-grid-3-up
+// variants (index.css) query for its column count; its font size is a track's
+// minimum width, which they measure in em, and cards set the usual 1rem back.
+export const appGridCompleteRowsClass = tw`@container/app-grid [font-size:calc(240px+20*var(--text-boost))]`
+export const appCardCompleteRowsClass = tw`
+  text-[1rem]
+  app-grid-2-up:nth-[2n+3]:last:hidden
+  app-grid-3-up:nth-[3n+4]:last:hidden
+  app-grid-3-up:nth-[3n+4]:nth-last-2:hidden
+  app-grid-3-up:nth-[3n+5]:last:hidden
+`
 
 // Bleeds a horizontally scrolling rail through the sheet's responsive padding
 // (layouts/sheet.tsx) so cards scroll edge-to-edge — keep the two in sync.

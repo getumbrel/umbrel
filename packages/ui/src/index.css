@@ -105,6 +105,33 @@
 	}
 }
 
+/* The App Store grid's column count (appGridClass in features/app-store/constants.ts),
+   for a grid that's also the app-grid container (appGridCompleteRowsClass). CSS can't
+   ask a grid how many auto-fill columns it made, so this restates the rule: two from
+   560px and three from xl, each while every track keeps its minimum width beside the
+   10px gaps. The grid's font size is that minimum, which follows the text size, so
+   N columns fit from N × 1em plus the gaps, exactly where auto-fill adds one. Keep
+   the two in sync. */
+@custom-variant app-grid-2-up {
+	@media (560px <= width < 80rem) {
+		@container app-grid (width >= calc(2em + 0.625rem)) {
+			@slot;
+		}
+	}
+	@media (width >= 80rem) {
+		@container app-grid (calc(2em + 0.625rem) <= width < calc(3em + 1.25rem)) {
+			@slot;
+		}
+	}
+}
+@custom-variant app-grid-3-up {
+	@media (width >= 80rem) {
+		@container app-grid (width >= calc(3em + 1.25rem)) {
+			@slot;
+		}
+	}
+}
+
 @custom-variant w-regular {
 	@container widget (min-width: 140px) {
 		@slot;

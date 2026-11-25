@@ -246,6 +246,22 @@ describe('useSwipeSelect', () => {
 		expect(frames).toHaveLength(0)
 	})
 
+	test('a swipe that sets off inside an edge band scrolls only once it heads on past where it came down', () => {
+		const scroller = render({handle: true})
+		// The top band runs 72px below the 20px fade: row 0's middle is inside it
+		const start = rowY(0)
+		down($('handle'), 20, start)
+		move(scroller, 20, start + 6)
+		expect(lastSelection()).toEqual(['row-0'])
+		expect(frames).toHaveLength(0)
+		// Back up to where it began: still choosing, not scrolling
+		move(scroller, 20, start)
+		expect(frames).toHaveLength(0)
+		// On towards the edge, it scrolls
+		move(scroller, 20, start - 10)
+		expect(frames).toHaveLength(1)
+	})
+
 	test('a swipe that loses the finger ends, but not for an item losing its own hold of it', () => {
 		const scroller = render()
 		down($('row'), 40, rowY(1))
@@ -266,5 +282,77 @@ describe('useSwipeSelect', () => {
 		down($('row'), 40, rowY(1))
 		move(second, 70, rowY(1))
 		expect(lastSelection()).toEqual(['row-1'])
+	})
+
+	describe('holding an item', () => {
+		beforeEach(() => vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']}))
+		afterEach(() => {
+			vi.useRealTimers()
+			vi.restoreAllMocks()
+		})
+		const hold = () => act(() => vi.advanceTimersByTime(300))
+
+		test('picks it up there and then, and straight down from it selects', () => {
+			const scroller = render()
+			down($('row'), 40, rowY(1))
+			act(() => vi.advanceTimersByTime(299))
+			expect(onSelect).not.toHaveBeenCalled()
+			act(() => vi.advanceTimersByTime(1))
+			expect(lastSelection()).toEqual(['row-1'])
+			expect(captured).toBe(7)
+			// The page doesn't scroll from under it
+			expect(touchMove(scroller).defaultPrevented).toBe(true)
+			move(scroller, 40, rowY(3))
+			expect(lastSelection()).toEqual(['row-1', 'row-2', 'row-3'])
+			up(scroller, 40, rowY(3))
+			click($('row'))
+			expect(onRowClick).not.toHaveBeenCalled()
+		})
+
+		test('deselects from an item that was selected', () => {
+			const scroller = render({selection: ['row-1', 'row-2']})
+			down($('row'), 40, rowY(1))
+			hold()
+			expect(lastSelection()).toEqual(['row-2'])
+			move(scroller, 40, rowY(2))
+			expect(lastSelection()).toEqual([])
+		})
+
+		test('a finger that sets off up or down first scrolls, and picks nothing up later', () => {
+			const scroller = render()
+			down($('row'), 40, rowY(1))
+			move(scroller, 41, rowY(1) + 30)
+			hold()
+			move(scroller, 41, rowY(3))
+			expect(onSelect).not.toHaveBeenCalled()
+			expect(touchMove(scroller).defaultPrevented).toBe(false)
+		})
+
+		test('a tap, or a touch the browser takes for a scroll, picks nothing up', () => {
+			render()
+			down($('row'), 40, rowY(1))
+			up($('row'), 40, rowY(1))
+			click($('row'))
+			hold()
+			down($('row'), 40, rowY(1))
+			pointer('pointercancel', $('row'), 40, rowY(1))
+			hold()
+			expect(onSelect).not.toHaveBeenCalled()
+			expect(onRowClick).toHaveBeenCalledTimes(1)
+		})
+
+		test('a finger that stops a fling, or a second finger, is not a hold', () => {
+			const scroller = render()
+			scroller.dispatchEvent(new Event('scroll'))
+			down($('row'), 40, rowY(1))
+			hold()
+			up(scroller, 40, rowY(1))
+			// Two fingers down, as a pinch starts
+			vi.spyOn(performance, 'now').mockReturnValue(performance.now() + 1000)
+			down($('row'), 40, rowY(1))
+			pointer('pointerdown', $('row'), 60, rowY(2))
+			hold()
+			expect(onSelect).not.toHaveBeenCalled()
+		})
 	})
 })

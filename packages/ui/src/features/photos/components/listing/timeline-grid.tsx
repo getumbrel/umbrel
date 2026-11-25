@@ -182,8 +182,9 @@ type Slot = {index: number; item: Item; x: number; y: number; size: number}
 // Selection (see PhotosSelectionProvider) is picked here: a click on a
 // tile's circle, or on any tile while selecting, toggles it; shift extends
 // from the last one toggled; a mouse drag over the grid draws a box
-// (useMarquee), and a finger swiped sideways across it in selection mode
-// selects the run it covers (useSwipeSelect); ⌘A takes everything in the view
+// (useMarquee), and a finger swiped sideways across it in selection mode, or
+// held on a tile for a moment and then moved any way, selects the run it
+// covers (useSwipeSelect); ⌘A takes everything in the view
 // and Escape leaves.
 export function TimelineGrid({
 	items,

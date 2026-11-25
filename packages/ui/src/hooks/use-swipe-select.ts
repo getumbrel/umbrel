@@ -6,6 +6,15 @@ import {useCallback, useEffect, useRef, type RefObject} from 'react'
 const SLOP_PX = 10
 // From a handle (an item's selection circle) any direction selects, after this much travel
 const HANDLE_SLOP_PX = 4
+// A finger held this long on an item without setting off picks it up: the
+// item toggles there and then, and the swipe goes in any direction, straight
+// down a list too. Quicker than Files' hold for an item's actions, which
+// selection mode doesn't use, and long enough that a finger put down to
+// scroll has set off first.
+const HOLD_MS = 300
+// A finger that lands this soon after the scroller last moved is stopping a
+// fling, not choosing an item, and doesn't pick one up by holding
+const FLING_MS = 120
 // Holding the finger within this band at the top or bottom of what can be
 // seen scrolls: px per frame, from the minimum at the band's inner edge up to
 // the maximum at the scroller's edge and beyond
@@ -21,6 +30,8 @@ type Swipe = {
 	// It came down on a handle, where the browser doesn't scroll
 	// (touch-action: none), so the swipe is the scroller's from the start
 	fromHandle: boolean
+	// Picks the item up if the finger is still there and hasn't set off (see HOLD_MS)
+	holdTimer: number | null
 	// Past the slop: the scroller owns the finger and the selection follows it
 	active: boolean
 	// The item the swipe started on and the one it reaches to now (none until
@@ -46,7 +57,10 @@ type Swipe = {
 // runs on down the rows as the finger does, as in Photos. In a list, where
 // rows run the whole width, an item can also carry a handle (its selection
 // circle): a finger that comes down there selects in any direction, straight
-// down the rows, as in Mail. Either way it deselects instead when the first
+// down the rows, as in Mail. A finger held still on any item for a moment
+// picks it up the same way, so a list can be selected straight down from
+// anywhere on a row without taking scrolling away: one that sets off up or
+// down at once still scrolls. Either way it deselects instead when the first
 // item was already selected, sliding back returns the items it leaves to
 // what they were, and holding the finger near the top or bottom edge scrolls.
 //
@@ -112,6 +126,7 @@ export function useSwipeSelect({
 		const scroller = scrollerRef.current
 		if (!swipe) return
 		swipeRef.current = null
+		if (swipe.holdTimer !== null) clearTimeout(swipe.holdTimer)
 		if (!swipe.active) return
 		if (swipe.scrollFrame !== null) cancelAnimationFrame(swipe.scrollFrame)
 		if (scroller?.hasPointerCapture(swipe.pointerId)) scroller.releasePointerCapture(swipe.pointerId)
@@ -151,8 +166,11 @@ export function useSwipeSelect({
 			if (!swipe?.active) return
 			const bounds = scroller.getBoundingClientRect()
 			const {edges} = latest.current
-			const top = bounds.top + edges.top + EDGE_PX
-			const bottom = bounds.bottom - edges.bottom - EDGE_PX
+			// A swipe that sets off inside a band (from the first or last item in
+			// view) only scrolls once the finger heads on past where it came down:
+			// starting there is choosing that item, not asking for more
+			const top = Math.min(bounds.top + edges.top + EDGE_PX, swipe.origin.y)
+			const bottom = Math.max(bounds.bottom - edges.bottom - EDGE_PX, swipe.origin.y)
 			const into = swipe.client.y < top ? swipe.client.y - top : Math.max(0, swipe.client.y - bottom)
 			if (into === 0) {
 				if (swipe.scrollFrame !== null) cancelAnimationFrame(swipe.scrollFrame)
@@ -169,9 +187,28 @@ export function useSwipeSelect({
 			if (swipe.scrollFrame === null) swipe.scrollFrame = requestAnimationFrame(step)
 		}
 
+		// From here the scroller owns the finger, wherever it goes: off the item
+		// it came down on, which may scroll away and unmount
+		const activate = (swipe: Swipe) => {
+			if (swipe.holdTimer !== null) clearTimeout(swipe.holdTimer)
+			swipe.holdTimer = null
+			swipe.active = true
+			scroller.setPointerCapture(swipe.pointerId)
+		}
+
+		// When the scroller last moved, to tell a finger stopping a fling from one choosing an item
+		let scrolledAt = -Infinity
+		const onScroll = () => {
+			scrolledAt = performance.now()
+		}
+
 		const onPointerDown = (event: PointerEvent) => {
-			// A second finger is a pinch's (which ends the swipe), not a wider swipe
-			if (swipeRef.current) return
+			// A second finger is a pinch's (which ends the swipe), not a wider
+			// swipe, and two fingers held down aren't a hold
+			if (swipeRef.current) {
+				if (!swipeRef.current.active) end()
+				return
+			}
 			// A fresh press, by any pointer and in any mode: whatever the last
 			// swipe left pending is stale. A lifted touch rarely clicks, so
 			// nothing else is sure to clear it.
@@ -183,11 +220,14 @@ export function useSwipeSelect({
 			if (id === undefined) return
 			const base = selectionRef.current
 			const {handle} = latest.current
-			swipeRef.current = {
+			const fromHandle =
+				handle !== undefined && event.target instanceof Element && event.target.closest(handle) !== null
+			const swipe: Swipe = {
 				pointerId: event.pointerId,
 				origin: {x: event.clientX, y: event.clientY},
 				client: {x: event.clientX, y: event.clientY},
-				fromHandle: handle !== undefined && event.target instanceof Element && event.target.closest(handle) !== null,
+				fromHandle,
+				holdTimer: null,
 				active: false,
 				from: id,
 				to: null,
@@ -195,6 +235,17 @@ export function useSwipeSelect({
 				base,
 				scrollFrame: null,
 				scrollBy: 0,
+			}
+			swipeRef.current = swipe
+			// A handle selects as soon as it's moved anyway
+			if (!fromHandle && performance.now() - scrolledAt > FLING_MS) {
+				swipe.holdTimer = window.setTimeout(() => {
+					if (swipeRef.current !== swipe) return
+					activate(swipe)
+					// A tick under the finger, where the device can give one, as Files' item hold does
+					navigator.vibrate?.(8)
+					update()
+				}, HOLD_MS)
 			}
 		}
 
@@ -212,14 +263,11 @@ export function useSwipeSelect({
 					// Up or down first: a scroll, which the browser has already taken
 					// (or would have, if the list had room to move)
 					if (dy >= dx) {
-						swipeRef.current = null
+						end()
 						return
 					}
 				}
-				swipe.active = true
-				// From here the scroller owns the finger, wherever it goes: off the
-				// item it came down on, which may scroll away and unmount
-				scroller.setPointerCapture(event.pointerId)
+				activate(swipe)
 			}
 			update()
 			autoScroll()
@@ -247,6 +295,7 @@ export function useSwipeSelect({
 			event.stopPropagation()
 		}
 
+		scroller.addEventListener('scroll', onScroll, {passive: true})
 		scroller.addEventListener('pointerdown', onPointerDown)
 		scroller.addEventListener('pointermove', onPointerMove)
 		scroller.addEventListener('pointerup', onPointerUp)
@@ -255,6 +304,7 @@ export function useSwipeSelect({
 		scroller.addEventListener('touchmove', onTouchMove, {passive: false})
 		scroller.addEventListener('click', onClick, {capture: true})
 		return () => {
+			scroller.removeEventListener('scroll', onScroll)
 			scroller.removeEventListener('pointerdown', onPointerDown)
 			scroller.removeEventListener('pointermove', onPointerMove)
 			scroller.removeEventListener('pointerup', onPointerUp)
@@ -263,8 +313,9 @@ export function useSwipeSelect({
 			scroller.removeEventListener('touchmove', onTouchMove)
 			scroller.removeEventListener('click', onClick, {capture: true})
 			// A swipe interrupted by an unmount leaves nothing running
-			const frame = swipeRef.current?.scrollFrame
-			if (frame !== null && frame !== undefined) cancelAnimationFrame(frame)
+			const swipe = swipeRef.current
+			if (swipe && swipe.scrollFrame !== null) cancelAnimationFrame(swipe.scrollFrame)
+			if (swipe && swipe.holdTimer !== null) clearTimeout(swipe.holdTimer)
 			swipeRef.current = null
 		}
 	}, [scrollerRef, scrollerKey, selectionRef, end])

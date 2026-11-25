@@ -6,7 +6,9 @@ import {AppCard} from '@/features/app-store/components/app-card'
 import {SectionHeading} from '@/features/app-store/components/section-heading'
 import {
 	APP_STORE_EMPTY_STATE_SRC,
+	appCardCompleteRowsClass,
 	appGridClass,
+	appGridCompleteRowsClass,
 	storeCardClass,
 	storeCardPaddedClass,
 	storeRevealCardClass,
@@ -23,6 +25,7 @@ export function AppGrid({
 	makeTo,
 	className,
 	revealDelayStart,
+	completeRows,
 }: {
 	apps: readonly RegistryApp[]
 	statuses?: Map<string, AppStoreStatus>
@@ -31,11 +34,13 @@ export function AppGrid({
 	className?: string
 	/** When set, cards trickle in with a tiny per-card stagger from this delay */
 	revealDelayStart?: number
+	/** Hide the apps that would be left on an unfinished last row */
+	completeRows?: boolean
 }) {
 	const stagger = revealDelayStart !== undefined
 	const appStates = useAppCardStateMap(apps)
 	return (
-		<div className={cn(appGridClass, className)}>
+		<div className={cn(appGridClass, completeRows && appGridCompleteRowsClass, className)}>
 			{apps.map((app, index) => {
 				const actionState = appStates.get(app.id)
 				return (
@@ -46,7 +51,7 @@ export function AppGrid({
 						lifecycleState={actionState?.state}
 						progress={actionState?.progress}
 						to={makeTo?.(app)}
-						className={stagger ? storeRevealCardClass : undefined}
+						className={cn(stagger && storeRevealCardClass, completeRows && appCardCompleteRowsClass)}
 						style={stagger ? storeRevealDelay(revealDelayStart + Math.min(index * 12, 240)) : undefined}
 					/>
 				)
@@ -63,6 +68,7 @@ export function AppGridSection({
 	apps,
 	statuses,
 	makeTo,
+	completeRows,
 	children,
 }: {
 	overline?: string
@@ -71,12 +77,13 @@ export function AppGridSection({
 	apps: readonly RegistryApp[]
 	statuses?: Map<string, AppStoreStatus>
 	makeTo?: (app: RegistryApp) => string
+	completeRows?: boolean
 	children?: ReactNode
 }) {
 	return (
 		<section className={cn(storeCardPaddedClass, 'flex flex-col gap-4')}>
 			<SectionHeading overline={overline} title={title} rightChildren={rightChildren} />
-			<AppGrid apps={apps} statuses={statuses} makeTo={makeTo} />
+			<AppGrid apps={apps} statuses={statuses} makeTo={makeTo} completeRows={completeRows} />
 			{children}
 		</section>
 	)

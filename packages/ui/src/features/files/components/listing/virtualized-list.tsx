@@ -423,7 +423,8 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 
 	// On a touch screen in selection mode, a finger drawn across the items
 	// selects them as it goes (see useSwipeSelect): sideways from any item, as
-	// in Photos, or in any direction from a row's selection circle
+	// in Photos, or in any direction from a row's selection circle or from
+	// anywhere on an item it was held on for a moment
 	const isSelecting = useFilesStore((state) => state.isSelectingOnMobile)
 	useSwipeSelect({
 		scrollerRef: scrollAreaRef,

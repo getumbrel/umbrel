@@ -42,7 +42,13 @@ export function StorefrontSectionView({
 			return section.layout === 'rail' ? (
 				<AppRailSection overline={section.subtitle} title={section.title} apps={section.apps} statuses={statuses} />
 			) : (
-				<AppGridSection overline={section.subtitle} title={section.title} apps={section.apps} statuses={statuses} />
+				<AppGridSection
+					overline={section.subtitle}
+					title={section.title}
+					apps={section.apps}
+					statuses={statuses}
+					completeRows
+				/>
 			)
 		case 'category-feature':
 			return (
