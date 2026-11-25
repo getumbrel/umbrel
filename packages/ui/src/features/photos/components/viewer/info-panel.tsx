@@ -1,20 +1,30 @@
-import {Camera, MessageSquareText, X} from 'lucide-react'
-import {lazy, Suspense} from 'react'
+import {Camera, MessageSquareText, ScanFace, X} from 'lucide-react'
+import {lazy, Suspense, useCallback, useMemo, useRef} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {materialSurfaceClasses} from '@/components/ui/shared/material'
 import {useHomePath} from '@/features/files/hooks/use-home-path'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {LocationCard} from '@/features/photos/components/map/location-card'
+import {PersonAvatar} from '@/features/photos/components/people/person-avatar'
+import {PersonName} from '@/features/photos/components/people/person-name'
 import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {timeAgo} from '@/features/photos/components/sources/source-status'
-import {BASE_ROUTE_PATH, sectionPath, sourcePath} from '@/features/photos/constants'
+import type {FaceFocus} from '@/features/photos/components/viewer/face-outlines'
+import {DetectedText, Transcript} from '@/features/photos/components/viewer/item-insights'
+import {useRevealMatch} from '@/features/photos/components/viewer/reveal-match'
+import type {TextFocus} from '@/features/photos/components/viewer/text-regions'
+import {BASE_ROUTE_PATH, personPath, sectionPath, sourcePath} from '@/features/photos/constants'
 import type {ItemDetail} from '@/features/photos/hooks/use-items'
 import {usePhotoSource} from '@/features/photos/hooks/use-photo-sources'
+import {useItemInsights} from '@/features/photos/hooks/use-search'
 import {itemKindLabel} from '@/features/photos/utils/item-label'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
+import {snippetTerms} from '@/features/search/snippet'
+import type {SearchSnippetText} from '@/features/search/types'
 import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {capitalizeDate} from '@/utils/date-time'
@@ -35,11 +45,13 @@ function formatDuration(ms: number) {
 }
 
 // Everything about the item, the way a camera roll's inspector tells it:
-// when, then the file, then the camera and how it was set, then which albums
-// — each a way into that view of the library — and where the file came from.
-// (The "where" and "who" facts return with People/Locations, cut from v1.)
-// Motion is the caller's (it docks or slides this in); the panel itself is
-// still. As the phone's sheet (`sheet`, see InfoSheet) it rises from the
+// when, then the file, then the camera and how it was set, then what is in
+// it — the words read off it, what is said in it, who, where — then which
+// albums, each a way into that view of the library, and where the file came
+// from. What Search knows (the words, the speech, the place's name) arrives
+// on its own a moment after the rest and simply joins; a device without
+// smart search never shows those rows. Motion is the caller's (it docks or
+// slides this in); the panel itself is still. As the phone's sheet (`sheet`, see InfoSheet) it rises from the
 // bottom under a grabber, dragged rather than closed with a button — the
 // button stays for screen readers and keyboards, shown once focused — or, in
 // a short landscape window, stands at the right with its close button. The
@@ -53,6 +65,11 @@ export function InfoPanel({
 	panelRef,
 	scrollRef,
 	contentRef,
+	video = null,
+	matched,
+	onTextFocus,
+	faceFocus = null,
+	onFaceFocus,
 }: {
 	item: ItemDetail
 	// Whether it is out: the caller keeps it mounted when it is put away
@@ -62,8 +79,39 @@ export function InfoPanel({
 	panelRef?: React.Ref<HTMLElement>
 	scrollRef?: React.Ref<HTMLDivElement>
 	contentRef?: React.Ref<HTMLDivElement>
+	// The stage's player while the item is a video on it: the transcript
+	// follows it and seeks it
+	video?: HTMLVideoElement | null
+	// The words a search found this item by, when it is one of its results:
+	// they are pointed out where they are read or said
+	matched?: SearchSnippetText
+	// How the panel points at the picture's text on the stage (see
+	// TextHighlights). Absent where the stage can't draw on the picture.
+	onTextFocus?: (focus: TextFocus) => void
+	// Which faces the stage is outlining, and how the panel points at them:
+	// hovering a person (tapping their face, where there is no hover), or the
+	// People row's toggle for everyone. Absent where the stage can't outline
+	// (a video).
+	faceFocus?: FaceFocus
+	onFaceFocus?: (focus: FaceFocus) => void
 }) {
 	const {t, i18n} = useTranslation()
+	const isTouchDevice = useIsTouchDevice()
+	const {data: insights} = useItemInsights(item.id)
+	const matchedTerms = useMemo(() => snippetTerms(matched), [matched])
+	// Opened from a search, the panel shows what it matched (see useRevealMatch).
+	// The scroller is the sheet's to measure too (`scrollRef`).
+	const scrollerRef = useRef<HTMLDivElement | null>(null)
+	const setScroller = useCallback(
+		(element: HTMLDivElement | null) => {
+			scrollerRef.current = element
+			if (typeof scrollRef === 'function') scrollRef(element)
+			else if (scrollRef) scrollRef.current = element
+		},
+		[scrollRef],
+	)
+	useRevealMatch(scrollerRef, `${item.id}:${matchedTerms.join('|')}`, matchedTerms.length > 0)
+	const placeName = insights?.place && [insights.place.region, insights.place.country].filter(Boolean).join(', ')
 	const navigate = useNavigate()
 	const {revealItem, navigateToDirectory} = useFilesNavigate()
 	const utils = trpcReact.useUtils()
@@ -113,7 +161,7 @@ export function InfoPanel({
 			{/* The scroller and, inside it, the content at its natural height (what
 			    the sheet measures); the foot clears whatever floats over it */}
 			<div
-				ref={scrollRef}
+				ref={setScroller}
 				className={cn('umbrel-hide-scrollbar min-h-0 flex-1 overflow-y-auto', sheet && 'overscroll-contain')}
 			>
 				<div ref={contentRef} className='flex flex-col gap-4 px-5 pt-2 pb-[calc(1.25rem+var(--sheet-inset,0px))]'>
@@ -190,18 +238,150 @@ export function InfoPanel({
 						</div>
 					)}
 
-					{/* Where it was taken — and the way to every other photo taken
-					    around it */}
-					{item.location && (
+					{/* The words read off it, and what is said in it */}
+					{insights?.text && (
+						<DetectedText
+							key={item.id}
+							text={insights.text}
+							matched={matchedTerms}
+							quads={insights.textQuads}
+							onFocus={onTextFocus}
+						/>
+					)}
+					{item.kind === 'video' && insights?.transcript && insights.transcript.length > 0 && (
+						<Transcript transcript={insights.transcript} video={video} matched={matchedTerms} />
+					)}
+
+					{/* Who is in it: each a way to their photos, and — on a still — a way
+					    to point at their face: by hovering them, or where there is no
+					    hover by tapping their face (their name still opens their
+					    photos). Someone with no name yet can be given one right here. */}
+					{item.people.length > 0 && (
+						<Facts
+							label={t('photos-item.fact-people')}
+							action={
+								onFaceFocus && (
+									<button
+										type='button'
+										aria-pressed={faceFocus === 'all'}
+										onClick={() => onFaceFocus(faceFocus === 'all' ? null : 'all')}
+										className={cn(
+											'-my-1 flex h-6 items-center gap-1 rounded-full pr-2.5 pl-2 text-11 font-medium transition-colors',
+											faceFocus === 'all'
+												? 'bg-white/20 text-white'
+												: 'bg-white/8 text-white/70 hover:bg-white/14 hover:text-white',
+										)}
+									>
+										<ScanFace className='size-3.5' aria-hidden='true' />
+										{t('photos-item.show-faces')}
+									</button>
+								)
+							}
+						>
+							{item.people.map((person) => {
+								const name = person.name ?? t('photos-people.unnamed')
+								const pointedAt = faceFocus !== null && faceFocus !== 'all' && faceFocus.personId === person.id
+								const tapsToPoint = isTouchDevice && onFaceFocus !== undefined
+								// Their face as it is in this very picture
+								const face = (
+									<PersonAvatar
+										person={{
+											cover: {
+												itemId: item.id,
+												face: person.face,
+												width: item.width,
+												height: item.height,
+												tint: item.tint,
+											},
+										}}
+										size={20}
+									/>
+								)
+								return (
+									<span
+										key={person.id}
+										// Leaving a chip hands the stage back to the toggle's state, never
+										// past it. Touch has no leaving: a tap would light the face and
+										// put it out again in one gesture.
+										onPointerEnter={() => !isTouchDevice && faceFocus !== 'all' && onFaceFocus?.({personId: person.id})}
+										onPointerLeave={() => !isTouchDevice && faceFocus !== 'all' && onFaceFocus?.(null)}
+										className={cn(
+											'flex max-w-full min-w-0 items-center rounded-full bg-white/8 text-12 text-white/90 transition-colors hover:bg-white/14',
+											pointedAt && tapsToPoint && 'bg-white/14',
+										)}
+									>
+										{tapsToPoint ? (
+											<>
+												<button
+													type='button'
+													aria-label={t('photos-item.show-face', {name})}
+													aria-pressed={pointedAt}
+													onClick={() => onFaceFocus(pointedAt ? null : {personId: person.id})}
+													className={cn(
+														'shrink-0 rounded-full p-[3px] outline-hidden transition-shadow',
+														pointedAt && 'shadow-[inset_0_0_0_1.5px_rgb(255_255_255/0.9)]',
+													)}
+												>
+													{face}
+												</button>
+												{person.name && (
+													<button
+														type='button'
+														onClick={() => navigate(personPath(person.id))}
+														className='min-w-0 truncate rounded-full py-[3px] pr-2.5 pl-1 outline-hidden'
+													>
+														{person.name}
+													</button>
+												)}
+											</>
+										) : (
+											<button
+												type='button'
+												aria-label={name}
+												onClick={() => navigate(personPath(person.id))}
+												className={cn(
+													'flex min-w-0 items-center gap-1.5 rounded-full py-[3px] pl-[3px] outline-hidden',
+													person.name ? 'pr-2.5' : 'pr-0',
+												)}
+											>
+												{face}
+												{person.name && <span className='truncate'>{person.name}</span>}
+											</button>
+										)}
+										{!person.name && (
+											// As wide as its invitation, so starting to type moves nothing
+											<PersonName
+												person={person}
+												align='left'
+												className='mr-1 w-[4.75rem] text-left text-12 leading-6'
+											/>
+										)}
+									</span>
+								)
+							})}
+						</Facts>
+					)}
+
+					{/* Where it was taken: the place by name when Search knows it, over
+					    the way to every other photo taken around it */}
+					{(item.location || insights?.place) && (
 						<Facts label={t('photos-item.fact-place')}>
-							<LocationCard
-								item={item}
-								lat={item.location.lat}
-								lng={item.location.lng}
-								altitude={item.location.altitude}
-								showing={showing}
-								onOpen={() => navigate(`${sectionPath('map')}?lat=${item.location!.lat}&lng=${item.location!.lng}`)}
-							/>
+							{insights?.place && (
+								<p className='mb-0.5 w-full min-w-0 truncate text-13 font-medium text-white/90'>
+									{insights.place.name}
+									{placeName && <span className='font-normal text-white/50'> · {placeName}</span>}
+								</p>
+							)}
+							{item.location && (
+								<LocationCard
+									item={item}
+									lat={item.location.lat}
+									lng={item.location.lng}
+									altitude={item.location.altitude}
+									showing={showing}
+									onOpen={() => navigate(`${sectionPath('map')}?lat=${item.location!.lat}&lng=${item.location!.lng}`)}
+								/>
+							)}
 						</Facts>
 					)}
 
@@ -265,10 +445,13 @@ export function InfoPanel({
 
 const cardClass = tw`rounded-xl bg-white/6 p-3`
 
-function Facts({label, children}: {label: string; children: React.ReactNode}) {
+function Facts({label, action, children}: {label: string; action?: React.ReactNode; children: React.ReactNode}) {
 	return (
 		<div>
-			<p className='mb-1.5 text-12 text-white/50'>{label}</p>
+			<div className='mb-1.5 flex items-center justify-between gap-2'>
+				<p className='text-12 text-white/50'>{label}</p>
+				{action}
+			</div>
 			<div className='flex flex-wrap gap-1.5'>{children}</div>
 		</div>
 	)

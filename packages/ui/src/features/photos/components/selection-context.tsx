@@ -11,7 +11,12 @@ import {
 } from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
 
-import {BASE_ROUTE_PATH} from '@/features/photos/constants'
+import {BASE_ROUTE_PATH, personPath} from '@/features/photos/constants'
+
+// What a cover is being chosen for: an album's face, or a person's
+export type CoverTarget = {kind: 'album' | 'person'; id: string}
+const coverPagePath = ({kind, id}: CoverTarget) =>
+	kind === 'album' ? `${BASE_ROUTE_PATH}/albums/${id}` : personPath(id)
 
 type PhotosSelection = {
 	// The selected items. A new set on every change, so a consumer can compare
@@ -48,15 +53,15 @@ type PhotosSelection = {
 	// the whole library.
 	pickingFor: string | undefined
 	pickFor: (albumId: string) => void
-	// The album a cover is being chosen for, while one is: selection mode on
-	// the album's own page where the first item chosen becomes the cover (a
-	// cover must be one of the album's items, so leaving the page cancels).
-	// While it's on, the selection itself is inert — nothing accumulates.
-	coveringFor: string | undefined
-	coverFor: (albumId: string) => void
-	// Ends cover mode after a choice. When `coverFor` navigated to the album's
-	// page (the albums grid, another view's sidebar card), the choice returns
-	// the user where they came from; choosing from the album's own page stays.
+	// The album or person a cover is being chosen for, while one is: selection
+	// mode on its own page where the first item chosen becomes the cover (a
+	// cover must be one of its items, so leaving the page cancels). While it's
+	// on, the selection itself is inert — nothing accumulates.
+	coveringFor: CoverTarget | undefined
+	coverFor: (target: CoverTarget) => void
+	// Ends cover mode after a choice. When `coverFor` navigated to the page
+	// (the albums or people grid, another view's sidebar card), the choice
+	// returns the user where they came from; choosing from the page itself stays.
 	coverChosen: () => void
 }
 
@@ -83,13 +88,13 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 		setSelectingAll(false)
 	}, [])
 	const [pickingFor, setPickingFor] = useState<string>()
-	const [coveringFor, setCoveringFor] = useState<string>()
+	const [coveringFor, setCoveringFor] = useState<CoverTarget>()
 	// Where `coverFor` navigated from, when it did: a chosen cover returns
 	// there. Cancelling stays put, and leaving the page cancels instead.
 	const coveringFrom = useRef<string>(undefined)
 	// Read by the otherwise-stable callbacks, so entering cover mode doesn't
 	// change their identity for every consumer that lists them as deps
-	const covering = useRef<string>(undefined)
+	const covering = useRef<CoverTarget>(undefined)
 	useLayoutEffect(() => {
 		covering.current = coveringFor
 	}, [coveringFor])
@@ -113,13 +118,13 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 	// can run between the two, when the pathname is still the old page's.
 	// Which album arrived, not whether: an arrival for album A must not count
 	// against a covering just switched to album B mid-navigation.
-	const coveringArrived = useRef<string>(undefined)
+	const coveringArrived = useRef<CoverTarget>(undefined)
 	useEffect(() => {
 		if (!coveringFor) {
 			coveringArrived.current = undefined
 			return
 		}
-		if (pathname === `${BASE_ROUTE_PATH}/albums/${coveringFor}`) coveringArrived.current = coveringFor
+		if (pathname === coverPagePath(coveringFor)) coveringArrived.current = coveringFor
 		else if (coveringArrived.current === coveringFor) {
 			coveringArrived.current = undefined
 			coveringFrom.current = undefined
@@ -148,15 +153,15 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 		[navigate, stopAll],
 	)
 	const coverFor = useCallback(
-		(albumId: string) => {
+		(target: CoverTarget) => {
 			stopAll()
 			setIds(EMPTY)
 			setExplicit(false)
 			setPickingFor(undefined)
-			setCoveringFor(albumId)
-			// Already on the album's page (its own sidebar card): navigating
+			setCoveringFor(target)
+			// Already on the page (an album's own sidebar card): navigating
 			// again would only push a dead history entry
-			const path = `${BASE_ROUTE_PATH}/albums/${albumId}`
+			const path = coverPagePath(target)
 			coveringFrom.current = pathname !== path ? pathname : undefined
 			if (pathname !== path) navigate(path)
 		},

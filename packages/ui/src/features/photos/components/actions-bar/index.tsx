@@ -1,4 +1,4 @@
-import {Plus} from 'lucide-react'
+import {CircleCheck, Plus} from 'lucide-react'
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -12,20 +12,23 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
 import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
 import {MobileActions} from '@/features/photos/components/actions-bar/mobile-actions'
+import {PeopleSelectionActions} from '@/features/photos/components/actions-bar/people-selection-actions'
 import {PickingActions} from '@/features/photos/components/actions-bar/picking-actions'
 import {SelectionActions} from '@/features/photos/components/actions-bar/selection-actions'
 import {UploadButton} from '@/features/photos/components/actions-bar/upload-button'
 import {useBarRoute} from '@/features/photos/components/actions-bar/use-bar-route'
 import {ViewLine} from '@/features/photos/components/actions-bar/view-line'
 import {ZoomSlider} from '@/features/photos/components/actions-bar/zoom-slider'
+import {useListing} from '@/features/photos/components/listing/use-listing'
 import {MobileSearch, SearchPill, useSearchEngaged} from '@/features/photos/components/search'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {SourceActions} from '@/features/photos/components/sources/source-actions'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import type {CollectionSection} from '@/features/photos/constants'
 import {useAlbums} from '@/features/photos/hooks/use-library'
+import {usePeople} from '@/features/photos/hooks/use-people'
 import {usePhotoSources} from '@/features/photos/hooks/use-photo-sources'
-import {useIsMobile, useIsTablet} from '@/hooks/use-is-mobile'
+import {useIsMobile, useIsPhone, useIsTablet} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
 import {touchTargetClass} from '@/utils/element-classes'
@@ -38,8 +41,9 @@ import {tw} from '@/utils/tw'
 // pull-up (ListingSurface's BAR_TOP is the other half of that sum). What it
 // offers follows the route: timeline pages get the timeline zoom, grid zoom
 // and upload, a source's page its Import now / Manage, an album's its Add;
-// Albums gets "Create album", Sources "Add source"; Deleted only what every
-// page has, search. Zoom and search live in the view
+// Albums gets "Create album", People "Select", Sources "Add source"; Deleted
+// only what every page has, search. A ranked search's results have no dates
+// to group by, so the grouping steps aside while one is up. Zoom and search live in the view
 // context so the listing reacts to them. Deleted additionally offers a
 // media-only permanent purge of Trash. On phones the page's controls sit
 // in the title row instead (MobileActions), leaving this row to the date. A
@@ -48,7 +52,8 @@ import {tw} from '@/utils/tw'
 // opens in their place.
 //
 // While items are selected the bar is the selection's: how many, and what
-// can be done with them (SelectionActions) in place of the page's controls.
+// can be done with them (SelectionActions) in place of the page's controls —
+// on the People page, people (PeopleSelectionActions).
 // While they are being picked for an album (from its Add button, or a new
 // album's dialog) the bar keeps the timeline's zoom — it is for browsing to
 // the right items — with Add and Cancel (PickingActions) in place of the
@@ -82,6 +87,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	// A tablet's search has this row: the field and its Cancel stand where the
 	// page's buttons were (a phone's takes the title row: see PhotosLayout)
 	const isTablet = useIsTablet()
+	const isPhone = useIsPhone()
 	const searchingHere = isTablet && searchEngaged
 	// A phone's grid zooms under the fingers — two columns to six in one
 	// pinch — so the − / + steps would only be a smaller, slower copy of the
@@ -89,7 +95,9 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	// width has a mouse, and keeps them.
 	const pinchZooms = useIsTouchDevice() && isMobile
 	const selection = usePhotosSelection()
-	const {albumId, sourceId} = useParams()
+	const {albumId, sourceId, personId} = useParams()
+	// Dates group a timeline; a ranked search's results are in order of relevance
+	const ranked = useListing().mode === 'ranked'
 	// Below the desktop layout the grouping is in the bar only where the bar
 	// can hold it whole beside the longest date it may have to show, a day's
 	// ("Wed, September 23, 2026"), whatever the grid is grouped by: a control
@@ -117,6 +125,8 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 		exit: 'exit',
 	})
 	const {collection, isSources, isMap, inDeleted, isTimeline} = useBarRoute()
+	// Nobody to select on an empty People page
+	const hasPeople = usePeople({enabled: collection === 'people'}).people.length > 0
 	const timelineFace = isTimeline && !selection.coveringFor && !selection.pickingFor && !selection.selecting
 	const createAlbum = () => navigate(linkToDialog('photos-create-album'))
 	const addSource = () => navigate(linkToDialog('photos-add-source'))
@@ -132,8 +142,19 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			// answers across the whole 44px of the sheet's corner, so the row ends
 			// short of that square, as a phone's does on its side: by 36px beside
 			// the sheet's 12px of padding, and from md by 8px beside its 40px. Its
-			// own width decides what it has room for (the grouping)
-			className='umbrel-photos-actions @container/bar relative z-10 flex h-11 w-full min-w-0 items-center gap-3 lg:-mt-[86px] lg:pr-5 xl:pr-0 phone-side:pr-9 tablet:-mt-14 tablet:ml-[184px] tablet:w-auto tablet:max-md:pr-9 tablet:md:pr-2'
+			// own width decides what it has room for (the grouping). Below the
+			// desktop layout a search's filters have a line of their own under the
+			// count, and the bar grows by it and does not let it rise into the
+			// search field above.
+			// The bar only comes up into the title's row where that row is not a
+			// phone's, whose search field takes the whole of it: the one answer
+			// that puts the field there (see TitleRow) keeps the bar out, so the
+			// two cannot be drawn over each other whatever CSS makes of the window
+			className={cn(
+				'umbrel-photos-actions @container/bar relative z-10 flex min-h-11 w-full min-w-0 items-center gap-3 phone-side:pr-9',
+				!isPhone &&
+					'lg:-mt-[86px] lg:h-11 lg:pr-5 xl:pr-0 tablet:-mt-14 tablet:ml-[184px] tablet:w-auto tablet:max-md:pr-9 tablet:md:pr-2',
+			)}
 			aria-label={t('photos-actions.navigation')}
 		>
 			{onOpenSidebar && (
@@ -153,7 +174,13 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			    many are — over a line naming the view and its size, which stays
 			    put. The block sits on the bar's bottom edge, as close above the
 			    first row as the grid's own headers are above theirs. */}
-			{collection ? (
+			{/* (People are not what is being selected while photos are gathered
+			    for an album, which follows the user here, or a cover is chosen) */}
+			{collection === 'people' && selection.selecting && !selection.pickingFor && !selection.coveringFor ? (
+				<h2 className={countClass}>
+					<SelectionCount count={selection.ids.size} none={t('photos-people.select-none')} />
+				</h2>
+			) : collection ? (
 				<CollectionCount kind={collection} />
 			) : isSources ? (
 				<SourcesCount />
@@ -162,8 +189,13 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 					className={cn(
 						'flex min-w-0 flex-col self-end',
 						// Beside a tablet's search the field has the say: this block
-						// gives first, down to the room a month's date needs
-						searchingHere && 'min-w-36 shrink-[999]',
+						// gives first, down to the room its line needs for the view's
+						// name and the count whole in the longer languages, and from
+						// md, where the row can spare it, for the start of what Search
+						// has to say after them as well. That is the same whether or
+						// not it has anything to say, so the field keeps its width as
+						// those words come and go
+						searchingHere && 'min-w-40 shrink-[999] md:min-w-52',
 						// Over the map the title stands on the map itself, names and all,
 						// under a light shade: its own shadow is deeper there
 						isMap ? mapTitleShadowClass : titleShadowClass,
@@ -177,7 +209,9 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 						<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 							{selection.coveringFor ? (
 								<motion.h2 key='covering' className={titleClass} {...faceProps(titleRoll)}>
-									{t('photos-album.pick-cover')}
+									{selection.coveringFor.kind === 'person'
+										? t('photos-people.pick-cover')
+										: t('photos-album.pick-cover')}
 								</motion.h2>
 							) : selection.selecting ? (
 								<motion.h2 key='selection' className={titleClass} {...faceProps(titleRoll)}>
@@ -203,16 +237,22 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			    timeline's own face (from md, where it has the grouping) this side
 			    takes the squeeze first: the grouping scrolls so the date stays whole.
 			    A tablet shows the grouping only where the date has room beside it
-			    (see below), so there nothing is squeezed */}
+			    (see below), so there nothing is squeezed. While a tablet's search
+			    has this side it is the field's alone to size, at every width a
+			    tablet has: giving as the title's block does, it gave the block
+			    the width of whatever Search had to say after the count, and the
+			    field changed width as those words came and went */}
 			<div
 				className={cn(
 					'relative -my-1.5 ml-auto flex items-center gap-2 overflow-x-visible overflow-y-clip py-1.5',
 					selection.pickingFor && 'min-w-0',
-					timelineFace && 'md:min-w-0 md:shrink-[999]',
+					timelineFace && !searchingHere && 'md:min-w-0 md:shrink-[999]',
 					searchEngaged && 'lg:shrink-0',
 					timelineFace && !searchingHere && 'tablet:shrink-0',
-					// A search field is as wide as the bar can spare, and no wider than it needs
-					searchingHere && 'min-w-0 shrink basis-[380px]',
+					// A search field is as wide as the bar can spare, and no wider than it
+					// needs. It keeps to the title's row, level with the sheet's close
+					// button, when the filters' line makes the bar taller
+					searchingHere && 'min-w-0 shrink basis-[380px] self-start',
 				)}
 			>
 				<AnimatePresence mode='popLayout' initial={false} custom={direction}>
@@ -228,7 +268,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 						</motion.div>
 					) : selection.selecting ? (
 						<motion.div key='selection' className='flex items-center gap-2' {...faceProps(pillsRoll)}>
-							<SelectionActions inDeleted={inDeleted} />
+							{collection === 'people' ? <PeopleSelectionActions /> : <SelectionActions inDeleted={inDeleted} />}
 						</motion.div>
 					) : searchingHere ? (
 						<motion.div key='search' className='flex w-full min-w-0 items-center' {...faceProps(pillsRoll)}>
@@ -243,7 +283,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 							    row is this one and a phone on its side has none, so the
 							    controls come here */}
 							<div className='flex min-w-0 items-center gap-2 lg:hidden'>
-								{isTimeline && (
+								{isTimeline && !ranked && (
 									<div className={cn('hidden min-w-0', groupingRoomClass)}>
 										<GroupingPills />
 									</div>
@@ -258,8 +298,13 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 								    its tiles go together — and everything returns when the
 								    search is cleared */}
 								<CollapseAside hidden={searchEngaged}>
-									{isTimeline && <GroupingPills />}
+									{isTimeline && !ranked && <GroupingPills />}
 									{inDeleted && <DeletedActions />}
+									{collection === 'people' && hasPeople && (
+										<PillButton icon={CircleCheck} onClick={selection.start}>
+											{t('photos-selection.select')}
+										</PillButton>
+									)}
 									{collection === 'albums' && (
 										<PillButton icon={Plus} onClick={createAlbum}>
 											{t('photos-actions.create-album')}
@@ -280,7 +325,8 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 													{t('photos-album.add')}
 												</PillButton>
 											)}
-											{sourceId ? <SourceActions sourceId={sourceId} /> : <UploadButton />}
+											{/* A person's page is made by recognition, not by uploading into it */}
+											{sourceId ? <SourceActions sourceId={sourceId} /> : personId ? null : <UploadButton />}
 										</CollapseAside>
 									</>
 								)}
@@ -393,15 +439,15 @@ function SectionTitle({section}: {section: string | null}) {
 }
 
 // "3 selected", its number rolling as the selection changes; "Select items"
-// until there is one. While a Select all is still loading the rest of the
-// view (`gathering`) the number is only what has arrived so far, and says so
-// with a spinner beside it until it rolls to the whole.
-function SelectionCount({count, gathering}: {count: number; gathering: boolean}) {
+// until there is one (or what `none` says to pick). While a Select all is still
+// loading the rest of the view (`gathering`) the number is only what has arrived
+// so far, and says so with a spinner beside it until it rolls to the whole.
+function SelectionCount({count, gathering = false, none}: {count: number; gathering?: boolean; none?: string}) {
 	const {t, i18n} = useTranslation()
 	if (count === 0)
 		return (
 			<span key='none' className={cn('block truncate', riseClass)}>
-				{t('photos-selection.none')}
+				{none ?? t('photos-selection.none')}
 			</span>
 		)
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
@@ -433,16 +479,22 @@ function SelectionCount({count, gathering}: {count: number; gathering: boolean})
 // whitespace-pre, not truncate, so the space beside the number is kept
 const countWordsClass = tw`min-w-0 overflow-hidden text-ellipsis whitespace-pre`
 
-// "7 albums" — nothing until the list is known. (People and Locations counts
-// — photos-actions.people-count / location-count — return with those pages.)
+// "7 albums", "12 people" — nothing until the list is known, and nothing over
+// an empty People page, whose own words say it better. (The Locations count
+// — photos-actions.location-count — returns with that page.)
 function CollectionCount({kind}: {kind: CollectionSection}) {
 	const {t, i18n} = useTranslation()
 	const albums = useAlbums({enabled: kind === 'albums'})
-	const count = albums.data?.length
-	if (count === undefined) return null
+	const people = usePeople({enabled: kind === 'people'})
+	const count = kind === 'albums' ? albums.data?.length : people.isLoading ? undefined : people.people.length
+	if (count === undefined || (kind === 'people' && count === 0)) return null
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
-	// "0 albums" like "0 sources": the empty screen below says there are none yet
-	return <h2 className={countClass}>{t('photos-actions.album-count', {count, formattedCount})}</h2>
+	const label =
+		kind === 'people'
+			? t('photos-actions.people-count', {count, formattedCount})
+			: // "0 albums" like "0 sources": the empty screen below says there are none yet
+				t('photos-actions.album-count', {count, formattedCount})
+	return <h2 className={countClass}>{label}</h2>
 }
 
 // "5 sources"

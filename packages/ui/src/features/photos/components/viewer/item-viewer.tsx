@@ -1,7 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {Album, Download, Heart, Info, Plus, RotateCcw, Trash2, X} from 'lucide-react'
 import {useReducedMotion} from 'motion/react'
-import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
@@ -17,11 +17,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {preventDialogDismissForToasts} from '@/components/ui/shared/dialog'
 import {toast} from '@/components/ui/toast'
+import {VideoPlayer} from '@/components/video-player'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
-import {useRouteFilter} from '@/features/photos/components/listing'
 import {createTileLift} from '@/features/photos/components/listing/tile-lift'
+import {useListing} from '@/features/photos/components/listing/use-listing'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {usePhotosView} from '@/features/photos/components/view-context'
+import {FaceOutlines, type FaceFocus} from '@/features/photos/components/viewer/face-outlines'
 import {Filmstrip, FilmstripPlaceholder} from '@/features/photos/components/viewer/filmstrip'
 import {InfoPanel} from '@/features/photos/components/viewer/info-panel'
 import {InfoSheet, useInfoSheet} from '@/features/photos/components/viewer/info-sheet'
@@ -31,6 +33,8 @@ import {useNeighborPrefetch} from '@/features/photos/components/viewer/neighbor-
 import {usePictureFlight, type FlightStart} from '@/features/photos/components/viewer/picture-flight'
 import {useSeedRenditions} from '@/features/photos/components/viewer/seed-rendition'
 import {PANE_GAP, useStageGestures} from '@/features/photos/components/viewer/stage-gestures'
+import {TextHighlights} from '@/features/photos/components/viewer/text-highlights'
+import {textLines, type TextFocus} from '@/features/photos/components/viewer/text-regions'
 import {createStripDrive} from '@/features/photos/components/viewer/viewer-channels'
 import {useViewerItemId} from '@/features/photos/components/viewer/viewer-location'
 import {
@@ -39,13 +43,15 @@ import {
 	useItem,
 	useItemActions,
 	useItemNeighbors,
-	useItems,
 	type Item,
 	type ThumbSize,
 } from '@/features/photos/hooks/use-items'
 import {useAlbumActions, useAlbums} from '@/features/photos/hooks/use-library'
+import {useItemInsights} from '@/features/photos/hooks/use-search'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
+import {snippetTerms} from '@/features/search/snippet'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {useSharedAuthorizedHttpUrl} from '@/modules/auth/http-url-authorizer'
@@ -130,27 +136,49 @@ const STAGE_MARGIN = 24
 // map marker showing the item is lifted while the picture is away from it
 const ungriddedLift = createTileLift()
 
-// The lightbox. Shares the timeline's item query, so the filmstrip and ←/→
-// walk the same list the user was looking at and extend it page by page;
-// when the item isn't in that list (a deep link), neighbours come from the API.
+// The lightbox. Shares the listing on screen (see useListing), so the
+// filmstrip and ←/→ walk the same list the user was looking at — a timeline
+// extended page by page, or a search's results in their ranked order — and
+// when the item isn't in a timeline's list (a deep link), neighbours come
+// from the API. A ranked list has no neighbours but its own: an item opened
+// before its search has answered (a link from ⌘K) simply stands alone for
+// that moment, rather than stepping off into the calendar.
+//
+// `photos-item-t=<ms>` beside the id opens a video at that moment — a search
+// result that matched something said or seen partway through.
 export function ItemViewer() {
 	const dialogProps = useDialogOpenProps('photos-item')
 	// The item on stage: the URL's on opening, the viewer's own as it steps
 	// (written back to the URL once it rests, see useViewerItemId)
 	const {currentId, goTo, commitUrl} = useViewerItemId(dialogProps.open)
+	const {params, remove} = useQueryParams()
+	// Where to start the video, taken out of the address bar as soon as it is
+	// read — like a handed-over search, so Back and a reload don't replay it —
+	// and spent on the player's first metadata (see the <video> below). It
+	// waits its turn behind `q`, which leaves the same way: two rewrites of
+	// the same URL in one commit would undo each other.
+	const [startAt, setStartAt] = useState<{id: string; ms: number}>()
+	const handedStart = params.get('photos-item-t')
+	const handedSearch = params.has('q')
+	useEffect(() => {
+		if (handedStart === null || handedSearch) return
+		const ms = Number(handedStart)
+		if (currentId && Number.isFinite(ms) && ms > 0) setStartAt({id: currentId, ms})
+		remove('photos-item-t', {replace: true})
+	}, [handedStart, handedSearch, currentId])
 	const {t, i18n} = useTranslation()
 	const reduceMotion = useReducedMotion() ?? false
-	const filter = useRouteFilter()
+	const {mode, filter, items, hasMore, before, loadMore, pending, snippets} = useListing({enabled: dialogProps.open})
 	const inDeleted = filter.deleted === true
 	const confirm = useConfirmation()
-	const {items, hasMore, before, loadMore} = useItems(filter, {enabled: dialogProps.open})
 	const {data: item} = useItem(currentId, inDeleted)
 	const index = items.findIndex((candidate) => candidate.id === currentId)
 	// The list has no neighbour to give when it doesn't hold the item — or
 	// holds it first while being the timeline's tail from a jump (see
 	// useItems), with the rest of the timeline above it
+	// A ranked list has no neighbours but its own (see above)
 	const {data: apiNeighbors} = useItemNeighbors(
-		index === -1 || (index === 0 && before !== undefined) ? currentId : undefined,
+		mode === 'timeline' && !pending && (index === -1 || (index === 0 && before !== undefined)) ? currentId : undefined,
 		filter,
 	)
 	const prevId = index > 0 ? items[index - 1]!.id : apiNeighbors?.prevId
@@ -170,6 +198,19 @@ export function ItemViewer() {
 	// … and is only built once it has been asked for in this session
 	const [infoUsed, setInfoUsed] = useState(false)
 	if (showInfo && !infoUsed) setInfoUsed(true)
+	// The stage's player, for the inspector's transcript to follow and seek
+	const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null)
+	// Whose face the inspector is pointing at (see FaceOutlines): a matter of
+	// one picture, so it starts over with each
+	const [faceFocus, setFaceFocus] = useState<FaceFocus>(null)
+	const [faceFocusId, setFaceFocusId] = useState(currentId)
+	// … and which of its text (see TextHighlights), likewise
+	const [textFocus, setTextFocus] = useState<TextFocus>(null)
+	if (faceFocusId !== currentId) {
+		setFaceFocusId(currentId)
+		setFaceFocus(null)
+		setTextFocus(null)
+	}
 	// Opening or closing the inspector by hand is the preference the next
 	// session opens under (see readInfoOpen)
 	const setInfoByHand = useCallback(
@@ -291,6 +332,32 @@ export function ItemViewer() {
 		}
 	}, [measureUrl])
 	const aspect = measured && (measured.url === measureUrl || flight.arrived) ? measured.aspect : undefined
+	// Where the picture's text is in it, for pointing at on the stage: asked
+	// for when there is something to point with — a search that found the
+	// picture by its words, or the inspector, which asks for the same thing
+	// and shares the answer. A video's text is wherever its frames put it,
+	// and a live photo's still is played over.
+	const matched = item ? snippets.get(item.id) : undefined
+	const matchedTerms = useMemo(() => snippetTerms(matched), [matched])
+	const pointsAtText = item !== undefined && !isVideo && item.subKind !== 'live' && (showInfo || matched !== undefined)
+	// A video's are asked for too: what is said in it is its captions
+	const {data: insights} = useItemInsights(pointsAtText || (item !== undefined && isVideo) ? item?.id : undefined)
+	const textLinesOnStage = useMemo(() => {
+		const lines = insights?.text && insights.textQuads ? textLines(insights.text, insights.textQuads) : undefined
+		return lines?.some((line) => line.quad) ? lines : undefined
+	}, [insights])
+	// Open where the search matched: seek before the first frame is shown,
+	// and autoplay carries on from there
+	useEffect(() => {
+		if (!videoEl || !item || startAt?.id !== item.id) return
+		const seek = () => {
+			videoEl.currentTime = startAt.ms / 1000
+			setStartAt(undefined)
+		}
+		if (videoEl.readyState >= HTMLMediaElement.HAVE_METADATA) return seek()
+		videoEl.addEventListener('loadedmetadata', seek, {once: true})
+		return () => videoEl.removeEventListener('loadedmetadata', seek)
+	}, [videoEl, item, startAt, setStartAt])
 	const [closing, setClosing] = useState(false)
 	const closingRef = useRef(false)
 	// The inspector dock's box, pinned for the length of the close. The flight
@@ -471,7 +538,16 @@ export function ItemViewer() {
 	useEffect(() => {
 		if (!dialogProps.open) return
 		const onKey = (e: KeyboardEvent) => {
-			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+			if (e.metaKey || e.ctrlKey || e.altKey) return
+			// A key that is somewhere's own stays there: typed into a field, an
+			// arrow that moves a slider of the player's, a menu's arrows and the
+			// letters that find its rows — stepping under an open menu would hand
+			// what is picked from it to another picture
+			const own = 'input, textarea, select, [contenteditable], [role="slider"], [role="menu"]'
+			if (e.target instanceof Element && e.target.closest(own)) return
+			// … and so does every key while a video fills the screen, which a
+			// step would take it off
+			if (document.fullscreenElement) return
 			if (e.key === 'ArrowLeft') goTo(prevId)
 			else if (e.key === 'ArrowRight') goTo(nextId)
 			else if (e.key === 'i') setInfoByHand(!showInfo)
@@ -651,7 +727,13 @@ export function ItemViewer() {
 				<DialogPrimitive.Overlay className='fixed inset-0 z-50' />
 				{/* No animation of its own (see the flight): the layers inside make their own entrances */}
 				<DialogPrimitive.Content
-					onOpenAutoFocus={(e) => e.preventDefault()}
+					// The focus comes to the lightbox itself rather than to a button
+					// in it. Left on the tile that was clicked, Space would press
+					// that tile again instead of playing or pausing a video.
+					onOpenAutoFocus={(e) => {
+						e.preventDefault()
+						if (e.currentTarget instanceof HTMLElement) e.currentTarget.focus({preventScroll: true})
+					}}
 					onPointerDownOutside={preventDialogDismissForToasts}
 					className='fixed inset-0 z-50 h-dvh w-screen ps-(--safe-left) pe-(--safe-right) pt-(--safe-top) outline-hidden'
 				>
@@ -747,14 +829,18 @@ export function ItemViewer() {
 												(restedId === item.id || warm(item.id)) &&
 												(isVideo ? (
 													videoUrl && (
-														<video
+														// The same player as Files (see VideoPlayer), captions and all.
+														// The arrow keys step between items here, so the player
+														// answers the rest (space, C, F, M) and leaves it those.
+														<VideoPlayer
 															key={item.id}
 															src={videoUrl}
 															poster={thumbnailUrl}
-															controls
-															autoPlay
-															playsInline
-															className='absolute inset-0 h-full w-full'
+															transcript={insights?.transcript}
+															keys='media'
+															controls={!closing}
+															onVideo={setVideoEl}
+															className='absolute inset-0'
 														/>
 													)
 												) : restingUrl && (!closing || loadedId === item.id) ? (
@@ -795,6 +881,22 @@ export function ItemViewer() {
 											    still it will land as. */}
 											{item && item.subKind === 'live' && flight.arrived && restedId === item.id && !closing && (
 												<LivePhoto id={item.id} autoPlay={!reduceMotion} />
+											)}
+											{/* The faces the inspector points at, on a still that has
+											    landed — a video's faces are wherever its frames put them */}
+											{item && !isVideo && flight.arrived && !closing && item.people.length > 0 && (
+												<FaceOutlines people={item.people} focus={showInfo ? faceFocus : null} />
+											)}
+											{/* … and its text: the words a search found it by, and the
+											    lines the inspector points at */}
+											{item && pointsAtText && textLinesOnStage && flight.arrived && !closing && (
+												<TextHighlights
+													key={`text:${item.id}`}
+													lines={textLinesOnStage}
+													aspect={aspect}
+													matched={matchedTerms}
+													focus={showInfo ? textFocus : null}
+												/>
 											)}
 										</div>
 									</div>
@@ -869,7 +971,16 @@ export function ItemViewer() {
 										style={{width: INSPECTOR_WIDTH + STAGE_MARGIN}}
 									>
 										{item && infoUsed && (
-											<InfoPanel item={item} showing={showInfo} onClose={() => setInfoByHand(false)} />
+											<InfoPanel
+												item={item}
+												showing={showInfo}
+												onClose={() => setInfoByHand(false)}
+												video={isVideo ? videoEl : null}
+												matched={matched}
+												onTextFocus={textLinesOnStage ? setTextFocus : undefined}
+												faceFocus={faceFocus}
+												onFaceFocus={isVideo ? undefined : setFaceFocus}
+											/>
 										)}
 									</div>
 								</aside>
@@ -964,6 +1075,8 @@ export function ItemViewer() {
 								built={infoUsed}
 								closing={closing}
 								onClose={() => setInfoByHand(false)}
+								video={isVideo ? videoEl : null}
+								matched={matched}
 							/>
 						)}
 					</div>

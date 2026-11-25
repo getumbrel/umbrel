@@ -850,6 +850,8 @@ export default class Backups {
 		ignoreFileContents.push('app-stores')
 		ignoreFileContents.push(this.#umbreld.files.thumbnails.thumbnailDirectory)
 		ignoreFileContents.push('file-index')
+		ignoreFileContents.push('embeddings')
+		ignoreFileContents.push('models')
 
 		// Ignore kopia's own cache and logs otherwise backups include the backup cache
 		ignoreFileContents.push('kopia')

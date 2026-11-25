@@ -8,11 +8,21 @@ import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
 import {migratePhotos} from '../photos/migrations.ts'
+import type {PeopleChange} from '../photos/people.ts'
+import type {SearchRead, SearchReadResult} from '../search/types.ts'
+import {placeIn, places} from './places.ts'
 import PhotosRepository from '../photos/repository.ts'
 import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index/reader-pool.ts'
 import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.ts'
 import {readDatabase, type ReadSql} from './file-index/read-database.ts'
-import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
+import {
+	BACKGROUND_DATABASE_PRIORITY,
+	SCAN_DATABASE_PRIORITY,
+	ON_DEMAND_DATABASE_PRIORITY,
+} from './file-index/database-priority.ts'
+import {embeddingsDatabasePath} from './embeddings-store.ts'
+import {readableKind} from './readable.ts'
+import {embeddingsAvailable} from './embeddings.ts'
 import {
 	supportsPhotos,
 	type PhotoBackupCloudIdentity,
@@ -77,6 +87,20 @@ const PHOTOS_ONLY_THUMBNAIL_VARIANT_SET = new Set<ThumbnailVariant>(
 	PHOTOS_THUMBNAIL_VARIANTS.filter((variant) => variant !== FILES_THUMBNAIL_VARIANT),
 )
 const PHOTOS_INDEXING_PROGRESS_INTERVAL_MS = 1000
+// Faces found by the models are given to people this long after the first
+// of a batch is found, and this many contents at a time when catching up
+const FACES_ASSIGNMENT_DELAY_MS = 2000
+const FACES_ASSIGNMENT_BATCH = 200
+const FACES_SWEEP_DELAY_MS = 60_000
+// How long the places an account has photos in are taken as read
+const PLACES_KEPT_MS = 60_000
+// How far along an account's files are is asked for with every step of the
+// work on them, and on a device with more than one account it is counted by
+// going through every file the account has. What was counted is kept for
+// this long, and for this many times as long as the counting took where that
+// is longer: no more than a twentieth of the time goes on counting.
+const COUNTS_KEPT_MS = 5000
+const COUNTS_KEPT_FOR_TIMES = 20
 
 export type FileIndexLogger = {
 	log(message?: string): void
@@ -327,6 +351,7 @@ export const REUSE_RENAMED_CONTENT_SQL = `
 export default class FileIndexEngine {
 	readonly databasePath: string
 	readonly umbrelDatabasePath: string
+	readonly embeddingsDatabasePath: string
 	readonly logger: FileIndexLogger
 
 	#database?: Database
@@ -352,11 +377,18 @@ export default class FileIndexEngine {
 	#recoveryAttempt?: Promise<void>
 	#recoveryAttempts = 0
 	#artifactRecoveryBarrierRequired = false
+	#facesToAssign: Buffer[] = []
+	#facesAssignment?: ReturnType<typeof setTimeout>
+	#facesSweep?: ReturnType<typeof setTimeout>
+	#facesCaughtUp = false
 	#photosAvailable = false
 	#photosRecoveryTimer?: ReturnType<typeof setTimeout>
 	#photosRecoveryAttempt?: Promise<void>
 	#photosRecoveryAttempts = 0
 	#photos = new PhotosRepository()
+	// What each account's places can be called when typed, and until when that is taken as read
+	#placesNamed = new Map<string, {named: ReturnType<ReturnType<typeof places>['named']>; until: number}>()
+	#counted = new Map<string, {counts: Promise<unknown>; until: number}>()
 	#readers?: FileIndexReaderPool
 	#readerPoolOptions?: FileIndexReaderPoolOptions
 
@@ -394,6 +426,7 @@ export default class FileIndexEngine {
 	}: FileIndexEngineOptions) {
 		this.databasePath = nodePath.join(dataDirectory, 'file-index', 'index.db')
 		this.umbrelDatabasePath = nodePath.join(dataDirectory, 'umbrel.db')
+		this.embeddingsDatabasePath = embeddingsDatabasePath(dataDirectory)
 		this.logger = logger
 		this.#isHidden = isHidden
 		this.#onAvailabilityChange = onAvailabilityChange
@@ -435,6 +468,16 @@ export default class FileIndexEngine {
 						.then((accountIds) => this.#notifyPhotosChanged(accountIds))
 						.catch((error) => {
 							if (!this.#stopping) this.logger.error('Failed to report thumbnail availability', error)
+						})
+				},
+				onModelWorkSettled: (contentId, work, hash) => {
+					if (!this.#photosAvailable || this.#stopping) return
+					if (work === 'faces') this.#assignFaces(hash)
+					// Nothing about the photo itself changes, only how far indexing has got
+					void this.#readFiles('accountIdsForContent', [contentId])
+						.then((accountIds) => this.#notifyPhotosIndexingProgress(accountIds))
+						.catch((error) => {
+							if (!this.#stopping) this.logger.error('Failed to report indexing progress', error)
 						})
 				},
 				onHashFailure: async (entryId) => {
@@ -520,7 +563,12 @@ export default class FileIndexEngine {
 		if (this.#stopping) return
 		const readersStartedAt = performance.now()
 		this.#readers = new FileIndexReaderPool(
-			{databasePath: this.databasePath, umbrelDatabasePath: this.umbrelDatabasePath},
+			{
+				databasePath: this.databasePath,
+				umbrelDatabasePath: this.umbrelDatabasePath,
+				// Only where the models run, as for the connection that writes
+				embeddingsDatabasePath: embeddingsAvailable() ? this.embeddingsDatabasePath : undefined,
+			},
 			this.#readerPoolOptions,
 		)
 		await this.#readers.start()
@@ -655,10 +703,24 @@ export default class FileIndexEngine {
 			umbrelDatabase = undefined
 			this.#requireDatabase().prepare('ATTACH DATABASE ? AS umbrel').run(this.umbrelDatabasePath)
 			attached = true
+			// The faces People are made of are with what the models made of
+			// everything else (see ./embeddings-store.ts). Where the models aren't
+			// installed there are none.
+			if (embeddingsAvailable()) {
+				try {
+					this.#requireDatabase().prepare('ATTACH DATABASE ? AS embeddings').run(this.embeddingsDatabasePath)
+				} catch (error) {
+					// Photos works without what the models have read: there are
+					// only no people in it, and nothing is found by what it shows
+					this.logger.error('Failed to open what the models have read', error)
+				}
+			}
 			const sync = this.#requireDatabase().transaction(() => this.#syncPhotosState(this.#requireDatabase(), trace))
 			sync.immediate()
 			this.#photosAvailable = true
 			this.#photosRecoveryAttempts = 0
+			this.#facesCaughtUp = false
+			this.#assignFaces()
 		} catch (error) {
 			this.#photosAvailable = false
 			try {
@@ -667,6 +729,9 @@ export default class FileIndexEngine {
 			if (attached) {
 				try {
 					this.#requireDatabase().exec('DETACH DATABASE umbrel')
+				} catch {}
+				try {
+					this.#requireDatabase().exec('DETACH DATABASE embeddings')
 				} catch {}
 			}
 			throw error
@@ -883,6 +948,11 @@ export default class FileIndexEngine {
 				row.last_successful_scan_at === null ? undefined : Number(row.last_successful_scan_at)
 			registered.lastError = row.last_error ?? undefined
 		}
+	}
+
+	// Whether the models read the library (see FileIndexEnrichment#setModelsEnabled)
+	setModelWork(enabled: boolean) {
+		this.#enrichment.setModelsEnabled(enabled)
 	}
 
 	startBackgroundReconciliation() {
@@ -1584,8 +1654,19 @@ export default class FileIndexEngine {
 		const name = nodePath.basename(systemPath)
 		const type = entryType(stats)
 		const identity = fileIdentity(stats)
+		// A photo or video, which Files and Photos show a picture of, is told by
+		// its content where the root is scanned. So is a document or recording
+		// that the models read there, where they are installed.
 		const thumbnailEligible = type === 'file' && supportsThumbnail(name)
-		const thumbnailIdentityKind = thumbnailEligible ? (root.scanEnabled === false ? 'transient' : 'content') : null
+		const read =
+			type === 'file' && root.scanEnabled !== false && embeddingsAvailable() && readableKind(name) !== undefined
+		const thumbnailIdentityKind = thumbnailEligible
+			? root.scanEnabled === false
+				? 'transient'
+				: 'content'
+			: read
+				? 'content'
+				: null
 
 		return {
 			rootId: root.id,
@@ -2217,6 +2298,57 @@ export default class FileIndexEngine {
 		return this.#readPhotos('listItems', [accountId, filter, cursor, limit])
 	}
 
+	// Search's questions of the index (see ../search/search.ts)
+	async photosSearch<R extends SearchRead>(accountId: string, request: R): Promise<SearchReadResult[R['type']]>
+	async photosSearch(accountId: string, request: SearchRead): Promise<SearchReadResult[SearchRead['type']]> {
+		const read = <T extends SearchRead>(asked: T) =>
+			this.#readPhotos('search', [accountId, asked]) as Promise<SearchReadResult[T['type']]>
+		// Places have their names here, where the table of them is loaded (see
+		// places.ts). Which ones an account has photos in is asked at most once
+		// a minute: it is read from its whole library, for every search.
+		if (request.type === 'place') {
+			let known = this.#placesNamed.get(accountId)
+			if (!known || known.until < Date.now()) {
+				known = {named: places().named(await read({type: 'places'})), until: Date.now() + PLACES_KEPT_MS}
+				this.#placesNamed.set(accountId, known)
+			}
+			return placeIn(request.text, known.named)
+		}
+		if (request.type === 'insights') {
+			const {where, ...insights} = await read(request)
+			return {...insights, ...(where ? {place: places().name(where)} : {})}
+		}
+		// How far along the account's files are, as last counted (see COUNTS_KEPT_MS)
+		const counted = <T extends {type: 'status'} | {type: 'progress'}>(asked: T) => {
+			const key = `${asked.type} ${accountId}`
+			let kept = this.#counted.get(key)
+			if (!kept || kept.until < Date.now()) {
+				const started = Date.now()
+				const counting = {counts: read(asked) as Promise<unknown>, until: Infinity}
+				counting.counts.then(
+					() =>
+						(counting.until = Date.now() + Math.max(COUNTS_KEPT_MS, COUNTS_KEPT_FOR_TIMES * (Date.now() - started))),
+					() => (counting.until = 0),
+				)
+				this.#counted.set(key, (kept = counting))
+			}
+			return kept.counts as Promise<SearchReadResult[T['type']]>
+		}
+		if (request.type === 'progress') return counted(request)
+		// Whether the models are waiting for memory, or for room to be fetched
+		// into, is the enrichment's to say
+		if (request.type === 'status') {
+			const status = {
+				...(await counted(request)),
+				...(this.#enrichment.modelsShortOfRoom ? {noRoomForModels: true} : {}),
+			}
+			const waiting = this.#enrichment.modelsWaitingForMemory
+			if (!waiting || status.completed >= status.total) return status
+			return {...status, waitingForMemorySince: waiting.since, ...(waiting.now ? {waitingForMemory: true} : {})}
+		}
+		return read(request)
+	}
+
 	async photosMapPoints(accountId: string, filter: PhotoFilter) {
 		return this.#readPhotos('mapPoints', [accountId, filter])
 	}
@@ -2249,6 +2381,48 @@ export default class FileIndexEngine {
 
 	async photosListAlbums(accountId: string) {
 		return this.#readPhotos('listAlbums', [accountId])
+	}
+
+	async photosListPeople(accountId: string, hidden: boolean) {
+		return this.#readPhotos('listPeople', [accountId, hidden])
+	}
+
+	async photosListPersonSuggestions(accountId: string) {
+		return this.#readPhotos('listPersonSuggestions', [accountId])
+	}
+
+	async photosChangePeople(accountId: string, change: PeopleChange) {
+		return this.#mutate((database) => this.#photos.changePeople(this.#photosDatabase(database), accountId, change))
+	}
+
+	// Gives the faces the models have just found to people, a few contents at
+	// a time: a library being read for the first time finds them by the
+	// thousand, and each batch is one write.
+	#assignFaces(hash?: Buffer) {
+		if (hash) this.#facesToAssign.push(hash)
+		this.#facesAssignment ??= setTimeout(() => {
+			this.#facesAssignment = undefined
+			const hashes = this.#facesToAssign.splice(0)
+			if (!this.#photosAvailable || this.#stopping) return
+			void this.#mutate((database) => {
+				const photos = this.#photosDatabase(database)
+				// With nothing just found, whatever was missed: found while nobody
+				// was told, or in a library the content has only now arrived in
+				const contents = hashes.length > 0 ? hashes : this.#photos.unassignedFaces(photos, FACES_ASSIGNMENT_BATCH)
+				if (contents.length === 0) this.#facesCaughtUp = true
+				return this.#photos.assignFaces(photos, contents)
+			}, BACKGROUND_DATABASE_PRIORITY)
+				.then((accountIds) => {
+					this.#notifyPhotosChanged(accountIds, true)
+					if (!this.#facesCaughtUp) this.#assignFaces()
+				})
+				.catch((error) => {
+					// What was worked out about people on the way was not written down
+					this.#photos.forgetPeople()
+					if (!this.#stopping) this.logger.error('Failed to give faces to people', error)
+				})
+		}, FACES_ASSIGNMENT_DELAY_MS)
+		this.#facesAssignment.unref()
 	}
 
 	async photosCreateAlbum(accountId: string, name: string, ids?: string[]) {
@@ -2582,10 +2756,22 @@ export default class FileIndexEngine {
 		this.#onAvailabilityChange?.(available)
 	}
 
-	#notifyPhotosChanged(accountIds: Iterable<string>) {
+	#notifyPhotosChanged(accountIds: Iterable<string>, byFaces = false) {
 		if (!this.#photosAvailable || (!this.#onPhotosChange && !this.#onPhotosIndexingProgress) || this.#stopping) return
 		const changedAccountIds = [...new Set(accountIds)]
 		if (changedAccountIds.length === 0) return
+		// A library that changed may have gained something whose faces are
+		// already known: a folder made part of Photos, or a copy of what
+		// someone else has. Nobody is told of those one at a time, so every
+		// library is looked through for them, at most this often.
+		if (!byFaces) {
+			this.#facesSweep ??= setTimeout(() => {
+				this.#facesSweep = undefined
+				this.#facesCaughtUp = false
+				this.#assignFaces()
+			}, FACES_SWEEP_DELAY_MS)
+			this.#facesSweep.unref()
+		}
 
 		if (this.#onPhotosChange) {
 			for (const accountId of changedAccountIds) this.#photosChangedAccountIds.add(accountId)
@@ -2597,24 +2783,28 @@ export default class FileIndexEngine {
 			}, 250)
 		}
 
-		if (this.#onPhotosIndexingProgress) {
-			for (const accountId of changedAccountIds) this.#photosIndexingProgressAccountIds.add(accountId)
-			this.#photosIndexingProgressTimer ??= setTimeout(() => {
-				this.#photosIndexingProgressTimer = undefined
-				const accountIds = [...this.#photosIndexingProgressAccountIds]
-				this.#photosIndexingProgressAccountIds.clear()
-				void Promise.all(
-					accountIds.map(async (accountId) => ({
-						accountId,
-						state: await this.photosIndexingState(accountId),
-					})),
-				)
-					.then((progress) => {
-						if (!this.#stopping) this.#onPhotosIndexingProgress?.(progress)
-					})
-					.catch((error) => this.logger.error('Failed to report Photos indexing progress', error))
-			}, PHOTOS_INDEXING_PROGRESS_INTERVAL_MS)
-		}
+		this.#notifyPhotosIndexingProgress(changedAccountIds)
+	}
+
+	#notifyPhotosIndexingProgress(accountIds: Iterable<string>) {
+		if (!this.#photosAvailable || !this.#onPhotosIndexingProgress || this.#stopping) return
+		for (const accountId of accountIds) this.#photosIndexingProgressAccountIds.add(accountId)
+		if (this.#photosIndexingProgressAccountIds.size === 0) return
+		this.#photosIndexingProgressTimer ??= setTimeout(() => {
+			this.#photosIndexingProgressTimer = undefined
+			const accountIds = [...this.#photosIndexingProgressAccountIds]
+			this.#photosIndexingProgressAccountIds.clear()
+			void Promise.all(
+				accountIds.map(async (accountId) => ({
+					accountId,
+					state: await this.photosIndexingState(accountId),
+				})),
+			)
+				.then((progress) => {
+					if (!this.#stopping) this.#onPhotosIndexingProgress?.(progress)
+				})
+				.catch((error) => this.logger.error('Failed to report Photos indexing progress', error))
+		}, PHOTOS_INDEXING_PROGRESS_INTERVAL_MS)
 	}
 
 	async stop() {
@@ -2626,6 +2816,10 @@ export default class FileIndexEngine {
 		if (this.#reconciliationTimer) clearTimeout(this.#reconciliationTimer)
 		if (this.#recoveryTimer) clearTimeout(this.#recoveryTimer)
 		if (this.#photosRecoveryTimer) clearTimeout(this.#photosRecoveryTimer)
+		clearTimeout(this.#facesAssignment)
+		this.#facesAssignment = undefined
+		clearTimeout(this.#facesSweep)
+		this.#facesSweep = undefined
 		if (this.#photosChangeTimer) clearTimeout(this.#photosChangeTimer)
 		if (this.#photosIndexingProgressTimer) clearTimeout(this.#photosIndexingProgressTimer)
 		this.#reconciliationTimer = undefined
@@ -2807,7 +3001,7 @@ function indexedEntry(row: EntryRow): IndexedEntry {
 		modifiedNs: row.modified_ns,
 		ctimeNs: row.ctime_ns,
 		thumbnailIdentityKind: row.thumbnail_identity_kind,
-		thumbnailEligible: Number(row.thumbnail_identity_kind !== null),
+		thumbnailEligible: Number(row.thumbnail_identity_kind !== null && supportsThumbnail(row.name)),
 		observedAt: row.observed_at === null ? undefined : Number(row.observed_at),
 		hidden: Boolean(row.hidden),
 	}

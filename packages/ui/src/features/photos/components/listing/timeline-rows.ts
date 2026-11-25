@@ -242,6 +242,7 @@ export function groupItems({
 	before,
 	language,
 	footer = false,
+	ranked,
 }: {
 	items: Item[]
 	zoom: Zoom
@@ -249,9 +250,18 @@ export function groupItems({
 	before?: number
 	language: string
 	footer?: boolean
+	// A ranked list (a search's results, best match first) has no dates to
+	// group by: it is one section under this title, in the order given. The
+	// rest of the grid neither knows nor cares — a section is a section.
+	ranked?: string
 }): Timeline {
 	const sections: Section[] = []
 	const indexOf = new Map<string, number>()
+	if (ranked !== undefined) {
+		items.forEach((item, index) => indexOf.set(item.id, index))
+		if (items.length > 0) sections.push({key: 'h:ranked', title: ranked, start: 0, count: items.length})
+		return {items, sections, indexOf, hasMore, footer}
+	}
 	let key: number | undefined
 	let open: Section | undefined
 	for (let index = 0; index < items.length; index++) {

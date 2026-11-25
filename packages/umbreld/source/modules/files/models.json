@@ -1,0 +1,82 @@
+[
+	{
+		"file": "embeddinggemma-2-text-270m.litertlm",
+		"sha256": "2d079ee2f6f066b1f368e8d7c819f55214eaef1d0513b312321901f30ab286fb",
+		"size": 164626432,
+		"source": "https://huggingface.co/litert-community/embeddinggemma-2-text-270m-litert-lm/resolve/9be6e8b90982095dc05c2bd162e4b954ee4dbac7/embeddinggemma-2-text-270m.litertlm"
+	},
+	{
+		"file": "embeddinggemma-2-text-vision-440m.litertlm",
+		"sha256": "92dcbea108899e5d6e30d919b0744f90d9967e80c67a4ab5503ac16d54f62eb0",
+		"size": 387710976,
+		"source": "https://huggingface.co/litert-community/embeddinggemma-2-text-vision-440m-litert-lm/resolve/e301f74d5551b0c2641bd5cb4652a76239d5c5f8/embeddinggemma-2-text-vision-440m.litertlm"
+	},
+	{
+		"file": "faces-detector.onnx",
+		"sha256": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91",
+		"size": 16923827,
+		"source": "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip",
+		"member": "det_10g.onnx"
+	},
+	{
+		"file": "faces-recogniser.onnx",
+		"sha256": "4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43",
+		"size": 174383860,
+		"source": "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip",
+		"member": "w600k_r50.onnx"
+	},
+	{
+		"file": "text-detector.onnx",
+		"sha256": "f42c0fbd294d95eac1a550e131b277dac97462c8025fa4b6c3cec1b7894bd3d5",
+		"size": 1829618,
+		"source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv6/det/PP-OCRv6_det_tiny.onnx"
+	},
+	{
+		"file": "text-recogniser.onnx",
+		"sha256": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884",
+		"size": 21234383,
+		"source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv6/rec/PP-OCRv6_rec_small.onnx"
+	},
+	{
+		"file": "speech-detector.onnx",
+		"sha256": "2623a2953f6ff3d2c1e61740c6cdb7168133479b267dfef114a4a3cc5bdd788f",
+		"size": 2327524,
+		"source": "https://github.com/snakers4/silero-vad/raw/v5.1.2/src/silero_vad/data/silero_vad.onnx"
+	},
+	{
+		"file": "speech-whisper.gguf",
+		"sha256": "325b9c7997cd1eff81ef709d55766565e71be696130cc3a3d444713798706834",
+		"size": 45981088,
+		"source": "https://huggingface.co/handy-computer/whisper-tiny-gguf/resolve/2678cc66038359b97c8e6fd6454c56fc9006d571/whisper-tiny-Q8_0.gguf"
+	},
+	{
+		"file": "speech-parakeet.gguf",
+		"sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+		"size": 739508576,
+		"source": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/90f082450fcbacdb54e5900c44ef697c9ea59622/parakeet-tdt-0.6b-v3-Q8_0.gguf"
+	},
+	{
+		"file": "speech-qwen.gguf",
+		"sha256": "3b051f108f03c0c91bbe1a3b2c1ee15e3ed51e4caec2a48751b01f2a21441cc3",
+		"size": 690417824,
+		"source": "https://huggingface.co/handy-computer/Qwen3-ASR-0.6B-gguf/resolve/28c66fba077f1359a42b52c55b618a24cdb6e0e7/Qwen3-ASR-0.6B-Q6_K.gguf"
+	},
+	{
+		"file": "speech-romaniser.pt",
+		"sha256": "45ffecef88d990ae12f915939b91267a3fc8f69f26331baa59f7932005976f28",
+		"size": 135825281,
+		"source": "https://huggingface.co/ai4bharat/IndicXlit/resolve/e7049fe725b11c0a187d42edeb2f56aa1ffee5fd/indicxlit-indic-en-v1.0/transformer/indicxlit.pt"
+	},
+	{
+		"file": "speech-romaniser-source.txt",
+		"sha256": "0fe786202f4418cec9d8fcd8413c715a2be7fabb5b58fdc47671e6227dde384f",
+		"size": 7594,
+		"source": "https://huggingface.co/ai4bharat/IndicXlit/resolve/e7049fe725b11c0a187d42edeb2f56aa1ffee5fd/indicxlit-indic-en-v1.0/corpus-bin/dict.hi.txt"
+	},
+	{
+		"file": "speech-romaniser-target.txt",
+		"sha256": "5ed7b43557095f70f20bad9fb0484ea9f2099001467bc8c732c8a9e6b3d7c34a",
+		"size": 302,
+		"source": "https://huggingface.co/ai4bharat/IndicXlit/resolve/e7049fe725b11c0a187d42edeb2f56aa1ffee5fd/indicxlit-indic-en-v1.0/corpus-bin/dict.en.txt"
+	}
+]

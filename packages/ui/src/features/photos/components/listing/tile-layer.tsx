@@ -18,6 +18,8 @@ import {SELECT_CIRCLE} from '@/features/photos/components/listing/item-tile'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {useDownloadItems, useItemActions, type Item} from '@/features/photos/hooks/use-items'
 import {useAlbumActions, useAlbums} from '@/features/photos/hooks/use-library'
+import {usePeopleActions} from '@/features/photos/hooks/use-people'
+import type {SearchMoment} from '@/features/search/types'
 import {useConfirmation} from '@/providers/confirmation/use-confirmation'
 import {useLinkToDialog} from '@/utils/dialog'
 import {formatNumberI18n} from '@/utils/number'
@@ -44,6 +46,7 @@ export function TileLayer({
 	selecting,
 	selected,
 	itemAtPoint,
+	moments,
 	onSelect,
 	children,
 }: {
@@ -55,6 +58,8 @@ export function TileLayer({
 	selected: ReadonlySet<string>
 	// Which item a point is over, where tiles are not elements
 	itemAtPoint?: (point: {clientX: number; clientY: number}) => Item | undefined
+	// Items a search matched at a moment of a video, by id: they open there
+	moments?: ReadonlyMap<string, SearchMoment>
 	// `range` extends the selection from the last selected tile (shift held)
 	onSelect: (item: Item, range: boolean) => void
 	children: ReactNode
@@ -67,7 +72,8 @@ export function TileLayer({
 	const download = useDownloadItems()
 	const {addToAlbum, removeFromAlbum, setCover} = useAlbumActions()
 	const selection = usePhotosSelection()
-	const {albumId} = useParams()
+	const {albumId, personId} = useParams()
+	const {setPersonCover, removeFromPerson} = usePeopleActions()
 	const {data: albums} = useAlbums({enabled: !inDeleted && !albumId})
 	// The tile the context menu is about
 	const [target, setTarget] = useState<Item | null>(null)
@@ -90,12 +96,24 @@ export function TileLayer({
 		selection.set(ids)
 		navigate(linkToDialog('photos-create-album'))
 	}
-	// Cover mode ends on the first choice: this item becomes the album's face
+	// Cover mode ends on the first choice: this item becomes the album's face,
+	// or the photo a person's face is taken from
 	const commitCover = (item: Item) => {
-		const albumId = selection.coveringFor
-		if (!albumId) return
+		const target = selection.coveringFor
+		if (!target) return
+		// A face is taken from a photo: given a video, the server would quietly
+		// pick another photo of the person and call the cover changed
+		if (target.kind === 'person' && item.kind === 'video') return
 		selection.coverChosen()
-		act(setCover({id: albumId, itemId: item.id}))
+		act(
+			target.kind === 'album'
+				? setCover({id: target.id, itemId: item.id})
+				: setPersonCover({id: target.id, itemId: item.id}),
+		)
+	}
+	const open = (item: Item) => {
+		const momentMs = moments?.get(item.id)?.startMs
+		navigate(linkToDialog('photos-item', momentMs === undefined ? {id: item.id} : {id: item.id, t: String(momentMs)}))
 	}
 	const purge = async () => {
 		const count = ids.length
@@ -145,7 +163,7 @@ export function TileLayer({
 						// The selection circle needs a 72px tile, bigger than any the
 						// canvas draws, so a canvas tile never has one to hit
 						if (selecting || (tile && onCircle(event, tile))) onSelect(item, event.shiftKey)
-						else navigate(linkToDialog('photos-item', {id: item.id}))
+						else open(item)
 					}}
 					onContextMenuCapture={(event) => {
 						const item = itemFrom(event)
@@ -160,7 +178,12 @@ export function TileLayer({
 			<ContextMenuContent>
 				{target &&
 					(selection.coveringFor ? (
-						<ContextMenuItem onClick={() => commitCover(target)}>{t('photos-item.set-cover')}</ContextMenuItem>
+						<ContextMenuItem
+							disabled={selection.coveringFor.kind === 'person' && target.kind === 'video'}
+							onClick={() => commitCover(target)}
+						>
+							{selection.coveringFor.kind === 'person' ? t('photos-people.set-cover') : t('photos-item.set-cover')}
+						</ContextMenuItem>
 					) : selection.pickingFor ? (
 						<>
 							<ContextMenuItem onClick={() => act(setFavorite({ids, favorite: !target.isFavorite}))}>
@@ -180,6 +203,27 @@ export function TileLayer({
 							<ContextMenuItem onClick={() => act(setFavorite({ids, favorite: !target.isFavorite}))}>
 								{target.isFavorite ? t('photos-item.unfavorite') : t('photos-item.favorite')}
 							</ContextMenuItem>
+							{personId && (
+								<>
+									{ids.length === 1 && target.kind !== 'video' && (
+										<ContextMenuItem
+											onClick={() =>
+												act(
+													setPersonCover({id: personId, itemId: target.id}).then(() =>
+														toast.success(t('photos-people.cover-set'), {area: 'photos'}),
+													),
+												)
+											}
+										>
+											{t('photos-people.set-cover')}
+										</ContextMenuItem>
+									)}
+									<ContextMenuItem onClick={() => act(removeFromPerson({id: personId, ids}))}>
+										{t('photos-people.not-this-person')}
+									</ContextMenuItem>
+									<ContextMenuSeparator />
+								</>
+							)}
 							{albumId ? (
 								<>
 									{/* The cover is one item's; the whole selection has no single face */}

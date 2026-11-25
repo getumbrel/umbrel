@@ -37,6 +37,9 @@ export interface ActionsBarConfig {
 	// Whether to hide the path
 	hidePath?: boolean
 
+	// Shown beside the title (e.g. what a search understood the query to mean)
+	pathAccessory?: React.ReactNode
+
 	// Whether to hide the search input
 	hideSearch?: boolean
 

@@ -1,8 +1,8 @@
 // TODO: Investigate pre-existing issue where large video files fail to play in Safari.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {Video} from 'react-video-kit'
 
+import {VideoPlayer} from '@/components/video-player'
 import {useViewerSize, type ViewerSize} from '@/features/files/components/file-viewer/shell/context'
 import {
 	stageButtonClass,
@@ -12,11 +12,35 @@ import {
 } from '@/features/files/components/file-viewer/shell/stage-states'
 import {useFileUrl} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import type {ViewerProps} from '@/features/files/components/file-viewer/viewers'
+import {trpcReact} from '@/trpc/trpc'
 
 export default function VideoViewer({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
 	const previewUrl = useFileUrl(item)
 	const containerRef = useRef<HTMLDivElement>(null)
+	// A search result opens at the moment that matched
+	const startSeconds = (item.searchResult?.moment?.startMs ?? 0) / 1000
+
+	// What is said in it, when Search has transcribed it, as captions (see
+	// VideoPlayer)
+	const {data: insights} = trpcReact.search.insights.useQuery(
+		{path: item.path},
+		{retry: false, refetchOnWindowFocus: false, staleTime: 60_000},
+	)
+
+	// Seeking needs the duration, so it waits for the metadata — which a cached
+	// video may already have by the time this runs. Keyed on the URL: the
+	// element only exists once it is authorized.
+	useEffect(() => {
+		const video = containerRef.current?.querySelector('video')
+		if (!video || startSeconds <= 0) return
+		const seek = () => {
+			video.currentTime = startSeconds
+		}
+		if (video.readyState >= HTMLMediaElement.HAVE_METADATA) return seek()
+		video.addEventListener('loadedmetadata', seek, {once: true})
+		return () => video.removeEventListener('loadedmetadata', seek)
+	}, [previewUrl.url, startSeconds])
 
 	// Ensure video is fully stopped on unmount to prevent lingering audio
 	useEffect(() => {
@@ -101,46 +125,14 @@ export default function VideoViewer({item, mode}: ViewerProps) {
 				className='max-h-[100cqh] overflow-hidden rounded-xl bg-black'
 				style={{width: `min(100cqw, clamp(15rem, 100cqh * ${aspect}, 72rem))`, aspectRatio: aspect}}
 			>
-				<Video.Root
+				<VideoPlayer
 					key={item.path}
-					// Sized both ways, it takes the box's shape over its own 16:9
-					className='size-full'
 					src={previewUrl.url}
-					title={item.name}
-					autoPlay
-					// Opened, the player has the keyboard (space, seeking); a quick look
-					// leaves it to stepping and closing
-					hotkeys={{scope: 'global', enabled: mode !== 'preview'}}
-				>
-					{/* Never cropped, in fullscreen too: the kit's inline `cover` gives
-					    way only to an important rule */}
-					<Video.Media className='!object-contain' />
-					<Video.Backdrop />
-					<Video.Header>
-						<div className='rv-w-full rv-flex'>
-							<Video.FullscreenToggle />
-							<Video.PipToggle />
-						</div>
-						<div className='rv-w-full rv-flex rv-justify-end rv-items-center rv-h-fit'>
-							<Video.Volume.Button />
-							<Video.Volume.Slider />
-						</div>
-					</Video.Header>
-					<Video.Center>
-						<Video.SeekBack seconds={10} />
-						<Video.PlayPause />
-						<Video.SeekForward seconds={10} />
-						<Video.Loading />
-					</Video.Center>
-					<Video.Footer>
-						<Video.Title />
-						<Video.Timeline />
-						<div className='rv-flex rv-justify-between rv-w-full'>
-							<Video.Time.Current />
-							<Video.Time.Remaining negative />
-						</div>
-					</Video.Footer>
-				</Video.Root>
+					transcript={insights?.transcript}
+					// Opened, the player has the keyboard (space, seeking, C for
+					// captions); a quick look leaves it to stepping and closing
+					keys={mode !== 'preview' ? 'global' : false}
+				/>
 			</div>
 		</div>
 	)

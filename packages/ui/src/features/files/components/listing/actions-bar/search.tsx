@@ -4,6 +4,9 @@ import {useEffect, useRef} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {useFilesSearch} from '@/features/files/hooks/use-files-search'
+import {SearchArc} from '@/features/search/search-arc'
+import {useSearchStatus} from '@/features/search/use-search'
+import {useSearchArc} from '@/features/search/use-search-footnote'
 import {cn} from '@/lib/utils'
 import {isBeneathModal} from '@/utils/is-beneath-modal'
 import {useBreakpoint} from '@/utils/tw'
@@ -98,6 +101,9 @@ function SearchBox({
 	const {t} = useTranslation()
 	const search = useFilesSearch()!
 	const expanded = variant === 'row' || search.engaged
+	// How far along the reading its results rest on is, while that is the
+	// news beside their count (see ListingMeta)
+	const analyzed = useSearchArc('files', useSearchStatus(search.query.trim() !== ''))
 
 	return (
 		<label
@@ -137,6 +143,7 @@ function SearchBox({
 					slim && !expanded ? 'w-0 min-w-0 flex-none' : 'min-w-0',
 				)}
 			/>
+			<SearchArc files percent={analyzed} />
 			{search.query !== '' && (
 				<button
 					type='button'

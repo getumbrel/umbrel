@@ -44,7 +44,7 @@ const FAILURE_RETRY_MS = 60_000
 // ones that failed a moment ago, though — a busy folder refreshes many times
 // a second, and each pass would re-ask every broken file on screen.
 const FAILURE_SETTLE_MS = 5_000
-const LISTINGS = new Set(['list', 'recents', 'search'])
+const LISTINGS = new Set(['files.list', 'files.recents', 'search.query'])
 const connected = new WeakSet<QueryClient>()
 
 function retryFailuresWithListings(client: QueryClient) {
@@ -54,7 +54,7 @@ function retryFailuresWithListings(client: QueryClient) {
 	client.getQueryCache().subscribe((event) => {
 		if (event.type !== 'updated' || event.action.type !== 'invalidate') return
 		const [procedure] = event.query.queryKey
-		if (!Array.isArray(procedure) || procedure[0] !== 'files' || !LISTINGS.has(procedure[1])) return
+		if (!Array.isArray(procedure) || !LISTINGS.has(procedure.join('.'))) return
 		// One pass however many cached listings the invalidation swept over
 		if (scheduled) return
 		scheduled = true

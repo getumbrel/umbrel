@@ -10,6 +10,7 @@ const permissions = z
 		manageSystem: z.boolean(),
 		machines: z.union([z.literal('all'), z.array(z.string())]),
 		createMachines: z.boolean(),
+		photos: z.boolean(),
 	})
 	.strict()
 

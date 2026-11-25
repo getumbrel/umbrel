@@ -79,8 +79,13 @@ export type PhotoFilter = {
 	deleted?: boolean
 	sourceIds?: string[]
 	albumIds?: string[]
+	// Items showing every one of these people, together
+	personIds?: string[]
 	dates?: Array<{from: number; to: number}>
 	bounds?: PhotoBounds
+	// Items taken in any of these places, as Search names them (see
+	// ../files/places.ts). Only Search narrows a view this way.
+	placeIds?: string[]
 }
 
 // A stretch of the map, in degrees. West is east of east when the stretch
@@ -137,6 +142,38 @@ export type PhotoItemDetail = PhotoItem & {
 	}
 	location?: {lat: number; lng: number; altitude?: number}
 	albums: Array<{id: string; name: string}>
+	// Who is in the picture, each with where their face is so the viewer can
+	// point at it
+	people: Array<{id: string; name?: string; face: PhotoFaceBox}>
+}
+
+// A face's rectangle as fractions of the picture's displayed (orientation
+// applied) width and height, origin top left
+export type PhotoFaceBox = {x: number; y: number; width: number; height: number}
+
+// Someone Photos has recognised across the library. Unnamed until the user
+// says who it is.
+export type PhotoPerson = {
+	id: string
+	name?: string
+	// Items this person appears in
+	count: number
+	// The face that stands for them: an item id and where the face is in it,
+	// with the item's shape and tint (as PhotoItem carries them) so the face
+	// can be framed before any of the picture has loaded
+	cover: PhotoPersonFace
+	isHidden: boolean
+	takenFrom?: number
+	takenTo?: number
+}
+
+export type PhotoPersonFace = {itemId: string; face: PhotoFaceBox; width: number; height: number; tint?: number}
+
+// "Is this also Anna?": someone unnamed who looks like someone named seen
+// again, as People lists them, with a few of their clearest faces
+export type PhotoPersonSuggestion = {
+	person: {id: string; name: string}
+	candidate: PhotoPerson & {faces: PhotoPersonFace[]}
 }
 
 export type PhotoAlbum = {

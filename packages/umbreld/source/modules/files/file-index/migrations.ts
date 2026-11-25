@@ -1,5 +1,6 @@
 import type BetterSqlite3 from 'better-sqlite3'
 import {createDirectorySizes} from './directory-sizes.ts'
+import {places} from '../places.ts'
 
 import {photosIndexingSchema} from '../../photos/indexing-schema.ts'
 
@@ -564,6 +565,77 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 				ALTER TABLE transient_thumbnail_variants ADD COLUMN retry_at INTEGER;
 				UPDATE transient_thumbnail_variants SET retry_at = 0 WHERE state = 'failed';
 			`)
+		},
+	},
+	{
+		version: 26,
+		up: (database) => {
+			// What the models have read of each photo, video, document and
+			// recording (see ../embeddings.ts): what a photo or video shows and
+			// the faces in it, the text in a photo or document, and what is said
+			// in a video or recording. A photo or video is queued for a model the
+			// moment the preview that model reads a photo from is ready (512px for
+			// what it shows, 1280px for faces and text), and the ones that already
+			// have theirs are queued here. A document or recording is queued when
+			// its content is first known. What the models made of each is kept
+			// outside the file index (see ../embeddings-store.ts).
+			const work = `(SELECT 'embedding' AS model, 'preview-512-webp-v2' AS variant, NULL AS kind
+				UNION ALL SELECT 'speech', 'preview-512-webp-v2', 'video'
+				UNION ALL SELECT 'faces', 'preview-1280-webp-v2', NULL
+				UNION ALL SELECT 'text', 'preview-1280-webp-v2', 'photo')`
+			const queue = `
+				INSERT INTO model_work(content_id, model, state)
+				SELECT new.content_id, work.model, 'pending' FROM media_metadata
+				JOIN ${work} AS work ON work.variant = new.variant AND (work.kind IS NULL OR work.kind = media_metadata.kind)
+				WHERE media_metadata.content_id = new.content_id AND media_metadata.kind IS NOT NULL
+				ON CONFLICT DO NOTHING;`
+			const queued = "new.state = 'ready' AND new.variant IN ('preview-512-webp-v2', 'preview-1280-webp-v2')"
+			database.exec(`
+				CREATE TABLE model_work (
+					content_id INTEGER NOT NULL REFERENCES contents(id) ON DELETE CASCADE,
+					model TEXT NOT NULL CHECK (model IN ('embedding', 'faces', 'text', 'speech')),
+					state TEXT NOT NULL CHECK (state IN ('pending', 'ready', 'failed')),
+					failure_count INTEGER NOT NULL DEFAULT 0,
+					retry_at INTEGER,
+					last_error TEXT,
+					PRIMARY KEY (content_id, model)
+				) WITHOUT ROWID;
+
+				CREATE INDEX model_work_pending ON model_work(model, content_id) WHERE state = 'pending';
+				CREATE INDEX model_work_failed ON model_work(model, retry_at, content_id) WHERE state = 'failed';
+
+				CREATE TRIGGER model_work_queue_on_insert AFTER INSERT ON thumbnail_variants
+				WHEN ${queued} BEGIN ${queue} END;
+				CREATE TRIGGER model_work_queue_on_update AFTER UPDATE OF state ON thumbnail_variants
+				WHEN ${queued} BEGIN ${queue} END;
+
+				INSERT INTO model_work(content_id, model, state)
+				SELECT new.content_id, work.model, 'pending' FROM thumbnail_variants AS new
+				JOIN media_metadata ON media_metadata.content_id = new.content_id
+				JOIN ${work} AS work ON work.variant = new.variant AND (work.kind IS NULL OR work.kind = media_metadata.kind)
+				WHERE ${queued} AND media_metadata.kind IS NOT NULL;
+
+				-- Where each photo and video was taken, by name: the city it was in or
+				-- near, its region and its country, as GeoNames numbers and codes them
+				-- (see ../places.ts). Kept beside the coordinates they are worked out from.
+				ALTER TABLE media_metadata ADD COLUMN place_city INTEGER;
+				ALTER TABLE media_metadata ADD COLUMN place_region TEXT;
+				ALTER TABLE media_metadata ADD COLUMN place_country TEXT;
+				CREATE INDEX media_metadata_places ON media_metadata(place_country, place_region, place_city)
+					WHERE place_country IS NOT NULL;
+			`)
+			const name = database.prepare(
+				'UPDATE media_metadata SET place_city = ?, place_region = ?, place_country = ? WHERE content_id = ?',
+			)
+			const located = database
+				.prepare(
+					'SELECT content_id, latitude, longitude FROM media_metadata WHERE latitude IS NOT NULL AND longitude IS NOT NULL',
+				)
+				.all() as Array<{content_id: number; latitude: number; longitude: number}>
+			for (const {content_id, latitude, longitude} of located) {
+				const place = places().at(latitude, longitude)
+				if (place) name.run(place.city ?? null, place.region ?? null, place.country, content_id)
+			}
 		},
 	},
 ]

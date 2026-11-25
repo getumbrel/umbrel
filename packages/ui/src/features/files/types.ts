@@ -1,3 +1,4 @@
+import type {SearchResult} from '@/features/search/types'
 import type {RouterOutput} from '@/trpc/trpc'
 
 // ---------------------------- umbreld (server) Types ----------------------------
@@ -22,6 +23,7 @@ export interface FileSystemItem extends UmbreldFileSystemItem {
 	speed?: number // upload speed in bytes per second
 	tempId?: string // we don't use path since an item with the same name can be uploaded to the same path
 	capabilitiesPending?: boolean // true only for an optimistic item awaiting authoritative backend operations
+	searchResult?: SearchResult // the search result this item came from: why it matched, shown beside its name, and where a viewer opens it
 }
 
 export interface UploadStats {

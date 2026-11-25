@@ -17,6 +17,7 @@ import type {FileSystemItem} from '@/features/files/types'
 import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {isDirectoryANetworkShare} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {uiToVirtualPath, virtualToUiPath} from '@/features/files/utils/path-alias'
+import {withoutSearchResult} from '@/features/files/utils/without-search-result'
 
 export function toFsPath(urlPath: string): string {
 	return decodeURIComponent(urlPath).replace(BASE_ROUTE_PATH, '')
@@ -65,7 +66,8 @@ export const useNavigate = () => {
 
 	// Show a file where it lives: its parent directory with the file selected,
 	// without opening the viewer (e.g. "Show in Files" from Photos)
-	const revealItem = (item: FileSystemItem) =>
+	// `afterReveal` runs once the directory has settled (see the hack below)
+	const revealItem = (item: FileSystemItem, afterReveal?: () => void) =>
 		leaveViewer(() => {
 			const lastSlash = item.path.lastIndexOf('/')
 			const parentDirectory = lastSlash === 0 ? '' : item.path.slice(0, lastSlash)
@@ -77,7 +79,9 @@ export const useNavigate = () => {
 			// so we wait 500ms for the path change to complete => setSelectedItems([])
 			// to execute, and then set the selected item
 			setTimeout(() => {
-				setSelectedItems([item])
+				// In its folder it is the file, not the search result it was found as
+				setSelectedItems([withoutSearchResult(item)])
+				afterReveal?.()
 			}, 500)
 		})
 
@@ -89,15 +93,18 @@ export const useNavigate = () => {
 		}
 
 		// for files we navigate to their parent directory with the file selected
-		// and trigger the viewer if a viewer is available (asking once for both)
+		// and trigger the viewer if a viewer is available (asking once for both).
+		// The viewer opens via global store (the Files feature will render the viewer
+		// component once it sees `viewerItem` being set). Arriving from another
+		// path, the same path-change cleanup that clears the selection closes
+		// any viewer too, so the viewer opens once, with the selection, after
+		// it. Only a file of the directory already on screen opens at once:
+		// opened at both ends, a viewer mounted, was torn down and mounted again.
 		leaveViewer(() => {
-			revealItem(item)
-
-			if (getFileViewer(item)) {
-				// open viewer via global store (the Files feature will render the viewer
-				// component once it sees `viewerItem` being set)
-				setViewerItem(item)
-			}
+			const openViewer = getFileViewer(item) ? () => setViewerItem(item) : undefined
+			const alreadyThere = currentPath === (item.path.slice(0, item.path.lastIndexOf('/')) || '/')
+			revealItem(item, alreadyThere ? undefined : openViewer)
+			if (alreadyThere) openViewer?.()
 		})
 	}
 

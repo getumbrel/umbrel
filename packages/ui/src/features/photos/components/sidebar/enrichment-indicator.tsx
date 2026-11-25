@@ -1,6 +1,7 @@
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 
+import {ProgressRing} from '@/components/ui/progress-ring'
 import {useLibraryStatus} from '@/features/photos/hooks/use-library'
 import type {RouterOutput} from '@/trpc/trpc'
 
@@ -22,9 +23,6 @@ export function indicatorState(status: LibraryStatus | undefined): IndicatorStat
 	return {kind: 'ring', percentage: status.percentage}
 }
 
-const RADIUS = 6.25
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-
 // The Library row's quiet signal that media is still being prepared: a
 // filling progress ring, or a spinner when there's no meaningful number to
 // draw. Its own component so the percentage stream re-renders only this,
@@ -36,26 +34,13 @@ export function EnrichmentIndicator() {
 	if (!state) return null
 
 	const label = t('photos-sidebar.preparing', {percentage: Math.floor(state.percentage)})
-	// A sliver of arc even at 0% so the ring never looks inert
-	const arc = Math.max(state.percentage, 3) / 100
-
 	return (
 		<span role='status' aria-label={label} title={label} className='flex size-3.5 shrink-0'>
 			{state.kind === 'spinner' ? (
 				// The app's spinner, as the indexing and loading screens draw it
 				<TbLoader className='size-full animate-spin text-white/70' />
 			) : (
-				<svg viewBox='0 0 16 16' className='-rotate-90' fill='none' strokeWidth={2} strokeLinecap='round'>
-					<circle cx='8' cy='8' r={RADIUS} className='stroke-white/15' />
-					<circle
-						cx='8'
-						cy='8'
-						r={RADIUS}
-						strokeDasharray={CIRCUMFERENCE}
-						strokeDashoffset={CIRCUMFERENCE * (1 - arc)}
-						className='stroke-white/70 transition-[stroke-dashoffset] duration-500 ease-out'
-					/>
-				</svg>
+				<ProgressRing fraction={state.percentage / 100} />
 			)}
 		</span>
 	)

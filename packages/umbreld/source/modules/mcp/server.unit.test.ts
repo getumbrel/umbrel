@@ -24,6 +24,7 @@ const noPermissions: McpPermissions = {
 	manageSystem: false,
 	machines: [],
 	createMachines: false,
+	photos: false,
 }
 let enabled = true
 let uploadRoot = ''
@@ -386,20 +387,27 @@ test('transfer URLs honor the forwarded scheme and host from ingress', async () 
 	}
 })
 
-test('file search is advertised only for full Home access', async () => {
-	async function hasSearch() {
+test('search is advertised for full Home or Photos access, and Photos tools only for Photos access', async () => {
+	async function tools() {
 		const client = new Client({name: 'umbreld-file-search-test', version: '1.0.0'})
 		try {
 			await client.connect(transport())
-			return (await client.listTools()).tools.some(({name}) => name === 'search_files')
+			const names = (await client.listTools()).tools.map(({name}) => name)
+			// Albums and the rest of the library come and go together
+			expect(names.includes('create_album')).toBe(names.includes('list_photos'))
+			return {search: names.includes('search_files'), photos: names.includes('list_photos')}
 		} finally {
 			await client.close()
 		}
 	}
 
-	await expect(hasSearch()).resolves.toBe(false)
+	await expect(tools()).resolves.toEqual({search: false, photos: false})
+	permissions = {...noPermissions, files: ['/Home/Documents']}
+	await expect(tools()).resolves.toEqual({search: false, photos: false})
 	permissions = {...noPermissions, files: ['/Home']}
-	await expect(hasSearch()).resolves.toBe(true)
+	await expect(tools()).resolves.toEqual({search: true, photos: false})
+	permissions = {...noPermissions, photos: true}
+	await expect(tools()).resolves.toEqual({search: true, photos: true})
 })
 
 test('system management tools are registered with the system grant', async () => {

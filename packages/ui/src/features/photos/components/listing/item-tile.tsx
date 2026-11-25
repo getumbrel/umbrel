@@ -1,11 +1,13 @@
 import {Check, Heart, Play} from 'lucide-react'
 import {memo, useEffect, useRef, useState} from 'react'
 
-import {ItemThumbnail} from '@/features/photos/components/listing/item-thumbnail'
+import {ItemThumbnail, tintColor} from '@/features/photos/components/listing/item-thumbnail'
 import type {ThumbnailQueue} from '@/features/photos/components/listing/thumbnail-queue'
 import {LivePhotoIcon} from '@/features/photos/components/live-photo-icon'
 import {itemLiveUrl, type Item, type ThumbSize} from '@/features/photos/hooks/use-items'
 import {itemLabel} from '@/features/photos/utils/item-label'
+import {MomentScrubber} from '@/features/search/moment-scrubber'
+import {MomentStill} from '@/features/search/moment-still'
 import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {tw} from '@/utils/tw'
@@ -48,6 +50,8 @@ export const ItemTile = memo(function ItemTile({
 	item,
 	thumbSize = 512,
 	warmUntil = 0,
+	momentMs,
+	momentStill,
 	live,
 	selected,
 	selectable,
@@ -60,6 +64,12 @@ export const ItemTile = memo(function ItemTile({
 	// ItemThumbnail.warmUntil) — both the grid's business, passed through
 	thumbSize?: ThumbSize
 	warmUntil?: number
+	// A search matched this video at a moment (ms in): the tile shows it as a
+	// player would, played up to there (see MomentScrubber), in place of the
+	// running time
+	momentMs?: number
+	// … and a picture of the video as it is then, shown in place of its cover
+	momentStill?: string
 	// A hovered live photo's motion clip (see useLiveHover): 'playing' under
 	// the pointer, 'ending' while it lingers out after the pointer has left.
 	// A primitive, not an object, so the memo around this tile holds.
@@ -69,6 +79,7 @@ export const ItemTile = memo(function ItemTile({
 	thumbnailQueue?: ThumbnailQueue
 	thumbnailIndex?: number
 }) {
+	const moment = item.kind === 'video' && momentMs !== undefined
 	return (
 		<button
 			type='button'
@@ -85,19 +96,37 @@ export const ItemTile = memo(function ItemTile({
 				requestIndex={thumbnailIndex}
 				className='h-full w-full'
 			/>
+			{momentStill && <MomentStill url={momentStill} backdrop={tintColor(item.tint)} />}
 			{live && <LiveTileClip id={item.id} active={live === 'playing'} />}
+			{/* A video a search matched partway through: the line at every size,
+			    the time on it once the tile can carry one. Past the seam the
+			    canvas draws the same line (see tile-renderer). */}
+			{moment && (
+				<MomentScrubber momentMs={momentMs!} durationMs={item.durationMs} pillClassName='hidden @min-[88px]:block' />
+			)}
 			{/* Below the sizes that carry the full badges, a video still wears a
 			    small play mark — the same one the canvas draws past the seam, so
 			    crossing it never pops the mark in or out */}
 			{item.kind === 'video' && (
-				<span className='absolute bottom-1 left-1 flex size-3 items-center justify-center rounded-full bg-black/55 text-white @min-[88px]:hidden'>
+				<span
+					className={cn(
+						'absolute left-1 flex size-3 items-center justify-center rounded-full bg-black/55 text-white @min-[88px]:hidden',
+						moment ? 'bottom-1.5' : 'bottom-1',
+					)}
+				>
 					<Play className='size-1.5' fill='currentColor' strokeWidth={0} />
 				</span>
 			)}
 			{/* Badges only once the tile is big enough to carry them (see TileSlot's container).
-			    One corner shares them: 360° and duration can coexist on a video, Live is photos-only. */}
-			{(item.subKind === 'live' || item.subKind === 'spherical' || item.durationMs !== undefined) && (
-				<span className='absolute bottom-1.5 left-1.5 hidden items-center gap-1 @min-[88px]:flex'>
+			    One corner shares them: 360° and duration can coexist on a video, Live is photos-only.
+			    A matched moment's pill has the bottom edge, so they sit above it. */}
+			{(item.subKind === 'live' || item.subKind === 'spherical' || (item.durationMs !== undefined && !moment)) && (
+				<span
+					className={cn(
+						'absolute left-1.5 hidden items-center gap-1 @min-[88px]:flex',
+						moment ? 'bottom-7' : 'bottom-1.5',
+					)}
+				>
 					{item.subKind === 'live' && (
 						<span className='flex items-center rounded-full bg-black/55 p-[3px] text-white backdrop-blur-sm'>
 							<LivePhotoIcon className='size-3.5' />
@@ -108,8 +137,8 @@ export const ItemTile = memo(function ItemTile({
 							360°
 						</span>
 					)}
-					{item.kind === 'video' && item.durationMs !== undefined && (
-						<span className='flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm'>
+					{item.kind === 'video' && item.durationMs !== undefined && !moment && (
+						<span className='flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-white tabular-nums backdrop-blur-sm'>
 							<Play className='size-2.5' fill='currentColor' strokeWidth={0} />
 							{formatDuration(item.durationMs)}
 						</span>

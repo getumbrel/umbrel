@@ -3,9 +3,27 @@ import nodePath from 'node:path'
 
 import type DatabaseTypes from 'better-sqlite3'
 
+import {placeColumn, type Place} from '../files/places.ts'
+import {contentHits, contentInsights, rankHits} from '../search/hits.ts'
+import {NOTED, nameStrength} from '../search/names.ts'
+import {INDEXING_KINDS, type IndexingKind, type SearchRead, type SearchReadResult} from '../search/types.ts'
 import {foldSearchName} from '../files/file-index/migrations.ts'
 import {floorToTenthPercent} from '../utilities/progress.ts'
 import PhotosIndexingStatus from './indexing-status.ts'
+import {
+	dismissSuggestion,
+	facesAvailable,
+	listPeople,
+	mergePeople,
+	PeopleAssigner,
+	peopleOfItem,
+	removePersonContents,
+	renamePerson,
+	setPersonCover,
+	setPersonHidden,
+	suggestions,
+	type PeopleChange,
+} from './people.ts'
 import {photoSourceTypeSql, sourceScopeSql} from './library-sql.ts'
 import PhotosReadModel, {photoLibraryCte} from './read-model.ts'
 import type {
@@ -80,6 +98,7 @@ const UNKNOWN_EFFECTIVE_TAKEN_AT = -8_640_000_000_000_000
 const TARGETED_HASH_BATCH_SIZE = 128
 const ACCOUNT_WIDE_REFRESH_THRESHOLD = 32_768
 const PHOTO_LIBRARY_CTE = photoLibraryCte()
+
 // The library read in the table's own order, for a stretch of map: no index
 // knows where anything was taken, so every row is looked at, and unprompted
 // the planner fetches them one by one in the timeline's order, ~10× slower.
@@ -115,6 +134,7 @@ const ITEM_SELECT = `
 export default class PhotosRepository {
 	#readModel = new PhotosReadModel()
 	#indexingStatus = new PhotosIndexingStatus()
+	#people = new PeopleAssigner()
 	#preparedStatements = new WeakMap<Database, Map<string, DatabaseTypes.Statement>>()
 	#readonly: boolean
 
@@ -975,6 +995,7 @@ export default class PhotosRepository {
 				!filter.subKind &&
 				filter.favorite === undefined &&
 				!filter.albumIds?.length &&
+				!filter.personIds?.length &&
 				!filter.dates?.length &&
 				!filter.query,
 		)
@@ -1033,6 +1054,256 @@ export default class PhotosRepository {
 			...(total === undefined ? {} : {total}),
 			...(rows.length > limit && last ? {nextCursor: encodeCursor(Number(last.taken_at), last.id)} : {}),
 		}
+	}
+
+	// Search (see ../search/hits.ts), in a reader thread: what the models have
+	// read so far, what they found in one file, or the files of the one asking
+	// that match what was typed. In Photos that is the photos and videos of the
+	// view being searched: the ones whose names match first, as the listing
+	// finds them, then the ones found by what is in them. Elsewhere it is every
+	// file in their home that was found by what is in it, and names are for
+	// Files' own search to find.
+	search<R extends SearchRead>(database: Database, accountId: string, request: R): SearchReadResult[R['type']]
+	search(database: Database, accountId: string, request: SearchRead): SearchReadResult[SearchRead['type']] {
+		// How far along the work is, on the files of the one asking: what another
+		// account has is not theirs to count. Content is worked on once whoever
+		// has it, and counts for everyone who does. On a device with one account
+		// that is all the work there is, and it is not gone through file by file.
+		const alone = (database.prepare('SELECT COUNT(DISTINCT owner_id) FROM index_roots').pluck().get() as number) < 2
+		const mine = alone
+			? {sql: '', parameters: []}
+			: {
+					sql: `WHERE content_id IN (
+						SELECT entries.content_id FROM entries JOIN index_roots ON index_roots.id = entries.root_id
+						WHERE index_roots.owner_id = ? AND entries.content_id IS NOT NULL
+					)`,
+					parameters: [accountId],
+				}
+		if (request.type === 'status') {
+			if (!alone) {
+				return database
+					.prepare(
+						`SELECT COUNT(*) AS total, COALESCE(SUM(state != 'pending'), 0) AS completed FROM model_work ${mine.sql}`,
+					)
+					.get(...mine.parameters) as SearchReadResult['status']
+			}
+			// What is still to do is counted from its own index
+			return database
+				.prepare(
+					`SELECT COUNT(*) AS total, COUNT(*) - (
+						SELECT COUNT(*) FROM model_work INDEXED BY model_work_pending WHERE state = 'pending'
+					) AS completed FROM model_work`,
+				)
+				.get() as SearchReadResult['status']
+		}
+		// How far along each kind of work is: what is not waiting to be done, or
+		// done again, of all there is
+		if (request.type === 'progress') {
+			const count = (table: string) =>
+				database
+					.prepare(
+						`SELECT ${table === 'model_work' ? 'model' : "'previews'"} AS kind, COUNT(*) AS total,
+						SUM(state != 'pending') AS completed FROM ${table} ${mine.sql} GROUP BY 1`,
+					)
+					.all(...mine.parameters) as Array<{kind: IndexingKind; total: number; completed: number}>
+			const counted = new Map([...count('thumbnail_variants'), ...count('model_work')].map((row) => [row.kind, row]))
+			return Object.fromEntries(
+				INDEXING_KINDS.map((kind) => {
+					const {total = 0, completed = 0} = counted.get(kind) ?? {}
+					return [kind, {completed, total}]
+				}),
+			) as SearchReadResult['progress']
+		}
+		// Which place a text names is for the index to say, of the places here
+		if (request.type === 'place') return undefined
+		// Everyone the account has named and not hidden
+		if (request.type === 'people') {
+			return database
+				.prepare(
+					`SELECT id, name FROM umbrel.photos_people
+					WHERE account_id = ? AND name IS NOT NULL AND name != '' AND is_hidden = 0`,
+				)
+				.all(accountId) as Array<{id: string; name: string}>
+		}
+		// Every place something in the account's library was taken in. Read
+		// from the library's own rows, so it takes as long as the account has
+		// photos, whatever anyone else has (the index keeps what it says for a
+		// while: see FileIndexEngine#photosSearch).
+		if (request.type === 'places') {
+			this.#ensureSource(database, accountId)
+			this.syncPendingChanges(database)
+			return database
+				.prepare(
+					`SELECT DISTINCT place.place_city AS city, place.place_region AS region, place.place_country AS country
+					FROM photos_library_items AS item
+					JOIN media_metadata AS place ON place.content_id = item.content_id
+					WHERE item.account_id = ? AND place.place_country IS NOT NULL`,
+				)
+				.all(accountId)
+				.map(
+					(place) => Object.fromEntries(Object.entries(place as Place).filter(([, value]) => value !== null)) as Place,
+				)
+		}
+		// Where the models do not run there is nothing they made of the library
+		// to look in. A search still finds things by their names, and by when
+		// and where they were taken.
+		const read = facesAvailable(database)
+		if (request.type === 'insights') {
+			if (!read) return {}
+			const hash = 'photoId' in request ? idToHash(request.photoId) : this.#hashAt(database, accountId, request.path)
+			const mine =
+				hash &&
+				database
+					.prepare(
+						`SELECT 1 FROM contents JOIN entries ON entries.content_id = contents.id
+						JOIN index_roots ON index_roots.id = entries.root_id
+						WHERE contents.blake3 = ? AND index_roots.owner_id = ? LIMIT 1`,
+					)
+					.get(hash, accountId)
+			if (!mine) return {}
+			const where = database
+				.prepare(
+					`SELECT place_city AS city, place_region AS region, place_country AS country FROM media_metadata
+					JOIN contents ON contents.id = media_metadata.content_id
+					WHERE contents.blake3 = ? AND place_country IS NOT NULL`,
+				)
+				.get(hash) as {city: number | null; region: string | null; country: string} | undefined
+			return {
+				...contentInsights(database, hash),
+				...(where
+					? {
+							where: {
+								country: where.country,
+								...(where.region && {region: where.region}),
+								...(where.city && {city: where.city}),
+							},
+						}
+					: {}),
+			}
+		}
+		// A view of Photos that is not the whole library is searched for what
+		// is like what was typed only among what it holds: an album's photos
+		// are all compared, however large the library around them
+		let only: Buffer[] | undefined
+		if (request.scope === 'photos' && request.embedding) {
+			const view = {...request.filter, ...(request.placeIds?.length ? {placeIds: request.placeIds} : {})}
+			if (!isSimpleFilter({...view, query: undefined})) {
+				this.#ensureSource(database, accountId)
+				this.syncPendingChanges(database)
+				const held = filterQuery({...view, query: undefined})
+				only = database
+					.prepare(`${PHOTO_LIBRARY_CTE} SELECT DISTINCT content_hash FROM logical_items WHERE (${held.sql})`)
+					.pluck()
+					.all(accountId, ...held.parameters) as Buffer[]
+			}
+		}
+		const hits = read
+			? contentHits(database, accountId, request.text, request.embedding, request.sounded, only)
+			: (new Map() as ReturnType<typeof contentHits>)
+		// What was taken in the places the search is narrowed to
+		const places = request.placeIds?.length ? placesQuery(request.placeIds) : undefined
+		if (request.scope !== 'photos') {
+			const file = `SELECT lower(hex(contents.blake3)) AS hash, index_roots.virtual_path, entries.relative_path`
+			const mine = `index_roots.owner_id = ? AND index_roots.kind = 'home' AND entries.hidden = 0`
+			const files = (
+				places && !request.text
+					? // With nothing typed, everything that was taken there, the latest first
+						database
+							.prepare(
+								`${file} FROM media_metadata AS place JOIN contents ON contents.id = place.content_id
+								JOIN entries ON entries.content_id = contents.id JOIN index_roots ON index_roots.id = entries.root_id
+								WHERE ${places.sql} AND ${mine} ORDER BY place.taken_at DESC LIMIT ?`,
+							)
+							.all(...places.parameters, accountId, request.limit)
+					: database
+							.prepare(
+								`${file} FROM contents JOIN entries ON entries.content_id = contents.id
+								JOIN index_roots ON index_roots.id = entries.root_id
+								WHERE contents.blake3 IN (SELECT unhex(value) FROM json_each(?)) AND ${mine}
+								${places ? `AND contents.id IN (SELECT content_id FROM media_metadata AS place WHERE ${places.sql})` : ''}`,
+							)
+							.all(JSON.stringify([...hits.keys()]), accountId, ...(places?.parameters ?? []))
+			) as Array<{hash: string; virtual_path: string; relative_path: string}>
+			const found = JSON.stringify(files.map(({hash}) => hash))
+			let photos = new Map<string, PhotoItem>()
+			if (request.scope === 'everything') {
+				this.#ensureSource(database, accountId)
+				this.syncPendingChanges(database)
+				const items = database
+					.prepare(
+						`${PHOTO_LIBRARY_CTE} ${ITEM_SELECT} FROM logical_items
+						WHERE content_hash IN (SELECT unhex(value) FROM json_each(?)) AND root_kind = 'home'`,
+					)
+					.all(accountId, found) as ItemRow[]
+				photos = new Map(items.map((row) => [row.id, item(row)]))
+			}
+			const located = files.map(({hash, virtual_path, relative_path}) => ({
+				path: joinVirtualPath(virtual_path, relative_path),
+				hit: hits.get(hash),
+				photo: photos.get(hash),
+			}))
+			const ranked = request.text
+				? rankHits(located.flatMap((file) => (file.hit ? [{...file, hit: file.hit, strength: file.hit.strength}] : [])))
+				: located
+			return ranked.slice(0, request.limit)
+		}
+		this.#ensureSource(database, accountId)
+		this.syncPendingChanges(database)
+		const filter = {...request.filter, ...(request.placeIds?.length ? {placeIds: request.placeIds} : {})}
+		const named = this.listItems(database, accountId, {...filter, query: request.text}, undefined, request.limit)
+		const where = filterQuery({...filter, query: undefined})
+		const rows = database
+			.prepare(
+				`${PHOTO_LIBRARY_CTE} ${ITEM_SELECT}, root_virtual_path, relative_path FROM logical_items
+				WHERE content_hash IN (SELECT unhex(value) FROM json_each(?)) AND (${where.sql})`,
+			)
+			.all(
+				accountId,
+				JSON.stringify([...new Set([...hits.keys(), ...named.items.map(({id}) => id)])]),
+				...where.parameters,
+			) as Array<ItemRow & {root_virtual_path: string; relative_path: string}>
+		const located = new Map(
+			rows.map(({root_virtual_path, relative_path, ...row}) => [
+				row.id,
+				{path: joinVirtualPath(root_virtual_path, relative_path), photo: item(row)},
+			]),
+		)
+		// What Photos finds by its name, or by what its camera wrote about it,
+		// and what is found by what is in it: one list, by how sure each is
+		// (see ../search/hits.ts). A photo's own name and what is in it are
+		// reasons that add up.
+		const names = new Set(named.items.map(({id}) => id))
+		const found = [...names, ...[...hits.keys()].filter((hash) => !names.has(hash))].flatMap((id) => {
+			const where = located.get(id)
+			if (!where) return []
+			const hit = hits.get(id)
+			const name = names.has(id) ? nameStrength(request.text, nodePath.basename(where.path)) || NOTED : 0
+			const strength = 1 - (1 - name) * (1 - (hit?.strength ?? 0))
+			return [{...where, ...(hit && hit.strength >= name ? {hit} : {}), strength}]
+		})
+		// With nothing typed they stay in the order Photos lists them
+		return (request.text ? found.sort((first, second) => second.strength - first.strength) : found).slice(
+			0,
+			request.limit,
+		)
+	}
+
+	// The hash of the content of the file at a virtual path, in a root of the account's
+	#hashAt(database: Database, accountId: string, path: string) {
+		const roots = database
+			.prepare('SELECT id, virtual_path FROM index_roots WHERE owner_id = ?')
+			.all(accountId) as Array<{id: number; virtual_path: string}>
+		const root = roots
+			.filter(({virtual_path}) => path.startsWith(`${virtual_path}/`))
+			.sort((first, second) => second.virtual_path.length - first.virtual_path.length)[0]
+		if (!root) return
+		return database
+			.prepare(
+				`SELECT contents.blake3 FROM entries JOIN contents ON contents.id = entries.content_id
+				WHERE entries.root_id = ? AND entries.relative_path = ?`,
+			)
+			.pluck()
+			.get(root.id, path.slice(root.virtual_path.length + 1)) as Buffer | undefined
 	}
 
 	// Every item a filter selects that knows where it was taken, newest first,
@@ -1137,7 +1408,64 @@ export default class PhotosRepository {
 				ORDER BY umbrel.photos_albums.created_at, umbrel.photos_albums.id`,
 			)
 			.all(hash, accountId) as Array<{id: string; name: string}>
-		return itemDetail(row, albums)
+		const people = facesAvailable(database) ? peopleOfItem(database, accountId, hash) : []
+		return itemDetail(row, albums, people)
+	}
+
+	// People (see people.ts). The faces of contents the models have just looked
+	// at are given to people here, for every account with the content;
+	// resolves to the accounts whose people changed.
+	assignFaces(database: Database, hashes: Buffer[]) {
+		if (!facesAvailable(database)) return []
+		this.syncPendingChanges(database)
+		return this.#people.assign(database, hashes)
+	}
+
+	// After a write that did not happen, what was remembered of people is not so
+	forgetPeople() {
+		this.#people.forgetAll()
+	}
+
+	// Contents whose faces an account still has to place
+	unassignedFaces(database: Database, limit: number) {
+		if (!facesAvailable(database)) return []
+		this.syncPendingChanges(database)
+		return this.#people.unassigned(database, limit)
+	}
+
+	listPeople(database: Database, accountId: string, hidden: boolean) {
+		if (!facesAvailable(database)) return []
+		this.#ensureSource(database, accountId)
+		this.syncPendingChanges(database)
+		return listPeople(database, accountId, hidden)
+	}
+
+	listPersonSuggestions(database: Database, accountId: string) {
+		if (!facesAvailable(database)) return []
+		this.#ensureSource(database, accountId)
+		this.syncPendingChanges(database)
+		return suggestions(database, accountId)
+	}
+
+	// Resolves to whether there was anything to change
+	changePeople(database: Database, accountId: string, change: PeopleChange): boolean {
+		const hashes = (ids: string[]) => ids.map(idToHash).filter((hash) => hash !== undefined)
+		switch (change.type) {
+			case 'rename':
+				return renamePerson(database, accountId, change.id, change.name)
+			case 'setHidden':
+				return setPersonHidden(database, accountId, change.id, change.hidden)
+			case 'setCover':
+				return setPersonCover(database, accountId, change.id, change.itemId ? idToHash(change.itemId) : undefined)
+			case 'dismissSuggestion':
+				return dismissSuggestion(database, accountId, change.id, change.candidateId)
+			case 'merge':
+				this.#people.forget(accountId)
+				return mergePeople(database, accountId, change.into, change.ids)
+			case 'removeItems':
+				this.#people.forget(accountId)
+				return removePersonContents(database, accountId, change.id, hashes(change.itemIds)) > 0
+		}
 	}
 
 	neighbors(database: Database, accountId: string, id: string, filter: PhotoFilter) {
@@ -1589,6 +1917,10 @@ export default class PhotosRepository {
 		const remove = database.transaction(() => {
 			database.prepare('DELETE FROM umbrel.photos_content_state WHERE account_id = ?').run(accountId)
 			database.prepare('DELETE FROM umbrel.photos_albums WHERE account_id = ?').run(accountId)
+			// Their people, and with each whatever was said about who they are not
+			database.prepare('DELETE FROM umbrel.photos_faces WHERE account_id = ?').run(accountId)
+			database.prepare('DELETE FROM umbrel.photos_people WHERE account_id = ?').run(accountId)
+			this.#people.forget(accountId)
 			const changes = database.prepare('DELETE FROM umbrel.photos_sources WHERE account_id = ?').run(accountId).changes
 			this.#readModel.removeAccount(database, accountId)
 			this.#advanceProjectionGeneration(database)
@@ -1802,6 +2134,16 @@ function filterQuery(filter: PhotoFilter): Query {
 		)
 		parameters.push(...filter.albumIds)
 	}
+	// Each of them is in it
+	for (const personId of filter.personIds ?? []) {
+		clauses.push(
+			`EXISTS (SELECT 1 FROM umbrel.photos_faces
+			WHERE umbrel.photos_faces.account_id = logical_items.account_id
+				AND umbrel.photos_faces.content_hash = logical_items.content_hash
+				AND umbrel.photos_faces.person_id = ?)`,
+		)
+		parameters.push(personId)
+	}
 	if (filter.dates?.length) {
 		clauses.push(`(${filter.dates.map(() => '(logical_taken_at >= ? AND logical_taken_at < ?)').join(' OR ')})`)
 		for (const range of filter.dates) parameters.push(range.from, range.to)
@@ -1813,6 +2155,14 @@ function filterQuery(filter: PhotoFilter): Query {
 			WHERE place.content_id = logical_items.content_id AND ${bounds.sql})`,
 		)
 		parameters.push(...bounds.parameters)
+	}
+	if (filter.placeIds?.length) {
+		const places = placesQuery(filter.placeIds)
+		clauses.push(
+			`EXISTS (SELECT 1 FROM media_metadata AS place
+			WHERE place.content_id = logical_items.content_id AND ${places.sql})`,
+		)
+		parameters.push(...places.parameters)
 	}
 	const terms = filter.query?.replaceAll('\0', '').normalize('NFC').trim().split(/\s+/).filter(Boolean) ?? []
 	for (const term of terms) {
@@ -1846,7 +2196,14 @@ function filterQuery(filter: PhotoFilter): Query {
 }
 
 function isSimpleFilter(filter: PhotoFilter) {
-	return !filter.sourceIds?.length && !filter.albumIds?.length && !filter.query?.trim() && !filter.bounds
+	return (
+		!filter.sourceIds?.length &&
+		!filter.albumIds?.length &&
+		!filter.personIds?.length &&
+		!filter.query?.trim() &&
+		!filter.bounds &&
+		!filter.placeIds?.length
+	)
 }
 
 // The media_metadata rows, as `place`, inside a map stretch. One that crosses
@@ -1857,6 +2214,15 @@ function boundsQuery({west, south, east, north}: PhotoBounds): Query {
 			west <= east ? 'place.longitude BETWEEN ? AND ?' : '(place.longitude >= ? OR place.longitude <= ?)'
 		}`,
 		parameters: [south, north, west, east],
+	}
+}
+
+// The media_metadata rows, as `place`, of what was taken in any of the places
+function placesQuery(ids: string[]): Query {
+	const columns = ids.flatMap((id) => placeColumn(id) ?? [])
+	return {
+		sql: columns.length > 0 ? `(${columns.map(({column}) => `place.${column} = ?`).join(' OR ')})` : '0',
+		parameters: columns.map(({value}) => value),
 	}
 }
 
@@ -1875,7 +2241,11 @@ function item(row: ItemRow): PhotoItem {
 	}
 }
 
-function itemDetail(row: ItemDetailRow, albums: Array<{id: string; name: string}>): PhotoItemDetail {
+function itemDetail(
+	row: ItemDetailRow,
+	albums: Array<{id: string; name: string}>,
+	people: PhotoItemDetail['people'],
+): PhotoItemDetail {
 	const exifFields = {
 		...(row.camera_make ? {make: row.camera_make} : {}),
 		...(row.camera_model ? {model: row.camera_model} : {}),
@@ -1906,6 +2276,7 @@ function itemDetail(row: ItemDetailRow, albums: Array<{id: string; name: string}
 					},
 				}),
 		albums,
+		people,
 	}
 }
 

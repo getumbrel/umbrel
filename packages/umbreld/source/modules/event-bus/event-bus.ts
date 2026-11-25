@@ -16,6 +16,7 @@ import type {
 } from '../hardware/raid.ts'
 import type {Machine, OsImage, MachineAgentControlEvent} from '../machines/machines.ts'
 import type {PhotoIndexingProgress} from '../photos/types.ts'
+import type {SearchIndexingProgress} from '../search/types.ts'
 
 // A file change listener that never settles mustn't hold up later batches
 // forever. Timing out releases the dispatch; it doesn't cancel the listener.
@@ -100,6 +101,7 @@ export const events = [
 	'hardware:thunderbolt:devices-change',
 	'photos:change',
 	'photos:indexing-progress',
+	'search:indexing-progress',
 ] as const satisfies readonly (keyof EventTypes)[]
 
 // Statically define event types
@@ -178,6 +180,9 @@ export type EventTypes = {
 	'photos:change': {accountIds: string[]}
 	// Fires with the latest indexing job snapshot for one Photos account.
 	'photos:indexing-progress': PhotoIndexingProgress
+	// Fires with how far the models have got through what there is to read,
+	// for one account.
+	'search:indexing-progress': SearchIndexingProgress
 }
 
 export default class EventBus {

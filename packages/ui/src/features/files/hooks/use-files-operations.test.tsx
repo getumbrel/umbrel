@@ -47,8 +47,8 @@ vi.mock('@/trpc/trpc', () => {
 					recents: {invalidate},
 					favorites: {invalidate},
 					shares: {invalidate},
-					search: {invalidate},
 				},
+				search: {query: {invalidate}},
 			}),
 			files: {
 				rename: mutation(mocks.rename),

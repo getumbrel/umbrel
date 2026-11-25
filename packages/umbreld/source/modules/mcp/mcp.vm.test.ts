@@ -149,6 +149,7 @@ describe('MCP', () => {
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		})
 
 		await withMcp(token, async (client) => {
@@ -196,6 +197,7 @@ describe('MCP', () => {
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		})
 
 		await withMcp(token, async (client) => {
@@ -283,6 +285,7 @@ request.end(${JSON.stringify(body)})
 			manageSystem: false,
 			machines: 'all',
 			createMachines: true,
+			photos: false,
 		})
 		await withMcp(token, async (client) => {
 			const names = (await client.listTools()).tools.map((tool) => tool.name)
@@ -313,6 +316,7 @@ request.end(${JSON.stringify(body)})
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		})
 		await withMcp(token, async (client) => {
 			const names = (await client.listTools()).tools.map((tool) => tool.name)

@@ -80,6 +80,7 @@ function CommandInput({
 	wrapperClassName,
 	leading,
 	trailing,
+	accessory,
 	onClear,
 	clearLabel = 'Clear',
 	ref,
@@ -91,6 +92,9 @@ function CommandInput({
 	// Without `trailing` the dialog's close button takes that slot.
 	leading?: React.ReactNode
 	trailing?: React.ReactNode
+	// A small sign about what is typed (how far along a search's work is),
+	// between the field and its clear button
+	accessory?: React.ReactNode
 	// Shows a clear button while the (controlled) value is non-empty
 	onClear?: () => void
 	clearLabel?: string
@@ -108,6 +112,7 @@ function CommandInput({
 				)}
 				{...props}
 			/>
+			{accessory}
 			{onClear && hasValue && (
 				<button
 					type='button'

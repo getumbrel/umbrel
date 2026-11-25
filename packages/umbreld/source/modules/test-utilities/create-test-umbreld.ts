@@ -1,5 +1,9 @@
+import fs from 'node:fs'
+import http from 'node:http'
+import type {AddressInfo} from 'node:net'
 import path from 'node:path'
 import {Buffer} from 'node:buffer'
+import {pipeline} from 'node:stream/promises'
 import {fileURLToPath} from 'node:url'
 import {createTRPCProxyClient, httpBatchLink, createWSClient, wsLink, splitLink} from '@trpc/client'
 import got from 'got'
@@ -408,12 +412,44 @@ export const raidzDrives = [
 	})),
 ]
 
+// Serves the models umbrelOS fetches once it is running (see files/models.ts)
+// from where `scripts/download-models` puts them, in the layout the download
+// server has them in, with range requests like it. VMs reach it at
+// http://10.0.2.2:<port>.
+async function serveModels() {
+	const directory = path.resolve(currentDirectory, '../../../../os/build/models')
+	if (!fs.existsSync(directory)) {
+		throw new Error(`No models at ${directory}: run scripts/download-models from the repository root first`)
+	}
+	const server = http.createServer((request, response) => {
+		const file = path.join(directory, path.normalize(decodeURIComponent(request.url ?? '/')))
+		const size = file.startsWith(`${directory}${path.sep}`) && fs.statSync(file, {throwIfNoEntry: false})?.size
+		if (!size) return response.writeHead(404).end()
+		const range = /^bytes=(\d+)-$/.exec(request.headers.range ?? '')
+		const start = range ? Number(range[1]) : 0
+		response.writeHead(range ? 206 : 200, {
+			'content-length': size - start,
+			...(range ? {'content-range': `bytes ${start}-${size - 1}/${size}`} : {}),
+		})
+		pipeline(fs.createReadStream(file, {start}), response).catch(() => {})
+	})
+	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+	return {
+		port: (server.address() as AddressInfo).port,
+		async close() {
+			server.closeAllConnections()
+			await new Promise((resolve) => server.close(resolve))
+		},
+	}
+}
+
 export async function createTestVm({
 	device,
 	bootDisk,
 	image,
 	memory,
 	cores,
+	models = false,
 	forwardPorts = [],
 	startupTimeout = 300_000,
 	stateDirectoryName,
@@ -423,6 +459,10 @@ export async function createTestVm({
 	image?: string
 	memory?: number
 	cores?: number
+	// Whether the VM can fetch the models that read the library, from this
+	// machine. Without it there is nowhere for it to fetch them from: a test
+	// that doesn't ask for them never has a VM download them from the internet.
+	models?: boolean
 	forwardPorts?: Array<{hostPort?: number; guestPort: number}>
 	startupTimeout?: number
 	stateDirectoryName?: string
@@ -449,6 +489,9 @@ export async function createTestVm({
 	}
 	const stateDir = stateDirectoryName ? path.join(generatedStateDirectory, stateDirectoryName) : generatedStateDirectory
 	const env = {VM_STATE_DIR: stateDir}
+	const modelsServer = models ? await serveModels() : undefined
+	// Port 1 has nothing listening, so a VM that asks is refused at once
+	const modelsUrl = `http://10.0.2.2:${modelsServer?.port ?? 1}`
 
 	let sshPort = 0
 	let httpPort = 0
@@ -537,7 +580,7 @@ export async function createTestVm({
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot ${imageArgs} ${deviceArgs} ${bootDiskArgs} ${memoryArgs} ${coreArgs} ${cdromArgs} ${bootNvmeSlotArgs} ${bootSataSlotArgs} ${bootUfsArgs} ${forwardPortArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot ${imageArgs} ${deviceArgs} ${bootDiskArgs} ${memoryArgs} ${coreArgs} ${cdromArgs} ${bootNvmeSlotArgs} ${bootSataSlotArgs} ${bootUfsArgs} ${forwardPortArgs} --credential ${`umbrel.models-url=${modelsUrl}`} --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcessPid = vmProcess.pid
 
 		// Capture output and track if process exits
@@ -863,6 +906,7 @@ export async function createTestVm({
 
 	async function cleanup() {
 		await powerOff()
+		await modelsServer?.close()
 		await directory.destroyRoot()
 	}
 

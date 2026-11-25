@@ -25,6 +25,7 @@ import {
 	generateThumbnailFiles,
 	hashFileRevision,
 	hashNotBefore,
+	pageDpi,
 	streamableImageCoder,
 	THUMBNAIL_GENERATION_TIMEOUT_MS,
 } from './file-index-enrichment.ts'
@@ -886,4 +887,21 @@ test('packs the average thumbnail colour as 0xRRGGBB', async () => {
 	await expect(extractThumbnailTint(thumbnail)).resolves.toBe(0x123456)
 	// Read from standard input, like any other media
 	expect(argumentsOf('convert')[0]).toBe('webp:-')
+})
+
+test('makes a picture of a page no larger than a page of A0 comes out', () => {
+	const boxes = (width: number, height: number, shown = [width, height]) =>
+		`Page    1 size:      ${shown[0]} x ${shown[1]} pts\n` +
+		`Page    1 MediaBox:      0.00     0.00  ${width.toFixed(2)}  ${height.toFixed(2)}\n` +
+		`Page    1 CropBox:       0.00     0.00   ${shown[0].toFixed(2)}   ${shown[1].toFixed(2)}\n`
+	// A4 and A0 at 150 to the inch, as ever
+	expect(pageDpi(boxes(595, 842))).toBe(150)
+	expect(pageDpi(boxes(2384, 3370))).toBe(150)
+	// A page twice the size of A0 at half that, and one 200 inches square at 35: 7,000 pixels a side
+	expect(pageDpi(boxes(4768, 6741))).toBe(75)
+	expect(pageDpi(boxes(14400, 14400))).toBe(35)
+	// By the box the picture is made of, whatever part of it the page is shown by
+	expect(pageDpi(boxes(9600, 9600, [595, 842]))).toBe(52)
+	// And as ever where pdfinfo says nothing of the page
+	expect(pageDpi('')).toBe(150)
 })

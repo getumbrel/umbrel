@@ -15,6 +15,7 @@ import {monthKeyOf, yearOf} from '@/features/photos/components/listing/time-rail
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {inBatches, inBatchesIsolating} from '@/features/photos/hooks/batches'
 import {moveActivity} from '@/features/photos/hooks/move-activity'
+import {SEARCH_QUERY_KEY, type SearchResponse} from '@/features/photos/hooks/use-search'
 import {authorizedHttpUrl} from '@/modules/auth/http-auth'
 import {RouterInput, RouterOutput, trpcClient, trpcReact} from '@/trpc/trpc'
 import {MS_PER_MINUTE} from '@/utils/date-time'
@@ -235,8 +236,31 @@ export function useItemNeighbors(id: string | undefined, filter: ItemFilter) {
 	return trpcReact.photos.items.neighbors.useQuery({id: id ?? '', filter}, {enabled: Boolean(id)})
 }
 
-// The filter a cached list was fetched with
+// The filter a cached list was fetched with. A ranked search (search.query)
+// keeps the view it looked in at the same place, so it reads the same way.
 const listFilter = (queryKey: readonly unknown[]): ItemFilter => listInput(queryKey).filter ?? {}
+
+// A cached answer of search.query: one response where it is asked whole (the
+// command palette, Files), pages of them for a ranked search in Photos
+type SearchAnswer = SearchResponse | InfiniteData<SearchResponse>
+
+const answersOf = (data: SearchAnswer | undefined) => (!data ? [] : 'pages' in data ? data.pages : [data])
+
+// The answer with its results changed. What a change drops is taken off the
+// count of everything found, which every page carries.
+function changeResults(
+	data: SearchAnswer | undefined,
+	change: (results: SearchResponse['results']) => SearchResponse['results'],
+): SearchAnswer | undefined {
+	if (!data) return data
+	const changed = answersOf(data).map((answer) => ({...answer, results: change(answer.results)}))
+	const dropped = answersOf(data).reduce(
+		(count, answer, index) => count + answer.results.length - changed[index]!.results.length,
+		0,
+	)
+	const counted = changed.map((answer) => ({...answer, total: Math.max(0, answer.total - dropped)}))
+	return 'pages' in data ? {...data, pages: counted} : counted[0]
+}
 
 // ── Counting a change as it is asked for ──
 //
@@ -281,6 +305,8 @@ export function summaryAfterMove(summary: Summary, items: Item[], count: number,
 
 // Cache-level edits so a mutation shows instantly and never triggers a
 // refetch of every loaded page. Lists are marked stale for their next mount.
+// A ranked search's results (search.query) carry the same items and are the
+// list on screen while one is up, so every edit reaches them too.
 export function useItemCache() {
 	const queryClient = useQueryClient()
 	const utils = trpcReact.useUtils()
@@ -296,6 +322,8 @@ export function useItemCache() {
 		for (const query of queryClient.getQueryCache().findAll({queryKey: ITEMS_LIST_KEY, type: 'active'})) {
 			void rereadList(queryClient, query as Query<ItemsList>).catch(() => undefined)
 		}
+		// … and so is a search on screen, which is its own to fetch again
+		void queryClient.invalidateQueries({queryKey: SEARCH_QUERY_KEY})
 	}
 	const patch = (ids: string[], update: (item: Item) => Item) => {
 		const set = new Set(ids)
@@ -310,19 +338,31 @@ export function useItemCache() {
 					}
 				: data,
 		)
+		queryClient.setQueriesData<SearchAnswer>({queryKey: SEARCH_QUERY_KEY}, (data) =>
+			changeResults(data, (results) =>
+				results.map((result) =>
+					result.photo && set.has(result.photo.id) ? {...result, photo: update(result.photo)} : result,
+				),
+			),
+		)
 	}
 	// Drops the items from every list, or only from the lists `inList` picks
 	// (the ones the items have actually left)
 	const remove = (ids: string[], inList?: (filter: ItemFilter) => boolean) => {
 		const set = new Set(ids)
-		const filters = {
-			queryKey: ITEMS_LIST_KEY,
+		const lists = (queryKey: readonly unknown[]) => ({
+			queryKey,
 			predicate: inList && ((query: {queryKey: readonly unknown[]}) => inList(listFilter(query.queryKey))),
-		}
-		queryClient.setQueriesData<InfiniteData<ItemsPage>>(filters, (data) =>
+		})
+		queryClient.setQueriesData<InfiniteData<ItemsPage>>(lists(ITEMS_LIST_KEY), (data) =>
 			data
 				? {...data, pages: data.pages.map((page) => ({...page, items: page.items.filter((item) => !set.has(item.id))}))}
 				: data,
+		)
+		// A ranked search is the list of the view it was asked about: an item
+		// leaving Favorites leaves a search made there, and no other
+		queryClient.setQueriesData<SearchAnswer>(lists(SEARCH_QUERY_KEY), (data) =>
+			changeResults(data, (results) => results.filter((result) => !result.photo || !set.has(result.photo.id))),
 		)
 	}
 	// The items themselves, as many as any list holds: for counting what a
@@ -333,6 +373,11 @@ export function useItemCache() {
 		for (const [, data] of queryClient.getQueriesData<ItemsList>({queryKey: ITEMS_LIST_KEY})) {
 			for (const page of data?.pages ?? []) {
 				for (const item of page.items) if (wanted.has(item.id)) found.set(item.id, item)
+			}
+		}
+		for (const [, data] of queryClient.getQueriesData<SearchAnswer>({queryKey: SEARCH_QUERY_KEY})) {
+			for (const {results} of answersOf(data)) {
+				for (const {photo} of results) if (photo && wanted.has(photo.id)) found.set(photo.id, photo)
 			}
 		}
 		return [...found.values()]

@@ -57,3 +57,14 @@ it('keeps the full path scrollable and initially shows its end', () => {
 	expect(scroller.textContent).toBe('/Home/Archive/2026')
 	expect(scroller.scrollLeft).toBe(640)
 })
+
+it('leaves a path that fits at its start', () => {
+	// A fraction of a pixel over, as text widths are: reported as one
+	vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(241)
+	act(() => root.render(<FolderBreadcrumbScroller path='/Home/Photos' homePath='/Home' />))
+
+	const scroller = container.querySelector<HTMLDivElement>('.umbrel-fade-scroller-x')!
+	scroller.scrollLeft = 0.5
+	act(() => root.render(<FolderBreadcrumbScroller path='/Home/Videos' homePath='/Home' />))
+	expect(scroller.scrollLeft).toBe(0)
+})

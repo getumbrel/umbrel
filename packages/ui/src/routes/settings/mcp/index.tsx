@@ -768,6 +768,13 @@ function PermissionsSection({
 					</button>
 				)}
 				<PermissionToggleRow
+					title={t('mcp-photos')}
+					description={t('mcp-photos-description')}
+					checked={permissions.photos}
+					disabled={busy}
+					onCheckedChange={(checked) => onUpdate({photos: checked})}
+				/>
+				<PermissionToggleRow
 					title={t('mcp-app-store')}
 					description={t('mcp-app-store-description')}
 					checked={permissions.appStore}

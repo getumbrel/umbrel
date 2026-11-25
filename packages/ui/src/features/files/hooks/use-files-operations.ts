@@ -12,6 +12,8 @@ import {batchActivity} from '@/features/files/utils/batch-activity'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {canPerformFileOperation} from '@/features/files/utils/file-capabilities'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
+import {withoutSearchResult} from '@/features/files/utils/without-search-result'
+import {refreshSearchSoon} from '@/features/search/refresh-search'
 import {authorizedHttpUrl} from '@/modules/auth/http-auth'
 import {useConfirmation} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
@@ -270,7 +272,7 @@ export function useFilesOperations() {
 			utils.files.recents.invalidate()
 			utils.files.favorites.invalidate()
 			utils.files.shares.invalidate()
-			utils.files.search.invalidate()
+			refreshSearchSoon(utils)
 		},
 	}).mutateAsync
 
@@ -284,7 +286,8 @@ export function useFilesOperations() {
 		}
 
 		const renamedPath = `${item.path.substring(0, item.path.lastIndexOf('/') + 1)}${newName}`
-		const renamedItem = {...item, name: newName, path: renamedPath, renamedFrom: item.path}
+		// (a search result renamed is no longer what the search found)
+		const renamedItem = {...withoutSearchResult(item), name: newName, path: renamedPath, renamedFrom: item.path}
 
 		// Show renamed item immediately, hide old one. A source that is itself an
 		// unconfirmed optimistic entry is retired rather than masked: the server
@@ -381,7 +384,8 @@ export function useFilesOperations() {
 	const extract = trpcReact.files.unarchive.useMutation({
 		onSuccess: async (_, {path}) => {
 			const parentPath = path.substring(0, path.lastIndexOf('/'))
-			await Promise.all([utils.files.list.invalidate({path: parentPath}), utils.files.search.invalidate()])
+			refreshSearchSoon(utils)
+			await utils.files.list.invalidate({path: parentPath})
 			useFilesStore.getState().removePendingPaths([path])
 		},
 		onError: (error) => {
@@ -411,9 +415,8 @@ export function useFilesOperations() {
 				utils.files.list.invalidate({path: paths[0].split('/').slice(0, -1).join('/')}),
 				// invalidate the recents list
 				utils.files.recents.invalidate(),
-				// invalidate the search list
-				utils.files.search.invalidate(),
 			])
+			refreshSearchSoon(utils)
 			useFilesStore.getState().removePendingPaths(paths)
 		},
 		onError: (error, {paths}) => {
@@ -450,7 +453,7 @@ export function useFilesOperations() {
 				utils.files.recents.invalidate()
 				utils.files.favorites.invalidate()
 				utils.files.shares.invalidate()
-				utils.files.search.invalidate()
+				refreshSearchSoon(utils)
 			}),
 	}).mutateAsync
 
@@ -497,7 +500,7 @@ export function useFilesOperations() {
 			refreshAfterBatch(() => {
 				utils.files.list.invalidate()
 				utils.files.recents.invalidate()
-				utils.files.search.invalidate()
+				refreshSearchSoon(utils)
 			}),
 	}).mutateAsync
 

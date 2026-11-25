@@ -40,9 +40,12 @@ export function useViewerItemId(open: boolean) {
 			// The live URL, not a render's snapshot of it: the close (or back)
 			// may have taken the dialog out of it since
 			const next = new URLSearchParams(window.location.search)
-			if (next.get('dialog') !== 'photos-item' || next.get(ID_PARAM) === target) return
-			next.set(ID_PARAM, target)
+			if (next.get('dialog') !== 'photos-item') return
+			// (Also when the URL already names it, handed over from outside: an
+			// id written before that is then no echo, should it be handed next)
 			writtenRef.current = target
+			if (next.get(ID_PARAM) === target) return
+			next.set(ID_PARAM, target)
 			navigate({search: `?${next}`}, {replace: true})
 		},
 		[navigate],

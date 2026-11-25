@@ -1,3 +1,4 @@
+import {writeFileSync} from 'node:fs'
 import nodePath from 'node:path'
 
 import BetterSqlite3 from 'better-sqlite3'
@@ -195,4 +196,24 @@ test('Files reads do not require Photos projection maintenance', async () => {
 		),
 	).resolves.toEqual({taken_at: 2000})
 	await expect(pool.read('summary', ['owner'], (begin) => begin())).rejects.toMatchObject({code: 'PHOTOS_READ_RETRY'})
+})
+
+test('Photos reads work when what the models made of the library cannot be opened', async () => {
+	const {paths} = await fixture()
+	// A file that is there and is not a database, as a damaged one is
+	const embeddingsDatabasePath = nodePath.join(nodePath.dirname(paths.databasePath), 'embeddings.db')
+	writeFileSync(embeddingsDatabasePath, 'not a database'.repeat(1000))
+	const reader = new FileIndexReader({...paths, embeddingsDatabasePath})
+	cleanup.push(() => reader.close())
+
+	reader.beginSnapshot()
+	try {
+		expect(reader.read('listItems', ['owner', {}, undefined, 10]).items.length).toBeGreaterThan(0)
+		// With nothing of the models' to look in, a search still goes by name
+		const found = reader.read('search', ['owner', {type: 'query', text: '1.jpg', scope: 'photos', limit: 10}])
+		expect(found).toEqual(expect.any(Array))
+		expect(reader.read('search', ['owner', {type: 'insights', path: '/Home/1.jpg'}])).toEqual({})
+	} finally {
+		reader.endSnapshot()
+	}
 })

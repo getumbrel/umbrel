@@ -65,6 +65,10 @@ export default {
 				'brand-lighter': 'hsl(var(--color-brand-lighter) / <alpha-value>)',
 				'brand-lightest': 'hsl(var(--color-brand-lightest) / <alpha-value>)',
 				//
+				// What a search matched (see --color-match in index.css)
+				match: 'hsl(var(--color-match) / <alpha-value>)',
+				'match-ink': 'hsl(var(--color-match-ink) / <alpha-value>)',
+				//
 				// Keyboard focus ring. Defined in index.css so the global
 				// `:focus-visible` outline and `ring-ring` stay the same colour.
 				ring: 'var(--focus-ring)',

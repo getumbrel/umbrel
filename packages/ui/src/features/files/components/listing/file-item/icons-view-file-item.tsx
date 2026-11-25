@@ -16,6 +16,7 @@ import {formatUploadPercent} from '@/features/files/utils/format-upload-percent'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
+import {matchReason, SearchMatchLine} from '@/features/search/search-match-line'
 import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
@@ -82,6 +83,7 @@ export const IconsViewFileItem = ({
 					thumbnailClassName='h-[72px] w-full max-w-[108px] [--thumbnail-radius:6px]'
 					useAnimatedIcon={!isTouchDevice && !item.isDisconnected}
 					isHovered={isHovered}
+					momentTime
 				/>
 			</div>
 			<div className={cn('relative mt-2 w-full flex-col items-center', fadedContent && 'opacity-50')}>
@@ -98,29 +100,40 @@ export const IconsViewFileItem = ({
 						suffix={folderApps ? <FolderAppStack apps={folderApps} className='ml-0.5 align-[-3px]' /> : undefined}
 					/>
 				)}
+				{/* In search, what was found in this file takes the size's line. One
+				    found by its name keeps the folder it is in there: the whole way
+				    to it would be cut short of that folder, the part that tells it apart. */}
 				<span className='block w-full truncate text-center text-11 leading-normal text-white/45'>
-					{item.isDisconnected
-						? t('files-network-storage.disconnected')
-						: isUploading
-							? uploadingProgress === 0
-								? t('files-state.waiting')
-								: formatUploadPercent(uploadingProgress ?? 0, languageCode)
-							: showLocation
-								? // Among items gathered from all over, the folder each one is in says the most
-									item.path.split('/').slice(-2, -1)[0] || formatFilesystemSize(item.size)
-								: item.type === 'directory'
-									? isDirectoryAnExternalDrivePartition(item.path)
-										? t('files-type.external-drive')
-										: isDirectoryANetworkDevice(item.path)
-											? t('files-type.network-drive')
-											: isDirectoryAnUmbrelBackup(item.name)
-												? t('files-type.umbrel-backup')
-												: // Folder sizes come from the index, so one that isn't indexed yet falls back to
-													// the label, and so does an empty one: "0 KB" says less than "Folder"
-													item.size
-													? formatFilesystemSize(item.size)
-													: t('files-type.directory')
-									: formatFilesystemSize(item.size)}
+					{item.searchResult && matchReason(item.searchResult).type !== 'folder' ? (
+						<SearchMatchLine result={item.searchResult} />
+					) : item.isDisconnected ? (
+						t('files-network-storage.disconnected')
+					) : isUploading ? (
+						uploadingProgress === 0 ? (
+							t('files-state.waiting')
+						) : (
+							formatUploadPercent(uploadingProgress ?? 0, languageCode)
+						)
+					) : showLocation ? (
+						// Among items gathered from all over, the folder each one is in says the most
+						item.path.split('/').slice(-2, -1)[0] || formatFilesystemSize(item.size)
+					) : item.type === 'directory' ? (
+						isDirectoryAnExternalDrivePartition(item.path) ? (
+							t('files-type.external-drive')
+						) : isDirectoryANetworkDevice(item.path) ? (
+							t('files-type.network-drive')
+						) : isDirectoryAnUmbrelBackup(item.name) ? (
+							t('files-type.umbrel-backup')
+						) : // Folder sizes come from the index, so one that isn't indexed yet falls back to
+						// the label, and so does an empty one: "0 KB" says less than "Folder"
+						item.size ? (
+							formatFilesystemSize(item.size)
+						) : (
+							t('files-type.directory')
+						)
+					) : (
+						formatFilesystemSize(item.size)
+					)}
 				</span>
 			</div>
 

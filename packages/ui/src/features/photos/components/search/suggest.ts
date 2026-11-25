@@ -16,6 +16,7 @@ export type MonthCount = {year: number; month: number; count: number}
 
 export type SuggestSource = {id: string; name: string; count?: number}
 export type SuggestAlbum = {id: string; name: string; count?: number}
+export type SuggestPerson = {id: string; name: string; count?: number}
 export type SuggestKind = {kind: 'photo' | 'video'; label: string; count?: number}
 export type SuggestSubKind = {subKind: PhotoSubKind; label: string; count?: number}
 
@@ -24,11 +25,13 @@ export type SuggestSubKind = {subKind: PhotoSubKind; label: string; count?: numb
 export type Suggestion = {token: SearchToken; count?: number}
 
 // With nothing typed the panel is an invitation, not a void: the split, the
-// sources, the albums and the freshest months, each one tap away. Typed text
-// is read as a date first and foremost — a month name or its start ("aug"),
+// people, the sources, the albums and the freshest months, each one tap away.
+// Typed text is read as a date first and foremost — a month name or its start ("aug"),
 // a year ("2024", or just "20"), a month of a year in either order
 // ("aug 2024", "8/2024"), or a range between two of those ("2019–2021",
-// "aug 2024 - jan 2025") — and as a source, album or kind by name. Only
+// "aug 2024 - jan 2025") — and as a person, source, album or kind by name
+// (a person by the start of any word of theirs: "ma" finds Anna Maria as
+// well as Mark, "an" Anna but not Ryan). Only
 // stretches of the calendar that actually hold something are offered.
 export function suggest({
 	text,
@@ -36,6 +39,7 @@ export function suggest({
 	months,
 	sources,
 	albums,
+	people = [],
 	kinds,
 	subKinds = [],
 }: {
@@ -44,6 +48,8 @@ export function suggest({
 	months: MonthCount[]
 	sources: SuggestSource[]
 	albums: SuggestAlbum[]
+	// Named people, in the caller's order (the most photographed first)
+	people?: SuggestPerson[]
 	kinds: SuggestKind[]
 	subKinds?: SuggestSubKind[]
 }): Suggestion[] {
@@ -55,6 +61,13 @@ export function suggest({
 	for (const {subKind, label, count} of subKinds) {
 		if (!needle || label.toLocaleLowerCase(locale).startsWith(needle))
 			out.push({token: {type: 'subKind', subKind, label}, count})
+	}
+	// A library can know hundreds of faces; browsing shows the front of the
+	// caller's order, and a name is matched from the start of any of its words
+	const browsedPeople = needle ? people : people.slice(0, MAX_BROWSE_PEOPLE)
+	for (const {id, name, count} of browsedPeople) {
+		if (!needle || startsAWord(name.toLocaleLowerCase(locale), needle))
+			out.push({token: {type: 'person', id, label: name}, count})
 	}
 	for (const {id, name, count} of sources) {
 		if (!needle || name.toLocaleLowerCase(locale).includes(needle))
@@ -72,6 +85,12 @@ export function suggest({
 }
 
 const MAX_BROWSE_ALBUMS = 6
+const MAX_BROWSE_PEOPLE = 6
+
+// Whether the needle starts the text or any word in it
+function startsAWord(text: string, needle: string) {
+	return text.startsWith(needle) || text.split(/\s+/).some((word) => word.startsWith(needle))
+}
 
 const MAX_DATES = 5
 

@@ -1,0 +1,36 @@
+[Unit]
+Description=Models that write down what is said in recordings
+# Stopped after umbreld at shutdown: one stopped while umbreld is still sending
+# it things would look to umbreld like it had fallen over on each of them
+Before=umbrel.service
+ConditionPathExists=/opt/transcribe
+# The models are not part of the image. umbreld fetches them the first time
+# there is something for them to read, and leaves this once they are all
+# there (see models.ts in umbreld).
+ConditionPathExists=/home/umbrel/umbrel/models/installed
+
+[Service]
+# Like the other models that read the library, it only runs while there is
+# something to listen to: systemd starts it for the first sound umbreld sends,
+# and it exits five minutes after the last. It runs on the CPU, or on a GPU
+# when umbreld says the model that reads photos has left it free.
+ExecStart=/usr/bin/python3 /opt/umbrel-embeddings/speech.py --idle-seconds 300 \
+    --models /home/umbrel/umbrel/models
+# Mesa's Vulkan driver that renders on the CPU is not a GPU (see the index service)
+Environment=VK_LOADER_DRIVERS_DISABLE=*lvp*
+# It hears the sound of the user's files, so it gets nothing else: its own
+# user, no network, and of the home directories only the
+# models.
+# With the other models that read the library, and the first of everything on
+# the device to be stopped when it is out of memory (see umbrelbackground.slice)
+Slice=umbrelbackground.slice
+OOMScoreAdjust=1000
+DynamicUser=yes
+SupplementaryGroups=render
+PrivateNetwork=yes
+ProtectHome=tmpfs
+BindReadOnlyPaths=/home/umbrel/umbrel/models
+# Where the GPU driver keeps what it compiles, so that it is not compiled
+# again at every start
+CacheDirectory=umbrel-embeddings-speech
+Environment=XDG_CACHE_HOME=/var/cache/umbrel-embeddings-speech

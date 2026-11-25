@@ -1,0 +1,12 @@
+[Unit]
+Description=Socket of the models that write down what is said in recordings
+ConditionPathExists=/opt/transcribe
+
+[Socket]
+# Only root, so only umbreld, can reach it
+ListenStream=/run/umbrel-embeddings-speech/speech.sock
+SocketMode=0600
+DirectoryMode=0700
+
+[Install]
+WantedBy=sockets.target

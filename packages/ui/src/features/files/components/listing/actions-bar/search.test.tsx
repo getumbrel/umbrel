@@ -26,6 +26,12 @@ vi.mock('@/features/files/hooks/use-home-path', () => ({
 	useHomePath: () => '/Home',
 	useTrashPath: () => '/Trash',
 }))
+// The field's arc follows Search's own progress, which is not under test here
+vi.mock('@/features/search/use-search', () => ({useSearchStatus: () => undefined}))
+vi.mock('@/features/search/use-search-footnote', () => ({
+	useSearchFootnote: () => undefined,
+	useSearchArc: () => undefined,
+}))
 vi.mock('@/utils/tw', () => ({useBreakpoint: () => '2xl'}))
 ;(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true
 

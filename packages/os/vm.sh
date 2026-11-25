@@ -187,6 +187,8 @@ Boot Options:
     --ssh-port <port>              Local SSH port forward (default: ${DEFAULT_SSH_PORT})
     --http-port <port>             Local HTTP port forward (default: ${DEFAULT_HTTP_PORT})
     --forward-port <host:guest>    Extra local TCP port forward to the VM, repeatable
+    --credential <name=value>      A systemd system credential for the VM, repeatable. It is passed
+                                   in the SMBIOS, so not to a pi, which has none.
 
 Disk Options:
     --size <size>                  Disk size for nvme/sata/sas/usb/ufs add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata/sas, ${DEFAULT_USB_STORAGE_SIZE} usb, ${DEFAULT_UFS_SIZE} ufs)
@@ -1973,6 +1975,16 @@ boot_vm() {
   remove_qmp_socket
   printf '%s\n' "$device" > "$RUNNING_DEVICE_FILE"
 
+  # systemd takes credentials from the SMBIOS's OEM strings, and has them at
+  # /run/credentials/@system/<name> by the time anything else starts. A comma
+  # in a value is written twice for QEMU.
+  local credential
+  for credential in ${credentials[@]+"${credentials[@]}"}; do
+    if [[ "$device" != "pi" ]]; then
+      smbios_args+=(-smbios "type=11,value=io.systemd.credential:${credential//,/,,}")
+    fi
+  done
+
   local netdev_arg="user,id=net0,hostfwd=tcp:127.0.0.1:${ssh_port}-:22,hostfwd=tcp:127.0.0.1:${http_port}-:80"
   # ${arr[@]+...} guard: empty array expansion errors under set -u on bash < 4.4 (stock macOS bash 3.2)
   for port_forward in ${forward_ports[@]+"${forward_ports[@]}"}; do
@@ -2464,6 +2476,7 @@ case "$command" in
     ssh_port="$DEFAULT_SSH_PORT"
     http_port="$DEFAULT_HTTP_PORT"
     forward_ports=()
+    credentials=()
 
     # Check if first argument is an image path (not an option)
     if [[ $# -gt 0 && ! "$1" =~ ^-- ]]; then
@@ -2533,6 +2546,14 @@ case "$command" in
           ;;
         --http-port)
           http_port="$2"
+          shift 2
+          ;;
+        --credential)
+          if [[ ! "$2" =~ ^[A-Za-z0-9._-]+=.+$ ]]; then
+            echo "Error: --credential must be in name=value format" >&2
+            exit 1
+          fi
+          credentials+=("$2")
           shift 2
           ;;
         --forward-port)

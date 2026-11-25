@@ -11,8 +11,8 @@ type QueryOptions = {enabled?: boolean}
 export const useLibrarySummary = () => trpcReact.photos.library.summary.useQuery()
 export const useLibraryStatus = () => trpcReact.photos.library.status.useQuery()
 export const useAlbums = (options?: QueryOptions) => trpcReact.photos.albums.list.useQuery(undefined, options)
-// People and Locations are cut from v1 — usePeople/useLocations (and their
-// Person/Location types) come back with the photos.people/locations routers
+// People live in use-people.ts. Locations is cut from v1 — useLocations (and
+// its Location type) comes back with the photos.locations router
 
 export function useAlbumActions() {
 	const utils = trpcReact.useUtils()

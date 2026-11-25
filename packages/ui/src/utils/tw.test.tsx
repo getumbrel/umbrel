@@ -12,6 +12,8 @@ test('the breakpoint follows the window, read once per resize however many ask',
 	let width = 1440
 	const read = vi.fn(() => width)
 	Object.defineProperty(window, 'innerWidth', {configurable: true, get: read})
+	// (The window is read when it says it has changed, and not while rendering)
+	window.dispatchEvent(new Event('resize'))
 	const seen: string[][] = [[], []]
 	const Probe = ({index}: {index: number}) => {
 		seen[index].push(useBreakpoint())

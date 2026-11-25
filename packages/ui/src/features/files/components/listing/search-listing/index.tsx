@@ -5,16 +5,21 @@
 //   they navigate into a file or folder.
 
 import {Search} from 'lucide-react'
-import {useEffect} from 'react'
+import {useEffect, useMemo} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useSearchParams} from 'react-router-dom'
 
 import {Listing, StateView} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
-import {SEARCH_MAX_RESULTS, useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {useFilesStore} from '@/features/files/store/use-files-store'
+import {SearchChips} from '@/features/search/search-chips'
+import {useSearch} from '@/features/search/use-search'
+
+// The most results a search brings back
+const SEARCH_MAX_RESULTS = 200
 
 export function SearchListing() {
+	const {t} = useTranslation()
 	const clearSelectedItems = useFilesStore((state) => state.clearSelectedItems)
 
 	const setActionsBarConfig = useSetActionsBarConfig()
@@ -29,26 +34,40 @@ export function SearchListing() {
 		clearSelectedItems()
 	}, [queryParam])
 
+	// Results are ranked by the backend and listed in that order. While the
+	// next query is on its way the previous results stay put, so the listing
+	// neither blanks nor says "no results" mid-keystroke.
+	const search = useSearch({query: queryParam, scope: 'files', limit: SEARCH_MAX_RESULTS})
+	// Each result as the Files item it is: its `file` is the file exactly as
+	// Files reports it, and the item remembers the result it came from, so a
+	// listing shows why it matched and a viewer opens where it did
+	const results = useMemo(
+		() => search.results.map((result) => ({...result.file, searchResult: result})),
+		[search.results],
+	)
+	// Beside the label, what the query was understood to filter by: each whole,
+	// on one line the bar scrolls sideways when it has not the room for them
 	useEffect(() => {
-		setActionsBarConfig({hideSearch: false})
-	}, [])
+		setActionsBarConfig({
+			pathAccessory: <SearchChips chips={search.chips} className='w-max flex-nowrap [&>li]:shrink-0' />,
+			hideSearch: false,
+		})
+	}, [search.chips])
 
-	// query the backend – the hook internally short-circuits when provided an
-	// empty string, so clearing the search box stops the requests
-	const {results, isLoading, isError, error} = useSearchFiles({query: queryParam})
-
-	// search results are currently returned in a single batch so we keep
-	// pagination disabled
+	// search results are returned in a single batch so we keep pagination disabled
 	return (
 		<Listing
 			items={results}
 			totalItems={results.length}
-			// As many as a search brings back: there may well be more, and the count says so
-			truncatedAt={results.length >= SEARCH_MAX_RESULTS ? results.length : undefined}
+			// Search found more than it brings back, and the count says so
+			truncatedAt={search.hasMore ? results.length : undefined}
 			isSearch
 			selectableItems={results}
-			isLoading={isLoading}
-			error={isError ? error : undefined}
+			isLoading={search.isSearching && results.length === 0}
+			// A search that could not be made says so in its own words: the
+			// server's are not written to be read. Results a failed refresh left
+			// standing stay.
+			error={search.isError && results.length === 0 ? new Error(t('cmdk.search-failed')) : undefined}
 			hasMore={false}
 			onLoadMore={async () => false}
 			CustomEmptyView={() => <EmptySearchView query={queryParam} />}

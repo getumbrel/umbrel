@@ -124,3 +124,52 @@ describe('suggest', () => {
 		expect(run('img_0042')).toEqual([])
 	})
 })
+
+describe('suggest: people', () => {
+	const PEOPLE = [
+		{id: 'p-dad', name: 'Dad', count: 420},
+		{id: 'p-anna', name: 'Anna Maria', count: 300},
+		{id: 'p-mark', name: 'Mark', count: 120},
+		{id: 'p-ryan', name: 'Ryan', count: 80},
+		{id: 'p-eve', name: 'Eve', count: 60},
+		{id: 'p-zoe', name: 'Zoë', count: 40},
+		{id: 'p-august', name: 'August', count: 12},
+	]
+	const people = (text: string) =>
+		suggest({text, locale: 'en', months: MONTHS, sources: SOURCES, albums: ALBUMS, kinds: [...KINDS], people: PEOPLE})
+
+	it('offers the front of the people list when nothing is typed, between the types and the sources', () => {
+		const all = people('')
+		expect(all.map(({token}) => token.type)).toEqual([
+			'kind',
+			'kind',
+			...Array(6).fill('person'),
+			'source',
+			'source',
+			'album',
+			'date',
+			'date',
+			'date',
+		])
+		expect(all[2]).toEqual({token: {type: 'person', id: 'p-dad', label: 'Dad'}, count: 420})
+		// The seventh waits for a letter
+		expect(all.some(({token}) => token.type === 'person' && token.id === 'p-august')).toBe(false)
+	})
+
+	it('matches a name from the start of any of its words, never mid-word', () => {
+		const ids = (text: string) => people(text).flatMap(({token}) => (token.type === 'person' ? [token.id] : []))
+		expect(ids('ma')).toEqual(['p-anna', 'p-mark'])
+		expect(ids('an')).toEqual(['p-anna'])
+		expect(ids('DAD')).toEqual(['p-dad'])
+		expect(ids('zoë')).toEqual(['p-zoe'])
+		expect(ids('anna m')).toEqual(['p-anna'])
+	})
+
+	it('offers a person and a month alike when a name is also one', () => {
+		expect(people('august').map(({token}) => token.type)).toEqual(['person', 'date', 'date'])
+	})
+
+	it('offers nobody when no people are passed', () => {
+		expect(run('dad')).toEqual([])
+	})
+})

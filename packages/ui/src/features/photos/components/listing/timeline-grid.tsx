@@ -77,6 +77,7 @@ import {usePhotosSelection} from '@/features/photos/components/selection-context
 import {usePhotosView} from '@/features/photos/components/view-context'
 import type {Item, ItemFilter, ThumbSize} from '@/features/photos/hooks/use-items'
 import {useLibrarySummary} from '@/features/photos/hooks/use-library'
+import type {SearchMoment} from '@/features/search/types'
 import {useContainerSize} from '@/hooks/use-container-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {marqueeBoxClass, useMarquee} from '@/hooks/use-marquee'
@@ -196,6 +197,7 @@ export function TimelineGrid({
 	frame,
 	inDeleted,
 	footer,
+	ranked,
 	tileSize: fixedTileSize,
 }: {
 	items: Item[]
@@ -215,6 +217,19 @@ export function TimelineGrid({
 	// A quiet status line after the last row, once every page is loaded —
 	// the layout reserves its band (see FOOTER_HEIGHT)
 	footer?: ReactNode
+	// The list is a search's results in order of relevance, not a timeline:
+	// one section under this title (shown by the bar, like any section's), no
+	// date headers and no time rail — there is no calendar to index. `moments`
+	// are the results that matched at a point in a video, by item id: their
+	// tiles say when, show the video as it is then, and open there. `answer`
+	// names the search they answer: another one's results are read from the top.
+	// `loadAll` pages them to their end, for Select all (see Listing.loadAll).
+	ranked?: {
+		title: string
+		moments: ReadonlyMap<string, SearchMoment>
+		answer?: string
+		loadAll?: () => Promise<string[] | null>
+	}
 	// A fixed tile size, for a list beside something else: tiles of that
 	// size, which a pinch leaves alone, and no time rail down its narrow edge
 	tileSize?: number
@@ -281,9 +296,19 @@ export function TimelineGrid({
 	// Grouping depends on the list and not on the column count, so it survives
 	// every zoom stop; the layout below is a running sum over its sections
 	const hasFooter = footer !== undefined
+	const rankedTitle = ranked?.title
 	const timeline = useMemo(
-		() => groupItems({items, zoom: grouping, hasMore, before, language: i18n.language, footer: hasFooter}),
-		[items, grouping, hasMore, before, i18n.language, hasFooter],
+		() =>
+			groupItems({
+				items,
+				zoom: grouping,
+				hasMore,
+				before,
+				language: i18n.language,
+				footer: hasFooter,
+				ranked: rankedTitle,
+			}),
+		[items, grouping, hasMore, before, i18n.language, hasFooter, rankedTitle],
 	)
 	// The first row is the current section's (empty) header: it sits in the
 	// faded band under the bar, so tiles start at the inset itself
@@ -313,7 +338,8 @@ export function TimelineGrid({
 	const landingRef = useRef<Landing | null>(null)
 	const [fromTop, setFromTop] = useState(items)
 	if (before === undefined && fromTop !== items) setFromTop(items)
-	const loadedMonths = useMemo(() => monthsFromItems(fromTop), [fromTop])
+	const isRanked = ranked !== undefined
+	const loadedMonths = useMemo(() => (isRanked ? [] : monthsFromItems(fromTop)), [fromTop, isRanked])
 	const railBuckets = useMemo(
 		() =>
 			railDomain({
@@ -344,12 +370,13 @@ export function TimelineGrid({
 		// A phone-sized window with a mouse has neither: the rail is the
 		// desktop's, the scrubber is for a thumb, and the scrollbar is a mouse's
 		// own index (which the rail would hide). A grid of fixed tiles (a list
-		// beside the map) has neither down its narrow edge.
-		const eligible = (!isMobile || touchScrub) && !fixed && domainReady && railBuckets.length > 0
+		// beside the map) has neither down its narrow edge, and a ranked search's
+		// results have no dates to scrub through.
+		const eligible = !isRanked && (!isMobile || touchScrub) && !fixed && domainReady && railBuckets.length > 0
 		setShowRail((on) =>
 			on ? eligible && railViewports > RAIL_HIDE_VIEWPORTS : eligible && railViewports >= RAIL_SHOW_VIEWPORTS,
 		)
-	}, [isMobile, touchScrub, fixed, librarySummary, summaryFailed, railBuckets, railViewports])
+	}, [isRanked, isMobile, touchScrub, fixed, librarySummary, summaryFailed, railBuckets, railViewports])
 
 	// The committed view. A new layout is adopted here, before paint, together
 	// with the scroll position that keeps the focal tile still and the row
@@ -443,6 +470,8 @@ export function TimelineGrid({
 	// inputs are unchanged by then, so without it the layout would be dropped
 	// (the grid stayed one gutter narrower than its scroller at startup)
 	const [attempt, retry] = useReducer((n: number) => n + 1, 0)
+	const answer = ranked?.answer
+	const adoptedAnswer = useRef(answer)
 	useLayoutEffect(() => {
 		if (width === 0 || height === 0) return
 		if (view && view.layout === layout && view.height === height) return
@@ -510,14 +539,35 @@ export function TimelineGrid({
 			head && headTop !== undefined && headTop >= 0 && headTop < height && layout.indexOf.has(head.id)
 				? {id: head.id, top: headTop}
 				: undefined
-		const anchor =
-			landed !== undefined
+		// Another search's answer is another list in the same grid (the tiles
+		// it shares keep their pixels): it is read from its best match down,
+		// not from wherever the last one had been scrolled to. Nothing is held
+		// under the eye, and nothing flies the length of the jump.
+		const fresh = adoptedAnswer.current !== answer
+		adoptedAnswer.current = answer
+		// A list at its top stays there when the window changes width. The
+		// tile kept for it would be the middle one of the first row, which in
+		// a narrower window with fewer columns (a phone's, come to from a
+		// tablet's or a desktop's) is in a row further down: held where it
+		// was, it left the list scrolled by a row, the first one under the bar.
+		const atTop = view !== null && view.width !== width && current <= 0
+		const kept =
+			fresh || landed !== undefined || atTop
 				? undefined
 				: inGesture
 					? last
 					: (headAnchor ?? (view ? findAnchor(view.layout, current, focal) : undefined))
+		// The room kept under the bar is not the list's: when it changes (a
+		// window widened into the desktop layout, a tablet turned on its side)
+		// what is kept still moves down or up with it. Held where it was, a
+		// list at its top came out scrolled by the difference, its first row
+		// under the bar's title and the view line.
+		const lower = view ? (layout.tops[0] ?? 0) - (view.layout.tops[0] ?? 0) : 0
+		const anchor = kept && lower !== 0 ? {id: kept.id, top: kept.top + lower} : kept
 		const anchored = anchor && anchoredScrollTop(layout, anchor)
-		const scrollTop = Math.max(0, Math.min(landed ?? anchored ?? current, layout.total + endSpacer - height))
+		const scrollTop = fresh
+			? 0
+			: Math.max(0, Math.min(landed ?? anchored ?? current, layout.total + endSpacer - height))
 		// Remember where the anchor actually ended up: the clamp may have moved it
 		anchorRef.current =
 			anchor && anchored !== undefined ? {id: anchor.id, top: anchored + anchor.top - scrollTop} : null
@@ -529,11 +579,11 @@ export function TimelineGrid({
 			height,
 			items: visibleItems(layout, scrollTop, height, overscanFor({layout, height, gpu})),
 			scrollTop,
-			animate: view !== null && view.width === width && !reduceMotion && !lands,
+			animate: view !== null && view.width === width && !reduceMotion && !lands && !(fresh && current > 0),
 			gpu,
 			warmUntil: view?.gpu && !gpu ? now + SEAM_WARM_MS : 0,
 		})
-	}, [layout, width, height, endSpacer, view, reduceMotion, gpu, attempt, noteMove, before])
+	}, [layout, width, height, endSpacer, view, reduceMotion, gpu, attempt, noteMove, before, answer])
 
 	// Scrolling only moves the row window (and the current section); the
 	// geometry is untouched
@@ -778,6 +828,9 @@ export function TimelineGrid({
 		at.set(count, built)
 		return built
 	}
+	// The moments a search matched, for the canvas: read when a frame is drawn
+	const momentsRef = useRef(ranked?.moments)
+	momentsRef.current = ranked?.moments
 	// Hand the canvas a frame. At rest that is the committed view; during a
 	// gesture it is whatever the blend has just been moved to.
 	const paint = (
@@ -800,6 +853,7 @@ export function TimelineGrid({
 				selected: selectionRef.current,
 				hovered: hoveredRef.current,
 				lifted: liftedRef.current,
+				moments: momentsRef.current,
 				focal: eyeRef.current,
 				settled: live === null,
 				animate: !reduceMotion,
@@ -1200,8 +1254,9 @@ export function TimelineGrid({
 	// size would have Delete quietly take a hundredth of what was asked. What
 	// is loaded is selected at once and the rest as soon as the list has been
 	// paged to its end (see Seek.loadAll), the bar holding its actions until
-	// then (PhotosSelection.selectingAll).
-	const loadAll = seek.loadAll
+	// then (PhotosSelection.selectingAll). A ranked search's results are
+	// Search's pages, not the timeline's, and are paged by their own list.
+	const loadAll = ranked?.loadAll ?? seek.loadAll
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			const target = event.target as Element
@@ -1288,6 +1343,7 @@ export function TimelineGrid({
 							selecting={selection.selecting}
 							selected={selectedIds}
 							itemAtPoint={itemAtPoint}
+							moments={ranked?.moments}
 							onSelect={select}
 						>
 							{view.gpu && plan ? (
@@ -1317,6 +1373,8 @@ export function TimelineGrid({
 										size={size}
 										thumbSize={thumbSize}
 										warmUntil={view.warmUntil}
+										momentMs={ranked?.moments.get(item.id)?.startMs}
+										momentStill={ranked?.moments.get(item.id)?.thumbnail}
 										live={liveHover.clip?.id === item.id ? (liveHover.clip.active ? 'playing' : 'ending') : undefined}
 										registry={tileEls}
 										selected={selectedIds.has(item.id)}
@@ -1444,6 +1502,8 @@ const TileSlot = memo(function TileSlot({
 	size,
 	thumbSize,
 	warmUntil,
+	momentMs,
+	momentStill,
 	live,
 	registry,
 	selected,
@@ -1457,6 +1517,8 @@ const TileSlot = memo(function TileSlot({
 	size: number
 	thumbSize: ThumbSize
 	warmUntil: number
+	momentMs?: number
+	momentStill?: string
 	live?: 'playing' | 'ending'
 	registry: Map<string, HTMLElement>
 	selected: boolean
@@ -1473,6 +1535,8 @@ const TileSlot = memo(function TileSlot({
 				item={item}
 				thumbSize={thumbSize}
 				warmUntil={warmUntil}
+				momentMs={momentMs}
+				momentStill={momentStill}
 				live={live}
 				selected={selected}
 				selectable={selectable}

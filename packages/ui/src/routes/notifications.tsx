@@ -1,6 +1,6 @@
 import {TFunction} from 'i18next'
 import {motion} from 'motion/react'
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {RiErrorWarningFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
@@ -39,14 +39,17 @@ function NotificationContent({children}: {children: string}) {
 	const [isExpanded, setIsExpanded] = useState(false)
 	const [showReadMore, setShowReadMore] = useState(false)
 	// Three lines of the description (text-13, leading-tight), which grow with the text size
-	const collapsedHeight = (13 + useLargerText()) * 1.25 * 3
+	const lineHeight = (13 + useLargerText()) * 1.25
+	const collapsedHeight = lineHeight * 3
 
-	useEffect(() => {
+	// A description a line over is shown whole rather than folded for the
+	// sake of that line: measured before the first paint, so it never opens cut
+	useLayoutEffect(() => {
 		if (!contentRef.current) return
 		const el = contentRef.current
-		const WIGGLE_ROOM = 20
-		setShowReadMore(el.scrollHeight > el.clientHeight + WIGGLE_ROOM)
-	}, [children, collapsedHeight])
+		// One line of the current size, and a pixel for its rounding
+		setShowReadMore(el.scrollHeight > collapsedHeight + lineHeight + 1)
+	}, [children, collapsedHeight, lineHeight])
 
 	return (
 		<div className='flex flex-col gap-2'>
@@ -54,10 +57,11 @@ function NotificationContent({children}: {children: string}) {
 				ref={contentRef}
 				initial={false}
 				animate={{
-					height: isExpanded ? 'auto' : collapsedHeight,
+					height: isExpanded || !showReadMore ? 'auto' : collapsedHeight,
 				}}
 				transition={{
-					duration: 0.4,
+					// Only unfolding is a movement; settling on a height is not
+					duration: isExpanded ? 0.4 : 0,
 					ease: [0.32, 0.72, 0, 1],
 				}}
 				className='overflow-hidden'
@@ -331,6 +335,50 @@ export function Notifications() {
 						</Button>
 						<AlertDialogAction variant='primary' onClick={onGoToStorageManager} autoFocus>
 							{t('notifications.raid.issue.action')}
+						</AlertDialogAction>
+					</>
+				),
+			}
+		}
+
+		// The models that read files for search have waited a day for memory
+		if (notification === 'search-indexing-waiting-for-memory') {
+			const onOpenLiveUsage = () => {
+				clearNotification(notification)
+				navigate(linkToDialog('live-usage', {tab: 'memory'}))
+			}
+			return {
+				title: t('notifications.search-indexing-memory.title'),
+				description: t('notifications.search-indexing-memory.description'),
+				action: (
+					<>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
+							{t('ok')}
+						</Button>
+						<AlertDialogAction variant='primary' onClick={onOpenLiveUsage} autoFocus>
+							{t('open-live-usage')}
+						</AlertDialogAction>
+					</>
+				),
+			}
+		}
+
+		// The device has no room for the models that read files for search
+		if (notification === 'search-models-no-room') {
+			const onOpenLiveUsage = () => {
+				clearNotification(notification)
+				navigate(linkToDialog('live-usage', {tab: 'storage'}))
+			}
+			return {
+				title: t('notifications.search-models-no-room.title'),
+				description: t('notifications.search-models-no-room.description'),
+				action: (
+					<>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
+							{t('ok')}
+						</Button>
+						<AlertDialogAction variant='primary' onClick={onOpenLiveUsage} autoFocus>
+							{t('open-live-usage')}
 						</AlertDialogAction>
 					</>
 				),

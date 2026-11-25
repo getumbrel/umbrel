@@ -472,12 +472,17 @@ jobs:
                 if grep --quiet '^// @vm-requires-update-bundle$' "${test_path}"; then
                   requires_update_bundle=true
                 fi
+                requires_models=false
+                if grep --quiet '^// @vm-requires-models$' "${test_path}"; then
+                  requires_models=true
+                fi
                 jq --null-input --compact-output \
                   --arg path "${relative_path}" \
                   --arg name "${name}" \
                   --argjson requiresPlaywright "${requires_playwright}" \
                   --argjson requiresUpdateBundle "${requires_update_bundle}" \
-                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright, requiresUpdateBundle: $requiresUpdateBundle}'
+                  --argjson requiresModels "${requires_models}" \
+                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright, requiresUpdateBundle: $requiresUpdateBundle, requiresModels: $requiresModels}'
               done |
               jq --slurp --compact-output
           )
@@ -554,6 +559,20 @@ jobs:
           path: packages/os/build/umbrelos-amd64.update*
           key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
           fail-on-cache-miss: true
+      # The models umbrelOS fetches once it is running (see models.ts in
+      # umbreld), for the tests that have a VM fetch them: from this runner,
+      # never the internet. They are downloaded from where their authors
+      # publish them once for each list of models, and cached after that.
+      - name: Restore models from cache
+        id: restore-models
+        if: matrix.test.requiresModels
+        uses: actions/cache@v5
+        with:
+          path: packages/os/build/models
+          key: models-${{ hashFiles('packages/umbreld/source/modules/files/models.json') }}
+      - name: Download models
+        if: matrix.test.requiresModels && steps.restore-models.outputs.cache-hit != 'true'
+        run: scripts/download-models
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
       # Retried once: a dropped registry connection (ECONNRESET) or a race in

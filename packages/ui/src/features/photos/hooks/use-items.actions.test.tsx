@@ -172,3 +172,28 @@ it('fails as a whole, and reads the list back, when the server takes none of it'
 		stop()
 	}
 })
+
+it('takes a deleted item out of a search that found it, whichever shape its answer is cached in', async () => {
+	mocks.remove.mockImplementation(async ({ids}) => ids.length)
+	const found = (...ids: string[]) => ({
+		understood: {chips: [], text: 'beach'},
+		results: ids.map((id) => ({photo: page([id]).items[0]})),
+		total: 3,
+	})
+	// A ranked search in Photos is pages of answers; the command palette's is one
+	const ranked = [['search', 'query'], {input: {query: 'beach', scope: 'photos', filter: {}}, type: 'infinite'}]
+	const whole = [['search', 'query'], {input: {query: 'beach', scope: 'all'}, type: 'query'}]
+	client.setQueryData(ranked, {pages: [found('item-1', 'item-2'), found('item-3')], pageParams: [0, 2]})
+	client.setQueryData(whole, found('item-1', 'item-2', 'item-3'))
+	await act(async () => {
+		await actions.deleteItems({ids: ['item-2']})
+	})
+	type Answer = ReturnType<typeof found>
+	const idsOf = (answer: Answer) => answer.results.map((result) => result.photo!.id)
+	const pages = client.getQueryData<InfiniteData<Answer>>(ranked)!.pages
+	expect(pages.map(idsOf)).toEqual([['item-1'], ['item-3']])
+	// … and off the count of what it found, on every page
+	expect(pages.map((answer) => answer.total)).toEqual([2, 2])
+	expect(idsOf(client.getQueryData<Answer>(whole)!)).toEqual(['item-1', 'item-3'])
+	expect(listed()).toBe(5999)
+})

@@ -13,9 +13,13 @@ export const AudioViewer: React.FC<ViewerProps> = ({item, mode}) => {
 	// A quick look plays only while it's the one looked at: closing it, or
 	// stepping on to another file, ends it.
 	useEffect(() => {
+		const moment = item.searchResult?.moment
 		setAudio({
 			path: item.path,
 			name: item.name,
+			// A search result opens at the moment that matched
+			startSeconds: moment ? moment.startMs / 1000 : undefined,
+			matched: item.searchResult?.snippet,
 		})
 		if (mode === 'preview') return () => setAudio({path: null, name: null})
 	}, [item, mode, setAudio])

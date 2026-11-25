@@ -6,7 +6,12 @@ import {afterEach, expect, test, vi} from 'vitest'
 
 import VideoViewer from '@/features/files/components/file-viewer/video-viewer'
 import type {FileSystemItem} from '@/features/files/types'
+import {setCaptionsOn} from '@/features/search/captions'
 
+const player = vi.hoisted(() => ({video: {current: null as HTMLVideoElement | null}, wrapper: {current: null}}))
+const insights = vi.hoisted(() => ({
+	current: undefined as {transcript?: {startMs: number; endMs: number; text: string}[]} | undefined,
+}))
 const previewUrl = vi.hoisted(() => ({current: {status: 'error', url: '', retry: vi.fn()}}))
 vi.mock('react-i18next', () => ({useTranslation: () => ({t: (key: string) => key})}))
 vi.mock('react-video-kit', () => {
@@ -15,10 +20,11 @@ vi.mock('react-video-kit', () => {
 	const parts = ['Root', 'Backdrop', 'Header', 'Center', 'Footer', 'Title', 'Timeline', 'Loading']
 	const buttons = ['PlayPause', 'SeekBack', 'SeekForward', 'FullscreenToggle', 'PipToggle']
 	return {
+		useVideoContext: () => ({showControls: false, videoRef: player.video, wrapperRef: player.wrapper}),
 		Video: {
 			...Object.fromEntries([...parts, ...buttons].map((name) => [name, Part])),
 			Media: () => (
-				<video>
+				<video ref={(element) => void (player.video.current = element)}>
 					<source />
 				</video>
 			),
@@ -31,6 +37,7 @@ vi.mock('@/modules/auth/http-auth', () => ({
 	useAuthorizedHttpUrlQuery: () => previewUrl.current,
 	useAuthorizedHttpUrl: (url: string) => url,
 }))
+vi.mock('@/trpc/trpc', () => ({trpcReact: {search: {insights: {useQuery: () => ({data: insights.current})}}}}))
 vi.mock('@/features/files/components/shared/file-item-icon', () => ({FileItemIcon: () => null}))
 vi.mock('@/features/files/components/file-viewer/shell/context', () => ({useViewerSize: () => {}}))
 ;(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true
@@ -45,6 +52,9 @@ const fresh = {
 	videoWidth: 0,
 	videoHeight: 0,
 	error: null as {code: number} | null,
+	currentTime: 0,
+	paused: true,
+	ended: false,
 }
 const media = {...fresh}
 for (const key of Object.keys(media) as (keyof typeof media)[])
@@ -58,6 +68,8 @@ const roots: ReturnType<typeof createRoot>[] = []
 afterEach(async () => {
 	await act(async () => roots.splice(0).forEach((root) => root.unmount()))
 	Object.assign(media, fresh)
+	insights.current = undefined
+	setCaptionsOn(true)
 })
 async function render() {
 	const container = document.createElement('div')
@@ -78,7 +90,7 @@ test('a video the Umbrel couldn’t be asked for says so, and tries again', asyn
 test('the player takes the video’s shape, whether its size arrives before the player mounts or after', async () => {
 	previewUrl.current = {status: 'ready', url: 'blob:clip', retry: vi.fn()}
 	const shape = (container: HTMLElement) =>
-		parseFloat(container.querySelector('video')!.parentElement!.style.aspectRatio)
+		parseFloat(container.querySelector('video')!.closest<HTMLElement>('[style*="aspect-ratio"]')!.style.aspectRatio)
 
 	// 16:9 until it's known, then the video's own
 	const later = await render()
@@ -131,4 +143,52 @@ test('a video that plays stays in the player, even when its connection drops', a
 	await act(async () => video.dispatchEvent(new Event('error')))
 	expect(container.querySelector('video')).toBe(video)
 	expect(container.querySelector('h3')).toBeNull()
+})
+
+test('a transcribed video has captions, on until turned off and the choice kept', async () => {
+	previewUrl.current = {status: 'ready', url: 'blob:clip', retry: vi.fn()}
+	vi.stubGlobal(
+		'ResizeObserver',
+		class {
+			observe() {}
+			disconnect() {}
+		},
+	)
+	// Not transcribed: no switch at all
+	expect((await render()).querySelector('button[aria-pressed]')).toBeNull()
+
+	insights.current = {
+		transcript: [
+			{startMs: 0, endMs: 2000, text: 'Hello there'},
+			{startMs: 4000, endMs: 6000, text: 'Look at the waves'},
+		],
+	}
+	media.currentTime = 1
+	const container = await render()
+	const toggle = container.querySelector<HTMLButtonElement>('button[aria-pressed]')!
+	expect(toggle.getAttribute('aria-pressed')).toBe('true')
+	expect(container.textContent).toContain('Hello there')
+
+	await act(async () => toggle.click())
+	expect(toggle.getAttribute('aria-pressed')).toBe('false')
+	expect(container.textContent).not.toContain('Hello there')
+	expect(localStorage.getItem('umbrel-captions')).toBe('off')
+
+	await act(async () => toggle.click())
+	expect(toggle.getAttribute('aria-pressed')).toBe('true')
+	expect(container.textContent).toContain('Hello there')
+	expect(localStorage.getItem('umbrel-captions')).toBe('on')
+
+	// Between the lines, nothing; then the next
+	media.currentTime = 3
+	await act(async () => player.video.current!.dispatchEvent(new Event('seeked')))
+	expect(container.textContent).not.toContain('Hello there')
+	media.currentTime = 4.5
+	await act(async () => player.video.current!.dispatchEvent(new Event('seeked')))
+	expect(container.textContent).toContain('Look at the waves')
+
+	// C works it too
+	await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', {key: 'c'})))
+	expect(toggle.getAttribute('aria-pressed')).toBe('false')
+	expect(container.textContent).not.toContain('Look at the waves')
 })

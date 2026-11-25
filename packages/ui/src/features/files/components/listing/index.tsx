@@ -224,9 +224,9 @@ export function Listing({
 
 	const content = (
 		// Wrap in a flex column to ensure the context menu works. The column carries the
-		// listing's height, which Files' layout gives it, so a top banner shrinks the listing
-		// instead of pushing it past the sheet. The embedded (Rewind) explorer keeps the
-		// original height so snapshots render unchanged.
+		// listing's height, which Files' layout gives it, so a top banner shrinks
+		// the listing instead of pushing it past the sheet. The embedded (Rewind) explorer keeps
+		// the original height so snapshots render unchanged.
 		<div
 			ref={listingRef}
 			className={cn(

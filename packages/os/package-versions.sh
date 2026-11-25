@@ -51,7 +51,19 @@ echo "## Other software"
 echo
 {
     echo "kopia $(kopia --version | awk '{ print $1 }')"
+    # LiteRT-LM, unpacked from its wheel
+    for metadata in /opt/litert-lm/litert_lm_api-*.dist-info; do
+        if [ -d "${metadata}" ]; then
+            echo "litert-lm $(basename "${metadata}" .dist-info | sed 's/^litert_lm_api-//')"
+        fi
+    done
     echo "node $(node --version | sed 's/^v//')"
+    # ... and transcribe.cpp, the same way
+    for metadata in /opt/transcribe/transcribe_cpp-*.dist-info; do
+        if [ -d "${metadata}" ]; then
+            echo "transcribe.cpp $(basename "${metadata}" .dist-info | sed 's/^transcribe_cpp-//')"
+        fi
+    done
     echo "rclone $(rclone version | awk 'NR == 1 { sub(/^v/, "", $2); print $2 }')"
     echo "yq $(yq --version | awk '{ sub(/^v/, "", $NF); print $NF }')"
     # Node.js's bundled global packages, such as npm. umbreld is linked here

@@ -36,6 +36,7 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {fileTypeLabel} from '@/features/files/utils/file-type-label'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {withoutSearchResult} from '@/features/files/utils/without-search-result'
 import {LightboxButton, lightboxButtonClass} from '@/features/photos/components/viewer/lightbox-button'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
@@ -219,7 +220,11 @@ export function ViewerShell({item, viewer}: {item: FileSystemItem; viewer?: View
 			if (copy) {
 				// The changes live in the copy now, so that is the file to carry on
 				// with; the original is as it was
-				const copyItem = {...item, path: result.path, name: result.path.slice(result.path.lastIndexOf('/') + 1)}
+				const copyItem = {
+					...withoutSearchResult(item),
+					path: result.path,
+					name: result.path.slice(result.path.lastIndexOf('/') + 1),
+				}
 				setViewerNavigationGuard(null)
 				if (setViewerItem(copyItem, 'open')) setSelectedItems([copyItem])
 			} else {

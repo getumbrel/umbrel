@@ -54,6 +54,8 @@ import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-n
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {OsIcon} from '@/features/machines/components/os-icon'
 import type {Machine} from '@/features/machines/types'
+import {MomentScrubber} from '@/features/search/moment-scrubber'
+import {containInset} from '@/features/search/scrubber'
 import {EnsureHttpUrlAuthorizer, useSharedAuthorizedHttpUrl} from '@/modules/auth/http-url-authorizer'
 
 interface FileItemIconProps {
@@ -75,6 +77,10 @@ interface FileItemIconProps {
 	thumbnailFit?: 'box' | 'hug'
 	// A box of its own for a thumbnail that hugs, where it may be wider than an icon
 	thumbnailClassName?: string
+	// A video a search matched at a moment wears a line along its thumbnail's
+	// bottom edge, filled up to that moment. Where the thumbnail is big enough
+	// (the icons view) the time rides on the line too.
+	momentTime?: boolean
 }
 
 export const FileItemIcon = (props: FileItemIconProps) => {
@@ -94,6 +100,7 @@ const FileItemIconContent = ({
 	useAnimatedIcon = false,
 	isHovered = false,
 	showBadges = true,
+	momentTime = false,
 	thumbnailFit = 'box',
 	thumbnailClassName,
 }: FileItemIconProps) => {
@@ -280,12 +287,25 @@ const FileItemIconContent = ({
 				className={className}
 				fit={thumbnailFit}
 				boxClassName={thumbnailClassName}
+				momentTime={momentTime}
 			/>
 		)
 	}
 
 	// Unknown file
 	if (!DefaultThumbnail) return <UnknownFileThumbnail type={item.type || ''} className={className} />
+
+	// A recording a search matched at a moment wears the same line a video's
+	// thumbnail does, under its icon
+	const spoken = item.searchResult?.kind === 'audio' ? item.searchResult.moment : undefined
+	if (spoken) {
+		return (
+			<div className='relative'>
+				<DefaultThumbnail className={className} />
+				<MomentScrubber momentMs={spoken.startMs} durationMs={spoken.durationMs} pill={momentTime} compact />
+			</div>
+		)
+	}
 
 	// All other supported file types
 	return <DefaultThumbnail className={className} />
@@ -387,6 +407,7 @@ type ThumbnailProps = {
 	overlay?: React.ReactNode
 	fit?: 'box' | 'hug'
 	boxClassName?: string
+	momentTime?: boolean
 }
 
 const Thumbnail = (props: ThumbnailProps) => (
@@ -395,8 +416,25 @@ const Thumbnail = (props: ThumbnailProps) => (
 	</EnsureHttpUrlAuthorizer>
 )
 
-const AuthorizedThumbnail = ({item, fallback, className, overlay, fit = 'box', boxClassName}: ThumbnailProps) => {
-	const authorizedThumbnailUrl = useSharedAuthorizedHttpUrl(useOnDemandThumbnail(item))
+const AuthorizedThumbnail = ({
+	item,
+	fallback,
+	className,
+	overlay,
+	fit = 'box',
+	boxClassName,
+	momentTime,
+}: ThumbnailProps) => {
+	const fileThumbnailUrl = useSharedAuthorizedHttpUrl(useOnDemandThumbnail(item))
+	// A video a search matched at a moment is shown as it looks then. A still
+	// that fails to load leaves the file's own thumbnail, as before.
+	const stillUrl = useSharedAuthorizedHttpUrl(item.searchResult?.moment?.thumbnail)
+	const [stillFailed, setStillFailed] = useState(false)
+	const showsStill = Boolean(stillUrl) && !stillFailed
+	const authorizedThumbnailUrl = showsStill ? stillUrl : fileThumbnailUrl
+	// Where a hugged picture lies in its box, for the moment's line along its edge
+	const [huggedImage, setHuggedImage] = useState<HTMLImageElement | null>(null)
+	const huggedBox = useOffsetBox(fit === 'hug' && item.searchResult?.kind === 'video' ? huggedImage : null)
 
 	// Track if the image failed to load so we can gracefully fall back to the
 	// default thumbnail component
@@ -406,8 +444,26 @@ const AuthorizedThumbnail = ({item, fallback, className, overlay, fit = 'box', b
 	useEffect(() => {
 		setHadError(false)
 	}, [authorizedThumbnailUrl, item.path])
+	useEffect(() => {
+		setStillFailed(false)
+	}, [stillUrl])
+
+	// The moment a search matched in a video, drawn along the picture's own
+	// bottom edge. The picture is fitted whole into a square box, so where
+	// that edge is depends on its shape, known once it has loaded.
+	const moment = item.searchResult?.kind === 'video' ? item.searchResult.moment : undefined
+	const [picture, setPicture] = useState<{url: string; width: number; height: number}>()
+	const inset =
+		picture && picture.url === authorizedThumbnailUrl ? containInset(picture.width, picture.height) : undefined
 
 	const hasImage = Boolean(authorizedThumbnailUrl) && !hadError
+	const onLoad =
+		moment &&
+		((event: React.SyntheticEvent<HTMLImageElement>) => {
+			const {naturalWidth: width, naturalHeight: height} = event.currentTarget
+			setPicture({url: authorizedThumbnailUrl!, width, height})
+		})
+	const onError = () => (showsStill ? setStillFailed(true) : setHadError(true))
 
 	// The picture at its own shape, as large as the box allows: the corners,
 	// the hairline and the shadow are the picture's own, not a square's around it
@@ -416,14 +472,30 @@ const AuthorizedThumbnail = ({item, fallback, className, overlay, fit = 'box', b
 		return (
 			<span className={`relative flex items-center justify-center ${boxClassName ?? className ?? ''}`}>
 				<img
+					ref={setHuggedImage}
 					src={authorizedThumbnailUrl}
 					alt={item.name}
 					decoding='async'
 					draggable={false}
-					onError={() => setHadError(true)}
+					onError={onError}
 					className='max-h-full max-w-full rounded-[var(--thumbnail-radius,3px)] shadow-[0_0_0_0.5px_rgb(255_255_255/0.16),0_1px_3px_rgb(0_0_0/0.35)]'
 				/>
-				{overlay}
+				{/* The time on the line carries the play mark itself */}
+				{!(moment && momentTime) && overlay}
+				{/* Hugging, the picture's own edge is the image's: the line lies along it */}
+				{moment && huggedBox && (
+					<span
+						className='absolute overflow-hidden rounded-[var(--thumbnail-radius,3px)]'
+						style={{
+							left: huggedBox.left,
+							top: huggedBox.top,
+							width: huggedBox.width,
+							height: huggedBox.height,
+						}}
+					>
+						<MomentScrubber momentMs={moment.startMs} durationMs={moment.durationMs} pill={momentTime} compact />
+					</span>
+				)}
 			</span>
 		)
 	}
@@ -433,7 +505,8 @@ const AuthorizedThumbnail = ({item, fallback, className, overlay, fit = 'box', b
 			src={authorizedThumbnailUrl}
 			alt={item.name}
 			decoding='async'
-			onError={() => setHadError(true)}
+			onLoad={onLoad}
+			onError={onError}
 			className={`rounded-xs object-contain ${className || ''}`}
 		/>
 	) : null
@@ -445,7 +518,13 @@ const AuthorizedThumbnail = ({item, fallback, className, overlay, fit = 'box', b
 		return (
 			<div className='relative'>
 				{imageNode}
-				{overlay}
+				{/* The time on the line carries the play mark itself */}
+				{!(moment && momentTime) && overlay}
+				{moment && inset && (
+					<span className='absolute overflow-hidden rounded-xs' style={{inset: `${inset.block}% ${inset.inline}%`}}>
+						<MomentScrubber momentMs={moment.startMs} durationMs={moment.durationMs} pill={momentTime} compact />
+					</span>
+				)}
 			</div>
 		)
 	}
@@ -525,4 +604,24 @@ function extractAppIdFromPath(path: string): string {
 	const pattern = new RegExp(`${APPS_PATH}/([^/]+)`)
 	const match = path.match(pattern)
 	return match?.[1] || ''
+}
+
+// An element's box within its offset parent, kept up to date as it resizes
+function useOffsetBox(element: HTMLElement | null) {
+	const [box, setBox] = useState<{left: number; top: number; width: number; height: number}>()
+	useEffect(() => {
+		if (!element) return setBox(undefined)
+		const measure = () =>
+			setBox({
+				left: element.offsetLeft,
+				top: element.offsetTop,
+				width: element.offsetWidth,
+				height: element.offsetHeight,
+			})
+		measure()
+		const observer = new ResizeObserver(measure)
+		observer.observe(element)
+		return () => observer.disconnect()
+	}, [element])
+	return box
 }

@@ -164,6 +164,19 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+	/* Captions a video's transcript is shown as (see captions.ts): the
+	   player's own, so they follow the video into fullscreen and keep to the
+	   size the browser picks for the picture. In the UI's typeface, on a
+	   softer panel than the near-black default, so the picture still shows
+	   through around them. Safari puts a viewer's own caption style
+	   (Accessibility settings) before this. */
+	video::cue {
+		background-color: rgb(0 0 0 / 0.6);
+		color: white;
+		font-weight: 500;
+		font-family: var(--font-inter), system-ui, sans-serif;
+	}
+
 	*,
 	::after,
 	::before,
@@ -280,6 +293,14 @@ html {
 	   rule above and by the `ring` colour in tailwind.config.ts, which backs the
 	   shared `focusRingClass`. */
 	--focus-ring: rgb(255 255 255 / 0.25);
+
+	/* What a search matched, wherever it is pointed at: words in a snippet or a
+	   card, a place on a picture, a moment in a video. A highlighter yellow,
+	   kept apart from the brand so that a match never reads as a control; on
+	   it, text is dark (`match-ink`). Chosen against the dark glass, dark and
+	   light photographs and video thumbnails. */
+	--color-match: 50 100% 52%;
+	--color-match-ink: 50 100% 6%;
 
 	/* System material recipe */
 	--material-tint-rgb: 0 0 0;
@@ -573,6 +594,474 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 		animation: cmdk-section-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
 	}
 
+	/* Cmd+K showing Search's understanding (see CmdkInsight): the orb, then the
+	   field and the light round the card, then the results. The stage and the
+	   card carry `data-insight` (off | thinking | understood | plain), and the
+	   card the wallpaper's colours as `--orb-deep/primary/secondary/milk`
+	   channels. */
+
+	/* cmdk insight: orb */
+
+	/* While what is shown was found by what is in it, the orb's glow is
+	   warmer, and stays so. It swells in once as the understood answer
+	   arrives: the attribute holds through a refined query, so typing more
+	   never sets it off again. Leaving is a quick fade. */
+	.cmdk-orb-warmth {
+		opacity: 0;
+		transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	.cmdk-orb-stage[data-understood] .cmdk-orb-warmth {
+		opacity: 1;
+		animation: cmdk-orb-warm 640ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		transition-duration: 300ms;
+	}
+
+	@keyframes cmdk-orb-warm {
+		from {
+			transform: scale(0.8);
+		}
+		55% {
+			transform: scale(1.05);
+		}
+		to {
+			transform: none;
+		}
+	}
+
+	/* cmdk insight: field and aura */
+
+	/* The field's glyph: magnifier and sparkle trade places like a symbol
+	   replace. A quick cross-fade with a touch of scale and blur so the two
+	   read as one glyph changing; the one leaving goes faster than the one
+	   arriving. */
+	.cmdk-glyph-sparkle {
+		fill: rgb(var(--orb-milk) / 0.9);
+	}
+
+	.cmdk-glyph-magnifier,
+	.cmdk-glyph-sparkle {
+		transition:
+			opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+			transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+			filter 180ms cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	.cmdk-glyph[data-mode='sparkle'] .cmdk-glyph-magnifier,
+	.cmdk-glyph[data-mode='magnifier'] .cmdk-glyph-sparkle {
+		transform: scale(0.9);
+		opacity: 0;
+		filter: blur(1px);
+		transition-duration: 120ms;
+	}
+
+	/* Everything below answers one state: the results shown were understood.
+	   The card's aura is lit then (and stays lit through a refined query), so
+	   each piece starts once when the light comes on and then simply rests. */
+
+	/* The stars glow in the orb's colour: a soft copy of them behind blooms
+	   out, and the stars themselves catch the light once */
+	.cmdk-glyph-glow {
+		transform: scale(1.3);
+		transform-box: fill-box;
+		transform-origin: center;
+		opacity: 0;
+		filter: blur(3.5px);
+		transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+		fill: rgb(var(--orb-primary));
+	}
+
+	.cmdk-card:has(.cmdk-aura[data-lit]) .cmdk-glyph-glow {
+		opacity: 1;
+		animation: cmdk-stars-bloom 560ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		transition-duration: 300ms;
+	}
+
+	.cmdk-card:has(.cmdk-aura[data-lit]) .cmdk-glyph[data-mode='sparkle'] .cmdk-glyph-sparkle {
+		animation: cmdk-stars-catch 460ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		fill: rgb(var(--orb-milk));
+	}
+
+	@keyframes cmdk-stars-bloom {
+		from {
+			transform: scale(0.6);
+		}
+		50% {
+			transform: scale(1.6);
+		}
+		to {
+			transform: scale(1.3);
+		}
+	}
+
+	@keyframes cmdk-stars-catch {
+		from {
+			transform: none;
+		}
+		40% {
+			transform: scale(1.14) rotate(8deg);
+		}
+		to {
+			transform: none;
+		}
+	}
+
+	/* The field takes on the orb's colour */
+	.cmdk-field {
+		transition:
+			background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+			box-shadow 150ms cubic-bezier(0.23, 1, 0.32, 1);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 0.06),
+			0 0 0 0.5px rgb(255 255 255 / 0.08);
+		background-color: rgb(255 255 255 / 0.06);
+	}
+
+	.cmdk-card:has(.cmdk-aura[data-lit]) .cmdk-field {
+		transition-duration: 300ms;
+		box-shadow:
+			inset 0 1px 0 rgb(var(--orb-milk) / 0.16),
+			0 0 0 0.5px rgb(var(--orb-milk) / 0.22);
+		background-color: rgb(var(--orb-primary) / 0.14);
+	}
+
+	/* The card: the glass takes on the wallpaper's tint, strongest under the
+	   orb, and its top edge catches the orb's light. The line opens out from
+	   the middle and the light settles beneath it as the state comes on. */
+	.cmdk-aura {
+		position: absolute;
+		opacity: 0;
+		z-index: 1;
+		transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+		inset: 0;
+		border-radius: var(--material-modal-radius);
+		background: radial-gradient(
+			90% 70% at 50% 0%,
+			rgb(var(--orb-primary) / 0.3),
+			rgb(var(--orb-secondary) / 0.09) 55%,
+			transparent 85%
+		);
+		pointer-events: none;
+	}
+
+	.cmdk-aura[data-lit] {
+		opacity: 1;
+		transition-duration: 300ms;
+	}
+
+	.cmdk-aura::before {
+		position: absolute;
+		top: 0;
+		right: 14%;
+		left: 14%;
+		background: linear-gradient(90deg, transparent, rgb(var(--orb-milk) / 0.95) 50%, transparent);
+		height: 1px;
+		content: '';
+	}
+
+	.cmdk-aura::after {
+		position: absolute;
+		top: 0;
+		right: 20%;
+		left: 20%;
+		transform-origin: 50% 0;
+		background: radial-gradient(50% 100% at 50% 0%, rgb(var(--orb-milk) / 0.14), transparent);
+		height: 56px;
+		content: '';
+	}
+
+	.cmdk-aura[data-lit]::before {
+		animation: cmdk-edge-open 560ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	}
+
+	.cmdk-aura[data-lit]::after {
+		animation: cmdk-light-settle 720ms cubic-bezier(0.23, 1, 0.32, 1) 60ms both;
+	}
+
+	@keyframes cmdk-edge-open {
+		from {
+			transform: scaleX(0.2);
+			opacity: 0;
+		}
+		to {
+			transform: none;
+			opacity: 1;
+		}
+	}
+
+	@keyframes cmdk-light-settle {
+		from {
+			transform: scaleY(0.4);
+			opacity: 0;
+		}
+		to {
+			transform: none;
+			opacity: 1;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.cmdk-glyph-magnifier,
+		.cmdk-glyph-sparkle,
+		.cmdk-glyph[data-mode] :is(.cmdk-glyph-magnifier, .cmdk-glyph-sparkle) {
+			transform: none;
+			filter: none;
+			transition: opacity 150ms ease;
+		}
+
+		/* The light still comes and goes, by fading alone */
+		.cmdk-orb-stage[data-understood] .cmdk-orb-warmth,
+		.cmdk-card:has(.cmdk-aura[data-lit]) :is(.cmdk-glyph-glow, .cmdk-glyph-sparkle),
+		.cmdk-aura[data-lit]::before,
+		.cmdk-aura[data-lit]::after {
+			animation: none;
+		}
+	}
+
+	/* cmdk insight: results */
+
+	/* A filter Search read out of the query (a person, a place, a year) settles
+	   in under the field: up a little, out of a slight blur. */
+	.search-chip {
+		animation: search-chip-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	}
+
+	/* A transcript followed as it plays (see TranscriptView): in the audio
+	   island, and in the Photos inspector's card for a video. The spoken row
+	   is bright and sharp; the rows around it dim and soften with distance —
+	   a filter on those few rows only, the ones further off being out of view
+	   and merely dim. While the reader has the scroll (`data-browsing`)
+	   everything sharpens to be read. The card is small and read beside the
+	   picture: its type is smaller and its blur gentler. */
+	.lyrics {
+		animation: lyrics-in 320ms ease-out 120ms both;
+	}
+
+	.lyrics-scroller {
+		mask-image: linear-gradient(to bottom, transparent, black 16%, black 72%, transparent);
+	}
+
+	.lyrics[data-variant='island'] .lyrics-scroller {
+		padding-inline: 24px;
+		padding-bottom: 7rem;
+	}
+
+	.lyrics[data-variant='card'] .lyrics-scroller {
+		mask-image: linear-gradient(to bottom, transparent, black 10%, black 70%, transparent);
+		padding-inline: 6px;
+		padding-bottom: 8rem;
+	}
+
+	.lyrics[data-variant='card'] .lyrics-scroller.lyrics-fits {
+		mask-image: none;
+		padding-bottom: 6px;
+	}
+
+	.lyric-row {
+		transform: scale(0.97);
+		transform-origin: left center;
+		content-visibility: auto;
+		opacity: 0.2;
+		transition:
+			opacity 450ms ease-out,
+			filter 450ms ease-out,
+			transform 450ms cubic-bezier(0.23, 1, 0.32, 1);
+		contain-intrinsic-size: auto 2.8em;
+		color: rgb(255 255 255);
+		font-weight: 600;
+		letter-spacing: -0.02em;
+	}
+
+	.lyrics[data-variant='island'] .lyric-row {
+		padding-block: 5px;
+		font-size: 17px;
+		line-height: 1.28;
+	}
+
+	.lyrics[data-variant='card'] .lyric-row {
+		padding: 4px 6px;
+		font-size: 14px;
+		line-height: 1.36;
+	}
+
+	.lyric-row[data-distance='0'] {
+		transform: none;
+		opacity: 1;
+	}
+
+	.lyric-row[data-distance='1'] {
+		opacity: 0.4;
+		filter: blur(0.7px);
+	}
+
+	.lyric-row[data-distance='2'] {
+		opacity: 0.32;
+		filter: blur(1.3px);
+	}
+
+	.lyric-row[data-distance='3'] {
+		opacity: 0.26;
+		filter: blur(1.9px);
+	}
+
+	.lyric-row[data-distance='4'] {
+		opacity: 0.22;
+		filter: blur(2.4px);
+	}
+
+	.lyrics[data-variant='card'] .lyric-row[data-distance='1'] {
+		opacity: 0.5;
+		filter: blur(0.3px);
+	}
+
+	.lyrics[data-variant='card'] .lyric-row[data-distance='2'] {
+		opacity: 0.38;
+		filter: blur(0.6px);
+	}
+
+	.lyrics[data-variant='card'] .lyric-row:is([data-distance='3'], [data-distance='4'], [data-distance='5']) {
+		opacity: 0.3;
+		filter: blur(0.9px);
+	}
+
+	/* A transcript short enough to be seen whole is read, not followed */
+	.lyrics-fits > .lyric-row:not([data-distance='0']) {
+		opacity: 0.55;
+		filter: none;
+	}
+
+	[data-browsing] > .lyric-row {
+		opacity: 0.55;
+		filter: none;
+	}
+
+	[data-browsing] > .lyric-row[data-distance='0'] {
+		opacity: 1;
+	}
+
+	@media (hover: hover) {
+		.lyric-row[data-lyric]:hover {
+			opacity: 0.85;
+			filter: none;
+		}
+
+		.lyric-row[data-distance='0']:hover {
+			opacity: 1;
+		}
+	}
+
+	/* Within the spoken line the words still to come sit a shade back, and
+	   lift to white as they are reached */
+	.lyric-row[data-distance='0'] [data-word] {
+		transition: color 380ms ease-out;
+		color: rgb(255 255 255 / 0.6);
+	}
+
+	.lyric-row[data-distance='0'] [data-word][data-said] {
+		color: rgb(255 255 255);
+	}
+
+	/* The words a search found it by, as a highlighter marks them: the match
+	   colour behind dark text, whether or not they have been said yet */
+	.lyric-row [data-matched] {
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+		border-radius: 4px;
+		background: hsl(var(--color-match));
+		padding: 0 3px;
+	}
+
+	.lyric-row[data-distance] [data-matched] [data-word] {
+		color: hsl(var(--color-match-ink));
+	}
+
+	/* A silence: three dots, unseen until playback is in it, then breathing */
+	.lyric-gap {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		opacity: 0;
+		filter: none;
+		height: 26px;
+	}
+
+	.lyric-gap > span {
+		border-radius: 9999px;
+		background: rgb(255 255 255);
+		width: 7px;
+		height: 7px;
+	}
+
+	.lyrics[data-variant='card'] .lyric-gap {
+		gap: 4px;
+		padding-inline: 6px;
+		height: 20px;
+	}
+
+	.lyrics[data-variant='card'] .lyric-gap > span {
+		width: 5px;
+		height: 5px;
+	}
+
+	.lyric-gap[data-distance='0'] > span {
+		animation: lyric-breathe 1.8s ease-in-out infinite;
+	}
+
+	.lyric-gap[data-distance='0'] > span:nth-child(2) {
+		animation-delay: 0.22s;
+	}
+
+	.lyric-gap[data-distance='0'] > span:nth-child(3) {
+		animation-delay: 0.44s;
+	}
+
+	/* Above every rule that dims by distance: an unlit silence is not drawn */
+	.lyrics[data-variant] .lyric-row.lyric-gap:not([data-distance='0']) {
+		opacity: 0;
+		filter: none;
+	}
+
+	/* Text in a picture, pointed at on the picture (see TextRegions). Each shape
+	   is stroked in its own colour at a width that does not scale with the
+	   picture: round corners, a little air around the letters, and a floor
+	   under the height of a line of small print. Opacity is the shape's own,
+	   so fill and stroke blend as one. */
+	.picture-text-match,
+	.picture-text-line {
+		transform-box: fill-box;
+		transform-origin: center;
+		vector-effect: non-scaling-stroke;
+		stroke-linejoin: round;
+	}
+
+	/* Words a search found: they land a beat brighter and larger than they
+	   rest, then settle to a wash the letters read through. */
+	.picture-text-match {
+		opacity: var(--picture-text-rest, 0.4);
+		animation: picture-text-in 700ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		fill: hsl(var(--color-match));
+		stroke: hsl(var(--color-match));
+		stroke-width: 5px;
+	}
+
+	/* A line the inspector points at: a white outline, lit only while pointed */
+	.picture-text-line {
+		opacity: 0;
+		transition: opacity 160ms ease-out;
+		fill: rgb(255 255 255 / 0.14);
+		stroke: rgb(255 255 255 / 0.85);
+		stroke-width: 1.25px;
+	}
+
+	/* White alone is lost on a receipt or a page */
+	.picture-text-lines {
+		filter: drop-shadow(0 0 0.75px rgb(0 0 0 / 0.75));
+	}
+
+	.picture-text-line[data-lit] {
+		opacity: 1;
+	}
+
 	/* Rows darken progressively down each section, bottoming out at tone 6 —
 	   rows past the sixth stay at the darkest tone. */
 	.settings-list-group > .settings-list-row {
@@ -660,6 +1149,33 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	.cmdk-card,
 	.cmdk-section {
 		animation: cmdk-fade 150ms ease-out both;
+		transition: none;
+	}
+
+	.search-chip {
+		animation: cmdk-fade 150ms ease-out both;
+	}
+
+	.picture-text-match {
+		animation: picture-text-fade 200ms ease-out both;
+	}
+
+	.lyrics {
+		animation: none;
+	}
+
+	.lyric-row,
+	.lyric-row [data-word] {
+		transform: none;
+		transition: none;
+	}
+
+	.lyric-gap[data-distance='0'] > span {
+		opacity: 0.7;
+		animation: none;
+	}
+
+	.picture-text-line {
 		transition: none;
 	}
 
@@ -1252,6 +1768,63 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	}
 }
 
+@keyframes lyrics-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes lyric-breathe {
+	0%,
+	100% {
+		transform: scale(0.78);
+		opacity: 0.4;
+	}
+	50% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes picture-text-in {
+	from {
+		transform: scale(1.18);
+		opacity: 0;
+	}
+	35% {
+		opacity: 0.7;
+	}
+	to {
+		transform: none;
+		opacity: var(--picture-text-rest, 0.4);
+	}
+}
+
+@keyframes picture-text-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: var(--picture-text-rest, 0.4);
+	}
+}
+
+@keyframes search-chip-in {
+	from {
+		transform: translateY(3px) scale(0.96);
+		opacity: 0;
+		filter: blur(2px);
+	}
+	to {
+		transform: none;
+		opacity: 1;
+		filter: blur(0);
+	}
+}
+
 @keyframes cmdk-section-in {
 	from {
 		transform: translateY(4px);
@@ -1330,7 +1903,6 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	padding-inline: 11px;
 	/* height: var(--cmdk-list-height); */
 	/* min-height: 200px; */
-	max-height: 500px;
 	/* scroll-padding-block-start: 20px; */
 	/* scroll-padding-block-end: 20px; */
 }

@@ -4,7 +4,11 @@ import {useEffect, useRef} from 'react'
 import {moveActivity} from '@/features/photos/hooks/move-activity'
 import {isUniformList, ITEMS_LIST_KEY, type ItemsPage} from '@/features/photos/hooks/use-items'
 import {MAP_POINTS_KEY} from '@/features/photos/hooks/use-map-points'
+import {SEARCH_QUERY_KEY, type SearchStatus} from '@/features/photos/hooks/use-search'
 import {trpcReact, type RouterOutput} from '@/trpc/trpc'
+
+// tRPC's mutation-key prefix for every change to people (rename, merge, hide, …)
+const PEOPLE_MUTATION_KEY = [['photos', 'people']] as const
 
 type LibraryStatus = RouterOutput['photos']['library']['status']
 
@@ -21,6 +25,26 @@ const REFETCH_IN_PLACE_MAX_PAGES = 3
 // library keeps changing — an import changes it every second for hours.
 const MAP_POINTS_REFRESH_MS = 10_000
 
+// A ranked search has Search read its words with a model for every page on
+// screen, and is paced the same way: asked again on every change, it was
+// answering for the whole of an import or of the library being read.
+const SEARCH_REFRESH_MS = 10_000
+
+// A refresh run at once after a quiet spell, and at most every `everyMs`
+// while it keeps being asked for
+type Paced = {refreshedAt: number; timer?: ReturnType<typeof setTimeout>}
+function refreshPaced(paced: Paced, everyMs: number, refresh: () => void) {
+	if (paced.timer) return
+	const run = () => {
+		paced.timer = undefined
+		paced.refreshedAt = Date.now()
+		refresh()
+	}
+	const wait = paced.refreshedAt + everyMs - Date.now()
+	if (wait > 0) paced.timer = setTimeout(run, wait)
+	else run()
+}
+
 // One subscription group for the whole Photos surface. Indexing snapshots go
 // straight into the status cache; `photos:change` covers library mutations,
 // indexed filesystem changes, and enrichment. Raw Files events also include
@@ -31,21 +55,27 @@ export function usePhotosEvents() {
 	const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 	const indexingVersionRef = useRef(0)
 	const refreshRef = useRef({running: false, pending: false, mounted: true})
-	const mapPointsRef = useRef<{refreshedAt: number; timer?: ReturnType<typeof setTimeout>}>({refreshedAt: 0})
+	const mapPointsRef = useRef<Paced>({refreshedAt: 0})
+	const searchesRef = useRef<Paced>({refreshedAt: 0})
 
-	const refreshMapPoints = () => {
-		const points = mapPointsRef.current
-		if (points.timer) return
-		const refresh = () => {
-			points.timer = undefined
-			points.refreshedAt = Date.now()
+	const refreshMapPoints = () =>
+		refreshPaced(mapPointsRef.current, MAP_POINTS_REFRESH_MS, () => {
 			// A read already under way may predate the change: this replaces it
 			void queryClient.invalidateQueries({queryKey: MAP_POINTS_KEY})
-		}
-		const wait = points.refreshedAt + MAP_POINTS_REFRESH_MS - Date.now()
-		if (wait > 0) points.timer = setTimeout(refresh, wait)
-		else refresh()
-	}
+		})
+
+	// A ranked search is one request a page: the one on screen is asked again,
+	// the rest wait stale for whoever shows them next
+	const refreshSearches = () =>
+		refreshPaced(searchesRef.current, SEARCH_REFRESH_MS, () => {
+			// A delete or restore of this session's own began while this waited
+			// its turn: the search is asked once it has finished, not for the
+			// items it is still taking away
+			if (moveActivity.isRunning()) return
+			for (const query of queryClient.getQueryCache().findAll({queryKey: SEARCH_QUERY_KEY})) {
+				if (query.isActive()) void query.fetch(undefined, {cancelRefetch: false}).catch(() => undefined)
+			}
+		})
 
 	const schedule = () => {
 		const refresh = refreshRef.current
@@ -87,8 +117,16 @@ export function usePhotosEvents() {
 					utils.photos.library.summary.invalidate(undefined, undefined, options),
 					utils.photos.sources.invalidate(undefined, undefined, options),
 					utils.photos.albums.invalidate(undefined, undefined, options),
+					// People are left alone while a change to them of this session's
+					// own is on its way: read now, they could come back as they were
+					// before it and undo on screen what it has already shown. The
+					// change reads them itself once it has settled.
+					...(queryClient.isMutating({mutationKey: PEOPLE_MUTATION_KEY}) > 0
+						? []
+						: [utils.photos.people.invalidate(undefined, undefined, options)]),
 					utils.photos.items.get.invalidate(undefined, undefined, options),
 					queryClient.invalidateQueries({queryKey: ITEMS_LIST_KEY, refetchType: 'none'}),
+					queryClient.invalidateQueries({queryKey: SEARCH_QUERY_KEY, refetchType: 'none'}),
 				]
 				// Refetch shallow lists that something is showing; leave deep ones
 				// stale for their next mount. (Showing, not merely subscribed to: the
@@ -101,6 +139,7 @@ export function usePhotosEvents() {
 						requests.push(query.fetch(undefined, options))
 					}
 				}
+				refreshSearches()
 				await Promise.allSettled(requests)
 			} finally {
 				refresh.running = false
@@ -128,6 +167,9 @@ export function usePhotosEvents() {
 				mapPointsRef.current.timer = undefined
 				void queryClient.invalidateQueries({queryKey: MAP_POINTS_KEY, refetchType: 'none'})
 			}
+			// … and a search's is already marked stale
+			clearTimeout(searchesRef.current.timer)
+			searchesRef.current.timer = undefined
 		}
 	}, [])
 
@@ -151,6 +193,16 @@ export function usePhotosEvents() {
 				})
 			},
 			onError: (err) => console.error('eventBus.listen(photos:indexing-progress)', err),
+		},
+	)
+
+	// How far Search has read the library: the People page's progress and the
+	// "warming up" note follow it live
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'search:indexing-progress'},
+		{
+			onData: (status) => utils.search.status.setData(undefined, status as SearchStatus),
+			onError: (err) => console.error('eventBus.listen(search:indexing-progress)', err),
 		},
 	)
 

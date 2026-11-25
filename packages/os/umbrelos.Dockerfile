@@ -49,6 +49,25 @@ ARG LIBDE265_SNAPSHOT_DATE=20260919T000000Z
 ARG LIBDE265_SHA256_amd64=36115188a321806ac797218cb878be15e8df7584fc65b10ea50d52cad065c5f5
 ARG LIBDE265_SHA256_arm64=36c69add16a79fdffd85f284501b8f9ddd7128ccb8e078598818beb3e50109ec
 
+# LiteRT-LM, the runtime the embedding model runs in. 0.18.0 and not later:
+# measured on an Intel N150, 0.19.2 takes a fifth longer to read a photo. The
+# models themselves are not in the image: umbreld fetches them (see models.ts
+# in umbreld).
+ARG LITERT_LM_URL_amd64=https://files.pythonhosted.org/packages/c9/8f/eb7a5203be1d48440c6b8d6e6382c3f744dd6d338fe400555718b4d695a1/litert_lm_api-0.18.0-py3-none-manylinux_2_27_x86_64.whl
+ARG LITERT_LM_SHA256_amd64=b64e2cf6d7dcb90ff094b74af595cc5d53faa07e0889f967d15df8d3e696b53c
+ARG LITERT_LM_URL_arm64=https://files.pythonhosted.org/packages/cf/f2/60707ac6860248e5f3601926c7cfe44794db350b60c1f14cb6e7e8874ae4/litert_lm_api-0.18.0-py3-none-manylinux_2_27_aarch64.whl
+ARG LITERT_LM_SHA256_arm64=d066db0c2bcd832b2b9cf8532b5fff385f7cff8562a1b482f8da0b51f810c47c
+
+# transcribe.cpp, which runs the speech models on the CPU or, through Vulkan,
+# on a GPU: its Python bindings, which depend on nothing else, and the
+# libraries they load
+ARG TRANSCRIBE_URL=https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.2/transcribe_cpp-0.4.2-py3-none-any.whl
+ARG TRANSCRIBE_SHA256=2e4a5d3e7ba78918969ccb1ee06f3d5c6c79664e0626d0da0ffe832f465e6d51
+ARG TRANSCRIBE_NATIVE_URL_amd64=https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.2/transcribe-native-0.4.2-linux-x86_64-cpu-vulkan.tar.gz
+ARG TRANSCRIBE_NATIVE_SHA256_amd64=4fe87db8919ea34e461db7987713b580f54e6f3ed610457c5d8fb8eac1a15046
+ARG TRANSCRIBE_NATIVE_URL_arm64=https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.2/transcribe-native-0.4.2-linux-aarch64-cpu-vulkan.tar.gz
+ARG TRANSCRIBE_NATIVE_SHA256_arm64=5e9cc7b244949fc686d1272e796e965411e80cc768533f1704c3c53e4c7d695e
+
 #########################################################################
 # source stage
 #########################################################################
@@ -497,6 +516,16 @@ ARG LIBDE265_VERSION
 ARG LIBDE265_SNAPSHOT_DATE
 ARG LIBDE265_SHA256_amd64
 ARG LIBDE265_SHA256_arm64
+ARG LITERT_LM_URL_amd64
+ARG LITERT_LM_SHA256_amd64
+ARG LITERT_LM_URL_arm64
+ARG LITERT_LM_SHA256_arm64
+ARG TRANSCRIBE_URL
+ARG TRANSCRIBE_SHA256
+ARG TRANSCRIBE_NATIVE_URL_amd64
+ARG TRANSCRIBE_NATIVE_SHA256_amd64
+ARG TRANSCRIBE_NATIVE_URL_arm64
+ARG TRANSCRIBE_NATIVE_SHA256_arm64
 
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
@@ -713,6 +742,35 @@ RUN KOPIA_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") &&
 
 # kopia also requires fuse3 for mounting snapshots
 RUN apt-get install --yes fuse3 bindfs
+
+# Install what the models that read the library run in (see the
+# umbrel-embeddings units and servers in the overlay). LiteRT-LM runs the
+# embedding model. It is a Python package with no dependencies, so its wheel is
+# unpacked where the server finds it and nothing is installed with pip. It
+# reaches Intel and AMD GPUs through Mesa's Vulkan drivers, and uses the CPU
+# where there is no GPU. The models that find faces and read the text in
+# pictures run on the CPU in Debian's ONNX Runtime, and the speech models in
+# transcribe.cpp, unpacked the same way as LiteRT-LM with its libraries beside
+# it. Text is read out of PDFs by Poppler. The models are fetched by umbreld
+# once the device is running, and kept with its data.
+RUN set -e; \
+    apt-get install --yes mesa-vulkan-drivers python3-onnxruntime poppler-utils; \
+    LITERT_LM_URL=$(eval echo \$LITERT_LM_URL_${TARGETARCH}); \
+    LITERT_LM_SHA256=$(eval echo \$LITERT_LM_SHA256_${TARGETARCH}); \
+    TRANSCRIBE_NATIVE_URL=$(eval echo \$TRANSCRIBE_NATIVE_URL_${TARGETARCH}); \
+    TRANSCRIBE_NATIVE_SHA256=$(eval echo \$TRANSCRIBE_NATIVE_SHA256_${TARGETARCH}); \
+    curl -fsSL "${LITERT_LM_URL}" -o /tmp/litert-lm.whl; \
+    echo "${LITERT_LM_SHA256} /tmp/litert-lm.whl" | sha256sum -c; \
+    python3 -m zipfile -e /tmp/litert-lm.whl /opt/litert-lm; \
+    rm /tmp/litert-lm.whl; \
+    curl -fsSL "${TRANSCRIBE_URL}" -o /tmp/transcribe.whl; \
+    curl -fsSL "${TRANSCRIBE_NATIVE_URL}" -o /tmp/transcribe-native.tar.gz; \
+    echo "${TRANSCRIBE_SHA256} /tmp/transcribe.whl" | sha256sum -c; \
+    echo "${TRANSCRIBE_NATIVE_SHA256} /tmp/transcribe-native.tar.gz" | sha256sum -c; \
+    python3 -m zipfile -e /tmp/transcribe.whl /opt/transcribe; \
+    tar -xzf /tmp/transcribe-native.tar.gz -C /opt/transcribe --strip-components=1 --no-same-owner; \
+    chmod 644 /opt/transcribe/*.so; \
+    rm /tmp/transcribe.whl /tmp/transcribe-native.tar.gz
 
 # Install Watchman from pinned Homebrew bottles.
 COPY --from=watchman-build --chown=root:root /opt/linuxbrew/ /opt/linuxbrew/

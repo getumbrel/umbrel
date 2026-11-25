@@ -14,6 +14,8 @@ import {
 } from './file-index-engine.ts'
 import type {PublishedFileRevision, ThumbnailReference} from './file-index-enrichment.ts'
 import {PHOTOS_THUMBNAIL_VARIANTS, type ThumbnailVariant} from './thumbnail-support.ts'
+import type {PeopleChange} from '../photos/people.ts'
+import type {SearchRead, SearchReadResult} from '../search/types.ts'
 import type {
 	PhotoAlbum,
 	PhotoBackupCloudIdentity,
@@ -21,8 +23,10 @@ import type {
 	PhotoFilter,
 	PhotoIndexingProgress,
 	PhotoIndexingState,
-	PhotoItem,
 	PhotoItemDetail,
+	PhotoItem,
+	PhotoPerson,
+	PhotoPersonSuggestion,
 	PhotoScopeMode,
 	PhotoSource,
 	PhotoSummary,
@@ -224,6 +228,9 @@ export default class FileIndex {
 				this.#workerBootTimeoutMs,
 				'File index worker startup timed out',
 			)
+			// Before any background work starts: the models are not to read a
+			// library whose owner has had them leave it alone
+			if (!this.#modelWork) this.#notifyFor(worker, generation, 'setModelWork', [false])
 			if (this.#backgroundReconciliationStarted) {
 				this.#notifyFor(worker, generation, 'startBackgroundReconciliation', [])
 			}
@@ -371,6 +378,14 @@ export default class FileIndex {
 	startBackgroundReconciliation() {
 		this.#backgroundReconciliationStarted = true
 		this.#notify('startBackgroundReconciliation', [])
+	}
+
+	// Whether the models read the library so that it is found by what is in
+	// it. A worker that starts later is told as it starts.
+	#modelWork = true
+	setModelWork(enabled: boolean) {
+		this.#modelWork = enabled
+		if (this.#workerReady) this.#notify('setModelWork', [enabled])
 	}
 
 	scheduleFullReconciliation(reason: string) {
@@ -535,6 +550,10 @@ export default class FileIndex {
 		])
 	}
 
+	async photosSearch<R extends SearchRead>(accountId: string, request: R) {
+		return this.#request<SearchReadResult[R['type']]>('photosSearch', [accountId, request])
+	}
+
 	async photosMapPoints(accountId: string, filter: PhotoFilter) {
 		return this.#request<Uint8Array>('photosMapPoints', [accountId, filter])
 	}
@@ -569,6 +588,18 @@ export default class FileIndex {
 
 	async photosListAlbums(accountId: string) {
 		return this.#request<PhotoAlbum[]>('photosListAlbums', [accountId])
+	}
+
+	async photosListPeople(accountId: string, hidden: boolean) {
+		return this.#request<PhotoPerson[]>('photosListPeople', [accountId, hidden])
+	}
+
+	async photosListPersonSuggestions(accountId: string) {
+		return this.#request<PhotoPersonSuggestion[]>('photosListPersonSuggestions', [accountId])
+	}
+
+	async photosChangePeople(accountId: string, change: PeopleChange) {
+		return this.#request<boolean>('photosChangePeople', [accountId, change])
 	}
 
 	async photosCreateAlbum(accountId: string, name: string, ids?: string[]) {

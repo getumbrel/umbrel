@@ -39,6 +39,7 @@ const permissions = {
 	appStore: false,
 	manageSystem: true,
 	createMachines: false,
+	photos: false,
 	machines: ['another'],
 }
 function Harness() {

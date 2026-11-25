@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
 	invalidateSummary: vi.fn(),
 	invalidateSources: vi.fn(),
 	invalidateAlbums: vi.fn(),
+	invalidatePeople: vi.fn(),
+	isMutating: vi.fn(() => 0),
 	invalidateItem: vi.fn(),
 	cancelItem: vi.fn(async () => {}),
 	invalidateQueries: vi.fn(),
@@ -35,6 +37,7 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 		...original,
 		useQueryClient: () => ({
 			invalidateQueries: mocks.invalidateQueries,
+			isMutating: mocks.isMutating,
 			getQueryCache: () => ({findAll: mocks.findQueries}),
 		}),
 	}
@@ -50,6 +53,7 @@ vi.mock('@/trpc/trpc', () => ({
 				},
 				sources: {invalidate: mocks.invalidateSources},
 				albums: {invalidate: mocks.invalidateAlbums},
+				people: {invalidate: mocks.invalidatePeople},
 				items: {get: {invalidate: mocks.invalidateItem, cancel: mocks.cancelItem}},
 			},
 		}),
@@ -145,9 +149,74 @@ it('uses the bounded library refresh when indexing becomes ready', async () => {
 	expect(mocks.invalidateSources).toHaveBeenCalledOnce()
 	expect(mocks.invalidateAlbums).toHaveBeenCalledOnce()
 	expect(mocks.invalidateItem).toHaveBeenCalledOnce()
-	// The items lists, and the map's points
-	expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
-	expect(mocks.invalidateQueries).toHaveBeenCalledWith({queryKey: MAP_POINTS_KEY})
+	// The map's points, the lists, and the ranked searches of the same library
+	expect(mocks.invalidateQueries.mock.calls).toEqual([
+		[{queryKey: MAP_POINTS_KEY}],
+		[{queryKey: [['photos', 'items', 'list']], refetchType: 'none'}],
+		[{queryKey: [['search', 'query']], refetchType: 'none'}],
+	])
+})
+
+it('leaves people unread while a change to them is still on its way', async () => {
+	mocks.isMutating.mockReturnValueOnce(1)
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.isMutating).toHaveBeenCalledWith({mutationKey: [['photos', 'people']]})
+	expect(mocks.invalidatePeople).not.toHaveBeenCalled()
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
+
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.invalidatePeople).toHaveBeenCalledOnce()
+})
+
+it('asks the ranked search on screen again when the library changes, and no other', async () => {
+	const shown = {isActive: () => true, fetch: vi.fn(async () => {})}
+	const cached = {isActive: () => false, fetch: vi.fn(async () => {})}
+	mocks.findQueries.mockImplementation((filters) => {
+		const [[path]] = (filters as {queryKey: string[][]}).queryKey
+		return path === 'search' ? [shown, cached] : []
+	})
+	try {
+		await act(async () => {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			await vi.advanceTimersByTimeAsync(1000)
+		})
+		expect(shown.fetch).toHaveBeenCalledOnce()
+		expect(cached.fetch).not.toHaveBeenCalled()
+	} finally {
+		mocks.findQueries.mockReset().mockReturnValue([])
+	}
+})
+
+it('asks the ranked search on screen again at once, then at most every ten seconds while changes keep coming', async () => {
+	const shown = {isActive: () => true, fetch: vi.fn(async () => {})}
+	mocks.findQueries.mockImplementation((filters) => {
+		const [[path]] = (filters as {queryKey: string[][]}).queryKey
+		return path === 'search' ? [shown] : []
+	})
+	try {
+		// An import: a change a second, for 25 seconds
+		await act(async () => {
+			for (let second = 0; second < 25; second++) {
+				mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+				await vi.advanceTimersByTimeAsync(1000)
+			}
+		})
+		// At 1s, 11s and 21s
+		expect(shown.fetch).toHaveBeenCalledTimes(3)
+		// … and once more for the changes since, unless a delete of this session's is under way by then
+		moveActivity.begin()
+		await act(async () => vi.advanceTimersByTimeAsync(10_000))
+		expect(shown.fetch).toHaveBeenCalledTimes(3)
+	} finally {
+		moveActivity.end()
+		mocks.findQueries.mockReset().mockReturnValue([])
+	}
 })
 
 it("refreshes the map's points at once, then at most every ten seconds while changes keep coming", async () => {
@@ -301,7 +370,12 @@ it('refreshes a newly selected filter when a change arrives while waiting for an
 		// Switching filters starts B after the refresh took its snapshot of A.
 		unsubscribe = observer.subscribe(() => {})
 		const filterQuery = client.getQueryCache().getAll()[0]!
-		mocks.findQueries.mockReturnValueOnce([filterQuery]).mockReturnValueOnce([]).mockReturnValueOnce([filterQuery])
+		// Each refresh looks up the reads in flight, the lists, then the searches
+		mocks.findQueries
+			.mockReturnValueOnce([filterQuery])
+			.mockReturnValueOnce([])
+			.mockReturnValueOnce([])
+			.mockReturnValueOnce([filterQuery])
 		await act(async () => {
 			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
 			finishOlderRead()

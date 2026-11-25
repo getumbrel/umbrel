@@ -13,6 +13,8 @@ export type McpToolContext = {
 	// request can be named at the console; every other tool goes through routes
 	machines: Pick<Machines, 'control' | 'screenshot'>
 	agent?: MachineAgent
+	// The picture of a Photos item, as an MCP image block carries it
+	photos: {image: (photoId: string) => Promise<{data: string; mimeType: string}>}
 }
 
 // Matches the visible settings row label so agents can point the user at it verbatim

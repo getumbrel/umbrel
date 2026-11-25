@@ -1,5 +1,5 @@
 import {useQuery} from '@tanstack/react-query'
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {useViewerSize, ViewerBackdrop, type ViewerSize} from '@/features/files/components/file-viewer/shell/context'
@@ -9,6 +9,9 @@ import type {ViewerProps} from '@/features/files/components/file-viewer/viewers'
 import {RENDERED_IMAGE_TYPES} from '@/features/files/constants'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {TextHighlights} from '@/features/photos/components/viewer/text-highlights'
+import {textLines} from '@/features/photos/components/viewer/text-regions'
+import {hasHighlight, snippetTerms} from '@/features/search/snippet'
 import {cn} from '@/lib/utils'
 import {useAuthorizedHttpUrl} from '@/modules/auth/http-auth'
 import {trpcReact} from '@/trpc/trpc'
@@ -192,6 +195,7 @@ export default function ImageViewer({item}: ViewerProps) {
 	// The picture's own size, which a quick look takes the shape of
 	const [size, setSize] = useState<ViewerSize>()
 	useViewerSize(size)
+	const [image, setImage] = useState<HTMLImageElement | null>(null)
 
 	if (state === 'failed' || failed) {
 		return (
@@ -221,6 +225,7 @@ export default function ImageViewer({item}: ViewerProps) {
 					// Absolutely placed with auto margins, the element is exactly the
 					// picture's fitted box, so the rounded corners land on the picture
 					<img
+						ref={setImage}
 						src={url}
 						alt={item.name}
 						draggable={false}
@@ -235,7 +240,59 @@ export default function ImageViewer({item}: ViewerProps) {
 						)}
 					/>
 				)}
+				{url && state === 'loaded' && <MatchedText item={item} image={image} />}
 			</div>
 		</>
+	)
+}
+
+// A picture a search found by words read off it opens with those words
+// pointed at on it, as it does in Photos (see TextHighlights). The image
+// above is fitted whole into a box of its own, so the drawing is given the
+// picture's rectangle inside that box — measured when the image loads or the
+// window changes — and centred where the image is. Any other picture, and
+// one whose text has no places kept, mounts nothing.
+function MatchedText({item, image}: {item: FileSystemItem; image: HTMLImageElement | null}) {
+	const snippet = item.searchResult?.kind === 'photo' ? item.searchResult.snippet : undefined
+	const terms = useMemo(() => snippetTerms(snippet), [snippet])
+	const wanted = snippet !== undefined && hasHighlight(snippet)
+	const {data: insights} = trpcReact.search.insights.useQuery(
+		{path: item.path},
+		{enabled: wanted, retry: false, refetchOnWindowFocus: false, staleTime: 60_000},
+	)
+	const lines = useMemo(
+		() => (insights?.text && insights.textQuads ? textLines(insights.text, insights.textQuads) : undefined),
+		[insights],
+	)
+
+	const [picture, setPicture] = useState<{width: number; height: number; aspect: number}>()
+	useEffect(() => {
+		if (!image || !lines) return
+		const measure = () => {
+			if (!(image.naturalWidth > 0)) return
+			// The box's own shape is not always the picture's: both limits can bind
+			const boxAspect = image.offsetWidth / image.offsetHeight
+			const aspect = image.naturalWidth / image.naturalHeight
+			const width = boxAspect > aspect ? image.offsetHeight * aspect : image.offsetWidth
+			setPicture({width, height: width / aspect, aspect})
+		}
+		measure()
+		image.addEventListener('load', measure)
+		const observer = new ResizeObserver(measure)
+		observer.observe(image)
+		return () => {
+			image.removeEventListener('load', measure)
+			observer.disconnect()
+		}
+	}, [image, lines])
+
+	if (!lines || !picture) return null
+	return (
+		<div
+			className='pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
+			style={{width: picture.width, height: picture.height}}
+		>
+			<TextHighlights lines={lines} aspect={picture.aspect} matched={terms} focus={null} />
+		</div>
 	)
 }

@@ -20,6 +20,7 @@ import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-n
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import type {Machine} from '@/features/machines/types'
+import {SearchMatchLine} from '@/features/search/search-match-line'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
 import {cn} from '@/lib/utils'
@@ -129,7 +130,8 @@ export function ListViewFileItem({
 						data-item-content
 						className='max-w-full min-w-0 self-start truncate text-12 leading-tight text-white/50'
 					>
-						{details || '—'}
+						{/* In search, why this file is here takes the details' line */}
+						{item.searchResult ? <SearchMatchLine result={item.searchResult} /> : details || '—'}
 					</span>
 				</div>
 				{item.type === 'directory' && !isSelecting && !isUploading && (
@@ -171,9 +173,15 @@ export function ListViewFileItem({
 						<EditableName item={item} view='list' onFinish={onEditingNameComplete} />
 					</div>
 				) : (
-					<div data-item-content className={cn('flex min-w-0 items-center gap-1.5', fadedContent && 'opacity-50')}>
-						<TruncatedFilename filename={displayName} view='list' className='min-w-0 text-13 text-white/90' />
-						{folderApps && <FolderAppStack apps={folderApps} />}
+					<div data-item-content className={cn('min-w-0', fadedContent && 'opacity-50')}>
+						<div className='flex min-w-0 items-center gap-1.5'>
+							<TruncatedFilename filename={displayName} view='list' className='min-w-0 text-13 text-white/90' />
+							{folderApps && <FolderAppStack apps={folderApps} />}
+						</div>
+						{/* In search, why this file is here: the words that matched, or where it lives */}
+						{item.searchResult && (
+							<SearchMatchLine result={item.searchResult} className='text-11 leading-[14px] text-white/40' />
+						)}
 					</div>
 				)}
 			</div>

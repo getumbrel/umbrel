@@ -8,6 +8,7 @@ const permissions: AgentSettings['permissions'] = {
 	appStore: true,
 	manageSystem: false,
 	createMachines: false,
+	photos: false,
 	machines: ['another'],
 }
 const token: AgentToken = {id: 'token', label: 'Codex', agentType: 'codex', createdAt: 1, lastRequestAt: 2, clients: []}

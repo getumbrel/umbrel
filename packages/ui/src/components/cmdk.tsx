@@ -1,5 +1,3 @@
-import {Search as SearchIcon} from 'lucide-react'
-import {motion, useReducedMotion} from 'motion/react'
 import {
 	createContext,
 	useCallback,
@@ -19,21 +17,29 @@ import {CommandDialog, CommandInput} from '@/components/ui/command'
 import {DialogTitle} from '@/components/ui/dialog'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {materialSurfaceClasses} from '@/components/ui/shared/material'
+import {SearchArc} from '@/features/search/search-arc'
+import {SearchChips} from '@/features/search/search-chips'
+import {SearchFootnote} from '@/features/search/search-footnote'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {IS_DEV} from '@/utils/misc'
 
+import {CmdkAura} from './cmdk-aura'
 import {CmdkDomainChip, nextCmdkDomain, useCmdkDomainCopy, type CmdkDomain} from './cmdk-domain'
+import {CmdkFieldGlyph, useCmdkFieldPlaceholder} from './cmdk-field-glyph'
 import {useCmdkGridNavigation} from './cmdk-navigation'
+import {CmdkOrbStage} from './cmdk-orb-stage'
 import {CmdkResultsList} from './cmdk-results'
-import {cmdkMoreValue, useCmdkResults} from './cmdk-sources'
-import {Orb, useOrbPalette} from './orb/orb'
-import {rgbCss, type OrbPalette} from './orb/orb-palette'
+import {cmdkMoreValue, useCmdkResults, type CmdkInsight} from './cmdk-sources'
+import {useOrbPalette} from './orb/orb'
+import {orbPaletteVars} from './orb/orb-palette'
 
 // Cmd+K: the wallpaper's orb over a glass card. Type and the orb stirs; the
 // card grows and shrinks with what it finds. Tab widens or narrows where it
 // looks (Everywhere, Files, Photos, App Store, Settings), and the arrows walk
-// results laid out as rows and as grids of tiles alike.
+// results laid out as rows and as grids of tiles alike. Files and photos
+// come from one semantic search; what it understood of the query (a person, a
+// place, a year) shows as tokens under the field.
 
 type CmdkContextValue = {
 	open: boolean
@@ -94,10 +100,9 @@ const EXIT_HOLD_MS = 240
 const NAVIGATION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'])
 // How long after the last keystroke the orb settles
 const STIR_SETTLE_MS = 450
-// A press squeezes the orb; letting go kicks it back out past where it was,
-// and it settles
-const ORB_SQUEEZE = {scale: 0.88, transition: {type: 'spring', visualDuration: 0.15, bounce: 0}} as const
-const ORB_RELEASE = {type: 'spring', visualDuration: 0.45, bounce: 0.55, velocity: 1.5} as const
+// How much of the list's edge fades out while there is more to scroll to
+// (the fade scroller's default, which CommandList takes)
+const LIST_FADE_PX = 50
 
 export function CmdkMenu() {
 	const {t} = useTranslation()
@@ -120,6 +125,10 @@ export function CmdkMenu() {
 	const active = useHeldOpen(open, EXIT_HOLD_MS)
 	const results = useCmdkResults({domain, query, active, close})
 	const navigateGrid = useCmdkGridNavigation(listRef, value, setValue)
+	// The wallpaper's colours, for every light the palette makes of them
+	const paletteVars = useMemo(() => orbPaletteVars(palette) as React.CSSProperties, [palette])
+	// Where Search reads what is inside files, the empty field says so
+	const contentsPlaceholder = useCmdkFieldPlaceholder({domain, open})
 
 	// The search survives closing — picking a result, or a route change under
 	// the palette, doesn't throw away what was typed; only clearing does.
@@ -140,6 +149,11 @@ export function CmdkMenu() {
 		return () => cancelAnimationFrame(frame)
 	}, [open])
 
+	// Whether a key that moves the selection is down: the arrows, which move
+	// it here, and Home, End and cmdk's vim bindings, which cmdk moves it on
+	// itself. A change that arrives meanwhile is the keyboard's.
+	const navKeyDownRef = useRef(false)
+
 	// The selection is controlled, and a value set through the prop skips
 	// cmdk's own scroll-into-view and its aria-activedescendant refresh. Do
 	// both here, once the list has committed. The item is found by value:
@@ -155,6 +169,18 @@ export function CmdkMenu() {
 			return
 		}
 		selected.scrollIntoView({block: 'nearest'})
+		// A photo tile a search found is explained on a line at the foot of its
+		// grid (see PhotoTile), which bringing the tile into view can leave
+		// below the fold. The line comes with it, clear of the list's fading
+		// edge, wherever the list can show both — for the keyboard only: a
+		// tile the pointer selects by passing over it would have the list
+		// move under the pointer.
+		const captioned = navKeyDownRef.current ? selected.closest('[data-captioned]') : null
+		if (captioned) {
+			const view = list.getBoundingClientRect()
+			const below = captioned.getBoundingClientRect().bottom + LIST_FADE_PX - view.bottom
+			if (below > 0 && selected.getBoundingClientRect().top - below >= view.top) list.scrollTop += below
+		}
 		input.setAttribute('aria-activedescendant', selected.id)
 	}, [open, value])
 
@@ -165,10 +191,6 @@ export function CmdkMenu() {
 	// moved it since the last keystroke, in which case theirs stays as long as
 	// it is still something on offer: a result, a section's "More", the footer.
 	const userMovedRef = useRef(false)
-	// cmdk moves the selection itself on Home, End, Alt+arrows and its vim
-	// bindings; a change that arrives while one of those keys is down is the
-	// user's too
-	const navKeyDownRef = useRef(false)
 	const resultValues = useMemo(
 		() =>
 			results.sections.flatMap((section) => section.items.filter((item) => !item.disabled).map((item) => item.value)),
@@ -238,9 +260,10 @@ export function CmdkMenu() {
 				energy={energy}
 				pressed={pressed}
 				pulseKey={pulseKey}
+				insight={results.insight}
 				onPress={stir}
 			/>
-			<CmdkCard>
+			<CmdkCard style={paletteVars} insight={results.insight.state} aura={<CmdkAura insight={results.insight} />}>
 				<CommandInput
 					ref={inputRef}
 					autoFocus
@@ -250,9 +273,9 @@ export function CmdkMenu() {
 						userMovedRef.current = false
 						stir()
 					}}
-					placeholder={placeholder(domain)}
+					placeholder={contentsPlaceholder ?? placeholder(domain)}
 					aria-label={t('search')}
-					leading={<SearchIcon className='size-4' strokeWidth={2.25} aria-hidden='true' />}
+					leading={<CmdkFieldGlyph insight={results.insight} />}
 					trailing={
 						<CmdkDomainChip
 							domain={domain}
@@ -261,10 +284,11 @@ export function CmdkMenu() {
 							onCloseAutoFocus={() => inputRef.current?.focus()}
 						/>
 					}
+					accessory={<SearchArc percent={results.footnote?.percent} className='mr-2 size-4' />}
 					onClear={() => setQuery('')}
 					clearLabel={t('cmdk.clear-search')}
-					wrapperClassName='h-11 rounded-full bg-white/6 pr-1.5 pl-3.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_0_0_0.5px_rgb(255_255_255/0.08)] sm:h-12'
-					className='px-2.5 text-14 sm:text-15'
+					wrapperClassName='cmdk-field h-11 shrink-0 rounded-full pr-1.5 pl-3.5 sm:h-12'
+					className='px-2.5 text-14 placeholder-shown:text-ellipsis sm:text-15'
 					onKeyDown={(event) => {
 						// An IME owns the keys while composing (Tab, arrows and space pick candidates)
 						if (event.nativeEvent.isComposing || event.keyCode === 229) return
@@ -295,66 +319,45 @@ export function CmdkMenu() {
 					}}
 					onBlur={() => setPressed(false)}
 				/>
+				{/* What the search understood the query to filter by */}
+				{results.chips && <SearchChips chips={results.chips} className='mt-2.5 shrink-0 px-3.5' />}
 				<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 					{/* cmdk selects whatever the pointer passes over; that counts as the user's choice too */}
 					<div onPointerMove={() => (userMovedRef.current = true)} className='contents'>
 						<CmdkResultsList results={results} listRef={listRef} />
 					</div>
 				</ErrorBoundary>
+				{/* Search admitting it is still catching up (how far along, it says,
+				    and the arc in the field draws), or that it could not be asked: a line under
+				    the results, not a banner over them. It sits
+				    outside the list, so it neither scrolls away nor fades with the
+				    list's edge. */}
+				{results.footnote && <SearchFootnote line={results.footnote} className='shrink-0 px-4 pt-2.5 pb-1' />}
 			</CmdkCard>
 		</CommandDialog>
 	)
 }
 
-// The orb and its glow. It rises into place as the palette opens and sinks
-// away as it closes (keyframes in index.css); keys press it, a space flashes
-// it. It's the one thing on the stage besides the card that a press doesn't
-// dismiss: the orb squeezes under it, stirs, and pops back when let go.
-function CmdkOrbStage({
-	size,
-	palette,
-	energy,
-	pressed,
-	pulseKey,
-	onPress,
-}: {
-	size: number
-	palette: OrbPalette
-	energy: number
-	pressed: boolean
-	pulseKey: number
-	onPress: () => void
-}) {
-	const reduceMotion = useReducedMotion()
-	return (
-		<div className='cmdk-orb-stage relative mb-4 shrink-0 sm:mb-5' style={{width: size, height: size}}>
-			<div
-				aria-hidden='true'
-				className='pointer-events-none absolute -inset-[45%] rounded-full'
-				style={{
-					background: `radial-gradient(circle, ${rgbCss(palette.primary, 0.32)} 0%, ${rgbCss(palette.secondary, 0.1)} 38%, transparent 66%)`,
-				}}
-			/>
-			<div className='cmdk-orb-body relative' data-pressed={pressed ? '' : undefined}>
-				<motion.div
-					className='pointer-events-auto rounded-full [-webkit-tap-highlight-color:transparent]'
-					whileTap={reduceMotion ? undefined : ORB_SQUEEZE}
-					transition={ORB_RELEASE}
-					onTapStart={onPress}
-					// Keep the caret in the field
-					onMouseDown={(event) => event.preventDefault()}
-				>
-					<Orb size={size} palette={palette} energy={energy} pulseKey={pulseKey} />
-				</motion.div>
-			</div>
-		</div>
-	)
-}
-
 // The glass card. Its height follows the content through a transition, so
 // results arriving or leaving glide the card open and closed rather than
-// snap it. The first measurement snaps, before anything has been seen.
-function CmdkCard({children}: {children: React.ReactNode}) {
+// snap it. The first measurement snaps, before anything has been seen. It is
+// never taller than the room the stage has under the orb (the stage's own
+// height limit, in ui/command.tsx, less the orb and its margin: 64 + 16 on a
+// phone, 64 + 20 from sm, 88 + 20 on desktop): on a short screen the list
+// gives up the difference, the one part that scrolls, and the field above it
+// and the line below keep their place.
+function CmdkCard({
+	children,
+	style,
+	insight,
+	aura,
+}: {
+	children: React.ReactNode
+	style?: React.CSSProperties
+	insight: CmdkInsight['state']
+	// Light on the glass, under the content
+	aura?: React.ReactNode
+}) {
 	const outerRef = useRef<HTMLDivElement>(null)
 	const innerRef = useRef<HTMLDivElement>(null)
 
@@ -380,12 +383,21 @@ function CmdkCard({children}: {children: React.ReactNode}) {
 	}, [])
 
 	return (
-		<div
-			ref={outerRef}
-			className={cn(materialSurfaceClasses.modal, 'cmdk-card pointer-events-auto w-full overflow-hidden')}
-		>
-			<div ref={innerRef} className='p-3'>
-				{children}
+		// The glass is a layer of its own, so light can lie on it, under the
+		// content (raised above it), without being clipped by it
+		<div ref={outerRef} className='cmdk-card pointer-events-auto relative w-full' style={style} data-insight={insight}>
+			<div className={cn(materialSurfaceClasses.modal, 'cmdk-card-glass absolute inset-0')} aria-hidden='true' />
+			{aura}
+			{/* Clipped, not `overflow-hidden`: a hidden box can still be scrolled,
+			    and scrolling the selection into view mid-transition would nudge
+			    the whole card's contents up by the few pixels the height still lacks */}
+			<div className='relative z-[2] size-full overflow-clip rounded-[var(--material-modal-radius)]'>
+				<div
+					ref={innerRef}
+					className='flex max-h-[calc(100dvh-112px-var(--safe-top))] flex-col p-3 sm:max-h-[calc(100dvh-116px-var(--safe-top))] lg:max-h-[calc(84dvh-108px-var(--safe-top))]'
+				>
+					{children}
+				</div>
 			</div>
 		</div>
 	)

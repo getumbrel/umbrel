@@ -2,7 +2,7 @@ import type BetterSqlite3 from 'better-sqlite3'
 
 import {photosReadModelDirtySchema, photosReadModelDurableTriggers} from './read-model-schema.ts'
 
-export const PHOTOS_SCHEMA_VERSION = 11
+export const PHOTOS_SCHEMA_VERSION = 12
 export const PHOTOS_MIGRATION_MODULE = 'photos'
 
 export class UnsupportedPhotosSchemaError extends Error {}
@@ -260,6 +260,44 @@ export function migratePhotos(database: BetterSqlite3.Database) {
 			`)
 			database
 				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 11, ?)')
+				.run(PHOTOS_MIGRATION_MODULE, Date.now())
+		}
+		if (version < 12) {
+			// People (see people.ts): who each face found in an account's library
+			// belongs to, which is nobody for a face too poor to tell or one the
+			// user took off someone, and what the user has said of each person.
+			// The faces themselves are not here but with what the models made of
+			// everything else, kept by content hash and their place among the
+			// content's faces.
+			database.exec(`
+				CREATE TABLE IF NOT EXISTS photos_people (
+					id TEXT PRIMARY KEY,
+					account_id TEXT NOT NULL,
+					name TEXT,
+					is_hidden INTEGER NOT NULL DEFAULT 0 CHECK (is_hidden IN (0, 1)),
+					cover_content_hash BLOB CHECK (cover_content_hash IS NULL OR length(cover_content_hash) = 32),
+					created_at INTEGER NOT NULL
+				);
+				CREATE INDEX IF NOT EXISTS photos_people_by_account ON photos_people(account_id);
+
+				CREATE TABLE IF NOT EXISTS photos_faces (
+					account_id TEXT NOT NULL,
+					content_hash BLOB NOT NULL CHECK (length(content_hash) = 32),
+					face INTEGER NOT NULL,
+					person_id TEXT REFERENCES photos_people(id) ON DELETE SET NULL,
+					PRIMARY KEY(account_id, content_hash, face)
+				) WITHOUT ROWID;
+				CREATE INDEX IF NOT EXISTS photos_faces_by_person ON photos_faces(person_id, content_hash) WHERE person_id IS NOT NULL;
+
+				-- "No, that isn't them" to a suggestion that two people are one
+				CREATE TABLE IF NOT EXISTS photos_people_dismissed (
+					person_id TEXT NOT NULL REFERENCES photos_people(id) ON DELETE CASCADE,
+					candidate_id TEXT NOT NULL REFERENCES photos_people(id) ON DELETE CASCADE,
+					PRIMARY KEY(person_id, candidate_id)
+				) WITHOUT ROWID;
+			`)
+			database
+				.prepare('INSERT INTO schema_migrations(module, version, applied_at) VALUES (?, 12, ?)')
 				.run(PHOTOS_MIGRATION_MODULE, Date.now())
 		}
 	})

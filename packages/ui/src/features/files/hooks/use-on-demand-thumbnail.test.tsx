@@ -160,6 +160,19 @@ describe('useOnDemandThumbnail', () => {
 		expect(requests.map((request) => request.path).slice(4)).toEqual([offScreen.path])
 	})
 
+	test('a refreshed search retries the failures among what it found', async () => {
+		vi.useFakeTimers({toFake: ['Date']})
+		const failed = photo('failed.jpg')
+		await render([failed])
+		await fail(failed.path)
+
+		vi.setSystemTime(Date.now() + 6_000)
+		queryClient.setQueryData([['search', 'query'], {input: {query: 'failed'}}], {results: []})
+		await act(async () => void queryClient.invalidateQueries({queryKey: [['search', 'query']]}))
+		await settle()
+		expect(requests.map((request) => request.path)).toEqual([failed.path, failed.path])
+	})
+
 	test('a file replaced under the same name and modified time is a new file', async () => {
 		const item = photo('a.jpg')
 		await render([item])

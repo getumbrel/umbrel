@@ -3,6 +3,7 @@ import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {useTranslation} from 'react-i18next'
 import {HiMenuAlt2} from 'react-icons/hi'
 
+import {FadeScroller} from '@/components/fade-scroller'
 import {CountText} from '@/components/ui/count-text'
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
 import {PillButton} from '@/components/ui/edge-controls'
@@ -19,10 +20,14 @@ import {
 import {SortMenu, ViewOptionsButton, ViewToggle} from '@/features/files/components/listing/actions-bar/view-controls'
 import {useFilesSearch, useFilesSearchEngaged} from '@/features/files/hooks/use-files-search'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
+import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesEmbedded, useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {useIsPhoneNow, useIsTablet} from '@/hooks/use-is-mobile'
+import {SearchNote} from '@/features/search/search-note'
+import {useSearchStatus} from '@/features/search/use-search'
+import {useSearchFootnote, type SearchFootnoteLine} from '@/features/search/use-search-footnote'
+import {useIsPhone, useIsPhoneNow, useIsTablet} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {touchTargetClass} from '@/utils/element-classes'
 import {formatNumberI18n} from '@/utils/number'
@@ -61,7 +66,15 @@ const pillsRoll = roll('115%')
 
 export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	const {t} = useTranslation()
-	const {hidePath, hideSearch, hideViewOptions, actions = [], selectable = true, summary} = useActionsBarConfig()
+	const {
+		hidePath,
+		pathAccessory,
+		hideSearch,
+		hideViewOptions,
+		actions = [],
+		selectable = true,
+		summary,
+	} = useActionsBarConfig()
 	const isReadOnly = useIsFilesReadOnly()
 	const isEmbedded = useIsFilesEmbedded()
 	const isTouchDevice = useIsTouchDevice()
@@ -71,6 +84,9 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	// A tablet's search has this row: the field and its Cancel stand where the
 	// page's buttons were (a phone's takes the title row: see FilesLayout)
 	const isTablet = useIsTablet()
+	// (Not isPhone above, which follows the keyboard: this is the one that
+	// puts a phone's field in the title row)
+	const isPhoneTitleRow = useIsPhone()
 	const search = useFilesSearch()
 	const searchingHere = isTablet && !isEmbedded && !!search && (search.open || search.query !== '')
 	const reduceMotion = useReducedMotion() ?? false
@@ -99,6 +115,9 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 	// stands last of them, nearest the controls that stay
 	const pills = isReadOnly ? [] : actions.filter((action) => action.pill).reverse()
 	const showSearch = !hideSearch && !isReadOnly && !isEmbedded
+	// Search results come ranked by relevance; a sort control would reorder nothing
+	const {isBrowsingSearch} = useNavigate()
+	const showAccessory = !hidePath && !isSelecting && !searchingHere && !!pathAccessory
 
 	return (
 		<nav
@@ -112,7 +131,12 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 				// the sheet's corner, so the row ends short of that square, as a
 				// phone's does on its side: by 36px beside the sheet's 12px of padding,
 				// and from md by 8px beside its 40px
-				!isEmbedded && 'lg:-mt-14 phone-side:pr-9 tablet:-mt-14 tablet:max-md:pr-9 tablet:md:pr-2',
+				!isEmbedded && 'phone-side:pr-9',
+				// It only comes up where the title row is not a phone's, whose search
+				// field takes the whole of it: the one answer that puts the field
+				// there (see TitleRow) keeps the bar out, so the two cannot be drawn
+				// over each other whatever CSS makes of the window
+				!isEmbedded && !isPhoneTitleRow && 'lg:-mt-14 tablet:-mt-14 tablet:max-md:pr-9 tablet:md:pr-2',
 			)}
 			aria-label={t('files-view.actions')}
 		>
@@ -135,8 +159,17 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 			<div className={cn('flex shrink-0 items-center empty:hidden', isSelecting && 'hidden')}>
 				<NavigationControls />
 			</div>
-			{/* Beside a tablet's search the count under the title keeps room to be read */}
-			<div className={cn('flex min-w-0 flex-1 flex-col justify-center', searchingHere && 'min-w-28')}>
+			{/* Beside a tablet's search the count under the title keeps room to be
+			    read, and what Search has to say after it to be begun: the room
+			    Photos' title keeps there */}
+			<div
+				className={cn(
+					'flex min-w-0 flex-1 flex-col justify-center',
+					searchingHere && 'min-w-36',
+					// What a search understood stands right after its title
+					showAccessory && 'flex-initial',
+				)}
+			>
 				<div className='relative h-[1lh] overflow-y-clip text-17 leading-tight'>
 					<AnimatePresence mode='popLayout' initial={false} custom={direction}>
 						{isSelecting ? (
@@ -152,6 +185,18 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 				</div>
 				<ListingMeta />
 			</div>
+			{/* Short of room it scrolls under a faded edge, rather than squeeze
+			    what it holds to nothing or run under the controls, and is never
+			    narrower than one short token */}
+			{showAccessory && (
+				<FadeScroller
+					direction='x'
+					fadeSize={16}
+					className='umbrel-hide-scrollbar hidden min-w-16 shrink overflow-x-auto sm:block'
+				>
+					{pathAccessory}
+				</FadeScroller>
+			)}
 
 			{/* Right side: the page's actions, or the selection's. Clipped above and
 			    below (with room for focus rings), not at the sides: menus and
@@ -182,7 +227,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 								{isEmbedded ? (
 									<>
 										<ViewToggle />
-										<SortMenu />
+										{!isBrowsingSearch && <SortMenu />}
 									</>
 								) : (
 									<>
@@ -232,7 +277,7 @@ export function ActionsBar({onOpenSidebar}: {onOpenSidebar?: () => void}) {
 										{!hideViewOptions && (
 											<>
 												<ViewToggle />
-												<SortMenu />
+												{!isBrowsingSearch && <SortMenu />}
 											</>
 										)}
 										{/* Fingers can't drag a marquee or hold Shift, so a tablet selects from here */}
@@ -329,7 +374,8 @@ function SelectionCount({count}: {count: number}) {
 
 // How much the listing holds, under the title: "15 items / 10.5 MB". With a
 // pointer it is also where a selection is counted ("3 of 15 selected"), so
-// the title above keeps saying where you are. A search counts its results.
+// the title above keeps saying where you are. A search counts its results,
+// and says when there may be more to come.
 // Nothing until the listing has said what it holds, with the line's height
 // kept so the title doesn't drop when it does.
 function ListingMeta() {
@@ -340,6 +386,10 @@ function ListingMeta() {
 	const format = (n: number) => formatNumberI18n({n, showDecimals: false, locale: i18n.language})
 
 	const count = summary?.count
+	// Beside a search's count, Search admitting it is not at full strength yet
+	// (the line the command palette shows under its results)
+	const typed = (useFilesSearch()?.query.trim() ?? '') !== ''
+	const footnote = useSearchFootnote('files', useSearchStatus(summary?.isSearch === true && typed))
 	const selectedCount = selectedItems.length
 	// With a pointer the line counts the selection; a touch screen's title does
 	const countsSelection = !isTouchDevice && selectedCount > 0 && count !== undefined
@@ -347,6 +397,7 @@ function ListingMeta() {
 	let text: string | undefined
 	let number: string | undefined
 	let size: number | null | undefined
+	let note: SearchFootnoteLine | undefined
 	if (hidePath || count === undefined) {
 		text = undefined
 	} else if (countsSelection) {
@@ -363,6 +414,7 @@ function ListingMeta() {
 		text = summary.truncatedAt
 			? t('files-search.result-count-truncated', {formattedCount: number})
 			: t('files-search.result-count', {count, formattedCount: number})
+		note = footnote
 	} else if (summary?.truncatedAt) {
 		number = format(summary.truncatedAt)
 		text = t('files-listing.item-count-truncated', {formattedCount: number})
@@ -373,7 +425,7 @@ function ListingMeta() {
 	}
 
 	return (
-		<p className='flex min-w-0 items-center gap-2 text-12 leading-tight -tracking-2 text-white/50'>
+		<p className='flex min-w-0 items-center gap-2 overflow-hidden text-12 leading-tight -tracking-2 text-white/50'>
 			{text === undefined || number === undefined ? (
 				<span aria-hidden>&nbsp;</span>
 			) : (
@@ -393,6 +445,10 @@ function ListingMeta() {
 							</span>
 						</span>
 					)}
+					{/* One line at every width, in a row that is one line tall: the
+					    count stays whole and this gives way, all of it if need be (see
+					    SearchNote) */}
+					{note && <SearchNote line={note} />}
 				</>
 			)}
 		</p>

@@ -45,6 +45,7 @@ test('creates and idempotently migrates the durable Photos schema', () => {
 		{module: PHOTOS_MIGRATION_MODULE, version: 9},
 		{module: PHOTOS_MIGRATION_MODULE, version: 10},
 		{module: PHOTOS_MIGRATION_MODULE, version: 11},
+		{module: PHOTOS_MIGRATION_MODULE, version: 12},
 	])
 	expect(
 		database
@@ -57,6 +58,11 @@ test('creates and idempotently migrates the durable Photos schema', () => {
 		{name: 'photos_content_state'},
 		{name: 'photos_content_state_by_account'},
 		{name: 'photos_content_state_by_effective_taken_at'},
+		{name: 'photos_faces'},
+		{name: 'photos_faces_by_person'},
+		{name: 'photos_people'},
+		{name: 'photos_people_by_account'},
+		{name: 'photos_people_dismissed'},
 		{name: 'photos_projection_state'},
 		{name: 'photos_read_model_dirty_accounts'},
 		{name: 'photos_read_model_dirty_contents'},
@@ -258,6 +264,7 @@ test('migrates v3 by discarding derived Live Photo pairs without touching backup
 		{version: 9},
 		{version: 10},
 		{version: 11},
+		{version: 12},
 	])
 	expect(
 		database
@@ -364,6 +371,7 @@ test('migrates staging v4 by adding managed backup presentation metadata', () =>
 		{version: 9},
 		{version: 10},
 		{version: 11},
+		{version: 12},
 	])
 	database.close()
 })
@@ -466,6 +474,7 @@ test('keeps Photos migration versions independent from other umbrel.db modules',
 		{module: PHOTOS_MIGRATION_MODULE, version: 9},
 		{module: PHOTOS_MIGRATION_MODULE, version: 10},
 		{module: PHOTOS_MIGRATION_MODULE, version: 11},
+		{module: PHOTOS_MIGRATION_MODULE, version: 12},
 	])
 	database.close()
 })
@@ -586,7 +595,7 @@ test('upgrades v10 backup receipts with no cloud identity', () => {
 	const database = new BetterSqlite3(':memory:')
 	try {
 		migratePhotos(database)
-		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version=11;
+		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version>=11;
 			DROP INDEX photos_source_resources_by_cloud_identifier;
 			ALTER TABLE photos_source_resources DROP COLUMN resource_role;
 			ALTER TABLE photos_source_resources DROP COLUMN cloud_identifier;

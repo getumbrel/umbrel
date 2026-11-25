@@ -55,7 +55,7 @@ export function AlbumCard({
 
 	const rename = () => navigate(linkToDialog('photos-rename-album', {id: album.id}))
 	// Opens the album with cover-picking on: the next item clicked is the cover
-	const changeCover = () => selection.coverFor(album.id)
+	const changeCover = () => selection.coverFor({kind: 'album', id: album.id})
 	// The photos stay in the library, but the album's selection can't be brought back
 	const remove = async () => {
 		const result = await confirm({

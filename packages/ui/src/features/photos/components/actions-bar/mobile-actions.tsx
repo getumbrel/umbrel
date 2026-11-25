@@ -11,6 +11,7 @@ import {UploadButton} from '@/features/photos/components/actions-bar/upload-butt
 import {useBarRoute} from '@/features/photos/components/actions-bar/use-bar-route'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {usePhotosView} from '@/features/photos/components/view-context'
+import {usePeople} from '@/features/photos/hooks/use-people'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
 
@@ -39,7 +40,9 @@ export function MobileActions({className}: {className?: string}) {
 	const reduceMotion = useReducedMotion() ?? false
 	const {collection, isSources, isMap, inDeleted, hasGrid, isTimeline} = useBarRoute()
 	const isTouchDevice = useIsTouchDevice()
-	const {albumId, sourceId} = useParams()
+	const {albumId, sourceId, personId} = useParams()
+	// Nobody to select on an empty People page
+	const hasPeople = usePeople({enabled: collection === 'people'}).people.length > 0
 
 	return (
 		<AnimatePresence initial={false}>
@@ -62,7 +65,7 @@ export function MobileActions({className}: {className?: string}) {
 							onClick={() => navigate(linkToDialog('photos-source', {id: sourceId}))}
 						/>
 					)}
-					{isTimeline && !sourceId && <UploadButton iconOnly />}
+					{isTimeline && !sourceId && !personId && <UploadButton iconOnly />}
 					{/* The map's zoom, its way back to everything and its list, beside the search */}
 					{isMap && mapControls && <MapControls controls={mapControls} compact />}
 					{inDeleted && <DeletedActions iconOnly />}
@@ -71,8 +74,9 @@ export function MobileActions({className}: {className?: string}) {
 					    every tile offers its own circle, and a drag draws a box, as on
 					    the desktop, whose bar has no such button either. In a narrow
 					    window a mouse also brings the zoom steps to this row, and has
-					    no room to spare for a button it doesn't need */}
-					{hasGrid && isTouchDevice && (
+					    no room to spare for a button it doesn't need. People are
+					    selected from here under a pointer too. */}
+					{((hasGrid && isTouchDevice) || (collection === 'people' && hasPeople)) && (
 						<PillButton icon={SelectGlyph} aria-label={t('photos-selection.select')} onClick={selection.start} />
 					)}
 					{collection === 'albums' && (

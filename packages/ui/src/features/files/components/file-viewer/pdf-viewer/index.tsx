@@ -165,7 +165,10 @@ function PdfDocument({item, mode, url, editable}: ViewerProps & {url: string; ed
 
 		eventBus.on('pagesinit', () => {
 			viewer.currentScale = fitScale(viewer, 'auto')
-			setPage(1)
+			// A search result's page opens where it matched
+			const start = item.searchResult?.page
+			if (start && start > 1 && start <= viewer.pagesCount) viewer.currentPageNumber = start
+			setPage(viewer.currentPageNumber)
 		})
 		eventBus.on('pagechanging', ({pageNumber}: {pageNumber: number}) => setPage(pageNumber))
 		eventBus.on('scalechanging', ({scale}: {scale: number}) => setScale(scale))

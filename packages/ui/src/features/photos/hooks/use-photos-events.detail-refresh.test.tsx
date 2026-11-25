@@ -35,6 +35,7 @@ vi.mock('@/trpc/trpc', () => ({
 				library: {summary: {invalidate: mocks.invalidateSummary}},
 				sources: {invalidate: mocks.invalidateSources},
 				albums: {invalidate: mocks.invalidateAlbums},
+				people: {invalidate: vi.fn()},
 				items: {
 					get: {
 						cancel: () => queryClient.cancelQueries({queryKey: ITEM_DETAIL_KEY}),

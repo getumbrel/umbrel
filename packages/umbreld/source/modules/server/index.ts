@@ -31,6 +31,7 @@ import createErrorHandler from './error-handler.ts'
 
 import fileApi from '../files/api.ts'
 import photosApi from '../photos/api.ts'
+import searchApi from '../search/api.ts'
 import accountAvatarApi from '../user/avatar-api.ts'
 
 // Keep known-size internal uploads from collectively consuming the platform's
@@ -250,6 +251,7 @@ class Server {
 		// Photos serves account-scoped thumbnails, originals, downloads and uploads
 		// over Files' authorization, enrichment and streaming primitives.
 		this.app.use('/api/photos', photosApi(this.umbreld, this.uploadDiskPreflight))
+		this.app.use('/api/search', searchApi(this.umbreld))
 		// Account avatars use raw request streams for writes and public,
 		// content-addressed reads for the pre-login account picker.
 		this.app.use('/api/accounts', accountAvatarApi(this.umbreld))

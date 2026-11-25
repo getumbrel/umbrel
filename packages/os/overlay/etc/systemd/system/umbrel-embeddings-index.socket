@@ -1,0 +1,12 @@
+[Unit]
+Description=Socket of the embedding model that reads photos for search
+ConditionPathExists=/opt/litert-lm
+
+[Socket]
+# Only root, so only umbreld, can reach it
+ListenStream=/run/umbrel-embeddings-index/embeddings.sock
+SocketMode=0600
+DirectoryMode=0700
+
+[Install]
+WantedBy=sockets.target
