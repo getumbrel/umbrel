@@ -1863,6 +1863,8 @@
 	"machines.settings-shutdown-required-title": "Shutdown required",
 	"machines.settings-storage-note": "Can grow anytime, but shrinking it isn't possible.",
 	"machines.settings-unavailable-installing": "Settings can't be changed while the machine is installing.",
+	"machines.autostart": "Autostart",
+	"machines.autostart-description": "Start the machine when umbrelOS boots",
 	"machines.setup-taking-longer": "Setup is taking longer than expected",
 	"machines.setup-taking-longer-description": "{{os}} is still setting up. You can keep waiting or open the console to troubleshoot.",
 	"machines.shut-down": "Shut down",
