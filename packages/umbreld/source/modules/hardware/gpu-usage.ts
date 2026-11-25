@@ -261,15 +261,20 @@ export function parseDrmFdinfo(contents: string, pid: number): DrmClientSample |
 	}
 }
 
-function parseDrmClientPids(contents: string): number[] {
-	return contents
-		.split('\n')
-		.slice(1)
-		.flatMap((line) => {
-			const fields = line.trim().split(/\s+/)
-			const pid = Number(fields.at(-6))
-			return Number.isInteger(pid) && pid > 0 ? [pid] : []
-		})
+// The columns of debugfs' clients file vary by kernel: newer ones add name
+// and id after magic. So the tgid column is found from the header, counted
+// from the end because the command before it can contain spaces.
+export function parseDrmClientPids(contents: string): number[] {
+	const [header = '', ...lines] = contents.split('\n')
+	const columns = header.trim().split(/\s+/)
+	const tgidColumn = columns.indexOf('tgid')
+	if (tgidColumn === -1) return []
+	const fromEnd = columns.length - tgidColumn
+	return lines.flatMap((line) => {
+		const fields = line.trim().split(/\s+/)
+		const pid = Number(fields.at(-fromEnd))
+		return Number.isInteger(pid) && pid > 0 ? [pid] : []
+	})
 }
 
 async function getDrmClientPids(): Promise<number[]> {

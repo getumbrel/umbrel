@@ -4,6 +4,7 @@ import {
 	calculateDrmUtilization,
 	mergeGpuDeviceUsage,
 	normalizePciAddress,
+	parseDrmClientPids,
 	parseDrmFdinfo,
 	parseNvidiaGpuCsv,
 	parseNvidiaPmon,
@@ -36,6 +37,26 @@ describe('PCI GPU parsing', () => {
 })
 
 describe('DRM client usage', () => {
+	test('finds client PIDs whatever columns the kernel prints', () => {
+		// Linux 7.2, with name and id after magic
+		const current = [
+			'             command  tgid dev master a   uid      magic                                                             name                   id',
+			'     qemu-system-x86 3033187 128   n    n 64055          0                                                          <unset>                 2778',
+			'             python3 3793150 128   n    n 63610          0                                                          <unset>                 2789',
+		].join('\n')
+		expect(parseDrmClientPids(current)).toStrictEqual([3033187, 3793150])
+
+		// Without them, and a command with a space in it
+		const older = [
+			'             command   tgid dev master a   uid      magic',
+			'         Web Content   4242 128   n    n  1000          0',
+			'                Xorg    901   0   y    y     0          0',
+		].join('\n')
+		expect(parseDrmClientPids(older)).toStrictEqual([4242, 901])
+
+		expect(parseDrmClientPids('')).toStrictEqual([])
+	})
+
 	test('parses engines and prefers resident memory without double-counting aliases', () => {
 		const sample = parseDrmFdinfo(
 			[
