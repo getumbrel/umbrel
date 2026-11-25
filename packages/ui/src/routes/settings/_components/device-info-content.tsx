@@ -124,6 +124,17 @@ export function DeviceInfoContent({
 					</div>
 				)}
 			</div>
+			{/* The credits and licences of what umbrelOS is built with: a plain-text
+			    file the build writes (see acknowledgements/plugin.ts). Beneath the
+			    details, in their column when the device sits beside them */}
+			<a
+				href='/acknowledgements.txt'
+				target='_blank'
+				rel='noreferrer'
+				className='mx-auto -mt-2 block w-fit rounded-4 px-1 text-center text-12 font-medium text-white/40 outline-hidden transition-colors hover:text-white/70 focus-visible:text-white/70 focus-visible:ring-2 focus-visible:ring-ring contrast-more:text-white/80 low:col-start-2 low:mt-0'
+			>
+				{t('device-info.acknowledgements')}
+			</a>
 		</div>
 	)
 }

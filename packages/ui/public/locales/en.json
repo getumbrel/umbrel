@@ -637,6 +637,7 @@
   "device": "Device",
   "device-info": "Device info",
   "device-info-description": "Information about your device",
+  "device-info.acknowledgements": "Acknowledgements",
   "device-info.cpu": "CPU",
   "device-info.device": "Device",
   "device-info.gpu": "GPU",

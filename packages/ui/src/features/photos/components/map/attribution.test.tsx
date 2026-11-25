@@ -21,6 +21,7 @@ describe('The map credit', () => {
 		container = document.createElement('div')
 		mapElement = document.createElement('div')
 		document.body.append(container, mapElement)
+		zoom = 2
 		mount()
 	})
 
@@ -31,22 +32,45 @@ describe('The map credit', () => {
 		vi.useRealTimers()
 	})
 
-	// A map coming into sight, with its credit
+	// A map coming into sight, with its credit, as far out as the globe
+	let zoom = 2
+	let zoomed: (() => void) | undefined
 	function mount() {
 		root = createRoot(container)
-		const map = {getContainer: () => mapElement} as unknown as MapLibreMap
+		const map = {
+			getContainer: () => mapElement,
+			getZoom: () => zoom,
+			on: (_: 'zoom', listener: () => void) => (zoomed = listener),
+			off: () => (zoomed = undefined),
+		} as unknown as MapLibreMap
 		act(() => root.render(<Attribution map={map} />))
 	}
+	const zoomTo = (to: number) => {
+		zoom = to
+		act(() => zoomed?.())
+	}
+	const credits = () => [...container.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')])
 	const link = () => container.querySelector('a')
 	const press = () => act(() => container.querySelector('button')!.click())
 	const wait = (ms: number) => act(() => vi.advanceTimersByTime(ms))
 
 	test('is out the first time a map is, and put away 5 seconds on', () => {
-		expect(link()?.textContent).toBe('© OpenStreetMap')
+		expect(credits()).toEqual([
+			['© OpenStreetMap', 'https://www.openstreetmap.org/copyright'],
+			['© ESA WorldCover', 'https://worldcover2020.esa.int'],
+		])
 		wait(4999)
 		expect(link()).not.toBeNull()
 		wait(1)
 		expect(link()).toBeNull()
+	})
+
+	test('credits ESA WorldCover only while the map is out far enough to draw its land cover', () => {
+		zoomTo(12)
+		expect(credits()).toEqual([['© OpenStreetMap', 'https://www.openstreetmap.org/copyright']])
+		expect(container.querySelector('button')!.getAttribute('aria-label')).toBe('OpenStreetMap')
+		zoomTo(6.9)
+		expect(credits().map(([text]) => text)).toEqual(['© OpenStreetMap', '© ESA WorldCover'])
 	})
 
 	test.each(['pointerdown', 'wheel'])('is put away by a %s on the map', (type) => {

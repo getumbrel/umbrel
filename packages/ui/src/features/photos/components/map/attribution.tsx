@@ -8,13 +8,20 @@ const SHOWN_MS = 5000
 // off the screen sooner — the inspector's, as photos are stepped through —
 // has not been seen, so the next map has it out again
 let credited = false
+// The basemap draws its land cover, ESA WorldCover's, only when zoomed out
+// further than this: @protomaps/basemaps fades it out from 5 to 7, and the
+// tiles carry none deeper. Closer in, nothing of ESA's is on the map
+const LAND_COVER_MAX_ZOOM = 7
 
-// The credit OpenStreetMap's licence asks for wherever its map is drawn, and
-// asks to be seen without being asked for: the first map has it out, until
-// the map is touched or a few seconds have passed. After that it is out of
-// the way until wanted
+// The credits the map's data asks for wherever it is drawn: OpenStreetMap's,
+// and ESA WorldCover's while its land cover, which colours the globe, is on
+// the map. OSM asks for it to be seen without being asked for: the first map
+// has it out, until the map is touched or a few seconds have passed. After
+// that it is out of the way until wanted. The rest of what the map is made
+// with is credited in full in the acknowledgements (Settings > Device info)
 export function Attribution({map}: {map: MapLibreMap}) {
 	const [open, setOpen] = useState(!credited)
+	const landCover = useDrawsLandCover(map)
 	useEffect(() => {
 		if (credited) return
 		const collapse = () => {
@@ -40,7 +47,7 @@ export function Attribution({map}: {map: MapLibreMap}) {
 		<div className='flex flex-row-reverse items-center gap-1 text-white/40'>
 			<button
 				type='button'
-				aria-label='OpenStreetMap'
+				aria-label={landCover ? 'OpenStreetMap, ESA WorldCover' : 'OpenStreetMap'}
 				aria-expanded={open}
 				onClick={() => {
 					credited = true
@@ -51,15 +58,44 @@ export function Attribution({map}: {map: MapLibreMap}) {
 				<Info className='size-3.5' />
 			</button>
 			{open && (
-				<a
-					href='https://www.openstreetmap.org/copyright'
-					target='_blank'
-					rel='noreferrer'
-					className='rounded-full bg-black/70 px-1.5 py-0.5 text-11 font-medium whitespace-nowrap text-white transition-colors select-none hover:bg-black/70 motion-safe:animate-in motion-safe:fade-in'
-				>
-					© OpenStreetMap
-				</a>
+				<span className='flex items-center gap-1 rounded-full bg-black/70 px-1.5 py-0.5 text-11 font-medium whitespace-nowrap text-white select-none motion-safe:animate-in motion-safe:fade-in'>
+					<Credit href='https://www.openstreetmap.org/copyright'>© OpenStreetMap</Credit>
+					{landCover && (
+						<>
+							<span aria-hidden className='text-white/40'>
+								·
+							</span>
+							<Credit href='https://worldcover2020.esa.int'>© ESA WorldCover</Credit>
+						</>
+					)}
+				</span>
 			)}
 		</div>
+	)
+}
+
+const drawsLandCover = (map: MapLibreMap) => map.getZoom() < LAND_COVER_MAX_ZOOM
+
+function useDrawsLandCover(map: MapLibreMap) {
+	const [landCover, setLandCover] = useState(() => drawsLandCover(map))
+	useEffect(() => {
+		const update = () => setLandCover(drawsLandCover(map))
+		update()
+		map.on('zoom', update)
+		return () => void map.off('zoom', update)
+	}, [map])
+	return landCover
+}
+
+function Credit({href, children}: {href: string; children: string}) {
+	return (
+		<a
+			href={href}
+			target='_blank'
+			rel='noreferrer'
+			className='rounded-full outline-hidden transition-colors hover:text-white/75 focus-visible:underline'
+		>
+			{children}
+		</a>
 	)
 }
