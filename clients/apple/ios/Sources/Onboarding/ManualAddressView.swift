@@ -24,21 +24,13 @@ struct ManualAddressView: View {
 
 	var body: some View {
 		VStack(spacing: 0) {
-			HStack {
-				CircleIconButton(system: "chevron.left", accessibilityLabel: "Back") {
-					connectionTask?.cancel()
-					model.leaveManualAddress()
-				}
-				Spacer()
-			}
-			.padding(.horizontal, Theme.contentInset)
-			.padding(.top, 8)
-
 			OnboardingHeader(
 				title: "Connect by address",
 				subtitle: "Enter your Umbrel’s IP address or hostname. If you’re away from home, use its Tailscale IP address or MagicDNS name. Tailscale must already be set up on this iPhone and your Umbrel."
 			)
-			.padding(.top, 26)
+			// Below the navigation bar, this keeps the title where it sat under the old
+			// corner button
+			.padding(.top, 33)
 
 			Spacer().frame(height: 40)
 
@@ -136,6 +128,19 @@ struct ManualAddressView: View {
 			}
 			.padding(.horizontal, 31)
 			.padding(.bottom, 8)
+		}
+		// A system item, so on iPhone Duo it joins the side column. It takes the place of
+		// Cancel while adding a device, as the next step back in the flow.
+		.toolbar {
+			ToolbarItem(placement: .cancellationAction) {
+				Button {
+					connectionTask?.cancel()
+					model.leaveManualAddress()
+				} label: {
+					Label("Back", systemImage: "chevron.left")
+				}
+				.tint(.white)
+			}
 		}
 		.sheet(isPresented: $showingSignIn) {
 			SignInSheet(onCancel: { showingSignIn = false })

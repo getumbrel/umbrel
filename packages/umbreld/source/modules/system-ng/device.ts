@@ -136,13 +136,11 @@ export default class Device {
 		let storageType = ''
 
 		try {
-			// Use RAID pool size on Pro, fall back to df for other devices.
+			// Use RAID pool size on Pro and for raidz arrays, fall back to df for other devices.
 			// Duplicates logic from system/system.ts getSystemDiskUsage (will be consolidated when system module is migrated).
-			if (await this.#umbreld.hardware.umbrelPro.isUmbrelPro()) {
-				const pool = await this.#umbreld.hardware.raid.getStatus()
-				if (pool.exists) {
-					storageSize = pool.usableSpace ?? null
-				}
+			const pool = await this.#umbreld.hardware.raid.getStatus()
+			if (pool.exists && (pool.topology === 'raidz' || (await this.#umbreld.hardware.umbrelPro.isUmbrelPro()))) {
+				storageSize = (pool.usableSpace ?? 0) - (pool.accelerator?.specialFreeSpace ?? 0)
 			}
 			if (storageSize === null) {
 				const df = await $`df --output=size --block-size=1 ${this.#umbreld.dataDirectory}`

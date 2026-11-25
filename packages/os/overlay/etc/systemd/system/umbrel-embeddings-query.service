@@ -1,0 +1,31 @@
+[Unit]
+Description=Embedding model that reads search queries
+# Stopped after umbreld at shutdown: one stopped while umbreld is still sending
+# it things would look to umbreld like it had fallen over on each of them
+Before=umbrel.service
+ConditionPathExists=/opt/litert-lm
+# The models are not part of the image. umbreld fetches them the first time
+# there is something for them to read, and leaves this once they are all
+# there (see models.ts in umbreld).
+ConditionPathExists=/home/umbrel/umbrel/models/installed
+
+[Service]
+# Only the text half of the model, on the CPU and always loaded, so a search
+# is answered whatever the GPU is busy with. It also spells what is typed in
+# Devanagari the way speech in Hindi is kept.
+ExecStart=/usr/bin/python3 /opt/umbrel-embeddings/server.py \
+    --model /home/umbrel/umbrel/models/embeddinggemma-2-text-270m.litertlm \
+    --romaniser /home/umbrel/umbrel/models
+# Not on a CPU the runtimes can't run on, one without AES (see cpuRunsModels()
+# in umbreld's embeddings.ts)
+ExecCondition=/bin/grep -qw aes /proc/cpuinfo
+Restart=on-failure
+RestartSec=5
+DynamicUser=yes
+PrivateNetwork=yes
+ProtectHome=tmpfs
+BindReadOnlyPaths=/home/umbrel/umbrel/models
+CacheDirectory=umbrel-embeddings-query
+
+[Install]
+WantedBy=multi-user.target

@@ -6,6 +6,7 @@ import {composeStart, type FlightStart} from '@/features/photos/components/viewe
 import {springConfig, stepAxis, type Axis} from '@/features/photos/components/viewer/spring'
 import type {StageLift} from '@/features/photos/components/viewer/viewer-channels'
 import type {ItemDetail} from '@/features/photos/hooks/use-items'
+import type {SearchSnippetText} from '@/features/search/types'
 import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
@@ -669,6 +670,8 @@ export function InfoSheet({
 	built,
 	closing,
 	onClose,
+	video,
+	matched,
 }: {
 	sheet: InfoSheetController
 	item: ItemDetail | undefined
@@ -677,6 +680,9 @@ export function InfoSheet({
 	// The lightbox is leaving: the sheet fades with the chrome
 	closing: boolean
 	onClose: () => void
+	// Passed on to the panel (see InfoPanel)
+	video?: HTMLVideoElement | null
+	matched?: SearchSnippetText
 }) {
 	const side = sheet.layout === 'side'
 	return (
@@ -705,6 +711,8 @@ export function InfoSheet({
 						panelRef={sheet.panelRef}
 						scrollRef={sheet.scrollRef}
 						contentRef={sheet.contentRef}
+						video={video}
+						matched={matched}
 					/>
 				)}
 				{!side && (

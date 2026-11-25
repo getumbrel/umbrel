@@ -1,6 +1,6 @@
 import nodePath from 'node:path'
 import type {Stats} from 'node:fs'
-import {appendFile, chmod, link, lstat, readFile, symlink, utimes, writeFile} from 'node:fs/promises'
+import {appendFile, chmod, link, lstat, readFile, symlink, truncate, utimes, writeFile} from 'node:fs/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
 import fse from 'fs-extra'
@@ -11,6 +11,7 @@ import {migratePhotos} from '../photos/migrations.ts'
 import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../photos/types.ts'
 import temporaryDirectory from '../utilities/temporary-directory.ts'
 import FileIndex, {
+	REUSE_RENAMED_CONTENT_SQL,
 	walkFileTree,
 	type FileIndexEngineOptions,
 	type FileIndexRoot,
@@ -448,6 +449,25 @@ describe('file index migrations', () => {
 			expect(plan.some(({detail}) => detail.includes(workIndex))).toBe(true)
 			expect(plan.some(({detail}) => detail === 'SCAN entries')).toBe(false)
 		}
+
+		const metadataRefreshPlan = database
+			.prepare(
+				`EXPLAIN QUERY PLAN
+				SELECT contents.id, entries.id AS entry_id, hex(contents.blake3) AS hash,
+					entries.device, entries.inode, entries.size, entries.modified_ns,
+					entries.ctime_ns, entries.thumbnail_identity_kind,
+					index_roots.system_path AS root_system_path, entries.relative_path
+				FROM media_metadata_refresh
+				CROSS JOIN contents ON contents.id = media_metadata_refresh.content_id
+				CROSS JOIN entries INDEXED BY entries_by_content ON entries.content_id = media_metadata_refresh.content_id
+				JOIN index_roots ON index_roots.id = entries.root_id
+				WHERE index_roots.kind IN ('home', 'trash')
+				ORDER BY media_metadata_refresh.content_id, entries.id
+				LIMIT 1`,
+			)
+			.all() as Array<{detail: string}>
+		expect(metadataRefreshPlan[0].detail).toBe('SCAN media_metadata_refresh')
+		expect(metadataRefreshPlan.some(({detail}) => detail.startsWith('SCAN entries'))).toBe(false)
 		database.exec(
 			'CREATE TEMP TABLE content_gc_candidates(content_id INTEGER PRIMARY KEY, deferred_at INTEGER NOT NULL)',
 		)
@@ -1189,6 +1209,32 @@ test('hashes and generates a content-addressed thumbnail on demand', async () =>
 		content_id: expect.any(Number),
 	})
 	database.close()
+})
+
+test('keeps serving a content thumbnail for a file moved before the index catches up', async () => {
+	const digest = Buffer.alloc(32, 0xad)
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile: async () => digest,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const image = nodePath.join(homeDirectory, 'Photos/photo.png')
+	await fse.outputFile(image, 'image')
+	const reference = await index.ensureThumbnail(image)
+
+	// A folder renamed outside Files: the index still has the old path until a
+	// scan gets to it
+	await fse.rename(nodePath.join(homeDirectory, 'Photos'), nodePath.join(homeDirectory, 'Pictures'))
+	await expect(index.getExistingThumbnail(image)).resolves.toStrictEqual(reference)
+	await expect(index.matchesThumbnail(image, reference.kind, reference.key, reference.variant)).resolves.toBe(true)
+
+	// Once the scan has moved the row, the old path is gone from the index too
+	await index.reconcileRoot('/Home', 'renamed')
+	await expect(index.getExistingThumbnail(image)).resolves.toBeUndefined()
+	await expect(index.getExistingThumbnail(nodePath.join(homeDirectory, 'Pictures/photo.png'))).resolves.toStrictEqual(
+		reference,
+	)
 })
 
 test('shares one content hash across every requested thumbnail size', async () => {
@@ -2622,6 +2668,204 @@ test('preserves Photos identity and user state across a watcher-reported rename'
 	await expect(index.photosListAlbums('owner')).resolves.toContainEqual(
 		expect.objectContaining({id: album.id, count: 1}),
 	)
+})
+
+test('updates a renumbered device or changed ctime without refreshing or rehashing Photos items', async () => {
+	// ZFS datasets have no block device, so their device number depends on mount
+	// order and can change across boots. An index written before such a change
+	// stores the old number on every row.
+	const hashFile = vi.fn(async (systemPath: string) => Buffer.alloc(32, nodePath.basename(systemPath).charCodeAt(0)))
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const photos = nodePath.join(homeDirectory, 'Photos')
+	await fse.ensureDir(photos)
+	await Promise.all(['A.jpg', 'B.heic', 'C.mp4'].map((name) => writeFile(nodePath.join(photos, name), name)))
+	await index.reconcileRoot('/Home', 'initial')
+	await index.initializePhotos('owner')
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const items = (await index.photosListItems('owner', {}, undefined, 10)).items
+	expect(items).toHaveLength(3)
+	const hashes = hashFile.mock.calls.length
+
+	const database = new BetterSqlite3(index.databasePath)
+	const generation = () => database.prepare('SELECT generation FROM photos_projection_state WHERE id = 1').pluck().get()
+	const before = generation()
+	const {device} = await indexedContentRevision(homeDirectory)
+	database.prepare('UPDATE entries SET device = ?').run(String(Number(device) + 1))
+
+	await index.reconcileRoot('/Home', 'renumbered')
+	expect(database.prepare('SELECT DISTINCT device FROM entries').pluck().all()).toStrictEqual([device])
+	expect(generation()).toBe(before)
+
+	// A permission change only moves ctime, which Photos doesn't read either
+	const ctime = () => database.prepare("SELECT ctime_ns FROM entries WHERE name = 'A.jpg'").pluck().get()
+	const previousCtime = ctime()
+	await new Promise((resolve) => setTimeout(resolve, 10))
+	await chmod(nodePath.join(photos, 'A.jpg'), 0o600)
+	await index.reconcileRoot('/Home', 'permissions')
+	expect(ctime()).not.toBe(previousCtime)
+	expect(generation()).toBe(before)
+	database.close()
+	expect(hashFile).toHaveBeenCalledTimes(hashes)
+	await expect(index.photosListItems('owner', {}, undefined, 10)).resolves.toMatchObject({items})
+	await expect(index.directorySizes(['/Home/Photos'])).resolves.toStrictEqual([
+		{virtualPath: '/Home/Photos', size: 'A.jpgB.heicC.mp4'.length},
+	])
+})
+
+test('remaps a renumbered root filesystem in one statement and corrects any other device', async () => {
+	const {index, homeDirectory} = await fixture()
+	await fse.outputFile(nodePath.join(homeDirectory, 'a/one.txt'), 'one')
+	await fse.outputFile(nodePath.join(homeDirectory, 'a/b/two.txt'), 'two!')
+	await link(nodePath.join(homeDirectory, 'a/one.txt'), nodePath.join(homeDirectory, 'a/b/one-link.txt'))
+	await index.reconcileRoot('/Home', 'initial')
+	const sizes = await index.directorySizes(['/Home/a', '/Home/a/b'])
+	expect(sizes).toStrictEqual([
+		{virtualPath: '/Home/a', size: 'onetwo!'.length},
+		{virtualPath: '/Home/a/b', size: 'onetwo!'.length},
+	])
+
+	const database = new BetterSqlite3(index.databasePath)
+	const {device} = await indexedContentRevision(homeDirectory)
+	const previous = String(Number(device) + 1)
+	database.prepare('UPDATE entries SET device = ?').run(previous)
+	// A minority number, as if this file had been on another filesystem, isn't
+	// the root's previous number. The walk corrects it from lstat instead.
+	database.prepare("UPDATE entries SET device = ? WHERE name = 'two.txt'").run(String(Number(device) + 2))
+	logger.log.mockClear()
+	await index.reconcileRoot('/Home', 'renumbered')
+	expect(logger.log).toHaveBeenCalledWith(`Renumbered '/Home' entries from device ${previous} to ${device}`)
+	expect(database.prepare('SELECT DISTINCT device FROM entries').pluck().all()).toStrictEqual([device])
+	await expect(index.directorySizes(['/Home/a', '/Home/a/b'])).resolves.toStrictEqual(sizes)
+
+	logger.log.mockClear()
+	await index.reconcileRoot('/Home', 'unchanged')
+	expect(logger.log).not.toHaveBeenCalledWith(expect.stringContaining('Renumbered'))
+	database.close()
+})
+
+test('keeps Photos items and content for a folder renamed outside Files', async () => {
+	// A rename over SMB or in a shell reaches the index as a root scan that finds
+	// every file at a new path, and only deletes the old rows once it finishes
+	const contents = new Map<string, number>([
+		['A.jpg', 0x41],
+		['B.heic', 0x42],
+		['C.mp4', 0x43],
+	])
+	const hashFile = vi.fn(async (systemPath: string) => Buffer.alloc(32, contents.get(nodePath.basename(systemPath))))
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const photos = nodePath.join(homeDirectory, 'Photos')
+	await fse.ensureDir(photos)
+	await Promise.all([...contents.keys()].map((name) => writeFile(nodePath.join(photos, name), name)))
+	await index.reconcileRoot('/Home', 'initial')
+	await index.initializePhotos('owner')
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const items = (await index.photosListItems('owner', {}, undefined, 10)).items
+	expect(items).toHaveLength(3)
+	hashFile.mockClear()
+
+	await fse.rename(photos, nodePath.join(homeDirectory, 'Pictures'))
+	await index.reconcileRoot('/Home', 'renamed')
+
+	// Every file kept its content at its new path, so nothing was rehashed
+	const database = new BetterSqlite3(index.databasePath, {readonly: true})
+	// Each written row looks up its old row by identity, not by scanning the root
+	const plan = database.prepare(`EXPLAIN QUERY PLAN ${REUSE_RENAMED_CONTENT_SQL}`).all(1, 'x') as Array<{
+		detail: string
+	}>
+	expect(plan.map(({detail}) => detail)).toStrictEqual([
+		expect.stringContaining('USING INDEX sqlite_autoindex_entries_1 (root_id=? AND relative_path=?)'),
+		expect.stringContaining('USING INDEX entries_by_size_identity (root_id=? AND device=? AND inode=?)'),
+	])
+	const rows = database
+		.prepare(
+			`SELECT entries.relative_path AS path, hex(contents.blake3) AS hash FROM entries
+			LEFT JOIN contents ON contents.id = entries.content_id WHERE entries.type = 'file' ORDER BY entries.relative_path`,
+		)
+		.all()
+	database.close()
+	expect(rows).toStrictEqual([
+		{path: 'Pictures/A.jpg', hash: '41'.repeat(32)},
+		{path: 'Pictures/B.heic', hash: '42'.repeat(32)},
+		{path: 'Pictures/C.mp4', hash: '43'.repeat(32)},
+	])
+	const after = (await index.photosListItems('owner', {}, undefined, 10)).items
+	expect(after.map(({id}) => id).sort()).toStrictEqual(items.map(({id}) => id).sort())
+	expect(hashFile).not.toHaveBeenCalled()
+})
+
+test("hashes a new file that took a deleted file's inode instead of reusing its content", async () => {
+	const contents = new Map<string, number>([
+		['kept.jpg', 0x51],
+		['gone.jpg', 0x52],
+		['new.jpg', 0x53],
+	])
+	const hashFile = vi.fn(async (systemPath: string) => Buffer.alloc(32, contents.get(nodePath.basename(systemPath))))
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const kept = nodePath.join(homeDirectory, 'kept.jpg')
+	const gone = nodePath.join(homeDirectory, 'gone.jpg')
+	await Promise.all([writeFile(kept, 'same'), writeFile(gone, 'same')])
+	await index.reconcileRoot('/Home', 'initial')
+	await index.ensureThumbnail(kept)
+	await index.ensureThumbnail(gone)
+	hashFile.mockClear()
+
+	// A rename keeps the file's birth time, so the renamed file keeps its content
+	await fse.rename(kept, nodePath.join(homeDirectory, 'renamed.jpg'))
+	// A new file of the same size and time takes the deleted file's inode. Its
+	// row still has the deleted file's identity, until the scan removes it.
+	await fse.remove(gone)
+	const created = nodePath.join(homeDirectory, 'new.jpg')
+	await writeFile(created, 'same')
+	const stats = await lstat(created, {bigint: true})
+	const birthtimeMs = stats.birthtimeNs > 0n ? Number(stats.birthtimeNs / 1_000_000n) : null
+	const database = new BetterSqlite3(index.databasePath)
+	database
+		.prepare('UPDATE entries SET device = ?, inode = ?, modified_ns = ?, birthtime_ms = ? WHERE name = ?')
+		.run(stats.dev.toString(), stats.ino.toString(), stats.mtimeNs.toString(), (birthtimeMs ?? 0) + 5_000, 'gone.jpg')
+	database.close()
+
+	await index.reconcileRoot('/Home', 'changed')
+	await index.ensureThumbnail(nodePath.join(homeDirectory, 'renamed.jpg'))
+	await index.ensureThumbnail(created)
+
+	expect(hashFile.mock.calls.map(([systemPath]) => nodePath.basename(systemPath))).toStrictEqual(['new.jpg'])
+	const check = new BetterSqlite3(index.databasePath, {readonly: true})
+	const rows = check
+		.prepare(
+			`SELECT entries.name, hex(contents.blake3) AS hash FROM entries
+			JOIN contents ON contents.id = entries.content_id WHERE entries.type = 'file' ORDER BY entries.name`,
+		)
+		.all()
+	check.close()
+	expect(rows).toStrictEqual([
+		{name: 'new.jpg', hash: '53'.repeat(32)},
+		{name: 'renamed.jpg', hash: '51'.repeat(32)},
+	])
 })
 
 test('selects one canonical shared Live Photo companion and moves it only with every referencing still', async () => {
@@ -4796,7 +5040,7 @@ test('does not retry a failed thumbnail for every newly hashed duplicate', async
 	database.close()
 })
 
-test('hashes each new hard-link entry before deduplicating by its content hash', async () => {
+test('a new hard link to a hashed file shares its content without rehashing', async () => {
 	const digest = Buffer.alloc(32, 0xef)
 	const hashFile = vi.fn(async () => digest)
 	const generateThumbnail = vi.fn(async (_source: string, destination: string) => {
@@ -4810,7 +5054,7 @@ test('hashes each new hard-link entry before deduplicating by its content hash',
 
 	await index.ensureThumbnail(first)
 	await index.ensureThumbnail(hardLink)
-	expect(hashFile).toHaveBeenCalledTimes(2)
+	expect(hashFile).toHaveBeenCalledOnce()
 	expect(generateThumbnail).toHaveBeenCalledOnce()
 })
 
@@ -4845,7 +5089,7 @@ test('preserves a moved entry hash and reuses its content-addressed thumbnail', 
 	database.close()
 })
 
-test('rehashes moved directory entries and reuses their content-addressed thumbnails', async () => {
+test('keeps the content and thumbnails of moved directory entries without rehashing', async () => {
 	const hashFile = vi.fn(async (systemPath: string) => {
 		const number = Number(nodePath.basename(systemPath).match(/\d+/)?.[0] ?? 0)
 		return Buffer.alloc(32, number + 1)
@@ -4872,7 +5116,7 @@ test('rehashes moved directory entries and reuses their content-addressed thumbn
 	)
 
 	expect(after).toStrictEqual(before)
-	expect(hashFile).toHaveBeenCalledTimes(6)
+	expect(hashFile).toHaveBeenCalledTimes(3)
 	expect(generateThumbnail).toHaveBeenCalledTimes(3)
 })
 
@@ -7019,30 +7263,257 @@ test('uses one root snapshot for a large watcher burst', async () => {
 	expect(logger.log).toHaveBeenCalledWith("Reconciling '/Home' (watcher-burst)")
 })
 
-test('uses a full root reconciliation for a watcher directory creation', async () => {
-	const entryCount = 2_000
-	const walkedRoots: string[] = []
+test('pauses scan writes between batches while people browse, without stalling the scan', async () => {
+	const entryCount = 150
 	const walk: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (root) {
-		walkedRoots.push(root)
 		const stats = await lstat(root)
 		for (let index = 0; index < entryCount; index++) {
-			yield {systemPath: nodePath.join(root, `watcher-bulk-${String(index).padStart(4, '0')}`), stats}
+			yield {systemPath: nodePath.join(root, `browse-${String(index).padStart(3, '0')}`), stats}
 		}
 	}
-	const {index, homeDirectory} = await fixture(walk)
-	const changedDirectory = nodePath.join(homeDirectory, 'watcher-directory')
-	await fse.ensureDir(changedDirectory)
+	const {index} = await fixture(walk, {batchSize: 50})
+	const quietStartedAt = Date.now()
+	await index.reconcileRoot('/Home', 'quiet')
+	const quietMs = Date.now() - quietStartedAt
 
-	noteWatcherChanges(index, [changedDirectory])
+	// Lookups keep arriving faster than the quiet window, so every batch waits
+	// for its full pause. The scan still finishes, a quarter second per batch.
+	let browsing = true
+	const browse = (async () => {
+		while (browsing) {
+			await index.getEntryByVirtualPath('/Home/browse-000')
+			await new Promise((resolve) => setTimeout(resolve, 10))
+		}
+	})()
+	const busyStartedAt = Date.now()
+	await index.reconcileRoot('/Home', 'browsing')
+	const busyMs = Date.now() - busyStartedAt
+	browsing = false
+	await browse
 
-	await pRetry(async () => expect(await index.status()).toMatchObject({entryCount}), {
-		retries: 100,
+	expect(quietMs).toBeLessThan(1_000)
+	expect(busyMs).toBeGreaterThanOrEqual(600)
+	expect(busyMs).toBeLessThan(5_000)
+	await expect(index.status()).resolves.toMatchObject({entryCount})
+}, 20_000)
+
+test('lets a scan run between the requests of a client that polls the index', async () => {
+	const entryCount = 600
+	const walk: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (root) {
+		const stats = await lstat(root)
+		for (let index = 0; index < entryCount; index++) {
+			yield {systemPath: nodePath.join(root, `poll-${String(index).padStart(3, '0')}`), stats}
+		}
+	}
+	const {index} = await fixture(walk, {batchSize: 50})
+	// Like a Files window waiting for folder sizes to appear
+	let polling = true
+	const poll = (async () => {
+		while (polling) {
+			await index.directorySizes(['/Home'])
+			await new Promise((resolve) => setTimeout(resolve, 100))
+		}
+	})()
+	const startedAt = Date.now()
+	await index.reconcileRoot('/Home', 'polled')
+	const elapsedMs = Date.now() - startedAt
+	polling = false
+	await poll
+
+	// Twelve batches; full pauses would take at least three seconds
+	expect(elapsedMs).toBeLessThan(2_500)
+	await expect(index.status()).resolves.toMatchObject({entryCount})
+}, 20_000)
+
+test('does not slow a scan down for a photo backup that keeps uploading', async () => {
+	const entryCount = 1_200
+	const walk: NonNullable<FileIndexEngineOptions['walkTree']> = async function* (root) {
+		const stats = await lstat(root)
+		for (let index = 0; index < entryCount; index++) {
+			yield {systemPath: nodePath.join(root, `backup-${String(index).padStart(4, '0')}`), stats}
+		}
+	}
+	const {index, homeDirectory} = await fixture(walk, {batchSize: 50})
+	await index.initializePhotos('owner')
+	let startedAt = Date.now()
+	await index.reconcileRoot('/Home', 'quiet')
+	const quietMs = Date.now() - startedAt
+
+	// Registering an upload looks up its entry, which isn't someone browsing.
+	// A phone backs up several photos at once.
+	let uploading = true
+	let uploads = 0
+	const upload = Promise.all(
+		Array.from({length: 4}, async (_, client) => {
+			for (let next = 0; uploading; next++) {
+				const systemPath = nodePath.join(homeDirectory, `upload-${client}-${next}.jpg`)
+				const bytes = Buffer.from(`upload ${client} ${next}`)
+				await writeFile(systemPath, bytes)
+				const hasher = new Blake3Hasher()
+				hasher.update(bytes)
+				await index.photosRegisterUpload('owner', systemPath, hasher.digestBuffer(), await contentRevision(systemPath))
+				uploads++
+			}
+		}),
+	)
+	startedAt = Date.now()
+	await index.reconcileRoot('/Home', 'backup')
+	const backupMs = Date.now() - startedAt
+	uploading = false
+	await upload
+
+	expect(uploads).toBeGreaterThan(0)
+	// 24 batches; waiting out the 50 ms quiet window after the uploads between
+	// them would add over a second
+	expect(backupMs).toBeLessThan(quietMs + 900)
+}, 20_000)
+
+test('indexes a directory the watcher reports, with the contents reported alongside it, without rescanning its root', async () => {
+	const walkTree = vi.fn(walkFileTree)
+	const {index, homeDirectory, trashDirectory} = await fixture(walkTree, {includeTrash: true})
+	await index.reconcileRoot('/Home', 'initial')
+	walkTree.mockClear()
+	// Watchman reports everything inside a directory moved in whole, not just the
+	// directory itself
+	const moved = nodePath.join(homeDirectory, 'moved')
+	const nested = nodePath.join(moved, 'nested')
+	const inside = nodePath.join(nested, 'inside.txt')
+	await fse.outputFile(inside, 'inside')
+
+	noteWatcherChanges(index, [moved, nested, inside])
+	await pRetry(async () => expect(await index.getEntryBySystemPath(inside)).toMatchObject({name: 'inside.txt'}), {
+		retries: 20,
 		minTimeout: 10,
 		maxTimeout: 20,
 	})
-	expect(walkedRoots).toStrictEqual([homeDirectory])
-	expect(logger.log).toHaveBeenCalledWith("Reconciling '/Home' (directory-changed)")
-}, 10_000)
+
+	// Root scans run in order, so any scan of Home these events queued has run by now
+	await index.reconcileRoot('/Trash', 'barrier')
+	expect(walkTree.mock.calls.filter(([root]) => root === homeDirectory)).toHaveLength(0)
+	expect(walkTree.mock.calls.filter(([root]) => root === trashDirectory)).toHaveLength(1)
+	expect(await index.getEntryBySystemPath(moved)).toMatchObject({type: 'directory'})
+	expect(await index.getEntryBySystemPath(nested)).toMatchObject({type: 'directory'})
+})
+
+test('notifies Photos about a watcher delete only when it removed something from the index', async () => {
+	const onPhotosChange = vi.fn()
+	const {index, homeDirectory} = await fixture(undefined, {onPhotosChange})
+	const indexed = nodePath.join(homeDirectory, 'indexed.txt')
+	await writeFile(indexed, 'indexed')
+	await index.reconcileRoot('/Home', 'initial')
+	await index.initializePhotos('owner')
+	await new Promise((resolve) => setTimeout(resolve, 500))
+	onPhotosChange.mockClear()
+
+	// A temporary file created and removed within a batch was never indexed
+	noteWatcherChanges(index, [nodePath.join(homeDirectory, '.indexed.txt.tmp')], 'delete')
+	await new Promise((resolve) => setTimeout(resolve, 500))
+	expect(onPhotosChange).not.toHaveBeenCalled()
+
+	await fse.remove(indexed)
+	noteWatcherChanges(index, [indexed], 'delete')
+	await pRetry(() => expect(onPhotosChange).toHaveBeenCalledWith(['owner']), {
+		retries: 50,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	expect(await index.getEntryBySystemPath(indexed)).toBeUndefined()
+})
+
+test('does not index a directory Files creates in a root that is not scanned', async () => {
+	const {index, rootDirectory} = await fixture()
+	const externalDirectory = nodePath.join(rootDirectory, 'external')
+	await fse.ensureDir(externalDirectory)
+	await index.addRoot({
+		virtualPath: '/External',
+		systemPath: externalDirectory,
+		ownerId: 'owner',
+		kind: 'apps',
+		searchEnabled: false,
+		scanEnabled: false,
+	})
+	const created = nodePath.join(externalDirectory, 'created')
+	await fse.ensureDir(created)
+
+	await index.reconcileCreatedDirectory(created)
+	await expect(index.getEntryBySystemPath(created)).resolves.toBeUndefined()
+})
+
+test('indexes a directory Files created without rescanning its root, and drops it once the watcher reports it gone', async () => {
+	const walkTree = vi.fn(walkFileTree)
+	const {index, homeDirectory, trashDirectory} = await fixture(walkTree, {includeTrash: true})
+	await index.reconcileRoot('/Home', 'initial')
+	walkTree.mockClear()
+	const directory = nodePath.join(homeDirectory, 'created')
+	await fse.ensureDir(directory)
+
+	await index.reconcileCreatedDirectory(directory)
+	expect(await index.getEntryBySystemPath(directory)).toMatchObject({type: 'directory'})
+
+	// Removed by something other than Files before the watcher reported the create
+	await fse.remove(directory)
+	noteWatcherChanges(index, [directory], 'delete')
+	await pRetry(async () => expect(await index.getEntryBySystemPath(directory)).toBeUndefined(), {
+		retries: 20,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+
+	await index.reconcileRoot('/Trash', 'barrier')
+	expect(walkTree.mock.calls.filter(([root]) => root === homeDirectory)).toHaveLength(0)
+	expect(walkTree.mock.calls.filter(([root]) => root === trashDirectory)).toHaveLength(1)
+})
+
+test('registers a photo backup upload into a new shard directory without rescanning its root', async () => {
+	const hash = Buffer.alloc(32, 0x43)
+	const walkTree = vi.fn(walkFileTree)
+	const {index, homeDirectory} = await fixture(walkTree, {
+		includeTrash: true,
+		enrichmentRuntime: {
+			hashFile: async () => hash,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	await index.initializePhotos('owner')
+	const sourceId = 'iphone:new-shard'
+	await index.photosUpsertBackupSource('owner', sourceId, 'Phone', 123)
+	await fse.ensureDir(nodePath.join(homeDirectory, 'Photos', 'Phone'))
+	await index.reconcileRoot('/Home', 'initial')
+	walkTree.mockClear()
+
+	// Backup creates the shard through Files and writes the upload's temporary file
+	// into it, possibly before the index has handled the new directory
+	const resourceKey = 'ab'.padEnd(64, 'c')
+	const shard = nodePath.join(homeDirectory, 'Photos', 'Phone', 'ab')
+	const temporaryUpload = nodePath.join(shard, `.${resourceKey}.heic.0123.umbrel-upload`)
+	const uploaded = nodePath.join(shard, `${resourceKey}.heic`)
+	await fse.outputFile(temporaryUpload, 'photo')
+	await index.reconcileCreatedDirectory(shard)
+	noteWatcherChanges(index, [shard, temporaryUpload])
+	await pRetry(async () => expect(await index.getEntryBySystemPath(temporaryUpload)).toMatchObject({hidden: true}), {
+		retries: 20,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+
+	// Publishing links the upload under its resource key, then registers it
+	await link(temporaryUpload, uploaded)
+	await fse.remove(temporaryUpload)
+	const revision = await contentRevision(uploaded)
+	const moved = index.movePath(temporaryUpload, uploaded)
+	await expect(
+		index.photosRegisterBackupResource('owner', sourceId, resourceKey, uploaded, hash, revision),
+	).resolves.toMatchObject({resourceKey, path: `/Home/Photos/Phone/ab/${resourceKey}.heic`})
+	await moved
+
+	// Root scans run in order, so any scan of Home these events queued has run by now
+	await index.reconcileRoot('/Trash', 'barrier')
+	expect(walkTree.mock.calls.filter(([root]) => root === homeDirectory)).toHaveLength(0)
+	expect(await index.getEntryBySystemPath(shard)).toMatchObject({type: 'directory'})
+	await expect(index.photosConfirmedBackupResources('owner', sourceId, [resourceKey])).resolves.toMatchObject([
+		{resourceKey, path: `/Home/Photos/Phone/ab/${resourceKey}.heic`},
+	])
+})
 
 test('applies direct move hints to both paths, including regular files', async () => {
 	const {index, homeDirectory} = await fixture()
@@ -7659,4 +8130,60 @@ test('purges a removed member when the optional Photos database recovers', async
 		count: 0,
 	})
 	photos.close()
+})
+
+test('drops the contents of a directory replaced by a file when the watcher reports them gone', async () => {
+	const {index, homeDirectory} = await fixture()
+	const directory = nodePath.join(homeDirectory, 'replaced')
+	const child = nodePath.join(directory, 'child.txt')
+	await fse.ensureDir(directory)
+	await writeFile(child, 'child')
+	await index.reconcileRoot('/Home', 'initial')
+	await expect(index.getEntryBySystemPath(child)).resolves.toBeDefined()
+
+	await fse.remove(directory)
+	await writeFile(directory, 'now a file')
+	index.noteWatcherChanges('/Home', [
+		{path: directory, type: 'update'},
+		{path: child, type: 'delete'},
+	])
+
+	await pRetry(async () => expect(await index.getEntryBySystemPath(child)).toBeUndefined(), {
+		retries: 50,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	expect(await index.getEntryBySystemPath(directory)).toMatchObject({type: 'file'})
+	await expect(index.status()).resolves.toMatchObject({roots: [{virtualPath: '/Home', state: 'ready'}]})
+})
+
+test('hashes a new photo straight away but waits for a new large video to settle', async () => {
+	const hashed: string[] = []
+	const {index, homeDirectory} = await fixture(undefined, {
+		enrichmentRuntime: {
+			hashFile: async (systemPath) => {
+				hashed.push(nodePath.basename(systemPath))
+				return Buffer.alloc(32, hashed.length)
+			},
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const photo = nodePath.join(homeDirectory, 'photo.jpg')
+	const video = nodePath.join(homeDirectory, 'download.mkv')
+	await writeFile(photo, 'photo')
+	await writeFile(video, '')
+	await truncate(video, 4_000_000_000)
+	const {ctimeMs} = await lstat(video)
+	await index.reconcileRoot('/Home', 'settle')
+	index.startBackgroundReconciliation()
+
+	await pRetry(async () => expect(hashed).toContain('photo.jpg'), {retries: 200, minTimeout: 10, maxTimeout: 20})
+	expect(hashed).not.toContain('download.mkv')
+	const database = new BetterSqlite3(index.databasePath, {readonly: true})
+	const {hash_retry_at} = database.prepare("SELECT hash_retry_at FROM entries WHERE name = 'download.mkv'").get() as {
+		hash_retry_at: number
+	}
+	database.close()
+	// Hashing 4 GB on a Raspberry Pi takes about 40 seconds
+	expect(Math.abs(hash_retry_at - (ctimeMs + 40_000))).toBeLessThanOrEqual(1)
 })

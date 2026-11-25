@@ -17,13 +17,12 @@ import {
 	buildScale,
 	labelUnit,
 	monthAtRailY,
-	monthKeyOf,
 	monthSpan,
 	monthStartUtc,
 	pickMonthLabels,
 	pickYearLabels,
 	railYForMonth,
-	scrollForMonth,
+	settleOnLabel,
 	timeAtFraction,
 	timeAtScroll,
 	yearMarks,
@@ -35,8 +34,10 @@ import {
 	useLanding,
 	type CommittedView,
 	type ElementRef,
+	type Landing,
 } from '@/features/photos/components/listing/time-rail/use-landing'
 import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {cn} from '@/lib/utils'
 import {capitalizeDate} from '@/utils/date-time'
 import {formatNumberI18n} from '@/utils/number'
@@ -64,7 +65,8 @@ const RAIL_WIDTH = 72
 const STRIP_WIDTH = 24
 const TRACK_PAD = 14
 const THUMB_HEIGHT = 28
-// Year labels keep at least this far apart; decades win the crowding
+// Year labels keep at least this far apart, plus what larger text adds to
+// their height; decades win the crowding
 const LABEL_MIN_GAP = 18
 // A month gets its own hairline tick only with this much rail to its name
 const MONTH_TICK_MIN_SPAN = 8
@@ -74,6 +76,11 @@ const HIDE_AFTER_MS = 1200
 const MIN_TRACK = 160
 // A press that travels no further than this is a click, not a scrub
 const DRAG_SLOP_PX = 3
+// How far above its mark a pointer is still on a label (see settleOnLabel):
+// half the label's height at rest. Under the lens the label is drawn nearly
+// twice the size but is also pushed away from the pointer, three quarters of
+// a px for each px the pointer is short of the mark, which comes to the same.
+const LABEL_REACH = 6
 
 // ── The lens ──
 // Hovering magnifies the pointer's neighbourhood the way the dock does:
@@ -97,30 +104,30 @@ const LENS_EASE_MS = 80
 // The Time Machine-style index down a long timeline's right edge: a thumb
 // marking where in time the viewport is, year ticks and labels, and a pill
 // naming the month under the pointer. A click or a released drag travels
-// there; a drag scrubs the grid live through everything loaded; past the
-// loading frontier the seek (see use-seek.ts) pages toward the month while
-// the pill counts the frontier down, and the landing settles on the real
-// thing. Renders nothing per scroll frame — the thumb follows by transform,
-// off React's render path, the discipline the zoom control set.
+// there; a drag scrubs the grid live — through everything the list holds,
+// and beyond it by a seek (see use-seek.ts) that puts each month it comes to
+// on screen as its photographs arrive, the pill naming where the drag is
+// heading meanwhile. Renders nothing per scroll frame — the thumb follows by
+// transform, off React's render path, the discipline the zoom control set.
 export function TimeRail({
 	buckets,
 	scrollerRef,
 	contentRef,
 	viewRef,
+	landingRef,
 	frame,
 	height,
 	endSpacer,
-	hasMore,
 	seek,
 }: {
 	buckets: MonthBucket[]
 	scrollerRef: ElementRef<HTMLDivElement>
 	contentRef: ElementRef<HTMLDivElement>
 	viewRef: ElementRef<CommittedView>
+	landingRef: {current: Landing | null}
 	frame: Frame
 	height: number
 	endSpacer: number
-	hasMore: boolean
 	seek: Seek
 }) {
 	const {t, i18n} = useTranslation()
@@ -133,8 +140,13 @@ export function TimeRail({
 	// label carry the year (see labelUnit)
 	const unit = labelUnit(buckets)
 	const spanMonths = monthSpan(buckets)
-	const yearLabels = useMemo(() => (unit === 'years' ? pickYearLabels(marks, LABEL_MIN_GAP) : []), [unit, marks])
-	const monthLabels = useMemo(() => (unit === 'months' ? pickMonthLabels(scale, LABEL_MIN_GAP) : []), [unit, scale])
+	const largerText = useLargerText()
+	const labelGap = LABEL_MIN_GAP + largerText
+	const yearLabels = useMemo(() => (unit === 'years' ? pickYearLabels(marks, labelGap) : []), [unit, marks, labelGap])
+	const monthLabels = useMemo(
+		() => (unit === 'months' ? pickMonthLabels(scale, labelGap) : []),
+		[unit, scale, labelGap],
+	)
 	// Month hairlines, where there is room — skipping each year's first month,
 	// whose line is the year tick itself
 	const monthTicks = useMemo(() => {
@@ -203,13 +215,13 @@ export function TimeRail({
 	const moveRaf = useRef(0)
 	const pendingY = useRef(0)
 
-	const {scrollWindow, stopTween, jump} = useLanding({
+	const {locate, stopTween, jump, scrubBeyond, scrubWithin} = useLanding({
 		scrollerRef,
 		contentRef,
 		viewRef,
+		landingRef,
 		inset: frame.inset,
 		endSpacer,
-		hasMore,
 		seek,
 	})
 
@@ -252,10 +264,14 @@ export function TimeRail({
 			const grow = (label ? LENS_LABEL_SCALE : LENS_TICK_SCALE) - 1
 			const scaleBy = 1 + grow * Math.exp(-t * t) * lens.amp
 			const push = Math.sign(distance) * LENS_PUSH * (t / LENS_PUSH_PEAK) * Math.exp(1 - t / LENS_PUSH_PEAK) * lens.amp
-			// Labels centre themselves on their tick (the -translate-y-1/2 the
-			// class gives them at rest), so the inline transform carries it too
+			// Labels centre themselves on their tick with the class's
+			// -translate-y-1/2, which is the `translate` property: it stays in
+			// force beside this inline `transform`, so the push and the scale are
+			// all that is written here. (Carrying the half-height in both lifted
+			// every label clear above its tick while the lens was on, over the
+			// year before the one it names.)
 			el.style.transform = label
-				? `translateY(calc(-50% + ${push}px)) scale(${scaleBy})`
+				? `translateY(${push}px) scale(${scaleBy})`
 				: `translateY(${push}px) scaleX(${scaleBy})`
 		}
 		lens.raf = lens.amp === 0 && lens.target === 0 ? 0 : requestAnimationFrame(lensFrame)
@@ -362,40 +378,50 @@ export function TimeRail({
 		if (!strip) return null
 		return clientY - strip.getBoundingClientRect().top - TRACK_PAD
 	}, [])
+	// What a point on the rail means to a pointer resting on it or clicking: the
+	// month under it, or the label it is on. A scrub reads the rail as it is,
+	// every month in turn.
+	const labels = unit === 'years' ? yearLabels : monthLabels
+	const pointed = useCallback(
+		(y: number, scrub: boolean) =>
+			monthAtRailY(scale, scrub ? y : settleOnLabel(y, labels, LABEL_REACH + largerText / 2)),
+		[scale, labels, largerText],
+	)
 
 	const applyPointer = useCallback(
 		(clientY: number, scrub: boolean) => {
 			const y = railY(clientY)
 			if (y === null) return
-			const at = monthAtRailY(scale, y)
+			const at = pointed(y, scrub)
 			if (!at) return
 			const view = viewRef.current
 			const scroller = scrollerRef.current
-			const where = view ? scrollWindow(view) : null
-			const target = view && where ? scrollForMonth(view.layout, at.key, at.fraction, where) : undefined
+			const target = view ? locate(view, at.key, at.fraction) : undefined
 			const clamped = Math.min(Math.max(0, y), trackHeight)
 			lensRef.current.y = clamped + TRACK_PAD
 			setHover({
 				y: clamped,
 				key: at.key,
 				fraction: at.fraction,
-				pending: target === undefined && hasMore,
+				pending: view !== null && target === undefined,
 			})
-			if (!scrub || !view || !scroller || !where) return
+			if (!scrub || !view || !scroller) return
 			stopTween()
-			// Loaded territory scrubs live under the finger; past the frontier
-			// the grid holds at the deepest loaded row and the pill says where
-			// this is heading
-			scroller.scrollTop = target ?? Math.max(0, view.layout.total + endSpacer - view.height)
+			// What the list holds scrubs live under the finger; beyond it the
+			// pill says where this is heading and the grid follows as that
+			// arrives
+			if (target === undefined) return scrubBeyond(at.key, at.fraction)
+			scrubWithin()
+			scroller.scrollTop = target
 		},
-		[railY, scale, viewRef, scrollerRef, scrollWindow, trackHeight, hasMore, stopTween, endSpacer],
+		[railY, pointed, viewRef, scrollerRef, locate, trackHeight, stopTween, scrubBeyond, scrubWithin],
 	)
 
 	const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
 		if (event.pointerType === 'mouse' && event.button !== 0) return
 		event.currentTarget.setPointerCapture(event.pointerId)
 		dragRef.current = {startY: event.clientY, scrubbing: false}
-		if (seek.busy) seek.cancel()
+		seek.cancel()
 		stopTween()
 		wake()
 		applyPointer(event.clientY, false)
@@ -420,21 +446,23 @@ export function TimeRail({
 		cancelAnimationFrame(moveRaf.current)
 		moveRaf.current = 0
 		const y = railY(event.clientY)
-		const at = y === null ? undefined : monthAtRailY(scale, y)
+		const at = y === null ? undefined : pointed(y, drag.scrubbing)
 		if (!at) return
 		if (!drag.scrubbing) return jump(at.key, at.fraction)
-		// Released after a live scrub: settle exactly, or seek what the drag
-		// ran past the frontier for
+		// Released after a live scrub: settle exactly, or on what the drag ran
+		// beyond the list for once that is here
 		const view = viewRef.current
-		const target = view ? scrollForMonth(view.layout, at.key, at.fraction, scrollWindow(view)) : undefined
-		if (target === undefined) jump(at.key, at.fraction)
-		else if (scrollerRef.current) scrollerRef.current.scrollTop = target
+		const target = view ? locate(view, at.key, at.fraction) : undefined
+		if (target === undefined) return scrubBeyond(at.key, at.fraction, true)
+		scrubWithin()
+		if (scrollerRef.current) scrollerRef.current.scrollTop = target
 	}
 
 	const onPointerCancel = () => {
 		dragRef.current = null
 		cancelAnimationFrame(moveRaf.current)
 		moveRaf.current = 0
+		scrubWithin()
 	}
 
 	// ── The keyboard on the slider ──
@@ -456,13 +484,8 @@ export function TimeRail({
 
 	if (trackHeight < MIN_TRACK || scale.segments.length === 0) return null
 
-	// While a seek runs its pill pins at the destination and counts the
-	// loading frontier down beneath it; otherwise the pill follows the pointer
-	const frontierKey = (() => {
-		const items = viewRef.current?.layout.items
-		const last = items?.[items.length - 1]
-		return last === undefined ? null : monthKeyOf(last.takenAt)
-	})()
+	// While a seek is awaited its pill pins at the destination; otherwise the
+	// pill follows the pointer
 	const pill =
 		seek.target !== null
 			? {
@@ -479,7 +502,7 @@ export function TimeRail({
 	})()
 	// The rail is always present — quiet at rest so the timeline can be seen
 	// to have this axis at all, clearer while scrolling, full on approach
-	const presence = engaged || seek.busy ? 'opacity-100' : awake ? 'opacity-90' : 'opacity-60'
+	const presence = engaged || seek.target !== null ? 'opacity-100' : awake ? 'opacity-90' : 'opacity-60'
 
 	return (
 		// The mount fades in: the rail can arrive from a zoom-in or a window
@@ -488,13 +511,17 @@ export function TimeRail({
 			className='pointer-events-none absolute right-0 z-30 animate-in duration-300 select-none fade-in'
 			style={{top: frame.inset, height: trackHeight + TRACK_PAD * 2, width: RAIL_WIDTH}}
 		>
-			{/* A whisper of scrim so labels read over bright photographs. Masked
-			    so it breathes out at both ends — without it the band stops in a
-			    hard horizontal line across whatever photo sits at the edge. */}
+			{/* A whisper of scrim so labels read over bright photographs (more
+			    than a whisper under increased contrast). Masked so it breathes
+			    out at both ends — without it the band stops in a hard horizontal
+			    line across whatever photo sits at the edge. */}
 			<div
-				className={cn('absolute inset-0 transition-opacity duration-300', engaged ? 'opacity-100' : 'opacity-0')}
+				className={cn(
+					'absolute inset-0 transition-opacity duration-300 [--scrim:0.45] contrast-more:[--scrim:0.8]',
+					engaged ? 'opacity-100' : 'opacity-0',
+				)}
 				style={{
-					background: 'linear-gradient(to left, rgba(0, 0, 0, 0.45), transparent)',
+					background: 'linear-gradient(to left, rgb(0 0 0 / var(--scrim)), transparent)',
 					maskImage: 'linear-gradient(to bottom, transparent, black 72px, black calc(100% - 72px), transparent)',
 					WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 72px, black calc(100% - 72px), transparent)',
 				}}
@@ -505,7 +532,7 @@ export function TimeRail({
 						<div
 							key={key}
 							data-rail-y={TRACK_PAD + top}
-							className='absolute right-[9px] h-px w-1.5 origin-right bg-white/25'
+							className='absolute right-[9px] h-px w-1.5 origin-right bg-white/25 contrast-more:bg-white/60'
 							style={{top: TRACK_PAD + top}}
 						/>
 					))}
@@ -515,7 +542,7 @@ export function TimeRail({
 						<div
 							key={year}
 							data-rail-y={TRACK_PAD + y}
-							className='absolute right-[7px] h-px w-2.5 origin-right bg-white/45'
+							className='absolute right-[7px] h-px w-2.5 origin-right bg-white/45 contrast-more:bg-white/80'
 							style={{top: TRACK_PAD + y}}
 						/>
 					))}
@@ -528,7 +555,7 @@ export function TimeRail({
 							key={year}
 							data-rail-y={TRACK_PAD + y}
 							data-rail-lens='label'
-							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]'
+							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] contrast-more:[text-shadow:0_0_3px_rgb(0_0_0),0_1px_2px_rgb(0_0_0)]'
 							style={{top: TRACK_PAD + y}}
 						>
 							{year}
@@ -539,7 +566,7 @@ export function TimeRail({
 							key={key}
 							data-rail-y={TRACK_PAD + y}
 							data-rail-lens='label'
-							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide whitespace-nowrap text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]'
+							className='absolute right-5 origin-right -translate-y-1/2 text-11 leading-none font-medium tracking-wide whitespace-nowrap text-white/60 tabular-nums [text-shadow:0_1px_2px_rgba(0,0,0,0.6)] contrast-more:[text-shadow:0_0_3px_rgb(0_0_0),0_1px_2px_rgb(0_0_0)]'
 							style={{top: TRACK_PAD + y}}
 						>
 							{monthMarkLabel(key, index === 0 || (((key % 12) + 12) % 12 === 0 && spanMonths > 1))}
@@ -550,7 +577,7 @@ export function TimeRail({
 			<div
 				ref={thumbRef}
 				className={cn(
-					'absolute top-0 right-1 w-[3px] rounded-full bg-white/60 transition-opacity duration-300',
+					'absolute top-0 right-1 w-[3px] rounded-full bg-white/60 transition-opacity duration-300 contrast-more:bg-white',
 					presence,
 				)}
 				style={{height: THUMB_HEIGHT}}
@@ -565,12 +592,7 @@ export function TimeRail({
 				>
 					<span className='text-13 leading-none font-medium text-white/90'>{pillLabel(pill.key, pill.fraction)}</span>
 					{pill.pending ? (
-						<>
-							{seek.target !== null && frontierKey !== null && frontierKey !== pill.key && (
-								<span className='text-12 leading-none text-white/50 tabular-nums'>{monthLabel(frontierKey)}</span>
-							)}
-							<TbLoader className='size-3 animate-spin text-white/60' />
-						</>
+						<TbLoader className='size-3 animate-spin text-white/60' />
 					) : (
 						pillCount !== null && (
 							<span className='text-12 leading-none text-white/50'>

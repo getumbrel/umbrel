@@ -9,7 +9,11 @@ using System.Windows.Threading;
 namespace Umbrel.Views;
 
 /// <summary>A login attempt from PasswordForm. Totp is set only once the account requires a 2FA code.</summary>
-public sealed record PasswordSubmission(string Password, string? Totp);
+public sealed record PasswordSubmission(string Password, string? Totp)
+{
+	// A record prints every field by default, the password included.
+	public override string ToString() => nameof(PasswordSubmission);
+}
 
 public sealed partial class PasswordForm : UserControl
 {

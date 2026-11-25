@@ -36,6 +36,18 @@ fun Context.openExternal(url: String) {
 	}
 }
 
+/** This app's notification settings, where notifications are turned on once Android stops asking. */
+fun Context.openNotificationSettings() {
+	val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+		.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
+		.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+	try {
+		startActivity(intent)
+	} catch (error: ActivityNotFoundException) {
+		openAppSettings()
+	}
+}
+
 fun Context.openAppSettings() {
 	val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri())
 		.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

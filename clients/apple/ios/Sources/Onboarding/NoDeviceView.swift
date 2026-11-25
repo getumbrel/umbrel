@@ -22,7 +22,7 @@ struct NoDeviceView: View {
 				)
 				ManualAddressPrompt()
 			}
-			.padding(.top, 90)
+			.padding(.top, model.headerTopPadding)
 
 			Spacer()
 

@@ -5,24 +5,30 @@ import {useCallback, useSyncExternalStore} from 'react'
 import {useTranslation} from 'react-i18next'
 
 import {PillButtonGroup, PillButtonGroupItem} from '@/components/ui/edge-controls'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {sliderRootClass, sliderThumbClass, sliderTrackClass} from '@/features/photos/components/actions-bar/zoom-slider'
 import type {MapControls as MapControlsHandle} from '@/features/photos/components/view-context'
 
 // The map's zoom, the way the grid's is laid out: −, a slider, + — the
 // slider following the map however it is zoomed, and the map following the
 // slider while it is dragged. Then back to all the photos, and the list.
-// `compact` is a phone's title row, beside "Photos": the four glyphs share
-// one pill (two would leave a 360px phone no room), and the slider — only
-// ever shown from xl — is left out
+// `compact` is a phone's title row, beside "Photos": the glyphs share one
+// pill (two would leave a 360px phone no room), and the slider — only ever
+// shown from xl — is left out. Under a finger the map zooms by a pinch, as
+// the grid does, so there the steps are left out too: − and + would only be
+// a smaller, slower copy of the gesture
 export function MapControls({controls, compact = false}: {controls: MapControlsHandle; compact?: boolean}) {
 	const {t} = useTranslation()
+	const isTouch = useIsTouchDevice()
 	if (compact) {
 		return (
 			<PillButtonGroup className='gap-0.5'>
-				<div role='group' aria-label={t('photos-map.zoom')} className='contents'>
-					<ZoomStep map={controls.map} by={-1} />
-					<ZoomStep map={controls.map} by={1} />
-				</div>
+				{!isTouch && (
+					<div role='group' aria-label={t('photos-map.zoom')} className='contents'>
+						<ZoomStep map={controls.map} by={-1} />
+						<ZoomStep map={controls.map} by={1} />
+					</div>
+				)}
 				<MapActions controls={controls} />
 			</PillButtonGroup>
 		)
@@ -47,7 +53,8 @@ function MapActions({controls: {showAll, listOpen, setListOpen}}: {controls: Map
 				icon={List}
 				aria-label={t(listOpen ? 'photos-map.hide-list' : 'photos-map.show-list')}
 				aria-pressed={listOpen}
-				className={listOpen ? 'bg-white/12' : undefined}
+				// Under increased contrast a hover is as strong as this fill, so a ring tells it apart
+				className={listOpen ? 'bg-white/12 contrast-more:ring-1 contrast-more:ring-white' : undefined}
 				onClick={() => setListOpen(!listOpen)}
 			/>
 		</>

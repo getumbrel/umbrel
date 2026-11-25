@@ -1,18 +1,16 @@
-import {Upload} from 'lucide-react'
-import {useEffect, useLayoutEffect, useRef} from 'react'
+import {ClipboardPaste, CloudDownload, FilePlus2, FolderPlus, Upload} from 'lucide-react'
+import {useEffect, useLayoutEffect, useMemo, useRef} from 'react'
 import {useTranslation} from 'react-i18next'
-import {RiClipboardLine} from 'react-icons/ri'
 import {TbWorldPlus} from 'react-icons/tb'
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
-import {ContextMenuItem, ContextMenuShortcut} from '@/components/ui/context-menu'
-import {DropdownMenuItem} from '@/components/ui/dropdown-menu'
-import {IconButton} from '@/components/ui/icon-button'
 import {toast} from '@/components/ui/toast'
-import {AddFolderIcon} from '@/features/files/assets/add-folder-icon'
 import {CloudBanner} from '@/features/files/components/cloud-banner'
 import {Listing} from '@/features/files/components/listing'
-import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
+import {
+	useSetActionsBarConfig,
+	type BarAction,
+} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {EmptyStateDirectory, EmptyStateNetwork} from '@/features/files/components/listing/directory-listing/empty-state'
 import {UploadInput} from '@/features/files/components/shared/upload-input'
 import {cloudSyncForPath, useCloudSyncs} from '@/features/files/hooks/use-cloud'
@@ -30,9 +28,7 @@ import {dashboardAuthHeaders} from '@/modules/auth/http-auth'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 
-// `marqueeScale` is threaded through so embedded contexts (like Rewind) can tell marquee selection
-// about the CSS transform that shrinks the Files UI.
-export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {}) {
+export function DirectoryListing() {
 	const {t} = useTranslation()
 	const {
 		currentPath,
@@ -49,7 +45,7 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 	const isEmbedded = useIsFilesEmbedded()
 	const isReadOnly = useIsFilesReadOnly()
 	const setActionsBarConfig = useSetActionsBarConfig()
-	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
+	const {listing, isLoading, error, fetchMoreItems, fetchAllItems} = useListDirectory(currentPath)
 	const routerNavigate = useRouterNavigate()
 	const linkToDialog = useLinkToDialog()
 	const homePath = useHomePath()
@@ -149,37 +145,10 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 		!currentDirCloud &&
 		isValidCloudDestination(currentPath, homePath)
 
-	// Additional items for the directory context menu
-	// Disable write actions (New Folder, Upload, Paste) for read-only directories
-	const additionalContextMenuItems =
-		isViewingExternalDrives || isViewingNetworkDevices || isViewingNetworkShares ? null : (
-			<>
-				<ContextMenuItem disabled={!isWritable} onClick={startNewFolder}>
-					{t('files-action.new-folder')}
-				</ContextMenuItem>
-				<ContextMenuItem disabled={!isWritable} onClick={startNewTextFile}>
-					{t('files-action.new-text-file')}
-				</ContextMenuItem>
-				<ContextMenuItem disabled={!isWritable} onClick={handleUploadClick}>
-					{t('files-action.upload')}
-				</ContextMenuItem>
-				<ContextMenuItem
-					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-					disabled={!hasItemsInClipboard || !isWritable}
-				>
-					{t('files-action.paste')}
-					<ContextMenuShortcut>⌘V</ContextMenuShortcut>
-				</ContextMenuItem>
-				{canDownloadFromCloudHere && (
-					<ContextMenuItem onClick={() => routerNavigate(linkToDialog('files-cloud-add', {destination: currentPath}))}>
-						{t('files-cloud.download-here')}
-					</ContextMenuItem>
-				)}
-			</>
-		)
-
-	// Filter out items that are currently uploading to prevent them from being selected via marquee selection or keyboard shortcuts
-	const selectableItems = (listing?.items ?? []).filter((item) => !item.isUploading)
+	// Filter out items that are currently uploading to prevent them from being selected via marquee selection or keyboard shortcuts.
+	// The same array until the items change: what holds on to it (the keyboard, the marquee) starts over when it does.
+	const listedItems = listing?.items
+	const selectableItems = useMemo(() => (listedItems ?? []).filter((item) => !item.isUploading), [listedItems])
 
 	// Disable actions while loading or on error; only hide the path bar on error
 	const disableActions = Boolean(isLoading || error)
@@ -197,73 +166,77 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 		if (parentUi && parentUi !== uiPath) navigateToDirectory(parentUi)
 	}, [isEmbedded, error, uiPath, navigateToDirectory])
 
-	// Desktop actions
-	// - At /Network (devices view): show "Add share" action
-	// - Elsewhere (non-readonly): show New Folder and Upload
-	let DesktopActions: React.ReactNode = null
-	if (isViewingNetworkDevices && !isReadOnly) {
-		DesktopActions = (
-			<IconButton
-				icon={TbWorldPlus}
-				onClick={() => routerNavigate(linkToDialog('files-add-network-share'))}
-				disabled={disableActions}
-			>
-				{t('files-action.add-network-device')}
-			</IconButton>
-		)
-	} else if (!isReadOnly && !(isViewingExternalDrives || isViewingNetworkShares)) {
-		DesktopActions = (
-			<>
-				<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={disableActions || !isWritable}>
-					{t('files-folder')}
-				</IconButton>
-				<IconButton icon={Upload} onClick={handleUploadClick} disabled={disableActions || !isWritable}>
-					{t('files-action.upload')}
-				</IconButton>
-			</>
-		)
-	}
+	// What can be done to this folder. The bar draws its pills from these, a
+	// phone its + menu, and the menu on empty space its first items.
+	// - At /Network (devices view): add a device
+	// - Where drives and shares are listed: nothing
+	// - Elsewhere: upload, new folder, new text file, paste
+	// Write actions are disabled for read-only directories.
+	const openAddNetworkShare = () => routerNavigate(linkToDialog('files-add-network-share'))
+	const openCloudAdd = () => routerNavigate(linkToDialog('files-cloud-add', {destination: currentPath}))
+	const paste = () => void pasteItemsFromClipboard({toDirectory: currentPath})
+	const actions: BarAction[] = isReadOnly
+		? []
+		: isViewingNetworkDevices
+			? [
+					{
+						id: 'add-network-device',
+						label: t('files-action.add-network-device'),
+						icon: TbWorldPlus,
+						onSelect: openAddNetworkShare,
+						disabled: disableActions,
+						pill: true,
+					},
+				]
+			: isViewingExternalDrives || isViewingNetworkShares
+				? []
+				: [
+						{
+							id: 'upload',
+							label: t('files-action.upload'),
+							icon: Upload,
+							onSelect: handleUploadClick,
+							disabled: disableActions || !isWritable,
+							pill: true,
+						},
+						{
+							id: 'new-folder',
+							label: t('files-action.new-folder'),
+							icon: FolderPlus,
+							onSelect: startNewFolder,
+							disabled: disableActions || !isWritable,
+							pill: t('files-folder'),
+						},
+						{
+							id: 'new-text-file',
+							label: t('files-action.new-text-file'),
+							icon: FilePlus2,
+							onSelect: () => void startNewTextFile(),
+							disabled: disableActions || !isWritable,
+						},
+						{
+							id: 'paste',
+							label: t('files-action.paste'),
+							icon: ClipboardPaste,
+							onSelect: paste,
+							disabled: disableActions || !hasItemsInClipboard || !isWritable,
+							shortcut: '⌘V',
+						},
+						...(canDownloadFromCloudHere
+							? [{id: 'cloud', label: t('files-cloud.download-here'), icon: CloudDownload, onSelect: openCloudAdd}]
+							: []),
+					]
 
-	// Mobile actions
-	let MobileDropdownActions: React.ReactNode = null
-	if (isViewingNetworkDevices && !isReadOnly) {
-		MobileDropdownActions = (
-			<DropdownMenuItem onClick={() => routerNavigate(linkToDialog('files-add-network-share'))}>
-				<TbWorldPlus className='mr-2 h-4 w-4' />
-				{t('files-action.add-network-device')}
-			</DropdownMenuItem>
-		)
-	} else if (!isReadOnly && !(isViewingExternalDrives || isViewingNetworkShares)) {
-		MobileDropdownActions = (
-			<>
-				<DropdownMenuItem onClick={startNewFolder} disabled={disableActions || !isWritable}>
-					<AddFolderIcon className='mr-2 h-4 w-4 opacity-50' />
-					{t('files-action.new-folder')}
-				</DropdownMenuItem>
-				<DropdownMenuItem onClick={handleUploadClick} disabled={disableActions || !isWritable}>
-					<Upload className='mr-2 h-4 w-4 opacity-50' />
-					{t('files-action.upload')}
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-					disabled={disableActions || !hasItemsInClipboard || !isWritable}
-				>
-					<RiClipboardLine className='mr-2 h-4 w-4 opacity-50' />
-					{t('files-action.paste')}
-				</DropdownMenuItem>
-			</>
-		)
-	}
-
-	// The actions are elements built from this render's state (the folder to paste
+	// The actions are built from this render's state (the folder to paste
 	// into, whether there's anything to paste), so anything they read is a
 	// dependency, or they keep acting on the folder they were built for
 	useEffect(() => {
 		setActionsBarConfig({
-			desktopActions: DesktopActions,
-			mobileActions: MobileDropdownActions,
+			actions,
 			hidePath,
 			hideSearch: isBrowsingApps || isBrowsingMachines || isBrowsingExternalStorage || isBrowsingNetworkStorage,
+			// The drives of /External are places to go into, not things to act on
+			selectable: !isViewingExternalDrives,
 		})
 	}, [
 		currentPath,
@@ -272,6 +245,7 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 		isReadOnly,
 		isWritable,
 		hidePath,
+		canDownloadFromCloudHere,
 		isBrowsingApps,
 		isBrowsingMachines,
 		isBrowsingExternalStorage,
@@ -289,15 +263,15 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 				hiddenRenamedPaths={listing?.hiddenRenamedPaths}
 				totalItems={listing?.totalFiles}
 				truncatedAt={listing?.truncatedAt}
+				totalSize={listing?.size}
 				selectableItems={selectableItems}
 				isLoading={isLoading}
 				error={error}
 				hasMore={listing?.hasMore ?? false}
 				onLoadMore={fetchMoreItems}
-				additionalContextMenuItems={additionalContextMenuItems}
+				onLoadAll={fetchAllItems}
 				enableFileDrop={!isViewingExternalDrives && !isViewingNetworkDevices && !isViewingNetworkShares}
 				CustomEmptyView={isViewingNetworkDevices ? EmptyStateNetwork : EmptyStateDirectory}
-				marqueeScale={marqueeScale}
 				topBanner={!isEmbedded ? <CloudBanner path={currentPath} /> : undefined}
 			/>
 		</>

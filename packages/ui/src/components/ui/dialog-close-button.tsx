@@ -20,11 +20,30 @@ const closeSurfaceClass = {
 	sheet: windowClosePlacementClass,
 }
 
-export function CloseButton({className, ...props}: React.ComponentProps<'button'>) {
+// The cross RiCloseCircleFill cuts out of its circle, to draw over it on its own
+const CROSS_PATH =
+	'M12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z'
+
+export function CloseButton({
+	className,
+	crossClassName,
+	...props
+}: React.ComponentProps<'button'> & {
+	/** Colours the cross on its own, filling the cut-out that otherwise shows what's behind the circle */
+	crossClassName?: string
+}) {
 	const {t} = useTranslation()
 	return (
 		<button type='button' className={cn(dialogHeaderCircleButtonClass, className)} {...props}>
 			<RiCloseCircleFill className='h-5 w-5 lg:h-6 lg:w-6' />
+			{crossClassName && (
+				// Wrapped, so the circle's dimming (on the button's svg children) passes it by
+				<span aria-hidden className={cn('absolute inset-0', crossClassName)}>
+					<svg viewBox='0 0 24 24' className='size-full fill-current'>
+						<path d={CROSS_PATH} />
+					</svg>
+				</span>
+			)}
 			<span className='sr-only'>{t('close')}</span>
 		</button>
 	)
@@ -32,10 +51,20 @@ export function CloseButton({className, ...props}: React.ComponentProps<'button'
 
 // The one close button in umbrelOS. Windows draw it themselves (see DialogContent and
 // ImmersiveDialogContent), so a caller only ever renders it for a hand-built surface.
-export function DialogCloseButton({surface = 'modal'}: {surface?: keyof typeof closeSurfaceClass}) {
+export function DialogCloseButton({
+	surface = 'modal',
+	crossClassName,
+}: {
+	surface?: keyof typeof closeSurfaceClass
+	crossClassName?: string
+}) {
 	return (
 		<DialogPrimitive.Close asChild>
-			<CloseButton data-close-surface={surface} className={closeSurfaceClass[surface]} />
+			<CloseButton
+				data-close-surface={surface}
+				className={closeSurfaceClass[surface]}
+				crossClassName={crossClassName}
+			/>
 		</DialogPrimitive.Close>
 	)
 }

@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.work.Configuration
 import androidx.work.Logger
 import com.umbrel.android.browser.BrowserSessions
+import com.umbrel.android.browser.CapturesFolder
 import com.umbrel.kit.NativeClientInfo
 import com.umbrel.kit.SecretStore
 import com.umbrel.kit.backup.PhotoBackupScheduler
@@ -25,6 +26,8 @@ class UmbrelApplication : Application(), Configuration.Provider {
 		SecretStore.initialize(this)
 		NativeClientInfo.initialize(this)
 		BrowserSessions.initialize(this)
+		// Clears photos an earlier run took for web pages, whether or not a page is opened this time.
+		CapturesFolder.of(this)
 		container = AppContainer(this)
 		PhotoBackupScheduler.catchUp(this)
 	}

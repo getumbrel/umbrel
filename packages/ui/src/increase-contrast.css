@@ -1,0 +1,251 @@
+/*
+  Increase contrast (Settings > Accessibility, or the device's own setting: see
+  hooks/use-accessibility.ts, which sets data-increase-contrast on <html>).
+
+  umbrelOS is drawn in white at many strengths over glass. Here the glass turns
+  solid and the whites step up: text to three levels that all read at 7:1 or
+  better on the dark surfaces, lines far enough to give controls an edge, and
+  the fills that mark what's hovered, highlighted or selected.
+  It works on the utilities themselves, so a screen needs nothing of its own;
+  what can't be reached that way uses the `contrast-more:` variant.
+*/
+
+[data-increase-contrast] {
+	--focus-ring: #fff;
+	--window-edge-width: 1px;
+	--window-edge-opacity: 0.4;
+	--window-background-tint-opacity: 1;
+}
+
+/* Glass turns solid: menus, dialogs and toasts. Set here, not on the root,
+   because some of them tune the recipe themselves. */
+[data-increase-contrast] .umbrel-material {
+	--material-tint-opacity: 0.96;
+	--material-border-width: 1px;
+	--material-border-opacity: 0.4;
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+
+/* Cards and controls on the edge material trade their soft shading for a line */
+[data-increase-contrast] .settings-edge-material {
+	box-shadow: 0 0 0 1px rgb(255 255 255 / 0.4) inset;
+}
+
+/* Photos' bar floats its controls over the photos themselves. Its glass turns
+   dark rather than solid, so the controls keep their own fills and hovers.
+   (Over the map it's already solid: see index.css.) */
+[data-increase-contrast] .umbrel-photos-actions .settings-edge-material {
+	-webkit-backdrop-filter: blur(24px) brightness(0.25);
+	backdrop-filter: blur(24px) brightness(0.25);
+}
+
+/* In the utilities layer and no more specific than a utility, so these replace a
+   plain `text-white/50` but still give way to its states (`disabled:`). They
+   list the strengths by name: one off the usual steps of five needs adding. */
+@layer utilities {
+	:where([data-increase-contrast]) {
+		/* Text: primary, secondary, tertiary */
+		:is(.text-white\/80, .text-white\/85, .text-white\/90, .text-white\/95) {
+			color: #fff;
+		}
+		:is(.text-white\/50, .text-white\/55, .text-white\/60, .text-white\/65, .text-white\/70, .text-white\/75) {
+			color: rgb(255 255 255 / 0.85);
+		}
+		:is(
+			.text-white\/5,
+			.text-white\/10,
+			.text-white\/15,
+			.text-white\/20,
+			.text-white\/25,
+			.text-white\/30,
+			.text-white\/35,
+			.text-white\/40,
+			.text-white\/45
+		) {
+			color: rgb(255 255 255 / 0.7);
+		}
+		:is(
+			.placeholder\:text-white\/20,
+			.placeholder\:text-white\/25,
+			.placeholder\:text-white\/30,
+			.placeholder\:text-white\/35,
+			.placeholder\:text-white\/40,
+			.placeholder\:text-white\/45,
+			.placeholder\:text-white\/50,
+			.placeholder\:text-white\/55,
+			.placeholder\:text-white\/60
+		)::placeholder {
+			color: rgb(255 255 255 / 0.7);
+		}
+		/* A hover that brightened dim text would now dim it, so it goes all the way */
+		@media (hover: hover) {
+			:is(
+				.hover\:text-white\/30,
+				.hover\:text-white\/35,
+				.hover\:text-white\/40,
+				.hover\:text-white\/45,
+				.hover\:text-white\/50,
+				.hover\:text-white\/55,
+				.hover\:text-white\/60,
+				.hover\:text-white\/65,
+				.hover\:text-white\/70,
+				.hover\:text-white\/75,
+				.hover\:text-white\/80,
+				.hover\:text-white\/85,
+				.hover\:text-white\/90,
+				.hover\:text-white\/95
+			):hover,
+			:is(
+				.group-hover\:text-white\/30,
+				.group-hover\:text-white\/35,
+				.group-hover\:text-white\/40,
+				.group-hover\:text-white\/45,
+				.group-hover\:text-white\/50,
+				.group-hover\:text-white\/55,
+				.group-hover\:text-white\/60,
+				.group-hover\:text-white\/65,
+				.group-hover\:text-white\/70,
+				.group-hover\:text-white\/75,
+				.group-hover\:text-white\/80,
+				.group-hover\:text-white\/85,
+				.group-hover\:text-white\/90,
+				.group-hover\:text-white\/95
+			):is(:where(.group):hover *) {
+				color: #fff;
+			}
+		}
+
+		/* Lines */
+		:is(
+			.border-white\/3,
+			.border-white\/4,
+			.border-white\/5,
+			.border-white\/6,
+			.border-white\/7,
+			.border-white\/8,
+			.border-white\/10,
+			.border-white\/12,
+			.border-white\/15,
+			.border-white\/20,
+			.border-white\/25
+		) {
+			border-color: rgb(255 255 255 / 0.4);
+		}
+		:where(:is(.divide-white\/5, .divide-white\/6, .divide-white\/8) > :not(:last-child)) {
+			border-color: rgb(255 255 255 / 0.25);
+		}
+		/* A group of rows is a card whose fill is too faint to show where it ends,
+		   so it takes a line unless it has one. An outline, since rows would
+		   paint over an inset shadow. */
+		:is(.divide-white\/5, .divide-white\/6, .divide-white\/8):where([class*='rounded-']):not(
+				.border,
+				.settings-edge-material
+			) {
+			outline: 1px solid rgb(255 255 255 / 0.4);
+			outline-offset: -1px;
+		}
+		/* A resting line is now stronger than the hovered and focused ones were */
+		@media (hover: hover) {
+			:is(.hover\:border-white\/6, .hover\:border-white\/10, .hover\:border-white\/20, .hover\:border-white\/30):hover {
+				border-color: rgb(255 255 255 / 0.7);
+			}
+		}
+		:is(
+			.focus-visible\:border-white\/10,
+			.focus-visible\:border-white\/20,
+			.focus-visible\:border-white\/40,
+			.focus-visible\:border-white\/50
+		):focus-visible,
+		:is(.focus-within\:border-white\/20, .focus-within\:border-white\/25):focus-within {
+			border-color: #fff;
+		}
+
+		/* Fills aren't raised at rest, since their hover and selected states are
+		   utilities of their own and would end up level with them. Those states
+		   are raised instead, so the row under the pointer, the highlighted menu
+		   item and the selected result stand out from a solid surface. */
+		@media (hover: hover) {
+			:is(
+				.hover\:bg-white\/3,
+				.hover\:bg-white\/4,
+				.hover\:bg-white\/5,
+				.hover\:bg-white\/6,
+				.hover\:bg-white\/7,
+				.hover\:bg-white\/8,
+				.hover\:bg-white\/9,
+				.hover\:bg-white\/10,
+				.hover\:bg-white\/12,
+				.hover\:bg-white\/14,
+				.hover\:bg-white\/15,
+				.hover\:bg-white\/16,
+				.enabled\:hover\:bg-white\/10
+			):hover,
+			:is(.group-hover\:bg-white\/8, .group-hover\:bg-white\/10, .group-hover\:bg-white\/15):is(
+				:where(.group):hover *
+			) {
+				background-color: rgb(255 255 255 / 0.25);
+			}
+		}
+		.focus\:bg-white\/10:focus,
+		.focus\:bg-white\/15:focus,
+		.focus-visible\:bg-white\/5:focus-visible,
+		.focus-visible\:bg-white\/6:focus-visible,
+		.focus-visible\:bg-white\/8:focus-visible,
+		.focus-visible\:bg-white\/10:focus-visible,
+		.focus-within\:bg-white\/6:focus-within,
+		.focus-within\:bg-white\/7:focus-within,
+		.focus-within\:bg-white\/8:focus-within,
+		.focus-within\:bg-white\/10:focus-within,
+		.focus-within\:bg-white\/12:focus-within,
+		.data-\[highlighted\]\:bg-white\/10[data-highlighted],
+		.data-\[state\=open\]\:bg-white\/10[data-state='open'],
+		.data-\[active\]\:bg-white\/10[data-active],
+		.aria-selected\:bg-white\/6[aria-selected='true'],
+		.aria-selected\:bg-white\/8[aria-selected='true'] {
+			background-color: rgb(255 255 255 / 0.25);
+		}
+
+		/* Red text, at 7:1 */
+		:is(.text-destructive, .text-destructive2, .text-destructive2-lighter, .text-destructive2-lightest) {
+			color: #ff6b6b;
+		}
+
+		/* The wallpaper's colour can be as dark as 2.4:1 as text and as light as 3:1
+		   under white text. As text it lightens, to 6:1 or better for every
+		   wallpaper. As a fill it deepens, to 5:1 or better, and its lighter state
+		   (hover, focus, open) becomes the colour itself. */
+		:is(.text-brand, .text-brand-lighter, .text-brand-lightest) {
+			color: color-mix(in srgb, hsl(var(--color-brand)), white 45%);
+		}
+		/* As a line it marks what's chosen, which has to outrank the 40% lines around it */
+		.border-brand {
+			border-color: color-mix(in srgb, hsl(var(--color-brand)), white 45%);
+		}
+		.ring-brand {
+			--tw-ring-color: color-mix(in srgb, hsl(var(--color-brand)), white 45%);
+		}
+		@media (hover: hover) {
+			.hover\:border-brand:hover {
+				border-color: color-mix(in srgb, hsl(var(--color-brand)), white 45%);
+			}
+		}
+		:is(.bg-brand, .bg-brand-lighter) {
+			background-color: color-mix(in srgb, hsl(var(--color-brand)) 75%, black);
+		}
+		@media (hover: hover) {
+			.hover\:bg-brand-lighter:hover {
+				background-color: hsl(var(--color-brand));
+			}
+		}
+		.focus-visible\:bg-brand-lighter:focus-visible,
+		.data-\[state\=open\]\:bg-brand-lighter[data-state='open'] {
+			background-color: hsl(var(--color-brand));
+		}
+	}
+
+	/* Every focus ring is solid white, whatever colour and strength it had */
+	[data-increase-contrast] :focus-visible {
+		--tw-ring-color: #fff;
+	}
+}

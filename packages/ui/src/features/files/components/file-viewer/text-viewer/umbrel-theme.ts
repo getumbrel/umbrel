@@ -14,11 +14,30 @@ const umbrelEditorTheme = EditorView.theme(
 		// Force dark background on every CodeMirror layer — the wrapper div,
 		// the editor root, and the scroller all need explicit bg to prevent
 		// the library's default white from bleeding through.
+		// The whites the editor draws in, each a step stronger with Increase contrast, as the app's own text is
 		'&': {
-			color: 'rgba(255, 255, 255, 0.75)',
+			'--cm-umbrel-text': 'rgba(255, 255, 255, 0.75)',
+			'--cm-umbrel-strong': 'rgba(255, 255, 255, 0.90)',
+			'--cm-umbrel-gutter': 'rgba(255, 255, 255, 0.20)',
+			'--cm-umbrel-gutter-active': 'rgba(255, 255, 255, 0.40)',
+			'--cm-umbrel-comment': 'rgba(255, 255, 255, 0.25)',
+			'--cm-umbrel-punctuation': 'rgba(255, 255, 255, 0.30)',
+			'--cm-umbrel-bracket': 'rgba(255, 255, 255, 0.35)',
+			'--cm-umbrel-selection': 'rgba(255, 255, 255, 0.08)',
+			color: 'var(--cm-umbrel-text)',
 			backgroundColor: 'rgba(0, 0, 0, 0)',
-			fontSize: '13px',
+			fontSize: 'calc(13px + var(--text-boost))',
 			fontFamily: "SF Mono, SFMono-Regular, ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace",
+		},
+		'[data-increase-contrast] &': {
+			'--cm-umbrel-text': 'rgba(255, 255, 255, 0.85)',
+			'--cm-umbrel-strong': '#fff',
+			'--cm-umbrel-gutter': 'rgba(255, 255, 255, 0.7)',
+			'--cm-umbrel-gutter-active': '#fff',
+			'--cm-umbrel-comment': 'rgba(255, 255, 255, 0.7)',
+			'--cm-umbrel-punctuation': 'rgba(255, 255, 255, 0.7)',
+			'--cm-umbrel-bracket': 'rgba(255, 255, 255, 0.7)',
+			'--cm-umbrel-selection': 'rgba(255, 255, 255, 0.25)',
 		},
 		'&.cm-editor': {
 			backgroundColor: 'transparent',
@@ -27,7 +46,7 @@ const umbrelEditorTheme = EditorView.theme(
 			backgroundColor: 'transparent',
 		},
 		'.cm-content': {
-			caretColor: 'rgba(255, 255, 255, 0.9)',
+			caretColor: 'var(--cm-umbrel-strong)',
 			padding: '12px 0',
 			// See clipUnderGutters
 			clipPath: 'inset(0 0 0 var(--cm-umbrel-scrolled, 0px))',
@@ -38,24 +57,24 @@ const umbrelEditorTheme = EditorView.theme(
 			clipPath: 'inset(0 -1e8px -1e8px calc(var(--cm-umbrel-scrolled, 0px) + var(--cm-umbrel-gutters, 0px)))',
 		},
 		'.cm-cursor, .cm-dropCursor': {
-			borderLeftColor: 'rgba(255, 255, 255, 0.9)',
+			borderLeftColor: 'var(--cm-umbrel-strong)',
 			borderLeftWidth: '1.5px',
 		},
 		'&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-			backgroundColor: 'rgba(255, 255, 255, 0.08)',
+			backgroundColor: 'var(--cm-umbrel-selection)',
 		},
 		'.cm-activeLine': {
 			backgroundColor: 'rgba(255, 255, 255, 0.02)',
 		},
 		'.cm-gutters': {
 			backgroundColor: 'transparent',
-			color: 'rgba(255, 255, 255, 0.20)',
+			color: 'var(--cm-umbrel-gutter)',
 			border: 'none',
 			paddingLeft: '12px',
 		},
 		'.cm-activeLineGutter': {
 			backgroundColor: 'transparent',
-			color: 'rgba(255, 255, 255, 0.40)',
+			color: 'var(--cm-umbrel-gutter-active)',
 		},
 		'.cm-lineNumbers .cm-gutterElement': {
 			padding: '0 12px 0 4px',
@@ -99,24 +118,6 @@ const umbrelEditorTheme = EditorView.theme(
 			borderLeft: '2px solid rgba(245, 158, 11, 0.5)',
 			backgroundColor: 'rgba(245, 158, 11, 0.05)',
 		},
-		// Scrollbar — match Umbrel's custom scrollbar
-		'.cm-scroller::-webkit-scrollbar': {
-			width: '11px',
-			height: '11px',
-			background: 'transparent',
-		},
-		'.cm-scroller::-webkit-scrollbar-thumb': {
-			border: '4px solid transparent',
-			borderRadius: '20px',
-			backgroundClip: 'padding-box',
-			backgroundColor: 'rgba(255, 255, 255, 0.15)',
-		},
-		'.cm-scroller::-webkit-scrollbar-thumb:hover': {
-			backgroundColor: 'rgba(255, 255, 255, 0.30)',
-		},
-		'.cm-scroller::-webkit-scrollbar-corner': {
-			background: 'transparent',
-		},
 		// Focus ring — invisible (we handle focus at container level)
 		'&.cm-focused': {
 			outline: 'none',
@@ -137,9 +138,9 @@ const umbrelHighlightStyle = HighlightStyle.define([
 	{tag: tags.definition(tags.variableName), color: '#9ccfd8'},
 	{tag: tags.string, color: '#a6da95'},
 	{tag: tags.special(tags.string), color: '#a6da95'},
-	{tag: tags.comment, color: 'rgba(255, 255, 255, 0.25)', fontStyle: 'italic'},
-	{tag: tags.variableName, color: 'rgba(255, 255, 255, 0.75)'},
-	{tag: tags.bracket, color: 'rgba(255, 255, 255, 0.35)'},
+	{tag: tags.comment, color: 'var(--cm-umbrel-comment)', fontStyle: 'italic'},
+	{tag: tags.variableName, color: 'var(--cm-umbrel-text)'},
+	{tag: tags.bracket, color: 'var(--cm-umbrel-bracket)'},
 	{tag: tags.tagName, color: '#9ccfd8'},
 	{tag: tags.attributeName, color: '#f6c177'},
 	{tag: tags.attributeValue, color: '#a6da95'},
@@ -149,13 +150,13 @@ const umbrelHighlightStyle = HighlightStyle.define([
 	{tag: tags.className, color: '#f6c177'},
 	{tag: tags.function(tags.variableName), color: '#9ccfd8'},
 	{tag: tags.url, color: '#9ccfd8', textDecoration: 'underline'},
-	{tag: tags.heading, color: 'rgba(255, 255, 255, 0.90)', fontWeight: 'bold'},
+	{tag: tags.heading, color: 'var(--cm-umbrel-strong)', fontWeight: 'bold'},
 	{tag: tags.emphasis, fontStyle: 'italic'},
-	{tag: tags.strong, fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.90)'},
+	{tag: tags.strong, fontWeight: 'bold', color: 'var(--cm-umbrel-strong)'},
 	{tag: tags.link, color: '#9ccfd8'},
-	{tag: tags.processingInstruction, color: 'rgba(255, 255, 255, 0.25)'},
-	{tag: tags.punctuation, color: 'rgba(255, 255, 255, 0.30)'},
-	{tag: tags.separator, color: 'rgba(255, 255, 255, 0.30)'},
+	{tag: tags.processingInstruction, color: 'var(--cm-umbrel-comment)'},
+	{tag: tags.punctuation, color: 'var(--cm-umbrel-punctuation)'},
+	{tag: tags.separator, color: 'var(--cm-umbrel-punctuation)'},
 	{tag: tags.labelName, color: '#9ccfd8'},
 ])
 

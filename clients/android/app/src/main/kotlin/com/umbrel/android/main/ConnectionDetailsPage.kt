@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.umbrel.android.IdentityChange
 import com.umbrel.android.R
 import com.umbrel.android.ui.AppleType
 import com.umbrel.android.ui.InfoPageDivider
@@ -220,7 +221,7 @@ internal fun connectionTitle(connection: ConnectionState, route: ConnectionRoute
 		ConnectionRoute.TAILSCALE -> "Connected through Tailscale"
 		null -> "Connected"
 	}
-	ConnectionState.UNAVAILABLE -> if (identityChanged) "Not recognized" else "Not connected"
+	ConnectionState.UNAVAILABLE -> if (identityChanged) IdentityChange.STATUS else "Not connected"
 	ConnectionState.UNVERIFIED -> "Checking connection"
 }
 
@@ -236,7 +237,7 @@ internal fun connectionMessage(
 		null -> "This phone is securely connected to your Umbrel."
 	}
 	ConnectionState.UNAVAILABLE -> if (identityChanged) {
-		"This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app."
+		IdentityChange.MESSAGE
 	} else if (hasKnownTailscaleAddress) {
 		"Make sure your Umbrel is turned on. Connect this phone to the same local network, or turn on Tailscale."
 	} else {

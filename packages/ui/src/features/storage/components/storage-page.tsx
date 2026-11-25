@@ -54,13 +54,13 @@ export function StorageHeader({
 	return (
 		<div className={cn('flex flex-col gap-1 md:gap-2', className)}>
 			<h1
-				className='text-[20px] font-bold text-white/85 md:text-[24px]'
+				className='text-[20px] font-bold text-white/85 md:text-24'
 				style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 			>
 				{title}
 				{titleExtra && <> {titleExtra}</>}
 			</h1>
-			{subTitle && <p className='max-w-[640px] text-[14px] leading-relaxed text-white/50 md:text-[16px]'>{subTitle}</p>}
+			{subTitle && <p className='max-w-[640px] text-14 leading-relaxed text-white/50 md:text-16'>{subTitle}</p>}
 		</div>
 	)
 }

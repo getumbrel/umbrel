@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import {Button} from '@/components/ui/button'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
-import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialogSeparator, ImmersiveDialogTitle} from '@/components/ui/immersive-dialog'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {BackupsExclusions} from '@/features/backups/components/backups-exclusions'
 import {
@@ -27,8 +27,8 @@ import {
 	useRepositorySize,
 	useTriggerBackupForRepo,
 } from '@/features/backups/hooks/use-backups'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
-import {getDisplayRepositoryPath} from '@/features/backups/utils/filepath-helpers'
 import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import {EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
@@ -91,7 +91,9 @@ export function BackupsConfigureWizard() {
 	return (
 		<div className='flex h-full flex-col gap-4'>
 			<div>
-				<h2 className='text-24 font-medium text-white'>{t('backups')}</h2>
+				<ImmersiveDialogTitle asChild>
+					<h2 className='text-24 font-medium text-white'>{t('backups')}</h2>
+				</ImmersiveDialogTitle>
 			</div>
 			<ImmersiveDialogSeparator />
 
@@ -219,6 +221,7 @@ function LocationsSection({
 	const {t} = useTranslation()
 	const isSmallMobile = useIsSmallMobile()
 	const [lang] = useLanguage()
+	const describeBackupLocation = useDescribeBackupLocation()
 	return (
 		<>
 			<div className='space-y-2'>
@@ -260,7 +263,7 @@ function LocationsSection({
 						<div className='p-5 text-sm text-white/50'>{t('backups-configure.no-backup-locations')}</div>
 					) : (
 						repositories.map((repo) => {
-							const deviceName = repo.path.split('/').filter(Boolean)[1] || repo.path
+							const deviceName = describeBackupLocation(repo.path).name
 							const isConnected = isRepoConnected(repo.path, doesHostHaveMountedShares, disks)
 							return (
 								<div className='flex flex-col gap-0 p-3' key={repo.id}>
@@ -336,7 +339,8 @@ function RepositoryDetails({
 	const [confirmRemoveOpen, setConfirmRemoveOpen] = React.useState(false)
 	const [showAllBackups, setShowAllBackups] = React.useState(false)
 
-	const deviceName = repo.path.split('/').filter(Boolean)[1] || repo.path
+	const describeBackupLocation = useDescribeBackupLocation()
+	const location = describeBackupLocation(repo.path)
 	return (
 		<div className='space-y-4'>
 			<div className='flex items-center gap-2'>
@@ -356,7 +360,7 @@ function RepositoryDetails({
 					<ArrowLeft className='h-4 w-4' />
 				</span>
 				<BackupDeviceIcon path={repo.path} className='h-5 w-5 opacity-90' />
-				<span className='text-15 font-medium'>{deviceName}</span>
+				<span className='text-15 font-medium'>{location.name}</span>
 			</div>
 			<div className='divide-y divide-white/6 rounded-12 bg-white/5'>
 				{/* Connection row */}
@@ -375,7 +379,7 @@ function RepositoryDetails({
 						direction='x'
 						className='umbrel-hide-scrollbar min-w-0 overflow-x-auto text-right whitespace-nowrap'
 					>
-						{getDisplayRepositoryPath(repo.path)}
+						{location.path}
 					</FadeScroller>
 				</div>
 				<div className='flex items-center justify-between p-3 text-sm'>
@@ -424,15 +428,16 @@ function RepositoryDetails({
 						)}
 					</div>
 				</div>
-				<div
-					className={`flex items-center justify-between p-3 text-sm transition-colors ${
+				<button
+					type='button'
+					className={`flex w-full items-center justify-between p-3 text-left text-sm outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
 						isLoadingBackups || (backups?.length || 0) === 0
 							? ''
-							: `hover:bg-white/5 ${!showAllBackups ? 'hover:rounded-b-12' : ''}`
+							: `hover:bg-white/5 ${!showAllBackups ? 'rounded-b-12' : ''}`
 					}`}
-					onClick={
-						isLoadingBackups || (backups?.length || 0) === 0 ? undefined : () => setShowAllBackups(!showAllBackups)
-					}
+					disabled={isLoadingBackups || (backups?.length || 0) === 0}
+					aria-expanded={showAllBackups}
+					onClick={() => setShowAllBackups(!showAllBackups)}
 				>
 					<div className='text-white/60'>{t('backups-configure.total-backups')}</div>
 					<div className='flex items-center gap-2'>
@@ -449,7 +454,7 @@ function RepositoryDetails({
 							/>
 						)}
 					</div>
-				</div>
+				</button>
 				<AnimatePresence initial={false}>
 					{showAllBackups && (
 						<motion.div
@@ -486,7 +491,7 @@ function RepositoryDetails({
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t('backups-configure.remove-backup-location-confirmation')}</AlertDialogTitle>
 						<AlertDialogDescription>
-							{t('backups-configure.remove-backup-location-confirmation-description', {device: deviceName})}
+							{t('backups-configure.remove-backup-location-confirmation-description', {device: location.name})}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -530,10 +535,9 @@ function BackupsList({
 		return <div className='p-3 text-center text-sm text-white/40'>{t('backups-restore.no-backups-found')}</div>
 	}
 
-	// Show max 5 backups with scroll; the gutter stays reserved so crossing
-	// the threshold doesn't reflow the rows
+	// Show max 5 backups with scroll
 	return (
-		<div className='umbrel-stable-gutter max-h-[200px] overflow-y-auto'>
+		<div className='max-h-[200px] overflow-y-auto'>
 			<div className='divide-y divide-white/6'>
 				{backups.map((backup, index) => {
 					const id = backup.id ?? ''

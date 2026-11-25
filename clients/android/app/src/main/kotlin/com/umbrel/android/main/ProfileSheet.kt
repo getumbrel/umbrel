@@ -36,18 +36,22 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.umbrel.android.BuildConfig
+import com.umbrel.android.IdentityChange
 import com.umbrel.android.onboarding.RenderShadow
 import com.umbrel.android.onboarding.UmbrelDeviceRender
 import com.umbrel.android.onboarding.UmbrelRenderPlacement
@@ -65,10 +69,11 @@ import com.umbrel.android.ui.SheetToolbar
 import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.formatStorageSize
 import com.umbrel.android.ui.glassControl
+import com.umbrel.android.ui.openUrl
 import kotlinx.coroutines.launch
 
 /** The pages pushed inside the Profile sheet. */
-enum class ProfileDestination { REMOTE_ACCESS, CONNECTION, FOLDERS, FOLDER_SETUP }
+enum class ProfileDestination { REMOTE_ACCESS, CONNECTION, FOLDERS, FOLDER_SETUP, FAILED_UPLOADS }
 
 // The device render's shadow on the Profile card.
 private val ProfileRenderShadow = RenderShadow(opacity = 0.16f, radius = 8.dp, y = 16.dp)
@@ -85,6 +90,10 @@ private val ProfileRenderShadow = RenderShadow(opacity = 0.16f, radius = 8.dp, y
 fun ProfileSheet(
 	model: MainViewModel,
 	state: MainUiState,
+	/** The library's items, which what couldn't back up is listed from. */
+	library: PhotoLibraryAssets,
+	/** Opens one of those items in the viewer. */
+	photoLibrary: PhotoLibraryViewModel,
 	folders: List<LibraryFolder>,
 	choosingFolders: Boolean,
 	destination: ProfileDestination?,
@@ -95,6 +104,8 @@ fun ProfileSheet(
 	var page by rememberSaveable { mutableStateOf(destination) }
 	// The root keeps its scroll position under a pushed page, as a navigation stack does.
 	val pageStates = rememberSaveableStateHolder()
+	// Read here, above the pages, so the row's count and the page it opens are one list
+	val failedUploads = rememberFailedUploads(model, state, library)
 	LaunchedEffect(choosingFolders) {
 		if (choosingFolders) page = ProfileDestination.FOLDER_SETUP else if (page == ProfileDestination.FOLDER_SETUP) page = null
 	}
@@ -128,7 +139,7 @@ fun ProfileSheet(
 					when (current) {
 						null -> {
 							SheetToolbar("Profile", onClose = ::close)
-							ProfileRoot(model, state, folders, onOpen = { page = it }, onSignOut = { model.signOut(onDismiss) })
+							ProfileRoot(model, state, folders, failedUploads?.count ?: 0, onOpen = { page = it }, onSignOut = { model.signOut(onDismiss) })
 						}
 						ProfileDestination.REMOTE_ACCESS -> {
 							SheetToolbar("Tailscale", onClose = null, onBack = { page = null })
@@ -146,6 +157,10 @@ fun ProfileSheet(
 							SheetToolbar("Photo Backup", onClose = null)
 							FolderSetupPage(model, state, folders, onStart = model::confirmFolderChoice, modifier = Modifier.weight(1f))
 						}
+						ProfileDestination.FAILED_UPLOADS -> {
+							SheetToolbar("Couldn’t Back Up", onClose = null, onBack = { page = null })
+							FailedUploadsPage(model, photoLibrary, state, failedUploads, folders)
+						}
 					}
 				}
 			}
@@ -158,6 +173,7 @@ private fun ProfileRoot(
 	model: MainViewModel,
 	state: MainUiState,
 	folders: List<LibraryFolder>,
+	failedUploadCount: Int,
 	onOpen: (ProfileDestination) -> Unit,
 	onSignOut: () -> Unit,
 ) {
@@ -169,16 +185,18 @@ private fun ProfileRoot(
 	) {
 		DeviceCard(state, Modifier.padding(top = 20.dp, bottom = 10.dp))
 		ConnectionSection(state, onOpen)
-		PhotosSection(model, state, photoBackup, folders, onOpenFolders = { onOpen(ProfileDestination.FOLDERS) })
-		NotificationSection()
+		PhotosSection(
+			model,
+			state,
+			photoBackup,
+			folders,
+			failedUploadCount,
+			onOpenFolders = { onOpen(ProfileDestination.FOLDERS) },
+			onOpenFailedUploads = { onOpen(ProfileDestination.FAILED_UPLOADS) },
+		)
 		PermissionsSection(photoBackup)
 		SignOutButton(Modifier.padding(vertical = 10.dp)) { confirmingSignOut = true }
-		Text(
-			"Umbrel, Inc. · Version ${BuildConfig.VERSION_NAME}",
-			style = AppleType.footnote,
-			color = MainTheme.gray,
-			modifier = Modifier.padding(vertical = 10.dp),
-		)
+		Footer()
 	}
 	if (confirmingSignOut) {
 		AlertDialog(
@@ -259,20 +277,22 @@ private fun ConnectionSection(state: MainUiState, onOpen: (ProfileDestination) -
 	}
 }
 
-/** A static preview of the notification settings, under a "Coming Soon" badge. */
+/** The same privacy policy umbrelOS links to. Google Play asks for it in the app too. */
 @Composable
-private fun NotificationSection() {
-	SettingsSection("Notifications", badge = "Coming Soon") {
-		Column(Modifier.alpha(0.45f)) {
-			SettingsToggleRow(Symbols.PowerSettingsNew, "Device offline alert", checked = false, onCheckedChange = {}, enabled = false)
-			SettingsDivider()
-			SettingsToggleRow(Symbols.DriveWarning, "Storage alert", checked = false, onCheckedChange = {}, enabled = false, iconSize = 24.dp)
-			SettingsDivider()
-			SettingsToggleRow(Symbols.ArrowCircleUp, "umbrelOS updates", checked = false, onCheckedChange = {}, enabled = false)
-			SettingsDivider()
-			SettingsToggleRow(Symbols.AppBadge, "umbrelOS app updates", checked = false, onCheckedChange = {}, enabled = false)
-		}
-	}
+private fun Footer() {
+	val context = LocalContext.current
+	Text(
+		buildAnnotatedString {
+			append("Umbrel, Inc. · Version ${BuildConfig.VERSION_NAME} · ")
+			withLink(LinkAnnotation.Clickable("privacy", TextLinkStyles(SpanStyle(color = Color.White.copy(alpha = 0.65f)))) {
+				context.openUrl("https://umbrel.com/legal/privacy")
+			}) { append("Privacy\u00A0Policy") }
+		},
+		style = AppleType.footnote,
+		color = MainTheme.gray,
+		textAlign = TextAlign.Center,
+		modifier = Modifier.padding(vertical = 10.dp),
+	)
 }
 
 /**
@@ -284,9 +304,7 @@ private fun PermissionsSection(photoBackup: PhotoBackupControls) {
 	SettingsSection("Permissions") {
 		PhotoLibraryAccessRow(photoBackup)
 		SettingsDivider()
-		SettingsRow(Symbols.Notifications, "Notifications") {
-			SettingsValue("Coming Soon")
-		}
+		NotificationsRow(photoBackup)
 	}
 }
 
@@ -313,5 +331,5 @@ internal fun currentConnectionLabel(connection: ConnectionState, route: Connecti
 		ConnectionRoute.TAILSCALE -> "Tailscale"
 		null -> "Connected"
 	}
-	ConnectionState.UNAVAILABLE -> if (identityChanged) "Not recognized" else "Offline"
+	ConnectionState.UNAVAILABLE -> if (identityChanged) IdentityChange.STATUS else "Offline"
 }

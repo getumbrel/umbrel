@@ -126,7 +126,7 @@ export function AppIcon({
 				)}
 			</div>
 			<div className='max-w-full text-[length:var(--app-label)] leading-normal drop-shadow-desktop-label'>
-				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
+				<div className='truncate contrast-more:-mx-1 contrast-more:rounded-4 contrast-more:bg-black contrast-more:px-1'>
 					<AppLabel state={state} label={label} />
 				</div>
 			</div>

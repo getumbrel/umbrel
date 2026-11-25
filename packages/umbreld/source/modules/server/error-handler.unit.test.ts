@@ -22,7 +22,7 @@ beforeAll(async () => {
 	for (const path of assetPaths) await fse.outputFile(join(uiPath, path), image)
 
 	const app = express()
-	// Match the dashboard's cache policy, which is applied before serving files.
+	// Mark the files immutable before serving them, so an error has to replace the policy.
 	app.get(['/assets/*', '/wallpapers/*'], (_request, response, next) => {
 		response.set('Cache-Control', immutableCacheControl)
 		next()

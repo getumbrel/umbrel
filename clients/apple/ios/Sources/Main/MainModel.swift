@@ -57,8 +57,8 @@ final class MainModel {
 		case error
 		case backingUp(Int?)
 		case upToDate
-		// Only failed items remain. The extension retries them, and until the app can list
-		// them there's nothing for the user to do.
+		// Only failed items remain. They're retried once other backups make progress, and
+		// Profile lists them.
 		case upToDateExceptFailures
 
 		var text: String {
@@ -208,7 +208,9 @@ final class MainModel {
 	private(set) var blurredWallpaper: UIImage?
 	private(set) var wallpaperId: String?
 	private(set) var wallpaperBrandColorHsl: String?
-	@ObservationIgnored private var renderedWallpaperId: String?
+	@ObservationIgnored private var wallpaperHash: String?
+	// The id and hash of the wallpaper on screen, so a changed hash loads the new files
+	@ObservationIgnored private var renderedWallpaper: String?
 	private(set) var accountRole: String?
 	private(set) var backupPhotosEnabled = false
 	private(set) var backupVideosEnabled = false
@@ -382,23 +384,25 @@ final class MainModel {
 		let accountProfile = session.flatMap { device.accountProfile(for: $0.accountId) }
 		userName = accountProfile?.name
 		wallpaperId = accountProfile?.wallpaperId
+		wallpaperHash = accountProfile?.wallpaperHash
 		wallpaperBrandColorHsl = accountProfile?.wallpaperBrandColorHsl
 		accountRole = accountProfile?.role ?? (session?.accountId == "0" ? "owner" : "member")
 		if let id = accountProfile?.wallpaperId {
-			let fullScreen = WallpaperStore.shared.memoryCached(id: id)
-			wallpaperImage = fullScreen ?? WallpaperStore.shared.memoryCachedCard(id: id)
-			blurredWallpaper = WallpaperStore.shared.memoryBlurred(id: id)
-			if fullScreen != nil { renderedWallpaperId = id }
+			let hash = accountProfile?.wallpaperHash
+			let fullScreen = WallpaperStore.shared.memoryCached(id: id, hash: hash)
+			wallpaperImage = fullScreen ?? WallpaperStore.shared.memoryCachedCard(id: id, hash: hash)
+			blurredWallpaper = WallpaperStore.shared.memoryBlurred(id: id, hash: hash)
+			if fullScreen != nil { renderedWallpaper = Self.wallpaperVersion(id: id, hash: hash) }
 			Task { @MainActor [weak self] in
-				let fullScreen = await WallpaperStore.shared.cached(id: id)
+				let fullScreen = await WallpaperStore.shared.cached(id: id, hash: hash)
 				let card = fullScreen == nil
-					? await WallpaperStore.shared.cachedCard(id: id)
+					? await WallpaperStore.shared.cachedCard(id: id, hash: hash)
 					: nil
-				let blur = await WallpaperStore.shared.blurred(id: id)
-				guard let self, self.wallpaperId == id else { return }
+				let blur = await WallpaperStore.shared.blurred(id: id, hash: hash)
+				guard let self, self.wallpaperId == id, self.wallpaperHash == hash else { return }
 				if let image = fullScreen ?? card { wallpaperImage = image }
 				if let blur { blurredWallpaper = blur }
-				if fullScreen != nil { renderedWallpaperId = id }
+				if fullScreen != nil { renderedWallpaper = Self.wallpaperVersion(id: id, hash: hash) }
 			}
 		}
 		// Seed the tab data from the last-known snapshot (written by every load, and
@@ -857,6 +861,43 @@ final class MainModel {
 	// Nil until backup is set up. The app backs up while it's open on either route; on
 	// .tailscale, PhotoKit also does while it's closed.
 	var photoBackupRoute: PhotoBackupConfiguration.Route? { photoBackupPresentationConfiguration?.route }
+
+	// The media backup to this Umbrel includes, which is whose failures the app shows.
+	// Neither while backup isn't set up here, when nothing tries them again.
+	var photoBackupMedia: PhotoBackupMedia {
+		PhotoBackupMedia(
+			photos: photoBackupPresentationConfiguration?.includePhotos ?? false,
+			videos: photoBackupPresentationConfiguration?.includeVideos ?? false
+		)
+	}
+
+	// How many items the ledger counts as failed for the media backup includes. Profile
+	// lists those of them the Library still shows. None while backup isn't set up here.
+	var photoBackupFailedCount: Int {
+		photoBackupPresentationConfiguration == nil ? 0 : photoBackup.statistics?.failedCount ?? 0
+	}
+
+	// Automatic retries stop while backup is paused or stopped, until its own Try Again
+	var photoBackupRetriesFailuresByItself: Bool {
+		photoBackupStatus != .paused && photoBackupStatus != .error
+	}
+
+	// That Try Again is under way: the failed items are being requeued, or backup is
+	// starting again or checking storage first
+	var photoBackupRetryInProgress: Bool {
+		photoBackupFailuresRequeueing || photoBackupStatus == .settingUp || photoBackupStatus == .checkingStorage
+	}
+
+	// The items photoBackupFailedCount counts, newest first, read off the main thread.
+	// Nil when the ledger can't be read.
+	func photoBackupFailedAssets() async -> [PhotoBackupLedger.FailedAsset]? {
+		guard let configuration = photoBackupPresentationConfiguration else { return [] }
+		return await photoBackupReceipts.failedAssets(
+			sourceId: configuration.source.id,
+			includePhotos: configuration.includePhotos,
+			includeVideos: configuration.includeVideos
+		)
+	}
 
 	var photoBackupBackgroundRefreshUnavailable: Bool {
 		switch backgroundRefreshStatus {
@@ -1595,19 +1636,21 @@ final class MainModel {
 		guard info.userId == session?.accountId else { return }
 		let identityChanged = userName != info.name
 			|| wallpaperId != info.wallpaper.id
+			|| wallpaperHash != info.wallpaper.hash
 			|| wallpaperBrandColorHsl != info.wallpaper.brandColorHsl
 			|| accountRole != info.role
 		if userName != info.name { userName = info.name }
 		if wallpaperId != info.wallpaper.id { wallpaperId = info.wallpaper.id }
+		wallpaperHash = info.wallpaper.hash
 		if wallpaperBrandColorHsl != info.wallpaper.brandColorHsl {
 			wallpaperBrandColorHsl = info.wallpaper.brandColorHsl
 		}
 		if accountRole != info.role { accountRole = info.role }
-		if renderedWallpaperId != info.wallpaper.id
+		if renderedWallpaper != Self.wallpaperVersion(id: info.wallpaper.id, hash: info.wallpaper.hash)
 			|| wallpaperImage == nil
 			|| blurredWallpaper == nil
 		{
-			await loadWallpaperImages(id: info.wallpaper.id, target: target)
+			await loadWallpaperImages(id: info.wallpaper.id, hash: info.wallpaper.hash, target: target)
 		}
 		guard identityChanged else { return }
 		// Persist identity changes so the all-devices list and next launch match.
@@ -1618,6 +1661,7 @@ final class MainModel {
 					name: info.name,
 					wallpaperId: info.wallpaper.id,
 					wallpaperBrandColorHsl: info.wallpaper.brandColorHsl,
+					wallpaperHash: info.wallpaper.hash,
 					role: info.role
 				)
 			}
@@ -2006,6 +2050,61 @@ final class MainModel {
 			for: configuration,
 			renewGrant: photoBackup.issue == .authenticationRequired
 		)
+	}
+
+	// Try Again on the items that couldn't back up, which has to work while backup itself
+	// is fine. Like a change to the backup settings, it returns them to the queue: the
+	// app sends them from now, and with Tailscale PhotoKit's extension takes any that are
+	// left when iOS next runs it. A backup that's paused or stopped is retried its own
+	// way instead, which requeues them too.
+	func retryFailedPhotoBackups() {
+		switch photoBackupStatus {
+		case .paused:
+			retryPhotoBackupAfterInsufficientStorage()
+			return
+		case .error:
+			retryPhotoBackupAfterError()
+			return
+		default:
+			break
+		}
+		// One request at a time, however often the button is tapped
+		guard !photoBackupFailuresRequeueing else { return }
+		photoBackupFailuresRequeueing = true
+		Task {
+			await requeueFailedPhotoBackups()
+			photoBackupFailuresRequeueing = false
+		}
+	}
+
+	private(set) var photoBackupFailuresRequeueing = false
+
+	private func requeueFailedPhotoBackups() async {
+		guard let configuration = photoBackupPresentationConfiguration,
+			let ledgerURL = PhotoBackupStore.ledgerURL,
+			let ledger = PhotoBackupLedger(url: ledgerURL)
+		else { return }
+		// Lets go of the shared ledger before iOS suspends the app, which it would
+		// otherwise end (0xdead10cc)
+		let backgroundTime = BackgroundTaskAssertion(name: "Requeue failed photo backup assets") {
+			ledger.stop()
+		}
+		// Finding the failed assets reads every asset, so it's kept off the main thread
+		let requeued = await Task.detached {
+			(try? ledger.requeueFailedAssets(
+				deviceId: configuration.source.id,
+				includePhotos: configuration.includePhotos,
+				includeVideos: configuration.includeVideos
+			)) != nil
+		}.value
+		backgroundTime.end()
+		guard requeued else {
+			Self.logger.error("Could not requeue the failed photo backup assets")
+			return
+		}
+		presentationSnapshotDate = nil
+		refreshPhotoBackupPresentation()
+		PhotoBackupAppRunner.shared.run()
 	}
 
 	private func requestPhotoBackupRecovery(
@@ -2550,6 +2649,11 @@ final class MainModel {
 				includeVideos: includeVideos,
 				allowsCellularAccess: allowsCellularAccess
 			)
+			// PhotoKit's extension proves the Umbrel answers at its Tailscale address with
+			// this before creating uploads, and creates none without it
+			if route == .tailscale, !Keychain.sharePhotoBackupCA(deviceId: device.id) {
+				throw PhotoBackupSetupError.credentialStorageFailed
+			}
 			guard let ledgerURL = PhotoBackupStore.ledgerURL,
 				let ledger = PhotoBackupLedger(url: ledgerURL)
 			else { throw PhotoBackupSetupError.sharedStorageFailed }
@@ -2695,6 +2799,12 @@ final class MainModel {
 	}
 
 	private func disablePhotoBackupLocally(deviceId: String) {
+		Self.disablePhotoBackupLocally(deviceId: deviceId)
+		refreshPhotoBackupPresentation()
+	}
+
+	// Also for a sign-in (RootView), where no model exists yet
+	static func disablePhotoBackupLocally(deviceId: String) {
 		let configuration = PhotoBackupStore.configuration()
 		guard configuration == nil || configuration?.deviceId == deviceId else { return }
 		PhotoBackupAppRunner.shared.forget()
@@ -2709,7 +2819,6 @@ final class MainModel {
 				accountId: configuration.source.accountId
 			)
 		}
-		refreshPhotoBackupPresentation()
 	}
 
 	private func photoBackupFailed(_ failure: PhotoBackupSetupFailure, revision: Int) {
@@ -2742,14 +2851,18 @@ final class MainModel {
 	// blurred companion used to frost the cards. Both come from the same image so the
 	// frosted cards align with the sharp backdrop; both are cached on disk, so this only
 	// does work the very first time a wallpaper is ever seen.
-	private func loadWallpaperImages(id: String, target: Umbreld.Target) async {
-		guard let image = await WallpaperStore.shared.load(id: id, target: target)
+	private func loadWallpaperImages(id: String, hash: String?, target: Umbreld.Target) async {
+		guard let image = await WallpaperStore.shared.load(id: id, hash: hash, target: target)
 		else { return }
-		let blur = await WallpaperStore.shared.blurred(id: id)
-		guard wallpaperId == id else { return }
+		let blur = await WallpaperStore.shared.blurred(id: id, hash: hash)
+		guard wallpaperId == id, wallpaperHash == hash else { return }
 		wallpaperImage = image
 		blurredWallpaper = blur
-		renderedWallpaperId = id
+		renderedWallpaper = Self.wallpaperVersion(id: id, hash: hash)
+	}
+
+	private static func wallpaperVersion(id: String, hash: String?) -> String {
+		"\(id)#\(hash ?? "")"
 	}
 
 	func signOut() {
@@ -2761,6 +2874,10 @@ final class MainModel {
 			photoBackupSetupFailure = nil
 			if PhotoBackupStore.configuration()?.deviceId == id {
 				disablePhotoBackupLocally(deviceId: id)
+			}
+			// Even without a configuration: setup stores the grant before it saves one
+			if let accountId = sessionToRevoke?.accountId {
+				Keychain.deletePhotoBackupGrant(deviceId: id, accountId: accountId)
 			}
 			Keychain.deleteSession(deviceId: id)
 			self.session = nil
@@ -2812,6 +2929,9 @@ final class MainModel {
 		PhotoBackupPreferenceStore.removeDevice(device.id)
 
 		let session = Keychain.readSession(deviceId: device.id).session
+		if let session {
+			Keychain.deletePhotoBackupGrant(deviceId: device.id, accountId: session.accountId)
+		}
 		// Before the pinned CA is forgotten below: ending the browser session needs it.
 		await BrowserContext.signOut(target: device.nativeTarget, accountId: session?.accountId)
 		if let session {
@@ -2832,6 +2952,9 @@ final class MainModel {
 		if let target = nativeTarget {
 			let accountId = session?.accountId
 			Task { await BrowserContext.signOut(target: target, accountId: accountId) }
+		}
+		if let accountId = session?.accountId {
+			Keychain.deletePhotoBackupGrant(deviceId: deviceId, accountId: accountId)
 		}
 		Keychain.deleteSession(deviceId: deviceId)
 		session = nil

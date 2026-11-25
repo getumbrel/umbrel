@@ -1,4 +1,12 @@
-import {Dialog, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogOverlay,
+	DialogPortal,
+	DialogTitle,
+	DialogTrigger,
+} from '@radix-ui/react-dialog'
 import {motion} from 'motion/react'
 import {Children, ComponentPropsWithoutRef, ReactNode, useEffect} from 'react'
 
@@ -16,6 +24,7 @@ import {useImmersiveDialogCounter} from '@/providers/immersive-dialog'
 import {tw} from '@/utils/tw'
 
 import {IconTypes} from './icon'
+import {useReturnFocus} from './shared/return-focus'
 
 // Phones are narrow enough for a title to reach the close button
 export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80 pe-4`
@@ -46,6 +55,8 @@ export function ImmersiveDialog({open, children, ...props}: ComponentPropsWithou
 	)
 }
 export const ImmersiveDialogTrigger = DialogTrigger
+// The dialog's accessible name, put on the caller's own heading with `asChild`
+export const ImmersiveDialogTitle = DialogTitle
 
 export function ImmersiveDialogContent({
 	children,
@@ -54,6 +65,7 @@ export function ImmersiveDialogContent({
 	showScroll = false,
 	ref,
 	className,
+	closeCrossClassName,
 	...contentProps
 }: {
 	children: React.ReactNode
@@ -61,7 +73,10 @@ export function ImmersiveDialogContent({
 	short?: boolean
 	showScroll?: boolean
 	ref?: React.Ref<HTMLDivElement>
+	/** Colours the close button's cross on its own (see CloseButton) */
+	closeCrossClassName?: string
 } & Omit<ComponentPropsWithoutRef<typeof DialogContent>, 'asChild'>) {
+	const returnFocus = useReturnFocus(contentProps)
 	return (
 		<DialogContent
 			ref={ref}
@@ -80,6 +95,7 @@ export function ImmersiveDialogContent({
 				className,
 			)}
 			{...contentProps}
+			{...returnFocus}
 			// Compose after the spread so a caller's handler adds to the toast guard
 			onPointerDownOutside={(event) => {
 				preventDialogDismissForToasts(event)
@@ -102,7 +118,7 @@ export function ImmersiveDialogContent({
 				<div className={immersiveScrollAreaContentsClass}>{children}</div>
 			)}
 			<div className='umbrel-window-chrome umbrel-window-surface-all pointer-events-none absolute inset-0 z-50' />
-			<DialogCloseButton surface='immersive' />
+			<DialogCloseButton surface='immersive' crossClassName={closeCrossClassName} />
 		</DialogContent>
 	)
 }
@@ -120,6 +136,7 @@ export function ImmersiveDialogSplitContent({
 	footer?: React.ReactNode
 	ref?: React.Ref<HTMLDivElement>
 } & Omit<ComponentPropsWithoutRef<typeof DialogContent>, 'asChild'>) {
+	const returnFocus = useReturnFocus(contentProps)
 	return (
 		<DialogPortal>
 			<ImmersiveDialogOverlay />
@@ -135,6 +152,7 @@ export function ImmersiveDialogSplitContent({
 					'flex flex-row justify-between gap-0 p-0',
 				)}
 				{...contentProps}
+				{...returnFocus}
 				// Compose after the spread so a caller's handler adds to the toast guard
 				onPointerDownOutside={(event) => {
 					preventDialogDismissForToasts(event)
@@ -157,8 +175,8 @@ export function ImmersiveDialogSplitContent({
 	)
 }
 
-const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[calc(100dvh-40px)]`
-const immersiveContentTallClass = tw`max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-40px)]`
+const immersiveContentShortClass = tw`w-[calc(100%-40px-var(--safe-x))] max-w-[800px] max-h-[calc(100dvh-40px-var(--safe-top))]`
+const immersiveContentTallClass = tw`max-h-[800px] w-[calc(100%-40px-var(--safe-x))] max-w-[800px] h-[calc(100dvh-40px-var(--safe-top))]`
 const immersiveScrollAreaContentsClass = tw`flex h-full flex-col gap-6 px-6 py-4 md:p-8`
 
 export function ImmersiveDialogOverlay({ref}: {ref?: React.Ref<HTMLDivElement>}) {
@@ -186,8 +204,12 @@ export function ImmersiveDialogBody({
 	return (
 		<div className='flex h-full flex-col items-start gap-5'>
 			<div className='space-y-2'>
-				<h1 className={immersiveDialogTitleClass}>{title}</h1>
-				<p className={immersiveDialogDescriptionClass}>{description}</p>
+				<DialogTitle asChild>
+					<h1 className={immersiveDialogTitleClass}>{title}</h1>
+				</DialogTitle>
+				<DialogDescription asChild>
+					<p className={immersiveDialogDescriptionClass}>{description}</p>
+				</DialogDescription>
 			</div>
 			<ImmersiveDialogSeparator />
 			<div className='w-full space-y-2.5'>
@@ -291,7 +313,7 @@ export function ImmersiveDialogIconMessageKeyValue({
 				<IconComponent className={cn('h-5 w-5', iconClassName)} />
 			</div>
 			<div className='flex flex-1 text-14'>
-				<div className='flex-1 leading-tight font-normal -tracking-2 opacity-60'>{k}</div>
+				<div className='flex-1 leading-tight font-normal -tracking-2 text-white/60'>{k}</div>
 				<div className='leading-tight font-medium -tracking-2'>{v}</div>
 			</div>
 		</div>

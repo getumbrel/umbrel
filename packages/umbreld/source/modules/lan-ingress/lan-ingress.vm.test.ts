@@ -1,4 +1,6 @@
 // @vm-requires-playwright
+import {once} from 'node:events'
+import https from 'node:https'
 import {Readable} from 'node:stream'
 
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
@@ -252,6 +254,19 @@ describe.sequential('LAN ingress', () => {
 			expect(nftRules).toContain(`tcp dport ${port}`)
 			expect(nftRules).toContain(`ct original proto-dst != ${port} drop`)
 		}
+	})
+
+	test('keeps HTTPS connections open between requests', async () => {
+		// A browser can send its next request on the same TLS connection instead of
+		// handshaking again, on the dashboard, the app login port and app ports.
+		await expectHttpsConnectionReused(httpsPort, caCertificate)
+		await expectHttpsConnectionReused(authPort, caCertificate)
+		await expectHttpsConnectionReused(appProxyPort, caCertificate)
+		await expectHttpsConnectionReused(bridgeAppPort, caCertificate)
+
+		// An upload rejected before its body has arrived still closes the connection,
+		// so the client stops sending it.
+		await expectRejectedUploadClosesConnection(httpsPort, caCertificate)
 	})
 
 	test('re-resolves an app gateway target after an out-of-band container replacement', async () => {
@@ -581,6 +596,52 @@ async function expectTextAppPortSupportsHttpAndHttps(port: number, caCertificate
 		retry: {limit: 0},
 	})
 	expect(httpsResponse.body).toBe(expectedBody)
+}
+
+// The agent only has one connection, so the second request either goes out on
+// the first one's socket or has to open a new one once the server has closed it.
+async function expectHttpsConnectionReused(port: number, caCertificate: string) {
+	const agent = new https.Agent({keepAlive: true, maxSockets: 1, ca: caCertificate})
+	const get = () =>
+		new Promise<boolean>((resolve, reject) => {
+			const request = https.get({host: '127.0.0.1', port, agent}, (response) => {
+				response.resume()
+				response.once('end', () => resolve(request.reusedSocket))
+			})
+			request.once('error', reject)
+		})
+	try {
+		expect(await get()).toBe(false)
+		expect(await get()).toBe(true)
+	} finally {
+		agent.destroy()
+	}
+}
+
+async function expectRejectedUploadClosesConnection(port: number, caCertificate: string) {
+	const agent = new https.Agent({keepAlive: true, ca: caCertificate})
+	try {
+		// Announce a large body but only send the start of it, like an upload in progress.
+		const request = https.request({
+			host: '127.0.0.1',
+			port,
+			path: '/api/files/upload',
+			method: 'POST',
+			agent,
+			headers: {'content-length': 1024 ** 3},
+		})
+		request.on('error', () => {})
+		request.write(Buffer.alloc(1024))
+		const [response] = await once(request, 'response')
+		expect(response.statusCode).toBe(401)
+		response.resume()
+		await Promise.race([
+			once(response.socket, 'close'),
+			rejectAfter(5000, 'Expected the connection to close after an early response'),
+		])
+	} finally {
+		agent.destroy()
+	}
 }
 
 async function expectWebSocketRejected(url: string) {

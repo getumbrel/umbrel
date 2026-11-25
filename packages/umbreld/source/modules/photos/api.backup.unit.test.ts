@@ -1,4 +1,5 @@
 import {once} from 'node:events'
+import http from 'node:http'
 import type {AddressInfo} from 'node:net'
 import nodePath from 'node:path'
 import {PassThrough} from 'node:stream'
@@ -80,6 +81,12 @@ describe('photo backup API', () => {
 		}
 	>()
 	const touchSession = vi.fn(async () => true)
+	const authenticatePhotoBackupGrant = vi.fn(async (token: string) => {
+		if (token === 'photo-grant') {
+			return {sessionId: 'native-session', accountId: '0', actor: 'account' as const, sourceId: SOURCE_ID}
+		}
+		throw new Error('Invalid credential')
+	})
 	let sourceActive = true
 	const getBackupSource = vi.fn(async () => source)
 	const withBackupSource = vi.fn(
@@ -208,12 +215,7 @@ describe('photo backup API', () => {
 		await directory.createRoot()
 		mediaDirectory = await directory.create()
 		const auth = {
-			authenticatePhotoBackupGrant: async (token: string) => {
-				if (token === 'photo-grant') {
-					return {sessionId: 'native-session', accountId: '0', actor: 'account' as const, sourceId: SOURCE_ID}
-				}
-				throw new Error('Invalid credential')
-			},
+			authenticatePhotoBackupGrant,
 			touchSession,
 		}
 		const photos = {
@@ -712,6 +714,37 @@ describe('photo backup API', () => {
 				'utf8',
 			),
 		).resolves.toBe('sidecar')
+	})
+
+	test('refuses an invalid grant only once the whole upload has arrived', async () => {
+		const megabyte = Buffer.alloc(1024 * 1024)
+		const request = http.request(`${origin}/api/photos/upload`, {
+			method: 'POST',
+			headers: {
+				Authorization: 'Bearer invalid-grant',
+				'Content-Length': 4 * megabyte.length,
+				'X-Umbrel-Photo-Backup-Key': RESOURCE_KEY,
+				'X-Umbrel-Photo-Backup-Extension': 'heic',
+				...filenameHeader(),
+			},
+		})
+		let answered = false
+		const answer = once(request, 'response').then(([response]: http.IncomingMessage[]) => {
+			answered = true
+			return response
+		})
+
+		authenticatePhotoBackupGrant.mockClear()
+		request.write(megabyte)
+		await vi.waitFor(() => expect(authenticatePhotoBackupGrant).toHaveBeenCalledTimes(1))
+		await new Promise((resolve) => setTimeout(resolve, 100))
+		expect(answered).toBe(false)
+
+		for (let sent = 1; sent < 4; sent++) request.write(megabyte)
+		request.end()
+		const response = await answer
+		response.resume()
+		expect(response.statusCode).toBe(401)
 	})
 
 	test('checks source removal only after a stalled request body has finished staging', async () => {

@@ -212,7 +212,7 @@ function BatchSection({batch, onCancel}: {batch: TransferBatchView; onCancel: ()
 					</Fade>
 				</div>
 			</div>
-			<div className='mt-0.5 flex items-center justify-between gap-3 text-[11px] text-white/50'>
+			<div className='mt-0.5 flex items-center justify-between gap-3 text-11 text-white/50'>
 				<Swap id={batch.status} className='min-w-0 truncate'>
 					{batch.status === 'done' ? (
 						<span className='inline-flex items-center gap-1'>
@@ -252,7 +252,7 @@ function BatchSection({batch, onCancel}: {batch: TransferBatchView; onCancel: ()
 					))}
 				</AnimatePresence>
 				<Fade show={batch.hiddenCount > 0}>
-					<div className='h-[18px] text-[11px] leading-[18px] text-white/40'>
+					<div className='h-[18px] text-11 leading-[18px] text-white/40'>
 						{t('files-transfers.more-count', {count: batch.hiddenCount})}
 					</div>
 				</Fade>
@@ -336,7 +336,7 @@ function Row({item}: {item: TransferItem}) {
 			>
 				{item.name}
 			</span>
-			<Swap id={item.state} className='max-w-[45%] shrink-0 truncate text-[11px] text-white/50'>
+			<Swap id={item.state} className='max-w-[45%] shrink-0 truncate text-11 text-white/50'>
 				{status}
 			</Swap>
 			<Fade show={action !== undefined}>{action}</Fade>
@@ -425,7 +425,7 @@ function errorText(item: TransferItem, t: TFunction) {
 function TextButton({children, onClick}: {children: ReactNode; onClick: () => void}) {
 	return (
 		<button
-			className='shrink-0 rounded-full px-2 py-0.5 text-[11px] text-white/70 transition-colors hover:bg-white/10 hover:text-white active:scale-[0.97]'
+			className='shrink-0 rounded-full px-2 py-0.5 text-11 text-white/70 transition-colors hover:bg-white/10 hover:text-white active:scale-[0.97]'
 			onClick={(event) => {
 				event.stopPropagation()
 				onClick()

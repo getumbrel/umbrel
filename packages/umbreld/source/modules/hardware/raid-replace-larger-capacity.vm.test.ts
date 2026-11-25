@@ -1,7 +1,7 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 
 describe('RAID storage mode - upgrade disk capacity', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
@@ -191,7 +191,7 @@ describe('RAID storage mode - upgrade disk capacity', () => {
 	})
 })
 
-describe('RAID failsafe mode - upgrade disk capacity', () => {
+describe.each(raidzDrives)('RAID failsafe mode - upgrade disk capacity ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
@@ -202,7 +202,7 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 	let failed = false
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -218,16 +218,16 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 	})
 
 	test('adds two 32GB NVMe devices and boots VM', async () => {
-		await umbreld.vm.addNvme({slot: 1, size: '32G'})
-		await umbreld.vm.addNvme({slot: 2, size: '32G'})
+		await drive.add(umbreld.vm, {slot: 1, size: '32G'})
+		await drive.add(umbreld.vm, {slot: 2, size: '32G'})
 		await umbreld.vm.powerOn()
 	})
 
 	test('detects both NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(2)
-		const device1 = devices.find((d) => d.slot === 1)
-		const device2 = devices.find((d) => d.slot === 2)
+		const device1 = devices.find(drive.inSlot(1))
+		const device2 = devices.find(drive.inSlot(2))
 		expect(device1).toBeDefined()
 		expect(device2).toBeDefined()
 		firstDeviceId = device1!.id!
@@ -235,7 +235,11 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 	})
 
 	test('registers user with failsafe RAID config (triggers reboot)', async () => {
-		await umbreld.signup({raidDevices: [firstDeviceId, secondDeviceId], raidType: 'failsafe'})
+		await umbreld.signup({
+			raidDevices: [firstDeviceId, secondDeviceId],
+			raidType: 'failsafe',
+			failsafeLayout: drive.failsafeLayout,
+		})
 	})
 
 	test('waits for RAID setup to complete and logs in', async () => {
@@ -259,6 +263,7 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.exists).toBe(true)
 		expect(status.raidType).toBe('failsafe')
+		expect(status.topology).toBe('raidz')
 		expect(status.status).toBe('ONLINE')
 		expect(status.devices).toHaveLength(2)
 		initialUsableSpace = status.usableSpace!
@@ -274,7 +279,7 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 
 	test('shuts down and adds first 64GB replacement drive', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.addNvme({slot: 3, size: '64G'})
+		await drive.add(umbreld.vm, {slot: 3, size: '64G'})
 		await umbreld.vm.powerOn()
 	})
 
@@ -286,7 +291,7 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 	test('detects new 64GB drive in slot 3', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(3)
-		const thirdDevice = devices.find((d) => d.slot === 3)
+		const thirdDevice = devices.find(drive.inSlot(3))
 		expect(thirdDevice).toBeDefined()
 		thirdDeviceId = thirdDevice!.id!
 	})
@@ -319,7 +324,7 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 
 	test('shuts down and adds second 64GB replacement drive', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.addNvme({slot: 4, size: '64G'})
+		await drive.add(umbreld.vm, {slot: 4, size: '64G'})
 		await umbreld.vm.powerOn()
 	})
 
@@ -331,7 +336,7 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 	test('detects new 64GB drive in slot 4', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(4)
-		const fourthDevice = devices.find((d) => d.slot === 4)
+		const fourthDevice = devices.find(drive.inSlot(4))
 		expect(fourthDevice).toBeDefined()
 		fourthDeviceId = fourthDevice!.id!
 	})
@@ -367,6 +372,7 @@ describe('RAID failsafe mode - upgrade disk capacity', () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.exists).toBe(true)
 		expect(status.raidType).toBe('failsafe')
+		expect(status.topology).toBe('raidz')
 		expect(status.status).toBe('ONLINE')
 		expect(status.devices).toHaveLength(2)
 		const deviceIds = status.devices!.map((d) => d.id).sort()

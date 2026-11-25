@@ -41,7 +41,7 @@ export function SegmentedControl<T extends string>({
 			aria-label={ariaLabel}
 			className={cn(
 				'flex shrink-0 gap-0 rounded-full border-[0.5px] border-white/6 bg-white/3',
-				size === 'sm' && 'h-[24px] p-1 text-[9px]',
+				size === 'sm' && 'h-[24px] p-1 text-9',
 				size === 'default' && 'h-[30px] p-1 text-12',
 				size === 'lg' && 'h-[40px] p-[5px] text-12',
 				className,
@@ -65,7 +65,7 @@ export function SegmentedControl<T extends string>({
 						'group relative flex-grow rounded-full leading-inter-trimmed outline-hidden transition-[box-shadow,background]',
 						value === tab.id && variant === 'primary' && 'focus-visible:ring-2 focus-visible:ring-brand/40',
 						value === tab.id && variant === 'muted-primary' && 'focus-visible:ring-2 focus-visible:ring-white/25',
-						value !== tab.id && 'outline-1 -outline-offset-2 outline-transparent focus-visible:outline-white/10',
+						value !== tab.id && 'focus-visible:ring-2 focus-visible:ring-white/25',
 						size === 'sm' && 'px-2',
 						size === 'default' && 'px-2.5',
 						size === 'lg' && 'px-[14px]',
@@ -79,9 +79,11 @@ export function SegmentedControl<T extends string>({
 							layoutId={id}
 							className={cn(
 								'absolute inset-0 z-10 rounded-full',
-								variant === 'default' && 'bg-white/10',
+								variant === 'default' &&
+									'bg-white/10 contrast-more:bg-white/30 contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
 								variant === 'primary' && 'bg-brand',
-								variant === 'muted-primary' && 'bg-brand/45 shadow-button-highlight-soft-hpx',
+								variant === 'muted-primary' &&
+									'bg-brand/45 shadow-button-highlight-soft-hpx contrast-more:bg-brand/70 contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
 							)}
 							transition={
 								variant === 'muted-primary'
@@ -94,8 +96,12 @@ export function SegmentedControl<T extends string>({
 						className={cn(
 							'relative z-10 transition-opacity duration-200',
 							size === 'lg' && 'font-medium',
-							value !== tab.id && variant !== 'muted-primary' && 'opacity-50 group-hover:opacity-80',
-							value !== tab.id && variant === 'muted-primary' && 'opacity-75 group-hover:opacity-90',
+							value !== tab.id &&
+								variant !== 'muted-primary' &&
+								'opacity-50 group-hover:opacity-80 contrast-more:opacity-85 contrast-more:group-hover:opacity-100',
+							value !== tab.id &&
+								variant === 'muted-primary' &&
+								'opacity-75 group-hover:opacity-90 contrast-more:opacity-90',
 						)}
 					>
 						{tab.label}

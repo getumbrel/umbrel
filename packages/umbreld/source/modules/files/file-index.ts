@@ -14,6 +14,8 @@ import {
 } from './file-index-engine.ts'
 import type {PublishedFileRevision, ThumbnailReference} from './file-index-enrichment.ts'
 import {PHOTOS_THUMBNAIL_VARIANTS, type ThumbnailVariant} from './thumbnail-support.ts'
+import type {PeopleChange} from '../photos/people.ts'
+import type {SearchRead, SearchReadResult} from '../search/types.ts'
 import type {
 	PhotoAlbum,
 	PhotoBackupCloudIdentity,
@@ -21,8 +23,10 @@ import type {
 	PhotoFilter,
 	PhotoIndexingProgress,
 	PhotoIndexingState,
-	PhotoItem,
 	PhotoItemDetail,
+	PhotoItem,
+	PhotoPerson,
+	PhotoPersonSuggestion,
 	PhotoScopeMode,
 	PhotoSource,
 	PhotoSummary,
@@ -171,6 +175,12 @@ export default class FileIndex {
 		await this.#launchWorker()
 	}
 
+	// Resolves once the worker launch in progress, if any, has finished. The index
+	// may still be unavailable afterwards if the launch failed.
+	async waitForLaunch() {
+		await this.#launch
+	}
+
 	async #launchWorker() {
 		if (this.#launch) return this.#launch
 		const launch = this.#bootWorker().catch((error) => {
@@ -218,6 +228,9 @@ export default class FileIndex {
 				this.#workerBootTimeoutMs,
 				'File index worker startup timed out',
 			)
+			// Before any background work starts: the models are not to read a
+			// library whose owner has had them leave it alone
+			if (!this.#modelWork) this.#notifyFor(worker, generation, 'setModelWork', [false])
 			if (this.#backgroundReconciliationStarted) {
 				this.#notifyFor(worker, generation, 'startBackgroundReconciliation', [])
 			}
@@ -226,6 +239,10 @@ export default class FileIndex {
 			this.logger.log(`Started file index worker thread ${this.#workerThreadId}`)
 		} catch (error) {
 			if (this.#detachWorker(worker, generation, error)) {
+				// terminate() can't interrupt a long SQLite statement, so the worker can
+				// take as long as that statement does to exit. Log the failure now
+				// rather than only once it has.
+				if (!this.#stopping) this.logger.error('File index worker failed to start, waiting for it to exit', error)
 				await worker.terminate().catch(() => {})
 			}
 			throw error
@@ -361,6 +378,14 @@ export default class FileIndex {
 	startBackgroundReconciliation() {
 		this.#backgroundReconciliationStarted = true
 		this.#notify('startBackgroundReconciliation', [])
+	}
+
+	// Whether the models read the library so that it is found by what is in
+	// it. A worker that starts later is told as it starts.
+	#modelWork = true
+	setModelWork(enabled: boolean) {
+		this.#modelWork = enabled
+		if (this.#workerReady) this.#notify('setModelWork', [enabled])
 	}
 
 	scheduleFullReconciliation(reason: string) {
@@ -525,6 +550,10 @@ export default class FileIndex {
 		])
 	}
 
+	async photosSearch<R extends SearchRead>(accountId: string, request: R) {
+		return this.#request<SearchReadResult[R['type']]>('photosSearch', [accountId, request])
+	}
+
 	async photosMapPoints(accountId: string, filter: PhotoFilter) {
 		return this.#request<Uint8Array>('photosMapPoints', [accountId, filter])
 	}
@@ -559,6 +588,18 @@ export default class FileIndex {
 
 	async photosListAlbums(accountId: string) {
 		return this.#request<PhotoAlbum[]>('photosListAlbums', [accountId])
+	}
+
+	async photosListPeople(accountId: string, hidden: boolean) {
+		return this.#request<PhotoPerson[]>('photosListPeople', [accountId, hidden])
+	}
+
+	async photosListPersonSuggestions(accountId: string) {
+		return this.#request<PhotoPersonSuggestion[]>('photosListPersonSuggestions', [accountId])
+	}
+
+	async photosChangePeople(accountId: string, change: PeopleChange) {
+		return this.#request<boolean>('photosChangePeople', [accountId, change])
 	}
 
 	async photosCreateAlbum(accountId: string, name: string, ids?: string[]) {
@@ -625,6 +666,11 @@ export default class FileIndex {
 	async reconcilePath(systemPath: string) {
 		if (!this.#workerReady) return
 		await this.#request('reconcilePath', [systemPath])
+	}
+
+	async reconcileCreatedDirectory(systemPath: string) {
+		if (!this.#workerReady) return
+		await this.#request('reconcileCreatedDirectory', [systemPath])
 	}
 
 	async removePath(systemPath: string) {
@@ -752,7 +798,9 @@ export default class FileIndex {
 			if (worker) {
 				const generation = this.#workerGeneration
 				this.#detachWorker(worker, generation, new Error('File index worker stopped during startup'))
+				this.logger.log('Terminating file index worker that is still starting')
 				await worker.terminate().catch(() => {})
+				this.logger.log('Terminated file index worker')
 			}
 			await launch
 		}

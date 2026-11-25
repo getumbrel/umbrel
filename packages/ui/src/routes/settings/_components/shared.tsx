@@ -3,12 +3,11 @@ import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {TbChevronLeft} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {cn} from '@/lib/utils'
 import {AccountAvatarEditor, type AccountAvatarControlsVisibility} from '@/modules/auth/account-avatar-editor'
-import {afterDelayedClose} from '@/utils/dialog'
+import {useNavigateAfterExit} from '@/utils/dialog'
 import {focusRingClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
@@ -49,6 +48,18 @@ export function SettingsAccountAvatar({
 	)
 }
 
+// The mark beside Storage Manager when something is wrong with the storage: amber for what
+// needs attention, red for what can't wait. Its label is the sentence Storage Manager leads with.
+export function StorageAlarmDot({critical, label, className}: {critical: boolean; label: string; className?: string}) {
+	const colour = critical ? 'bg-[#FF3434]' : 'bg-[#F5A623]'
+	return (
+		<span className={cn('relative', className)} role='img' aria-label={label}>
+			<span className={cn('absolute inset-0 rounded-full', colour)} />
+			<span className={cn('absolute inset-0 animate-ping rounded-full opacity-75', colour)} />
+		</span>
+	)
+}
+
 export function ChangePasswordWarning() {
 	const {t} = useTranslation()
 	return <ErrorAlert icon={RiAlarmWarningFill} description={t('change-password.callout')} />
@@ -79,15 +90,8 @@ export function Divider() {
 }
 
 export function useSettingsDialogProps({closeTo = '/settings'}: {closeTo?: string} = {}) {
-	const navigate = useNavigate()
-
 	const [open, setOpen] = useState(true)
+	useNavigateAfterExit(!open, closeTo)
 
-	return {
-		open,
-		onOpenChange: (open: boolean) => {
-			setOpen(open)
-			afterDelayedClose(() => navigate(closeTo))(open)
-		},
-	}
+	return {open, onOpenChange: setOpen}
 }

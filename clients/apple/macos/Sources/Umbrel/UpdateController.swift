@@ -158,7 +158,11 @@ private final class UmbrelUpdateUserDriver: NSObject, SPUUserDriver {
 			message: "You’re currently using version \(currentDisplayVersion).",
 			buttons: buttons,
 			onClose: dismiss,
-			notes: Self.windowNotes(for: appcastItem)
+			notes: Self.windowNotes(for: appcastItem),
+			// A scheduled check shows the window without taking focus from what the user
+			// is doing. It's the only window a scheduled check shows unprompted: Sparkle
+			// shows its errors only once an update has been shown.
+			takesFocus: state.userInitiated
 		)
 	}
 
@@ -375,7 +379,8 @@ private final class UmbrelUpdateUserDriver: NSObject, SPUUserDriver {
 		buttons: [UpdateWindowButton] = [],
 		onClose: (() -> Void)? = nil,
 		expandedMessage: Bool = false,
-		notes: UpdateWindowNotes? = nil
+		notes: UpdateWindowNotes? = nil,
+		takesFocus: Bool = true
 	) {
 		let controller = windowController ?? UpdateWindowController()
 		windowController = controller
@@ -386,7 +391,8 @@ private final class UmbrelUpdateUserDriver: NSObject, SPUUserDriver {
 			buttons: buttons,
 			onClose: onClose,
 			expandedMessage: expandedMessage,
-			notes: notes
+			notes: notes,
+			takesFocus: takesFocus
 		)
 	}
 }
@@ -454,6 +460,9 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 		window.titlebarAppearsTransparent = true
 		window.isMovableByWindowBackground = true
 		window.animationBehavior = .alertPanel
+		// Panels hide while their app is inactive, and this one is often shown without
+		// activating the app. It stays up until the user answers it.
+		window.hidesOnDeactivate = false
 		super.init(window: window)
 		window.delegate = self
 	}
@@ -470,7 +479,8 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 		buttons: [UpdateWindowButton],
 		onClose: (() -> Void)?,
 		expandedMessage: Bool,
-		notes: UpdateWindowNotes?
+		notes: UpdateWindowNotes?,
+		takesFocus: Bool
 	) {
 		guard let window else { return }
 		closeAction = onClose
@@ -491,9 +501,13 @@ private final class UpdateWindowController: NSWindowController, NSWindowDelegate
 			? window.contentView?.fittingSize.height ?? 250
 			: progress == nil ? (expandedMessage ? 250 : 228) : 232
 		window.setContentSize(NSSize(width: 360, height: height))
-		NSApp.activate(ignoringOtherApps: true)
 		window.center()
-		window.makeKeyAndOrderFront(nil)
+		if takesFocus {
+			NSApp.activate(ignoringOtherApps: true)
+			window.makeKeyAndOrderFront(nil)
+		} else {
+			window.orderFrontRegardless()
+		}
 	}
 
 	func focus() {

@@ -1,21 +1,12 @@
 import {useState} from 'react'
-import {useNavigate} from 'react-router-dom'
 
-import {afterDelayedClose} from '@/utils/dialog'
+import {useNavigateAfterExit} from '@/utils/dialog'
 
 import {WidgetSelector} from './widget-selector'
 
 export default function EditWidgetsPage() {
-	const navigate = useNavigate()
 	const [open, setOpen] = useState(true)
+	useNavigateAfterExit(!open, '/')
 
-	return (
-		<WidgetSelector
-			open={open}
-			onOpenChange={(open) => {
-				setOpen(open)
-				afterDelayedClose(() => navigate('/'))(open)
-			}}
-		/>
-	)
+	return <WidgetSelector open={open} onOpenChange={setOpen} />
 }

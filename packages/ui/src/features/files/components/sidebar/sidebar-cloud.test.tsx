@@ -111,6 +111,7 @@ vi.mock('@/features/files/hooks/use-navigate', () => ({
 vi.mock('@/hooks/use-query-params', () => ({
 	useQueryParams: () => ({addLinkSearchParams: (params: Record<string, string>) => params}),
 }))
+vi.mock('@/modules/desktop/dock', () => ({DockSpacer: () => null}))
 vi.mock('@/providers/cloud', () => ({useCloudActivity: () => ({activities: []})}))
 vi.mock('@/trpc/trpc', () => ({
 	trpcReact: {files: {cloud: {syncs: {useQuery: () => ({data: []})}}}},

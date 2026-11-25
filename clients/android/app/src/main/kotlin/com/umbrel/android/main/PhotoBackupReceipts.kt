@@ -3,12 +3,24 @@ package com.umbrel.android.main
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import com.umbrel.kit.backup.PhotoBackupFailureReason
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+
+/** What the ledger holds for an item's current version. */
+sealed class BackupReceipt {
+	/** Nothing to show: the item is still waiting, or isn't something backup covers. */
+	data object None : BackupReceipt()
+
+	/** A completed upload receipt. */
+	data object BackedUp : BackupReceipt()
+
+	data class Failed(val reason: PhotoBackupFailureReason) : BackupReceipt()
+}
 
 /**
  * Backup receipts for the thumbnails on screen, the port of iOS's PhotoBackupReceiptCache.
@@ -22,15 +34,15 @@ import kotlinx.coroutines.launch
  */
 class PhotoBackupReceipts(
 	scope: CoroutineScope,
-	// The identifiers among the items whose current version has a completed upload receipt.
-	private val read: suspend (List<LocalMediaItem>) -> Set<String>,
+	// The receipts of the items that have one, by identifier.
+	private val read: suspend (List<LocalMediaItem>) -> Map<String, BackupReceipt>,
 	revisions: Flow<Any>,
 	private val capacity: Int = 512,
 ) {
-	private class Entry(val backedUp: Boolean, val generation: Int)
+	private class Entry(val receipt: BackupReceipt, val generation: Int)
 
 	private class Request(val item: LocalMediaItem, val generation: Int) {
-		val result = CompletableDeferred<Boolean>()
+		val result = CompletableDeferred<BackupReceipt>()
 	}
 
 	// Main-thread state: requests come from composition effects and batches resume on the
@@ -51,14 +63,14 @@ class PhotoBackupReceipts(
 		}
 	}
 
-	/** Whether the item is backed up, if that's already known for the current backup state. */
-	fun cachedBackedUp(item: LocalMediaItem): Boolean? =
-		entries[item.localIdentifier]?.takeIf { it.generation == generation }?.backedUp
+	/** The item's receipt, if it's already known for the current backup state. */
+	fun cached(item: LocalMediaItem): BackupReceipt? =
+		entries[item.localIdentifier]?.takeIf { it.generation == generation }?.receipt
 
-	/** Whether the item is backed up, read with others requested alongside it. */
-	suspend fun isBackedUp(item: LocalMediaItem): Boolean {
+	/** The item's receipt, read with others requested alongside it. */
+	suspend fun receipt(item: LocalMediaItem): BackupReceipt {
 		val id = item.localIdentifier
-		entries[id]?.let { if (it.generation == generation) return it.backedUp }
+		entries[id]?.let { if (it.generation == generation) return it.receipt }
 		requests[id]?.let { if (it.generation == generation) return it.result.await() }
 		val request = Request(item, generation)
 		requests[id] = request
@@ -71,7 +83,7 @@ class PhotoBackupReceipts(
 		if (pending.isEmpty()) return
 		val batch = pending.toList()
 		pending.clear()
-		val backedUp = try {
+		val receipts = try {
 			read(batch.map { it.item })
 		} catch (cancelled: CancellationException) {
 			batch.forEach {
@@ -83,13 +95,13 @@ class PhotoBackupReceipts(
 			// A failed read isn't proof that an item lacks a receipt, so nothing is cached.
 			batch.forEach {
 				finish(it)
-				it.result.complete(false)
+				it.result.complete(BackupReceipt.None)
 			}
 			return
 		}
 		for (request in batch) {
 			val id = request.item.localIdentifier
-			val result = id in backedUp
+			val result = receipts[id] ?: BackupReceipt.None
 			if (request.generation == generation) store(id, result)
 			finish(request)
 			request.result.complete(result)
@@ -101,9 +113,9 @@ class PhotoBackupReceipts(
 		if (requests[id] === request) requests.remove(id)
 	}
 
-	private fun store(id: String, backedUp: Boolean) {
+	private fun store(id: String, receipt: BackupReceipt) {
 		entries.remove(id)
-		entries[id] = Entry(backedUp, generation)
+		entries[id] = Entry(receipt, generation)
 		while (entries.size > capacity) entries.remove(entries.keys.first())
 	}
 

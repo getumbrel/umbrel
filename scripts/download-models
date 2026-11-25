@@ -1,0 +1,105 @@
+#!/usr/bin/env node
+// Downloads the models umbrelOS installs after it starts, from where their
+// authors publish them, into the layout the download server serves them in:
+//
+//   <directory>/<sha256>/<file>
+//
+// with a file a device keeps in a directory of its own under its name alone.
+// A device asks for https://download.umbrel.com/models/<sha256>/<file>, so
+// the directory this fills is what goes at /models there. A file is kept
+// under its hash, so replacing a model never changes what a device already in
+// the field is given.
+//
+// The models, and the hash and size each must have, are listed in
+// packages/umbreld/source/modules/files/models.json. A model's `source` is the
+// file itself, or an archive (ZIP or tar) that has it as `member`. This prints the hash of
+// every file, as `sha256sum --check` reads them from inside the directory,
+// and leaves the same in <directory>/SHA256SUMS. It fails when a file is not
+// what the list says. After adding a model or pointing one at a new source,
+// --update writes what was fetched into the list instead.
+//
+//   scripts/download-models [directory] [--update]
+//
+// The directory defaults to packages/os/build/models, where VM tests look.
+// What is already there with the right hash is not fetched again.
+
+import {spawn} from 'node:child_process'
+import {createHash} from 'node:crypto'
+import {createReadStream, createWriteStream} from 'node:fs'
+import {mkdir, readFile, rename, rm, stat, writeFile} from 'node:fs/promises'
+import path from 'node:path'
+import {Readable} from 'node:stream'
+import {pipeline} from 'node:stream/promises'
+import {fileURLToPath} from 'node:url'
+
+const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const manifestPath = path.join(repository, 'packages/umbreld/source/modules/files/models.json')
+const update = process.argv.includes('--update')
+const directory = path.resolve(process.argv.slice(2).find((argument) => !argument.startsWith('--')) ?? path.join(repository, 'packages/os/build/models'))
+
+async function sha256(file) {
+	const hash = createHash('sha256')
+	await pipeline(createReadStream(file), hash)
+	return hash.digest('hex')
+}
+
+// What is at a URL, in a file of its own: an archive is fetched once however
+// many models come out of it
+const fetched = new Map()
+async function fetchTo(url, file) {
+	const response = await fetch(url)
+	if (!response.ok) throw new Error(`${url} answered ${response.status}`)
+	await pipeline(Readable.fromWeb(response.body), createWriteStream(file))
+	return file
+}
+
+const models = JSON.parse(await readFile(manifestPath, 'utf8'))
+let different = false
+const sums = []
+for (const model of models) {
+	const name = path.basename(model.file)
+	const expected = path.join(directory, model.sha256 || 'unknown', name)
+	const there = model.sha256 && (await stat(expected).catch(() => undefined))?.size === model.size
+	if (!(there && (await sha256(expected)) === model.sha256)) {
+		const partial = path.join(directory, `${name}.partial`)
+		await mkdir(directory, {recursive: true})
+		if (model.member) {
+			if (!fetched.has(model.source)) {
+				fetched.set(model.source, await fetchTo(model.source, path.join(directory, `archive-${fetched.size}.partial`)))
+			}
+			const archive = fetched.get(model.source)
+			const member = model.source.endsWith('.zip')
+				? spawn('unzip', ['-p', archive, model.member], {stdio: ['ignore', 'pipe', 'inherit']})
+				: spawn('tar', ['-xOf', archive, model.member], {stdio: ['ignore', 'pipe', 'inherit']})
+			await Promise.all([
+				pipeline(member.stdout, createWriteStream(partial)),
+				new Promise((resolve, reject) =>
+					member.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`No ${model.member} in ${model.source}`)))),
+				),
+			])
+		} else {
+			await fetchTo(model.source, partial)
+		}
+		const found = {sha256: await sha256(partial), size: (await stat(partial)).size}
+		if (found.sha256 !== model.sha256 || found.size !== model.size) {
+			different = true
+			console.error(`${model.file} is ${found.sha256} (${found.size} bytes), not ${model.sha256 || 'listed'} (${model.size ?? '?'} bytes)`)
+			if (!update) {
+				await rm(partial)
+				continue
+			}
+			Object.assign(model, found)
+		}
+		await mkdir(path.join(directory, model.sha256), {recursive: true})
+		await rename(partial, path.join(directory, model.sha256, name))
+	}
+	sums.push(`${model.sha256}  ${model.sha256}/${name}`)
+	console.log(sums.at(-1))
+}
+for (const archive of fetched.values()) await rm(archive)
+if (!different || update) await writeFile(path.join(directory, 'SHA256SUMS'), `${sums.join('\n')}\n`)
+if (different && update) await writeFile(manifestPath, `${JSON.stringify(models, null, '\t')}\n`)
+if (different && !update) {
+	console.error('Some models are not what the list says they are. Run again with --update to list them as they are now.')
+	process.exit(1)
+}

@@ -38,6 +38,7 @@ class PhotoBackupEngineTest {
 		directory = File(System.getProperty("java.io.tmpdir"), "umbrel-engine-" + System.nanoTime()).apply { mkdirs() }
 		ledger = PhotoBackupLedger(File(directory, "photo-backup.sqlite"))
 		secrets.grants["umbrel:0"] = "grant"
+		preferences.save(PhotoBackupPreference(includesPhotos = true, includesVideos = true, foldersChosen = true), "umbrel", "0", activate = true)
 		configure()
 	}
 
@@ -96,6 +97,24 @@ class PhotoBackupEngineTest {
 		assertEquals(1L, ledger.statistics("source").uploadedPhotoCount)
 		assertNull(ledger.assetRecord("source", trashed))
 		assertEquals(PhotoBackupLedger.AssetState.UPLOADED, ledger.assetRecord("source", kept)?.state)
+	}
+
+	// A phone carrying on another's backup says so until it has caught up. An item it can't
+	// read is tried again later and doesn't hold that up.
+	@Test
+	fun aTakenOverBackupStopsSayingSoOnceNothingIsLeftToSend() {
+		preferences.setContinuingName("Pixel 7", "source")
+		preferences.setContinuingName("Pixel 6", "other-source")
+		repeat(5_000) { library.add(PhotoBackupLedger.MEDIA_TYPE_IMAGE) }
+		library.items.getValue(library.add()).unreadable = true
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals("Pixel 7", preferences.continuingName("source"))
+
+		while (pass() == PassOutcome.MoreWork) Unit
+		assertEquals(1L, preferences.snapshot.statistics?.unreadableCount)
+		assertNull(preferences.continuingName("source"))
+		assertEquals("Pixel 6", preferences.continuingName("other-source"))
 	}
 
 	// A camera that replaces its provisional file in place can keep DATE_MODIFIED; the size
@@ -667,6 +686,72 @@ class PhotoBackupEngineTest {
 		assertTrue(rest.all { ledger.assetRecord("source", it)?.state == PhotoBackupLedger.AssetState.UPLOADED })
 	}
 
+	// The watcher and the hourly check start passes without the app, so the pass itself waits.
+	@Test
+	fun accessToEverythingWaitsForTheFolderChoice() {
+		val unchosen = PhotoBackupPreference(includesPhotos = true, includesVideos = true)
+		preferences.save(unchosen, "umbrel", "0", activate = true)
+		library.access = PhotoLibraryAccess.SELECTED
+		library.select(library.add())
+		library.add(folder = WHATSAPP_FOLDER)
+		pass()
+		assertEquals(1, server.uploads.size)
+
+		library.access = PhotoLibraryAccess.FULL
+		assertEquals(PassOutcome.WaitingForUser, pass())
+		assertEquals(1, server.uploads.size)
+
+		preferences.save(unchosen.copy(foldersChosen = true), "umbrel", "0", activate = true)
+		settle()
+		assertEquals(2, server.uploads.size)
+	}
+
+	@Test
+	fun aFolderSkippedDuringAPassIsLeftOutFromTheNextItem() {
+		repeat(3) { library.add(folder = WHATSAPP_FOLDER) }
+		library.add()
+		server.respond = {
+			configure(skippedFolders = setOf(WHATSAPP_FOLDER))
+			PhotoUploadResult.Succeeded(10)
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(1, server.uploads.size)
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(1, server.uploads.size)
+	}
+
+	@Test
+	fun videosTurnedOffDuringAPassAreLeftOutFromTheNextItem() {
+		repeat(3) { library.add(PhotoBackupLedger.MEDIA_TYPE_VIDEO) }
+		library.add(PhotoBackupLedger.MEDIA_TYPE_IMAGE)
+		server.respond = {
+			configure(includeVideos = false)
+			PhotoUploadResult.Succeeded(10)
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(1, server.uploads.size)
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(1, server.uploads.size)
+	}
+
+	@Test
+	fun aFolderTurnedBackOnDuringTheLastUploadIsBackedUpByTheNextPass() {
+		configure(skippedFolders = setOf(WHATSAPP_FOLDER))
+		library.add(folder = WHATSAPP_FOLDER)
+		library.add()
+		server.respond = {
+			configure()
+			PhotoUploadResult.Succeeded(10)
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(1, server.uploads.size)
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(2, server.uploads.size)
+	}
+
 	@Test
 	fun anItemThatDisappearsBeforeUploadIsDropped() {
 		val photo = library.add()
@@ -764,6 +849,93 @@ class PhotoBackupEngineTest {
 
 		assertTrue(server.uploads.isEmpty())
 		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", photo)?.state)
+	}
+
+	// What the app lists as not backed up: each item with the reason its pass recorded
+	@Test
+	fun itemsThatCouldntBackUpAreListedWithWhy() {
+		val refused = library.add(createdMs = 1_000)
+		val empty = library.add(createdMs = 2_000, bytes = ByteArray(0))
+		val unreadable = library.add(createdMs = 3_000)
+		library.items.getValue(unreadable).unreadable = true
+		server.respond = { PhotoUploadResult.Rejected(413, null) }
+
+		pass()
+
+		assertEquals(
+			listOf(
+				PhotoBackupLedger.FailedAsset(unreadable, PhotoBackupFailureReason.UNREADABLE),
+				PhotoBackupLedger.FailedAsset(empty, PhotoBackupFailureReason.NOTHING_TO_UPLOAD),
+				PhotoBackupLedger.FailedAsset(refused, PhotoBackupFailureReason.GENERAL),
+			),
+			ledger.failedAssets("source", includePhotos = true, includeVideos = true),
+		)
+		assertEquals(2L, preferences.snapshot.statistics?.failedCount)
+		assertEquals(1L, preferences.snapshot.statistics?.unreadableCount)
+	}
+
+	/** The app's Try Again, which requeues on its own connection while a pass may be uploading. */
+	private fun requeueFromTheApp() =
+		PhotoBackupLedger(File(directory, "photo-backup.sqlite")).use { it.requeueFailedAssets("source", includePhotos = true, includeVideos = true) }
+
+	private fun fileName(localIdentifier: String) = "IMG_${library.items.getValue(localIdentifier).id}.jpg"
+
+	// The upload in flight is prepared, not failed, so the requeue leaves it alone and the
+	// pass still records how it ends. The item that was requeued is sent once, in its turn.
+	@Test
+	fun itemsRequeuedWhileAPassUploadsAreSentOnceAndTheUploadInFlightIsStillRecorded() {
+		val refused = library.add(createdMs = 1_000)
+		server.respond = { PhotoUploadResult.Rejected(415, null) }
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", refused)?.state)
+
+		val sending = library.add(createdMs = 3_000)
+		val waiting = library.add(createdMs = 2_000)
+		server.uploads.clear()
+		server.respond = { upload ->
+			if (upload.filename == fileName(sending)) {
+				requeueFromTheApp()
+				PhotoUploadResult.Rejected(415, null)
+			} else {
+				PhotoUploadResult.Succeeded(10)
+			}
+		}
+
+		assertEquals(PassOutcome.Completed, pass())
+
+		assertEquals(listOf(sending, waiting, refused).map(::fileName), server.uploads.map { it.filename })
+		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", sending)?.state)
+		assertEquals(PhotoBackupLedger.AssetState.UPLOADED, ledger.assetRecord("source", waiting)?.state)
+		assertEquals(PhotoBackupLedger.AssetState.UPLOADED, ledger.assetRecord("source", refused)?.state)
+		assertEquals(1L, preferences.snapshot.statistics?.failedCount)
+	}
+
+	// A pass sends each item once. One it failed and Try Again then requeued waits for the
+	// next pass, which tries it once more and no further.
+	@Test
+	fun anItemRequeuedInThePassThatFailedItIsTriedOnceMoreInTheNext() {
+		val refused = library.add(createdMs = 2_000)
+		val other = library.add(createdMs = 1_000)
+		server.respond = { upload ->
+			if (upload.filename == fileName(refused)) {
+				PhotoUploadResult.Rejected(415, null)
+			} else {
+				requeueFromTheApp()
+				PhotoUploadResult.Succeeded(10)
+			}
+		}
+
+		assertEquals(PassOutcome.MoreWork, pass())
+		assertEquals(listOf(refused, other).map(::fileName), server.uploads.map { it.filename })
+		assertEquals(PhotoBackupLedger.AssetState.PENDING, ledger.assetRecord("source", refused)?.state)
+
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(listOf(refused, other, refused).map(::fileName), server.uploads.map { it.filename })
+		assertEquals(PhotoBackupLedger.AssetState.FAILED, ledger.assetRecord("source", refused)?.state)
+
+		// Still refused: nothing tries it again by itself
+		assertEquals(PassOutcome.Completed, pass())
+		assertEquals(3, server.uploads.size)
 	}
 
 	@Test

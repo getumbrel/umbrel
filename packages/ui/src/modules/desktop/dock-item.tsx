@@ -133,7 +133,11 @@ export function DockItem({
 			>
 				<Link
 					to={to || '/'}
+					aria-label={label}
 					className='absolute inset-0 outline-hidden'
+					// Keyboard focus shows the label too, with the icon's brightening as the focus mark
+					onFocus={(e) => e.currentTarget.matches(':focus-visible') && setHovered(true)}
+					onBlur={() => setHovered(false)}
 					onClick={(e) => {
 						setClickedOpen(true)
 						if (onClick) {

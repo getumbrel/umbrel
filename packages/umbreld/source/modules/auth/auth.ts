@@ -57,7 +57,19 @@ type Session = {
 	expiresAt?: number
 	userAgent?: string
 	nativeClient?: NativeClient
+	// A browser session a native app made from its own session, so the app can show
+	// umbrelOS without asking for the password again. It is part of the app's login: it
+	// lives only as long as that session, isn't listed on its own, and is revoked with it.
+	parentSessionId?: string
 	credentials: Credential[]
+}
+
+type NewBrowserSession = {
+	session: Session
+	expiresAt: number
+	dashboardToken: string
+	appGatewayToken: string
+	browserSessionToken: string
 }
 
 export type SessionClient = {type: 'browser'; userAgent?: string} | ({type: 'native'} & NativeClient)
@@ -220,7 +232,15 @@ export default class Auth {
 	} = {}) {
 		if (!(await this.#accountExists(accountId))) throw new Error('Account does not exist')
 
-		const now = Date.now()
+		const {session, ...credentials} = this.#newBrowserSession(accountId, Date.now())
+		session.userAgent = normalizeUserAgent(userAgent)
+
+		await this.#storeNewSession(session, expectedSessionIssuanceRevision)
+
+		return {principal: this.#principalForSession(session), ...credentials}
+	}
+
+	#newBrowserSession(accountId: string, now: number, parentSessionId?: string): NewBrowserSession {
 		const expiresAt = now + SESSION_DURATION
 		const session: Session = {
 			id: randomToken(128),
@@ -228,7 +248,7 @@ export default class Auth {
 			createdAt: now,
 			lastSeenAt: now,
 			expiresAt,
-			userAgent: normalizeUserAgent(userAgent),
+			...(parentSessionId && {parentSessionId}),
 			credentials: [],
 		}
 		const dashboard = this.#createCredential('dashboard')
@@ -236,11 +256,8 @@ export default class Auth {
 		const browserSession = this.#createCredential('browser-session')
 		const httpApiToken = this.#createDerivedCredential(session.id, 'http-api-token')
 		session.credentials = [dashboard.record, appGateway.record, browserSession.record, httpApiToken.record]
-
-		await this.#storeNewSession(session, expectedSessionIssuanceRevision)
-
 		return {
-			principal: this.#principalForSession(session),
+			session,
 			expiresAt,
 			dashboardToken: dashboard.token,
 			appGatewayToken: appGateway.token,
@@ -290,7 +307,12 @@ export default class Auth {
 
 	// The device credential is accepted only here and never rotates, so an interrupted
 	// exchange can safely retry without invalidating the native session.
-	async refreshNativeAccess(deviceToken: string, nativeClient: NativeClient) {
+	//
+	// With browserSession, the app also gets a browser session for the same account, the
+	// one user.login would give it, without the password and 2FA code its native session
+	// was created with. It belongs to the native session (see Session.parentSessionId) and
+	// replaces any the app made before, so each app has at most one.
+	async refreshNativeAccess(deviceToken: string, nativeClient: NativeClient, {browserSession = false} = {}) {
 		let parsedCredential: ReturnType<typeof parseCredential>
 		try {
 			parsedCredential = parseCredential(deviceToken)
@@ -304,8 +326,15 @@ export default class Auth {
 					principal: Principal
 					accessExpiresAt: number
 					accessToken: string
+					browserSession?: {
+						expiresAt: number
+						dashboardToken: string
+						appGatewayToken: string
+						browserSessionToken: string
+					}
 			  }
 			| undefined
+		let replacedSessionIds: string[] = []
 
 		await this.#store.getWriteLock(async ({set}) => {
 			const session = this.#sessions.find((candidate) =>
@@ -335,16 +364,34 @@ export default class Auth {
 					access.record,
 				],
 			}
-			const sessions = this.#sessions.map((candidate) => (candidate.id === session.id ? updatedSession : candidate))
+			let sessions = this.#sessions.map((candidate) => (candidate.id === session.id ? updatedSession : candidate))
+			let child: NewBrowserSession | undefined
+			if (browserSession) {
+				// Made in the same lock that verified the native session, so a revocation
+				// can't land in between and leave the browser session behind.
+				child = this.#newBrowserSession(session.accountId, now, session.id)
+				replacedSessionIds = sessions
+					.filter((candidate) => candidate.parentSessionId === session.id)
+					.map((candidate) => candidate.id)
+				sessions = [...sessions.filter((candidate) => !replacedSessionIds.includes(candidate.id)), child.session]
+			}
 			await set('sessions', sessions)
 			this.#sessions = sessions
+			if (child) this.#scheduleSessionExpiry(child.session)
 			refreshed = {
 				principal: this.#principalForSession(updatedSession),
 				accessExpiresAt,
 				accessToken: access.token,
+				browserSession: child && {
+					expiresAt: child.expiresAt,
+					dashboardToken: child.dashboardToken,
+					appGatewayToken: child.appGatewayToken,
+					browserSessionToken: child.browserSessionToken,
+				},
 			}
 		})
 
+		for (const sessionId of replacedSessionIds) this.#removeSessionRuntimeState(sessionId)
 		if (!refreshed) throw new InvalidNativeDeviceCredentialError()
 		return refreshed
 	}
@@ -615,8 +662,12 @@ export default class Auth {
 	}
 
 	#activeSessionsForAccount(accountId: string, currentSessionId?: string): ActiveSession[] {
+		// A browser session an app made is shown as the app: its own row is hidden, and
+		// using it makes the app's row the current one.
+		const currentSession = this.#sessions.find((session) => session.id === currentSessionId)
+		const currentRowId = currentSession?.parentSessionId ?? currentSessionId
 		return this.#sessions
-			.filter((session) => session.accountId === accountId)
+			.filter((session) => session.accountId === accountId && !session.parentSessionId)
 			.map((session) => ({
 				id: session.id,
 				createdAt: session.createdAt,
@@ -626,63 +677,93 @@ export default class Auth {
 				client: this.#isNativeSession(session)
 					? {type: 'native' as const, ...(session.nativeClient ?? unidentifiedNativeClient)}
 					: {type: 'browser' as const, userAgent: session.userAgent},
-				current: session.id === currentSessionId,
+				current: session.id === currentRowId,
 			}))
 			.sort((first, second) => Number(second.current) - Number(first.current) || second.createdAt - first.createdAt)
 	}
 
 	async revokeSessionForAccount(principal: Principal, sessionId: string) {
 		await this.#validateAccountPrincipal(principal)
-		const revokedSessionIds = await this.#revokeSessions(
+		const revoked = await this.#revokeSessions(
 			(session) => session.accountId === principal.accountId && session.id === sessionId,
 			principal,
 		)
 		return {
-			revoked: revokedSessionIds.length === 1,
-			revokedCurrent: revokedSessionIds.includes(principal.sessionId),
+			revoked: revoked.some((session) => session.id === sessionId),
+			revokedCurrent: revoked.some((session) => session.id === principal.sessionId),
 		}
 	}
 
 	async revokeOtherSessionsForAccount(principal: Principal) {
 		await this.#validateAccountPrincipal(principal)
 		this.#invalidatePendingSessionIssuance(principal.accountId)
-		const revokedSessionIds = await this.#revokeSessions(
-			(session) => session.accountId === principal.accountId && session.id !== principal.sessionId,
+		// The caller's login is kept whole: an app and the browser session it made are one.
+		const currentLoginId = this.loginId(principal)
+		const revoked = await this.#revokeSessions(
+			(session) =>
+				session.accountId === principal.accountId &&
+				session.id !== currentLoginId &&
+				session.parentSessionId !== currentLoginId,
 			principal,
 		)
-		return revokedSessionIds.length
+		// Counted as Active Logins shows them, one per login.
+		return revoked.filter((session) => !session.parentSessionId).length
 	}
 
 	async revokeSessionForOwner(principal: Principal, accountId: string, sessionId: string) {
 		await this.#validateOwnerPrincipal(principal)
-		const revokedSessionIds = await this.#revokeSessions(
+		const revoked = await this.#revokeSessions(
 			(session) => session.accountId === accountId && session.id === sessionId,
 			principal,
 		)
 		return {
-			revoked: revokedSessionIds.length === 1,
-			revokedCurrent: revokedSessionIds.includes(principal.sessionId),
+			revoked: revoked.some((session) => session.id === sessionId),
+			revokedCurrent: revoked.some((session) => session.id === principal.sessionId),
 		}
 	}
 
 	async revokeAllSessionsForOwner(principal: Principal, accountId: string) {
 		await this.#validateOwnerPrincipal(principal)
 		this.#invalidatePendingSessionIssuance(accountId)
-		const revokedSessionIds = await this.#revokeSessions((session) => session.accountId === accountId, principal)
+		const revoked = await this.#revokeSessions((session) => session.accountId === accountId, principal)
 		return {
-			revokedCount: revokedSessionIds.length,
-			revokedCurrent: revokedSessionIds.includes(principal.sessionId),
+			revokedCount: revoked.filter((session) => !session.parentSessionId).length,
+			revokedCurrent: revoked.some((session) => session.id === principal.sessionId),
 		}
 	}
 
 	async revokeSession(sessionId: string) {
 		if (sessionId === 'system') return false
-		return (await this.#revokeSessions((session) => session.id === sessionId)).length === 1
+		return (await this.#revokeSessions((session) => session.id === sessionId)).some(
+			(session) => session.id === sessionId,
+		)
+	}
+
+	// The login a session belongs to: an app and the browser session it made are one.
+	// Wrong password and 2FA guesses are counted against this, so an app can't get more
+	// of them by making another browser session. A session that has ended has no login:
+	// a request still running for a browser session its app has since replaced must not
+	// be counted on its own, where it would get the guesses the app has used up.
+	loginId(principal: Principal) {
+		if (principal.actor === 'system') return principal.sessionId
+		const session = this.#sessions.find((candidate) => candidate.id === principal.sessionId)
+		if (!session) throw new Error('Invalid session')
+		return session.parentSessionId ?? session.id
+	}
+
+	// Logging out of the browser session an app made signs the app out too: the two are
+	// one login, and the app would otherwise just make another. A session that has
+	// already ended has nothing left to log out.
+	async logout(principal: Principal) {
+		const session = this.#sessions.find((candidate) => candidate.id === principal.sessionId)
+		return this.revokeSession(session?.parentSessionId ?? principal.sessionId)
 	}
 
 	async revokeAllForAccount(accountId: string) {
 		this.#invalidatePendingSessionIssuance(accountId)
-		return (await this.#revokeSessions((session) => session.accountId === accountId)).length
+		return (await this.#revokeSessions((session) => session.accountId === accountId)).filter(
+			(session) => !session.parentSessionId,
+		).length
 	}
 
 	issueWebSocketTicket(principal: Principal, target: WebSocketTarget) {
@@ -978,7 +1059,7 @@ export default class Auth {
 	}
 
 	async #revokeSessions(predicate: (session: Session) => boolean, requiredPrincipal?: Principal) {
-		let revokedSessionIds: string[] = []
+		let revokedSessions: Session[] = []
 		let removedSessionIds: string[] = []
 
 		await this.#store.getWriteLock(async ({set}) => {
@@ -993,8 +1074,14 @@ export default class Auth {
 				throw new Error('Invalid session')
 			}
 
-			revokedSessionIds = activeSessions.filter(predicate).map((session) => session.id)
-			const sessions = activeSessions.filter((session) => !revokedSessionIds.includes(session.id))
+			const revokedLoginIds = activeSessions.filter(predicate).map((session) => session.id)
+			// A browser session an app made goes with the app's session.
+			revokedSessions = activeSessions.filter(
+				(session) =>
+					revokedLoginIds.includes(session.id) ||
+					(session.parentSessionId !== undefined && revokedLoginIds.includes(session.parentSessionId)),
+			)
+			const sessions = activeSessions.filter((session) => !revokedSessions.includes(session))
 			removedSessionIds = this.#sessions
 				.filter((session) => !sessions.some((candidate) => candidate.id === session.id))
 				.map((session) => session.id)
@@ -1006,7 +1093,7 @@ export default class Auth {
 		})
 
 		for (const sessionId of removedSessionIds) this.#removeSessionRuntimeState(sessionId)
-		return revokedSessionIds
+		return revokedSessions
 	}
 
 	async #removeExpiredSessions() {

@@ -20,15 +20,13 @@ function Probe() {
 	return null
 }
 
-// useWindowSize, under useIsPhoneNow, waits for an animation frame
-const frame = () => new Promise((resolve) => setTimeout(resolve, 50))
-
+// (A test's window has no media queries to ask: its size is innerWidth and
+// innerHeight. What a browser goes by is in utils/layout.test.tsx)
 async function resize(width: number, height: number) {
 	await act(async () => {
 		Object.defineProperty(window, 'innerWidth', {configurable: true, value: width})
 		Object.defineProperty(window, 'innerHeight', {configurable: true, value: height})
 		window.dispatchEvent(new Event('resize'))
-		await frame()
 	})
 }
 

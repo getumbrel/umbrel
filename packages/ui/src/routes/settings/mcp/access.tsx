@@ -5,6 +5,7 @@ import {useTranslation} from 'react-i18next'
 
 import {AppIcon} from '@/components/app-icon'
 import {Button} from '@/components/ui/button'
+import {listClass} from '@/components/ui/list'
 import {SearchablePicker} from '@/components/ui/searchable-picker'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
@@ -78,7 +79,7 @@ export function AppAccessDetail({
 			<section className='flex flex-col gap-2'>
 				<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
 					<div className='text-15 font-semibold -tracking-2'>{t('mcp-apps')}</div>
-					<div className='flex items-center gap-3'>
+					<div className='flex flex-wrap items-center justify-end gap-x-3 gap-y-2'>
 						<ShareAllToggle
 							label={t('mcp-all-apps')}
 							tooltip={t('mcp-all-apps-description')}
@@ -169,7 +170,7 @@ export function MachineAccessDetail({
 			<section className='flex flex-col gap-2'>
 				<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
 					<div className='text-15 font-semibold -tracking-2'>{t('mcp-machines')}</div>
-					<div className='flex items-center gap-3'>
+					<div className='flex flex-wrap items-center justify-end gap-x-3 gap-y-2'>
 						<ShareAllToggle
 							label={t('mcp-all-machines')}
 							tooltip={t('mcp-all-machines-description')}
@@ -259,7 +260,7 @@ export function FileAccessDetail({
 			<section className='flex flex-col gap-2'>
 				<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
 					<div className='text-15 font-semibold -tracking-2'>{t('mcp-folders')}</div>
-					<div className='flex items-center gap-3'>
+					<div className='flex flex-wrap items-center justify-end gap-x-3 gap-y-2'>
 						<ShareAllToggle
 							label={t('mcp-all-folders')}
 							tooltip={t('mcp-all-folders-description')}
@@ -329,7 +330,7 @@ export function FileAccessDetail({
 
 			<section className='flex flex-col gap-2'>
 				<SectionLabel>{t('mcp-storage-access')}</SectionLabel>
-				<div className={shareListClass()}>
+				<div className={listClass}>
 					<ShareEveryoneRow
 						className='p-3'
 						title={t('mcp-usb-storage')}
@@ -339,7 +340,7 @@ export function FileAccessDetail({
 						onCheckedChange={(checked) => toggleStorageGrant('/External', checked)}
 					/>
 					<ShareEveryoneRow
-						className='border-t border-white/6 p-3'
+						className='p-3'
 						title={t('mcp-network-storage')}
 						description={t('mcp-network-storage-description')}
 						checked={allFolders || grantedFolders.includes('/Network')}

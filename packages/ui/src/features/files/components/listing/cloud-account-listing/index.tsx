@@ -2,11 +2,10 @@ import {useEffect, useMemo} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useParams, useNavigate as useRouterNavigate} from 'react-router-dom'
 
-import {Button} from '@/components/ui/button'
-import {IconButton} from '@/components/ui/icon-button'
+import {PillButton} from '@/components/ui/edge-controls'
 import {CloudIcon} from '@/features/files/assets/cloud-icon'
 import {CloudPlusIcon} from '@/features/files/assets/cloud-plus'
-import {Listing} from '@/features/files/components/listing'
+import {Listing, StateView} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {cloudSyncName, useCloudAccounts, useCloudSyncs} from '@/features/files/hooks/use-cloud'
 import type {FileSystemItem} from '@/features/files/types'
@@ -48,29 +47,26 @@ export function CloudAccountListing() {
 	useEffect(() => {
 		setActionsBarConfig({
 			hideSearch: true,
-			desktopActions: (
-				<IconButton icon={CloudPlusIcon} onClick={openAddWizard}>
-					{t('files-cloud.add-download')}
-				</IconButton>
-			),
-			// Selection is meaningless on the account's destination tiles, so
-			// the mobile bar offers the add action instead of the Select toggle
-			mobilePrimaryAction: (
-				<Button className='h-[1.9rem] rounded-full px-3 text-13' size='default' onClick={openAddWizard}>
-					{t('files-cloud.add-download')}
-				</Button>
-			),
+			// Selection is meaningless on the account's destination folders
+			selectable: false,
+			actions: [
+				{
+					id: 'add-download',
+					label: t('files-cloud.add-download'),
+					icon: CloudPlusIcon,
+					onSelect: openAddWizard,
+					pill: true,
+				},
+			],
 		})
 	}, [account?.id])
 
 	const EmptyState = () => (
-		<div className='flex h-full flex-col items-center justify-center gap-3 p-4 pt-0 text-center'>
-			<CloudIcon className='size-12 opacity-60' />
-			<div className='text-12 text-white/40'>{t('files-cloud.account-empty')}</div>
-			<IconButton icon={CloudPlusIcon} variant='primary' onClick={openAddWizard}>
+		<StateView icon={<CloudIcon className='size-12 opacity-60' />} title={t('files-cloud.account-empty')}>
+			<PillButton icon={CloudPlusIcon} onClick={openAddWizard}>
 				{t('files-cloud.add-download')}
-			</IconButton>
-		</div>
+			</PillButton>
+		</StateView>
 	)
 
 	return (

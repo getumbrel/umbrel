@@ -3,7 +3,10 @@ import fsp from 'node:fs/promises'
 import {inspect} from 'node:util'
 
 import {TRPCError} from '@trpc/server'
+import {execa, type Options} from 'execa'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
+
+import type {Sandbox} from '../utilities/sandbox.ts'
 
 import CloudRclone, {
 	RcloneProcessError,
@@ -12,6 +15,16 @@ import CloudRclone, {
 	cloudTransferBudget,
 } from './cloud-rclone.ts'
 import {CLOUD_JUNK_FILTER} from './cloud-types.ts'
+
+// There is no sandbox where these tests run. The stand-in for rclone is run
+// as it is, and what each run would have been allowed is recorded.
+const sandboxes = vi.hoisted(() => [] as Array<{command: string; subcommand: string; sandbox: Sandbox}>)
+vi.mock('../utilities/sandbox.ts', () => ({
+	sandboxed: (command: string, arguments_: string[], sandbox: Sandbox, options?: Options) => {
+		sandboxes.push({command, subcommand: arguments_[0]!, sandbox})
+		return execa(command, arguments_, options)
+	},
+}))
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111'
 const SYNC_ID = '22222222-2222-4222-8222-222222222222'
@@ -66,6 +79,7 @@ describe('CloudRclone', () => {
 	})
 
 	afterEach(async () => {
+		sandboxes.length = 0
 		await fsp.rm(dataDirectory, {recursive: true, force: true})
 	})
 
@@ -385,6 +399,47 @@ describe('CloudRclone', () => {
 		const signalPath = `${transaction.configPath}.signal`
 		await transaction.abort()
 		expect(await fsp.readFile(signalPath, 'utf8')).toBe('SIGINT')
+	})
+
+	test('runs rclone sandboxed with its account directory and the folder it syncs', async () => {
+		const paths = await rclone.ensureAccountDirectory(ACCOUNT_ID)
+		await fsp.writeFile(paths.config, '[cloud]\ntype = dropbox\n', {mode: 0o600})
+		const destination = `${dataDirectory}/destination`
+		await fsp.mkdir(destination)
+
+		await rclone.browse({accountId: ACCOUNT_ID, provider: 'dropbox', remote: {path: '/'}})
+		await rclone.refreshOAuthToken(ACCOUNT_ID, 'dropbox')
+		await rclone.sync({
+			accountId: ACCOUNT_ID,
+			provider: 'dropbox',
+			syncId: SYNC_ID,
+			remote: {path: '/'},
+			destination,
+			minimumFreeBytes: 0n,
+		})
+		const transaction = await rclone.beginConfigTransaction(ACCOUNT_ID)
+		await transaction.abort()
+
+		// As the owner of the user's files, with the network, seeing the
+		// stand-in for rclone and nothing else it isn't given
+		const policy = (writablePaths: unknown) => ({
+			network: true,
+			gpu: false,
+			readablePaths: [fakeBinary],
+			writablePaths,
+			user: {userId: USER_ID, groupId: GROUP_ID},
+		})
+		expect(sandboxes).toEqual([
+			{command: fakeBinary, subcommand: 'lsjson', sandbox: policy([paths.directory])},
+			{command: fakeBinary, subcommand: 'about', sandbox: policy([paths.directory])},
+			{command: fakeBinary, subcommand: 'sync', sandbox: policy([paths.directory, destination])},
+			// The config daemon is reached through a socket in a directory made for it
+			{
+				command: fakeBinary,
+				subcommand: 'rcd',
+				sandbox: policy([paths.directory, expect.stringMatching(/\/umbrel-cloud-rc-[^/]+$/)]),
+			},
+		])
 	})
 
 	test('writes the junk filter only when stale and never follows a symlink', async () => {

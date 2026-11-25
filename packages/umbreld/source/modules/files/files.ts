@@ -263,10 +263,18 @@ export default class Files {
 		await this.fileIndex.setRoots([...this.#staticIndexRoots(), ...memberRoots])
 		for (const {virtualPath} of memberRoots) await this.watcher.addPath(virtualPath)
 
-		await this.fileIndex.start()
-		void this.recoverTrashClaims().catch((error) =>
-			this.logger.error('Failed to recover interrupted revision-checked file operations', error),
-		)
+		// The index opens in its own worker and that can take a long time, so nothing
+		// else in Files waits for it. Until it's ready it keeps the roots and the
+		// request to start background reconciliation, and the reconciliation it runs
+		// once open picks up any changes the watcher saw in the meantime. Recovering
+		// trash claims records moves in the index, so that waits for it.
+		void this.fileIndex
+			.start()
+			.then(() =>
+				this.recoverTrashClaims().catch((error) =>
+					this.logger.error('Failed to recover interrupted revision-checked file operations', error),
+				),
+			)
 
 		// Start submodules
 		await this.watcher.start().catch((error) => this.logger.error(`Failed to start watcher`, error))
@@ -639,7 +647,7 @@ export default class Files {
 		await this.chownSystemPath(path).catch(() => {})
 
 		const {dev: device, ino: inode, birthtimeMs} = await fse.lstat(path)
-		this.#updateFileIndex(`create '${path}'`, () => this.fileIndex.reconcilePath(path))
+		this.#updateFileIndex(`create '${path}'`, () => this.fileIndex.reconcileCreatedDirectory(path))
 		return {created: true as const, identity: {device, inode, birthtimeMs}}
 	}
 

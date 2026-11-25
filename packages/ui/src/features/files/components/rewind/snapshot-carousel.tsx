@@ -131,9 +131,10 @@ export function SnapshotCarousel({
 											<div className='origin-top-left translate-y-full -rotate-[88deg]'>
 												<div className='relative inline-flex items-center justify-center'>
 													<img src={stickerBgUrl} alt='' className='h-8 w-auto' />
+													{/* Printed on the sticker art, so it keeps the art's size */}
 													<div
 														className={cn(
-															'absolute text-xs font-normal tracking-wide text-black uppercase',
+															'absolute text-xs font-normal tracking-wide text-black uppercase [--text-boost:0px]',
 															useStickerFont ? 'font-sticker' : 'font-sans',
 														)}
 													>
@@ -150,7 +151,7 @@ export function SnapshotCarousel({
 							<div className='flex h-full items-end justify-center px-4 pt-4 pb-0 lg:px-8 lg:pt-8'>
 								<div
 									ref={explorerContainerRef}
-									className='relative size-full max-w-[clamp(320px,92vw,1040px)] overflow-hidden rounded-t-2xl backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]'
+									className='relative size-full max-w-[clamp(320px,92vw,1040px)] overflow-hidden rounded-t-2xl backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2] contrast-more:bg-black'
 								>
 									<div
 										className={cn(
@@ -180,8 +181,6 @@ export function SnapshotCarousel({
 											initialPath={safeInitialPath}
 											currentPath={rewindPath}
 											onNavigate={setRewindPath}
-											// Pass the scale used by the carousel so marquee selection inside the embedded explorer compensates for the transform.
-											explorerScale={explorerScale}
 											pathAliases={
 												mountedDir
 													? {['/Home']: `/Backups/${mountedDir}/Home`, ['/Apps']: `/Backups/${mountedDir}/Apps`}

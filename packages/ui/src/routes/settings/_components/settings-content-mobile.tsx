@@ -14,7 +14,7 @@ import {Card} from '@/components/ui/card'
 import {SearchField} from '@/components/ui/edge-controls'
 import {Separator} from '@/components/ui/separator'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
-import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
+import {useStorageHeadline} from '@/features/storage/hooks/use-storage-headline'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -35,7 +35,7 @@ import {MemoryCardContent} from './memory-card-content'
 import {createSettingsCatalog, getSettingsPage, SettingsPageItem} from './settings-catalog'
 import {SettingsItemsGroup} from './settings-page-controls'
 import {useSettingsFilterLabels} from './settings-taxonomy'
-import {SettingsAccountAvatar, settingsPanesGridClass, settingsSidePaneClass} from './shared'
+import {SettingsAccountAvatar, settingsPanesGridClass, settingsSidePaneClass, StorageAlarmDot} from './shared'
 import {StorageCardContent} from './storage-card-content'
 
 const statCardClass = 'settings-edge-material h-full min-h-[104px] !rounded-24 !p-4 panes:min-h-0 panes:!p-5'
@@ -53,10 +53,9 @@ export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) 
 	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery(undefined, {enabled: isMember})
 	const {deviceName} = useIsHomeOrPro()
 	const {wallpaper} = useWallpaper()
-	const raidStatusQ = trpcReact.hardware.raid.getStatus.useQuery(undefined, {enabled: !isMember})
-	const devicesQ = trpcReact.hardware.internalStorage.getDevices.useQuery(undefined, {
-		enabled: !isMember,
-	})
+	// The Storage Manager row leads with what Storage Manager itself leads with
+	const storage = useStorageHeadline({enabled: !isMember})
+	const storageNeedsSaying = !!storage && (storage.alarming || storage.tone === 'busy')
 
 	const [searchQuery, setSearchQuery] = useState('')
 
@@ -65,14 +64,6 @@ export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) 
 	const inPanes = useWindowSize().width >= PANES_MIN_W
 	const statIcon = (icon: ComponentType<{className?: string}>) => (inPanes ? undefined : <MobileStatIcon icon={icon} />)
 
-	const hasRaidIssue = raidStatusQ.data?.exists && raidStatusQ.data?.status && raidStatusQ.data?.status !== 'ONLINE'
-	const hasHealthIssue = devicesQ.data?.some((device) => getDeviceHealth(device).hasWarning)
-	const hasStorageIssue = hasRaidIssue || hasHealthIssue
-	// SSD wording only when the machine is known to be SSD-only - HDD, mixed, and not-yet-loaded
-	// setups get generic drive wording (correct for any device type)
-	const storageIssueLabel = devicesQ.data?.every((device) => device.type === 'ssd')
-		? t('storage-manager.health.title')
-		: t('storage-manager.health.title-drive')
 	const ownerFirstName = userQ.data?.name ? firstNameFromFullName(userQ.data.name) : ''
 	const settingsCatalog = useMemo(
 		() =>
@@ -121,14 +112,12 @@ export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) 
 			title = (
 				<span className='flex items-center gap-1.5'>
 					{item.title}
-					{hasStorageIssue && (
-						<span className='relative size-2' role='img' aria-label={storageIssueLabel}>
-							<span className='absolute inset-0 rounded-full bg-[#FF3434]' />
-							<span className='absolute inset-0 animate-ping rounded-full bg-[#FF3434] opacity-75' />
-						</span>
+					{storage?.alarming && (
+						<StorageAlarmDot critical={storage.tone === 'critical'} label={storage.title} className='size-2' />
 					)}
 				</span>
 			)
+			if (storageNeedsSaying) description = storage.title
 		} else if (item.id === 'mcp') {
 			title = (
 				<span className='flex items-center gap-1.5'>
@@ -179,7 +168,7 @@ export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) 
 					</div>
 					{/* Wraps instead of truncating, so a language that puts a long phrase
 					    around the name ("Umbrel пользователя …") still shows the name */}
-					<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-[30px] font-semibold -tracking-4 text-balance break-words text-white/45'>
+					<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-tight font-semibold -tracking-4 text-balance break-words text-white/45'>
 						{ownerFirstName ? (
 							<Trans
 								t={t}
@@ -198,7 +187,7 @@ export function SettingsContentMobile({isMember = false}: {isMember?: boolean}) 
 
 				<SettingsSummary />
 
-				<div className='flex items-center gap-2'>
+				<div className='flex flex-wrap items-center gap-2'>
 					<ButtonLink to={{search: addLinkSearchParams({dialog: 'logout'})}} className={mobileActionButtonClass}>
 						{t('logout')}
 					</ButtonLink>

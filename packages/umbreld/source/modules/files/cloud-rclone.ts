@@ -8,11 +8,12 @@ import nodePath from 'node:path'
 import readline from 'node:readline'
 import {inspect, type InspectOptionsStylized} from 'node:util'
 
-import {execa, type ExecaChildProcess, type ExecaError, type ExecaReturnValue} from 'execa'
+import type {ExecaChildProcess, ExecaError, ExecaReturnValue} from 'execa'
 import fse from 'fs-extra'
 import pWaitFor from 'p-wait-for'
 
 import randomToken from '../utilities/random-token.ts'
+import {sandboxed, type Sandbox} from '../utilities/sandbox.ts'
 
 import {
 	CLOUD_INVALID_ACCOUNT_CONFIG_ERROR,
@@ -655,7 +656,7 @@ export default class CloudRclone {
 				'--no-mimetype',
 				'--use-json-log',
 			],
-			{signal},
+			{directory: paths.directory, signal},
 		)
 
 		let listing: unknown
@@ -711,7 +712,7 @@ export default class CloudRclone {
 				paths.temp,
 				'--use-json-log',
 			],
-			{signal},
+			{directory: paths.directory, signal},
 		)
 	}
 
@@ -783,6 +784,7 @@ export default class CloudRclone {
 				'8',
 			],
 			{
+				directory: paths.directory,
 				cwd: destination,
 				signal,
 				onRecord: (record) => {
@@ -814,7 +816,7 @@ export default class CloudRclone {
 		const socketPath = nodePath.join(socketDirectory, `rc-${randomToken(32)}.sock`)
 		let process: ExecaChildProcess<string> | undefined
 		try {
-			const child = execa(
+			const child = sandboxed(
 				this.binary,
 				[
 					'rcd',
@@ -831,9 +833,9 @@ export default class CloudRclone {
 					'ERROR',
 					'--use-json-log',
 				],
+				// umbreld talks to it through the socket it makes here
+				this.sandbox([paths.directory, socketDirectory]),
 				{
-					uid: this.fileOwner.userId,
-					gid: this.fileOwner.groupId,
 					stdin: 'ignore',
 					stdout: 'ignore',
 					stderr: 'pipe',
@@ -889,15 +891,33 @@ export default class CloudRclone {
 		}
 	}
 
+	// rclone handles whatever a cloud provider sends it, so it runs sandboxed.
+	// It is the owner of the user's files, as it has to be to write them, and
+	// has the network. Of this device it sees the directories it is given: its
+	// account's own, and for a sync the folder being synced.
+	private sandbox(writablePaths: string[]): Sandbox {
+		return {
+			network: true,
+			gpu: false,
+			// A stand-in for rclone that isn't one of the OS's programs
+			readablePaths: nodePath.isAbsolute(this.binary) ? [this.binary] : [],
+			writablePaths,
+			user: this.fileOwner,
+		}
+	}
+
 	private async run(
 		args: string[],
-		{cwd, signal, onRecord}: {cwd?: string; signal?: AbortSignal; onRecord?: (record: RcloneLogRecord) => void} = {},
+		{
+			directory,
+			cwd,
+			signal,
+			onRecord,
+		}: {directory: string; cwd?: string; signal?: AbortSignal; onRecord?: (record: RcloneLogRecord) => void},
 	) {
 		if (signal?.aborted) throw new RcloneAbortedError()
-		const process = execa(this.binary, args, {
+		const process = sandboxed(this.binary, args, this.sandbox([directory, ...(cwd ? [cwd] : [])]), {
 			cwd,
-			uid: this.fileOwner.userId,
-			gid: this.fileOwner.groupId,
 			stdin: 'ignore',
 			stdout: 'pipe',
 			stderr: 'pipe',

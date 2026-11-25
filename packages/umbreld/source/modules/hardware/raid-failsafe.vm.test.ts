@@ -1,20 +1,21 @@
 import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 import type {ExpansionStatus} from './raid.ts'
 
-describe('RAID failsafe mode', () => {
+describe.each(raidzDrives)('RAID failsafe mode ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
 	let thirdDeviceId: string
+	let fourthDeviceId: string
 	let initialUsableSpace: number
 	let expansionSubscription: ReturnType<typeof umbreld.subscribeToEvents<ExpansionStatus>>
 	let failed = false
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -30,16 +31,16 @@ describe('RAID failsafe mode', () => {
 	})
 
 	test('adds two NVMe devices and boots VM', async () => {
-		await umbreld.vm.addNvme({slot: 1})
-		await umbreld.vm.addNvme({slot: 2})
+		await drive.add(umbreld.vm, {slot: 1})
+		await drive.add(umbreld.vm, {slot: 2})
 		await umbreld.vm.powerOn()
 	})
 
 	test('detects both NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(2)
-		const device1 = devices.find((d) => d.slot === 1)
-		const device2 = devices.find((d) => d.slot === 2)
+		const device1 = devices.find(drive.inSlot(1))
+		const device2 = devices.find(drive.inSlot(2))
 		expect(device1).toBeDefined()
 		expect(device2).toBeDefined()
 		firstDeviceId = device1!.id!
@@ -47,7 +48,11 @@ describe('RAID failsafe mode', () => {
 	})
 
 	test('registers user with failsafe RAID config (triggers reboot)', async () => {
-		await umbreld.signup({raidDevices: [firstDeviceId, secondDeviceId], raidType: 'failsafe'})
+		await umbreld.signup({
+			raidDevices: [firstDeviceId, secondDeviceId],
+			raidType: 'failsafe',
+			failsafeLayout: drive.failsafeLayout,
+		})
 	})
 
 	test('waits for RAID setup to complete and logs in', async () => {
@@ -97,9 +102,14 @@ describe('RAID failsafe mode', () => {
 		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
 	})
 
-	test('shuts down and adds third SSD', async () => {
+	test('writes data so the expansion takes a while', async () => {
+		await umbreld.vm.ssh('dd if=/dev/urandom of=~/data.bin bs=1M count=1000 && sync')
+	})
+
+	test('shuts down and adds third and fourth SSDs', async () => {
 		await umbreld.vm.powerOff()
-		await umbreld.vm.addNvme({slot: 3})
+		await drive.add(umbreld.vm, {slot: 3})
+		await drive.add(umbreld.vm, {slot: 4})
 		await umbreld.vm.powerOn()
 	})
 
@@ -109,13 +119,15 @@ describe('RAID failsafe mode', () => {
 		await umbreld.login()
 	})
 
-	test('detects all three NVMe devices after reboot', async () => {
+	test('detects all four NVMe devices after reboot', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
-		expect(devices).toHaveLength(3)
-		const thirdDevice = devices.find((d) => d.slot === 3)
+		expect(devices).toHaveLength(4)
+		const thirdDevice = devices.find(drive.inSlot(3))
 		expect(thirdDevice).toBeDefined()
 		thirdDeviceId = thirdDevice!.id!
 		expect(thirdDeviceId).toBeDefined()
+		fourthDeviceId = devices.find(drive.inSlot(4))!.id!
+		expect(fourthDeviceId).toBeDefined()
 	})
 
 	test('adds third SSD to RAID array and subscribes to expansion events', async () => {
@@ -124,6 +136,12 @@ describe('RAID failsafe mode', () => {
 		await expansionSubscription.started
 
 		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: thirdDeviceId})
+	})
+
+	test('rejects adding fourth SSD while the array is still expanding', async () => {
+		await expect(umbreld.client.hardware.raid.addDevice.mutate({deviceId: fourthDeviceId})).rejects.toThrow(
+			'Cannot add a RAID device while a RAID expansion is in progress',
+		)
 	})
 
 	test('reports correct RAID status with three devices', async () => {

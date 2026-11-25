@@ -47,7 +47,8 @@ vi.mock('@/modules/auth/http-auth', () => ({useAuthorizedHttpUrl: (url?: string)
 vi.mock('@/features/files/components/shared/file-item-icon', () => ({FileItemIcon: () => null}))
 vi.mock('@/features/files/providers/files-capabilities-context', () => ({useIsFilesReadOnly: () => false}))
 vi.mock('@/features/files/hooks/use-is-touch-device', () => ({useIsTouchDevice: () => false}))
-vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', () => ({
+vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', async (importOriginal) => ({
+	...(await importOriginal()),
 	useFileBytes: () => ({status: 'ready', bytes: ui.bytes, revision: '"r1"'}),
 }))
 vi.mock('@/features/files/components/file-viewer/shell/context', () => ({
@@ -229,23 +230,26 @@ test('the grid starts below the notice and the find pill, and a phone on its sid
 		'<conditionalFormatting sqref="A1"><cfRule type="expression" priority="1"><formula>TRUE</formula></cfRule></conditionalFormatting>'
 	const bytes = await workbook({sheets: [worksheet('', {after: formatted})]})
 	const stage = await show('book.xlsx', XLSX, bytes)
-	const padding = () => {
-		const classes = stage.querySelector('[data-grid]')!.parentElement!.classList
-		return ['pt-20', 'group-has-[[role=status]]/area:pt-24'].filter((name) => classes.contains(name))
+	// The grid keeps the room its area says a notice takes, or find's
+	const noticeRoom = 'has-[[role=status]]:[--notice-room:calc(6rem_+_4_*_var(--text-boost))]'
+	const padding = (within: Element) => {
+		const grid = within.querySelector('[data-grid]')!.parentElement!
+		return [
+			...['pt-20', 'pt-[var(--notice-room,0px)]'].filter((name) => grid.classList.contains(name)),
+			...(grid.parentElement!.classList.contains(noticeRoom) ? ['notice room'] : []),
+		]
 	}
 	await until(() => !!stage.querySelector('[role="status"]'))
-	expect(padding()).toEqual(['group-has-[[role=status]]/area:pt-24'])
+	expect(padding(stage)).toEqual(['pt-[var(--notice-room,0px)]', 'notice room'])
 	await act(async () => stage.querySelector<HTMLButtonElement>('button[aria-label="files-viewer.find"]')!.click())
-	expect(padding()).toEqual(['pt-20'])
+	expect(padding(stage)).toEqual(['pt-20'])
 
 	await act(async () => root!.unmount())
 	ui.short = true
 	const short = await show('book.xlsx', XLSX, bytes)
 	await until(() => !!short.querySelector('[role="status"]'))
 	expect(short.querySelector('[role="status"]')!.closest('.hidden')).not.toBeNull()
-	expect(
-		short.querySelector('[data-grid]')!.parentElement!.classList.contains('group-has-[[role=status]]/area:pt-24'),
-	).toBe(false)
+	expect(padding(short)).toEqual(['pt-[var(--notice-room,0px)]'])
 })
 
 test('a link finds its sheet whatever the case of its name, and never opens a hidden one', async () => {

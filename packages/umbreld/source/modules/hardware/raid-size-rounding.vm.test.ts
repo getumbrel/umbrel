@@ -2,9 +2,9 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 
-describe('RAID transition with real 4TB drive sizes', () => {
+describe.each(raidzDrives)('RAID transition with real 4TB drive sizes ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let largerPhisonDeviceId: string
 	let smallerSamsungDeviceId: string
@@ -33,7 +33,7 @@ describe('RAID transition with real 4TB drive sizes', () => {
 	}
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -50,10 +50,10 @@ describe('RAID transition with real 4TB drive sizes', () => {
 
 	test('adds all four 4TB NVMe devices and boots VM', async () => {
 		// Slot 1: Larger Phison, Slot 2: Smaller Samsung, Slot 3: Exact 4TB, Slot 4: Small simulated (just over 4TB)
-		await umbreld.vm.addNvme({slot: 1, size: LARGER_PHISON_4TB_SIZE})
-		await umbreld.vm.addNvme({slot: 2, size: SMALLER_SAMSUNG_4TB_SIZE})
-		await umbreld.vm.addNvme({slot: 3, size: EXACT_4TB_SIZE})
-		await umbreld.vm.addNvme({slot: 4, size: SMALL_SIMULATED_4TB_SIZE})
+		await drive.add(umbreld.vm, {slot: 1, size: LARGER_PHISON_4TB_SIZE})
+		await drive.add(umbreld.vm, {slot: 2, size: SMALLER_SAMSUNG_4TB_SIZE})
+		await drive.add(umbreld.vm, {slot: 3, size: EXACT_4TB_SIZE})
+		await drive.add(umbreld.vm, {slot: 4, size: SMALL_SIMULATED_4TB_SIZE})
 		await umbreld.vm.powerOn()
 	})
 
@@ -64,10 +64,10 @@ describe('RAID transition with real 4TB drive sizes', () => {
 	test('detects all four NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(4)
-		largerPhisonDeviceId = devices.find((d) => d.slot === 1)!.id!
-		smallerSamsungDeviceId = devices.find((d) => d.slot === 2)!.id!
-		exactGenericDeviceId = devices.find((d) => d.slot === 3)!.id!
-		smallSimulatedDeviceId = devices.find((d) => d.slot === 4)!.id!
+		largerPhisonDeviceId = devices.find(drive.inSlot(1))!.id!
+		smallerSamsungDeviceId = devices.find(drive.inSlot(2))!.id!
+		exactGenericDeviceId = devices.find(drive.inSlot(3))!.id!
+		smallSimulatedDeviceId = devices.find(drive.inSlot(4))!.id!
 		expect(largerPhisonDeviceId).toBeDefined()
 		expect(smallerSamsungDeviceId).toBeDefined()
 		expect(exactGenericDeviceId).toBeDefined()

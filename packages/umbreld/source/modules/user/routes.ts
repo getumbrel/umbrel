@@ -15,6 +15,7 @@ import {
 } from '../auth/browser-session-cookie.ts'
 import {nativeClientSchema} from '../auth/native-client.ts'
 import * as totp from '../utilities/totp.ts'
+import clientAddress from '../server/client-address.ts'
 import type {Context} from '../server/trpc/context.ts'
 import {privateProcedure, privateProcedureWithMembers, publicProcedure, router} from '../server/trpc/trpc.ts'
 import {accountAvatarUrl, serializeAccountAvatar} from './avatar-api.ts'
@@ -64,6 +65,7 @@ export default router({
 				raidDevices: z.array(z.string()).optional(),
 				raidType: z.enum(['storage', 'failsafe']).optional(),
 				acceleratorDevices: z.array(z.string()).optional(),
+				failsafeLayout: z.enum(['raidz1', 'raidz2', 'mirror']).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
@@ -81,6 +83,7 @@ export default router({
 					input.raidDevices!,
 					input.raidType!,
 					input.acceleratorDevices,
+					input.failsafeLayout,
 					{name: input.name, password: input.password, language: input.language},
 				)
 				return true
@@ -112,7 +115,12 @@ export default router({
 			if (!ctx.request || !ctx.response) {
 				throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})
 			}
-			const validation = await ctx.user.validateAccountLogin(input.userId, input.password, input.totpToken)
+			const validation = await ctx.user.validateAccountLogin(
+				input.userId,
+				input.password,
+				input.totpToken,
+				clientAddress(ctx.request),
+			)
 			if (!validation.valid) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: loginErrorMessage(validation.reason)})
 			}
@@ -147,7 +155,12 @@ export default router({
 			if (!ctx.request || !ctx.response) {
 				throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})
 			}
-			const validation = await ctx.user.validateAccountLogin(input.userId, input.password, input.totpToken)
+			const validation = await ctx.user.validateAccountLogin(
+				input.userId,
+				input.password,
+				input.totpToken,
+				clientAddress(ctx.request),
+			)
 			if (!validation.valid) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: loginErrorMessage(validation.reason)})
 			}
@@ -180,21 +193,34 @@ export default router({
 	// The device credential is accepted only by this exchange. It remains stable so
 	// a lost response can be retried without destroying the native session.
 	refreshNativeAccess: publicProcedure
-		.input(z.object({deviceToken: z.string(), client: nativeClientSchema}))
+		.input(z.object({deviceToken: z.string(), client: nativeClientSchema, browserSession: z.boolean().optional()}))
 		.mutation(async ({ctx, input}) => {
 			if (!ctx.request || !ctx.response) {
 				throw new TRPCError({code: 'METHOD_NOT_SUPPORTED', message: 'HTTP transport required'})
 			}
-			const session = await ctx.umbreld.auth.refreshNativeAccess(input.deviceToken, input.client).catch((error) => {
-				if (error instanceof InvalidNativeDeviceCredentialError) {
-					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid native session'})
-				}
-				throw error
-			})
+			// Apps reach the Umbrel only over HTTPS, and the browser session's cookies are
+			// the secure ones.
+			if (input.browserSession && !ctx.request.secure) {
+				throw new TRPCError({code: 'BAD_REQUEST', message: 'HTTPS required'})
+			}
+			const session = await ctx.umbreld.auth
+				.refreshNativeAccess(input.deviceToken, input.client, {browserSession: input.browserSession})
+				.catch((error) => {
+					if (error instanceof InvalidNativeDeviceCredentialError) {
+						throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid native session'})
+					}
+					throw error
+				})
 			ctx.response!.set('Cache-Control', 'no-store')
+			const browser = session.browserSession
+			if (browser) {
+				setAppGatewayCookie(ctx.response!, ctx.request!, browser.appGatewayToken, new Date(browser.expiresAt))
+				setBrowserSessionCookie(ctx.response!, ctx.request!, browser.browserSessionToken, new Date(browser.expiresAt))
+			}
 			return {
 				accessToken: session.accessToken,
 				accessExpiresAt: session.accessExpiresAt,
+				...(browser && {dashboardToken: browser.dashboardToken}),
 			}
 		}),
 
@@ -323,14 +349,16 @@ export default router({
 	}),
 
 	logout: privateProcedureWithMembers.mutation(async ({ctx}) => {
-		await ctx.umbreld.auth.revokeSession(ctx.principal!.sessionId)
+		await ctx.umbreld.auth.logout(ctx.principal!)
 		clearAppGatewayCookies(ctx.response!)
 		clearBrowserSessionCookies(ctx.response!)
 		return true
 	}),
 
 	verifyPassword: privateProcedureWithMembers.input(z.object({password: z.string()})).mutation(async ({ctx, input}) => {
-		if (!(await ctx.user.validateAccountPassword(ctx.principal!.accountId, input.password))) {
+		const {accountId} = ctx.principal!
+		const loginId = ctx.umbreld.auth.loginId(ctx.principal!)
+		if (!(await ctx.user.validateAccountPassword(accountId, input.password, loginId))) {
 			throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect password'})
 		}
 		return true
@@ -344,8 +372,9 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			const accountId = ctx.principal!.accountId
-			if (!(await ctx.user.validateAccountPassword(accountId, input.oldPassword))) {
+			const {accountId} = ctx.principal!
+			const loginId = ctx.umbreld.auth.loginId(ctx.principal!)
+			if (!(await ctx.user.validateAccountPassword(accountId, input.oldPassword, loginId))) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect password'})
 			}
 			return ctx.user.setAccountPassword(accountId, input.newPassword)
@@ -380,11 +409,12 @@ export default router({
 	),
 
 	disable2fa: privateProcedureWithMembers.input(z.object({totpToken: z.string()})).mutation(async ({ctx, input}) => {
-		const accountId = ctx.principal!.accountId
+		const {accountId} = ctx.principal!
+		const loginId = ctx.umbreld.auth.loginId(ctx.principal!)
 		if (!(await ctx.user.is2faEnabledForAccount(accountId))) {
 			throw new TRPCError({code: 'UNAUTHORIZED', message: '2FA is not enabled'})
 		}
-		if (!(await ctx.user.validate2faTokenForAccount(accountId, input.totpToken))) {
+		if (!(await ctx.user.validate2faTokenForAccount(accountId, input.totpToken, loginId))) {
 			throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect 2FA code'})
 		}
 		return ctx.user.disable2faForAccount(accountId)

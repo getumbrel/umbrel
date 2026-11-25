@@ -1,5 +1,5 @@
 import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
-import {lazy, Suspense, useEffect, useState} from 'react'
+import {lazy, Suspense, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
 import {HiMenuAlt2} from 'react-icons/hi'
@@ -17,7 +17,7 @@ import {Sidebar} from '@/features/photos/components/sidebar'
 import {UploadDropZone} from '@/features/photos/components/upload-drop-zone'
 import {PhotosViewProvider} from '@/features/photos/components/view-context'
 import {usePhotosEvents} from '@/features/photos/hooks/use-photos-events'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsMobile, useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {HttpUrlAuthorizerProvider} from '@/modules/auth/http-url-authorizer'
 import {trpcReact} from '@/trpc/trpc'
@@ -27,10 +27,13 @@ import {trpcReact} from '@/trpc/trpc'
 // field takes the actions bar), and the title returns when it ends. Kept
 // never shorter than the pills that share it, so their coming and going
 // can't move what's below. A phone on its side gives the row to the grid
-// (the actions bar takes its controls) until a search needs it.
+// (the actions bar takes its controls) until a search needs it. On a tablet,
+// as on a desktop, the bar comes up into this row beside the title, and
+// keeps its own controls and its own search.
 function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () => void}) {
 	const {t} = useTranslation()
-	const searching = useSearchEngaged() && isMobile
+	const isPhone = useIsPhone()
+	const searching = useSearchEngaged() && isPhone
 	const reduceMotion = useReducedMotion() ?? false
 	const swap = (direction: 1 | -1) =>
 		reduceMotion
@@ -49,24 +52,71 @@ function TitleRow({isMobile, openSidebar}: {isMobile: boolean; openSidebar: () =
 			<div className='relative z-10 flex min-h-11 w-full items-center'>
 				<AnimatePresence initial={false} mode='popLayout'>
 					{searching ? (
-						<motion.div key='search' className='mr-5 flex min-w-0 flex-1 phone-side:mr-9' {...swap(1)}>
+						// (Clear of the sheet's close button: see the note on the title's controls below)
+						<motion.div key='search' className='mr-9 flex min-w-0 flex-1' {...swap(1)}>
 							<MobileSearch />
 						</motion.div>
 					) : (
 						<motion.div key='title' className='flex min-w-0 flex-1 items-center gap-4' {...swap(-1)}>
 							{isMobile ? (
-								<HiMenuAlt2 role='button' className='h-5 w-5 text-white/90 phone-side:hidden' onClick={openSidebar} />
+								<button
+									type='button'
+									onClick={openSidebar}
+									aria-label={t('photos-sidebar.navigation')}
+									className='shrink-0 phone-side:hidden'
+								>
+									<HiMenuAlt2 className='h-5 w-5 text-white/90' />
+								</button>
 							) : null}
-							<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[224px] lg:text-36 panes:text-36 phone-side:sr-only'>
-								{t('photos')}
-							</SheetTitle>
-							{/* Phones and tablets: the page's controls, clear of the sheet's close button */}
-							<MobileActions className='mr-5 ml-auto lg:hidden phone-side:hidden' />
+							<Title />
+							{/* Phones: the page's controls, clear of the sheet's close button. Not
+							    of its glyph alone: under a finger the button answers across the
+							    whole 44px of the sheet's corner, and anything of this row in that
+							    square would close the window when tapped. The sheet's own 12px
+							    of padding and these 36px keep the last control out of it */}
+							<MobileActions className='mr-9 ml-auto lg:hidden phone-side:hidden tablet:hidden' />
 						</motion.div>
 					)}
 				</AnimatePresence>
 			</div>
 		</SheetHeader>
+	)
+}
+
+// The sheet's title, at its own size where it fits and as much smaller as it
+// takes where it doesn't: of everything in its row, it is what gives. The
+// word for Photos is twice as long in some languages as in English. Greek's
+// ran past the sidebar's column into the bar's title on desktop, and on a
+// phone it squeezed the menu button out of the row. On desktop its box is the
+// sidebar's column, less a gap before the bar's own title, which stands right
+// after it; on a tablet, a box the bar starts after (see ActionsBar). Fitted when it mounts (it comes and goes with a phone's search)
+// and again whenever its row changes size.
+function Title() {
+	const {t} = useTranslation()
+	const title = t('photos')
+	const ref = useRef<HTMLHeadingElement>(null)
+	useLayoutEffect(() => {
+		const element = ref.current
+		if (!element?.parentElement) return
+		const fit = () => {
+			element.style.fontSize = ''
+			const [room, needed] = [element.clientWidth, element.scrollWidth]
+			// (Next to no room is the title read out but not shown: a phone on its side)
+			if (room < 16 || needed <= room) return
+			element.style.fontSize = `${(parseFloat(getComputedStyle(element).fontSize) * room) / needed}px`
+		}
+		fit()
+		const observer = new ResizeObserver(fit)
+		observer.observe(element.parentElement)
+		return () => observer.disconnect()
+	}, [title])
+	return (
+		<SheetTitle
+			ref={ref}
+			className='mr-2 min-w-0 leading-none whitespace-nowrap lg:mr-3 lg:w-[212px] lg:text-36 panes:text-36 phone-side:sr-only tablet:w-[124px]'
+		>
+			{title}
+		</SheetTitle>
 	)
 }
 
@@ -89,6 +139,7 @@ const RenameAlbumDialog = lazy(() =>
 // Photos shell: mirrors the Files layout (title row, sidebar column, actions bar
 // above the listing outlet) so the two system apps feel like siblings.
 export default function PhotosLayout() {
+	const {t} = useTranslation()
 	const {pathname} = useLocation()
 	const isMobile = useIsMobile()
 	const barDrop = useBarDrop()
@@ -122,8 +173,12 @@ export default function PhotosLayout() {
 						<div className='mt-[-0.5rem] grid grid-cols-1 lg:grid-cols-[224px_minmax(0,1fr)] phone-side:mt-0'>
 							{/* Sidebar */}
 							{isMobile ? (
-								<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
-									<Sidebar className='h-[calc(100svh-140px)] low:h-[calc(100svh-56px)]' />
+								<MobileSidebarWrapper
+									isOpen={isMobileSidebarOpen}
+									onClose={() => setIsMobileSidebarOpen(false)}
+									label={t('photos-sidebar.navigation')}
+								>
+									<Sidebar className='h-[calc(100svh-140px-var(--safe-top))] low:h-[calc(100svh-56px-var(--safe-top))]' />
 								</MobileSidebarWrapper>
 							) : (
 								// Above the listing: the map runs on beneath it

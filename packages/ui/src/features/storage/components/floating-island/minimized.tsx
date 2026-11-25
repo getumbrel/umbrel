@@ -1,15 +1,17 @@
 import {useTranslation} from 'react-i18next'
 
 import {DataStreamIconMini, type DriveVariant} from './data-stream-icon'
-import {raidOperationLabels, type IslandRaidProgress} from './index'
+import {islandProgress, raidOperationLabels, type IslandRaidProgress} from './index'
 
 // No restart countdown here - island is force-expanded when rebooting (see index.tsx)
 export function MinimizedContent({
 	operation,
 	deviceType = 'ssd',
+	mirrored = false,
 }: {
 	operation: IslandRaidProgress
 	deviceType?: DriveVariant
+	mirrored?: boolean
 }) {
 	const {t} = useTranslation()
 	const label = t(raidOperationLabels[operation.type])
@@ -24,7 +26,7 @@ export function MinimizedContent({
 				<span className='block truncate text-center text-xs text-white/90'>{label}</span>
 			</div>
 			<div className='flex shrink-0 items-center gap-2'>
-				<span className='text-xs text-white/60'>{Math.round(operation.progress)}%</span>
+				<span className='text-xs text-white/60'>{Math.floor(islandProgress(operation, mirrored).progress)}%</span>
 			</div>
 		</div>
 	)

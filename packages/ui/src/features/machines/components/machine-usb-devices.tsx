@@ -311,7 +311,13 @@ export function MachineUsbDevices({
 										{name}
 									</h3>
 									<div className='flex items-start gap-1.5 text-11 leading-tight text-white/35'>
-										<span className={cn('mt-1 size-1.5 shrink-0 rounded-full', statusDotClass[status.dot])} />
+										{/* Centred on the first line at any text size: half its height less half the dot */}
+										<span
+											className={cn(
+												'mt-[calc(0.625em-3px)] size-1.5 shrink-0 rounded-full',
+												statusDotClass[status.dot],
+											)}
+										/>
 										<span>{(nameCounts.get(name) ?? 0) > 1 ? `${status.text} · ${port}` : status.text}</span>
 									</div>
 								</div>

@@ -32,8 +32,8 @@ export function TwoFactorForm({
 	return (
 		<div className='flex flex-col items-center gap-5'>
 			<div className='flex flex-col items-center'>
-				<PinInput autoFocus length={6} onCodeCheck={onCodeCheck} />
-				<div role='alert'>
+				<PinInput label={t('login-2fa.subtitle')} autoFocus length={6} onCodeCheck={onCodeCheck} />
+				<div>
 					<AnimatedInputError>{error}</AnimatedInputError>
 				</div>
 			</div>

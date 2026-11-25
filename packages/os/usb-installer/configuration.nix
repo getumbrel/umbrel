@@ -135,9 +135,11 @@ in {
         bash
         coreutils
         dmidecode
+        dosfstools
         gawk
         gnugrep
         gnused
+        mtools
         ncurses
         systemd
         util-linux

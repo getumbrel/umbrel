@@ -275,3 +275,90 @@ test('optimized Photos reads preserve counts, source membership, filters and nei
 		await temporary.destroyRoot()
 	}
 })
+
+test('a search of Photos finds a photo by its name where nothing the models made is there to look in', async () => {
+	const temporary = temporaryDirectory()
+	const directory = await temporary.create()
+	const database = new BetterSqlite3(':memory:')
+	const durablePath = nodePath.join(directory, 'umbrel.db')
+	const durable = new BetterSqlite3(durablePath)
+	try {
+		migratePhotos(durable)
+		await migrateFileIndex(database)
+		// As on a device the models do not run on: no database of what they made is attached
+		database.prepare('ATTACH DATABASE ? AS umbrel').run(durablePath)
+		database.exec(`
+			INSERT INTO index_roots(id, virtual_path, system_path, owner_id, kind, search_enabled, created_at, updated_at)
+			VALUES (1, '/Home', '/home', 'owner', 'home', 1, 1, 1);
+			INSERT INTO contents(id, blake3, size, created_at) VALUES (1, x'${'01'.repeat(32)}', 100, 1), (2, x'${'02'.repeat(32)}', 100, 1);
+			INSERT INTO entries(root_id, relative_path, name, search_name, search_name_folded, type, size, modified_ms,
+				hidden, thumbnail_identity_kind, content_id)
+			VALUES (1, 'beach.jpg', 'beach.jpg', 'beach.jpg', 'beach.jpg', 'file', 100, 1, 0, 'content', 1),
+				(1, 'forest.jpg', 'forest.jpg', 'forest.jpg', 'forest.jpg', 'file', 100, 1, 0, 'content', 2);
+			INSERT INTO media_metadata(content_id, state, kind, taken_at, width, height, updated_at)
+			VALUES (1, 'ready', 'photo', 1000, 100, 50, 1), (2, 'ready', 'photo', 2000, 100, 50, 1);
+		`)
+		const repository = new PhotosRepository()
+
+		const found = repository.search(database, 'owner', {type: 'query', text: 'beach', scope: 'photos', limit: 10})
+		expect(found.map(({path}) => path)).toEqual(['/Home/beach.jpg'])
+		expect(repository.search(database, 'owner', {type: 'insights', path: '/Home/beach.jpg'})).toEqual({})
+	} finally {
+		durable.close()
+		database.close()
+		await temporary.destroyRoot()
+	}
+})
+
+test('counts how far along the work is on the files of the account asking', async () => {
+	const temporary = temporaryDirectory()
+	const directory = await temporary.create()
+	const database = new BetterSqlite3(':memory:')
+	const durablePath = nodePath.join(directory, 'umbrel.db')
+	const durable = new BetterSqlite3(durablePath)
+	try {
+		migratePhotos(durable)
+		await migrateFileIndex(database)
+		database.prepare('ATTACH DATABASE ? AS umbrel').run(durablePath)
+		// The owner has three files and a member two, one of them a copy of one of the owner's
+		database.exec(`
+			INSERT INTO index_roots(id, virtual_path, system_path, owner_id, kind, search_enabled, created_at, updated_at)
+			VALUES (1, '/Home', '/home', 'owner', 'home', 1, 1, 1), (2, '/Users/member', '/member', 'member', 'home', 1, 1, 1);
+			INSERT INTO contents(id, blake3, size, created_at)
+			VALUES (1, x'${'01'.repeat(32)}', 1, 1), (2, x'${'02'.repeat(32)}', 1, 1), (3, x'${'03'.repeat(32)}', 1, 1), (4, x'${'04'.repeat(32)}', 1, 1);
+			INSERT INTO entries(root_id, relative_path, name, type, size, modified_ms, hidden, thumbnail_identity_kind, content_id)
+			VALUES (1, 'a.jpg', 'a.jpg', 'file', 1, 1, 0, 'content', 1), (1, 'b.jpg', 'b.jpg', 'file', 1, 1, 0, 'content', 2),
+				(1, 'c.jpg', 'c.jpg', 'file', 1, 1, 0, 'content', 3), (2, 'c.jpg', 'c.jpg', 'file', 1, 1, 0, 'content', 3),
+				(2, 'd.txt', 'd.txt', 'file', 1, 1, 0, 'content', 4);
+			INSERT INTO model_work(content_id, model, state)
+			VALUES (1, 'embedding', 'ready'), (2, 'embedding', 'pending'), (3, 'embedding', 'ready'), (4, 'text', 'pending');
+			INSERT INTO thumbnail_variants(content_id, variant, state, updated_at)
+			VALUES (1, 'preview-192-webp-v1', 'ready', 1), (3, 'preview-192-webp-v1', 'pending', 1);
+		`)
+		const repository = new PhotosRepository()
+		const status = (accountId: string) => repository.search(database, accountId, {type: 'status'})
+		const progress = (accountId: string) => repository.search(database, accountId, {type: 'progress'})
+
+		expect(status('owner')).toEqual({total: 3, completed: 2})
+		expect(status('member')).toEqual({total: 2, completed: 1})
+		expect(progress('owner')).toMatchObject({
+			embedding: {completed: 2, total: 3},
+			text: {total: 0},
+			previews: {completed: 1, total: 2},
+		})
+		expect(progress('member')).toMatchObject({
+			embedding: {completed: 1, total: 1},
+			text: {completed: 0, total: 1},
+			previews: {completed: 0, total: 1},
+		})
+
+		// With no other account on the device, all the work there is is the owner's
+		database.exec(`DELETE FROM entries WHERE root_id = 2; DELETE FROM index_roots WHERE id = 2`)
+		expect(status('owner')).toEqual({total: 4, completed: 2})
+		expect(progress('owner')).toMatchObject({embedding: {completed: 2, total: 3}, text: {completed: 0, total: 1}})
+	} finally {
+		durable.close()
+		database.close()
+		await temporary.destroyRoot()
+	}
+})

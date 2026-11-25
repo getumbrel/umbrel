@@ -25,6 +25,7 @@ import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-na
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
+import {useIncreaseContrast} from '@/hooks/use-accessibility'
 import {useIsPhone} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {trpcReact} from '@/trpc/trpc'
@@ -35,6 +36,7 @@ export default function FileSharingDrawerOrDialog() {
 	const title = t('settings.file-sharing')
 	const dialogProps = useSettingsDialogProps()
 	const isPhone = useIsPhone()
+	const [increaseContrast] = useIncreaseContrast()
 	const homeDirectoryName = useHomeDirectoryName()
 	// The account's home root: /Home for the owner, /Users/<slug> for members
 	const homePath = useHomePath()
@@ -235,7 +237,9 @@ export default function FileSharingDrawerOrDialog() {
 											key={share.path}
 											className={listItemClass}
 											initial={{opacity: 0, height: 0}}
-											animate={{opacity: unavailableReason ? 0.5 : 1, height: 'auto'}}
+											// Dimmed while unavailable, but not with increased contrast, where the reason
+											// it gives has to stay readable
+											animate={{opacity: unavailableReason && !increaseContrast ? 0.5 : 1, height: 'auto'}}
 											exit={{opacity: 0, height: 0}}
 											transition={{duration: 0.2}}
 										>

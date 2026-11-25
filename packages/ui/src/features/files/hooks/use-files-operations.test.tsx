@@ -7,6 +7,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {authorizedHttpUrl} from '@/modules/auth/http-auth'
 
 const mocks = vi.hoisted(() => ({
 	isReadOnly: false,
@@ -46,8 +47,8 @@ vi.mock('@/trpc/trpc', () => {
 					recents: {invalidate},
 					favorites: {invalidate},
 					shares: {invalidate},
-					search: {invalidate},
 				},
+				search: {query: {invalidate}},
 			}),
 			files: {
 				rename: mutation(mocks.rename),
@@ -218,5 +219,80 @@ describe('Files command capabilities', () => {
 		expect(mocks.deleteMany).toHaveBeenCalledWith({
 			paths: ['/Trash/report.txt', '/Trash/notes.txt'],
 		})
+	})
+	it('trashes a large selection a few requests at a time, and says why once however many fail', async () => {
+		const items = Array.from({length: 100}, (_, index) => ({
+			...item(['trash']),
+			name: `file-${index}.txt`,
+			path: `/Home/file-${index}.txt`,
+		}))
+		let onTheirWay = 0
+		let mostAtOnce = 0
+		const settle: (() => void)[] = []
+		mocks.trash.mockImplementation(
+			({path}: {path: string}) =>
+				new Promise<void>((resolve, reject) => {
+					mostAtOnce = Math.max(mostAtOnce, ++onTheirWay)
+					settle.push(() => {
+						onTheirWay--
+						// One in ten can't be trashed
+						if (path.endsWith('7.txt')) reject(new Error('Permission denied'))
+						else resolve()
+					})
+				}),
+		)
+		act(() => useFilesStore.setState({selectedItems: items}))
+
+		await act(() => actions.trashSelectedItems())
+		// They leave the listing at once, and the selection with them
+		expect(useFilesStore.getState().pendingPaths.size).toBe(100)
+		expect(useFilesStore.getState().selectedItems).toEqual([])
+		expect(mocks.trash).toHaveBeenCalledTimes(16)
+
+		while (settle.length > 0) {
+			await act(async () => {
+				settle.shift()!()
+				await new Promise((resolve) => setTimeout(resolve, 0))
+			})
+		}
+		expect(mocks.trash).toHaveBeenCalledTimes(100)
+		expect(mostAtOnce).toBe(16)
+		// The ten that failed are back in the listing, and it is said once
+		const stillLeaving = [...useFilesStore.getState().pendingPaths.keys()]
+		expect(stillLeaving).toHaveLength(90)
+		expect(stillLeaving.some((path) => path.endsWith('7.txt'))).toBe(false)
+		expect(mocks.toastError).toHaveBeenCalledTimes(1)
+		expect(mocks.toastError).toHaveBeenCalledWith('files-error.trash', {area: 'files'})
+	})
+
+	it('downloads the folder itself when a selection too long to name is all of it, and says so when it is not', async () => {
+		const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+		vi.mocked(authorizedHttpUrl).mockImplementation(async (url) => url)
+		const many = Array.from({length: 2000}, (_, index) => ({
+			...item(['copy']),
+			name: `file-${index}.txt`,
+			path: `/Home/Big/file-${index}.txt`,
+		}))
+
+		// A few items are named one by one, whatever folder they fill
+		act(() => useFilesStore.setState({selectedItems: many.slice(0, 2)}))
+		await act(() => actions.downloadSelectedItems({wholeFolder: '/Home/Big'}))
+		expect(authorizedHttpUrl).toHaveBeenLastCalledWith(
+			'/api/files/download?path=%2FHome%2FBig%2Ffile-0.txt&path=%2FHome%2FBig%2Ffile-1.txt',
+		)
+
+		// All 2,000 would not fit in the address: the folder stands in for them
+		act(() => useFilesStore.setState({selectedItems: many}))
+		await act(() => actions.downloadSelectedItems({wholeFolder: '/Home/Big'}))
+		expect(authorizedHttpUrl).toHaveBeenLastCalledWith('/api/files/download?path=%2FHome%2FBig')
+		expect(click).toHaveBeenCalledTimes(2)
+
+		// Most of a folder is neither: nothing is asked of the server
+		act(() => useFilesStore.setState({selectedItems: many.slice(0, 1500)}))
+		await act(() => actions.downloadSelectedItems())
+		expect(authorizedHttpUrl).toHaveBeenCalledTimes(2)
+		expect(click).toHaveBeenCalledTimes(2)
+		expect(mocks.toastError).toHaveBeenCalledWith('files-error.download-too-many', {area: 'files'})
+		click.mockRestore()
 	})
 })

@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react'
 import {defineConfig} from 'vite'
 import {imagetools} from 'vite-imagetools'
 
+import {acknowledgements} from './acknowledgements/plugin'
+
 // https://vitejs.dev/config/
 
 export default defineConfig({
@@ -23,6 +25,8 @@ export default defineConfig({
 			// Currently we only convert SVGs in features/files/assets/file-items-thumbnails
 			include: /src\/features\/files\/assets\/file-items-thumbnails\/[^?]+\.svg(\?.*)?$/,
 		}),
+		// The Tabler icons reach the build as a copy in public/ (see copy-tabler-icons)
+		acknowledgements({extra: ['@tabler/icons']}),
 	],
 	// Vite 4.4.8+ blocks requests from unrecognized hosts to prevent DNS rebinding attacks.
 	// Allow all hosts since the dev server runs inside a local Docker container and is
@@ -37,6 +41,9 @@ export default defineConfig({
 		},
 	},
 	build: {
+		// Kept apart from the files copied from public/assets, which keep their names when
+		// they change: the server only caches this directory's content-hashed files forever
+		assetsDir: 'assets/build',
 		rollupOptions: {
 			// Build separate HTML entrypoints while keeping their shared dependencies
 			// in one set of chunks. The server chooses which document to serve, so the

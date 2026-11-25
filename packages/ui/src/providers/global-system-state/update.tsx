@@ -1,8 +1,6 @@
 import {useTranslation} from 'react-i18next'
 
-import {BarePage} from '@/layouts/bare/bare-page'
-import FailedLayout from '@/modules/bare/failed-layout'
-import {ProgressLayout} from '@/modules/bare/progress-layout'
+import {Cover, CoverRetryActions} from '@/components/ui/cover'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
 
 export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
@@ -46,27 +44,25 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 	const {progress, description, running, error} = updateStatusQ.data ?? {}
 	const indeterminate = updateStatusQ.isLoading || !running
 
+	if (error) {
+		return (
+			<Cover
+				mark='warning'
+				title={t('software-update.failed')}
+				description={error}
+				actions={<CoverRetryActions retry={t('software-update.failed.retry')} onRetry={onRetry} />}
+			/>
+		)
+	}
+
 	return (
-		<BarePage>
-			{!error && (
-				<ProgressLayout
-					title={
-						latestVersion ? t('software-update.updating-to', {name: latestVersion.name}) : t('software-update.updating')
-					}
-					callout={t('software-update.callout')}
-					progress={indeterminate ? undefined : progress}
-					message={description}
-					isRunning={!!running}
-				/>
-			)}
-			{error && (
-				<FailedLayout
-					title={t('software-update.failed')}
-					description={error}
-					buttonText={t('software-update.failed.retry')}
-					buttonOnClick={onRetry}
-				/>
-			)}
-		</BarePage>
+		<Cover
+			title={
+				latestVersion ? t('software-update.updating-to', {name: latestVersion.name}) : t('software-update.updating')
+			}
+			progress={indeterminate ? 'indeterminate' : (progress ?? 'indeterminate')}
+			// An empty step gets the default too
+			status={description || t('connecting')}
+		/>
 	)
 }

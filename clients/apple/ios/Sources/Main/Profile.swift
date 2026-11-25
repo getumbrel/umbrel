@@ -8,6 +8,7 @@ import UserNotifications
 enum ProfileDestination: Hashable {
 	case remoteAccess
 	case connection
+	case photoBackupFailures
 }
 
 struct ProfileSheet: View {
@@ -16,6 +17,8 @@ struct ProfileSheet: View {
 	// Accents follow the wallpaper's brand color, like the rest of the app.
 	@Environment(\.brandColor) private var brandColor
 	@State private var isConfirmingSignOut = false
+	// Read here, above the pages, so the row's count and the page it opens are one list
+	@State private var photoBackupFailures = PhotoBackupFailureList()
 	@Binding var path: [ProfileDestination]
 
 	var body: some View {
@@ -48,9 +51,13 @@ struct ProfileSheet: View {
 					TailscaleSetupPage()
 				case .connection:
 					ConnectionDetailsPage()
+				case .photoBackupFailures:
+					PhotoBackupFailuresPage()
 				}
 			}
 		}
+		.environment(photoBackupFailures)
+		.readingPhotoBackupFailures(into: photoBackupFailures)
 		.presentationDragIndicator(.visible)
 		.presentationCornerRadius(38)
 		.presentationBackground(Color(hex: 0x1C1C1E))
@@ -412,6 +419,7 @@ private struct ConnectionDetailsPage: View {
 
 private struct PhotosSection: View {
 	@Environment(MainModel.self) private var model
+	@Environment(PhotoBackupFailureList.self) private var failures
 	@Environment(\.openURL) private var openURL
 	@State private var showsInfo = false
 
@@ -445,6 +453,15 @@ private struct PhotosSection: View {
 					SettingsRow(icon: "clock.arrow.circlepath", title: "Last backed up") {
 						SettingsValue(text: Self.lastBackupText(lastUploadedAt))
 					}
+				}
+				if failures.count > 0 {
+					SettingsDivider()
+					NavigationLink(value: ProfileDestination.photoBackupFailures) {
+						SettingsRow(icon: "exclamationmark.circle", title: "Couldn\u{2019}t back up") {
+							SettingsValue(text: failures.count.formatted(), chevron: true)
+						}
+					}
+					.buttonStyle(.plain)
 				}
 			}
 		}

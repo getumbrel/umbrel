@@ -24,6 +24,8 @@ export function InlineCopyableField({value, className}: {value: string; classNam
 			<Tooltip open={showCopied}>
 				<TooltipTrigger asChild>
 					<button
+						type='button'
+						aria-label={t('copy')}
 						className='inline-flex items-center opacity-40 transition-opacity hover:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40'
 						onClick={async () => {
 							copyToClipboard(value)
@@ -37,6 +39,10 @@ export function InlineCopyableField({value, className}: {value: string; classNam
 				</TooltipTrigger>
 				<TooltipContent>{t('clipboard.copied')}</TooltipContent>
 			</Tooltip>
+			{/* The tooltip only shows "Copied"; this says it */}
+			<span role='status' className='sr-only'>
+				{showCopied ? t('clipboard.copied') : ''}
+			</span>
 		</span>
 	)
 }

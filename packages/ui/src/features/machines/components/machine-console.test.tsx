@@ -4,6 +4,8 @@ import {act} from 'react'
 import {createRoot, type Root} from 'react-dom/client'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
+import {pressConsoleKey} from '@/features/machines/console-keys'
+
 import {MachineConsole} from './machine-console'
 
 type FakeRfb = EventTarget & {
@@ -258,6 +260,32 @@ it('refuses to type more than the cap', async () => {
 
 	expect(container.textContent).toContain('machines.clipboard-too-long')
 	expect(consoles[0].sendKey.mock.calls.filter(([, code]) => code === null)).toHaveLength(0)
+})
+
+it('holds Super for the shortcut it starts, and taps it when released on its own', async () => {
+	const container = await connectConsole()
+	const screen = screenOf(container)
+	const superPresses = () =>
+		consoles[0].sendKey.mock.calls.filter(([keysym]) => keysym === 0xffeb).map(([, , down]) => down)
+	const press = (key: string) => {
+		screen.dispatchEvent(new KeyboardEvent('keydown', {key, bubbles: true}))
+		screen.dispatchEvent(new KeyboardEvent('keyup', {key, bubbles: true}))
+	}
+
+	act(() => void pressConsoleKey('machine-1', 'super'))
+	expect(superPresses()).toEqual([true])
+	expect(container.textContent).toContain('machines.keys-holding-super')
+
+	// Shift joins the shortcut, and the key after it ends it
+	act(() => press('Shift'))
+	expect(superPresses()).toEqual([true])
+	act(() => press('Enter'))
+	expect(superPresses()).toEqual([true, false])
+	expect(container.textContent).toBe('')
+
+	act(() => void pressConsoleKey('machine-1', 'super'))
+	act(() => container.querySelector('button')!.click())
+	expect(superPresses()).toEqual([true, false, true, false])
 })
 
 it('notices an agent that connects after the console opened', async () => {

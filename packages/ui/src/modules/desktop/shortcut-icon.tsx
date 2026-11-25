@@ -64,7 +64,7 @@ export function ShortcutIcon({shortcut}: {shortcut: Shortcut}) {
 				   so text baselines align on the same grid row. The link icon is inline
 				   rather than a flex sibling to preserve identical vertical positioning. */}
 					<div className='max-w-full text-[length:var(--app-label)] leading-normal drop-shadow-desktop-label'>
-						<div className='truncate contrast-more:bg-black contrast-more:px-1'>
+						<div className='truncate contrast-more:-mx-1 contrast-more:rounded-4 contrast-more:bg-black contrast-more:px-1'>
 							<HiExternalLink className='mr-0.5 inline h-3 w-3 align-[-0.15em] text-white/70 md:h-3.5 md:w-3.5' />
 							{shortcut.title}
 						</div>

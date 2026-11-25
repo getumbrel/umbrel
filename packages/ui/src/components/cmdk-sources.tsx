@@ -1,15 +1,17 @@
 import {keepPreviousData} from '@tanstack/react-query'
-import {useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode} from 'react'
+import {useDeferredValue, useMemo, useRef, type ReactNode} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {
+	bestSearchGrade,
 	CMDK_MATCH,
 	createCmdkMatcher,
 	orderSectionsByMatch,
 	rankCmdkEntries,
 	rankCmdkEntriesScored,
 	sortByMatch,
+	splitSearchResults,
 	type CmdkEntry,
 } from '@/components/cmdk-search'
 import {createAppStoreSearch} from '@/features/app-store/data/search'
@@ -22,11 +24,13 @@ import {
 	TRASH_PATH as FILES_TRASH_PATH,
 } from '@/features/files/constants'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
-import {useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {getLastFilesPath} from '@/features/files/utils/last-files-path'
 import {useMachinesCmdkEntries} from '@/features/machines/cmdk-entries'
 import type {Item as PhotoItem} from '@/features/photos/hooks/use-items'
 import {takenAtClock} from '@/features/photos/utils/taken-at'
+import type {SearchChip, SearchResult, SearchScope} from '@/features/search/types'
+import {useSearch, useSearchStatus} from '@/features/search/use-search'
+import {useSearchFootnote, type SearchFootnoteLine} from '@/features/search/use-search-footnote'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
@@ -45,8 +49,9 @@ import {cmdkDomainIcon, useCmdkDomainCopy, type CmdkDomain} from './cmdk-domain'
 // What the palette shows for a domain and query: sections of items, in the
 // order they render, plus an optional footer link out to the app that owns
 // the domain. Sources are the ranked local entries (apps, settings, actions),
-// the App Store's local index, and two server searches — files and photos —
-// that arrive a beat after typing stops.
+// the App Store's local index, and one server search — everything Search
+// understands about files and photos, already ranked — that arrives a beat
+// after typing stops.
 
 export type CmdkItem = {
 	value: string
@@ -56,13 +61,18 @@ export type CmdkItem = {
 	icon?: string | ReactNode
 	iconVariant?: 'bare' | 'tile'
 	// Photo tiles render the library's thumbnail for this item
-	photo?: Pick<PhotoItem, 'id' | 'tint'>
+	photo?: Pick<PhotoItem, 'id' | 'tint' | 'kind' | 'durationMs'>
+	// Results explain their match (a snippet, a page, a folder) from this: a
+	// row on its second line, a photo tile under the grid while it is selected.
+	// A tile also wears the moment of a video it matched at.
+	result?: SearchResult
 	onSelect?: () => void
 }
 
 export type CmdkSection = {
 	id: string
-	layout: 'list' | 'tiles' | 'photos'
+	// 'results' are search results as rows: a thumbnail, a name, and why it matched
+	layout: 'list' | 'tiles' | 'photos' | 'results'
 	items: CmdkItem[]
 	title?: string
 	icon?: string
@@ -83,14 +93,57 @@ export type CmdkResults = {
 	footer?: CmdkItem
 	// Shown when there are no sections
 	empty?: string
+	// The parts of the query Search took as filters, shown under the field
+	chips?: readonly SearchChip[]
+	// One quiet line under the results: Search still catching up, or failing
+	footnote?: SearchFootnoteLine
+	// How the search of what is inside files is going (see CmdkInsight)
+	insight: CmdkInsight
+}
+
+// What the palette shows of Search's understanding — the sparkle in the
+// field, the orb's thinking and its glow, the light round the card:
+//   off         no search of contents here: nothing typed, App Store or
+//               Settings, or a device that only matches names
+//   thinking    asked, not yet answered (typing included: the question is
+//               being put)
+//   understood  answered, and some of what is shown was found by what is
+//               in it — how it looks, the words read off it or inside it, what
+//               is said in it
+//   plain       answered, and everything shown matched by name, or nothing did
+export type CmdkInsight = {
+	state: 'off' | 'thinking' | 'understood' | 'plain'
+	// Of the results shown, how many were found each way
+	matches: {visual: number; text: number; speech: number}
+	// The query the answer on screen is for: a new one is a new arrival
+	answer: string
+}
+
+const NO_MATCHES = {visual: 0, text: 0, speech: 0}
+const INSIGHT_OFF: CmdkInsight = {state: 'off', matches: NO_MATCHES, answer: ''}
+
+function countMatches(items: CmdkItem[]) {
+	const matches = {visual: 0, text: 0, speech: 0}
+	for (const item of items) {
+		const match = item.result?.match
+		if (match && match !== 'name') matches[match]++
+	}
+	return matches
 }
 
 const NO_APPS: never[] = []
 const EVERYWHERE_HITS = 5
 const EVERYWHERE_TILES = 6
+const EVERYWHERE_ROWS = 5
 const DOMAIN_TILES = 12
 const FREQUENT_APPS = 6
-const PHOTOS_DEBOUNCE_MS = 250
+// What one search asks for. Everywhere shares its answer between a row of
+// photo tiles and a few file rows, so it asks for enough to fill both.
+const SEARCH = {
+	everywhere: {scope: 'everything', limit: 30},
+	files: {scope: 'files', limit: 12},
+	photos: {scope: 'photos', limit: 18},
+} as const satisfies Record<string, {scope: SearchScope; limit: number}>
 
 export function useCmdkResults({
 	domain,
@@ -111,23 +164,47 @@ export function useCmdkResults({
 	const trimmedQuery = query.trim()
 	const hasQuery = trimmedQuery.length > 0
 	const entries = useCmdkEntries()
-	const open = (to: string) => {
+	// A new function every render: the sources below read the latest through
+	// a ref, so their results are rebuilt only when what they found changes
+	const open = useLatest((to: string) => {
 		navigate(to)
 		close()
-	}
+	})
 	const searchParam = new URLSearchParams({q: trimmedQuery}).toString()
 
-	const wantsFiles = active && (domain === 'files' || (domain === 'everywhere' && hasQuery))
+	const searchDomain = domain === 'everywhere' || domain === 'files' || domain === 'photos' ? domain : undefined
 	const wantsApps = domain === 'app-store' || (domain === 'everywhere' && hasQuery)
-	const wantsPhotos = active && (domain === 'photos' || (domain === 'everywhere' && hasQuery))
 	const tileLimit = domain === 'everywhere' ? EVERYWHERE_TILES : DOMAIN_TILES
 
-	const files = useFileResults(wantsFiles && hasQuery ? trimmedQuery : '', tileLimit, close)
+	const found = useSearchResults(active && hasQuery ? searchDomain : undefined, trimmedQuery, close, open)
 	const apps = useAppStoreResults(wantsApps ? trimmedQuery : undefined, tileLimit, open)
-	const photos = usePhotoResults(wantsPhotos ? trimmedQuery : undefined, tileLimit, open)
+	const recentPhotos = useRecentPhotos(active && domain === 'photos' && !hasQuery, DOMAIN_TILES, open)
 	const frequent = useFrequentApps(domain === 'everywhere' && !hasQuery, close)
+	const {files, photos} = found
+	const searching = hasQuery && searchDomain !== undefined
+	// A search that could not be made is not one that found nothing
+	const failed = searching && found.failed
+	const failure = t('cmdk.search-failed')
+	// Only where a search is showing: what it understood, and how ready it is
+	const understood = searching ? {chips: found.chips, footnote: failed ? {text: failure} : found.footnote} : {}
+	// The first answer of a search is awaited as placeholders where its
+	// results will be, so the card takes its size once instead of collapsing
+	// to a line and growing again. An answer that found nothing stands like
+	// any other while it is refined: awaited again at every keystroke, the
+	// placeholders would blink in and out for as long as nothing is found.
+	const awaited = found.searching && found.answeredQuery === '' && files.items.length === 0 && photos.items.length === 0
+	// An answer that found nothing is named by the words it answers, which
+	// trail the field while it is refined
+	const emptyQuery = found.answeredQuery || trimmedQuery
+	const insight = useMemo((): CmdkInsight => {
+		if (!searching || !found.smart || failed) return INSIGHT_OFF
+		if (found.searching) return {state: 'thinking', matches: NO_MATCHES, answer: found.answeredQuery}
+		const matches = countMatches([...files.items, ...photos.items])
+		const understood = matches.visual + matches.text + matches.speech > 0
+		return {state: understood ? 'understood' : 'plain', matches, answer: found.answeredQuery}
+	}, [searching, found.smart, failed, found.searching, found.answeredQuery, files.items, photos.items])
 
-	if (!entries) return {ready: false, sections: []}
+	if (!entries) return {ready: false, sections: [], insight: INSIGHT_OFF}
 
 	const entryItem = (entry: CmdkEntry): CmdkItem => ({
 		value: entry.id,
@@ -148,11 +225,11 @@ export function useCmdkResults({
 		value: `open-in:${app}`,
 		title: t('cmdk.open-in', {app: label(app)}),
 		icon: cmdkDomainIcon(app),
-		onSelect: () => open(to),
+		onSelect: () => open.current(to),
 	})
-	const filesMore = () => open(`/files${FILES_SEARCH_PATH}?${searchParam}`)
-	const appsMore = () => open(`/app-store?${searchParam}`)
-	const photosMore = () => open(`/photos?${searchParam}`)
+	const filesMore = () => open.current(`/files${FILES_SEARCH_PATH}?${searchParam}`)
+	const appsMore = () => open.current(`/app-store?${searchParam}`)
+	const photosMore = () => open.current(`/photos?${searchParam}`)
 
 	if (domain === 'everywhere') {
 		if (!hasQuery) {
@@ -161,7 +238,7 @@ export function useCmdkResults({
 				sections.push({id: 'frequent', title: t('cmdk.frequent-apps'), layout: 'tiles', items: frequent})
 			}
 			sections.push({id: 'defaults', layout: 'list', items: entries.filter((entry) => entry.default).map(entryItem)})
-			return {ready: true, sections}
+			return {ready: true, sections, insight}
 		}
 		// Every source grades its results on the same scale, and the source
 		// holding the best match leads: a folder named "Downloads" outranks an
@@ -182,15 +259,16 @@ export function useCmdkResults({
 				priority: 0,
 			})
 		}
-		if (files.items.length > 0) {
+		if (files.items.length > 0 || awaited) {
 			ranked.push({
 				section: {
 					id: 'files',
 					title: label('files'),
 					icon: filesIcon,
-					layout: 'tiles',
+					layout: 'results',
 					items: files.items,
-					more: filesMore,
+					more: awaited ? undefined : filesMore,
+					loading: awaited,
 				},
 				bestMatch: files.bestMatch,
 				priority: 1,
@@ -210,7 +288,7 @@ export function useCmdkResults({
 				priority: 2,
 			})
 		}
-		if (photos.items.length > 0) {
+		if (photos.items.length > 0 || awaited) {
 			ranked.push({
 				section: {
 					id: 'photos',
@@ -218,31 +296,40 @@ export function useCmdkResults({
 					icon: photosIcon,
 					layout: 'photos',
 					items: photos.items,
-					more: photosMore,
+					more: awaited ? undefined : photosMore,
+					loading: awaited,
 				},
 				bestMatch: photos.bestMatch,
 				priority: 3,
 			})
 		}
-		const searching = files.loading || photos.loading
+		const sections = orderSectionsByMatch(ranked).map(({section}) => section)
 		return {
 			ready: true,
-			sections: orderSectionsByMatch(ranked).map(({section}) => section),
-			empty: searching ? t('cmdk.searching') : t('no-results-found'),
+			insight,
+			sections,
+			empty: failed ? failure : t('no-results-found'),
+			...understood,
+			// Said once: with nothing else to show, the failure is the empty line
+			...(failed && sections.length === 0 && {footnote: undefined}),
 		}
 	}
 
 	if (domain === 'files') {
 		if (!hasQuery) {
 			const links = entries.filter((entry) => entry.id === 'system:files' || entry.id.startsWith('files:'))
-			return {ready: true, sections: [{id: 'files-links', layout: 'list', items: links.map(entryItem)}]}
+			return {ready: true, sections: [{id: 'files-links', layout: 'list', items: links.map(entryItem)}], insight}
 		}
-		const section: CmdkSection = {id: 'files', layout: 'tiles', items: files.items, loading: files.loading}
+		const section: CmdkSection = {id: 'files', layout: 'results', items: files.items, loading: awaited}
+		const sections = files.items.length > 0 || awaited ? [section] : []
 		return {
 			ready: true,
-			sections: files.items.length > 0 || files.loading ? [section] : [],
+			insight,
+			sections,
 			footer: openIn('files', `/files${FILES_SEARCH_PATH}?${searchParam}`),
-			empty: t('cmdk.empty.files', {query: trimmedQuery}),
+			empty: failed ? failure : t('cmdk.empty.files', {query: emptyQuery}),
+			...understood,
+			...(failed && sections.length === 0 && {footnote: undefined}),
 		}
 	}
 
@@ -250,6 +337,7 @@ export function useCmdkResults({
 		const section: CmdkSection = {id: 'apps', layout: 'tiles', items: apps.items, loading: apps.loading}
 		return {
 			ready: true,
+			insight,
 			sections: apps.items.length > 0 || apps.loading ? [section] : [],
 			footer: openIn('app-store', hasQuery ? `/app-store?${searchParam}` : '/app-store'),
 			empty: t('cmdk.empty.app-store', {query: trimmedQuery}),
@@ -264,61 +352,118 @@ export function useCmdkResults({
 		)
 		return {
 			ready: true,
+			insight,
 			sections: items.length > 0 ? [{id: 'settings', layout: 'list', items}] : [],
 			empty: t('cmdk.empty.settings', {query: trimmedQuery}),
 		}
 	}
 
 	// Photos
+	const library = hasQuery ? {items: photos.items, loading: awaited} : recentPhotos
 	const section: CmdkSection = {
 		id: 'photos',
 		layout: 'photos',
-		items: photos.items,
-		loading: photos.loading,
+		items: library.items,
+		loading: library.loading,
 		title: hasQuery ? undefined : t('cmdk.photos-recent'),
 	}
+	const sections = library.items.length > 0 || library.loading ? [section] : []
 	return {
 		ready: true,
-		sections: photos.items.length > 0 || photos.loading ? [section] : [],
+		insight,
+		sections,
 		footer: openIn('photos', hasQuery ? `/photos?${searchParam}` : '/photos'),
-		empty: hasQuery ? t('cmdk.empty.photos', {query: trimmedQuery}) : t('cmdk.empty.photos-library'),
+		empty: failed ? failure : hasQuery ? t('cmdk.empty.photos', {query: emptyQuery}) : t('cmdk.empty.photos-library'),
+		...understood,
+		...(failed && sections.length === 0 && {footnote: undefined}),
 	}
 }
 
-function useFileResults(query: string, limit: number, close: () => void) {
+// The one server search behind the Files and Photos sections. Its results
+// arrive ranked and stay in that order; they are only dealt out — library
+// photos and videos to tiles, everything else to rows — and each section is
+// graded so it can take its place among the local ones.
+function useSearchResults(
+	domain: keyof typeof SEARCH | undefined,
+	query: string,
+	close: () => void,
+	open: Latest<(to: string) => void>,
+) {
 	const {navigateToItem} = useFilesNavigate()
-	// Fresh on every visit: the palette stands its searches down while closed
-	// (see `active`), and results a minute old are what a reopen must not show
-	const {results, isLoading, isDebouncing} = useSearchFiles({
-		query,
-		maxResults: limit,
-		keepPreviousResults: true,
-		staleTime: 0,
-	})
-	const {items, bestMatch} = useMemo(() => {
-		const match = query ? createCmdkMatcher(query) : null
-		if (!match) return {items: [] as CmdkItem[], bestMatch: CMDK_MATCH.none}
-		// The server's fuzzy order, with exact and prefix name matches lifted
-		// to the front
-		const sorted = sortByMatch(results.slice(0, limit), (item) => match(item.name))
+	// A new function every render; a selection reads the latest through a ref,
+	// so the items below are rebuilt only when the results change
+	const navigateToItemRef = useLatest(navigateToItem)
+	const {scope, limit} = SEARCH[domain ?? 'everywhere']
+	// Fresh on every visit: the palette stands its search down while closed
+	// (see `active`), and an answer a minute old is what a reopen must not show
+	const search = useSearch({query, scope, limit, enabled: domain !== undefined, staleTime: 0})
+	const status = useSearchStatus(domain !== undefined)
+	const footnote = useSearchFootnote(domain ?? 'everywhere', status)
+	const {results, answeredQuery} = search
+
+	const sections = useMemo(() => {
+		const split = splitSearchResults(results)
+		const everywhere = domain === 'everywhere'
+		const photos = split.photos.slice(0, everywhere ? EVERYWHERE_TILES : limit)
+		const files = split.files.slice(0, everywhere ? EVERYWHERE_ROWS : limit)
+		// Graded against the query these results answer, not the one being typed
+		const match = createCmdkMatcher(answeredQuery)
 		return {
-			items: sorted.map((item) => ({
-				value: `file:${item.path}`,
-				title: item.name,
-				icon: <FileItemIcon item={item} className='size-full' showBadges={false} />,
-				onSelect: () => {
-					navigateToItem(item)
-					close()
-				},
-			})),
-			// A file the server matched is at least a fuzzy hit
-			bestMatch: sorted.length > 0 ? Math.max(CMDK_MATCH.subsequence, match(sorted[0].name)) : CMDK_MATCH.none,
+			photos: {
+				items: photos.map(
+					(result): CmdkItem => ({
+						value: `photo:${result.id}`,
+						title: result.file.name,
+						photo: result.photo,
+						result,
+						// Into the lightbox, which walks this same search: the query
+						// rides along, and a matched moment is where playback starts
+						onSelect: () =>
+							open.current(
+								`/photos?${new URLSearchParams({
+									q: answeredQuery,
+									dialog: 'photos-item',
+									'photos-item-id': result.photo!.id,
+									...(result.moment && {'photos-item-t': String(result.moment.startMs)}),
+								})}`,
+							),
+					}),
+				),
+				bestMatch: bestSearchGrade(photos, match),
+			},
+			files: {
+				items: files.map((result): CmdkItem => {
+					const item = {...result.file, searchResult: result}
+					return {
+						value: `file:${result.id}`,
+						title: result.file.name,
+						icon: <FileItemIcon item={item} className='size-full' showBadges={false} />,
+						result,
+						onSelect: () => {
+							navigateToItemRef.current(item)
+							close()
+						},
+					}
+				}),
+				bestMatch: bestSearchGrade(files, match),
+			},
 		}
-	}, [results, query, limit, navigateToItem, close])
-	return {items, bestMatch, loading: query.length > 0 && (isLoading || isDebouncing)}
+	}, [results, answeredQuery, domain, limit, navigateToItemRef, open, close])
+
+	return {
+		...sections,
+		chips: search.chips,
+		footnote,
+		searching: search.isSearching,
+		failed: search.isError,
+		// Whether this device reads what is inside files at all (not until Search
+		// says so: a name-only device must never sparkle)
+		smart: status?.available === true,
+		answeredQuery,
+	}
 }
 
-function useAppStoreResults(requested: string | undefined, limit: number, open: (to: string) => void) {
+function useAppStoreResults(requested: string | undefined, limit: number, open: Latest<(to: string) => void>) {
 	const availableApps = useAvailableApps()
 	const apps = availableApps.isLoading ? [] : availableApps.apps
 	const search = useMemo(() => createAppStoreSearch(apps), [apps])
@@ -339,7 +484,7 @@ function useAppStoreResults(requested: string | undefined, limit: number, open: 
 				title: app.name,
 				icon: app.icon,
 				iconVariant: 'tile' as const,
-				onSelect: () => open(`/app-store/${app.id}`),
+				onSelect: () => open.current(`/app-store/${app.id}`),
 			})),
 			// Anything Fuse returned is at least a fuzzy hit
 			bestMatch: sorted.length > 0 && match ? Math.max(CMDK_MATCH.subsequence, matchOf(sorted[0])) : CMDK_MATCH.none,
@@ -348,15 +493,14 @@ function useAppStoreResults(requested: string | undefined, limit: number, open: 
 	return {items, bestMatch, loading: query !== undefined && availableApps.isLoading}
 }
 
-function usePhotoResults(query: string | undefined, limit: number, open: (to: string) => void) {
+// The newest of the library, for the Photos scope before anything is typed
+function useRecentPhotos(enabled: boolean, limit: number, open: Latest<(to: string) => void>) {
 	const {i18n} = useTranslation()
-	const enabled = query !== undefined
-	const debounced = useDebouncedValue(query ?? '', PHOTOS_DEBOUNCE_MS)
 	// An infinite query like the library's own lists (see use-items.ts): the
 	// Photos feature patches and refreshes every cached list under this key
 	// prefix as {pages}, so a differently shaped entry would break its actions
 	const list = trpcReact.photos.items.list.useInfiniteQuery(
-		{filter: debounced ? {query: debounced} : {}, limit},
+		{filter: {}, limit},
 		{
 			enabled,
 			retry: false,
@@ -378,17 +522,13 @@ function usePhotoResults(query: string | undefined, limit: number, open: (to: st
 							photo: item,
 							// Straight into the lightbox: a deep link the viewer resolves on its own
 							onSelect: () =>
-								open(`/photos?${new URLSearchParams({dialog: 'photos-item', 'photos-item-id': item.id})}`),
+								open.current(`/photos?${new URLSearchParams({dialog: 'photos-item', 'photos-item-id': item.id})}`),
 						}
 					})
 				: [],
 		[enabled, list.data, open, i18n.language],
 	)
-	const settling = enabled && (query ?? '') !== debounced
-	// The list items carry no file name to grade, and the library matches on
-	// the name: a hit is a name that contains the words
-	const bestMatch = items.length > 0 && debounced ? CMDK_MATCH.substring : CMDK_MATCH.none
-	return {items, bestMatch, loading: enabled && !list.isError && (list.isLoading || settling)}
+	return {items, loading: enabled && !list.isError && list.isLoading}
 }
 
 function useFrequentApps(enabled: boolean, close: () => void) {
@@ -425,21 +565,12 @@ export function appsByFrequency(lastOpenedApps: string[], count: number) {
 		.map(([appId]) => appId)
 }
 
-function useLatest<T>(value: T) {
+type Latest<T> = {readonly current: T}
+
+function useLatest<T>(value: T): Latest<T> {
 	const ref = useRef(value)
 	ref.current = value
 	return ref
-}
-
-function useDebouncedValue(value: string, delayMs: number) {
-	const [debounced, setDebounced] = useState(value)
-	useEffect(() => {
-		// Clearing applies at once so stale results never outlive the text
-		if (value === '') return setDebounced('')
-		const handle = setTimeout(() => setDebounced(value), delayMs)
-		return () => clearTimeout(handle)
-	}, [value, delayMs])
-	return debounced
 }
 
 // Everything the palette can find locally, in priority order: when several

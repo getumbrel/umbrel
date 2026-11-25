@@ -373,11 +373,14 @@ function HostnameSection() {
 							}}
 							onKeyDown={handleKeyDown}
 							autoFocus
+							aria-label={t('network.hostname')}
 							className='w-[140px]'
 						/>
 						<button
+							type='button'
 							onClick={handleSave}
 							disabled={isPending}
+							aria-label={t('network.hostname-confirm-continue')}
 							className='rounded-full p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white'
 						>
 							{isPending ? (
@@ -467,13 +470,13 @@ function InterfaceCard({iface, onSelect}: {iface: NetworkInterface; onSelect: ()
 					<span className='text-13 font-medium -tracking-2'>{label}</span>
 					<span className='text-11 text-white/25'>{iface.id}</span>
 				</div>
-				<div className='flex items-center gap-1.5 text-12 text-white/40'>
+				<div className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-12 text-white/40'>
 					<StatusDot connected={iface.connected} />
 					<span>{iface.connected ? t('network.interface-connected') : t('network.interface-disconnected')}</span>
 					{displayIp && (
 						<>
 							<span className='text-white/15'>·</span>
-							<span>
+							<span className='whitespace-nowrap'>
 								{isStaticConfigured && <span className='mr-1 text-white/25'>{t('network.ipv4-static')}:</span>}
 								{displayIp}
 							</span>
@@ -556,7 +559,7 @@ function ModeDropdown<T extends string>({
 			<DropdownMenuTrigger asChild disabled={isLoading || disabled}>
 				<button
 					className={cn(
-						'flex items-center gap-1.5 rounded-8 bg-white/6 px-3 py-2 text-13 font-medium -tracking-2 text-white/70 transition-colors hover:bg-white/10 disabled:cursor-not-allowed',
+						'flex items-center gap-1.5 rounded-8 bg-white/6 px-3 py-2 text-13 font-medium -tracking-2 text-white/70 transition-colors hover:bg-white/10 disabled:cursor-not-allowed contrast-more:border contrast-more:border-white/40',
 						isLoading && 'umbrel-pulse',
 					)}
 				>
@@ -573,7 +576,7 @@ function ModeDropdown<T extends string>({
 					>
 						<div>
 							<div>{opt.label}</div>
-							{opt.description && <div className='text-11 font-normal opacity-50'>{opt.description}</div>}
+							{opt.description && <div className='text-11 font-normal text-white/50'>{opt.description}</div>}
 						</div>
 					</DropdownMenuCheckboxItem>
 				))}

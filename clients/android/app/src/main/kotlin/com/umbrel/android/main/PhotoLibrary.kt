@@ -1,16 +1,10 @@
 package com.umbrel.android.main
 
-import android.Manifest
 import android.content.ContentResolver
 import android.content.ContentUris
-import android.content.Context
-import android.content.pm.PackageManager
 import android.database.Cursor
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
-import androidx.core.content.ContextCompat
-import androidx.exifinterface.media.ExifInterface
 import com.umbrel.kit.backup.MediaStoreLibrary
 import com.umbrel.kit.backup.PhotoBackupFolders
 import kotlinx.coroutines.Dispatchers
@@ -55,9 +49,6 @@ class PhotoLibraryAssets(val items: List<LocalMediaItem>, val revision: Int) {
 		val Empty = PhotoLibraryAssets(emptyList(), 0)
 	}
 }
-
-/** The details the viewer's info sheet adds to a grid row. */
-data class LocalMediaDetails(val displayName: String?, val location: Pair<Double, Double>?)
 
 /** Reads images and videos from MediaStore. Every query runs on the IO dispatcher. */
 object PhotoLibrary {
@@ -124,53 +115,6 @@ object PhotoLibrary {
 		}
 	}
 
-	/** The details row for the info sheet, or null when the item is gone. */
-	suspend fun details(context: Context, item: LocalMediaItem): LocalMediaDetails? = withContext(Dispatchers.IO) {
-		val cursor = try {
-			context.contentResolver.query(item.uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)
-		} catch (error: SecurityException) {
-			null
-		} ?: return@withContext null
-		val displayName = cursor.use {
-			if (!it.moveToFirst()) return@withContext null
-			it.getString(0)
-		}
-		LocalMediaDetails(displayName, location(context, item))
-	}
-
-	/**
-	 * Where the item was captured. MediaStore redacts location from the bytes it serves unless
-	 * the app holds ACCESS_MEDIA_LOCATION and asks for the original file, and its own location
-	 * columns are always empty since Android 10.
-	 */
-	private fun location(context: Context, item: LocalMediaItem): Pair<Double, Double>? {
-		if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
-		val original = MediaStore.setRequireOriginal(item.uri)
-		return try {
-			if (item.isVideo) {
-				MediaMetadataRetriever().use { retriever ->
-					retriever.setDataSource(context, original)
-					retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)?.let(::parseIso6709)
-				}
-			} else {
-				context.contentResolver.openInputStream(original)?.use { stream ->
-					ExifInterface(stream).latLong?.let { it[0] to it[1] }
-				}
-			}
-		} catch (error: Exception) {
-			// Unreadable, or the original isn't available: the sheet leaves location out.
-			null
-		}
-	}
-
-	/** A video's ISO 6709 location ("+37.4219-122.0840/" or with altitude) as latitude and longitude. */
-	internal fun parseIso6709(value: String): Pair<Double, Double>? {
-		val match = Regex("""^([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)""").find(value) ?: return null
-		val latitude = match.groupValues[1].toDoubleOrNull() ?: return null
-		val longitude = match.groupValues[2].toDoubleOrNull() ?: return null
-		return latitude to longitude
-	}
-
 	/** MediaStore stores the encoded size and the rotation separately. */
 	internal fun orientedSize(width: Int, height: Int, orientation: Int): Pair<Int, Int> =
 		if (orientation % 180 == 0) width to height else height to width
@@ -181,7 +125,7 @@ object PhotoLibrary {
 		return String.format(Locale.ROOT, "%d:%02d", total / 60, total % 60)
 	}
 
-	/** The info sheet's duration: hours appear once there are any ("1:15:03", "4:09"). */
+	/** The viewer's Info duration: hours appear once there are any ("1:15:03", "4:09"). */
 	fun formatLongDuration(durationMs: Long): String {
 		val total = roundedSeconds(durationMs)
 		val hours = total / 3600

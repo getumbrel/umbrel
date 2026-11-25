@@ -96,7 +96,15 @@ export default class DirectorySizes {
 		return statement
 	}
 
-	sync() {
+	// trace, when given, is called after each part of the sync that can be slow on
+	// a large index, so a sync that never finishes shows which part it's stuck in.
+	sync(trace?: (message: string) => void) {
+		let stepStartedAt = performance.now()
+		const step = (message: string) => {
+			if (!trace) return
+			trace(`Directory sizes sync: ${message} in ${Math.round(performance.now() - stepStartedAt)}ms`)
+			stepStartedAt = performance.now()
+		}
 		if (
 			!this.#prepare(
 				`SELECT 1 FROM directory_sizes_dirty_roots
@@ -135,16 +143,19 @@ export default class DirectorySizes {
 					).get(rootId, rows * 2) as {files: number}
 					if (files < rows * 2) rebuilds.add(rootId)
 				}
+				step(`planned ${rebuilds.size} root rebuilds (${journals.length} roots with large journals)`)
 				for (const rootId of rebuilds) {
 					const root = roots.get(rootId)
 					if (root) this.#rebuild(root)
 					this.#prepare('DELETE FROM directory_sizes_dirty_entries WHERE root_id = ?').run(rootId)
+					step(`rebuilt root ${rootId}`)
 				}
 
 				// Everything else stays incremental. Pages bound memory. Each page
 				// recalculates its (directory, identity) pairs from the current entries,
 				// so an identity that spans pages still ends up exact.
 				const directories = new Map<string, number>()
+				let pendingEntries = 0
 				let after: Pick<DirtyEntry, 'root_id' | 'relative_path' | 'identity'> = {
 					root_id: -1,
 					relative_path: '',
@@ -157,6 +168,7 @@ export default class DirectorySizes {
 						ORDER BY root_id, relative_path, identity LIMIT 4096`,
 					).all(after.root_id, after.relative_path, after.identity) as DirtyEntry[]
 					if (pending.length === 0) break
+					pendingEntries += pending.length
 					after = pending.at(-1)!
 					const groups = new Map<string, {entry: DirtyEntry; paths: Set<string>}>()
 					for (const entry of pending) {
@@ -217,6 +229,7 @@ export default class DirectorySizes {
 						if (delta) this.#prepare('UPDATE directory_sizes SET size = size + ? WHERE id = ?').run(delta, id)
 					}
 				}
+				step(`applied ${pendingEntries} changed entries`)
 				// Drop bookkeeping as soon as its last file identity is removed. Waiting
 				// for directory deletion would leak rows: directory changes aren't journaled.
 				// Empty directories read as zero without a row; zero-byte files keep identities.
@@ -227,6 +240,7 @@ export default class DirectorySizes {
 					).run(id)
 				}
 				this.#database.exec('DELETE FROM directory_sizes_dirty_entries; DELETE FROM directory_sizes_dirty_roots')
+				step(`cleaned up ${directories.size} directories`)
 			})
 			.immediate()
 	}

@@ -66,6 +66,14 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 		}
 	}
 
+	// One Enter mustn't do something destructive: next to a destructive action,
+	// Cancel takes the initial focus (or, without one, the last other choice,
+	// where Cancel goes by convention)
+	const safeAction = actions.some((action) => action.variant === 'destructive')
+		? (actions.find((action) => action.value === 'cancel') ??
+			actions.findLast((action) => action.variant !== 'destructive'))
+		: undefined
+
 	return (
 		<AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
 			<AlertDialogContent>
@@ -81,6 +89,7 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 							key={action.label}
 							variant={action.variant || 'default'}
 							onClick={() => handleActionClick(action.value)}
+							autoFocus={action === safeAction}
 						>
 							{action.label}
 						</AlertDialogAction>

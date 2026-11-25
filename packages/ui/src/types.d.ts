@@ -34,3 +34,13 @@ declare module '*&imagetools' {
 	const out
 	export default out
 }
+
+// The Keyboard Lock API, which TypeScript's DOM types leave out. Chromium only,
+// and only on secure origins.
+// https://developer.mozilla.org/en-US/docs/Web/API/Keyboard_API
+interface Navigator {
+	readonly keyboard?: {
+		lock(keyCodes?: string[]): Promise<void>
+		unlock(): void
+	}
+}

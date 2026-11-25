@@ -2,9 +2,9 @@ import {describe, expect, test} from 'vitest'
 
 import {ZipArchive} from '@/features/files/components/file-viewer/shared/zip'
 
-import {buildModel, type DocumentModel, type Insertion, type Paragraph, type Slot} from './model'
+import {buildModel, type Block, type DocumentModel, type Insertion, type Paragraph, type Slot} from './model'
 import {DocxError, DocxPackage} from './package'
-import {applySplices, save} from './save'
+import {applySplices, paragraphXml, save} from './save'
 import {docx, fixture, PNG, WORD_FIXTURES, zip} from './test-helpers'
 
 async function load(bytes: Uint8Array) {
@@ -12,8 +12,26 @@ async function load(bytes: Uint8Array) {
 	return {pkg, model: await buildModel(pkg)}
 }
 
-const write = (pkg: DocxPackage, model: DocumentModel, texts: Array<[Slot, string]>) =>
-	save(pkg, model.parts, new Map(texts))
+// Saves with these slots holding these texts, as the editor hands an edit over: the paragraph of the body each is in
+// (a section's, or a cell's), written as it now is
+function write(pkg: DocxPackage, model: DocumentModel, texts: Array<[Slot, string]>) {
+	const body: Paragraph[] = []
+	const visit = (blocks: Block[]) => {
+		for (const block of blocks) {
+			if (block.kind === 'paragraph') body.push(block)
+			else for (const row of block.rows) for (const cell of row.cells) visit(cell.blocks)
+		}
+	}
+	for (const section of model.sections) visit(section.blocks)
+	const edited = new Map<Paragraph, Map<Slot, string>>()
+	for (const [slot, text] of texts) {
+		const {start, end} = 'element' in slot ? slot.element : slot.paragraph.element
+		const paragraph = body.find(({element}) => element.start <= start && end <= element.end)!
+		edited.set(paragraph, (edited.get(paragraph) ?? new Map<Slot, string>()).set(slot, text))
+	}
+	const written = [...edited].map(([paragraph, slots]) => [paragraph, paragraphXml(paragraph, slots)] as const)
+	return save(pkg, model.parts, new Map(written))
+}
 
 const same = (a: Uint8Array, b: Uint8Array) => a.length === b.length && Buffer.from(a).equals(Buffer.from(b))
 

@@ -65,14 +65,15 @@ function ScrollBar({
 			ref={ref}
 			orientation={orientation}
 			className={cn(
-				'group flex touch-none rounded-tl-4 transition-colors hover:bg-white/10',
-				orientation === 'vertical' && 'mt-[38px] h-[calc(100%-38px)] w-[11px] border-l border-l-transparent p-[4px]',
-				orientation === 'horizontal' && 'h-[11px] flex-col border-t border-t-transparent p-[4px]',
+				// The thumb of every scrollbar in umbrelOS (see modules/scrollbars and index.css)
+				'umbrel-scrollbar-track flex touch-none',
+				orientation === 'vertical' && 'mt-[38px] h-[calc(100%-38px)] w-[11px] px-[3.5px] py-0.5',
+				orientation === 'horizontal' && 'h-[11px] flex-col px-0.5 py-[3.5px]',
 				className,
 			)}
 			{...props}
 		>
-			<ScrollAreaPrimitive.ScrollAreaThumb className='relative flex-1 rounded-full bg-white/20 group-hover:bg-white/50' />
+			<ScrollAreaPrimitive.ScrollAreaThumb className='umbrel-scrollbar-thumb relative' />
 		</ScrollAreaPrimitive.ScrollAreaScrollbar>
 	)
 }

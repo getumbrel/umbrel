@@ -56,12 +56,12 @@ object LibraryFolders {
 	}
 
 	/** "1,204 photos, 38 videos", leaving out a part that's zero. */
-	fun contents(photoCount: Long, videoCount: Long, separator: String = ", "): String {
+	fun contents(photoCount: Long, videoCount: Long): String {
 		val format = NumberFormat.getIntegerInstance()
 		return listOfNotNull(
 			photoCount.takeIf { it > 0 }?.let { "${format.format(it)} ${if (it == 1L) "photo" else "photos"}" },
 			videoCount.takeIf { it > 0 }?.let { "${format.format(it)} ${if (it == 1L) "video" else "videos"}" },
-		).joinToString(separator)
+		).joinToString(", ")
 	}
 }
 

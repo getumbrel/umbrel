@@ -2,9 +2,9 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 
-describe('RAID transition with different sized drives', () => {
+describe.each(raidzDrives)('RAID transition with different sized drives ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let smallDeviceId: string
 	let mediumDeviceId: string
@@ -12,7 +12,7 @@ describe('RAID transition with different sized drives', () => {
 	let failed = false
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -29,18 +29,18 @@ describe('RAID transition with different sized drives', () => {
 
 	test('adds three NVMe devices of different sizes and boots VM', async () => {
 		// Small: 32GB, Medium: 64GB, Large: 128GB
-		await umbreld.vm.addNvme({slot: 1, size: '32G'})
-		await umbreld.vm.addNvme({slot: 2, size: '64G'})
-		await umbreld.vm.addNvme({slot: 3, size: '128G'})
+		await drive.add(umbreld.vm, {slot: 1, size: '32G'})
+		await drive.add(umbreld.vm, {slot: 2, size: '64G'})
+		await drive.add(umbreld.vm, {slot: 3, size: '128G'})
 		await umbreld.vm.powerOn()
 	})
 
 	test('detects all three NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(3)
-		smallDeviceId = devices.find((d) => d.slot === 1)!.id!
-		mediumDeviceId = devices.find((d) => d.slot === 2)!.id!
-		largeDeviceId = devices.find((d) => d.slot === 3)!.id!
+		smallDeviceId = devices.find(drive.inSlot(1))!.id!
+		mediumDeviceId = devices.find(drive.inSlot(2))!.id!
+		largeDeviceId = devices.find(drive.inSlot(3))!.id!
 	})
 
 	test('registers user with storage RAID using medium device', async () => {

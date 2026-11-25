@@ -4,12 +4,20 @@ public struct SavedAccountProfile: Codable, Equatable, Sendable {
 	public var name: String
 	public var wallpaperId: String
 	public var wallpaperBrandColorHsl: String?
+	public var wallpaperHash: String?
 	public var role: String
 
-	public init(name: String, wallpaperId: String, wallpaperBrandColorHsl: String? = nil, role: String) {
+	public init(
+		name: String,
+		wallpaperId: String,
+		wallpaperBrandColorHsl: String? = nil,
+		wallpaperHash: String? = nil,
+		role: String
+	) {
 		self.name = name
 		self.wallpaperId = wallpaperId
 		self.wallpaperBrandColorHsl = wallpaperBrandColorHsl
+		self.wallpaperHash = wallpaperHash
 		self.role = role
 	}
 }
@@ -22,8 +30,9 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 	public var addresses: [String]
 	public var model: String?
 	public var userName: String?
-	// Cached wallpaper ID for rendering the device card while offline.
+	// Cached wallpaper ID and hash for rendering the device card while offline.
 	public var wallpaperId: String?
+	public var wallpaperHash: String?
 	// Identity and wallpaper belong to an account, not to the physical Umbrel. The
 	// top-level fields cache the last-used presentation for device lists.
 	public var accountProfiles: [String: SavedAccountProfile]?
@@ -42,6 +51,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		model: String? = nil,
 		userName: String? = nil,
 		wallpaperId: String? = nil,
+		wallpaperHash: String? = nil,
 		accountProfiles: [String: SavedAccountProfile]? = nil,
 		lastAccountId: String? = nil,
 		dashboardUsesHTTPS: Bool? = nil,
@@ -54,6 +64,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		self.model = model
 		self.userName = userName
 		self.wallpaperId = wallpaperId
+		self.wallpaperHash = wallpaperHash
 		self.accountProfiles = accountProfiles
 		self.lastAccountId = lastAccountId
 		self.dashboardUsesHTTPS = dashboardUsesHTTPS
@@ -68,9 +79,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 	// HTTPS CA before use. Tailscale additionally encrypts the route between peers.
 	// It remains one Umbrel account with multiple possible routes.
 	public var connectionHosts: [String] {
-		var seen = Set<String>()
-		return ([host] + addresses)
-			.filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+		Self.uniqueAddresses([host] + addresses)
 	}
 
 	public var nativeTarget: Umbreld.Target {
@@ -156,8 +165,14 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 	// Only an IdentifiedDevice has proved the stable discovery id through the saved
 	// Umbrel's HTTPS identity. Its answering endpoint becomes primary, while stale
 	// Bonjour names are discarded and current IP candidates remain as fallbacks.
+	//
+	// The pin proved the endpoint that answered, not its name: a .local name can point
+	// somewhere else a moment later. That is fine for the app's own requests, which
+	// check the pin on every connection. A browser or a share mount handed this host
+	// gets no such check, so a saved host is a place to look for the Umbrel, never
+	// proof of it.
 	public mutating func mergeVerifiedDiscovery(_ discovered: IdentifiedDevice) {
-		guard discovered.id == id else { return }
+		guard discovered.id == id, Self.isValidLocalEndpointHost(discovered.host) else { return }
 		host = discovered.host
 		addresses.removeAll(where: Self.isBonjourHostname)
 		rememberConnectionCandidates(discovered.addresses)
@@ -178,9 +193,12 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		addresses = Self.uniqueAddresses(current)
 	}
 
+	// Stored routes become request URLs, browser links and Finder mount targets. Keep
+	// only literal IPv4 addresses and .local names, so an advertised or server-reported
+	// value can never name another kind of host.
 	private static func uniqueAddresses(_ values: [String]) -> [String] {
 		var seen = Set<String>()
-		return values.filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+		return values.filter { isValidLocalEndpointHost($0) && seen.insert($0.lowercased()).inserted }
 	}
 
 	public mutating func saveAccountProfile(
@@ -188,6 +206,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		name: String,
 		wallpaperId: String,
 		wallpaperBrandColorHsl: String? = nil,
+		wallpaperHash: String? = nil,
 		role: String
 	) {
 		var profiles = accountProfiles ?? [:]
@@ -195,6 +214,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 			name: name,
 			wallpaperId: wallpaperId,
 			wallpaperBrandColorHsl: wallpaperBrandColorHsl,
+			wallpaperHash: wallpaperHash,
 			role: role
 		)
 		accountProfiles = profiles
@@ -202,6 +222,7 @@ public struct SavedDevice: Codable, Equatable, Sendable {
 		// Device cards deliberately show the last-used account while signed out.
 		userName = name
 		self.wallpaperId = wallpaperId
+		self.wallpaperHash = wallpaperHash
 	}
 
 	// Includes the user's name when available (e.g. "Patrick's Umbrel Home").

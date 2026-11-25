@@ -74,7 +74,8 @@ export function AccountAvatar({
 		<div
 			aria-hidden
 			className={cn(
-				'relative flex shrink-0 items-center justify-center overflow-hidden rounded-full text-white select-none',
+				// A light mesh leaves the white initial faint; Increase contrast gives it a dark edge
+				'relative flex shrink-0 items-center justify-center overflow-hidden rounded-full text-white select-none [text-shadow:0_1px_2px_rgba(0,0,0,0.15)] contrast-more:[text-shadow:0_1px_3px_rgba(0,0,0,0.6)]',
 				className,
 			)}
 			style={{
@@ -86,7 +87,6 @@ export function AccountAvatar({
 				fontFamily: "'Instrument Serif', 'Inter', system-ui, sans-serif",
 				background,
 				boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 10px 30px rgba(0, 0, 0, 0.25)',
-				textShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
 			}}
 		>
 			{initial}

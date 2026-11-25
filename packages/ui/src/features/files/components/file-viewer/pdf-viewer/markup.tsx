@@ -255,7 +255,7 @@ export function MarkupToolbar({markup}: {markup: Markup}) {
 										>
 											<span
 												className={cn(
-													'size-[18px] rounded-full ring-1 ring-white/25 transition-transform duration-200 ring-inset group-hover:scale-110 group-active:scale-90',
+													'size-[18px] rounded-full ring-1 ring-white/25 transition-transform duration-200 ring-inset group-hover:scale-110 group-active:scale-90 contrast-more:ring-white/70',
 													active && 'shadow-[0_0_0_2px_rgb(0_0_0/0.5),0_0_0_3.5px_white]',
 												)}
 												style={{backgroundColor: color}}

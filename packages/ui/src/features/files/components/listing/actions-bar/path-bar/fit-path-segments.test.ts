@@ -14,8 +14,20 @@ describe('fitPathSegments', () => {
 		})
 	})
 
-	test('narrows the current folder beside the root, then folds the root when even that is too narrow', () => {
-		expect(fit(200, [60, 300])).toEqual({foldsRoot: false, folded: 0, widths: [undefined, 140]})
+	test('narrows a lone name too long for the bar', () => {
+		expect(fit(200, [150])).toEqual({foldsRoot: false, folded: 0, widths: [undefined]})
+		expect(fit(120, [150])).toEqual({foldsRoot: false, folded: 0, widths: [120]})
+		expect(fit(30, [150])).toEqual({foldsRoot: false, folded: 0, widths: [42]})
+	})
+
+	test('folds the root before the current folder gives anything up', () => {
+		// 36 + 150 fit where 60 + 150 don't: the current folder keeps its whole name beside the menu
+		expect(fit(190, [60, 150])).toEqual({foldsRoot: true, folded: 0, widths: [undefined, undefined]})
+		expect(fit(190, [60, 100, 150])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, undefined]})
+	})
+
+	test('narrows the current folder only once it stands beside the menu alone', () => {
+		expect(fit(200, [60, 300])).toEqual({foldsRoot: true, folded: 0, widths: [undefined, 164]})
 		expect(fit(100, [60, 300])).toEqual({foldsRoot: true, folded: 0, widths: [undefined, 64]})
 	})
 
@@ -47,15 +59,15 @@ describe('fitPathSegments', () => {
 		})
 	})
 
-	test('narrows a long current folder once everything else is folded, keeping the root', () => {
-		expect(fit(300, [60, 100, 400])).toEqual({foldsRoot: false, folded: 1, widths: [undefined, undefined, 204]})
+	test('narrows a long current folder once everything else is folded, the root with it', () => {
+		expect(fit(300, [60, 100, 400])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, 264]})
 	})
 
 	test('folds a lone parent when the root and the current folder only fit without it', () => {
 		expect(fit(300, [60, 200, 180])).toEqual({foldsRoot: false, folded: 1, widths: [undefined, undefined, undefined]})
 	})
 
-	test('leaves the menu and the current folder in a bar too narrow for the root beside them', () => {
+	test('never narrows the current folder below its floor', () => {
 		expect(fit(100, [60, 100, 400])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, 64]})
 		expect(fit(60, [60, 100, 400])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, 42]})
 	})
@@ -76,5 +88,30 @@ describe('fitPathSegments', () => {
 			folded: 7,
 			widths: [...Array(8).fill(undefined), 62],
 		})
+	})
+
+	test('folds instead of narrowing when the folders between may not narrow', () => {
+		const foldFirst = (available: number, widths: number[]) =>
+			fitPathSegments({available, widths, minWidth: Infinity, minCurrentWidth: 64, overflowWidth: 36})
+		// 60 + 36 + 80 + 70 fit in 300, with one more folder beside them not
+		expect(foldFirst(300, [60, 100, 100, 100, 80, 70])).toEqual({
+			foldsRoot: false,
+			folded: 3,
+			widths: [undefined, undefined, undefined, undefined, undefined, undefined],
+		})
+		// The parent folds, then the root, and each time what is left keeps its whole name
+		expect(foldFirst(200, [60, 100, 100, 80, 70])).toEqual({
+			foldsRoot: false,
+			folded: 3,
+			widths: [undefined, undefined, undefined, undefined, undefined],
+		})
+		expect(foldFirst(150, [60, 100, 100, 80, 70])).toEqual({
+			foldsRoot: true,
+			folded: 3,
+			widths: [undefined, undefined, undefined, undefined, undefined],
+		})
+		// Only a current folder too long to stand beside the menu alone is cut, down to its own floor
+		expect(foldFirst(200, [60, 100, 400])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, 164]})
+		expect(foldFirst(90, [60, 100, 400])).toEqual({foldsRoot: true, folded: 1, widths: [undefined, undefined, 64]})
 	})
 })

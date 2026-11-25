@@ -406,10 +406,12 @@ const MapMarker = memo(function MapMarker({
 					}}
 					className={cn(
 						'group pointer-events-auto absolute block cursor-pointer rounded-[14px] outline-none',
-						'transition-[scale,opacity] duration-200 ease-out',
+						'transition-[scale,filter] duration-200 ease-out',
 						'hover:scale-[1.07] active:scale-[0.96]',
 						selected && 'scale-[1.12] hover:scale-[1.14]',
-						dimmed && 'opacity-45 hover:opacity-100',
+						// Darkened, not thinned: a see-through photo has the map's roads
+						// and names running across it
+						dimmed && 'brightness-[0.42] saturate-[0.7] hover:brightness-100 hover:saturate-100',
 						folding && 'pointer-events-none',
 					)}
 					style={{width: MARKER_SIZE, height: MARKER_SIZE, left: -MARKER_SIZE / 2, top: -MARKER_SIZE / 2}}

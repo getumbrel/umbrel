@@ -173,7 +173,7 @@ function AccountRow({
 			{needsAuth && (
 				<span className='flex shrink-0 items-center gap-1.5 text-12 text-white/50'>
 					<span className='size-1.5 rounded-full bg-yellow-400' />
-					{t('files-cloud.manage-status-auth')}
+					<span className='max-sm:sr-only'>{t('files-cloud.manage-status-auth')}</span>
 				</span>
 			)}
 			<button

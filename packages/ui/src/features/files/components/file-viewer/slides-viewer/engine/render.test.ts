@@ -106,6 +106,24 @@ test('an SVG picture never becomes a blob: URL', async () => {
 	expect(types).toEqual(['image/png'])
 })
 
+// Building and inflating the pictures takes seconds on a busy machine
+test('pictures are read only as far as a budget', {timeout: 60000}, async () => {
+	// Nine pictures of 32 MiB of zeros each: 288 MiB from a file of a few hundred KB
+	const names = Array.from({length: 9}, (_, i) => `ppt/media/image${i + 1}.png`)
+	const bytes = await buildDeck({
+		slides: [slide('')],
+		parts: Object.fromEntries(names.map((name) => [name, new Uint8Array(32 * 2 ** 20)])),
+	})
+	const createObjectURL = URL.createObjectURL
+	URL.createObjectURL = () => 'blob:test'
+	onTestFinished(() => void (URL.createObjectURL = createObjectURL))
+	const images = new Images((await loadPresentation(bytes)).pkg)
+	const drawn: boolean[] = []
+	for (const name of names) drawn.push(Boolean(await images.load(name)))
+	// 256 MiB in all: eight of the nine
+	expect(drawn).toEqual([true, true, true, true, true, true, true, true, false])
+})
+
 describe('the engine never builds DOM from markup', () => {
 	test('no innerHTML, outerHTML, insertAdjacentHTML, document.write or style strings', () => {
 		const dir = join(__dirname)

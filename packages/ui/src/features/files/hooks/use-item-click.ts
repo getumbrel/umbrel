@@ -8,10 +8,15 @@ import {FileSystemItem} from '@/features/files/types'
 import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {isDirectoryANetworkShare} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
+import {selectedPathsOf} from '@/features/files/utils/selected-paths'
 
 export const useItemClick = () => {
 	const isReadOnly = useIsFilesReadOnly()
-	const {selectedItems, setSelectedItems, isSelectingOnMobile, setViewerItem} = useFilesStore()
+	// The selection is read when a click arrives, not subscribed to: these
+	// handlers reach every row through a context, and one that changed with the
+	// selection would render them all each time it did
+	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
+	const setViewerItem = useFilesStore((state) => state.setViewerItem)
 	const {extractItems} = useFilesOperations()
 	const {navigateToDirectory} = useNavigate()
 	const isTouchDevice = useIsTouchDevice()
@@ -24,19 +29,21 @@ export const useItemClick = () => {
 	}
 
 	const handleClickOnMobile = (item: FileSystemItem) => {
+		const {selectedItems, isSelectingOnMobile} = useFilesStore.getState()
 		// if not selecting, mimic a double click
 		if (!isSelectingOnMobile) {
 			return handleDoubleClick(item)
 		}
 
 		// if selecting on mobile, toggle the item's selection
-		if (selectedItems.some((selectedItem: FileSystemItem) => selectedItem.path === item.path)) {
+		if (selectedPathsOf(selectedItems).has(item.path)) {
 			return setSelectedItems(selectedItems.filter((i: FileSystemItem) => i.path !== item.path))
 		}
 		return setSelectedItems([...selectedItems, item])
 	}
 
 	const handleClickOnDesktop = (e: React.MouseEvent, item: FileSystemItem, items: FileSystemItem[]) => {
+		const {selectedItems} = useFilesStore.getState()
 		e.stopPropagation()
 
 		// Disable selection if item is uploading
@@ -55,7 +62,7 @@ export const useItemClick = () => {
 		// if cmd or ctrl key is pressed, toggle the clicked item's selection
 		if (e.metaKey || e.ctrlKey) {
 			let newSelectedItems = Array.from(selectedItems)
-			if (newSelectedItems.some((selectedItem: FileSystemItem) => selectedItem.path === item.path)) {
+			if (selectedPathsOf(selectedItems).has(item.path)) {
 				newSelectedItems = newSelectedItems.filter((i: FileSystemItem) => i.path !== item.path)
 			} else {
 				newSelectedItems = [...selectedItems, item]
@@ -92,7 +99,7 @@ export const useItemClick = () => {
 		if (isDirectoryAnUmbrelBackup(item.name)) return
 
 		// if touch device and the user is selecting, do nothing
-		if (isTouchDevice && isSelectingOnMobile) {
+		if (isTouchDevice && useFilesStore.getState().isSelectingOnMobile) {
 			return
 		}
 

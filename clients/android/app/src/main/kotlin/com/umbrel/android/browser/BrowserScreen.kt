@@ -105,8 +105,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.zIndex
 import androidx.core.view.WindowCompat
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.umbrel.android.R
 import com.umbrel.android.main.AppIconView
 import com.umbrel.android.ui.AppleType
@@ -115,7 +113,7 @@ import com.umbrel.android.ui.GlassMenuDivider
 import com.umbrel.android.ui.GlassMenuHost
 import com.umbrel.android.ui.GlassMenuItem
 import com.umbrel.android.ui.LocalBrandColor
-import com.umbrel.android.ui.LocalGlassBackdrop
+import com.umbrel.android.ui.LocalWallpaperViewport
 import com.umbrel.android.ui.MainTheme
 import com.umbrel.android.ui.PillButton
 import com.umbrel.android.ui.PrimaryActionButton
@@ -167,6 +165,23 @@ internal fun UmbrelOSLayer(page: BrowserPage, isShown: Boolean, modifier: Modifi
 		showsProgress = true
 	}
 
+	// An umbrelOS that keeps clear of the top safe area runs under the header, so its dims,
+	// blurs and backgrounds reach the top of the screen; the header is its top safe area. Such
+	// an umbrelOS keeps clear of the bottom safe area too, so it also runs under the navigation
+	// bar, edge to edge. Otherwise it begins beneath the header and ends above the bar.
+	val context = LocalContext.current
+	val underHeader = page.keepsClearOfTop && remember { reportsSafeArea(context) }
+	val density = LocalDensity.current
+	val headerBottom = with(density) { WindowInsets.statusBars.getTop(this) + BrowserBarHeight.roundToPx() }
+	// umbrelOS's glass samples its own copy of the wallpaper, which fills the page, so it's pinned
+	// to where the app's wallpaper is: the whole window, from the page's top. Taken from layout
+	// rather than the web view's place on screen, which the scale below moves.
+	val viewport = LocalWallpaperViewport.current
+	val pageTop = if (underHeader) 0 else headerBottom
+	LaunchedEffect(page, viewport, pageTop, density) {
+		if (viewport.isEmpty()) return@LaunchedEffect
+		with(density) { page.pinWallpaper(Rect(Offset(0f, -pageTop.toDp().value), Size(viewport.width.toDp().value, viewport.height.toDp().value))) }
+	}
 	Column(
 		modifier
 			.fillMaxSize()
@@ -180,22 +195,26 @@ internal fun UmbrelOSLayer(page: BrowserPage, isShown: Boolean, modifier: Modifi
 				scaleY = scale
 			},
 	) {
-		// The app's header stays put above; umbrelOS begins beneath it.
-		Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-		Spacer(Modifier.height(BrowserBarHeight))
-		Box(Modifier.fillMaxWidth().weight(1f).navigationBarsPadding().imePadding()) {
+		if (!underHeader) {
+			// The app's header stays put above; umbrelOS begins beneath it.
+			Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+			Spacer(Modifier.height(BrowserBarHeight))
+		}
+		Box(Modifier.fillMaxWidth().weight(1f).then(if (underHeader) Modifier else Modifier.navigationBarsPadding()).imePadding()) {
 			BrowserWebView(
 				page.webView,
 				Modifier
 					.fillMaxSize()
 					.graphicsLayer {
 						alpha = ready
-						// The page's top and bottom edges are feathered so umbrelOS's dimming and
-						// sheets fade out there instead of ending in a line.
+						// Between the header and the navigation bar, the page's edges are feathered
+						// so umbrelOS's dimming and sheets fade out there instead of ending in a
+						// line. Edge to edge there's no edge to feather.
 						compositingStrategy = CompositingStrategy.Offscreen
 					}
 					.drawWithContent {
 						drawContent()
+						if (underHeader) return@drawWithContent
 						val top = 14.dp.toPx() / size.height
 						val bottom = 1f - 10.dp.toPx() / size.height
 						drawRect(
@@ -203,6 +222,7 @@ internal fun UmbrelOSLayer(page: BrowserPage, isShown: Boolean, modifier: Modifi
 							blendMode = BlendMode.DstIn,
 						)
 					},
+				insets = WebViewInsets(top = if (underHeader) headerBottom else 0, underNavigationBar = underHeader),
 			)
 			val failure = page.failure
 			if (failure != null) {
@@ -462,17 +482,16 @@ internal fun BrowserPageView(
 	// The page's menu draws over the page, blurring it the way an iOS menu does.
 	GlassMenuHost(modifier) {
 		if (isImmersive) {
-			val underControls = rememberLayerBackdrop()
 			Box(Modifier.fillMaxSize().background(Color.Black)) {
-				PageContent(page, Modifier.fillMaxSize().imePadding().layerBackdrop(underControls))
-				// The bar's controls on their own, as glass, tucked into the top corners of the
-				// card umbrelOS floats 20 in from the edges of its window.
-				CompositionLocalProvider(LocalGlassBackdrop provides underControls) {
-					Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 28.dp).padding(top = 28.dp)) {
-						PageMenu(page, onOpenInBrowser, foreground = Color.White, isImmersive = true)
-						Spacer(Modifier.weight(1f))
-						BarButton(Symbols.CloseSemibold, "Close", Color.White, isImmersive = true, onClick = onClose)
-					}
+				PageContent(page, Modifier.fillMaxSize().imePadding())
+				// The bar's controls on their own, tucked into the top corners of the card umbrelOS
+				// floats 20 in from the edges of its window. They take glass's translucent fill
+				// rather than blurring the page: capturing the WebView for their blur crashed
+				// WebView's renderer on setup's video background.
+				Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 28.dp).padding(top = 28.dp)) {
+					PageMenu(page, onOpenInBrowser, foreground = Color.White, isImmersive = true)
+					Spacer(Modifier.weight(1f))
+					BarButton(Symbols.CloseSemibold, "Close", Color.White, isImmersive = true, onClick = onClose)
 				}
 			}
 		} else {

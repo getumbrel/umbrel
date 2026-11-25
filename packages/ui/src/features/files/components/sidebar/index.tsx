@@ -48,7 +48,6 @@ export function Sidebar({className}: {className?: string}) {
 	const homeShares = sharedWithMe?.shares.filter((share) => share.base === 'home') ?? []
 	const hasExternalStorage = sharedWithMe?.shares.some((share) => share.path === '/External') ?? false
 	const hasNetworkStorage = sharedWithMe?.shares.some((share) => share.path === '/Network') ?? false
-	const hasSharedApps = sharedWithMe?.shares.some((share) => share.base === 'apps') ?? false
 	const sharedWithMeLabel = sharedWithMe?.ownerName
 		? t('files-sidebar.owners-umbrel', {name: firstNameFromFullName(sharedWithMe.ownerName)})
 		: ''
@@ -79,7 +78,7 @@ export function Sidebar({className}: {className?: string}) {
 				<SidebarSection>
 					<SidebarHome />
 					{!isMember && <SidebarRecents />}
-					{(!isMember || hasSharedApps) && <SidebarApps />}
+					{!isMember && <SidebarApps />}
 					{showMachines && <SidebarMachines />}
 				</SidebarSection>
 
@@ -227,7 +226,7 @@ function useHasMoreBelow(viewportRef: React.RefObject<HTMLDivElement | null>) {
 const SidebarSection = ({children, label = ''}: {children: React.ReactNode; label?: string}) => {
 	return (
 		<section className='flex flex-col pr-4' aria-label={label}>
-			{label && <div className='px-2 py-1 text-[11px] font-medium text-white/40'>{label}</div>}
+			{label && <div className='px-2 py-1 text-11 font-medium text-white/40'>{label}</div>}
 			{children}
 		</section>
 	)

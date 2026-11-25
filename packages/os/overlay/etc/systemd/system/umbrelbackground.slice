@@ -1,0 +1,23 @@
+[Unit]
+Description=Work umbrelOS does in the background
+# The models that find what is in photos, videos, documents and recordings
+# (the umbrel-embeddings services, but for the one that reads search queries)
+# run in here, so that what they may take of the device is set in one place.
+#
+# It is a slice of its own at the top, beside the ones apps (system.slice) and
+# machines (machine.slice) run in, so that what is set here is weighed against
+# all of those. A slice inside another is only weighed against what is beside
+# it there. (A dash in a slice's name puts it inside the slice named before
+# the dash, which is why this one has none.)
+#
+# Everything the models make can be made again, and umbreld sends a model that
+# went away its work again, so they are what goes first when memory runs out
+# (OOMScoreAdjust in each service).
+
+[Slice]
+# What runs in here has the processor when nothing else wants it. Measured on
+# a four-core Umbrel Home with an app encoding video on two of them: at the
+# weight everything has, indexing took the app from 118 frames a second to
+# 86, and a search from 1.6 seconds to 4.2 at worst; idle, 114 and 1.7, for
+# indexing that took a fifth longer.
+CPUWeight=idle

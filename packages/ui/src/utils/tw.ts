@@ -1,5 +1,3 @@
-import {createBreakpoint} from 'react-use'
-
 /** Pairs with `.vscode/settings.json` to provide intellisense for tailwind classes:
  * ```json
  * "tailwindCSS.experimental.classRegex": [
@@ -9,12 +7,5 @@ import {createBreakpoint} from 'react-use'
  */
 export const tw = (strings: TemplateStringsArray) => strings.join('')
 
-export const screens = {
-	sm: 640,
-	md: 768,
-	lg: 1024,
-	xl: 1280,
-	'2xl': 1400,
-}
-
-export const useBreakpoint = createBreakpoint(screens)
+// Tailwind's breakpoints, and which of them the window is at (see layout.ts)
+export {screens, useBreakpoint} from './layout'

@@ -6,6 +6,7 @@ import {useMeasure} from 'react-use'
 
 import {Button} from '@/components/ui/button'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {BackLink} from '@/modules/immersive-picker'
 import {usePickerTarget} from '@/modules/immersive-picker/target'
@@ -36,7 +37,7 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 
 	const isMobile = useIsMobile()
 	const isTouchDevice = useIsTouchDevice()
-	const fontSize = isMobile ? 11 : 13
+	const fontSize = (isMobile ? 11 : 13) + useLargerText()
 	// TODO: link this to the theme
 	const fontFamily = 'SF Mono, SFMono-Regular, ui-monospace, DejaVu Sans Mono, Menlo, Consolas, monospace'
 

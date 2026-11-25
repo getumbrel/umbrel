@@ -14,7 +14,7 @@ function Switch({
 		<SwitchPrimitives.Root
 			className={cn(
 				// Removing `disabled:cursor-not-allowed` so that we can disable switch while it's going to the server without changing the cursor
-				'peer inline-flex h-[20px] w-[36px] shrink-0 items-center rounded-full border-2 border-transparent transition-[background,color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden disabled:opacity-50 data-[state=checked]:bg-brand data-[state=unchecked]:bg-white/10',
+				'peer inline-flex h-[20px] w-[36px] shrink-0 items-center rounded-full border-2 border-transparent transition-[background,color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden disabled:opacity-50 data-[state=checked]:bg-brand data-[state=unchecked]:bg-white/10 contrast-more:data-[state=unchecked]:bg-white/40',
 				className,
 			)}
 			{...props}

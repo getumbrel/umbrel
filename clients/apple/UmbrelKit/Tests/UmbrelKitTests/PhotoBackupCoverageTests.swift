@@ -243,7 +243,8 @@ final class PhotoBackupCoverageTests: XCTestCase {
 		.init(
 			state: state,
 			modificationDate: Date(timeIntervalSince1970: modificationTime),
-			uploadedBytes: uploadedBytes
+			uploadedBytes: uploadedBytes,
+			failureReason: state == .failed ? .general : nil
 		)
 	}
 }

@@ -201,7 +201,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 
 	const inputStyles = cn(
 		'bg-transparent outline-hidden ring-1 ring-transparent',
-		'p-0 m-0 box-border leading-[16px] tracking-[-0.04em]',
+		'p-0 m-0 box-border leading-[1.33] tracking-[-0.04em]',
 		// Show ring outline only on touch devices so that it is obvious that the input is focused
 		isTouchDevice && 'focus:ring-[hsl(var(--color-brand))]',
 		// icons view specific styles
@@ -226,7 +226,8 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 				}}
 			>
 				{/* prevent clicks inside the drawer from triggering actions */}
-				<DrawerContent onClick={preventClickPropagation} onDoubleClick={preventClickPropagation}>
+				{/* Scrolls, for a phone short on room with its keyboard up */}
+				<DrawerContent withScroll onClick={preventClickPropagation} onDoubleClick={preventClickPropagation}>
 					<DrawerHeader>
 						<DrawerTitle>{drawerTitle}</DrawerTitle>
 						<DrawerDescription>{drawerDescription}</DrawerDescription>
@@ -235,6 +236,8 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 						<fieldset className='flex flex-1 flex-col gap-5'>
 							<Labeled label={inputLabel}>
 								<Input
+									// Focused, with the name selected, as it opens: typing replaces it
+									ref={inputRef}
 									value={name}
 									onClick={preventClickPropagation}
 									onDoubleClick={preventClickPropagation}

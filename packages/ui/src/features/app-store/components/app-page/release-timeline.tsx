@@ -39,7 +39,7 @@ export function ReleaseTimeline({
 					'relative pl-7',
 					// The spine only makes sense when it has releases to connect
 					entries.length > 1 &&
-						'before:absolute before:top-3.5 before:bottom-3 before:left-[7px] before:w-px before:bg-white/10',
+						'before:absolute before:top-3.5 before:bottom-3 before:left-[7px] before:w-px before:bg-white/10 contrast-more:before:bg-white/40',
 				)}
 			>
 				{entries.map((entry, index) => (
@@ -85,7 +85,7 @@ function TimelineRelease({
 					'absolute rounded-full',
 					latest
 						? 'top-2 -left-7 h-3.5 w-3.5 bg-white shadow-[0_0_0_1px_rgba(255,255,255,0.25),0_0_0_5px_rgba(255,255,255,0.08)] after:absolute after:inset-0 after:rounded-full after:border after:border-white/60 after:content-[""] motion-safe:after:animate-[umbrel-ripple_2.4s_ease-out_infinite]'
-						: 'top-2.5 left-[-26px] h-2.5 w-2.5 bg-zinc-600',
+						: 'top-2.5 left-[-26px] h-2.5 w-2.5 bg-zinc-600 contrast-more:bg-zinc-400',
 				)}
 			/>
 			<button

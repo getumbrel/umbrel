@@ -246,7 +246,7 @@ export function LivePhoto({id, autoPlay}: {id: string; autoPlay: boolean}) {
 				onClick={chipClick}
 				onPointerEnter={(event) => chipHover(event, true)}
 				onPointerLeave={(event) => chipHover(event, false)}
-				className='absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/55 py-1 pr-2.5 pl-1.5 text-[11px] font-medium tracking-wide text-white outline-hidden backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-white/60 motion-safe:animate-in motion-safe:duration-300 motion-safe:fade-in'
+				className='absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/55 py-1 pr-2.5 pl-1.5 text-11 font-medium tracking-wide text-white outline-hidden backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-white/60 motion-safe:animate-in motion-safe:duration-300 motion-safe:fade-in contrast-more:bg-black/80 contrast-more:backdrop-blur-none'
 			>
 				<LivePhotoIcon className='size-4' />
 				{t('photos-item.live-badge')}
@@ -258,7 +258,7 @@ export function LivePhoto({id, autoPlay}: {id: string; autoPlay: boolean}) {
 				aria-label={t('photos-item.live-sound')}
 				aria-pressed={sound}
 				onClick={toggleSound}
-				className='absolute top-3 right-3 flex items-center rounded-full bg-black/55 p-1.5 text-white outline-hidden backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-white/60 motion-safe:animate-in motion-safe:duration-300 motion-safe:fade-in'
+				className='absolute top-3 right-3 flex items-center rounded-full bg-black/55 p-1.5 text-white outline-hidden backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-white/60 motion-safe:animate-in motion-safe:duration-300 motion-safe:fade-in contrast-more:bg-black/80 contrast-more:backdrop-blur-none'
 			>
 				{sound ? <Volume2 className='size-4' /> : <VolumeX className='size-4' />}
 			</button>

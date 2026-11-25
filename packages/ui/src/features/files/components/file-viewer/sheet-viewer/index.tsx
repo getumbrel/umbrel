@@ -749,7 +749,13 @@ function SheetStage({
 						/>
 					</div>
 				)}
-				<div className='group/area relative min-h-0 flex-1'>
+				{/* While a notice is up, the area says how much room it takes, for the grid to keep (see DocumentViewer) */}
+				<div
+					className={cn(
+						'relative min-h-0 flex-1',
+						!find && !short && 'has-[[role=status]]:[--notice-room:calc(6rem_+_4_*_var(--text-boost))]',
+					)}
+				>
 					{empty ? (
 						<StageMessage
 							item={item}
@@ -770,8 +776,8 @@ function SheetStage({
 								'size-full transition-opacity duration-300 motion-reduce:transition-none',
 								painted ? 'opacity-100' : 'opacity-0',
 								// While find or the notice is up the grid starts below it, rather than hide its first rows
-								// (and find's match) under it; on a phone the notice takes three lines
-								find ? 'pt-20' : !short && 'group-has-[[role=status]]/area:pt-24',
+								// (and find's match) under it; on a phone the notice takes three lines, each taller with the text
+								find ? 'pt-20' : 'pt-[var(--notice-room,0px)]',
 							)}
 						>
 							<Grid

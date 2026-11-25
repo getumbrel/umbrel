@@ -30,7 +30,13 @@ import {
 	StageMessage,
 } from '@/features/files/components/file-viewer/shell/stage-states'
 import {ToolPill} from '@/features/files/components/file-viewer/shell/tool-button'
-import {fileViewUrl, useFileBytes} from '@/features/files/components/file-viewer/shell/use-file-bytes'
+import {
+	rangeReader,
+	useFileBytes,
+	useFileDownloadUrl,
+	useFileSource,
+	useFileUrl,
+} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import {
 	findMatches,
 	firstInView,
@@ -55,7 +61,6 @@ import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-siz
 import {isUncertainType} from '@/features/files/utils/get-file-viewer'
 import {LightboxButton} from '@/features/photos/components/viewer/lightbox-button'
 import {cn} from '@/lib/utils'
-import {useAuthorizedHttpUrl, useAuthorizedHttpUrlQuery} from '@/modules/auth/http-auth'
 import {useUserApp} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -149,7 +154,7 @@ function looksLikeBinary(text: string) {
 // A file's first bytes are text when they're UTF-8 that doesn't look like
 // binary. Decoded as a stream, a character the cut splits is left for a next
 // chunk, which never comes.
-export function isTextHead(head: ArrayBuffer) {
+export function isTextHead(head: AllowSharedBufferSource) {
 	try {
 		return !looksLikeBinary(new TextDecoder('utf-8', {fatal: true}).decode(head, {stream: true}))
 	} catch {
@@ -163,16 +168,16 @@ export function isTextHead(head: ArrayBuffer) {
 // which says why.
 export function useStartsAsText(item: FileSystemItem) {
 	const uncertain = isUncertainType(item)
-	const view = useAuthorizedHttpUrlQuery(uncertain ? fileViewUrl(item.path) : undefined)
+	const source = useFileSource()
+	const view = useFileUrl(uncertain ? item : undefined)
 	const [head, setHead] = useState<{url: string; text: boolean}>()
 
 	useEffect(() => {
 		if (view.status !== 'ready') return
 		const abort = new AbortController()
-		fetch(view.url, {headers: {Range: `bytes=0-${HEAD_BYTES - 1}`}, signal: abort.signal})
-			.then(async (response) => ({url: view.url, text: !response.ok || isTextHead(await response.arrayBuffer())}))
-			.catch(() => ({url: view.url, text: true}))
-			.then((head) => !abort.signal.aborted && setHead(head))
+		rangeReader(source?.blob ?? view.url, abort.signal)(0, HEAD_BYTES)
+			.then(isTextHead, () => true)
+			.then((text) => !abort.signal.aborted && setHead({url: view.url, text}))
 		return () => abort.abort()
 	}, [view.status, view.url])
 
@@ -182,7 +187,7 @@ export function useStartsAsText(item: FileSystemItem) {
 
 export default function TextViewer({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
-	const downloadUrl = useAuthorizedHttpUrl(`/api/files/download?path=${encodeURIComponent(item.path)}`)
+	const downloadUrl = useFileDownloadUrl(item)
 	const startsAsText = useStartsAsText(item)
 	const tooLarge = (item.size ?? 0) > MAX_EDITOR_FILE_SIZE
 
@@ -454,10 +459,16 @@ function TextEditor({item, mode, downloadUrl}: ViewerProps & {downloadUrl: strin
 					{/* Sensitive file warning — only in edit mode */}
 					{isSensitive && editable && (
 						<div className='flex items-center gap-2.5 border-b border-amber-500/10 bg-amber-500/[0.06] px-4 py-2'>
-							<svg className='h-4 w-4 shrink-0 text-amber-400/80' viewBox='0 0 16 16' fill='currentColor'>
+							<svg
+								className='h-4 w-4 shrink-0 text-amber-400/80 contrast-more:text-amber-400'
+								viewBox='0 0 16 16'
+								fill='currentColor'
+							>
 								<path d='M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 3.5zm0 7a.75.75 0 100-1.5.75.75 0 000 1.5z' />
 							</svg>
-							<span className='text-12 text-amber-300/70'>{t('files-text-editor.sensitive-warning')}</span>
+							<span className='text-12 text-amber-300/70 contrast-more:text-amber-300'>
+								{t('files-text-editor.sensitive-warning')}
+							</span>
 						</div>
 					)}
 
@@ -493,7 +504,9 @@ function TextEditor({item, mode, downloadUrl}: ViewerProps & {downloadUrl: strin
 						</div>
 
 						{showMarkdownPreview && (
-							<div className={previewOnly ? 'w-full' : 'w-1/2 border-l border-white/6'}>
+							<div
+								className={previewOnly ? 'w-full' : 'w-1/2 border-l border-white/[0.06] contrast-more:border-white/25'}
+							>
 								<MarkdownPreview ref={previewRef} content={content} />
 							</div>
 						)}
@@ -501,8 +514,8 @@ function TextEditor({item, mode, downloadUrl}: ViewerProps & {downloadUrl: strin
 
 					{/* Status bar — only in edit mode */}
 					{editable && (
-						<div className='flex items-center justify-between border-t border-white/6 bg-black/25 px-4 py-1 text-11 text-white/30'>
-							<div className='flex items-center gap-3'>
+						<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-t border-white/[0.06] bg-black/25 px-4 py-1 text-11 text-white/30 contrast-more:border-white/25'>
+							<div className='flex flex-wrap items-center gap-x-3'>
 								<span>{getLanguageLabel(item.name, item.type)}</span>
 								<span>UTF-8</span>
 								{lastSavedAt && (

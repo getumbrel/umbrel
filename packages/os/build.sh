@@ -243,7 +243,11 @@ function build_root_fs() {
     # cache), set SKIP_CACHE_EXPORT=true to skip the redundant re-export — mass
     # or transient re-exports otherwise intermittently fail the build with cache
     # backend errors (429/504/not_found). The --cache-from import is unaffected.
-    cache_to="--cache-to type=gha,mode=max,scope=umbrelos-${arch}"
+    #
+    # In CI, refs other than the default branch use their own cache scope and read the
+    # default branch's as well. See UMBRELOS_CACHE_SCOPE_SUFFIX in .github/workflows/ci.yml.
+    local cache_suffix="${UMBRELOS_CACHE_SCOPE_SUFFIX:-}"
+    cache_to="--cache-to type=gha,mode=max,scope=umbrelos-${arch}${cache_suffix}"
     if [ "${SKIP_CACHE_EXPORT:-false}" = "true" ]; then
         cache_to=""
     fi
@@ -251,7 +255,8 @@ function build_root_fs() {
     # entire repo to copy in umbreld stuff.
     docker buildx build \
         --builder "${BUILDX_BUILDER}" \
-        --cache-from type=gha,scope=umbrelos-${arch} \
+        --cache-from type=gha,scope=umbrelos-${arch}${cache_suffix} \
+        ${cache_suffix:+--cache-from type=gha,scope=umbrelos-${arch}} \
         ${cache_to} \
         --platform "linux/${platform_arch}" \
         --build-arg BASE_VARIANT="${base_variant}" \
@@ -274,10 +279,14 @@ function build_docker_image() {
     # CI run, so leave them out.
     local image_source_date_epoch
     image_source_date_epoch="$(sed -n 's/^ARG SOURCE_DATE_EPOCH=//p' umbrelos.Dockerfile)"
+    # See UMBRELOS_CACHE_SCOPE_SUFFIX in .github/workflows/ci.yml.
+    local cache_suffix="${UMBRELOS_CACHE_SCOPE_SUFFIX:-}"
     docker buildx build \
         --builder "${BUILDX_BUILDER}" \
-        --cache-from type=gha,scope=umbrelos-amd64 \
-        --cache-from type=gha,scope=umbrelos-arm64 \
+        --cache-from type=gha,scope=umbrelos-amd64${cache_suffix} \
+        --cache-from type=gha,scope=umbrelos-arm64${cache_suffix} \
+        ${cache_suffix:+--cache-from type=gha,scope=umbrelos-amd64} \
+        ${cache_suffix:+--cache-from type=gha,scope=umbrelos-arm64} \
         --platform linux/amd64,linux/arm64 \
         --file umbrelos.Dockerfile \
         --target umbrelos-docker \
@@ -298,9 +307,16 @@ function build_rugix_artifacts() {
     # Hard link the root filesystems previously built with Docker. Copying them
     # takes a while, they're several GB each, and Rugix Bakery only reads them.
     ln -f build/*.tar rugix/build/umbrelos-root
-    # Copy `/etc/hostname` and `/etc/hosts` such that Rugix can fix them.
-    cp overlay/etc/{hostname,hosts} rugix/recipes/fix-overlay/files
-    
+    # Copy `/etc/hostname` and `/etc/hosts` such that Rugix can fix them. Leave
+    # them alone if they're already there. Rugix Bakery rebuilds a layer when a
+    # recipe's files are newer than it, so writing them again from a parallel
+    # build in this directory would make the other build's layer stale.
+    local file
+    for file in hostname hosts; do
+        cmp -s "overlay/etc/${file}" "rugix/recipes/fix-overlay/files/${file}" \
+            || cp "overlay/etc/${file}" rugix/recipes/fix-overlay/files
+    done
+
     local compression="compression = { type = \"xz\", level = 9 }"
     if [ "$dev" == "true" ]; then
         compression=""

@@ -492,6 +492,22 @@ describe('ZipArchive.read', () => {
 		])
 	})
 
+	test('reads an entry with the signal it’s given, and called off, fails with its reason', async () => {
+		const zip = deck()
+		const {read} = remote(zip)
+		const signals: Array<AbortSignal | undefined> = []
+		const archive = await ZipArchive.read(zip.length, (start, end, signal) => {
+			signals.push(signal)
+			return read(start, end)
+		})
+		const abort = new AbortController()
+		expect(await archive.bytes('preview.jpg', abort.signal)).toEqual(preview)
+		expect(signals).toEqual([undefined, abort.signal, abort.signal])
+		const pending = archive.bytes('Data/movie-0.mov', abort.signal)
+		abort.abort()
+		await expect(pending).rejects.toBe(abort.signal.reason)
+	})
+
 	test('reads what the end it holds already has without asking again: a small archive in one read', async () => {
 		const zip = sample()
 		const {asked, read} = remote(zip)
@@ -544,6 +560,22 @@ describe('ZipArchive.read', () => {
 		const outOfBounds = remote(lying)
 		expect(await asyncError(ZipArchive.read(lying.length, outOfBounds.read))).toBe('corrupt')
 		expect(outOfBounds.asked).toHaveLength(1)
+	})
+
+	test('refuses a central directory far from its end record, before fetching what lies between them', async () => {
+		// A small directory right behind its one entry, then padding, then the end record: reading from where the
+		// directory starts to the end read first would fetch the padding, however much of the file that is
+		const zip = buildZip([{name: 'a.txt', data: 'hello', method: 0}])
+		const end = zip.length - 22
+		const padded = concat(zip.subarray(0, end), new Uint8Array(200_000), zip.subarray(end))
+		const far = remote(padded)
+		expect(await asyncError(ZipArchive.read(padded.length, far.read, {maxDirectorySize: 100_000}))).toBe('corrupt')
+		expect(far.asked).toEqual([[padded.length - 65557, padded.length]])
+
+		// No further back than a directory may reach, it's read as before; and held whole, the padding costs nothing
+		const near = await ZipArchive.read(padded.length, remote(padded).read, {maxDirectorySize: 300_000})
+		expect(await near.text('a.txt')).toBe('hello')
+		expect(await ZipArchive.open(padded).text('a.txt')).toBe('hello')
 	})
 
 	test('reads zip64 archives', async () => {

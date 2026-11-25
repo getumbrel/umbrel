@@ -58,20 +58,17 @@ class PhotoBackupPreferencesTest {
 		assertFalse(preferences.isActive("umbrel", "nate"))
 	}
 
+	// Builds up to versionCode 4 could store an unanswered new-phone question here
 	@Test
-	fun theNewPhoneQuestionIsKeptPerAccountUntilAnswered() {
-		preferences.setNewSourceQuestion("Nate’s Pixel", "umbrel", "0")
+	fun preferencesStoredWithAnUnansweredQuestionAreStillRead() {
+		context.getSharedPreferences(PhotoBackupPreferences.FILE_NAME, Context.MODE_PRIVATE).edit().putString(
+			PhotoBackupPreferences.KEY_PREFERENCES,
+			"""{"preferences":{"umbrel":{"0":{"includesPhotos":true,"includesVideos":true,"foldersChosen":true}}},""" +
+				""""activeTarget":{"deviceId":"umbrel","accountId":"0"},"newSourceQuestions":{"umbrel":{"0":"Nate’s iPhone"}}}""",
+		).commit()
 
-		assertEquals("Nate’s Pixel", PhotoBackupPreferences(context).newSourceQuestion("umbrel", "0"))
-		assertNull(preferences.newSourceQuestion("umbrel", "nate"))
-		assertNull(preferences.newSourceQuestion("other", "0"))
-
-		preferences.setNewSourceQuestion(null, "umbrel", "0")
-		assertNull(preferences.newSourceQuestion("umbrel", "0"))
-
-		preferences.setNewSourceQuestion("Nate’s Pixel", "umbrel", "0")
-		preferences.removeDevice("umbrel")
-		assertNull(preferences.newSourceQuestion("umbrel", "0"))
+		assertTrue(preferences.preference("umbrel", "0").isEnabled)
+		assertTrue(preferences.isActive("umbrel", "0"))
 	}
 
 	@Test

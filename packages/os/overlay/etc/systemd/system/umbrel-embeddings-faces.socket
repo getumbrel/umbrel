@@ -1,0 +1,12 @@
+[Unit]
+Description=Socket of the models that find and recognise faces in photos
+ConditionPathExists=/usr/lib/python3/dist-packages/onnxruntime
+
+[Socket]
+# Only root, so only umbreld, can reach it
+ListenStream=/run/umbrel-embeddings-faces/faces.sock
+SocketMode=0600
+DirectoryMode=0700
+
+[Install]
+WantedBy=sockets.target

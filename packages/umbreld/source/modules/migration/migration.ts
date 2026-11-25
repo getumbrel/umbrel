@@ -15,6 +15,7 @@ import isUmbrelHome from '../is-umbrel-home.ts'
 import type {ProgressStatus} from '../apps/schema.ts'
 import {reboot} from '../system/system.ts'
 import {setSystemStatus} from '../system/routes.ts'
+import {sandboxed} from '../utilities/sandbox.ts'
 
 let migrationStatus: ProgressStatus = {
 	running: false,
@@ -165,9 +166,13 @@ export async function runPreMigrationChecks(
 		externalVersion = version
 	}
 
-	// Don't allow migrating in data more recent than the current install
-	const validVersionRange =
-		externalVersion !== 'unknown' && semver.gte(umbreld.version, semver.coerce(externalVersion)!)
+	// Don't allow migrating in data more recent than the current install. A
+	// version is compared as it is written when it is a complete one, so that a
+	// pre-release counts as the pre-release it is: data from 2.1.0-beta.1 is not
+	// more recent than a 2.1.0-beta.1 install, which it would be if the data's
+	// version were rounded up to 2.1.0.
+	const comparableVersion = semver.valid(externalVersion) ?? semver.coerce(externalVersion)
+	const validVersionRange = comparableVersion !== null && semver.gte(umbreld.version, comparableVersion)
 	if (!validVersionRange) {
 		throw new Error(`Cannot migrate umbrelOS ${externalVersion} data into an umbrelOS ${umbreld.version} install.`)
 	}
@@ -198,15 +203,24 @@ export async function migrateData(currentInstall: string, externalUmbrelInstall:
 	updateMigrationStatus({running: true, description: 'Copying data'})
 
 	try {
-		// Copy over data dir from previous install to temp dir while preserving permissions
+		// Copy over data dir from previous install to temp dir while preserving permissions.
+		// The drive is whatever was plugged in, so rsync runs sandboxed: as root, which
+		// keeping each file's owner needs, seeing the old install and the empty
+		// directory it copies into and nothing else.
 		await fse.remove(temporaryData)
-		const rsync = execa('rsync', [
-			'--info=progress2',
-			'--archive',
-			'--delete',
-			`${externalUmbrelInstall}/`,
-			temporaryData,
-		])
+		await fse.mkdir(temporaryData)
+		const rsync = sandboxed(
+			'rsync',
+			['--info=progress2', '--archive', '--delete', `${externalUmbrelInstall}/`, temporaryData],
+			{
+				network: false,
+				gpu: false,
+				readablePaths: [externalUmbrelInstall],
+				writablePaths: [temporaryData],
+				user: 'root',
+				deviceFiles: true,
+			},
+		)
 
 		// Update migration status with rsync progress
 		rsync.stdout!.on('data', (chunk) => {

@@ -21,11 +21,13 @@ export function WindowsInstructions({smbUrl, username, password}: WindowsInstruc
 			<div className='overflow-hidden rounded-12 border border-white/10 bg-white/6 p-4'>
 				<h4 className='text-14 font-semibold -tracking-2'>{t('files-share.instructions.windows.app-title')}</h4>
 				<div className='mt-2 flex min-h-[120px] gap-4'>
-					<div className='min-w-0 flex-1'>
+					{/* The download button keeps its label on one line; when that needs the room, the
+					    preview beside it gives way */}
+					<div className='min-w-min flex-1'>
 						<p className='text-12 leading-relaxed text-white/60'>
 							{t('files-share.instructions.windows.app-description')}
 						</p>
-						<Button asChild variant='default' size='sm' className='mt-3 gap-1.5 text-11'>
+						<Button asChild variant='default' size='sm' className='mt-3 gap-1.5 text-11 whitespace-nowrap'>
 							<a href='https://link.umbrel.com/windows-app' target='_blank' rel='noopener noreferrer'>
 								<IoLogoWindows className='size-3' />
 								{t('files-share.instructions.windows.app-download')}
@@ -34,7 +36,7 @@ export function WindowsInstructions({smbUrl, username, password}: WindowsInstruc
 					</div>
 					<div
 						aria-hidden
-						className='pointer-events-none relative -mr-4 -mb-4 w-[140px] max-w-[40%] shrink-0 self-stretch select-none'
+						className='pointer-events-none relative -mr-4 -mb-4 w-[140px] max-w-[40%] self-stretch select-none'
 					>
 						<img
 							src='/assets/desktop/explorer-preview.svg'

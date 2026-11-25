@@ -263,7 +263,8 @@ export default function MachineSettings() {
 						<span className='-mt-2 text-12 -tracking-2 text-destructive2-lightest'>{t('machines.name-taken')}</span>
 					)}
 					<span className='-mt-3 text-13 -tracking-2 text-white/40'>{machine.osVersion}</span>
-					<span className='mt-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-12 -tracking-2 text-white/50 tabular-nums'>
+					{/* A pill on one line, and a rounded box rather than a lozenge if it wraps */}
+					<span className='mt-2 rounded-[1.25em] border border-white/10 bg-white/5 px-3 py-1.5 text-center text-12 -tracking-2 text-balance text-white/50 tabular-nums'>
 						{t('machines.cores-count', {count: cores})} · {t('machines.gb', {value: memoryGb})} ·{' '}
 						{diskValid ? t('machines.gb', {value: diskValue}) : '—'}
 					</span>
@@ -316,7 +317,8 @@ export default function MachineSettings() {
 							<div className='flex flex-col items-end gap-1.5'>
 								<Stepper
 									middle={
-										<div className='relative w-24'>
+										// Sized in em, so the digits keep their room as the text grows
+										<div className='relative w-[6.4em] text-15'>
 											<Input
 												type='text'
 												inputMode='numeric'
@@ -325,7 +327,7 @@ export default function MachineSettings() {
 												disabled={disabled}
 												sizeVariant='short'
 												aria-label={t('machines.disk-size')}
-												className='pr-9 text-right text-white tabular-nums'
+												className='pr-[2.4em] text-right text-white tabular-nums'
 											/>
 											<span className='pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-13 text-white'>
 												GB
@@ -356,6 +358,7 @@ export default function MachineSettings() {
 												type='button'
 												disabled={disabled || (machine.arch === 'arm64' && option === 'bios')}
 												onClick={() => setFirmwareChoice(option)}
+												aria-pressed={firmware === option}
 												className={machineSegmentButtonClass(firmware === option)}
 											>
 												{option.toUpperCase()}
@@ -371,6 +374,7 @@ export default function MachineSettings() {
 												type='button'
 												disabled={disabled || (machine.arch === 'arm64' && option === 'sata')}
 												onClick={() => setDiskBusChoice(option)}
+												aria-pressed={diskBus === option}
 												className={machineSegmentButtonClass(diskBus === option)}
 											>
 												{option.toUpperCase()}
@@ -439,14 +443,16 @@ export default function MachineSettings() {
 											{/* Column labels, once for the whole list. The protocol segment
 											    has a fixed width so the first two line up exactly; the
 											    Umbrel label splits the remaining space with Machine's. */}
-											<div className='flex items-center text-[10px] -tracking-1 text-white/30'>
-												<span className='w-[58px] shrink-0 pl-3.5'>{t('machines.port-forward-protocol')}</span>
+											<div className='flex items-center text-10 -tracking-1 text-white/30'>
+												<span className='w-[calc(58px+var(--text-boost)*5)] shrink-0 truncate pl-3.5'>
+													{t('machines.port-forward-protocol')}
+												</span>
 												{/* The machine column is effectively constant (addresses are
 												    always 10.203.0.x); narrower on mobile where it's hidden */}
-												<span className='w-[110px] shrink-0 pl-3 sm:w-[164px]'>
+												<span className='w-[110px] shrink-0 truncate pl-3 sm:w-[164px]'>
 													{t('machines.port-forward-machine-port')}
 												</span>
-												<span className='min-w-0 flex-1'>{t('machines.port-forward-umbrel-port')}</span>
+												<span className='min-w-0 flex-1 truncate'>{t('machines.port-forward-umbrel-port')}</span>
 											</div>
 											{portForwards.map((forward) => (
 												<div key={forward.id} className='flex items-center gap-2'>
@@ -459,10 +465,10 @@ export default function MachineSettings() {
 																<button
 																	type='button'
 																	disabled={disabled}
-																	className='flex h-full w-[58px] shrink-0 items-center gap-1 rounded-l-full border-r border-white/6 pl-3.5 text-11 font-semibold text-white/70 uppercase outline-hidden transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
+																	className='flex h-full w-[calc(58px+var(--text-boost)*5)] shrink-0 items-center gap-1 rounded-l-full border-r border-white/6 pl-3.5 text-11 font-semibold text-white/70 uppercase outline-hidden transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
 																>
 																	{forward.protocol}
-																	<ChevronDown className='size-3 opacity-50' />
+																	<ChevronDown className='size-3 shrink-0 opacity-50' />
 																</button>
 															</DropdownMenuTrigger>
 															{/* p-1 matches the context menu's density (dropdowns default
@@ -536,7 +542,8 @@ export default function MachineSettings() {
 																	)
 																}
 																aria-label={t('machines.host-port')}
-																className='w-full min-w-0 flex-1 bg-transparent pl-0.5 text-13 -tracking-2 text-white tabular-nums outline-none disabled:cursor-not-allowed disabled:text-white/35'
+																// Never narrower than a whole port: the hostname gives way, the number doesn't
+																className='w-full min-w-[5.5ch] flex-1 bg-transparent pl-0.5 text-13 -tracking-2 text-white tabular-nums outline-none disabled:cursor-not-allowed disabled:text-white/35'
 															/>
 														</label>
 														<div className='flex shrink-0 items-center pr-2.5 text-14'>
@@ -579,11 +586,12 @@ export default function MachineSettings() {
 			</div>
 
 			{/* Footer: context on the left, commitment on the right */}
-			<div className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 sm:flex-row sm:items-center'>
+			<div className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 md:flex-row md:items-center'>
 				<span className='text-13 -tracking-2 text-white/35'>
 					{isInstalling ? t('machines.settings-unavailable-installing') : ''}
 				</span>
-				<div className='flex shrink-0 flex-col-reverse gap-2.5 sm:flex-row sm:items-center'>
+				{/* Stacked below md, where dialog-size buttons are full-width */}
+				<div className='flex shrink-0 flex-col-reverse gap-2.5 md:flex-row md:items-center'>
 					<Button size='dialog' onClick={() => navigate(machinePath(machine.id))} disabled={isSaving}>
 						{t('cancel')}
 					</Button>

@@ -43,7 +43,7 @@ struct SignInSheet: View {
 			onRemove: nil
 		) { account, userId, password, totpToken in
 			guard model.selectedDevice != nil else { return }
-			let session = try await Umbreld.login(
+			let login = try await Umbreld.login(
 				target: target,
 				userId: userId,
 				password: password,
@@ -53,10 +53,11 @@ struct SignInSheet: View {
 			// The cleanup runs in its own task: this one is cancelled, so its requests would
 			// never be sent.
 			if Task.isCancelled {
-				Task { try? await Umbreld.logout(target: target, session: session) }
+				Task { try? await Umbreld.logout(target: target, session: login) }
 				throw CancellationError()
 			}
-			await BrowserContext.signIn(target: target, userId: userId, password: password, totpToken: totpToken)
+			let session = await BrowserContext.signIn(
+				target: target, session: login, password: password, totpToken: totpToken)
 			if Task.isCancelled {
 				Task {
 					await BrowserContext.signOut(target: target, accountId: userId)
@@ -108,6 +109,7 @@ struct UmbrelSignInForm: View {
 	}
 
 	@State private var step: Step = .loadingAccounts
+	@State private var usesSideColumn = false
 	@State private var accounts: [Umbreld.Account] = []
 	@State private var selectedAccount: Umbreld.Account?
 	@State private var password = ""
@@ -159,10 +161,13 @@ struct UmbrelSignInForm: View {
 			.toolbar {
 				DrawerCloseToolbarItem(action: onCancel)
 			}
+			.modifier(SideColumnReader(isInSideColumn: $usesSideColumn))
 			.toolbarBackground(Color(hex: 0x1C1C1E), for: .navigationBar)
 			.toolbarBackground(.visible, for: .navigationBar)
 		}
-		.presentationDetents([dynamicTypeSize.isAccessibilitySize ? .large : .height(540)])
+		// With iPhone Duo's side column the sheet runs full height, like the system's own
+		// sheets there, so its bar meets the status bar instead of stopping just below it.
+		.presentationDetents([dynamicTypeSize.isAccessibilitySize || usesSideColumn ? .large : .height(540)])
 		.presentationDragIndicator(.visible)
 		.presentationCornerRadius(38)
 		.presentationBackground(Color(hex: 0x1C1C1E))

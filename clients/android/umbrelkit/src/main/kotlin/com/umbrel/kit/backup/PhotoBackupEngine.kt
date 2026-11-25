@@ -78,6 +78,12 @@ class PhotoBackupEngine(
 			pauseForPhotoAccess(sourceId)
 			return@withContext PassOutcome.WaitingForUser
 		}
+		// The app asks which folders to back up once it can see them all. Passes also start
+		// without the app, so they wait for that answer too.
+		val preference = preferences.preference(configuration.deviceId, configuration.source.accountId)
+		if (library.access == PhotoLibraryAccess.FULL && preference.isEnabled && !preference.foldersChosen) {
+			return@withContext PassOutcome.WaitingForUser
+		}
 
 		val initialSnapshot = preferences.snapshot
 		val recoveryRetryRequested = preferences.recoveryRetryRequested(sourceId)
@@ -186,9 +192,14 @@ class PhotoBackupEngine(
 				else -> PhotoBackupPhase.UP_TO_DATE
 			}
 			publish(phase, sourceId, statistics, recovery.issue ?: PhotoBackupIssue.AUTHENTICATION_REQUIRED.takeIf { authenticationRequired })
+			// A backup taken over from another phone has caught up once nothing is left to send.
+			// Unreadable items are tried again later and don't hold it up.
+			if (!authenticationRequired && !recovery.storagePaused && ingestion != Ingestion.MORE_WORK && !hasQueuedWork) {
+				preferences.setContinuingName(null, sourceId)
+			}
 			when {
 				authenticationRequired || recovery.storagePaused -> PassOutcome.WaitingForUser
-				ingestion == Ingestion.MORE_WORK || hasQueuedWork -> PassOutcome.MoreWork
+				ingestion == Ingestion.MORE_WORK || hasQueuedWork || preferences.configuration != configuration -> PassOutcome.MoreWork
 				else -> PassOutcome.Completed
 			}
 		} catch (cancelled: CancellationException) {
@@ -335,6 +346,9 @@ class PhotoBackupEngine(
 			for (work in candidates) {
 				currentCoroutineContext().ensureActive()
 				if (clock() >= deadlineMs) break
+				// A pass keeps the settings it started with, so a change ends it and the next
+				// pass applies the new ones.
+				if (preferences.configuration != configuration) return null
 				ledger.uploadStarted(sourceId, work.localIdentifier)
 				val result = uploadAsset(configuration, endpoint, grant, work)
 				ledger.uploadFinished(sourceId, work.localIdentifier)
@@ -560,7 +574,7 @@ class PhotoBackupEngine(
 		} catch (error: IOException) {
 			return Attempt.Unreadable(error.message ?: UNREADABLE_MESSAGE)
 		}
-		if (length <= 0) return Attempt.Failed("This item has no uploadable data")
+		if (length <= 0) return Attempt.Failed(PhotoBackupFailureReason.NOTHING_TO_UPLOAD_MESSAGE)
 		return try {
 			Attempt.Sent(server.upload(endpoint, grant, upload, UploadSource(length) { library.open(work.localIdentifier) }))
 		} catch (error: PhotoBackupSourceException) {

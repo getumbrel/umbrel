@@ -47,11 +47,7 @@ export function LogResults({children}: {children: string}) {
 	useScrollToBottom(ref, [children])
 
 	return (
-		<div
-			ref={ref}
-			data-native-context-menu
-			className='umbrel-stable-gutter w-full flex-1 overflow-auto rounded-10 bg-black px-5 py-4'
-		>
+		<div ref={ref} data-native-context-menu className='w-full flex-1 overflow-auto rounded-10 bg-black px-5 py-4'>
 			{/* Allow text selection for copying logs/errors */}
 			<div
 				className={cn(

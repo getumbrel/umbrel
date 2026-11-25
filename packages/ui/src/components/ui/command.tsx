@@ -12,6 +12,7 @@ import {Dialog} from '@/components/ui/dialog'
 import {cn} from '@/lib/utils'
 
 import {dialogOverlayClass, preventDialogDismissForToasts} from './shared/dialog'
+import {useReturnFocus} from './shared/return-focus'
 
 function Command({
 	className,
@@ -36,18 +37,26 @@ type CommandDialogProps = DialogProps & {
 // results card) paints and animates itself. Radix keeps the stage mounted for
 // as long as an animation runs on it, so a no-op hold on close (see
 // `.cmdk-stage` in index.css) gives the children time to leave.
+//
+// The stage is transparent to the pointer too: a press anywhere it shows
+// through lands on the overlay and dismisses, like any press outside. What it
+// holds takes the pointer back with `pointer-events-auto`.
 const CommandDialog = ({children, contentClassName, commandProps, onEscapeKeyDown, ...props}: CommandDialogProps) => {
 	const {className: commandClassName, ...restCommandProps} = commandProps ?? {}
+	const returnFocus = useReturnFocus({})
 	return (
 		<Dialog {...props}>
 			<BlurOverlay />
 			<DialogPrimitive.Content
 				onPointerDownOutside={preventDialogDismissForToasts}
 				onEscapeKeyDown={onEscapeKeyDown}
+				{...returnFocus}
 				aria-describedby={undefined}
+				// Inline, to win over the `pointer-events: auto` Radix sets on the content
+				style={{pointerEvents: 'none'}}
 				className={cn(
 					'cmdk-stage fixed left-1/2 z-[999] flex -translate-x-1/2 flex-col items-center outline-hidden',
-					'top-4 max-h-[calc(100dvh-32px)] w-full max-w-[calc(100%-32px)] sm:max-w-[720px] lg:top-[8%] lg:max-h-[84dvh]',
+					'top-[calc(16px+var(--safe-top))] max-h-[calc(100dvh-32px-var(--safe-top))] w-full max-w-[calc(100%-32px)] sm:max-w-[720px] lg:top-[calc(8%+var(--safe-top))] lg:max-h-[calc(84dvh-var(--safe-top))]',
 					contentClassName,
 				)}
 			>
@@ -71,6 +80,7 @@ function CommandInput({
 	wrapperClassName,
 	leading,
 	trailing,
+	accessory,
 	onClear,
 	clearLabel = 'Clear',
 	ref,
@@ -82,6 +92,9 @@ function CommandInput({
 	// Without `trailing` the dialog's close button takes that slot.
 	leading?: React.ReactNode
 	trailing?: React.ReactNode
+	// A small sign about what is typed (how far along a search's work is),
+	// between the field and its clear button
+	accessory?: React.ReactNode
 	// Shows a clear button while the (controlled) value is non-empty
 	onClear?: () => void
 	clearLabel?: string
@@ -99,6 +112,7 @@ function CommandInput({
 				)}
 				{...props}
 			/>
+			{accessory}
 			{onClear && hasValue && (
 				<button
 					type='button'

@@ -1218,6 +1218,9 @@ public sealed class AppState : ObservableObject, IDisposable
 
 	public async Task ForgetAsync(string id)
 	{
+		// DisconnectAsync returns at once while a disconnect is already running. Forgetting
+		// under it would remove the pin and the saved Umbrel it still needs to sign out.
+		while (_disconnecting.Contains(id)) await Task.Delay(100);
 		await DisconnectAsync(id);
 		Umbreld.ForgetLocalHttpsIdentity(id);
 		try
@@ -1422,7 +1425,8 @@ public sealed class AppState : ObservableObject, IDisposable
 		_sambaCredentials[id] = credential;
 
 		// API calls may have moved from a stale LAN route to Tailscale (or back). Resolve
-		// after them so drives map to the endpoint that just proved the pinned identity.
+		// after them so drives map to the route the app is using now. The pin covers the
+		// app's check only: Windows resolves the host again by itself.
 		string connectionHost;
 		try
 		{

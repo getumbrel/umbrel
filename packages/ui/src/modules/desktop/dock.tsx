@@ -1,5 +1,5 @@
 import {motion, useMotionValue, useReducedMotion} from 'motion/react'
-import React, {useLayoutEffect, useState} from 'react'
+import React, {useSyncExternalStore} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 import {useWindowSize} from 'react-use'
@@ -22,7 +22,8 @@ import {useDockTuck} from './dock-tuck'
 import {homeFit} from './home-fit'
 import {prefetchRouteChunks} from './prefetch-route-chunks'
 
-// Safari's bar floats just below the window on an iPhone, so the dock can sit lower there
+// Safari's bar floats just below the window on an iPhone, so the dock can sit lower
+// there. No lower than this, though: Safari reads the band's colour 4px up from the edge
 const DOCK_BOTTOM_PADDING_PX = IS_IPHONE_BROWSER ? 4 : 10
 const DOCK_SIDE_PADDING_PX = 12
 // The most items it holds, and the least space it leaves either side of the window
@@ -58,18 +59,36 @@ type DockDimensionsPx = {
 }
 
 // The window's bottom safe area: on an iPhone on its side, what Safari keeps
-// clear for the home indicator. Only CSS can read it, so ask a throwaway element.
-function useSafeAreaBottom() {
-	const {width, height} = useWindowSize()
-	const [safeAreaBottom, setSafeAreaBottom] = useState(0)
-	useLayoutEffect(() => {
+// clear for the home indicator. Only CSS can read it, so a hidden element that tracks
+// it is measured, once for every dock, spacer and positioner. It's kept current: the
+// safe area can change without the window resizing, as when an app showing umbrelOS
+// changes what its own bars cover, and a stale value puts the dock and its spacer out
+// of step.
+let safeAreaBottom = 0
+const safeAreaListeners = new Set<() => void>()
+let safeAreaProbe: HTMLDivElement | undefined
+
+function subscribeToSafeAreaBottom(listener: () => void) {
+	safeAreaListeners.add(listener)
+	if (!safeAreaProbe) {
 		const probe = document.createElement('div')
-		probe.style.cssText = 'position:fixed;visibility:hidden;padding-bottom:env(safe-area-inset-bottom)'
+		probe.style.cssText =
+			'position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none'
 		document.body.append(probe)
-		setSafeAreaBottom(parseFloat(getComputedStyle(probe).paddingBottom) || 0)
-		probe.remove()
-	}, [width, height])
-	return safeAreaBottom
+		new ResizeObserver(() => {
+			const height = probe.getBoundingClientRect().height
+			if (height === safeAreaBottom) return
+			safeAreaBottom = height
+			safeAreaListeners.forEach((notify) => notify())
+		}).observe(probe)
+		safeAreaBottom = probe.getBoundingClientRect().height
+		safeAreaProbe = probe
+	}
+	return () => safeAreaListeners.delete(listener)
+}
+
+function useSafeAreaBottom() {
+	return useSyncExternalStore(subscribeToSafeAreaBottom, () => safeAreaBottom)
 }
 
 function useDockDimensions(options?: {isPreview?: boolean}): DockDimensionsPx {
@@ -288,7 +307,10 @@ export function DockSpacer({className}: {className?: string}) {
 export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 	const {bottom} = useDockDimensions()
 	return (
-		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: bottom}}>
+		// Held off the edge rather than padded down to it: Safari on an iPhone reads the
+		// colour for the band under its bar from the layer it finds in that gap, and a
+		// sheet has one there for it (see SheetContent)
+		<div className='fixed left-[calc(50%+var(--safe-center-shift))] z-50 -translate-x-1/2' style={{bottom}}>
 			{children}
 		</div>
 	)
@@ -300,5 +322,5 @@ const dockTuckSpring = {type: 'spring' as const, stiffness: 400, damping: 40}
 // Clearer glass than the widget defaults: barely any blur or tint, hard refraction
 const dockGlassProps = {blur: 1.5, saturate: 1.4, brightness: 0.9, scale: 70, chroma: 0.24, bevel: 1.0} as const
 
-const dockClass = tw`mx-auto flex items-end rounded-2xl contrast-more:bg-neutral-700 px-3 shadow-dock-drop shrink-0`
+const dockClass = tw`mx-auto flex items-end rounded-2xl contrast-more:bg-neutral-900 px-3 shadow-dock-drop shrink-0`
 const dockPreviewClass = tw`mx-auto flex items-end gap-4 rounded-2xl px-3 shadow-dock-drop shrink-0`

@@ -29,6 +29,7 @@ import {
 	useLanding,
 	type CommittedView,
 	type ElementRef,
+	type Landing,
 } from '@/features/photos/components/listing/time-rail/use-landing'
 import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
 import type {Layout} from '@/features/photos/components/listing/timeline-rows'
@@ -80,8 +81,8 @@ function reachOf(layout: Layout, scale: ReturnType<typeof buildScale>, where: Sc
 // time rail's count-weighted scale (see rail-scale.ts), and fades once the
 // grid rests. Holding it scrubs: it follows the thumb exactly, a bubble beside
 // it names the month beneath, and the grid travels there live — through
-// everything loaded, and past the loading frontier on release, by the same
-// seek the desktop rail uses (see use-seek.ts). Letting go leaves the grid
+// everything the list holds, and beyond it as each month it comes to
+// arrives, by the same seek the desktop rail uses (see use-seek.ts). Letting go leaves the grid
 // where it is. Only a touch that starts on the handle scrubs; everywhere else
 // the grid scrolls as it always has. The handle follows the scroll by
 // transform, off React's render path; the only renders while scrubbing are
@@ -91,20 +92,20 @@ export function DateScrubber({
 	scrollerRef,
 	contentRef,
 	viewRef,
+	landingRef,
 	frame,
 	height,
 	endSpacer,
-	hasMore,
 	seek,
 }: {
 	buckets: MonthBucket[]
 	scrollerRef: ElementRef<HTMLDivElement>
 	contentRef: ElementRef<HTMLDivElement>
 	viewRef: ElementRef<CommittedView>
+	landingRef: {current: Landing | null}
 	frame: Frame
 	height: number
 	endSpacer: number
-	hasMore: boolean
 	seek: Seek
 }) {
 	const {t, i18n} = useTranslation()
@@ -124,13 +125,13 @@ export function DateScrubber({
 			scrollNamingMonth(layout, key, fraction, {...where, handoff}),
 		[handoff],
 	)
-	const {scrollWindow, stopTween, jump} = useLanding({
+	const {scrollWindow, locate, stopTween, jump, scrubBeyond, scrubWithin} = useLanding({
 		scrollerRef,
 		contentRef,
 		viewRef,
+		landingRef,
 		inset: frame.inset,
 		endSpacer,
-		hasMore,
 		seek,
 		resolve,
 	})
@@ -240,22 +241,21 @@ export function DateScrubber({
 	const trackY = (clientY: number) => clientY - (overlayRef.current?.getBoundingClientRect().top ?? 0) - TRACK_PAD
 
 	// The scrollTop for a handle position: the month under it, landed so the
-	// bar names it — and the track's two ends are the list's, exactly, so a
-	// drag to either is the top or the last row rather than a row's worth
-	// short of it. Undefined past the loading frontier.
+	// bar names it — and the track's two ends are the timeline's, exactly, so
+	// a drag to either is the top or the last row rather than a row's worth
+	// short of it. Undefined beyond what the list holds.
 	const targetFor = (view: CommittedView, y: number, key: MonthKey, fraction: number) => {
-		const where = scrollWindow(view)
-		if (y <= 0) return 0
+		if (y <= 0 && view.layout.before === undefined) return 0
 		if (y >= trackHeight && !view.layout.hasMore) return Math.max(0, view.layout.total + endSpacer - view.height)
-		return resolve(view.layout, key, fraction, where)
+		return locate(view, key, fraction)
 	}
 
-	// Take the grid to a handle position, and name where it is. Loaded
-	// territory scrubs live under the thumb; past the frontier the grid holds
-	// at the deepest loaded row and the bubble names the month the release
-	// will seek. Otherwise the bubble names what the bar does — the month
-	// under the thumb everywhere but the foot of the list, where the grid can
-	// travel no further and the top of the last screen is what it shows.
+	// Take the grid to a handle position, and name where it is. What the list
+	// holds scrubs live under the thumb; beyond it the bubble names the month
+	// being sought and the grid follows as that arrives.
+	// Otherwise the bubble names what the bar does — the month under the
+	// thumb everywhere but the foot of the list, where the grid can travel no
+	// further and the top of the last screen is what it shows.
 	const scrubTo = (y: number, move: boolean) => {
 		const view = viewRef.current
 		const scroller = scrollerRef.current
@@ -268,10 +268,13 @@ export function DateScrubber({
 		drag.key = at.key
 		drag.fraction = at.fraction
 		const target = targetFor(view, y, at.key, at.fraction)
-		const pending = target === undefined && hasMore
+		const pending = target === undefined
 		if (move) {
 			stopTween()
-			scroller.scrollTop = target ?? Math.max(0, view.layout.total + endSpacer - view.height)
+			if (target !== undefined) {
+				scrubWithin()
+				scroller.scrollTop = target
+			} else scrubBeyond(at.key, at.fraction)
 		}
 		const key = pending
 			? at.key
@@ -283,9 +286,9 @@ export function DateScrubber({
 	useEffect(() => {
 		scrubRef.current = scrubTo
 	})
-	// A thumb held still past the frontier moves nothing, but the grid's own
-	// paging keeps landing beneath it: look again on a beat, so the grid goes
-	// the moment the month arrives and the bubble drops its spinner
+	// A thumb held still beyond the list moves nothing, but what it is waiting
+	// for lands beneath it: look again on a beat, so the bubble drops its
+	// spinner the moment the month is there
 	const waiting = grabbed && named?.pending === true
 	useEffect(() => {
 		if (!waiting) return
@@ -296,7 +299,7 @@ export function DateScrubber({
 	const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
 		if (event.pointerType === 'mouse' && event.button !== 0) return
 		event.currentTarget.setPointerCapture(event.pointerId)
-		if (seek.busy) seek.cancel()
+		seek.cancel()
 		stopTween()
 		heldRef.current = false
 		// Held where it was touched: the handle never jumps to the thumb, it
@@ -335,14 +338,15 @@ export function DateScrubber({
 		// scroll back out from the handle would land it on a row's top instead
 		if (!drag.moved) return
 		// Settle exactly where the thumb left it — a page that landed since the
-		// last move has reflowed the grid under it — or, let go past the
-		// frontier, seek what the drag ran out to
+		// last move has reflowed the grid under it — or, let go beyond the
+		// list, on what the drag ran out to once that is here
 		const view = viewRef.current
 		const scroller = scrollerRef.current
 		if (!view || !scroller) return
 		const where = scrollWindow(view)
 		const target = targetFor(view, drag.y, drag.key, drag.fraction)
-		if (target === undefined) return jump(drag.key, drag.fraction)
+		if (target === undefined) return scrubBeyond(drag.key, drag.fraction, true)
+		scrubWithin()
 		scroller.scrollTop = target
 		// … and the bubble fades out naming where the grid settled
 		const key = monthNamedAt(view.layout, scroller.scrollTop, {inset: where.inset, handoff})

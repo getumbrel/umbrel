@@ -646,6 +646,24 @@ export default class App {
 		}
 	}
 
+	// Starting fresh should match a new install, which also copies the package's
+	// committed data/ files (default config, seed databases) from the app store.
+	async #restorePackageData() {
+		let templatePath
+		try {
+			templatePath = await this.#umbreld.appStore.getAppTemplateFilePath(this.id)
+		} catch (error) {
+			this.logger.error(`Could not find ${this.id} in the app store, starting with an empty data folder`, error)
+			return
+		}
+		// The store's copy is briefly missing while the store refreshes
+		if (!(await fse.pathExists(templatePath))) {
+			this.logger.error(`${this.id}'s app store files are missing, starting with an empty data folder`)
+			return
+		}
+		await $`rsync --archive --include=/data/*** --exclude=* ${templatePath}/. ${this.dataDirectory}`
+	}
+
 	async #ensureAppDataRootBindSources(dataRootSystemPath: string) {
 		const manifest = await this.readManifest()
 		if (manifest.storage?.dataRoot !== 'data') return
@@ -1204,6 +1222,7 @@ export default class App {
 			await removeDurably(internalSystemPath)
 			await fse.ensureDir(internalSystemPath)
 			await fse.chown(internalSystemPath, this.#umbreld.files.fileOwner.userId, this.#umbreld.files.fileOwner.groupId)
+			await this.#restorePackageData()
 
 			// Commit the new authority before starting anything. If umbreld stops
 			// here, the pending flag makes the next start retry full initialization.
@@ -2695,34 +2714,6 @@ export default class App {
 			.map(([, service]) => service.container_name) as string[]
 		containers.push(`${this.id}_tor_server_1`)
 		return containers
-	}
-
-	async getPids() {
-		const containers = await this.getContainerNames()
-		try {
-			// If we fail to get the PIDs of one container, skip it and continue for
-			// the other containers. We'll expect to get it on some misses for the app
-			// proxy and tor server containers.
-			const outputs = await Promise.all(
-				containers.map(async (container) => {
-					try {
-						const {stdout} = await $`docker top ${container} -o pid`
-						return stdout
-					} catch {
-						return ''
-					}
-				}),
-			)
-			return outputs
-				.join('\n')
-				.split('\n') // Split on newline
-				.map((line) => line.trim()) // Trim whitespace
-				.filter((line) => /^([1-9][0-9]*|0)$/.test(line)) // Keep only integers
-				.map((line) => parseInt(line, 10)) // And convert
-		} catch (error) {
-			this.logger.error(`Failed to get pids for app ${this.id}`, error)
-			return []
-		}
 	}
 
 	async getDiskUsage() {

@@ -1,4 +1,4 @@
-import {Album, Calendar, Globe, Image, RectangleHorizontal, ScanLine, Search, Video, X} from 'lucide-react'
+import {Search, X} from 'lucide-react'
 import {motion} from 'motion/react'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -6,12 +6,14 @@ import {useParams} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {Popover, PopoverAnchor, PopoverContent} from '@/components/ui/popover'
-import {LivePhotoIcon} from '@/features/photos/components/live-photo-icon'
 import {suggest, type Suggestion} from '@/features/photos/components/search/suggest'
-import {SourceIcon} from '@/features/photos/components/sources/source-icon'
-import {usePhotosView, type SearchToken} from '@/features/photos/components/view-context'
+import {TokenIcon, TokenLabel, tokenLabel} from '@/features/photos/components/search/token-badge'
+import {tokenKey, usePhotosView, type SearchToken} from '@/features/photos/components/view-context'
 import {useAlbums, useLibrarySummary} from '@/features/photos/hooks/use-library'
+import {usePeople} from '@/features/photos/hooks/use-people'
 import {usePhotoSources} from '@/features/photos/hooks/use-photo-sources'
+import {useSearchNoteArc} from '@/features/photos/hooks/use-search'
+import {SearchArc} from '@/features/search/search-arc'
 import {cn} from '@/lib/utils'
 import {formatNumberI18n} from '@/utils/number'
 import {useBreakpoint} from '@/utils/tw'
@@ -19,11 +21,17 @@ import {useBreakpoint} from '@/utils/tw'
 // The Photos search. The quiet pill in the actions bar takes the stage when
 // looked at: it widens, the page's other controls step aside, and a panel
 // unfolds beneath with everything a search can be made of — the photo/video
-// split, the sources, the library's own months. Typed text narrows the grid
-// by file name as it goes (the grid is the results; nothing changes place),
-// while the panel reads the text as dates and sources to offer; choosing one
-// turns it into a small token in the field, and the dimensions stack. On
-// phones the search lives in the title row with a Cancel of its own
+// split, the people, the sources, the library's own months. Typed text
+// narrows the grid as it goes (the grid is the results; nothing changes
+// place) — by what the words mean where smart search runs, by file name
+// elsewhere (see plan.ts) — while the panel reads the text as dates, people
+// and sources to offer; choosing one turns it into a small token in the
+// field, and the dimensions stack. The field holds only what the user put
+// there: their words, and the tokens they picked. What smart search itself
+// read out of the words as filters ("dad in thailand 2026": a person, a
+// place, a year) is shown beside the result count instead (see ViewLine) —
+// in the field it repeated the words that produced it and crowded them out.
+// On phones the search lives in the title row with a Cancel of its own
 // (MobileSearch). Leaving the page ends the search — every view starts whole.
 
 const EASE_OUT = [0.215, 0.61, 0.355, 1] as const
@@ -32,6 +40,9 @@ const COMPACT_WIDTH = 184
 // give), so the resting pill is just the glyph — a tap still morphs it wide
 const COMPACT_ICON_WIDTH = 44
 const EXPANDED_WIDTH = 380
+// … and the wide field is narrower: at its full width it left the bar's title
+// and the line under it too little to name the view and count what was found
+const EXPANDED_SLIM_WIDTH = 320
 
 // Whether the search has the stage or a hold on the grid: the field is wide
 // and the bar's other controls stay aside while anything is typed or applied
@@ -51,11 +62,12 @@ export function SearchPill() {
 	const [settled, setSettled] = useState(true)
 	const breakpoint = useBreakpoint()
 	const slim = breakpoint !== 'xl' && breakpoint !== '2xl'
+	const width = engaged ? (slim ? EXPANDED_SLIM_WIDTH : EXPANDED_WIDTH) : slim ? COMPACT_ICON_WIDTH : COMPACT_WIDTH
 	return (
 		<motion.div
 			className='shrink-0'
 			initial={false}
-			animate={{width: engaged ? EXPANDED_WIDTH : slim ? COMPACT_ICON_WIDTH : COMPACT_WIDTH}}
+			animate={{width}}
 			transition={{duration: 0.25, ease: EASE_OUT}}
 			onAnimationStart={() => setSettled(false)}
 			onAnimationComplete={() => setSettled(true)}
@@ -116,6 +128,9 @@ function SearchBox({
 	const [highlight, setHighlight] = useState(-1)
 	const panelOpen = search.open && panelReady && suggestions.length > 0
 	const browsing = search.text.trim() === ''
+	// How far along the reading its results rest on is, while that is the
+	// news beside them (see ViewLine)
+	const analyzed = useSearchNoteArc(search.appliedText !== '')
 
 	// The options change under the highlight with every keystroke
 	useEffect(() => setHighlight(-1), [search.text, search.open])
@@ -158,11 +173,17 @@ function SearchBox({
 					ref={boxRef}
 					className={cn(
 						'settings-edge-material flex h-11 w-full items-center gap-2 rounded-24 bg-white/6 px-3 text-white/70 transition-colors duration-200 focus-within:bg-white/12 focus-within:text-white hover:bg-white/9',
+						slim && !expanded && 'justify-center gap-0 px-0',
 					)}
-					onClick={() => inputRef.current?.focus()}
+					// A click on the field re-summons a panel Return put away, even
+					// when the field never lost focus
+					onClick={() => {
+						inputRef.current?.focus()
+						search.setOpen(true)
+					}}
 				>
 					<Search className='size-4 shrink-0' aria-hidden='true' />
-					{search.tokens.length > 0 && <TokenStrip />}
+					<TokenStrip />
 					<input
 						ref={inputRef}
 						value={search.text}
@@ -188,16 +209,18 @@ function SearchBox({
 						aria-label={t('photos-actions.search')}
 						role='combobox'
 						aria-expanded={panelOpen}
-						aria-controls='photos-search-options'
+						// The listbox only exists while the panel is open
+						aria-controls={panelOpen ? 'photos-search-options' : undefined}
 						aria-activedescendant={highlight >= 0 ? optionId(highlight) : undefined}
 						autoFocus={autoFocus}
 						autoCorrect='off'
 						spellCheck={false}
 						className={cn(
 							'h-full flex-1 bg-transparent text-12 text-white outline-hidden placeholder:text-white/50',
-							slim && !expanded ? 'w-0 min-w-0' : 'min-w-16',
+							slim && !expanded ? 'w-0 min-w-0 flex-none' : 'min-w-16',
 						)}
 					/>
+					<SearchArc percent={analyzed} />
 					{(search.text !== '' || search.tokens.length > 0) && (
 						<button
 							type='button'
@@ -227,7 +250,10 @@ function SearchBox({
 					if (boxRef.current?.contains(event.target as Node)) return
 					if (variant === 'bar') search.setOpen(false)
 				}}
-				className='relative w-[var(--radix-popper-anchor-width)] rounded-20 p-3'
+				// As wide as the field, which in a tablet's bar can be narrower than
+				// the suggestions read well at: there the panel keeps a width of its
+				// own, and runs out to the left from under the field
+				className='relative w-[var(--radix-popper-anchor-width)] rounded-20 p-3 tablet:min-w-[22rem]'
 			>
 				{/* Puts the panel away without touching the search itself */}
 				<button
@@ -286,6 +312,7 @@ function BrowsePanel({
 		// The photo/video split and the subKinds share the TYPE row: both answer
 		// "what kind of thing"
 		{label: t('photos-search.type'), key: 'kind', types: ['kind', 'subKind'] as const},
+		{label: t('photos-search.people'), key: 'person', types: ['person'] as const},
 		{label: t('photos-search.source'), key: 'source', types: ['source'] as const},
 		{label: t('photos-search.album'), key: 'album', types: ['album'] as const},
 		{label: t('photos-search.date'), key: 'date', types: ['date'] as const},
@@ -365,7 +392,7 @@ function SuggestionChip({
 			{...optionProps({id, highlighted, onHighlight, onPick})}
 			className={cn(
 				'flex h-8 max-w-full min-w-0 cursor-default items-center gap-1.5 rounded-full bg-white/8 px-3 text-12 font-medium text-white/90 transition-colors',
-				highlighted && 'bg-white/17 text-white',
+				highlighted && 'bg-white/17 text-white contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
 			)}
 		>
 			<TokenIcon token={suggestion.token} />
@@ -401,10 +428,10 @@ function SuggestionRow({
 			{...optionProps({id, highlighted, onHighlight, onPick})}
 			className={cn(
 				'flex h-10 cursor-default items-center gap-2.5 rounded-12 px-2.5 text-13 text-white/90',
-				highlighted && 'bg-white/10 text-white',
+				highlighted && 'bg-white/10 text-white contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
 			)}
 		>
-			<TokenIcon token={suggestion.token} className='size-4' sourceSize={18} />
+			<TokenIcon token={suggestion.token} className='size-4' size={18} />
 			<span className='min-w-0 truncate'>
 				<TokenLabel token={suggestion.token} />
 			</span>
@@ -417,17 +444,19 @@ function SuggestionRow({
 	)
 }
 
-// The applied narrowings, riding inside the field. Capped well short of the
-// field's width so there is always room to keep typing: past the cap the
-// chips scroll sideways under faded edges (the fade only appears on a side
-// with more to see), and a new chip scrolls into view as it lands.
+// The narrowings the user picked, riding inside the field. Capped well short
+// of the field's width so there is always room to keep typing: past the cap
+// the chips scroll sideways under faded edges (the fade only appears on a
+// side with more to see), and a new chip scrolls into view as it lands.
 function TokenStrip() {
 	const {search} = usePhotosView()
 	const stripRef = useRef<HTMLDivElement>(null)
+	const count = search.tokens.length
 	useEffect(() => {
 		const strip = stripRef.current
 		if (strip) strip.scrollLeft = strip.scrollWidth
-	}, [search.tokens.length])
+	}, [count])
+	if (count === 0) return null
 	return (
 		<FadeScroller
 			direction='x'
@@ -448,14 +477,14 @@ function TokenChip({token, onRemove}: {token: SearchToken; onRemove: () => void}
 	return (
 		<button
 			type='button'
-			aria-label={t('photos-search.remove-filter', {label: labelOf(token, t)})}
+			aria-label={t('photos-search.remove-filter', {label: tokenLabel(token, t)})}
 			// Keep the focus (and the panel) in the field through the click
 			onMouseDown={(event) => event.preventDefault()}
 			onClick={(event) => {
 				event.stopPropagation()
 				onRemove()
 			}}
-			className='group flex h-7 max-w-36 min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-white/10 pr-1.5 pl-2 text-12 whitespace-nowrap text-white/90 transition-colors hover:bg-white/15'
+			className='group flex h-7 max-w-36 min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-white/10 pr-1.5 pl-2 text-12 whitespace-nowrap text-white/90 transition-colors hover:bg-white/15 motion-safe:animate-in motion-safe:duration-200 motion-safe:zoom-in-95 motion-safe:fade-in'
 		>
 			<TokenIcon token={token} />
 			{/* min-w-0 lets the label shrink inside the capped pill; without it the text runs past the pill's edge */}
@@ -467,49 +496,6 @@ function TokenChip({token, onRemove}: {token: SearchToken; onRemove: () => void}
 	)
 }
 
-function TokenIcon({token, className, sourceSize = 14}: {token: SearchToken; className?: string; sourceSize?: number}) {
-	if (token.type === 'source') return <SearchSourceIcon id={token.id} size={sourceSize} />
-	const Icon =
-		token.type === 'date'
-			? Calendar
-			: token.type === 'album'
-				? Album
-				: token.type === 'subKind'
-					? {live: LivePhotoIcon, panorama: RectangleHorizontal, screenshot: ScanLine, spherical: Globe}[token.subKind]
-					: token.kind === 'video'
-						? Video
-						: Image
-	return <Icon className={cn('size-3.5 shrink-0 opacity-60', className)} aria-hidden='true' />
-}
-
-// The same device artwork the sidebar shows for this source
-function SearchSourceIcon({id, size}: {id: string; size: number}) {
-	const {sources} = usePhotoSources()
-	const type = sources.find((source) => source.id === id)?.type
-	if (!type) return null
-	return <SourceIcon type={type} size={size} />
-}
-
-function TokenLabel({token}: {token: SearchToken}) {
-	const {t} = useTranslation()
-	return <>{labelOf(token, t)}</>
-}
-
-function labelOf(token: SearchToken, t: (key: string) => string) {
-	if (token.type === 'kind') return token.kind === 'video' ? t('photos-sidebar.videos') : t('photos-sidebar.photos')
-	return token.label
-}
-
-const tokenKey = (token: SearchToken) =>
-	token.type === 'date'
-		? `date-${token.from}-${token.to}`
-		: token.type === 'source'
-			? `source-${token.id}`
-			: token.type === 'album'
-				? `album-${token.id}`
-				: token.type === 'subKind'
-					? `subkind-${token.subKind}`
-					: `kind-${token.kind}`
 const optionId = (index: number) => `photos-search-option-${index}`
 
 // What the panel offers here, now: only dimensions that can still narrow the
@@ -519,10 +505,11 @@ const optionId = (index: number) => `photos-search-option-${index}`
 function useSuggestions(): Suggestion[] {
 	const {t, i18n} = useTranslation()
 	const {search} = usePhotosView()
-	const {section, sourceId, albumId} = useParams()
+	const {section, sourceId, albumId, personId} = useParams()
 	const {data: summary} = useLibrarySummary()
 	const {sources} = usePhotoSources()
 	const {data: albums} = useAlbums()
+	const {people} = usePeople()
 	return useMemo(() => {
 		// On a section whose type is already pinned (Photos, Videos, or any
 		// subKind view) type chips can only contradict the page
@@ -533,7 +520,7 @@ function useSuggestions(): Suggestion[] {
 			section === 'panoramas' ||
 			section === 'screenshots' ||
 			section === '360'
-		const inLibrary = (section === undefined || section === 'all') && !sourceId && !albumId
+		const inLibrary = (section === undefined || section === 'all') && !sourceId && !albumId && !personId
 		const kinds = kindFixed
 			? []
 			: ([
@@ -576,29 +563,37 @@ function useSuggestions(): Suggestion[] {
 						name: album.name,
 						count: inLibrary ? album.count : undefined,
 					}))
+		// People by name — a face with no name has nothing to be typed — in the
+		// People page's own order, the most photographed first
+		const offeredPeople = personId
+			? []
+			: people.flatMap((person) =>
+					person.name ? [{id: person.id, name: person.name, count: inLibrary ? person.count : undefined}] : [],
+				)
 		const all = suggest({
 			text: search.text,
 			locale: i18n.language,
 			months: summary?.months ?? [],
 			sources: offeredSources,
 			albums: offeredAlbums,
+			people: offeredPeople,
 			kinds: [...kinds],
 			subKinds,
 		})
 		// What's already applied isn't offered again
-		return all.filter(
-			({token}) =>
-				!search.tokens.some(
-					(existing) =>
-						(existing.type === 'date' &&
-							token.type === 'date' &&
-							existing.from === token.from &&
-							existing.to === token.to) ||
-						(existing.type === 'source' && token.type === 'source' && existing.id === token.id) ||
-						(existing.type === 'album' && token.type === 'album' && existing.id === token.id) ||
-						(existing.type === 'kind' && token.type === 'kind' && existing.kind === token.kind) ||
-						(existing.type === 'subKind' && token.type === 'subKind' && existing.subKind === token.subKind),
-				),
-		)
-	}, [search.text, search.tokens, section, sourceId, albumId, summary, sources, albums, t, i18n.language])
+		return all.filter(({token}) => !search.tokens.some((existing) => tokenKey(existing) === tokenKey(token)))
+	}, [
+		search.text,
+		search.tokens,
+		section,
+		sourceId,
+		albumId,
+		personId,
+		summary,
+		sources,
+		albums,
+		people,
+		t,
+		i18n.language,
+	])
 }

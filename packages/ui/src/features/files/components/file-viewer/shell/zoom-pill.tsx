@@ -26,7 +26,7 @@ const NEAR = 120
 
 // Floating controls sit over white paper as often as over the dark stage: a
 // denser glass than the chrome's keeps their white legible over both
-export const floatingGlassClass = tw`settings-edge-material bg-black/65 backdrop-blur-xl`
+export const floatingGlassClass = tw`settings-edge-material bg-black/65 backdrop-blur-xl contrast-more:bg-black/90 contrast-more:backdrop-blur-none`
 // The menus that open from them, made as dense
 export const floatingMenuClass = tw`[--material-brightness:75%] [--material-tint-opacity:0.65]`
 
@@ -229,7 +229,13 @@ export function PillButton({
 				aria-label={label}
 				aria-pressed={active}
 				onMouseDown={keepFocus}
-				className={cn(pillButtonClass, active && 'bg-white/20 text-white hover:bg-white/25', className)}
+				className={cn(
+					pillButtonClass,
+					// With contrast on a hover is as strong as this fill, so on also takes a white ring
+					active &&
+						'bg-white/20 text-white hover:bg-white/25 contrast-more:bg-white/30 contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
+					className,
+				)}
 				{...props}
 			>
 				{Icon ? <Icon className='size-4' /> : children}
@@ -278,7 +284,7 @@ function PageField({page, pageCount, onPage}: {page: number; pageCount: number; 
 						inputRef.current?.blur()
 					}}
 					style={{width: `${Math.max(String(pageCount).length, 1) + 1.5}ch`}}
-					className='h-7 rounded-8 bg-white/8 text-center text-white/90 transition-colors outline-none hover:bg-white/12 focus:bg-white/15'
+					className='h-7 rounded-8 bg-white/8 text-center text-white/90 transition-colors outline-none hover:bg-white/12 focus:bg-white/15 contrast-more:ring-1 contrast-more:ring-white/40 contrast-more:ring-inset'
 				/>
 			</label>
 			<span aria-hidden='true'>/</span>

@@ -29,7 +29,9 @@ function parseLevel(element: XmlElement, theme: Theme | undefined): Level {
 	return {
 		start: clamp(int(value(child(element, 'start'))) ?? 0, 0, 32767),
 		format: value(child(element, 'numFmt')) ?? 'decimal',
-		text: value(child(element, 'lvlText')) ?? '',
+		// A bullet that's a picture shows as a round one. The character it has besides is left from the bullet it was
+		// before, often in a font that draws it as a letter.
+		text: child(element, 'lvlPicBulletId') ? '•' : (value(child(element, 'lvlText')) ?? ''),
 		restart: restart === undefined ? undefined : clamp(restart, 0, 9),
 		legal: child(element, 'isLgl') !== undefined && value(child(element, 'isLgl')) !== '0',
 		suffix: suffix === 'space' || suffix === 'nothing' ? suffix : 'tab',

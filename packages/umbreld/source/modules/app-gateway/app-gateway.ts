@@ -17,6 +17,7 @@ import {
 	stripAppGatewayCookies,
 } from '../auth/app-gateway-cookie.ts'
 import {SESSION_DURATION} from '../auth/auth.ts'
+import readBeforeFailedWrite from '../utilities/read-before-failed-write.ts'
 import {appGatewayErrorPage} from './error-page.ts'
 
 export type AppGatewayConfig = {
@@ -236,6 +237,10 @@ export default class AppGateway {
 			proxyTimeout: this.#config.timeout,
 			followRedirects: false,
 			on: {
+				proxyReq: ({socket}) => {
+					// An app can answer an upload and close without reading the rest of it
+					if (socket && this.#config.targetProtocol === 'http') readBeforeFailedWrite(socket)
+				},
 				proxyRes: (proxyResponse, _request, response) => {
 					this.#upstreamResponses.set(response, proxyResponse)
 				},

@@ -5,6 +5,7 @@ import {act} from 'react'
 import {createRoot, type Root} from 'react-dom/client'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
+import {moveActivity} from '@/features/photos/hooks/move-activity'
 import {MAP_POINTS_KEY} from '@/features/photos/hooks/use-map-points'
 import {usePhotosEvents} from '@/features/photos/hooks/use-photos-events'
 
@@ -22,6 +23,8 @@ const mocks = vi.hoisted(() => ({
 	invalidateSummary: vi.fn(),
 	invalidateSources: vi.fn(),
 	invalidateAlbums: vi.fn(),
+	invalidatePeople: vi.fn(),
+	isMutating: vi.fn(() => 0),
 	invalidateItem: vi.fn(),
 	cancelItem: vi.fn(async () => {}),
 	invalidateQueries: vi.fn(),
@@ -34,6 +37,7 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 		...original,
 		useQueryClient: () => ({
 			invalidateQueries: mocks.invalidateQueries,
+			isMutating: mocks.isMutating,
 			getQueryCache: () => ({findAll: mocks.findQueries}),
 		}),
 	}
@@ -49,6 +53,7 @@ vi.mock('@/trpc/trpc', () => ({
 				},
 				sources: {invalidate: mocks.invalidateSources},
 				albums: {invalidate: mocks.invalidateAlbums},
+				people: {invalidate: mocks.invalidatePeople},
 				items: {get: {invalidate: mocks.invalidateItem, cancel: mocks.cancelItem}},
 			},
 		}),
@@ -144,9 +149,74 @@ it('uses the bounded library refresh when indexing becomes ready', async () => {
 	expect(mocks.invalidateSources).toHaveBeenCalledOnce()
 	expect(mocks.invalidateAlbums).toHaveBeenCalledOnce()
 	expect(mocks.invalidateItem).toHaveBeenCalledOnce()
-	// The items lists, and the map's points
-	expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
-	expect(mocks.invalidateQueries).toHaveBeenCalledWith({queryKey: MAP_POINTS_KEY})
+	// The map's points, the lists, and the ranked searches of the same library
+	expect(mocks.invalidateQueries.mock.calls).toEqual([
+		[{queryKey: MAP_POINTS_KEY}],
+		[{queryKey: [['photos', 'items', 'list']], refetchType: 'none'}],
+		[{queryKey: [['search', 'query']], refetchType: 'none'}],
+	])
+})
+
+it('leaves people unread while a change to them is still on its way', async () => {
+	mocks.isMutating.mockReturnValueOnce(1)
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.isMutating).toHaveBeenCalledWith({mutationKey: [['photos', 'people']]})
+	expect(mocks.invalidatePeople).not.toHaveBeenCalled()
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
+
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.invalidatePeople).toHaveBeenCalledOnce()
+})
+
+it('asks the ranked search on screen again when the library changes, and no other', async () => {
+	const shown = {isActive: () => true, fetch: vi.fn(async () => {})}
+	const cached = {isActive: () => false, fetch: vi.fn(async () => {})}
+	mocks.findQueries.mockImplementation((filters) => {
+		const [[path]] = (filters as {queryKey: string[][]}).queryKey
+		return path === 'search' ? [shown, cached] : []
+	})
+	try {
+		await act(async () => {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			await vi.advanceTimersByTimeAsync(1000)
+		})
+		expect(shown.fetch).toHaveBeenCalledOnce()
+		expect(cached.fetch).not.toHaveBeenCalled()
+	} finally {
+		mocks.findQueries.mockReset().mockReturnValue([])
+	}
+})
+
+it('asks the ranked search on screen again at once, then at most every ten seconds while changes keep coming', async () => {
+	const shown = {isActive: () => true, fetch: vi.fn(async () => {})}
+	mocks.findQueries.mockImplementation((filters) => {
+		const [[path]] = (filters as {queryKey: string[][]}).queryKey
+		return path === 'search' ? [shown] : []
+	})
+	try {
+		// An import: a change a second, for 25 seconds
+		await act(async () => {
+			for (let second = 0; second < 25; second++) {
+				mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+				await vi.advanceTimersByTimeAsync(1000)
+			}
+		})
+		// At 1s, 11s and 21s
+		expect(shown.fetch).toHaveBeenCalledTimes(3)
+		// … and once more for the changes since, unless a delete of this session's is under way by then
+		moveActivity.begin()
+		await act(async () => vi.advanceTimersByTimeAsync(10_000))
+		expect(shown.fetch).toHaveBeenCalledTimes(3)
+	} finally {
+		moveActivity.end()
+		mocks.findQueries.mockReset().mockReturnValue([])
+	}
 })
 
 it("refreshes the map's points at once, then at most every ten seconds while changes keep coming", async () => {
@@ -281,13 +351,12 @@ it('waits for an older read before requesting data for a new change', async () =
 it('refreshes a newly selected filter when a change arrives while waiting for an older read', async () => {
 	const client = new QueryClient({defaultOptions: {queries: {retry: false, gcTime: Infinity}}})
 	let finishOlderRead!: () => void
-	let finishFilterRead!: (data: {pages: string[]}) => void
+	type Data = {pages: {items: string[]}[]}
+	const pageOf = (item: string): Data => ({pages: [{items: [item]}]})
+	let finishFilterRead!: (data: Data) => void
 	const olderRead = new Promise<void>((resolve) => (finishOlderRead = resolve))
-	const filterRead = new Promise<{pages: string[]}>((resolve) => (finishFilterRead = resolve))
-	const queryFn = vi
-		.fn()
-		.mockReturnValueOnce(filterRead)
-		.mockResolvedValue({pages: ['new data']})
+	const filterRead = new Promise<Data>((resolve) => (finishFilterRead = resolve))
+	const queryFn = vi.fn().mockReturnValueOnce(filterRead).mockResolvedValue(pageOf('new data'))
 	const observer = new QueryObserver(client, {queryKey: [['photos', 'items', 'list'], {filter: 'new'}], queryFn})
 	let unsubscribe = () => {}
 	try {
@@ -301,7 +370,12 @@ it('refreshes a newly selected filter when a change arrives while waiting for an
 		// Switching filters starts B after the refresh took its snapshot of A.
 		unsubscribe = observer.subscribe(() => {})
 		const filterQuery = client.getQueryCache().getAll()[0]!
-		mocks.findQueries.mockReturnValueOnce([filterQuery]).mockReturnValueOnce([]).mockReturnValueOnce([filterQuery])
+		// Each refresh looks up the reads in flight, the lists, then the searches
+		mocks.findQueries
+			.mockReturnValueOnce([filterQuery])
+			.mockReturnValueOnce([])
+			.mockReturnValueOnce([])
+			.mockReturnValueOnce([filterQuery])
 		await act(async () => {
 			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
 			finishOlderRead()
@@ -309,11 +383,11 @@ it('refreshes a newly selected filter when a change arrives while waiting for an
 		expect(queryFn).toHaveBeenCalledOnce()
 
 		// cancelRefetch: false reuses B, whose response predates the second change.
-		await act(async () => finishFilterRead({pages: ['old data']}))
-		expect(observer.getCurrentResult().data).toEqual({pages: ['old data']})
+		await act(async () => finishFilterRead(pageOf('old data')))
+		expect(observer.getCurrentResult().data).toEqual(pageOf('old data'))
 		await act(async () => vi.advanceTimersByTimeAsync(1000))
 		expect(queryFn).toHaveBeenCalledTimes(2)
-		expect(observer.getCurrentResult().data).toEqual({pages: ['new data']})
+		expect(observer.getCurrentResult().data).toEqual(pageOf('new data'))
 		await act(async () => vi.advanceTimersByTimeAsync(10_000))
 		expect(queryFn).toHaveBeenCalledTimes(2)
 	} finally {
@@ -321,6 +395,95 @@ it('refreshes a newly selected filter when a change arrives while waiting for an
 		client.clear()
 		mocks.findQueries.mockReset().mockReturnValue([])
 	}
+})
+
+it('refetches a short list in place, and leaves one holding larger pages only marked stale', async () => {
+	const list = (sizes: number[]) => ({
+		queryKey: [['photos', 'items', 'list'], {input: {filter: {}, limit: 200}, type: 'infinite'}],
+		state: {fetchStatus: 'idle', data: {pages: sizes.map((size) => ({items: Array.from({length: size})}))}},
+		isActive: () => true,
+		fetch: vi.fn(async () => undefined),
+	})
+	const short = list([200, 200])
+	const spliced = list([200, 1000])
+	const deep = list([200, 200, 200, 200])
+	// One nobody is showing: subscribed to, but switched off (the command palette's, while it is closed)
+	const idle = {...list([6]), isActive: () => false}
+	mocks.findQueries.mockImplementation((filters) =>
+		(filters as {queryKey: unknown[]}).queryKey.length === 1 &&
+		Array.isArray((filters as {queryKey: unknown[][]}).queryKey[0])
+			? (filters as {queryKey: string[][]}).queryKey[0]!.length === 3
+				? [short, spliced, deep, idle]
+				: []
+			: [],
+	)
+	try {
+		await act(async () => {
+			mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+			await vi.advanceTimersByTimeAsync(1000)
+		})
+		expect(short.fetch).toHaveBeenCalledOnce()
+		// Refetched, either of these would come back shorter than it is, or a page at a time
+		expect(spliced.fetch).not.toHaveBeenCalled()
+		expect(deep.fetch).not.toHaveBeenCalled()
+		expect(idle.fetch).not.toHaveBeenCalled()
+		expect(mocks.invalidateQueries).toHaveBeenCalledWith({queryKey: [['photos', 'items', 'list']], refetchType: 'none'})
+	} finally {
+		mocks.findQueries.mockReset().mockReturnValue([])
+	}
+})
+
+it('runs the bounded refresh when the change subscription starts again, for what a dropped socket missed', async () => {
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onStarted?.()
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	// The first start is Photos opening: everything was fetched a moment ago
+	expect(mocks.invalidateSummary).not.toHaveBeenCalled()
+
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onStarted?.()
+		await vi.advanceTimersByTimeAsync(1000)
+	})
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
+	expect(mocks.invalidateQueries).toHaveBeenCalledWith({queryKey: [['photos', 'items', 'list']], refetchType: 'none'})
+})
+
+it('holds its refresh while a delete of this session is still running, and reads once it has finished', async () => {
+	moveActivity.begin()
+	try {
+		// The server reports the files leaving one by one, for as long as it takes
+		for (let second = 0; second < 5; second++) {
+			await act(async () => {
+				mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+				await vi.advanceTimersByTimeAsync(1000)
+			})
+		}
+		expect(mocks.invalidateSummary).not.toHaveBeenCalled()
+		expect(mocks.invalidateAlbums).not.toHaveBeenCalled()
+		expect(mocks.invalidateQueries).not.toHaveBeenCalled()
+	} finally {
+		moveActivity.end()
+	}
+	await act(async () => vi.advanceTimersByTimeAsync(1000))
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
+	expect(mocks.invalidateAlbums).toHaveBeenCalledOnce()
+})
+
+it('leaves a refresh already waiting its turn for the end of a delete that began meanwhile', async () => {
+	await act(async () => {
+		mocks.subscriptions.get('photos:change')!.onData({accountIds: ['Alice']})
+		await vi.advanceTimersByTimeAsync(500)
+	})
+	moveActivity.begin()
+	try {
+		await act(async () => vi.advanceTimersByTimeAsync(2000))
+		expect(mocks.invalidateSummary).not.toHaveBeenCalled()
+	} finally {
+		moveActivity.end()
+	}
+	await act(async () => vi.advanceTimersByTimeAsync(1000))
+	expect(mocks.invalidateSummary).toHaveBeenCalledOnce()
 })
 
 it('discards queued changes when Photos is closed during a refresh', async () => {

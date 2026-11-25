@@ -49,6 +49,9 @@ export function TimelineBar({
 								<button
 									style={{left: `${pct}%`}}
 									onClick={() => onSelect(b.id)}
+									// One stop per backup would put hundreds in the Tab order: the
+									// keyboard steps through them with the previous/next buttons
+									tabIndex={-1}
 									className={cn(
 										'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full p-2 md:p-0',
 										isSel ? 'z-10 hover:z-10 focus-visible:z-10' : 'hover:z-10 focus-visible:z-10',
@@ -60,12 +63,12 @@ export function TimelineBar({
 											'block rounded-full',
 											isSel
 												? 'size-2 bg-white shadow-[0_0_4px_2px_rgba(255,255,255,0.5)]'
-												: 'size-2 bg-[#5B5B5B] hover:bg-[#6d6d6d]',
+												: 'size-2 bg-[#5B5B5B] hover:bg-[#6d6d6d] contrast-more:bg-white/70 contrast-more:hover:bg-white',
 										)}
 									/>
 								</button>
 							</TooltipTrigger>
-							<TooltipContent side='bottom' className='text-[12px] text-black'>
+							<TooltipContent side='bottom' className='text-12 text-black'>
 								{b.id === 'current' ? t('rewind.now') : formatFilesystemDate(b.time, lang)}
 							</TooltipContent>
 						</Tooltip>

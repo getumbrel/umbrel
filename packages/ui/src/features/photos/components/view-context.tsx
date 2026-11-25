@@ -1,9 +1,9 @@
 import type {Map as MapLibreMap} from 'maplibre-gl'
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react'
-import {useLocation, useSearchParams} from 'react-router-dom'
+import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
 
 import {clampTileSize, defaultTileSize} from '@/features/photos/components/listing/timeline-rows'
-import type {PhotoSubKind} from '@/features/photos/constants'
+import {BASE_ROUTE_PATH, type PhotoSubKind} from '@/features/photos/constants'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 
 export type Zoom = 'years' | 'months' | 'days'
@@ -52,6 +52,12 @@ export type GridHandle = {
 	// up on the stage, flying home — so its tile is empty until it lands
 	// (undefined). Takes effect at once, in either renderer, without a render.
 	liftTile: (id: string | undefined) => void
+	// Put the stretch of the timeline around an item the list doesn't hold on
+	// screen, with the grid on its tile — for the lightbox opened on a picture
+	// from a link or a reload, or stepped to one above where a jump landed: the
+	// list it steps through and its filmstrip shows is then that picture's own
+	// neighbourhood, and closing leaves the timeline at it
+	seekTile: (id: string, takenAt: number) => void
 }
 
 // How many items a list asks for at a time. A screenful at a 14px tile is
@@ -65,52 +71,101 @@ export function pageSizeFor(tile: number) {
 }
 
 // One narrowing the search field has turned into structure: a stretch of the
-// calendar, a source, an album, the photo/video split, or a subKind (Live
-// Photos, Panoramas, Screenshots, 360°). Free text stays text and matches
-// file names and camera make/model. Within a dimension tokens broaden (either
-// source), across dimensions they narrow (that source AND that month) — see
-// the Photos Filter contract in umbreld.
+// calendar, a source, an album, a person, a place, the photo/video split, or
+// a subKind (Live Photos, Panoramas, Screenshots, 360°). Free text stays text:
+// where smart search runs it is read for what it means, elsewhere it matches
+// file names and camera make/model (see search/plan.ts for which). Within a
+// dimension tokens broaden (either source), across dimensions they narrow
+// (that source AND that month) — see the Photos Filter contract in umbreld.
+// A place is the one token only Search understands: it has no list filter.
 export type SearchToken =
 	| {type: 'date'; label: string; from: number; to: number}
 	| {type: 'source'; id: string; label: string}
 	| {type: 'album'; id: string; label: string}
+	| {type: 'person'; id: string; label: string}
+	| {type: 'place'; id: string; label: string}
 	| {type: 'kind'; kind: 'photo' | 'video'}
 	| {type: 'subKind'; subKind: PhotoSubKind; label: string}
 
-// What a search means to a list query: the filter fields it contributes
+// What makes two tokens the same one: the narrowing, whatever it is labelled
+export const tokenKey = (token: SearchToken) =>
+	token.type === 'date'
+		? `date-${token.from}-${token.to}`
+		: token.type === 'kind'
+			? `kind-${token.kind}`
+			: token.type === 'subKind'
+				? `subkind-${token.subKind}`
+				: `${token.type}-${token.id}`
+
+// What a search's tokens mean to a list query: the filter fields they
+// contribute
 export type SearchFilter = {
-	query?: string
 	kind?: 'photo' | 'video'
 	subKind?: PhotoSubKind
 	sourceIds?: string[]
 	albumIds?: string[]
+	personIds?: string[]
 	dates?: {from: number; to: number}[]
+}
+
+// The filter fields a search's tokens contribute (text aside)
+export function tokensFilter(tokens: readonly SearchToken[]): SearchFilter {
+	const ids = (type: 'source' | 'album' | 'person') => {
+		const found = tokens.flatMap((token) => (token.type === type ? [token.id] : []))
+		return found.length > 0 ? found : undefined
+	}
+	const dates = tokens.flatMap((token) => (token.type === 'date' ? [{from: token.from, to: token.to}] : []))
+	return {
+		kind: tokens.find((token) => token.type === 'kind')?.kind,
+		subKind: tokens.find((token) => token.type === 'subKind')?.subKind,
+		sourceIds: ids('source'),
+		albumIds: ids('album'),
+		personIds: ids('person'),
+		dates: dates.length > 0 ? dates : undefined,
+	}
 }
 
 export type PhotosSearch = {
 	// What's in the field right now (applied to the grid after a beat)
 	text: string
 	setText: (text: string) => void
+	// … and the text the grid is narrowed by: the field's, trimmed, a beat
+	// behind the typing
+	appliedText: string
+	// Replaces the whole search at once, applied without the beat — for a
+	// change that is a decision (taking an understood chip off) not typing
+	replace: (text: string, tokens: SearchToken[]) => void
 	tokens: SearchToken[]
 	// Adds unless already there; a kind token replaces the other kind (a
 	// photo/video split has two sides, and picking one means not the other)
 	addToken: (token: SearchToken) => void
 	removeToken: (index: number) => void
 	clear: () => void
+	// Asks the whole library what was asked of a view of it (an album, a
+	// person, a section): the one navigation the search is taken along on
+	widen: () => void
 	// The field is on stage: wide, focused, suggestions beneath
 	open: boolean
 	setOpen: (open: boolean) => void
-	// Whether anything is narrowing the grid, and the filter fields doing it
-	// (text debounced — typing shouldn't cost a list query per keystroke)
+	// Whether anything is narrowing the grid
 	active: boolean
-	filter: SearchFilter
 }
+
+// A timeline opened part-way down: which list (see listKey in use-items),
+// and the moment (epoch ms) it runs back from
+export type TimelineTail = {list: string; before: number}
 
 type PhotosView = {
 	zoom: Zoom
 	setZoom: (zoom: Zoom) => void
 	// The page size every items list asks with; see pageSizeFor
 	pageSize: number
+	// The tail a jump down the timeline has put on screen in place of the list
+	// from the top (see useItems, and time-rail/use-seek.ts which opens and
+	// closes it): here, so the grid, the lightbox and the selection bar all
+	// read the same list. Null when every list starts at its newest item.
+	tail: TimelineTail | null
+	setTail: (tail: TimelineTail | null) => void
 	search: PhotosSearch
 	// Preferred tile width in px. The grid rounds it to whole columns for its
 	// width, so it's device independent; see TILE_SIZE
@@ -139,7 +194,8 @@ type PhotosView = {
 
 // A map stretch, in degrees: west is east of east across the antimeridian
 export type MapBounds = {west: number; south: number; east: number; north: number}
-export type MapArea = {bounds: MapBounds; count: number; place?: string}
+// (`spot`: it is one spot a marker was opened for, not all the map shows)
+export type MapArea = {bounds: MapBounds; count: number; place?: string; spot?: boolean}
 export type MapControls = {
 	map: MapLibreMap
 	showAll: () => void
@@ -178,7 +234,7 @@ function useSearchState(): PhotosSearch {
 	// view already narrowed to it
 	const [searchParams, setSearchParams] = useSearchParams()
 	const handedText = searchParams.get('q') ?? ''
-	const [text, setText] = useState(handedText)
+	const [text, setFieldText] = useState(handedText)
 	const [tokens, setTokens] = useState<SearchToken[]>([])
 	const [open, setOpen] = useState(false)
 	const [appliedText, setAppliedText] = useState(handedText.trim())
@@ -193,17 +249,33 @@ function useSearchState(): PhotosSearch {
 		return () => clearTimeout(handle)
 	}, [text, appliedText])
 
-	// Every view starts whole: navigating away drops the search
+	// Emptied, the field stops narrowing in the same step: a token that takes
+	// the words' place (see pick in search/index.tsx) is otherwise applied one
+	// render before they leave, and Search is asked for the two together,
+	// an answer nobody waits for that the real one then queues behind
+	const setText = useCallback((text: string) => {
+		setFieldText(text)
+		if (text.trim() === '') setAppliedText('')
+	}, [])
+
+	// Every view starts whole: navigating away drops the search (unless it is
+	// the search itself being taken to the library: see `widen`)
 	const {pathname} = useLocation()
+	const navigate = useNavigate()
 	const lastPathname = useRef(pathname)
+	const widening = useRef(false)
 	useEffect(() => {
 		if (lastPathname.current === pathname) return
 		lastPathname.current = pathname
+		if (widening.current) {
+			widening.current = false
+			return
+		}
 		setText('')
 		setAppliedText('')
 		setTokens([])
 		setOpen(false)
-	}, [pathname])
+	}, [pathname, setText])
 
 	// … and one handed over while already here replaces it. Either way the
 	// text leaves the address bar once taken, so Back and a reload don't
@@ -220,7 +292,7 @@ function useSearchState(): PhotosSearch {
 		const next = new URLSearchParams(searchParams)
 		next.delete('q')
 		setSearchParams(next, {replace: true})
-	}, [searchParams, setSearchParams])
+	}, [searchParams, setSearchParams, setText])
 
 	const addToken = useCallback((token: SearchToken) => {
 		setTokens((current) => {
@@ -230,53 +302,46 @@ function useSearchState(): PhotosSearch {
 				token.type === 'kind' || token.type === 'subKind'
 					? current.filter((existing) => existing.type !== token.type)
 					: current
-			const already = rest.some(
-				(existing) =>
-					(existing.type === 'date' &&
-						token.type === 'date' &&
-						existing.from === token.from &&
-						existing.to === token.to) ||
-					(existing.type === 'source' && token.type === 'source' && existing.id === token.id) ||
-					(existing.type === 'album' && token.type === 'album' && existing.id === token.id),
-			)
+			const already = rest.some((existing) => tokenKey(existing) === tokenKey(token))
 			return already ? rest : [...rest, token]
 		})
 	}, [])
 	const removeToken = useCallback((index: number) => setTokens((current) => current.filter((_, i) => i !== index)), [])
 	const clear = useCallback(() => {
 		setText('')
-		setAppliedText('')
 		setTokens([])
-	}, [])
+	}, [setText])
 
-	const filter = useMemo<SearchFilter>(() => {
-		const dates = tokens.flatMap((token) => (token.type === 'date' ? [{from: token.from, to: token.to}] : []))
-		const sourceIds = tokens.flatMap((token) => (token.type === 'source' ? [token.id] : []))
-		const albumIds = tokens.flatMap((token) => (token.type === 'album' ? [token.id] : []))
-		return {
-			query: appliedText || undefined,
-			kind: tokens.find((token) => token.type === 'kind')?.kind,
-			subKind: tokens.find((token) => token.type === 'subKind')?.subKind,
-			sourceIds: sourceIds.length > 0 ? sourceIds : undefined,
-			albumIds: albumIds.length > 0 ? albumIds : undefined,
-			dates: dates.length > 0 ? dates : undefined,
-		}
-	}, [tokens, appliedText])
+	const widen = useCallback(() => {
+		widening.current = lastPathname.current !== BASE_ROUTE_PATH
+		navigate(BASE_ROUTE_PATH)
+	}, [navigate])
+
+	const replace = useCallback(
+		(text: string, tokens: SearchToken[]) => {
+			setText(text)
+			setAppliedText(text.trim())
+			setTokens(tokens)
+		},
+		[setText],
+	)
 
 	return useMemo(
 		() => ({
 			text,
 			setText,
+			appliedText,
+			replace,
 			tokens,
 			addToken,
 			removeToken,
 			clear,
+			widen,
 			open,
 			setOpen,
 			active: tokens.length > 0 || appliedText !== '',
-			filter,
 		}),
-		[text, tokens, addToken, removeToken, clear, open, appliedText, filter],
+		[text, setText, tokens, addToken, removeToken, clear, widen, replace, open, appliedText],
 	)
 }
 
@@ -287,6 +352,7 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 	const [chosenTileSize, setChosenTileSize] = useState(readStoredTileSize)
 	const tileSize = chosenTileSize ?? defaultTileSize(isMobile)
 	const [pageSize] = useState(() => pageSizeFor(tileSize))
+	const [tail, setTail] = useState<TimelineTail | null>(null)
 	const [grid, setGrid] = useState<GridHandle | null>(null)
 	const [section, setSection] = useState<string | null>(null)
 	const [mapArea, setMapArea] = useState<MapArea | null>(null)
@@ -308,6 +374,8 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 			zoom,
 			setZoom,
 			pageSize,
+			tail,
+			setTail,
 			search,
 			tileSize,
 			setTileSize,
@@ -320,7 +388,7 @@ export function PhotosViewProvider({children}: {children: React.ReactNode}) {
 			mapControls,
 			setMapControls,
 		}),
-		[zoom, pageSize, search, tileSize, setTileSize, grid, section, mapArea, mapControls],
+		[zoom, pageSize, tail, search, tileSize, setTileSize, grid, section, mapArea, mapControls],
 	)
 	return <PhotosViewContext value={value}>{children}</PhotosViewContext>
 }

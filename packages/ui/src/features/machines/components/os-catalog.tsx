@@ -202,8 +202,14 @@ const catalogGridClass = tw`grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-2 sm:
 // positioned wrapper (e.g. `relative`) to paint and click above the fill.
 const osCardClass = tw`group relative flex flex-col items-center gap-4 rounded-24 p-3 pt-6 sm:p-4 sm:pt-6 md:p-6 low:gap-3 low:p-3 low:pt-4`
 // settings-edge-material: same card surface as the Settings page tiles
-// Fills a narrow tile on a phone, and is a fixed width from there up
-const osCardButtonClass = tw`w-full max-w-44 justify-between whitespace-nowrap sm:min-w-44`
+// Fills a narrow tile on a phone, and is a fixed width from there up. The label
+// always shows whole: the pill is tighter at the sides on a phone, gives back
+// side padding as text grows, and when that isn't enough (a longer language,
+// larger text on a phone) takes a second line.
+// The top padding keeps the base button's optical centering.
+const osCardButtonClass = tw`h-auto min-h-[30px] w-full max-w-44 justify-between px-3 pt-[5.5px] pb-1 sm:min-w-44 sm:px-[calc(1rem-var(--text-boost))]`
+// leading-tight because the button's own trimmed line height would overprint two lines
+const osCardButtonLabelClass = tw`min-w-0 text-left leading-tight wrap-anywhere`
 const osCardFillClass = tw`settings-edge-material absolute inset-0 overflow-hidden rounded-24 bg-white/5`
 
 // The intro→catalog handoff glide: monitors stream into their tiles one after
@@ -365,7 +371,8 @@ function CatalogCard({
 					initial={{opacity: 0, y: introMorph ? 6 : 0}}
 					animate={{opacity: 1, y: 0}}
 					transition={contentTransition}
-					className='relative flex flex-col items-center gap-1 text-center'
+					// A long single word (a German compound) breaks rather than running out of the card
+					className='relative flex flex-col items-center gap-1 text-center wrap-anywhere hyphens-auto'
 				>
 					<div className='text-17 font-medium -tracking-2 text-white'>{title}</div>
 					<div className='text-13 -tracking-2 text-white/40'>{subtitle}</div>
@@ -405,8 +412,8 @@ function CreateMachineMenuTrigger() {
 	return (
 		<DropdownMenuTrigger asChild>
 			<Button size='md' className={cn('group', osCardButtonClass)}>
-				{t('machines.install')}
-				<ChevronDown className='-mr-1 size-3.5 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-180' />
+				<span className={osCardButtonLabelClass}>{t('machines.install')}</span>
+				<ChevronDown className='-mr-1 size-3.5 shrink-0 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-180' />
 			</Button>
 		</DropdownMenuTrigger>
 	)
@@ -428,9 +435,13 @@ function OsCardAction({family}: {family: OsFamily}) {
 		const image = family.images[0]
 		return (
 			<Button size='md' className={osCardButtonClass} onClick={() => goToConfigure(image.id)}>
-				{t('machines.install')}
-				<span className='text-11 -tracking-2 text-white/35 tabular-nums max-sm:hidden low:hidden'>
-					{prettyMb(image.estimatedInstalledSizeMb ?? image.sizeMb)}
+				<span className={osCardButtonLabelClass}>{t('machines.install')}</span>
+				{/* The size takes the room the label leaves, and shows whole or not at all:
+				    when it doesn't fit there it wraps onto a second line that this one-line
+				    box clips. The empty first item holds the first line at full height. */}
+				<span className='flex h-[1lh] min-w-0 flex-1 flex-wrap justify-end overflow-hidden text-11 leading-normal -tracking-2 text-white/35 tabular-nums max-sm:hidden low:hidden'>
+					<span aria-hidden className='h-full' />
+					<span className='whitespace-nowrap'>{prettyMb(image.estimatedInstalledSizeMb ?? image.sizeMb)}</span>
 				</span>
 			</Button>
 		)
@@ -512,7 +523,7 @@ function CustomMachineCard({index, introMorph}: {index: number; introMorph?: boo
 						{cancellable && (
 							<DarkTooltip label={t('cancel')}>
 								<button
-									className='shrink-0 opacity-50 transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-90'
+									className='shrink-0 opacity-50 transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-90 contrast-more:opacity-100'
 									onClick={handleCancel}
 									aria-label={t('cancel')}
 								>

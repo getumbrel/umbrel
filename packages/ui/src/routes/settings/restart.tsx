@@ -37,7 +37,9 @@ export default function RestartDialog() {
 					>
 						{t('restart.confirm.submit')}
 					</AlertDialogAction>
-					<AlertDialogCancel disabled={isPowerActionPending}>{t('cancel')}</AlertDialogCancel>
+					<AlertDialogCancel autoFocus disabled={isPowerActionPending}>
+						{t('cancel')}
+					</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

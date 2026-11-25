@@ -21,7 +21,6 @@ import {PasswordInput} from '@/components/ui/input'
 import {Loading} from '@/components/ui/loading'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {Switch} from '@/components/ui/switch'
-import {useAutoHeightAnimation} from '@/hooks/use-auto-height-animation'
 import {useIsPhone} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
@@ -48,8 +47,7 @@ export function WifiDrawerOrDialogContent() {
 		staleTime: 2000,
 	})
 	const namedNetworks = networksQ.data?.filter((network) => !!network.ssid)
-
-	const [controls, ref] = useAutoHeightAnimation([networksQ.isFetching])
+	const hasNetworks = !networksQ.isLoading && !networksQ.error && !!namedNetworks?.length
 
 	const [disableAlertOpen, setDisableAlertOpen] = useState(false)
 
@@ -60,6 +58,7 @@ export function WifiDrawerOrDialogContent() {
 					<>
 						<Switch
 							className='mt-0 disabled:pointer-events-none'
+							aria-label={t('wifi')}
 							checked={statusQ.data?.status === 'connected'}
 							onCheckedChange={(toCheck) => !toCheck && setDisableAlertOpen(true)}
 							disabled={disconnectMut.isPending || statusQ.isFetching || statusQ.data?.status !== 'connected'}
@@ -92,29 +91,28 @@ export function WifiDrawerOrDialogContent() {
 				)
 			}
 		>
-			<motion.div
-				className='overflow-hidden'
-				animate={controls}
-				transition={{
-					duration: 0.3,
-					ease: 'easeInOut',
-				}}
+			{/* The list has a height of its own and a message is shorter. Either gives way
+			    when there's less room than that: a short window, or a phone with its
+			    keyboard up, where the list scrolls in what's left. */}
+			<div
+				className={cn(
+					'flex min-h-0 flex-col overflow-hidden transition-[height] duration-300 ease-in-out',
+					hasNetworks ? 'h-[380px]' : 'h-32',
+				)}
 			>
-				<div ref={ref}>
-					{networksQ.isLoading ? (
-						<Message>
-							<Loading>{t('wifi-searching')}</Loading>
-						</Message>
-					) : (
-						<EnabledContent
-							namedNetworks={namedNetworks}
-							networkStatus={networkStatus}
-							isLoading={networksQ.isFetching}
-							errorMessage={networksQ.error?.message}
-						/>
-					)}
-				</div>
-			</motion.div>
+				{networksQ.isLoading ? (
+					<Message>
+						<Loading>{t('wifi-searching')}</Loading>
+					</Message>
+				) : (
+					<EnabledContent
+						namedNetworks={namedNetworks}
+						networkStatus={networkStatus}
+						isLoading={networksQ.isFetching}
+						errorMessage={networksQ.error?.message}
+					/>
+				)}
+			</div>
 		</DrawerOrDialogContent>
 	)
 }
@@ -142,7 +140,11 @@ export function DrawerOrDialogContent({header, children}: {header?: ReactNode; c
 			<Header className='flex flex-row items-center justify-between gap-4'>
 				<div className='space-y-0.5'>
 					<Title>{title}</Title>
-					<Description className='text-12 leading-tight'>{t('wifi-description-long')}</Description>
+					{/* Steps aside where room is short, as with a phone's keyboard up, so the list
+					    keeps enough of it to show a network along with its password field */}
+					<Description className='text-12 leading-tight in-data-low:sr-only low:sr-only'>
+						{t('wifi-description-long')}
+					</Description>
 				</div>
 				{header}
 			</Header>
@@ -193,7 +195,7 @@ export function EnabledContent({
 	return (
 		<ScrollArea
 			scrollbarClass='my-3'
-			className={cn('flex h-[380px] flex-col rounded-12 bg-white/5 transition-opacity', isLoading && 'opacity-50')}
+			className={cn('flex min-h-0 flex-1 flex-col rounded-12 bg-white/5 transition-opacity', isLoading && 'opacity-50')}
 			viewportRef={scrollRef}
 		>
 			{connectedNetwork && (
@@ -253,13 +255,16 @@ function Network({
 		passwordInputRef.current?.focus()
 	}, [connectMut.isError])
 
+	// Reset error and password once the network is collapsed. Resetting re-renders
+	// and the mutation object is new on every render, so only its stable `reset`
+	// can be a dependency: depending on the object loops forever.
+	const {reset: resetConnect} = connectMut
 	useEffect(() => {
-		// Reset error and password
 		if (!isOpen) {
-			connectMut.reset()
+			resetConnect()
 			setPassword('')
 		}
-	}, [isOpen, connectMut])
+	}, [isOpen, resetConnect])
 
 	const connect = ({ssid, password}: {ssid: string; password?: string}) => {
 		connectMut.mutate({ssid, password})
@@ -281,11 +286,16 @@ function Network({
 			layout='position'
 			key={network.ssid}
 			className={cn(wifiListItemClass, '!gap-0')}
-			onClick={() => setIsOpen(true)}
-			role={isOpen ? undefined : 'button'}
-			tabIndex={0}
 		>
-			<WifiListItemContent network={network} status={statusUi} error={otherError} />
+			{/* The row's header opens the connect form. It reaches over the row's padding so the whole row stays the target */}
+			<button
+				type='button'
+				aria-expanded={isOpen}
+				onClick={() => setIsOpen(true)}
+				className='-m-3 p-3 text-left outline-hidden'
+			>
+				<WifiListItemContent network={network} status={statusUi} error={otherError} />
+			</button>
 			<AnimatePresence>
 				{isOpen && !connectMut.isPending && (
 					<AnimateHeight>
@@ -456,7 +466,7 @@ export function Connect({
 export function Message({children}: {children?: React.ReactNode}) {
 	return (
 		<div className='grid h-32 place-items-center rounded-12 bg-white/6 p-4'>
-			<div className='text-center text-14 font-medium -tracking-2 opacity-60'>{children}</div>
+			<div className='text-center text-14 font-medium -tracking-2 text-white/60'>{children}</div>
 		</div>
 	)
 }

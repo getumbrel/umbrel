@@ -1,19 +1,28 @@
 import {HTMLProps, useEffect, useState} from 'react'
 
+import cpuIcon from '@/assets/widgets/system-widget-cpu.svg?no-inline'
+import memoryIcon from '@/assets/widgets/system-widget-memory.svg?no-inline'
+import storageIcon from '@/assets/widgets/system-widget-storage.svg?no-inline'
+import temperatureIcon from '@/assets/widgets/system-widget-temperature.svg?no-inline'
 import {cn} from '@/lib/utils'
 
 function sanitizeIconName(input: string) {
 	return input.replace(/[^a-z0-9-]/g, '')
 }
 
-const customIcons = ['system-widget-memory', 'system-widget-storage', 'system-widget-temperature', 'system-widget-cpu']
+const customIcons: Record<string, string> = {
+	'system-widget-memory': memoryIcon,
+	'system-widget-storage': storageIcon,
+	'system-widget-temperature': temperatureIcon,
+	'system-widget-cpu': cpuIcon,
+}
 
 export function TablerIcon({iconName, className, ...props}: {iconName: string} & HTMLProps<HTMLDivElement>) {
 	const [icon, setIcon] = useState('')
 
 	useEffect(() => {
-		const url = customIcons.includes(iconName)
-			? `/assets/${sanitizeIconName(iconName)}.svg`
+		const url = Object.hasOwn(customIcons, iconName)
+			? customIcons[iconName]
 			: `/generated-tabler-icons/${sanitizeIconName(iconName)}.svg`
 		fetch(url)
 			.then((res) => res.text())

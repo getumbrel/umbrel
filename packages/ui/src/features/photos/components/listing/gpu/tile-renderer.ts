@@ -5,8 +5,8 @@
 // compositor for free and this only redraws when the band itself has to move.
 // Every tile is one instance of a unit quad: the vertex shader places it and
 // works out which cell of the atlas it samples, and the fragment shader draws
-// the rounded corner, the hover wash, a video's play badge and the selection
-// ring as SDFs, which on a GPU is the same fragment either way. Ten thousand tiles is one buffer
+// the rounded corner, the hover wash, a video's play badge, the line of a
+// moment a search matched and the selection ring as SDFs, which on a GPU is the same fragment either way. Ten thousand tiles is one buffer
 // upload and one `drawArraysInstanced` — a fifth of a millisecond — which is
 // why the cost here is the size of the screen and not the number of photos.
 //
@@ -19,6 +19,7 @@
 import {Atlas, compile} from '@/features/photos/components/listing/gpu/atlas'
 import {bandFor, cellForBand, GPU_OVERSCAN, type AtlasPlan} from '@/features/photos/components/listing/gpu/capability'
 import {rectOf, tileRadius, type Layout} from '@/features/photos/components/listing/timeline-rows'
+import {momentFraction} from '@/features/search/scrubber'
 
 // Tint → photograph, ease-out. Never while a gesture is live (a fade over a
 // moving grid reads as flicker), never when a photo replaces a coarser
@@ -40,7 +41,9 @@ const WARM_MS = 800
 const UPLOAD_PER_FRAME_LIVE = 4
 const UPLOAD_BUDGET_MS = 3
 // Floats per instance: x, y, size, radius | slot, tint, flags, fade
-// (flags is a bitfield: selected 1, hovered 2, video 4)
+// (flags is a bitfield: selected 1, hovered 2, video 4; above it, from 8 up,
+// how far into a video a search matched, in thousandths plus one — see
+// momentFlag)
 const STRIDE = 8
 // A cell with no colour of its own yet, matching the DOM tile's `bg-white/6`
 const NO_TINT = -1
@@ -61,6 +64,7 @@ out float vFade;
 out float vSelected;
 out float vHovered;
 out vec4 vBadge;
+out vec2 vMoment;
 
 void main() {
 	vec2 corner = vec2(float(gl_VertexID & 1), float((gl_VertexID >> 1) & 1));
@@ -104,6 +108,15 @@ void main() {
 	vBadge = video < 0.5
 		? vec4(0.0, 0.0, 0.0, -1.0)
 		: vec4(badgeInset - vHalf, vHalf - badgeInset, badgeRadius, smoothstep(18.0, 26.0, aRect.z));
+
+	// The moment a search matched in this video, as the DOM tiles draw it (see
+	// MomentScrubber): a line along the bottom edge, filled up to the moment.
+	// x is how far along, −1 on a tile with none; y the line's height, which
+	// follows the tile down to a hairline. The play badge sits clear of it.
+	float moment = floor(flags / 8.0);
+	float line = clamp(aRect.z * 0.045, 1.5, 3.0);
+	vMoment = moment < 0.5 ? vec2(-1.0, 0.0) : vec2((moment - 1.0) / 1000.0, line);
+	if (moment >= 0.5) vBadge.y -= line;
 }`
 
 const FRAGMENT = `#version 300 es
@@ -119,8 +132,10 @@ in float vFade;
 in float vSelected;
 in float vHovered;
 in vec4 vBadge;
+in vec2 vMoment;
 uniform sampler2DArray uAtlas;
 uniform vec3 uBrand;
+uniform vec3 uMatch;
 uniform float uPixel;
 out vec4 outColor;
 
@@ -159,6 +174,15 @@ void main() {
 		shaded = mix(shaded, vec4(1.0), glyph * badge);
 	}
 
+	// The matched moment's line: a scrim of track, the match colour up to the moment
+	if (vMoment.x >= 0.0) {
+		float on = 1.0 - smoothstep(vMoment.y - uPixel, vMoment.y + uPixel, vHalf - vLocal.y);
+		float along = (vLocal.x + vHalf) / (2.0 * vHalf);
+		float played = 1.0 - smoothstep(-uPixel, uPixel, (along - vMoment.x) * 2.0 * vHalf - 1.5);
+		vec4 track = mix(mix(shaded, vec4(0.0, 0.0, 0.0, 1.0), 0.35), vec4(1.0), 0.35);
+		shaded = mix(shaded, mix(track, vec4(uMatch, 1.0), played), on);
+	}
+
 	// The ring follows the tile: two device pixels of brand on a fourteen
 	// pixel tile would be a quarter of the photograph
 	float ring = max(1.0, vHalf * 0.16);
@@ -167,6 +191,16 @@ void main() {
 
 	outColor = shaded * inside;
 }`
+
+// A matched moment's place in a video as the bits of `flags` above the three
+// states: thousandths of the way through plus one, times eight — zero, and so
+// no line, where there is no moment or no length to place it by. Whole
+// numbers up to 8008, which a float carries exactly.
+export function momentFlag(momentMs: number | undefined, durationMs: number | undefined) {
+	if (momentMs === undefined) return 0
+	const fraction = momentFraction(momentMs, durationMs)
+	return fraction === undefined ? 0 : (Math.round(fraction * 1000) + 1) * 8
+}
 
 // One frame of the grid, in the scroller's own coordinates. Everything here
 // is derived from the layout, the item list and the selection, so a frame can
@@ -182,6 +216,9 @@ export type Frame = {
 	// The item whose picture the lightbox has in the air: its cell is left out
 	// of the frame, so the place it left is empty (see tile-lift.ts)
 	lifted: string | undefined
+	// Videos a search matched at a moment, by id: each wears a line filled up
+	// to it
+	moments: ReadonlyMap<string, {startMs: number}> | undefined
 	// Where the eye is, in the scroller's viewport px, when a pointer or a
 	// pinch's midpoint set it: what the pixels fill outward from
 	focal: {x: number; y: number} | null
@@ -231,6 +268,11 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 	const uCell = uniform('uCell')
 	const uAtlas = uniform('uAtlas')
 	const uBrand = uniform('uBrand')
+	const uMatch = uniform('uMatch')
+	// The colour of a search's match, as the page defines it (--color-match)
+	const match = hslTriplet(getComputedStyle(document.documentElement).getPropertyValue('--color-match')) ?? [
+		1, 0.84, 0.04,
+	]
 	const uPixel = uniform('uPixel')
 
 	let instances = new Float32Array(1024 * STRIDE)
@@ -296,7 +338,7 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 	}
 
 	function fill(frame: Frame, now: number) {
-		const {layout, items, selected, hovered, lifted} = frame
+		const {layout, items, selected, hovered, lifted, moments} = frame
 		const count = Math.max(0, items.end - items.start + 1)
 		if (instances.length < count * STRIDE) instances = new Float32Array(count * STRIDE * 2)
 		let fading = false
@@ -322,7 +364,10 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 			instances[offset + 4] = resident ? slot : -1
 			instances[offset + 5] = item.tint ?? NO_TINT
 			instances[offset + 6] =
-				(selected.has(item.id) ? 1 : 0) + (hovered === item.id ? 2 : 0) + (item.kind === 'video' ? 4 : 0)
+				(selected.has(item.id) ? 1 : 0) +
+				(hovered === item.id ? 2 : 0) +
+				(item.kind === 'video' ? 4 : 0) +
+				(moments && item.kind === 'video' ? momentFlag(moments.get(item.id)?.startMs, item.durationMs) : 0)
 			instances[offset + 7] = fade
 			offset += STRIDE
 		}
@@ -385,6 +430,7 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 			gl.uniform1f(uSide, plan.side)
 			gl.uniform1f(uCell, atlas.cell)
 			gl.uniform3f(uBrand, brand[0], brand[1], brand[2])
+			gl.uniform3f(uMatch, match[0], match[1], match[2])
 			gl.uniform1f(uPixel, 1 / dpr)
 			gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count)
 			gl.bindVertexArray(null)
@@ -401,4 +447,15 @@ export function createRenderer(canvas: HTMLCanvasElement, plan: AtlasPlan, cell:
 			gl.getExtension('WEBGL_lose_context')?.loseContext()
 		},
 	}
+}
+
+// "50 100% 52%", as a colour token is kept in CSS, as red, green and blue 0..1
+export function hslTriplet(value: string): [number, number, number] | undefined {
+	const parts = /^\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*$/.exec(value)
+	if (!parts) return undefined
+	const [h, s, l] = [Number(parts[1]) / 360, Number(parts[2]) / 100, Number(parts[3]) / 100]
+	const k = (n: number) => (n + h * 12) % 12
+	const a = s * Math.min(l, 1 - l)
+	const channel = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))
+	return [channel(0), channel(8), channel(4)]
 }

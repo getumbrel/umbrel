@@ -1,6 +1,6 @@
 import {Minus, Plus} from 'lucide-react'
 import {animate, AnimatePresence, motion, useMotionValue, type PanInfo} from 'motion/react'
-import {CSSProperties, ReactNode, useEffect, useRef, useState} from 'react'
+import {CSSProperties, ReactNode, useEffect, useId, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
 import {useMeasure} from 'react-use'
@@ -221,6 +221,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 									return (
 										<ErrorBoundary key={widget.id} fallback={null}>
 											<WidgetChecker
+												label={name}
 												checked={selected.map((w) => w.id).includes(widget.id)}
 												onCheckedChange={(checked) => toggleSelected(widget.id, checked)}
 											>
@@ -316,16 +317,24 @@ function MinusIcon({className}: {className?: string}) {
 
 function WidgetChecker({
 	children,
+	label,
 	checked = false,
 	onCheckedChange,
 }: {
 	children: ReactNode
+	// The app the widget belongs to, naming its toggle
+	label: string
 	checked?: boolean
 	onCheckedChange?: (checked: boolean) => void
 }) {
+	const previewId = useId()
 	return (
 		<div className='group relative'>
-			{children}
+			{/* Just a preview: the overlay button below is the control, and the preview's
+			    text describes it, telling apart an app's widgets */}
+			<div inert id={previewId}>
+				{children}
+			</div>
 			{/* Corner icon: check when selected, plus/minus on hover to hint add/remove */}
 			<div className='absolute top-0 right-0 translate-x-1/3 -translate-y-1/3'>
 				{checked ? (
@@ -347,6 +356,10 @@ function WidgetChecker({
 			</div>
 			{/* Invisible overlay button for the entire widget area */}
 			<button
+				type='button'
+				aria-label={label}
+				aria-describedby={previewId}
+				aria-pressed={checked}
 				className='absolute top-0 left-0 h-full w-full rounded-12 outline-hidden focus-visible:ring-2 focus-visible:ring-ring sm:rounded-20'
 				onClick={() => onCheckedChange?.(!checked)}
 			/>

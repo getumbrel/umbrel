@@ -2,12 +2,12 @@ import {X} from 'lucide-react'
 import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 
+import {CountText} from '@/components/ui/count-text'
 import {DetentSheet, type Detent} from '@/components/ui/detent-sheet'
-import {CountText} from '@/features/photos/components/actions-bar/count-text'
-import {useRouteFilter} from '@/features/photos/components/listing/route-filter'
 import type {Frame} from '@/features/photos/components/listing/surface'
 import {TimelineGrid} from '@/features/photos/components/listing/timeline-grid'
 import {HEADER_HEIGHT} from '@/features/photos/components/listing/timeline-rows'
+import {useRouteFilter} from '@/features/photos/components/listing/use-listing'
 import {usePhotosView} from '@/features/photos/components/view-context'
 import {useItems} from '@/features/photos/hooks/use-items'
 import {formatNumberI18n} from '@/utils/number'
@@ -21,8 +21,8 @@ const FRAME: Frame = {inset: HEADER_HEIGHT, fadeFrom: 0, fadeTo: 14, handoff: 0}
 // The list's tiles: three to a row in the card on desktop
 const TILE_SIZE = 104
 
-// The photos in the map's area, beside the map on desktop: a glass card
-// that floats over the map's right edge (phones have a sheet: AreaSheet)
+// The photos in the map's area, beside the map on desktop: a card that
+// floats over the map's right edge (phones have a sheet: AreaSheet)
 export function AreaPanel({
 	onPeek,
 	...props
@@ -35,7 +35,7 @@ export function AreaPanel({
 }) {
 	return (
 		<section
-			className='umbrel-material flex h-full flex-col overflow-hidden rounded-[20px] bg-black/35'
+			className='umbrel-material flex h-full flex-col overflow-hidden rounded-[20px]'
 			onPointerOver={(event) =>
 				onPeek((event.target as Element).closest<HTMLElement>('[data-item-id]')?.dataset.itemId)
 			}
@@ -74,7 +74,7 @@ export function AreaSheet({
 			detents={detents}
 			topInset={topInset}
 			aria-label={t(props.scope ? 'photos-map.this-spot' : 'photos-map.in-view')}
-			className='umbrel-material bg-black/45'
+			className='umbrel-material'
 		>
 			<AreaList {...props} />
 		</DetentSheet>
@@ -90,6 +90,7 @@ function AreaList({scope, onClearScope, unlocated}: {scope?: Scope; onClearScope
 	const {items, total, isLoading, hasMore, loadMore} = useItems(filter, {
 		enabled: filter.bounds !== undefined,
 		keepPrevious: true,
+		owner: true,
 	})
 	// The bar names the area and counts it; a spot the list is narrowed to
 	// says so here, with the way back to the whole area
@@ -98,7 +99,7 @@ function AreaList({scope, onClearScope, unlocated}: {scope?: Scope; onClearScope
 	return (
 		<>
 			{scope && (
-				<header className='flex shrink-0 items-center gap-3 px-4 pt-3 pb-1'>
+				<header className='flex shrink-0 items-center gap-3 px-3 pt-3 pb-1'>
 					<div className='min-w-0 flex-1'>
 						<h2 className='truncate text-15 leading-tight font-semibold -tracking-2 text-white/90'>
 							{t('photos-map.this-spot')}

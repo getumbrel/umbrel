@@ -11,8 +11,12 @@ vi.mock('react-i18next', () => ({useTranslation: () => ({t: (key: string) => key
 vi.mock('@/modules/auth/http-auth', () => ({useAuthorizedHttpUrl: (url?: string) => url}))
 vi.mock('@/features/files/components/shared/file-item-icon', () => ({FileItemIcon: () => null}))
 vi.mock('@/features/files/providers/files-capabilities-context', () => ({useIsFilesReadOnly: () => false}))
-vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', () => ({
-	useFileBytes: () => ({status: 'ready', bytes: new ArrayBuffer(8), revision: '"r1"'}),
+vi.mock('@/features/files/hooks/use-is-touch-device', () => ({useIsTouchDevice: () => false}))
+// The file's bytes, and whether they were asked for
+const useFileBytes = vi.hoisted(() => vi.fn(() => ({status: 'ready', bytes: new ArrayBuffer(8), revision: '"r1"'})))
+vi.mock('@/features/files/components/file-viewer/shell/use-file-bytes', async (importOriginal) => ({
+	...(await importOriginal()),
+	useFileBytes,
 }))
 // A legacy binary .ppt renamed .pptx: the engine finds an OLE file where a package should be
 vi.mock('@/features/files/components/file-viewer/slides-viewer/engine', () => {
@@ -35,5 +39,18 @@ test('a presentation in the older PowerPoint format says so, rather than that it
 	await act(async () => root.render(<SlidesViewer item={item} mode='open' />))
 	expect(container.querySelector('h3')?.textContent).toBe('files-slides.damaged-title')
 	expect(container.querySelector('h3 + p')?.textContent).toBe('files-slides.legacy-detail')
+	await act(async () => root.unmount())
+})
+
+test('a presentation too large to hold while open is never downloaded: it says so, with the file to download', async () => {
+	useFileBytes.mockClear()
+	const item = {name: 'huge.pptx', path: '/Home/huge.pptx', type: 'pptx', size: 513 * 2 ** 20, operations: []}
+	const container = document.createElement('div')
+	const root = createRoot(container)
+	await act(async () => root.render(<SlidesViewer item={item as unknown as FileSystemItem} mode='open' />))
+	expect(container.querySelector('h3')?.textContent).toBe('files-slides.too-large-title')
+	expect(container.querySelector('h3 + p')?.textContent).toBe('files-viewer.too-large-detail')
+	expect(container.querySelector('a[download]')).not.toBeNull()
+	expect(useFileBytes).not.toHaveBeenCalled()
 	await act(async () => root.unmount())
 })

@@ -17,8 +17,10 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
+import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {getAppStorageSourcePaths} from '@/modules/apps/app-storage'
 import {useApps} from '@/providers/apps'
+import {trpcReact, type UserApp} from '@/trpc/trpc'
 
 // MAIN COMPONENT
 export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
@@ -53,6 +55,21 @@ export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
 		}
 		return byAppId
 	}, [userApps])
+
+	// The app picker shows what excluding each app takes out of backups. That is
+	// the app's size on disk only while all of its data is backed up: an app that
+	// leaves some of its own paths out, or keeps its data on an external drive or
+	// network share, is larger on disk than in backups, so it gets no size rather
+	// than a misleading one. Measuring is best-effort and can take a while, so
+	// the picker never waits for it.
+	const diskUsageQ = trpcReact.system.diskUsage.useQuery(undefined, {retry: false})
+	const usedByAppId = useMemo(() => new Map(diskUsageQ.data?.apps.map((app) => [app.id, app.used])), [diskUsageQ.data])
+	const sizeInBackups = (app: UserApp) => {
+		const used = usedByAppId.get(app.id)
+		const isBackedUpInFull =
+			!isAutoExcludedLoading && !pathsByAppId.get(app.id)?.length && !app.storage?.dataRoot?.location
+		return used && isBackedUpInFull ? formatFilesystemSize(used) : undefined
+	}
 
 	return (
 		<div className='space-y-3'>
@@ -111,6 +128,7 @@ export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
 						items={(userApps ?? []).map((app) => ({
 							value: app.id,
 							label: app.name || app.id,
+							detail: sizeInBackups(app),
 							icon: <AppIcon size={24} src={app.icon} className='shrink-0 rounded-6' />,
 						}))}
 						onSelect={ignore}
@@ -158,6 +176,8 @@ export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
 				onOpenPath={'/Home'}
 				preselectOnOpen={false}
 				title={t('backups-exclusions.select-item-to-exclude')}
+				// like the app picker, so it's clear what excluding an item takes out of backups
+				showSizes
 				// we allow selecting both files and folders
 				selectionMode='files-and-folders'
 				onSelect={(p) => {
@@ -237,14 +257,15 @@ function AppRow({
 
 	return (
 		<div className='p-3 text-sm'>
-			<div className='flex items-center justify-between gap-2'>
-				<div className='flex min-w-0 items-center gap-2'>
+			{/* The note moves under the name when both don't fit, rather than hiding it */}
+			<div className='flex flex-wrap items-center justify-between gap-x-2 gap-y-1'>
+				<div className='flex min-w-0 flex-1 basis-24 items-center gap-2'>
 					<AppIcon size={26} src={app.icon} className='rounded-md' />
 					<span className='truncate text-13' title={app.name || app.id}>
 						{app.name || app.id}
 					</span>
 				</div>
-				<div className='flex items-center gap-2'>
+				<div className='ms-auto flex items-center gap-2'>
 					{!isIgnored && hasExcludedData && (
 						<button
 							onClick={() => setOpen((v) => !v)}

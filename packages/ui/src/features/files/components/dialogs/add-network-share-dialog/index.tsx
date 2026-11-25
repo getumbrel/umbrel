@@ -286,7 +286,7 @@ export default function AddNetworkShareDialog(props?: {
 	)
 
 	const body = (
-		<div className='umbrel-stable-gutter flex-1 overflow-x-hidden overflow-y-auto'>
+		<div className='flex-1 overflow-x-hidden overflow-y-auto'>
 			<AnimatePresence mode='wait'>
 				{mode === 'wizard' ? (
 					<Form {...form}>
@@ -443,8 +443,8 @@ function DiscoverStep({
 	return (
 		// The same grid as the Backups wizard: columns of 125px or more share out the width, so a
 		// phone gets two full columns rather than an empty strip. Three across needs 399px, which
-		// the dialog has even with Chrome's scrollbar gutter reserved.
-		<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-3 py-2'>
+		// the dialog has. The columns widen with the text size, so the cards' one-line labels still fit.
+		<div className='grid grid-cols-[repeat(auto-fill,minmax(calc(125px+8*var(--text-boost)),1fr))] gap-3 py-2'>
 			<AddManuallyCard onClick={onManual} label={t('files-add-network-share.add-manually')} />
 
 			{isLoading ? (
@@ -452,7 +452,7 @@ function DiscoverStep({
 					<div className='mb-2 flex size-12 items-center justify-center'>
 						<Loader className='size-8 animate-spin text-white/60' />
 					</div>
-					<span className='text-[12px] text-white/60'>{t('files-add-network-share.discovering')}</span>
+					<span className='text-12 text-white/60'>{t('files-add-network-share.discovering')}</span>
 				</ServerCard>
 			) : (servers?.length ?? 0) === 0 ? (
 				<ServerCard onClick={isLoading ? undefined : onRetry}>
@@ -467,10 +467,8 @@ function DiscoverStep({
 							</div>
 						</div>
 					</div>
-					<span
-						className='w-full truncate text-center text-[12px] text-white/60'
-						title={t('files-add-network-share.retry-discovery')}
-					>
+					{/* An action, so it wraps like "Add manually" beside it rather than being cut */}
+					<span className='w-full text-center text-12 leading-tight text-white/60'>
 						{t('files-add-network-share.retry-discovery')}
 					</span>
 				</ServerCard>
@@ -484,7 +482,7 @@ function DiscoverStep({
 					>
 						<ServerCard selected={selectedHost === h} onClick={() => onSelectServer(h)}>
 							<BackupDeviceIcon path={`/Network/${h}`} className='mb-2 size-12' />
-							<span className='w-full truncate text-center text-[12px]' title={h}>
+							<span className='w-full truncate text-center text-12' title={h}>
 								{h}
 							</span>
 						</ServerCard>
@@ -592,12 +590,16 @@ function SelectShareStep({
 						<ScrollArea className={cn('rounded-12 bg-white/6', shares.length > 4 && 'h-[200px]')}>
 							<div className='divide-y divide-white/6'>
 								{shares.map((s) => (
-									<div
+									<button
+										type='button'
 										key={s}
-										onClick={disabled ? undefined : () => onSelect(s)}
+										onClick={() => onSelect(s)}
+										disabled={disabled}
+										aria-pressed={selectedShare === s}
 										className={cn(
-											'flex h-[50px] items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
-											selectedShare === s ? 'text-white' : 'hover:bg-white/5',
+											// Inset: the list's scroll area clips anything outside the rows
+											'flex h-[50px] w-full items-center gap-2 px-3 text-left text-15 font-medium -tracking-3 outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+											selectedShare === s ? 'text-white' : 'enabled:hover:bg-white/5',
 											disabled && 'cursor-not-allowed opacity-50',
 										)}
 									>
@@ -608,7 +610,7 @@ function SelectShareStep({
 												<Check className='size-3 text-white' />
 											</div>
 										)}
-									</div>
+									</button>
 								))}
 							</div>
 						</ScrollArea>

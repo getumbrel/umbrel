@@ -1,14 +1,21 @@
 import {Loader2, Maximize2, Pin, Power, RotateCw, Volume2, VolumeX, X} from 'lucide-react'
 import {lazy, Suspense, useState} from 'react'
 import {TbSparkles} from 'react-icons/tb'
+import {useMedia} from 'react-use'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
+import {MachineKeysMenu} from '@/features/machines/components/machine-keys-menu'
 import {MachineMenu, useUninstallMachine} from '@/features/machines/components/machines-list'
-import {machineFullscreenPath, machineRailButtonClass, machineStopTextClass} from '@/features/machines/constants'
+import {
+	machineFullscreenPath,
+	machineRailButtonClass,
+	MACHINES_RAIL_SIDE_QUERY,
+	machineStopTextClass,
+} from '@/features/machines/constants'
 import {useMachineActions} from '@/features/machines/hooks/use-machine-actions'
 import {useMachineAudioPreference} from '@/features/machines/hooks/use-machine-audio-preference'
 import type {Machine} from '@/features/machines/types'
-import {isMachineStartable} from '@/features/machines/utils'
+import {isMachineStartable, prefersTouchConsole} from '@/features/machines/utils'
 import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
@@ -28,6 +35,7 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 	const [agentsMounted, setAgentsMounted] = useState(false)
 	const controls = useMachineAgentControls({enabled: agentsOpen})
 	const viewerActions = useMachineViewerActions()
+	const railAtSide = useMedia(MACHINES_RAIL_SIDE_QUERY)
 
 	const isBusy = machine.state === 'starting' || machine.state === 'stopping' || machine.state === 'restarting'
 
@@ -36,7 +44,7 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 			// Beside the display the rail slides in from the right; when it wraps
 			// below the display on narrower screens it just fades in. A phone on its
 			// side has no height for a column, so it's a block of three across.
-			className='flex w-full shrink-0 animate-in flex-row flex-wrap justify-center gap-1.5 delay-150 duration-300 fill-mode-backwards fade-in sm:gap-3 rail-side:w-auto rail-side:flex-col rail-side:flex-nowrap rail-side:justify-start rail-side:slide-in-from-right-6 low:grid low:w-[136px] low:grid-cols-3 [@media(height<660px)]:gap-2'
+			className='flex w-full shrink-0 animate-in flex-row flex-wrap justify-center gap-1.5 delay-150 duration-300 fill-mode-backwards fade-in sm:gap-3 rail-side:w-auto rail-side:flex-col rail-side:flex-nowrap rail-side:justify-start rail-side:slide-in-from-right-6 rail-tight:gap-2 low:grid low:w-[136px] low:grid-cols-3'
 		>
 			<DarkTooltip label={t('machines.open-fullscreen')} side='left'>
 				<a
@@ -83,6 +91,15 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 					{muted ? <VolumeX className='size-5' /> : <Volume2 className='size-5' />}
 				</button>
 			</DarkTooltip>
+			{/* The touch console has keys of its own */}
+			{!prefersTouchConsole() && (
+				<MachineKeysMenu
+					machine={machine}
+					buttonClassName={machineRailButtonClass}
+					iconClassName='size-5'
+					side={railAtSide ? 'left' : 'bottom'}
+				/>
+			)}
 			<DarkTooltip
 				label={machine.pinned ? t('machines.unpin-from-homescreen') : t('machines.pin-to-homescreen')}
 				side='left'

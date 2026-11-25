@@ -46,6 +46,7 @@ describe.sequential('Backup restore on current install', () => {
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	}
 
 	beforeAll(async () => {

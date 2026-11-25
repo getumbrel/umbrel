@@ -94,6 +94,19 @@ final class BrowserPage: NSObject, Identifiable {
 	// umbrelOS shown in place, on the app's wallpaper, instead of as a page of its own.
 	let isSeeThrough: Bool
 
+	// umbrelOS 2.1 and later keep their dock and sheets' buttons clear of the home
+	// indicator themselves. Older versions put them at the very bottom of the page, so
+	// for those the app keeps the page above it. Assumed until the version is known:
+	// WebKit doesn't give the page its bottom safe area back once it has been covered.
+	private(set) var keepsClearOfHomeIndicator = true
+
+	// The page keeps its content clear of the screen's sides by itself (see
+	// BrowserContext.seeThroughScript), so it can run under iPhone Duo's side column
+	private(set) var keepsClearOfSides = false
+
+	// It also keeps clear of the top by itself, so it can run under the toolbar
+	private(set) var keepsClearOfTop = false
+
 	init(origin: String, identity: Identity, context: BrowserContext, seeThrough: Bool = false) {
 		self.origin = origin
 		self.identity = identity
@@ -102,6 +115,24 @@ final class BrowserPage: NSObject, Identifiable {
 		webView = context.makeWebView(seeThrough: seeThrough)
 		super.init()
 		webView.navigationDelegate = self
+		if seeThrough {
+			webView.configuration.userContentController.add(
+				MessageHandler { [weak self] body in
+					MainActor.assumeIsolated {
+						guard let self, let keepsClear = body as? Bool, self.keepsClearOfSides != keepsClear else { return }
+						self.keepsClearOfSides = keepsClear
+					}
+				},
+				contentWorld: BrowserContext.world, name: "keepsClearOfSides")
+			webView.configuration.userContentController.add(
+				MessageHandler { [weak self] body in
+					MainActor.assumeIsolated {
+						guard let self, let keepsClear = body as? Bool, self.keepsClearOfTop != keepsClear else { return }
+						self.keepsClearOfTop = keepsClear
+					}
+				},
+				contentWorld: BrowserContext.world, name: "keepsClearOfTop")
+		}
 		webView.uiDelegate = self
 		observations = [
 			webView.observe(\.estimatedProgress) { [weak self] view, _ in
@@ -188,6 +219,91 @@ final class BrowserPage: NSObject, Identifiable {
 				injectionTime: .atDocumentStart,
 				forMainFrameOnly: true,
 				in: .world(name: "umbrel-setup")))
+	}
+
+	// The edges of the web view that the app's own interface covers. The page lays out
+	// clear of them and still draws beneath them.
+	func keepClear(of insets: UIEdgeInsets) {
+		// umbrelOS runs under the toolbar on its own wallpaper. The scroll view's edge
+		// effect would cover the toolbar's strip with a band of the page's colors.
+		webView.scrollView.topEdgeEffect.isHidden = true
+		webView.scrollView.bottomEdgeEffect.isHidden = true
+		let previous = webView.obscuredContentInsets
+		if previous != insets {
+			webView.obscuredContentInsets = insets
+			// The page's top-left sits at the corner of the clear area; UIKit's scroll view
+			// needs the same insets or it pulls the page back under the bars. Only the
+			// change is applied, so room WebKit adds for the keyboard stays, and the page
+			// stays where it was scrolled to.
+			let scrollView = webView.scrollView
+			let change = UIEdgeInsets(
+				top: insets.top - previous.top,
+				left: insets.left - previous.left,
+				bottom: insets.bottom - previous.bottom,
+				right: insets.right - previous.right)
+			scrollView.contentInset = scrollView.contentInset.adding(change)
+			scrollView.verticalScrollIndicatorInsets = scrollView.verticalScrollIndicatorInsets.adding(change)
+			scrollView.contentOffset.x -= change.left
+			scrollView.contentOffset.y -= change.top
+			pinWallpaper()
+		}
+		viewportInsets = insets
+		applyViewportInsets()
+	}
+
+	// What keepClear last asked of the viewport, until WebKit can take it
+	@ObservationIgnored private var viewportInsets: UIEdgeInsets?
+
+	// Viewport units (100dvh) follow the clear area too. WebKit rejects insets larger
+	// than the web view, as they are before it's first laid out, so they wait for the
+	// next layout.
+	private func applyViewportInsets() {
+		guard let insets = viewportInsets else { return }
+		let size = webView.bounds.size
+		guard insets.left + insets.right < size.width, insets.top + insets.bottom < size.height else { return }
+		webView.setMinimumViewportInset(insets, maximumViewportInset: insets)
+		viewportInsets = nil
+	}
+
+	// The web view was laid out or moved in the window
+	func webViewDidLayout() {
+		applyViewportInsets()
+		pinWallpaper()
+	}
+
+	// umbrelOS draws the glass behind its widgets and dock from its own copy of the
+	// wallpaper, which the app hides and draws natively instead. That copy is placed as
+	// if the page filled the screen, so here it's pinned to where the app's wallpaper
+	// actually is, in page coordinates, and the glass shows what's really behind it.
+	func pinWallpaper() {
+		guard isSeeThrough, let window = webView.window else { return }
+		let origin = webView.convert(CGPoint.zero, to: nil)
+		let rect = CGRect(
+			x: -origin.x - webView.obscuredContentInsets.left,
+			y: -origin.y - webView.obscuredContentInsets.top,
+			width: window.bounds.width,
+			height: window.bounds.height)
+		guard rect != pinnedWallpaper else { return }
+		pinnedWallpaper = rect
+		applyPinnedWallpaper()
+	}
+
+	private var pinnedWallpaper = CGRect.zero
+
+	// Also run after every load, which starts the page's styles afresh
+	private func applyPinnedWallpaper() {
+		let rect = pinnedWallpaper
+		guard rect.width > 0 else { return }
+		webView.evaluateJavaScript("""
+			(() => {
+				const root = document.documentElement
+				root.style.setProperty('--umbrel-app-wallpaper-left', '\(rect.minX)px')
+				root.style.setProperty('--umbrel-app-wallpaper-top', '\(rect.minY)px')
+				root.style.setProperty('--umbrel-app-wallpaper-width', '\(rect.width)px')
+				root.style.setProperty('--umbrel-app-wallpaper-height', '\(rect.height)px')
+				root.setAttribute('data-umbrel-app-wallpaper', '')
+			})()
+			""")
 	}
 
 	func update(identity: Identity) {
@@ -423,6 +539,7 @@ extension BrowserPage: WKNavigationDelegate {
 		isLoadingMainFrame = false
 		if shownURL != webView.url { shownURL = webView.url }
 		failure = nil
+		if isSeeThrough { applyPinnedWallpaper() }
 		// The launch screen normally lifts when the page finishes loading. This is the
 		// limit on how long a slow page can keep it up once bytes are arriving.
 		reveal(after: .seconds(3))
@@ -435,6 +552,21 @@ extension BrowserPage: WKNavigationDelegate {
 		settleDeadline = .now + .milliseconds(1500)
 		reveal(after: Self.settleInterval)
 		Task { await context.adoptSession(from: webView) }
+		if isSeeThrough { Task { await checkHomeIndicatorSupport() } }
+	}
+
+	private func checkHomeIndicatorSupport() async {
+		let version = try? await webView.callAsyncJavaScript(
+			"""
+			const response = await fetch('/trpc/system.version')
+			return (await response.json()).result.data.version
+			""",
+			contentWorld: .page) as? String
+		guard let version else { return }
+		let parts = version.split(whereSeparator: { !$0.isNumber }).prefix(2).compactMap { Int($0) }
+		guard parts.count == 2 else { return }
+		let supported = parts[0] > 2 || (parts[0] == 2 && parts[1] >= 1)
+		if keepsClearOfHomeIndicator != supported { keepsClearOfHomeIndicator = supported }
 	}
 
 	func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -635,5 +767,24 @@ private final class PasswordEntryHandler: NSObject, WKScriptMessageHandler {
 	func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
 		guard message.frameInfo.isMainFrame, let value = message.body as? String else { return }
 		handler(value)
+	}
+}
+
+private final class MessageHandler: NSObject, WKScriptMessageHandler {
+	private let handler: (Any) -> Void
+
+	init(_ handler: @escaping (Any) -> Void) {
+		self.handler = handler
+	}
+
+	func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+		guard message.frameInfo.isMainFrame else { return }
+		handler(message.body)
+	}
+}
+
+private extension UIEdgeInsets {
+	func adding(_ other: UIEdgeInsets) -> UIEdgeInsets {
+		UIEdgeInsets(top: top + other.top, left: left + other.left, bottom: bottom + other.bottom, right: right + other.right)
 	}
 }

@@ -37,7 +37,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.umbrel.android.ui.openUrl
 import java.io.File
-import java.util.UUID
 
 /**
  * Everything a page asks of the person while it's on screen: its dialogs, camera and
@@ -190,26 +189,28 @@ private fun FileChooserEffect(page: BrowserPage, chooser: BrowserPage.FileChoose
 	val types = mimeTypes(params.acceptTypes)
 	val media = types.isNotEmpty() && types.all { it.startsWith("image/") || it.startsWith("video/") }
 	val captures = params.isCaptureEnabled && types.isNotEmpty() && types.all { it.startsWith("image/") }
-	var captureUri by remember { mutableStateOf<Uri?>(null) }
+	var capture by remember { mutableStateOf<Pair<File, Uri>?>(null) }
+	val finishCapture = { taken: Boolean ->
+		if (!taken) capture?.let { page.discardCapture(it.first) }
+		page.finishFileChooser(if (taken) listOfNotNull(capture?.second) else null)
+	}
 
 	val pickOne = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { page.finishFileChooser(listOfNotNull(it)) }
 	val pickMany = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { page.finishFileChooser(it) }
 	val openOne = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { page.finishFileChooser(listOfNotNull(it)) }
 	val openMany = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { page.finishFileChooser(it) }
-	val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
-		page.finishFileChooser(if (taken) listOfNotNull(captureUri) else null)
-	}
+	val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken -> finishCapture(taken) }
 	val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-		if (granted) captureUri?.let(takePicture::launch) else page.finishFileChooser(null)
+		if (granted) capture?.let { takePicture.launch(it.second) } else finishCapture(false)
 	}
 
 	LaunchedEffect(chooser) {
 		try {
 			when {
 				captures -> {
-					val file = File(context.cacheDir, "Captures/${UUID.randomUUID()}.jpg").apply { parentFile?.mkdirs() }
+					val file = page.newCapture()
 					val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-					captureUri = uri
+					capture = file to uri
 					if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
 						takePicture.launch(uri)
 					} else {

@@ -46,16 +46,20 @@ export function CpuTemperatureCardContent({
 					Math.min(95, ((temperatureInCelcius - scaleMinCelcius) / (scaleMaxCelcius - scaleMinCelcius)) * 100),
 				)
 
-	const compactValue = (
-		<span className='-mr-2 flex shrink-0 items-center gap-1 font-medium'>
-			<span className='text-white/45'>{temperatureMessage}</span>
-			<span className='text-white/30'>•</span>
+	// When the status and the temperature don't share a line, the temperature
+	// moves under the status, whole, rather than either being cut
+	const compactValue = (className?: string) => (
+		<span className={cn('-mr-2 flex min-w-0 flex-wrap items-center gap-x-1 font-medium', className)}>
+			<span className='flex min-w-0 items-center gap-1'>
+				<span className='text-white/45'>{temperatureMessage}</span>
+				<span className='text-white/30'>•</span>
+			</span>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<button
 						type='button'
 						aria-label={`${t('cpu-temperature')}: ${temperatureNumber ?? '--'}${temperatureUnitLabel}`}
-						className='group flex items-center gap-1 rounded-4 text-white outline-hidden transition-colors hover:text-white/80 focus-visible:ring-2 focus-visible:ring-white/20'
+						className='group flex shrink-0 items-center gap-1 rounded-4 whitespace-nowrap text-white outline-hidden transition-colors hover:text-white/80 focus-visible:ring-2 focus-visible:ring-white/20'
 					>
 						<span>
 							{isUnknown ? '--' : <AnimatedNumber to={temperatureNumber} />}
@@ -86,12 +90,13 @@ export function CpuTemperatureCardContent({
 						<span className='min-w-0 truncate font-semibold text-white/45'>{t('cpu-temperature')}</span>
 						{headerIcon}
 					</div>
-					<div className='flex justify-start text-13 -tracking-2'>{compactValue}</div>
+					<div className='flex justify-start text-13 -tracking-2'>{compactValue()}</div>
 				</>
 			) : (
-				<div className='flex items-center justify-between gap-3 text-13 -tracking-2'>
+				// A value that doesn't fit beside its title moves under it
+				<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-13 -tracking-2'>
 					<span className='truncate font-semibold text-white/45'>{t('cpu-temperature')}</span>
-					{compactValue}
+					{compactValue('ml-auto')}
 				</div>
 			)}
 			<div className='relative pt-[5px]'>

@@ -6,7 +6,7 @@ export function Alert({children, className}: {children: React.ReactNode; classNa
 	return (
 		<div
 			className={cn(
-				'text-normal flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-14 -tracking-2',
+				'text-normal flex items-center gap-1.5 rounded-24 bg-white/10 px-3 py-2 text-14 -tracking-2',
 				className,
 			)}
 		>

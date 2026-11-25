@@ -120,8 +120,22 @@ enum LocalHTTPSTransport {
 	// Candidate anchors remain in memory until the live HTTPS endpoint proves both
 	// possession of the corresponding private key and the same discovery id.
 	static func data(for request: URLRequest, candidateCertificate: Data) async throws -> (Data, URLResponse) {
+		try await data(
+			for: request,
+			anchorCertificate: candidateCertificate,
+			maximumBytes: candidateResponseMaximumBytes
+		)
+	}
+
+	// One request trusting the CA it's given rather than this device's pin: a first-use
+	// candidate, or the copy of the pin PhotoKit's extension is given
+	static func data(
+		for request: URLRequest,
+		anchorCertificate: Data,
+		maximumBytes: Int
+	) async throws -> (Data, URLResponse) {
 		guard let host = request.url?.host,
-			let anchor = SecCertificateCreateWithData(nil, candidateCertificate as CFData)
+			let anchor = SecCertificateCreateWithData(nil, anchorCertificate as CFData)
 		else { throw LocalHTTPSTransportError.invalidCertificate }
 
 		let delegate = LocalHTTPSSessionDelegate(expectedHost: host, anchor: anchor)
@@ -134,7 +148,7 @@ enum LocalHTTPSTransport {
 		return try await boundedData(
 			for: request,
 			session: session,
-			maximumBytes: candidateResponseMaximumBytes,
+			maximumBytes: maximumBytes,
 			taskDelegate: delegate
 		)
 	}
@@ -196,6 +210,7 @@ enum LocalHTTPSTransport {
 
 	static func forget(deviceId: String) async {
 		Keychain.deleteLocalHTTPSCA(deviceId: deviceId)
+		Keychain.deletePhotoBackupCA(deviceId: deviceId)
 		await sessions.remove(deviceId: deviceId)
 	}
 
@@ -391,6 +406,11 @@ func chainsToAnchor(_ certificates: [SecCertificate], anchor: SecCertificate) ->
 func evaluateServerTrust(_ trust: SecTrust, anchor: SecCertificate) -> Bool {
 	let policy = SecPolicyCreateSSL(true, nil)
 	guard SecTrustSetPolicies(trust, policy) == errSecSuccess,
+		// The Umbrel's CA signs its server certificate directly, so there is never an
+		// issuer to fetch. Left on, the system downloads a missing issuer from whatever
+		// URL the answering server's certificate names for it. Setting the policies
+		// turns fetching back on, so this has to come after SecTrustSetPolicies.
+		SecTrustSetNetworkFetchAllowed(trust, false) == errSecSuccess,
 		SecTrustSetAnchorCertificates(trust, [anchor] as CFArray) == errSecSuccess,
 		SecTrustSetAnchorCertificatesOnly(trust, true) == errSecSuccess
 	else { return false }

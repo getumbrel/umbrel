@@ -81,7 +81,7 @@ export default function PermanentlyDeleteConfirmationDialog() {
 					>
 						{t('files-permanently-delete.confirm')}
 					</AlertDialogAction>
-					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+					<AlertDialogCancel autoFocus>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

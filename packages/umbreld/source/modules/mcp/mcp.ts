@@ -20,6 +20,10 @@ export type McpPermissions = {
 	manageSystem: boolean
 	machines: 'all' | string[]
 	createMachines: boolean
+	// The owner's Photos library: every photo and video in Home, whatever
+	// folders are granted, with its albums, favourites, people and Recently
+	// Deleted. Folder grants alone give photos as files, not the library.
+	photos: boolean
 }
 
 export type McpTokenMetadata = {
@@ -85,6 +89,7 @@ function defaultPermissions(): McpPermissions {
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	}
 }
 
@@ -489,6 +494,7 @@ export default class Mcp {
 			manageSystem: permissions.manageSystem,
 			machines,
 			createMachines: permissions.createMachines,
+			photos: permissions.photos,
 		}
 		await this.#updatePermissions(() => normalized)
 		return normalized
@@ -523,6 +529,16 @@ export default class Mcp {
 		const permissions = await this.getPermissions()
 		if (permissions.machines !== 'all' && !permissions.machines.includes(id)) {
 			throw new Error(`[permission-denied] Machine '${id}' is not granted. ${MCP_PERMISSION_REMEDIATION}`)
+		}
+	}
+
+	async hasPhotosAccess() {
+		return (await this.getPermissions()).photos
+	}
+
+	async assertPhotosAccess() {
+		if (!(await this.hasPhotosAccess())) {
+			throw new Error(`[permission-denied] Photos access is not granted. ${MCP_PERMISSION_REMEDIATION}`)
 		}
 	}
 

@@ -138,11 +138,7 @@ function MachinesLayoutContent() {
 			initial={{opacity: 0}}
 			animate={{opacity: closing ? 0 : 1}}
 			transition={{duration: 0.15, ease: 'easeOut'}}
-			// stable both-edges: pages taller than the viewport (catalog) and shorter
-			// ones (index) would otherwise toggle the scrollbar and shift the centered
-			// column; both-edges reserves symmetric gutters so it stays centered.
-			// Touch scrollbars float over the page, so they need none.
-			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 backdrop-blur-xl [scrollbar-gutter:stable_both-edges] pointer-coarse:[scrollbar-gutter:auto]'
+			className='fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-black/50 ps-(--safe-left) pe-(--safe-right) pt-(--safe-top) backdrop-blur-xl'
 			onClick={!closing && canImplicitlyDismiss ? close : undefined}
 		>
 			<motion.div
@@ -184,11 +180,11 @@ function MachinesLayoutContent() {
 						animate={
 							hideHeader
 								? {height: 0, marginBottom: -20, y: -16, opacity: 0}
-								: {height: 50, marginBottom: 0, y: 0, opacity: 1}
+								: {height: 'auto', marginBottom: 0, y: 0, opacity: 1}
 						}
 						transition={layoutMorphTransition.layout}
 						style={{pointerEvents: hideHeader ? 'none' : undefined}}
-						aria-hidden={hideHeader}
+						inert={hideHeader}
 						className='flex items-center justify-between'
 					>
 						<div className='flex items-center gap-3'>
@@ -200,7 +196,7 @@ function MachinesLayoutContent() {
 							/>
 							<div className='flex flex-col gap-1.5'>
 								<h1 className='text-17 leading-none font-semibold -tracking-2 text-white'>{t('machines')}</h1>
-								<p className='text-15 leading-none -tracking-2 text-white/50'>{t('machines.tagline')}</p>
+								<p className='text-15 leading-tight -tracking-2 text-white/50'>{t('machines.tagline')}</p>
 							</div>
 						</div>
 						<DarkTooltip label={t('close')} side='left'>

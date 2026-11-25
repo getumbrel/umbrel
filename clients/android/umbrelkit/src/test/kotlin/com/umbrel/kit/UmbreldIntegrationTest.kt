@@ -10,7 +10,6 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -60,10 +59,9 @@ class UmbreldIntegrationTest {
 	fun passiveIdentificationDoesNotEnrollUntilExplicitClaim() = runBlocking {
 		val umbrel = umbrel()
 
-		val device = Umbreld.identify(Candidate(host = umbrel.host, name = "Live test"))
+		val device = identified(umbrel)
 
-		assertNotNull("Passive HTTPS identification failed", device)
-		assertArrayEquals(umbrel.caCertificate, device!!.candidateCaCertificate)
+		assertArrayEquals(umbrel.caCertificate, device.candidateCaCertificate)
 		assertEquals(SecretStore.LocalHttpsCaReadResult.Missing, SecretStore.readLocalHttpsCa(device.id))
 
 		Umbreld.claimLocalHttpsIdentity(device)
@@ -76,14 +74,16 @@ class UmbreldIntegrationTest {
 	fun anAdvertisedCaThatDoesNotSignTheEndpointIsRejected() = runBlocking {
 		val umbrel = umbrel().apply { advertisedCa = otherCa }
 
-		assertNull(Umbreld.identify(Candidate(host = umbrel.host, name = "Spoof")))
+		assertEquals(unverified(umbrel.discoveryHost, Umbreld.UnverifiedDevice.Reason.UNEXPECTED), identify(umbrel))
+		assertTrue(umbrel.requests.isNotEmpty())
 	}
 
 	@Test
 	fun aBootstrapForAnotherDeviceIsRejected() = runBlocking {
 		val umbrel = umbrel().apply { bootstrapId = "other-device" }
 
-		assertNull(Umbreld.identify(Candidate(host = umbrel.host, name = "Spoof")))
+		assertEquals(unverified(umbrel.discoveryHost, Umbreld.UnverifiedDevice.Reason.UNEXPECTED), identify(umbrel))
+		assertTrue(umbrel.requests.isNotEmpty())
 	}
 
 	@Test
@@ -94,7 +94,7 @@ class UmbreldIntegrationTest {
 		assertNull(Umbreld.identify(umbrel.host, expectedDeviceId = umbrel.deviceId))
 		assertFalse(Umbreld.isKnownEndpointAvailable(umbrel.host, umbrel.deviceId))
 		// The candidate path ignores the stale pin, so the real device can still be claimed.
-		val device = Umbreld.identify(Candidate(host = umbrel.host, name = "Umbrel"))!!
+		val device = identified(umbrel)
 		Umbreld.claimLocalHttpsIdentity(device)
 		assertTrue(Umbreld.isKnownEndpointAvailable(umbrel.host, umbrel.deviceId))
 	}
@@ -121,7 +121,7 @@ class UmbreldIntegrationTest {
 		val umbrel = umbrel()
 
 		assertNull(Umbreld.identify(umbrel.host, expectedDeviceId = umbrel.deviceId))
-		assertNull(Umbreld.identify(Candidate(host = umbrel.host, name = "Umbrel"), expectedDeviceId = umbrel.deviceId))
+		assertNull(Umbreld.identify(candidate(umbrel), expectedDeviceId = umbrel.deviceId))
 		assertTrue(umbrel.requests.isEmpty())
 	}
 
@@ -193,7 +193,7 @@ class UmbreldIntegrationTest {
 				.build(),
 		)
 
-		val result = Umbreld.identifyReportingFailure(Candidate(host = umbrel.host, name = "umbrel"), emptySet())
+		val result = identify(umbrel)
 
 		assertEquals(umbrel.deviceId, (result as Umbreld.HostIdentification.Device).value.id)
 	}
@@ -209,18 +209,19 @@ class UmbreldIntegrationTest {
 				.build(),
 		)
 
-		val result = Umbreld.identifyReportingFailure(Candidate(host = umbrel.host, name = "umbrel"), emptySet())
+		val result = identify(umbrel)
 
-		assertEquals(unverified(umbrel.host, Umbreld.UnverifiedDevice.Reason.SLOW), result)
+		assertEquals(unverified(umbrel.discoveryHost, Umbreld.UnverifiedDevice.Reason.SLOW), result)
 	}
 
 	@Test
 	fun anUmbrelServingACertificateItsCaDidNotIssueCouldNotConnect() = runBlocking {
 		val umbrel = umbrel(leafIssuer = otherCa)
 
-		val result = Umbreld.identifyReportingFailure(Candidate(host = umbrel.host, name = "umbrel"), emptySet())
+		val result = identify(umbrel)
 
-		assertEquals(unverified(umbrel.host, Umbreld.UnverifiedDevice.Reason.UNEXPECTED), result)
+		assertEquals(unverified(umbrel.discoveryHost, Umbreld.UnverifiedDevice.Reason.UNEXPECTED), result)
+		assertTrue(umbrel.requests.isNotEmpty())
 	}
 
 	@Test
@@ -228,7 +229,7 @@ class UmbreldIntegrationTest {
 		val umbrel = umbrel()
 		SecretStore.storeLocalHttpsCaIfAbsent(otherCa.certificate.encoded, umbrel.deviceId)
 
-		val result = Umbreld.identifyReportingFailure(Candidate(host = umbrel.host, name = "umbrel"), setOf(umbrel.deviceId))
+		val result = identify(umbrel, setOf(umbrel.deviceId))
 
 		assertEquals(Umbreld.HostIdentification.SavedIdentityChanged, result)
 	}
@@ -237,7 +238,7 @@ class UmbreldIntegrationTest {
 	fun aHealthySavedUmbrelIsIdentifiedWithItsPin() = runBlocking {
 		val umbrel = enrolledUmbrel()
 
-		val result = Umbreld.identifyReportingFailure(Candidate(host = umbrel.host, name = "umbrel"), setOf(umbrel.deviceId))
+		val result = identify(umbrel, setOf(umbrel.deviceId))
 
 		val device = (result as Umbreld.HostIdentification.Device).value
 		assertEquals(umbrel.deviceId, device.id)
@@ -258,7 +259,9 @@ class UmbreldIntegrationTest {
 	@Test
 	fun anUmbrelThatProvedItselfButKeepsDiscoveryInfoWaitingIsSlowAndNotTriedElsewhere() = runBlocking {
 		val umbrel = umbrel()
-		val address = "127.0.0.1:${umbrel.host.substringAfterLast(':')}"
+		// A second route to the same Umbrel
+		val address = "192.168.1.20"
+		val loopback = "127.0.0.1:${umbrel.host.substringAfterLast(':')}"
 		// discoveryInfo is asked for only over HTTPS, after the proof, so the delay can't hit the
 		// plain bootstrap. A second ask would get a prompt answer.
 		umbrel.enqueue(
@@ -269,14 +272,16 @@ class UmbreldIntegrationTest {
 				.build(),
 		)
 
-		val result = Umbreld.identifyReportingFailure(Candidate(umbrel.host, listOf(address), "umbrel"), emptySet())
+		val result = identify(umbrel, routes = mapOf(address to loopback))
 
 		assertEquals(
-			Umbreld.HostIdentification.Unverified(Umbreld.UnverifiedDevice(umbrel.host, listOf(address), Umbreld.UnverifiedDevice.Reason.SLOW)),
+			Umbreld.HostIdentification.Unverified(
+				Umbreld.UnverifiedDevice(umbrel.discoveryHost, listOf(address), Umbreld.UnverifiedDevice.Reason.SLOW),
+			),
 			result,
 		)
 		assertEquals(1, umbrel.requests.count { it.url.encodedPath == "/trpc/system.discoveryInfo" })
-		assertTrue(umbrel.requests.none { it.headers["Host"] == address })
+		assertTrue(umbrel.requests.none { it.headers["Host"] == loopback })
 	}
 
 	@Test
@@ -285,13 +290,32 @@ class UmbreldIntegrationTest {
 		val claimant = umbrel()
 		assertEquals(real.deviceId, claimant.deviceId)
 
-		val devices = Umbreld.identify(listOf(Candidate(real.host, name = "real"), Candidate(claimant.host, name = "claimant")))
+		val devices = Umbreld.uniqueUmbrels(listOf(identified(real), identified(claimant)))
 
 		assertEquals(setOf(real.host, claimant.host), devices.map { it.host }.toSet())
 	}
 
 	private fun unverified(host: String, reason: Umbreld.UnverifiedDevice.Reason) =
 		Umbreld.HostIdentification.Unverified(Umbreld.UnverifiedDevice(host, reason = reason))
+
+	// A candidate's host is a .local name or a LAN address, so it can't name a fake Umbrel's
+	// loopback port. A candidate carries the fake's discovery name instead, and the kit's own
+	// identity check is sent on to where the fake listens. Other routes go where [routes] says.
+	private fun candidate(umbrel: FakeUmbrel, addresses: List<String> = emptyList()) =
+		Candidate(umbrel.discoveryHost, addresses, "umbrel")
+
+	private suspend fun identify(
+		umbrel: FakeUmbrel,
+		knownDeviceIds: Set<String> = emptySet(),
+		routes: Map<String, String> = emptyMap(),
+	): Umbreld.HostIdentification =
+		Umbreld.identifyReportingFailure(candidate(umbrel, routes.keys.toList()), knownDeviceIds) { host, expectedDeviceId ->
+			Umbreld.verifiedLocalHttpsIdentity(routes[host] ?: umbrel.host, expectedDeviceId)
+		}
+
+	/** The record a scan gives for [umbrel], at the address the fake listens on. */
+	private suspend fun identified(umbrel: FakeUmbrel): IdentifiedDevice =
+		(identify(umbrel) as Umbreld.HostIdentification.Device).value.copy(host = umbrel.host)
 
 	// ── Native sessions ──
 

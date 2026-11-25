@@ -106,6 +106,72 @@ final class BrowserSessionTests: XCTestCase {
 		XCTAssertEqual(cookies[Umbreld.BrowserSession.appCookieName], "app-value")
 	}
 
+	func testARefreshResponseCarriesTheSessionItMade() throws {
+		let response = try refreshResponse(
+			setCookie: "__Host-UMBREL_APP_SESSION_HTTPS=app-value; Path=/; HttpOnly; Secure; SameSite=Lax, __Host-UMBREL_BROWSER_SESSION_HTTPS=browser-value; Path=/; HttpOnly; Secure; SameSite=Lax")
+
+		let session = try Umbreld.BrowserSession(
+			issuedBy: response,
+			path: "user.refreshNativeAccess",
+			deviceId: "umbrel",
+			accountId: "alice",
+			dashboardToken: "dashboard-token",
+			linked: true)
+
+		XCTAssertEqual(
+			session,
+			Umbreld.BrowserSession(
+				deviceId: "umbrel",
+				accountId: "alice",
+				dashboardToken: "dashboard-token",
+				browserCookie: "browser-value",
+				appCookie: "app-value",
+				linked: true))
+	}
+
+	func testASessionStoredBeforeLinkingExistedReadsAsAPasswordLogin() throws {
+		let stored = #"{"deviceId":"umbrel","accountId":"0","dashboardToken":"dashboard-token","browserCookie":"browser-value"}"#
+
+		let decoded = try JSONDecoder().decode(Umbreld.BrowserSession.self, from: Data(stored.utf8))
+
+		XCTAssertEqual(decoded, makeSession(appCookie: nil))
+		XCTAssertFalse(decoded.linked)
+	}
+
+	func testCodableRoundTripKeepsALinkedSessionLinked() throws {
+		let session = Umbreld.BrowserSession(
+			deviceId: "umbrel",
+			accountId: "0",
+			dashboardToken: "dashboard-token",
+			browserCookie: "browser-value",
+			appCookie: nil,
+			linked: true)
+
+		let decoded = try JSONDecoder().decode(
+			Umbreld.BrowserSession.self, from: JSONEncoder().encode(session))
+
+		XCTAssertEqual(decoded, session)
+	}
+
+	func testATokenWithoutItsBrowserCookieIsNotASession() throws {
+		let response = try refreshResponse(
+			setCookie: "__Host-UMBREL_APP_SESSION_HTTPS=app-value; Path=/; HttpOnly; Secure; SameSite=Lax")
+
+		XCTAssertThrowsError(
+			try Umbreld.BrowserSession(
+				issuedBy: response,
+				path: "user.refreshNativeAccess",
+				deviceId: "umbrel",
+				accountId: "alice",
+				dashboardToken: "dashboard-token"))
+	}
+
+	private func refreshResponse(setCookie: String) throws -> HTTPURLResponse {
+		let url = try XCTUnwrap(URL(string: "https://umbrel.local/trpc/user.refreshNativeAccess"))
+		return try XCTUnwrap(
+			HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Set-Cookie": setCookie]))
+	}
+
 	private func makeSession(appCookie: String?, dashboardToken: String = "dashboard-token") -> Umbreld.BrowserSession {
 		Umbreld.BrowserSession(
 			deviceId: "umbrel",

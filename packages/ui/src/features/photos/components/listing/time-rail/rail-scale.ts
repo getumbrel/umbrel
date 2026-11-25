@@ -245,6 +245,16 @@ export function pickMonthLabels(scale: RailScale, minGap: number): MonthMark[] {
 	return kept.sort((a, b) => a.y - b.y)
 }
 
+// A label names what begins at its mark and is drawn centred on it, so the
+// half above the mark lies over the end of what comes before: a pointer on
+// "2019" coming down the rail would be in the first weeks of 2020. Within
+// `reach` above a labelled mark the rail point is the mark itself — pointing
+// at a label means what it says.
+export function settleOnLabel(y: number, labels: {y: number}[], reach: number): number {
+	for (const label of labels) if (y < label.y && label.y - y <= reach) return label.y
+	return y
+}
+
 // The takenAt under a (month, fraction) spot, from the loaded list — what a
 // short-span pill names to the day; undefined while the month isn't loaded
 export function timeAtFraction(items: {takenAt: number}[], key: MonthKey, fraction: number): number | undefined {
@@ -314,6 +324,20 @@ export function scrollForMonth(
 		if (sections[section]!.start === index) return clampScroll(layout, tops[section]! - tops[0]!, window)
 	}
 	return clampScroll(layout, rectOf(layout, index).y - window.inset, window)
+}
+
+// Whether the list runs through where a month would be: it starts at or
+// above the month's end and carries on to or below its start. A month such a
+// list shows nothing of is one the listing skips, and its neighbour is where
+// it lands. Otherwise the month is beyond what the list holds — below the
+// loading frontier, or above where a tail of the timeline begins — and
+// showing it is a seek (see use-seek.ts).
+export function spansMonth({items, hasMore, before}: Layout, key: MonthKey): boolean {
+	if (items.length === 0) return false
+	return (
+		(before === undefined || before >= monthStartUtc(key + 1)) &&
+		(!hasMore || items[items.length - 1]!.takenAt < monthStartUtc(key))
+	)
 }
 
 // Where a moment would sit: the row of the first item at or past it — the

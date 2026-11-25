@@ -1,0 +1,28 @@
+[Unit]
+Description=Models that read the text in pictures
+# Stopped after umbreld at shutdown: one stopped while umbreld is still sending
+# it things would look to umbreld like it had fallen over on each of them
+Before=umbrel.service
+ConditionPathExists=/usr/lib/python3/dist-packages/onnxruntime
+# The models are not part of the image. umbreld fetches them the first time
+# there is something for them to read, and leaves this once they are all
+# there (see models.ts in umbreld).
+ConditionPathExists=/home/umbrel/umbrel/models/installed
+
+[Service]
+# Like the models that find faces, it only runs while there are photos to
+# read: systemd starts it for the first one umbreld sends, and it exits five
+# minutes after the last. It runs on the CPU.
+ExecStart=/usr/bin/python3 /opt/umbrel-embeddings/text.py --idle-seconds 300 \
+    --detector /home/umbrel/umbrel/models/text-detector.onnx \
+    --recogniser /home/umbrel/umbrel/models/text-recogniser.onnx
+# It reads pictures of the user's files, so it gets nothing else: its own
+# user, no network, and of the home directories only the models.
+# With the other models that read the library, and the first of everything on
+# the device to be stopped when it is out of memory (see umbrelbackground.slice)
+Slice=umbrelbackground.slice
+OOMScoreAdjust=1000
+DynamicUser=yes
+PrivateNetwork=yes
+ProtectHome=tmpfs
+BindReadOnlyPaths=/home/umbrel/umbrel/models

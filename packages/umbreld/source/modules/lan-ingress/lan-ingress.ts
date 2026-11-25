@@ -16,10 +16,12 @@ import type Umbreld from '../../index.ts'
 import randomToken from '../utilities/random-token.ts'
 import {getHostname, getIpAddresses} from '../system/system.ts'
 import runEvery from '../utilities/run-every.ts'
+import readBeforeFailedWrite from '../utilities/read-before-failed-write.ts'
 import {forwardTcp} from './forward-tcp.ts'
 import {readNativeTlsPrelude} from './native-tls-preread.ts'
 import {getNativeTlsPolicy, matchesNativeTlsHostname, type NativeTlsPolicy} from '../apps/native-tls.ts'
 import AppGateway, {readAppGatewayConfig, type AppGatewayConfig} from '../app-gateway/app-gateway.ts'
+import {lanIngressHeader} from '../server/client-address.ts'
 
 const NFT_BIN = '/usr/sbin/nft'
 
@@ -132,6 +134,10 @@ export default class LanIngress {
 	#appAuthHttpsProxyServer?: https.Server
 	#appMuxServers = new Map<string, AppMuxServer>()
 	#appGatewayWaits = new Map<string, {target: string; controller: AbortController; ready: boolean}>()
+	// The app-auth mux forwards connections to its proxies over loopback, which
+	// hides the client's address from them. This maps each of those loopback
+	// connections to the address of the client it carries.
+	#muxClientAddresses = new Map<string, string>()
 	// Track sockets at the TCP layer because Node's HTTP force-close helper does not cover
 	// upgraded/raw sockets, and the mux servers are plain net.Server instances.
 	#activeSocketsByServer = new WeakMap<net.Server | http.Server, Set<net.Socket>>()
@@ -837,6 +843,15 @@ export default class LanIngress {
 			await this.listen(this.#appAuthHttpsProxyServer, 0, '127.0.0.1')
 		}
 		if (this.#appAuthMuxServer) return
+		// Forget which client a mux connection carried once the proxy's end of it
+		// closes. Until then the proxy may still be reading requests from it, even
+		// if the client has already gone.
+		for (const proxy of [this.#appAuthHttpProxyServer, this.#appAuthHttpsProxyServer]) {
+			proxy.on('connection', (socket) => {
+				const connection = this.muxConnection(socket)
+				socket.once('close', () => this.#muxClientAddresses.delete(connection))
+			})
+		}
 		// App auth is still browser-facing during app login redirects
 		// (`<app-port>` -> `:2000` -> `<app-port>/umbrel_/api/v1/auth/handoff`),
 		// so it needs the same HTTP/HTTPS muxing as app ports. Unlike app
@@ -846,6 +861,7 @@ export default class LanIngress {
 			listenPort: APP_AUTH_PUBLIC_PORT,
 			httpPort: this.serverPort(this.#appAuthHttpProxyServer),
 			getHttpsProxyServer: () => this.#appAuthHttpsProxyServer,
+			rememberClientAddresses: true,
 		})
 		await this.listen(this.#appAuthMuxServer, APP_AUTH_PUBLIC_PORT)
 	}
@@ -929,11 +945,13 @@ export default class LanIngress {
 		httpPort,
 		getHttpsProxyServer,
 		nativeTls,
+		rememberClientAddresses = false,
 	}: {
 		listenPort: number
 		httpPort: number
 		getHttpsProxyServer: () => https.Server | undefined
 		nativeTls?: NativeTlsPolicy
+		rememberClientAddresses?: boolean
 	}) {
 		const server = net.createServer((socket) => {
 			const forward = (chunks: Buffer[], tls: boolean, hostname?: string, release = () => {}) => {
@@ -951,7 +969,15 @@ export default class LanIngress {
 					}
 					port = address.port
 				}
-				forwardTcp(socket, chunks, port, release)
+				const clientAddress = socket.remoteAddress
+				const upstream = forwardTcp(socket, chunks, port, release)
+				if (!rememberClientAddresses || !clientAddress) return
+				// The proxy can't read a request before this runs, since the forward only
+				// sends once connected. The proxy forgets the client when its end closes.
+				upstream.once('connect', () => {
+					const connection = `${upstream.localAddress}:${upstream.localPort}:${upstream.remotePort}`
+					this.#muxClientAddresses.set(connection, clientAddress)
+				})
 			}
 			// Only opted-in apps need SNI; ordinary apps keep their existing fast path.
 			if (nativeTls) {
@@ -1100,10 +1126,16 @@ export default class LanIngress {
 			// lines include each request's URL, and so any token in the query string.
 			// The error handler below logs failures without it.
 			on: {
-				proxyRes: (proxyResponse) => {
+				proxyRes: (proxyResponse, request) => {
 					// Do not let apps pin local origins to HTTPS; HSTS can remove browser warning bypass
 					// and HTTP fallback paths that are important for private local certs.
 					delete proxyResponse.headers['strict-transport-security']
+					// The upstream only answers Connection: close because agent: false asks it to,
+					// which says nothing about the browser's connection. Don't pass it on, so the
+					// browser can reuse its TLS connection instead of handshaking for every request.
+					// A response sent before the request body has arrived still closes, so that the
+					// browser stops uploading a body that was rejected.
+					if (originalProtocol === 'https' && request.complete) delete proxyResponse.headers.connection
 				},
 				error: (error, _request, response) => {
 					// Destroy the connection instead of answering with an error body. An
@@ -1119,6 +1151,11 @@ export default class LanIngress {
 					const clientFailed = response instanceof net.Socket && response.errored
 					this.logger[clientFailed ? 'verbose' : 'error'](`LAN ingress proxy error to ${upstreamPort}: ${error}`)
 					response.destroy()
+				},
+				proxyReq: ({socket}) => {
+					// An app or umbreld itself can answer an upload and close without
+					// reading the rest of it
+					if (socket) readBeforeFailedWrite(socket)
 				},
 			},
 		})
@@ -1148,9 +1185,20 @@ export default class LanIngress {
 		// loopback. Append the peer address instead, so the last entry is always ours.
 		if (includeForwardedFor) {
 			const forwardedFor = request.headers['x-forwarded-for']
-			const remoteAddress = request.socket.remoteAddress ?? ''
+			// A request that came through the app-auth mux was sent by the mux's client
+			const remoteAddress =
+				this.#muxClientAddresses.get(this.muxConnection(request.socket)) ?? request.socket.remoteAddress ?? ''
 			request.headers['x-forwarded-for'] = forwardedFor ? `${forwardedFor},${remoteAddress}` : remoteAddress
+			// Only umbreld is sent X-Forwarded-For. Show it that the address is ours.
+			request.headers[lanIngressHeader.name] = lanIngressHeader.value
 		}
+	}
+
+	// How a proxy behind the app-auth mux identifies one of the mux's loopback
+	// connections to it: by the address and port it came from and the port it
+	// arrived on.
+	private muxConnection(socket: net.Socket) {
+		return `${socket.remoteAddress}:${socket.remotePort}:${socket.localPort}`
 	}
 
 	private serverPort(server: net.Server | http.Server) {
@@ -1288,6 +1336,7 @@ export default class LanIngress {
 		])
 		this.#appAuthHttpProxyServer = undefined
 		this.#appAuthHttpsProxyServer = undefined
+		this.#muxClientAddresses.clear()
 		this.#appMuxServers.clear()
 	}
 

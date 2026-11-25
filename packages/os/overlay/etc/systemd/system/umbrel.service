@@ -16,6 +16,12 @@ TimeoutStopSec=15min
 # umbreld's trusted CAs are managed in one place with the rest of the OS.
 Environment=NODE_OPTIONS=--use-openssl-ca
 ExecStart=umbreld --data-directory=/home/umbrel/umbrel
+# umbreld gives each sandboxed command a cgroup of its own, to limit its memory,
+# CPU and number of processes. For that it is handed this unit's cgroup to
+# divide up, and runs in a subgroup itself, because a cgroup that limits its
+# children can hold no processes of its own.
+Delegate=yes
+DelegateSubgroup=main
 Restart=always
 # This prevents us hitting restart rate limits and ensures we keep restarting
 # indefinitely.

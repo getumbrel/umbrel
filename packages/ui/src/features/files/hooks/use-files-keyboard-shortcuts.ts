@@ -12,14 +12,14 @@ import type {FileSystemItem} from '@/features/files/types'
 import {canPerformFileOperation} from '@/features/files/utils/file-capabilities'
 import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {
-	getGridColumnCount,
-	getGridItemWidth,
-	getGridScrollerPadding,
-	GRID_ITEM_HEIGHT,
+	getGridItemHeight,
+	getListRowHeight,
 	GRID_ROW_GAP,
-	LISTING_FADE_BOTTOM_PX,
 	LISTING_FADE_TOP_PX,
+	readScrollerLayout,
 } from '@/features/files/utils/get-grid-column-count'
+import {isKeyForFocusedControl} from '@/features/files/utils/is-key-for-focused-control'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLinkToDialog} from '@/utils/dialog'
 import {isBeneathModal} from '@/utils/is-beneath-modal'
@@ -33,12 +33,17 @@ import {isBeneathModal} from '@/utils/is-beneath-modal'
 export function useFilesKeyboardShortcuts({
 	items,
 	hiddenRenamedPaths,
+	hasMore = false,
+	onLoadAll,
 	listingRef,
 	scrollAreaRef,
 	view,
 }: {
 	items: FileSystemItem[]
 	hiddenRenamedPaths?: string[]
+	// The listing holds more than `items`, which `onLoadAll` loads the rest of
+	hasMore?: boolean
+	onLoadAll?: () => Promise<boolean>
 	listingRef: React.RefObject<HTMLDivElement | null>
 	scrollAreaRef: React.RefObject<HTMLDivElement | null>
 	view: 'list' | 'icons'
@@ -58,10 +63,28 @@ export function useFilesKeyboardShortcuts({
 	const setViewerStepper = useFilesStore((s: FilesStore) => s.setViewerStepper)
 	const {pasteItemsFromClipboard, trashSelectedItems} = useFilesOperations()
 	const isMobile = useIsMobile()
+	const largerText = useLargerText()
 
 	// Search functionality
 	const searchBuffer = useRef('')
 	const searchTimer = useRef<NodeJS.Timeout | undefined>(undefined)
+	// A typed name that nothing loaded starts with, in a folder with more to
+	// load: the rest is on its way, and the name is looked for again when it
+	// lands, as long as nothing else has been selected meanwhile
+	const awaitedName = useRef<{name: string; selection: FileSystemItem[]} | null>(null)
+	const latestLoading = useRef({hasMore, onLoadAll})
+	latestLoading.current = {hasMore, onLoadAll}
+	useEffect(() => {
+		const awaited = awaitedName.current
+		if (!awaited) return
+		if (useFilesStore.getState().selectedItems !== awaited.selection) {
+			awaitedName.current = null
+			return
+		}
+		const match = items.find((item) => item.name.toLowerCase().startsWith(awaited.name))
+		if (match) setSelectedItems([match])
+		if (match || !hasMore) awaitedName.current = null
+	}, [items, hasMore, setSelectedItems])
 
 	// Use refs for values that change frequently so the useEffect doesn't need to re-register
 	const selectedItemsRef = useRef(selectedItems)
@@ -75,16 +98,14 @@ export function useFilesKeyboardShortcuts({
 	const hiddenRenamedPathsRef = useRef(hiddenRenamedPaths)
 	hiddenRenamedPathsRef.current = hiddenRenamedPaths
 
-	// Track the anchor index for Shift+Arrow range selection and the cursor (moving end)
-	const selectionAnchorRef = useRef<number>(-1)
-	const selectionCursorRef = useRef<number>(-1)
-
-	// Reset cursor/anchor when the item list changes (e.g. navigating to a new directory)
-	// so arrow keys start from the first item instead of a stale index.
-	useEffect(() => {
-		selectionAnchorRef.current = -1
-		selectionCursorRef.current = -1
-	}, [items])
+	// Where a Shift+Arrow range began (the anchor) and where its moving end is
+	// now (the cursor), as paths. Not indexes, and not reset when the items
+	// change: the listing hands over a new array whenever it renders, and rows
+	// come and go as pages load, while the range has to stay where it was put.
+	const selectionAnchorRef = useRef<string | null>(null)
+	const selectionCursorRef = useRef<string | null>(null)
+	// The selection the arrows last made, to tell it from one made some other way
+	const arrowSelectionRef = useRef<FileSystemItem[] | null>(null)
 
 	useEffect(() => {
 		// Guard to check if we're in a text input or contentEditable element
@@ -114,10 +135,7 @@ export function useFilesKeyboardShortcuts({
 			if (currentIndex === -1) return
 			let distance = 1
 			if ((step === 'up' || step === 'down') && viewRef.current === 'icons') {
-				const scrollEl = scrollAreaRef.current
-				distance = scrollEl
-					? getGridColumnCount(scrollEl.clientWidth - getGridScrollerPadding(isMobile), getGridItemWidth(isMobile))
-					: 1
+				distance = readScrollerLayout(scrollAreaRef.current).columnCount
 			}
 			const nextIndex =
 				step === 'previous' || step === 'up'
@@ -139,6 +157,27 @@ export function useFilesKeyboardShortcuts({
 			// opened over the listing too, where Cmd+C is for the text selected
 			// in it and Cmd+Backspace must not trash the files underneath
 			if (isBeneathModal(listingRef.current, e)) return
+
+			// Escape lets go of the selection, as a click on empty space does.
+			// Ahead of the check below: the sheet Files lives in turns every
+			// Escape down so that it doesn't close, which marks them all as
+			// handled. Not while a viewer is open over the listing (Escape is the
+			// viewer's), from a field (a name being typed gives up its edit) or
+			// from inside a popover (it closes that), nor in the middle of a drag
+			// (which Escape calls off). On a touch screen that is selecting, a
+			// second Escape leaves selecting, as Done does.
+			if (e.key === 'Escape' && viewerItemRef.current === null) {
+				if (isInInput(e) || e.metaKey || e.ctrlKey || e.altKey) return
+				if (e.target instanceof Element && e.target.closest('[data-radix-popper-content-wrapper]')) return
+				const {draggedItems, isSelectingOnMobile, setIsSelectingOnMobile} = useFilesStore.getState()
+				if (draggedItems.length > 0) return
+				if (selectedItemsRef.current.length > 0) setSelectedItems([])
+				else if (isSelectingOnMobile) setIsSelectingOnMobile(false)
+				return
+			}
+
+			// A key the focused control already handled (the Cloud tree's arrows) isn't the listing's
+			if (e.defaultPrevented) return
 
 			const mod = e.metaKey || e.ctrlKey
 
@@ -164,15 +203,23 @@ export function useFilesKeyboardShortcuts({
 					return
 				}
 
+				// While Select all is still loading the rest of a folder, the
+				// selection is short of what was asked for: copying, cutting or
+				// trashing it would act on a part as if it were the whole
+				const isSelectingAll = useFilesStore.getState().isSelectingAll
+
 				if (e.key === 'c') {
 					e.preventDefault()
-					copyItemsToClipboard()
+					if (!isSelectingAll) copyItemsToClipboard()
 					return
 				}
 
 				if (e.key === 'a') {
 					e.preventDefault()
-					setSelectedItems(items)
+					// The listing selects everything it holds, loaded or not (see Listing)
+					const selectAll = useFilesStore.getState().selectAllHandler
+					if (selectAll) selectAll()
+					else setSelectedItems(items)
 					return
 				}
 
@@ -183,7 +230,7 @@ export function useFilesKeyboardShortcuts({
 
 				if (e.key === 'x') {
 					e.preventDefault()
-					cutItemsToClipboard()
+					if (!isSelectingAll) cutItemsToClipboard()
 					return
 				}
 				if (e.key === 'v') {
@@ -197,7 +244,7 @@ export function useFilesKeyboardShortcuts({
 				if (e.key === 'Backspace') {
 					e.preventDefault()
 					const selected = selectedItemsRef.current
-					if (selected.length === 0) return
+					if (selected.length === 0 || isSelectingAll) return
 					const canTrash = canPerformFileOperation(selected[0], 'trash')
 					const canDelete = canPerformFileOperation(selected[0], 'delete')
 					if (canDelete) {
@@ -218,13 +265,14 @@ export function useFilesKeyboardShortcuts({
 				return
 			}
 
-			// Space bar to view selected item (allowed even in read-only)
-			if (e.key === ' ') {
+			// Space bar to view selected item (allowed even in read-only). In the
+			// middle of a name being typed, it is part of the name (see below).
+			if (e.key === ' ' && searchBuffer.current.length === 0) {
 				if (
 					isInInput(e) ||
+					isKeyForFocusedControl(e) ||
 					mod ||
 					e.altKey ||
-					searchBuffer.current.length > 0 ||
 					selectedItemsRef.current.length !== 1 ||
 					viewerItemRef.current !== null
 				)
@@ -264,32 +312,53 @@ export function useFilesKeyboardShortcuts({
 
 				const selected = selectedItemsRef.current
 
-				// Sync refs when selection was changed externally (e.g. mouse click).
-				// Without this, the anchor/cursor stay stale and Shift+Arrow produces wrong ranges.
-				if (selected.length === 1) {
-					const clickedIndex = items.findIndex((i) => i.path === selected[0].path)
-					if (clickedIndex !== -1 && clickedIndex !== selectionCursorRef.current) {
-						selectionAnchorRef.current = clickedIndex
-						selectionCursorRef.current = clickedIndex
+				const indexOf = (path: string | null) => (path === null ? -1 : items.findIndex((i) => i.path === path))
+
+				// A selection the arrows made keeps its anchor, however the listing
+				// has re-rendered since. One made some other way (a click, a
+				// marquee, a Shift+click, Select all) is where the arrows go on
+				// from: the item selected first anchors the range, and its moving
+				// end is the selected item furthest from that in the listing.
+				const byArrows = arrowSelectionRef.current
+				const madeByArrows =
+					byArrows !== null &&
+					(selected === byArrows ||
+						(selected.length === byArrows.length && selected.every((item, i) => item.path === byArrows[i].path)))
+				if (!madeByArrows) {
+					arrowSelectionRef.current = null
+					selectionAnchorRef.current = selected[0]?.path ?? null
+					selectionCursorRef.current = selected[0]?.path ?? null
+					if (selected.length > 1) {
+						const selectedPaths = new Set(selected.map((i) => i.path))
+						let first = -1
+						let last = -1
+						items.forEach((item, index) => {
+							if (!selectedPaths.has(item.path)) return
+							if (first === -1) first = index
+							last = index
+						})
+						const anchor = indexOf(selectionAnchorRef.current)
+						if (first !== -1 && anchor !== -1) {
+							selectionCursorRef.current = items[anchor - first > last - anchor ? first : last].path
+						}
 					}
 				}
 
-				// Find the current index — use the cursor ref if set (tracks the moving end during
-				// Shift+Arrow selection), otherwise fall back to the last selected item
-				let currentIndex = selectionCursorRef.current
-				if (currentIndex === -1 && selected.length > 0) {
-					const lastSelected = selected[selected.length - 1]
-					currentIndex = items.findIndex((i) => i.path === lastSelected.path)
-				}
+				// The moving end is where the next step is taken from
+				const currentIndex = indexOf(selectionCursorRef.current)
 
 				// If nothing is selected or the selected item was removed, select the first item.
 				// A rename the listing is deliberately holding back is neither: it is still
 				// the user's place in the folder, so arrow keys must not jump to the top.
+				const selectByArrow = (next: FileSystemItem[]) => {
+					arrowSelectionRef.current = next
+					setSelectedItems(next)
+				}
 				if (currentIndex === -1) {
 					if (selected.length === 1 && hiddenRenamedPathsRef.current?.includes(selected[0].path)) return
-					setSelectedItems([items[0]])
-					selectionAnchorRef.current = 0
-					selectionCursorRef.current = 0
+					selectByArrow([items[0]])
+					selectionAnchorRef.current = items[0].path
+					selectionCursorRef.current = items[0].path
 					scrollItemIntoView(0)
 					return
 				}
@@ -307,10 +376,7 @@ export function useFilesKeyboardShortcuts({
 					if (e.key === 'ArrowLeft') step = -1
 					else if (e.key === 'ArrowRight') step = 1
 					else {
-						const scrollEl = scrollAreaRef.current
-						const columnCount = scrollEl
-							? getGridColumnCount(scrollEl.clientWidth - getGridScrollerPadding(isMobile), getGridItemWidth(isMobile))
-							: 1
+						const {columnCount} = readScrollerLayout(scrollAreaRef.current)
 						if (e.key === 'ArrowUp') step = -columnCount
 						else step = columnCount
 					}
@@ -323,30 +389,34 @@ export function useFilesKeyboardShortcuts({
 				if (targetIndex === currentIndex) return
 
 				if (e.shiftKey) {
-					// Shift+Arrow: extend selection as a contiguous range from anchor to target
-					// Set anchor on first shift-select if not already set
-					if (selectionAnchorRef.current === -1) {
-						selectionAnchorRef.current = currentIndex
+					// Shift+Arrow: the selection is the contiguous range from the anchor
+					// to the target. An anchor that has left the listing gives way to
+					// where the step was taken from.
+					let anchor = indexOf(selectionAnchorRef.current)
+					if (anchor === -1) {
+						anchor = currentIndex
+						selectionAnchorRef.current = items[currentIndex].path
 					}
-					const anchor = selectionAnchorRef.current
 					const start = Math.min(anchor, targetIndex)
 					const end = Math.max(anchor, targetIndex)
-					setSelectedItems(items.slice(start, end + 1))
-					selectionCursorRef.current = targetIndex
+					selectByArrow(items.slice(start, end + 1))
 				} else {
-					// Regular arrow: select only the target item and reset anchor
-					setSelectedItems([items[targetIndex]])
-					selectionAnchorRef.current = targetIndex
-					selectionCursorRef.current = targetIndex
+					// Regular arrow: select only the target item, which anchors the next range
+					selectByArrow([items[targetIndex]])
+					selectionAnchorRef.current = items[targetIndex].path
 				}
+				selectionCursorRef.current = items[targetIndex].path
 
 				scrollItemIntoView(targetIndex)
 				return
 			}
 
-			// Search/selection stays available in read-only views.
+			// Typing a name selects the first item that starts with it. It stays
+			// available in read-only views. A space only ever continues a name
+			// (one that opens a name is the quick look's, above), and not when it
+			// is pressing a focused button.
 			if (isInInput(e) || mod || e.altKey) return
-			if (e.key === ' ' && searchBuffer.current.length === 0) return
+			if (e.key === ' ' && isKeyForFocusedControl(e)) return
 
 			// "/" is handled by SearchInput for focus
 			if (e.key === '/') return
@@ -363,8 +433,13 @@ export function useFilesKeyboardShortcuts({
 				}, 700)
 
 				const matchingItem = items.find((item) => item.name.toLowerCase().startsWith(searchBuffer.current))
+				awaitedName.current = null
 				if (matchingItem) {
 					setSelectedItems([matchingItem])
+				} else if (latestLoading.current.hasMore && latestLoading.current.onLoadAll) {
+					// It may be further down than what is loaded: load the rest and look again (see above)
+					awaitedName.current = {name: searchBuffer.current, selection: selectedItemsRef.current}
+					void latestLoading.current.onLoadAll()
 				}
 			}
 		}
@@ -375,31 +450,28 @@ export function useFilesKeyboardShortcuts({
 			if (!scrollEl) return
 
 			const currentView = viewRef.current
+			const {columnCount, bottomInset} = readScrollerLayout(scrollEl)
 			let itemTop: number
 			let itemBottom: number
 
 			if (currentView === 'list') {
-				const itemHeight = isMobile ? 50 : 40
+				const itemHeight = getListRowHeight(isMobile, largerText)
 				itemTop = index * itemHeight
 				itemBottom = itemTop + itemHeight
 			} else {
-				const columnCount = getGridColumnCount(
-					scrollEl.clientWidth - getGridScrollerPadding(isMobile),
-					getGridItemWidth(isMobile),
-				)
 				const row = Math.floor(index / columnCount)
-				const rowHeight = GRID_ITEM_HEIGHT + GRID_ROW_GAP
+				const rowHeight = getGridItemHeight(largerText) + GRID_ROW_GAP
 				itemTop = row * rowHeight
 				itemBottom = itemTop + rowHeight
 			}
 
 			const {scrollTop, clientHeight} = scrollEl
 
-			// Pad by the edge fades so the item lands clearly visible, not under them
+			// Pad by the edge fades (and the dock over the bottom) so the item lands clearly visible, not under them
 			if (itemTop < scrollTop + LISTING_FADE_TOP_PX) {
 				scrollEl.scrollTop = Math.max(0, itemTop - LISTING_FADE_TOP_PX)
-			} else if (itemBottom > scrollTop + clientHeight - LISTING_FADE_BOTTOM_PX) {
-				scrollEl.scrollTop = itemBottom - clientHeight + LISTING_FADE_BOTTOM_PX
+			} else if (itemBottom > scrollTop + clientHeight - bottomInset) {
+				scrollEl.scrollTop = itemBottom - clientHeight + bottomInset
 			}
 		}
 
@@ -413,6 +485,7 @@ export function useFilesKeyboardShortcuts({
 		currentPath,
 		items,
 		isMobile,
+		largerText,
 		copyItemsToClipboard,
 		cutItemsToClipboard,
 		setSelectedItems,

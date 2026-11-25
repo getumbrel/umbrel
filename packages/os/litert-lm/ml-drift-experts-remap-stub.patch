@@ -1,0 +1,76 @@
+diff -ruN a/ml_drift/common/kernels/google/custom/BUILD b/ml_drift/common/kernels/google/custom/BUILD
+--- a/ml_drift/common/kernels/google/custom/BUILD	1970-01-01 00:00:00
++++ b/ml_drift/common/kernels/google/custom/BUILD	1970-01-01 00:00:00
+@@ -0,0 +1,18 @@
++# Stub for a Google-internal ML Drift kernel package that LiteRT's
++# ml_drift_delegate/delegate/composite:experts_remap_builder references but that
++# is not published in the open-source ml-drift repository. Only used for
++# Mixture-of-Experts models; stops with a clear message if ever reached.
++load("@rules_cc//cc:defs.bzl", "cc_library")
++
++package(default_visibility = ["//visibility:public"])
++
++cc_library(
++    name = "experts_remap",
++    srcs = ["experts_remap.cc"],
++    hdrs = ["experts_remap.h"],
++    deps = [
++        "//ml_drift/common/task:gpu_operation",
++        "//ml_drift/common/task:tensor_desc",
++        "@com_google_absl//absl/log:absl_log",
++    ],
++)
+diff -ruN a/ml_drift/common/kernels/google/custom/experts_remap.cc b/ml_drift/common/kernels/google/custom/experts_remap.cc
+--- a/ml_drift/common/kernels/google/custom/experts_remap.cc	1970-01-01 00:00:00
++++ b/ml_drift/common/kernels/google/custom/experts_remap.cc	1970-01-01 00:00:00
+@@ -0,0 +1,23 @@
++#include "ml_drift/common/kernels/google/custom/experts_remap.h"
++
++#include "absl/log/absl_log.h"
++
++namespace ml_drift {
++namespace {
++[[noreturn]] void Unavailable() {
++  ABSL_LOG(FATAL) << "ML Drift MoE experts-remap kernels are not available in "
++                     "umbrelOS's build of LiteRT-LM.";
++}
++}  // namespace
++std::unique_ptr<GPUOperation> CreateExpertsRemapOp(const TensorDescriptor&,
++                                                   const TensorDescriptor&) { Unavailable(); }
++std::unique_ptr<GPUOperation> CreateOffsetsOp() { Unavailable(); }
++std::unique_ptr<GPUOperation> CreateLinearizeMapOp(const TensorDescriptor&,
++                                                   const TensorDescriptor&) { Unavailable(); }
++std::unique_ptr<GPUOperation> CreateExpertsRemapToOp(const TensorDescriptor&,
++                                                     const TensorDescriptor&,
++                                                     const TensorDescriptor&) { Unavailable(); }
++std::unique_ptr<GPUOperation> CreateExpertsRemapFromOp(const TensorDescriptor&,
++                                                       const TensorDescriptor&,
++                                                       const TensorDescriptor&) { Unavailable(); }
++}  // namespace ml_drift
+diff -ruN a/ml_drift/common/kernels/google/custom/experts_remap.h b/ml_drift/common/kernels/google/custom/experts_remap.h
+--- a/ml_drift/common/kernels/google/custom/experts_remap.h	1970-01-01 00:00:00
++++ b/ml_drift/common/kernels/google/custom/experts_remap.h	1970-01-01 00:00:00
+@@ -0,0 +1,23 @@
++#ifndef ML_DRIFT_COMMON_KERNELS_GOOGLE_CUSTOM_EXPERTS_REMAP_H_
++#define ML_DRIFT_COMMON_KERNELS_GOOGLE_CUSTOM_EXPERTS_REMAP_H_
++// OSS stub: the real MoE expert-remap kernels are not open source.
++#include <memory>
++
++#include "ml_drift/common/task/gpu_operation.h"
++#include "ml_drift/common/task/tensor_desc.h"
++
++namespace ml_drift {
++std::unique_ptr<GPUOperation> CreateExpertsRemapOp(const TensorDescriptor& indices,
++                                                   const TensorDescriptor& dst);
++std::unique_ptr<GPUOperation> CreateOffsetsOp();
++std::unique_ptr<GPUOperation> CreateLinearizeMapOp(const TensorDescriptor& src,
++                                                   const TensorDescriptor& dst);
++std::unique_ptr<GPUOperation> CreateExpertsRemapToOp(const TensorDescriptor& src,
++                                                     const TensorDescriptor& remap,
++                                                     const TensorDescriptor& dst);
++std::unique_ptr<GPUOperation> CreateExpertsRemapFromOp(const TensorDescriptor& src,
++                                                       const TensorDescriptor& remap,
++                                                       const TensorDescriptor& dst);
++}  // namespace ml_drift
++
++#endif  // ML_DRIFT_COMMON_KERNELS_GOOGLE_CUSTOM_EXPERTS_REMAP_H_

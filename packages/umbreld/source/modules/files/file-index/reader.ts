@@ -1,7 +1,10 @@
+import {existsSync} from 'node:fs'
+
 import BetterSqlite3 from 'better-sqlite3'
 
 import PhotosRepository from '../../photos/repository.ts'
 import type {PhotoFilter} from '../../photos/types.ts'
+import type {SearchRead} from '../../search/types.ts'
 import {fileIndexQueries} from './queries.ts'
 import type {ReadLane, SqlRead} from './read-database.ts'
 
@@ -9,6 +12,7 @@ export type PhotosReadMethod =
 	| 'summary'
 	| 'indexingState'
 	| 'listItems'
+	| 'search'
 	| 'mapPoints'
 	| 'getItem'
 	| 'neighbors'
@@ -17,6 +21,8 @@ export type PhotosReadMethod =
 	| 'resolveLiveCompanion'
 	| 'listAlbums'
 	| 'listSources'
+	| 'listPeople'
+	| 'listPersonSuggestions'
 
 type RepositoryReadMethod = PhotosReadMethod | 'accountIdsForContent' | 'accountIdsForEntry'
 type ReadMethods = Pick<PhotosRepository, RepositoryReadMethod> &
@@ -27,7 +33,7 @@ export type FileIndexReadMethod = keyof ReadMethods
 export type FileIndexReadArgs<M extends FileIndexReadMethod> =
 	Parameters<ReadMethods[M]> extends [unknown, ...infer Args] ? Args : never
 export type FileIndexReadResult<M extends FileIndexReadMethod> = ReturnType<ReadMethods[M]>
-export type FileIndexReaderPaths = {databasePath: string; umbrelDatabasePath: string}
+export type FileIndexReaderPaths = {databasePath: string; umbrelDatabasePath: string; embeddingsDatabasePath?: string}
 
 export function isPhotosRead(method: FileIndexReadMethod): method is PhotosReadMethod {
 	return (
@@ -43,8 +49,13 @@ export function isPhotosRead(method: FileIndexReadMethod): method is PhotosReadM
 export function readLane(method: FileIndexReadMethod, args: unknown[]): ReadLane {
 	// Album listing aggregates memberships and selects covers across every album.
 	if (['searchCandidates', 'summary', 'listSources', 'listAlbums'].includes(method)) return 'bulk'
-	// The map reads every located item a filter selects.
+	// People are counted, and their faces averaged, across the whole library
+	if (method === 'listPeople' || method === 'listPersonSuggestions') return 'bulk'
+	// The map reads every located item a filter selects, and a search reads
+	// everything the models have made. Asking how far the models have got, or
+	// what they found in one file, is quick.
 	if (method === 'mapPoints') return 'bulk'
+	if (method === 'search') return (args[1] as SearchRead).type === 'query' ? 'bulk' : 'interactive'
 	// Sizes are stored lookups, independent of subtree size. Keep unusually
 	// large batches off the reserved reader, as with bulk Photos resolution.
 	if (method === 'directorySizes' && (args[0] as unknown[]).length > 200) return 'bulk'
@@ -66,11 +77,14 @@ export default class FileIndexReader {
 	#database: BetterSqlite3.Database
 	#repository = new PhotosRepository({readonly: true})
 	#umbrelDatabasePath: string
+	#embeddingsDatabasePath?: string
 	#attached = false
+	#embeddingsAttached = false
 	#statements = new Map<string, BetterSqlite3.Statement>()
 
-	constructor({databasePath, umbrelDatabasePath}: FileIndexReaderPaths) {
+	constructor({databasePath, umbrelDatabasePath, embeddingsDatabasePath}: FileIndexReaderPaths) {
 		this.#umbrelDatabasePath = umbrelDatabasePath
+		this.#embeddingsDatabasePath = embeddingsDatabasePath
 		this.#database = new BetterSqlite3(databasePath, {readonly: true, fileMustExist: true, timeout: 5000})
 		try {
 			this.#database.pragma('query_only = ON')
@@ -86,6 +100,17 @@ export default class FileIndexReader {
 			// ATTACH inherits SQLITE_OPEN_READONLY from the main connection.
 			this.#database.prepare('ATTACH DATABASE ? AS umbrel').run(this.#umbrelDatabasePath)
 			this.#attached = true
+		}
+		// Only there where the model is (see ../embeddings-store.ts)
+		const embeddings = this.#embeddingsDatabasePath
+		if (photos && embeddings && !this.#embeddingsAttached && existsSync(embeddings)) {
+			try {
+				this.#database.prepare('ATTACH DATABASE ? AS embeddings').run(embeddings)
+				this.#embeddingsAttached = true
+			} catch {
+				// Photos works without what the models have read: there are only
+				// no people in it, and nothing is found by what it shows
+			}
 		}
 		this.#database.exec('BEGIN')
 		try {

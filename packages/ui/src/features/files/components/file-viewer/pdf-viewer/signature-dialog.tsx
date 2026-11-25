@@ -31,9 +31,9 @@ export function SignatureDialog({onAdd, onCancel}: {onAdd: (drawing: Drawing) =>
 					<DialogDescription>{t('files-pdf.signature-detail')}</DialogDescription>
 				</DialogHeader>
 				<div className='relative h-48 overflow-hidden rounded-12 bg-white shadow-[inset_0_0_0_1px_rgb(0_0_0/0.06)]'>
-					<div className='pointer-events-none absolute inset-x-8 bottom-12 border-b border-dashed border-black/20' />
+					<div className='pointer-events-none absolute inset-x-8 bottom-12 border-b border-dashed border-black/20 contrast-more:border-black/50' />
 					{strokes.length === 0 && (
-						<p className='pointer-events-none absolute inset-x-0 bottom-14 text-center text-13 text-black/35'>
+						<p className='pointer-events-none absolute inset-x-0 bottom-14 text-center text-13 text-black/35 contrast-more:text-black/70'>
 							{t('files-pdf.signature-placeholder')}
 						</p>
 					)}

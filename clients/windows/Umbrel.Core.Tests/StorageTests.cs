@@ -107,4 +107,20 @@ public class StorageTests : IDisposable
 		Assert.Equal(SecretStore.LocalHttpsCaStoreResult.Conflicts, SecretStore.StoreLocalHttpsCaIfAbsent([9], "dev"));
 		Assert.Equal(SecretStore.LocalHttpsCaStoreResult.Stored, SecretStore.ReplaceLocalHttpsCa([9], "dev"));
 	}
+
+	[Fact]
+	public void AFailedSaveLeavesNoTemporaryFileOnWindows()
+	{
+		if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return; // DPAPI is Windows-only.
+		SecretStore.Directory = Path.Combine(_directory, "secrets");
+		var session = new Umbreld.Session("dev", "0", "access", 1, "device");
+		Assert.True(SecretStore.SetSession(session, "dev"));
+		var stored = Assert.Single(Directory.GetFiles(SecretStore.Directory));
+		// Another program has the file open without sharing deletes, so it can't be replaced.
+		using (new FileStream(stored, FileMode.Open, FileAccess.Read, FileShare.Read))
+		{
+			Assert.False(SecretStore.SetSession(session with { AccessToken = "new" }, "dev"));
+		}
+		Assert.Equal([stored], Directory.GetFiles(SecretStore.Directory));
+	}
 }

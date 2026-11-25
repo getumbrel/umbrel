@@ -142,6 +142,10 @@ public static partial class Umbreld
 		/// <summary>Access tokens rotate, but these fields identify one server-issued login.</summary>
 		public bool BelongsToSameLogin(Session other) =>
 			DeviceId == other.DeviceId && AccountId == other.AccountId && DeviceToken == other.DeviceToken;
+
+		// A record prints every field by default, which would put both tokens into any log
+		// line or exception message built from a session.
+		public override string ToString() => $"Session {{ DeviceId = {DeviceId}, AccountId = {AccountId} }}";
 	}
 
 	public sealed record DiscoveryInfo(string Id, string Device, bool Onboarded);
@@ -742,9 +746,12 @@ public static partial class Umbreld
 
 	/// <summary>
 	/// DNS-SD is an unauthenticated source of local connection candidates: any LAN peer
-	/// can advertise any target. Accept only literal IPv4 addresses and .local names, and
-	/// never let it introduce a Tailscale-range endpoint; those come only from the
-	/// authenticated system.getIpAddresses response after sign-in.
+	/// can advertise any target and any addresses. Accept only .local names and literal
+	/// addresses in the ranges a local network uses, so a host that discovery adds only
+	/// works for someone on the same network. That matters because a saved host is also
+	/// handed to the browser and to share mounts, where the pin doesn't apply. A
+	/// Tailscale-range endpoint is refused too; those come only from the authenticated
+	/// system.getIpAddresses response after sign-in.
 	/// </summary>
 	internal static Candidate? LocalDiscoveryCandidate(Candidate candidate)
 	{
@@ -753,7 +760,8 @@ public static partial class Umbreld
 	}
 
 	private static bool IsLocalDiscoveryHost(string host) =>
-		SavedDevice.IsValidLocalEndpointHost(host) && !SavedDevice.IsTailscaleAddress(host);
+		SavedDevice.IsBonjourHostname(host)
+		|| (SavedDevice.IsSupportedManualIPv4Address(host) && !SavedDevice.IsTailscaleAddress(host));
 
 	/// <summary>
 	/// Probe a discovery snapshot concurrently and collapse duplicate advertisements of the

@@ -29,7 +29,7 @@ test('reserves the top-level Trash name in member homes', async () => {
 		getAllowedOperations: vi.fn(async () => ['rename', 'writable']),
 		isCloudPathOverlap: vi.fn(() => false),
 		chownSystemPath: vi.fn(async () => {}),
-		fileIndex: {reconcilePath: vi.fn(async () => {})},
+		fileIndex: {reconcileCreatedDirectory: vi.fn(async () => {})},
 	})
 
 	await expect(files.createDirectory('/Users/alice/Trash', 'alice')).rejects.toThrow('[operation-not-allowed]')

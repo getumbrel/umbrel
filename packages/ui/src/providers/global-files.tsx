@@ -2,6 +2,7 @@ import React, {createContext, useContext, useState} from 'react'
 
 import {transfers} from '@/features/files/transfers/transfers'
 import {useTransfersEffects} from '@/features/files/transfers/use-transfers'
+import type {SearchSnippetText} from '@/features/search/types'
 import type {RouterOutput} from '@/trpc/trpc'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -9,6 +10,10 @@ import {trpcReact} from '@/trpc/trpc'
 interface AudioState {
 	path: string | null
 	name: string | null
+	// Where playback begins, when not from the top (a search result's moment)
+	startSeconds?: number
+	// The words a search found the recording by, marked where they are said
+	matched?: SearchSnippetText
 }
 
 // ---------------- Long-running filesystem operations ----------------

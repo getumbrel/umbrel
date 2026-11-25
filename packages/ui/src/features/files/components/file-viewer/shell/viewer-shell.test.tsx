@@ -310,6 +310,18 @@ describe('ViewerShell saving', () => {
 		expect(useFilesStore.getState().viewerItem).toBeNull()
 	})
 
+	test('an Escape that gives up text being composed is the input method’s: the field keeps the keyboard, and the viewer stays', async () => {
+		await mount()
+		const field = document.querySelector<HTMLInputElement>('input[aria-label="field"]')!
+		await act(async () => field.focus())
+		// As browsers send it: while composing, or (Safari) once the composition has ended, still as the input method's
+		await key({key: 'Escape', isComposing: true})
+		await key({key: 'Escape', keyCode: 229})
+		await act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
+		expect(document.activeElement).toBe(field)
+		expect(useFilesStore.getState().viewerItem).not.toBeNull()
+	})
+
 	test('Escape in a text field leaves the field first, then closes the viewer', async () => {
 		await mount()
 		const field = document.querySelector<HTMLInputElement>('input[aria-label="field"]')!

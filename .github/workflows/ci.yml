@@ -2,6 +2,17 @@ name: CI
 
 on: push
 
+# The umbrelOS image builds share Docker layers through BuildKit's GitHub Actions
+# cache. Only the default branch writes the umbrelos-<variant> scopes. Every other
+# ref (branches, tags, master) writes umbrelos-<variant>-branch instead and reads
+# that along with the default branch's umbrelos-<variant>, so it starts from the
+# default branch's layers and then reuses its own. They can't share a name: a ref
+# reads a scope's index from itself and from the default branch, and when both
+# exist BuildKit fails to match the ref's own records anywhere its umbrelos stage
+# differs from the default branch's, so it rebuilds that whole stage every run.
+env:
+  UMBRELOS_CACHE_SCOPE_SUFFIX: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && '-branch' || '' }}
+
 jobs:
   # Detect if only UI files changed to skip heavy tests
   detect-changes:
@@ -12,7 +23,9 @@ jobs:
       ui-changed: ${{ steps.check.outputs.ui-changed }}
       apple-changed: ${{ steps.check.outputs.apple-changed }}
       android-changed: ${{ steps.check.outputs.android-changed }}
+      wallpapers-changed: ${{ steps.check.outputs.wallpapers-changed }}
       run-pi-tests: ${{ steps.pi.outputs.run-pi-tests }}
+      run-raid-tests: ${{ steps.raid.outputs.run-raid-tests }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -24,11 +37,13 @@ jobs:
           DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
 
           # On default branch, always run all tests
-          if [[ "${{ github.ref }}" == "refs/heads/${DEFAULT_BRANCH}" || "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$GITHUB_REF" == "refs/heads/${DEFAULT_BRANCH}" || "$GITHUB_REF" == refs/tags/* ]]; then
             echo "ui-only=false" >> $GITHUB_OUTPUT
             echo "ui-changed=true" >> $GITHUB_OUTPUT
             echo "apple-changed=true" >> $GITHUB_OUTPUT
             echo "android-changed=true" >> $GITHUB_OUTPUT
+            echo "raid-changed=true" >> $GITHUB_OUTPUT
+            echo "wallpapers-changed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -37,8 +52,8 @@ jobs:
           # branches against their merge base with the default branch. If the
           # workflow is later run on pull_request events, use the PR base/head.
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
-            DIFF_BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+            git fetch origin "${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+            DIFF_BASE=$(git merge-base "origin/${GITHUB_BASE_REF}" HEAD)
             DIFF_HEAD=HEAD
           else
             git fetch origin "${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
@@ -54,6 +69,8 @@ jobs:
           UI_CHANGED="false"
           APPLE_CHANGED="false"
           ANDROID_CHANGED="false"
+          RAID_CHANGED="false"
+          WALLPAPERS_CHANGED="false"
           while IFS= read -r file; do
             if [[ -n "$file" && ! "$file" =~ ^packages/ui/ ]]; then
               UI_ONLY="false"
@@ -76,10 +93,26 @@ jobs:
                 ANDROID_CHANGED="true"
                 ;;
             esac
+
+            # Everything the RAID VM tests run on or through: the RAID code and
+            # its tests, the OS image, and the VM test harness.
+            case "$file" in
+              packages/umbreld/source/modules/hardware/raid*|packages/umbreld/source/modules/test-utilities/*|packages/os/*|.github/workflows/ci.yml)
+                RAID_CHANGED="true"
+                ;;
+            esac
+
+            # The wallpaper files, which umbreld's unit tests check the hashes against
+            case "$file" in
+              packages/ui/public/assets/wallpapers/*)
+                WALLPAPERS_CHANGED="true"
+                ;;
+            esac
           done <<< "$CHANGED_FILES"
 
           if [[ -z "$CHANGED_FILES" ]]; then
             UI_ONLY="false"
+            RAID_CHANGED="true"
           fi
 
           echo "Changed files:"
@@ -88,10 +121,14 @@ jobs:
           echo "UI changed: $UI_CHANGED"
           echo "Apple changed: $APPLE_CHANGED"
           echo "Android changed: $ANDROID_CHANGED"
+          echo "RAID changed: $RAID_CHANGED"
+          echo "Wallpapers changed: $WALLPAPERS_CHANGED"
           echo "ui-only=$UI_ONLY" >> $GITHUB_OUTPUT
           echo "ui-changed=$UI_CHANGED" >> $GITHUB_OUTPUT
           echo "apple-changed=$APPLE_CHANGED" >> $GITHUB_OUTPUT
           echo "android-changed=$ANDROID_CHANGED" >> $GITHUB_OUTPUT
+          echo "raid-changed=$RAID_CHANGED" >> $GITHUB_OUTPUT
+          echo "wallpapers-changed=$WALLPAPERS_CHANGED" >> $GITHUB_OUTPUT
       # The Pi VM tests boot the production Pi image in an emulated Raspberry
       # Pi 4. Emulation is TCG-only (no hardware acceleration exists for the
       # raspi4b machine) so they're the slowest jobs in CI and only run on
@@ -111,16 +148,43 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.ref }}" == "refs/heads/master" || "${{ github.ref }}" == "refs/heads/staging" || "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$GITHUB_REF" == "refs/heads/master" || "$GITHUB_REF" == "refs/heads/staging" || "$GITHUB_REF" == refs/tags/* ]]; then
             echo "run-pi-tests=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          labels=$(gh pr list --repo "${{ github.repository }}" --head "${{ github.ref_name }}" --state open --json labels --jq '.[].labels[].name' || true)
+          labels=$(gh pr list --repo "${{ github.repository }}" --head "$GITHUB_REF_NAME" --state open --json labels --jq '.[].labels[].name' || true)
           if grep --quiet --line-regexp 'pi-tests' <<< "$labels"; then
             echo "run-pi-tests=true" >> $GITHUB_OUTPUT
           else
             echo "run-pi-tests=false" >> $GITHUB_OUTPUT
+          fi
+      # The RAID VM tests (raid-*.vm.test.ts) are over a third of the amd64 VM
+      # matrix and its slowest jobs, and nearly all of that time is spent
+      # booting VMs and waiting on ZFS. They only run on master/staging/tags,
+      # on branches that change something they depend on (see "RAID changed"
+      # above), or on branches whose open PR has the "raid-tests" label.
+      #
+      # Add the "raid-tests" label to PRs that can affect RAID from outside
+      # those paths, such as changes to reboot or startup handling. As with
+      # "pi-tests", after labelling an already-pushed PR use "Re-run all jobs".
+      - id: raid
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAID_CHANGED: ${{ steps.check.outputs.raid-changed }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" == "refs/heads/master" || "$GITHUB_REF" == "refs/heads/staging" || "$GITHUB_REF" == refs/tags/* || "$RAID_CHANGED" == "true" ]]; then
+            echo "run-raid-tests=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          labels=$(gh pr list --repo "${{ github.repository }}" --head "$GITHUB_REF_NAME" --state open --json labels --jq '.[].labels[].name' || true)
+          if grep --quiet --line-regexp 'raid-tests' <<< "$labels"; then
+            echo "run-raid-tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "run-raid-tests=false" >> $GITHUB_OUTPUT
           fi
 
   # These jobs simply serve as architecture native cache steps to load up the Docker cache for umbrelOS.
@@ -141,7 +205,7 @@ jobs:
       - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build amd64 Docker image
         working-directory: packages/os
-        run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
+        run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-amd64${UMBRELOS_CACHE_SCOPE_SUFFIX} ${UMBRELOS_CACHE_SCOPE_SUFFIX:+--cache-from type=gha,scope=umbrelos-amd64} --cache-to type=gha,mode=max,scope=umbrelos-amd64${UMBRELOS_CACHE_SCOPE_SUFFIX} ../../
   umbrelos-arm64-cache:
     name: Build umbrelOS arm64
     needs: detect-changes
@@ -158,7 +222,7 @@ jobs:
       - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build arm64 Docker image
         working-directory: packages/os
-        run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
+        run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-arm64${UMBRELOS_CACHE_SCOPE_SUFFIX} ${UMBRELOS_CACHE_SCOPE_SUFFIX:+--cache-from type=gha,scope=umbrelos-arm64} --cache-to type=gha,mode=max,scope=umbrelos-arm64${UMBRELOS_CACHE_SCOPE_SUFFIX} ../../
   umbrelos-pi-cache:
     name: Build umbrelOS Pi
     needs: detect-changes
@@ -175,7 +239,7 @@ jobs:
       - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Build Pi Docker image
         working-directory: packages/os
-        run: docker buildx build --platform linux/arm64 --build-arg BASE_VARIANT=-pi --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-pi --cache-to type=gha,mode=max,scope=umbrelos-pi ../../
+        run: docker buildx build --platform linux/arm64 --build-arg BASE_VARIANT=-pi --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-pi${UMBRELOS_CACHE_SCOPE_SUFFIX} ${UMBRELOS_CACHE_SCOPE_SUFFIX:+--cache-from type=gha,scope=umbrelos-pi} --cache-to type=gha,mode=max,scope=umbrelos-pi${UMBRELOS_CACHE_SCOPE_SUFFIX} ../../
 
   # Check the software installed in each umbrelOS image against the committed
   # lists in packages/os/package-versions/. This runs alongside the VM tests, so
@@ -204,7 +268,7 @@ jobs:
       - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - name: Compare package versions
         working-directory: packages/os
-        run: docker buildx build ${{ matrix.build-args }} --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-${{ matrix.variant }} --load --tag umbrelos ../../ && docker run --rm --entrypoint bash --volume "$PWD/package-versions.sh:/package-versions.sh:ro" umbrelos /package-versions.sh | diff --unified package-versions/${{ matrix.variant }}.txt -
+        run: docker buildx build ${{ matrix.build-args }} --file umbrelos.Dockerfile --target umbrelos --cache-from type=gha,scope=umbrelos-${{ matrix.variant }}${UMBRELOS_CACHE_SCOPE_SUFFIX} ${UMBRELOS_CACHE_SCOPE_SUFFIX:+--cache-from type=gha,scope=umbrelos-${{ matrix.variant }}} --load --tag umbrelos ../../ && docker run --rm --entrypoint bash --volume "$PWD/package-versions.sh:/package-versions.sh:ro" umbrelos /package-versions.sh | diff --unified package-versions/${{ matrix.variant }}.txt -
 
   # Build the image for the VM tests
   # We run this in a seperate step so we only build it once and reuse for all VM runners to reduce billed minutes.
@@ -385,9 +449,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: find
+        env:
+          RUN_RAID_TESTS: ${{ needs.detect-changes.outputs.run-raid-tests }}
         run: |
+          # Leave the RAID tests out of the matrix when detect-changes says
+          # this branch doesn't need them
+          exclude_raid=()
+          if [[ "$RUN_RAID_TESTS" == "false" ]]; then
+            exclude_raid=(! -name "raid-*.vm.test.ts")
+          fi
+
           tests=$(
-            find packages/umbreld/source -name "*.vm.test.ts" ! -name "*.pi.vm.test.ts" |
+            find packages/umbreld/source -name "*.vm.test.ts" ! -name "*.pi.vm.test.ts" "${exclude_raid[@]}" |
               while IFS= read -r test_path; do
                 relative_path="${test_path#packages/umbreld/}"
                 name="$(basename "${test_path}" .vm.test.ts)"
@@ -399,12 +472,17 @@ jobs:
                 if grep --quiet '^// @vm-requires-update-bundle$' "${test_path}"; then
                   requires_update_bundle=true
                 fi
+                requires_models=false
+                if grep --quiet '^// @vm-requires-models$' "${test_path}"; then
+                  requires_models=true
+                fi
                 jq --null-input --compact-output \
                   --arg path "${relative_path}" \
                   --arg name "${name}" \
                   --argjson requiresPlaywright "${requires_playwright}" \
                   --argjson requiresUpdateBundle "${requires_update_bundle}" \
-                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright, requiresUpdateBundle: $requiresUpdateBundle}'
+                  --argjson requiresModels "${requires_models}" \
+                  '{path: $path, name: $name, requiresPlaywright: $requiresPlaywright, requiresUpdateBundle: $requiresUpdateBundle, requiresModels: $requiresModels}'
               done |
               jq --slurp --compact-output
           )
@@ -481,6 +559,20 @@ jobs:
           path: packages/os/build/umbrelos-amd64.update*
           key: ${{ needs.umbrelos-amd64-vm-image-build.outputs.update-bundle-key }}
           fail-on-cache-miss: true
+      # The models umbrelOS fetches once it is running (see models.ts in
+      # umbreld), for the tests that have a VM fetch them: from this runner,
+      # never the internet. They are downloaded from where their authors
+      # publish them once for each list of models, and cached after that.
+      - name: Restore models from cache
+        id: restore-models
+        if: matrix.test.requiresModels
+        uses: actions/cache@v5
+        with:
+          path: packages/os/build/models
+          key: models-${{ hashFiles('packages/umbreld/source/modules/files/models.json') }}
+      - name: Download models
+        if: matrix.test.requiresModels && steps.restore-models.outputs.cache-hit != 'true'
+        run: scripts/download-models
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
       # Retried once: a dropped registry connection (ECONNRESET) or a race in
@@ -653,6 +745,11 @@ jobs:
           # overwhelms the cache backend and intermittently fails the build with
           # 429/504/not_found errors, which surfaced as flaky integration tests.
           UMBREL_DEV_SKIP_CACHE_EXPORT: 'true'
+      # umbreld runs media tools in a bubblewrap sandbox, which sets itself up
+      # inside a user namespace created by an unprivileged user. Ubuntu's
+      # AppArmor denies capabilities in those namespaces by default, and the dev
+      # container shares the runner's kernel. umbrelOS has no such restriction.
+      - run: sudo sysctl --write kernel.apparmor_restrict_unprivileged_userns=0
       - run: npm run dev start
       - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
       # Retried once for the same reason as the VM tests. Each run creates its own
@@ -671,7 +768,7 @@ jobs:
   umbreld:
     name: umbreld checks
     needs: detect-changes
-    if: needs.detect-changes.outputs.ui-only != 'true'
+    if: needs.detect-changes.outputs.ui-only != 'true' || needs.detect-changes.outputs.wallpapers-changed == 'true'
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -700,13 +797,16 @@ jobs:
           }
       - run: sudo env "PATH=$PATH" npm run ${{ matrix.task }}
 
-  # Run the shared Apple client tests and compile both native apps. The macOS 26
-  # runner includes the iOS 26.5 SDK required by the generated iOS project.
+  # Run the shared Apple client tests and compile both native apps with Xcode 27,
+  # the version that builds the App Store releases. iPhone Duo support needs its
+  # iOS 27.1 SDK.
   apple:
     name: Apple client checks
     needs: detect-changes
     if: needs.detect-changes.outputs.apple-changed == 'true'
-    runs-on: macos-26
+    runs-on: xcode-27
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -750,6 +850,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.android-changed == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: clients/android
@@ -831,10 +933,19 @@ jobs:
       - name: Expose GitHub Actions runtime for Docker cache
         uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
       - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      # The tag name goes into image names, file paths and the release manifest, so only release plain names.
+      # The steps below read it through the shell, never through an expression, which would paste it into
+      # the script as code.
+      - name: Check tag name
+        run: |
+          if [[ ! "${VERSION}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "A release tag can only contain letters, digits, '.', '-' and '_'" >&2
+            exit 1
+          fi
       # We need this to namespace Docker images on forks
-      - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
+      - run: echo "VERSION_IS_SEMVER=$(if [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
       - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
-      - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
+      - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${VERSION}" >> $GITHUB_ENV
       # create-release-manifest.sh refuses a version tag without its release notes, so fail before the build
       # rather than after it
       - name: Check release notes
@@ -846,9 +957,9 @@ jobs:
       # timestamps and no provenance attestation, which would otherwise make
       # the digest differ on every build.
       - name: Build and push Docker image
-        run: SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true DOCKER_IMAGE_OUTPUT="type=image,name=ghcr.io/${{ env.TAG }},push=true" ./build.sh
+        run: SKIP_ROOTS=true SKIP_RUGIX_ARTIFACTS=true DOCKER_IMAGE_OUTPUT="type=image,name=ghcr.io/${TAG},push=true" ./build.sh
       # The image index's digest pins the image for every platform, and the release manifest signs it
-      - run: echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos@$(docker buildx imagetools inspect ghcr.io/${{ env.TAG }} --format '{{json .Manifest}}' | jq --raw-output .digest)" >> $GITHUB_ENV
+      - run: echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos@$(docker buildx imagetools inspect "ghcr.io/${TAG}" --format '{{json .Manifest}}' | jq --raw-output .digest)" >> $GITHUB_ENV
       # Build OS images
       - uses: actions/setup-node@v5
         with:
@@ -859,9 +970,9 @@ jobs:
         # in ~90s, so we build it concurrently (hidden under the much longer OS
         # builds) and inject the OS image into it at the end.
         run: |
-          npm run build:amd64 "${{ env.VERSION }}" &
+          npm run build:amd64 "${VERSION}" &
           pid1=$!
-          npm run build:pi "${{ env.VERSION }}" &
+          npm run build:pi "${VERSION}" &
           pid2=$!
           npm run build:amd64:usb-installer:base &
           pid3=$!
@@ -897,7 +1008,7 @@ jobs:
       # The manifest pins every file in the release and gets timestamped here. Release signers sign it
       # and the release notes separately.
       - name: Create release manifest
-        run: RELEASE_TAG="${{ env.VERSION }}" ./create-release-manifest.sh release && cat release/manifest.txt
+        run: RELEASE_TAG="${VERSION}" ./create-release-manifest.sh release && cat release/manifest.txt
       - name: OpenTimestamps
         run: npm ci && npx ots-cli.js stamp release/manifest.txt
       - name: Nuke uncompressed images (we just wanted them covered by the manifest)

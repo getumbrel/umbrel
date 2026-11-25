@@ -22,12 +22,90 @@ echo
 # The umbrelOS image lives on the boot medium which is mounted at /iso.
 image="/iso/umbrelos-amd64.img.xz"
 
+# Writes umbrelOS to a disk. Runs in a subshell so it stops at the first
+# failing step and returns its status, as long as it isn't called as a
+# condition (bash ignores set -e there).
+#
+# The image's partition table is laid out for 512 byte logical sectors. On a
+# disk with 4096 byte logical sectors, like UFS storage and 4K native NVMe and
+# SATA drives, the firmware and kernel look for the partition table at
+# different offsets and don't find it. So on those disks the partition table is
+# rewritten for 4096 byte sectors after the image is written. Every partition
+# starts and ends on a 1 MiB boundary so the partitions stay where they are.
+# The EFI system partition is also recreated, because it's FAT with 512 byte
+# sectors and Linux won't mount that from a disk with larger sectors.
+install_umbrelos() (
+    set -euo pipefail
+    local device="$1"
+
+    local sector_size
+    sector_size="$(blockdev --getss "${device}")"
+    if [[ "${sector_size}" != "512" && "${sector_size}" != "4096" ]]; then
+        echo "${device} has ${sector_size} byte sectors, umbrelOS can only be installed on disks with 512 or 4096 byte sectors."
+        return 1
+    fi
+
+    xz --decompress --stdout "${image}" | dd of="${device}" bs=4M status=progress
+
+    if [[ "${sector_size}" == "4096" ]]; then
+        echo "Adapting umbrelOS to the disk's 4096 byte sectors..."
+
+        # Read the image's partition table as written, in 512 byte sectors
+        local table
+        table="$(sfdisk --sector-size 512 --dump "${device}")"
+
+        # Copy the files off the EFI system partition
+        local esp_start esp_size
+        read -r esp_start esp_size < <(awk '/type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B/ {
+            match($0, /start= *[0-9]+/); start = substr($0, RSTART + 6, RLENGTH - 6)
+            match($0, /size= *[0-9]+/); size = substr($0, RSTART + 5, RLENGTH - 5)
+            print start + 0, size + 0
+            exit
+        }' <<< "${table}")
+        local esp_files
+        esp_files="$(mktemp --directory)"
+        mcopy -s -p -m -i "${device}@@$((esp_start * 512))" '::/*' "${esp_files}/"
+
+        # Write the same partition table in 4096 byte sectors. sfdisk sizes the
+        # table to the whole disk, first boot then adds the remaining partitions.
+        # The table is built in full first so nothing is written if it can't be.
+        local new_table
+        new_table="$(awk '
+            /^sector-size:/ { print "sector-size: 4096"; next }
+            /^(device|first-lba|last-lba):/ { next }
+            / : start=/ {
+                sub(/^[^:]*: /, "")
+                match($0, /start= *[0-9]+/); start = substr($0, RSTART + 6, RLENGTH - 6) + 0
+                match($0, /size= *[0-9]+/); size = substr($0, RSTART + 5, RLENGTH - 5) + 0
+                if (start % 8 != 0 || size % 8 != 0) { print "Partition not aligned to 4096 bytes: " $0 > "/dev/stderr"; exit 1 }
+                sub(/start= *[0-9]+/, "start=" start / 8)
+                sub(/size= *[0-9]+/, "size=" size / 8)
+            }
+            { print }
+        ' <<< "${table}")"
+        sfdisk --no-reread --no-tell-kernel --quiet "${device}" <<< "${new_table}"
+
+        # Recreate the EFI system partition with 4096 byte sectors and copy its
+        # files back
+        local esp_image
+        esp_image="$(mktemp)"
+        truncate --size "$((esp_size * 512))" "${esp_image}"
+        mkfs.vfat -S 4096 "${esp_image}" > /dev/null
+        shopt -s dotglob
+        mcopy -s -p -m -i "${esp_image}" "${esp_files}"/* ::/
+        dd if="${esp_image}" of="${device}" bs=4M seek="$((esp_start * 512))" oflag=seek_bytes status=none
+        rm -rf "${esp_files}" "${esp_image}"
+    fi
+
+    sync
+)
+
 # If device is an Umbrel Home auto flash and shutdown non-interactively since we don't have video output.
 if dmidecode -t system | grep --silent 'Umbrel Home'
 then
     echo "Umbrel Home detected."
     echo "Automatically flashing internal storage..."
-    xz --decompress --stdout "${image}" | dd of=/dev/nvme0n1 bs=4M status=progress
+    install_umbrelos /dev/nvme0n1
     echo "umbrelOS has been installed, shutting down."
     poweroff
     exit 1
@@ -38,7 +116,7 @@ if dmidecode -t system | grep --silent 'Umbrel Pro'
 then
     echo "Umbrel Pro detected."
     echo "Automatically flashing internal storage..."
-    xz --decompress --stdout "${image}" | dd of=/dev/mmcblk0 bs=4M status=progress
+    install_umbrelos /dev/mmcblk0
     echo "umbrelOS has been installed, shutting down."
     poweroff
     exit 1
@@ -56,8 +134,14 @@ do
     then
         echo "installing umbrelOS on: $device"
         device_path="/dev/$(echo $device | awk '{print $1}')"
-        xz --decompress --stdout "${image}" | dd of=$device_path bs=4M status=progress
-        sync
+        # Not called as an if condition, which would disable set -e inside it
+        install_umbrelos "${device_path}"
+        if [[ $? -ne 0 ]]
+        then
+            echo
+            echo "umbrelOS could not be installed on: $device"
+            continue
+        fi
         echo
         echo "umbrelOS has been installed!"
         printf "Press any key to shutdown, remember to remove the USB drive before turning the device back on."

@@ -161,4 +161,45 @@ final class PhotoBackupPlannerTests: XCTestCase {
 		XCTAssertNil(PhotoBackupUpload.claimedResources(statusCode: 401, data: Data(#"{"error":"unauthorized"}"#.utf8), requested: asked))
 		XCTAssertNil(PhotoBackupUpload.claimedResources(statusCode: 200, data: Data("<html>".utf8), requested: asked))
 	}
+
+	func testClaimAnswerTellsDecliningFromSilent() {
+		let asked = [Umbreld.PhotoBackupResourceClaim(resourceKey: String(repeating: "a", count: 64), fileExtension: "heic", identity: nil)]
+		let receipt = Data(#"[{"resourceKey": "\#(String(repeating: "a", count: 64))", "bytes": 5}]"#.utf8)
+		XCTAssertEqual(
+			PhotoBackupUpload.claimAnswer(statusCode: 200, data: receipt, requested: asked),
+			.receipts([Umbreld.PhotoBackupResourceReceipt(resourceKey: String(repeating: "a", count: 64), bytes: 5)])
+		)
+		XCTAssertEqual(PhotoBackupUpload.claimAnswer(statusCode: 200, data: Data("[]".utf8), requested: asked), .receipts([]))
+		// umbrelOS before claims answers 401: the Umbrel answered, without receipts
+		XCTAssertEqual(PhotoBackupUpload.claimAnswer(statusCode: 401, data: Data(), requested: asked), .declined)
+		// Anything else says nothing about which files the Umbrel has
+		XCTAssertEqual(PhotoBackupUpload.claimAnswer(statusCode: 500, data: Data(), requested: asked), .unanswered)
+		XCTAssertEqual(PhotoBackupUpload.claimAnswer(statusCode: 200, data: Data("<html>".utf8), requested: asked), .unanswered)
+		XCTAssertEqual(PhotoBackupUpload.claimAnswer(statusCode: nil, data: Data(), requested: asked), .unanswered)
+	}
+
+	func testSentClaimReadsAnUploadsHeaders() {
+		let key = String(repeating: "d", count: 64)
+		var request = URLRequest(url: URL(string: "http://100.64.0.1/api/photos/upload")!)
+		for (field, value) in PhotoBackupUpload.headers(
+			resourceKey: key,
+			fileExtension: "heic",
+			originalFilename: "IMG_0001.HEIC",
+			sourceCreationDateMilliseconds: nil,
+			mimeType: "image/heic",
+			grant: "grant"
+		) {
+			request.setValue(value, forHTTPHeaderField: field)
+		}
+		XCTAssertEqual(
+			PhotoBackupUpload.sentClaim(for: request),
+			Umbreld.PhotoBackupResourceClaim(resourceKey: key, fileExtension: "heic", identity: nil)
+		)
+		var badKey = request
+		badKey.setValue("not-a-key", forHTTPHeaderField: "X-Umbrel-Photo-Backup-Key")
+		XCTAssertNil(PhotoBackupUpload.sentClaim(for: badKey))
+		var badExtension = request
+		badExtension.setValue("../x", forHTTPHeaderField: "X-Umbrel-Photo-Backup-Extension")
+		XCTAssertNil(PhotoBackupUpload.sentClaim(for: badExtension))
+	}
 }

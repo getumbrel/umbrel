@@ -12,22 +12,30 @@ export function CopyButton({value}: {value: string}) {
 	const [showCopied, setShowCopied] = useState(false)
 
 	return (
-		<Tooltip open={showCopied}>
-			<TooltipTrigger asChild>
-				<button
-					className='rounded-4 opacity-20 transition-opacity ring-inset hover:opacity-40 focus:outline-hidden focus-visible:opacity-60'
-					onClick={async () => {
-						copyToClipboard(value)
-						setShowCopied(true)
-						await sleep(1000)
-						setShowCopied(false)
-					}}
-				>
-					<TbCopy className='shrink-0' />
-				</button>
-			</TooltipTrigger>
-			{/* TODO: consider putting in portal to avoid inheriting parent's styling */}
-			<TooltipContent>{t('clipboard.copied')}</TooltipContent>
-		</Tooltip>
+		<>
+			<Tooltip open={showCopied}>
+				<TooltipTrigger asChild>
+					<button
+						type='button'
+						aria-label={t('copy')}
+						className='rounded-4 opacity-20 transition-opacity ring-inset hover:opacity-40 focus:outline-hidden focus-visible:opacity-60'
+						onClick={async () => {
+							copyToClipboard(value)
+							setShowCopied(true)
+							await sleep(1000)
+							setShowCopied(false)
+						}}
+					>
+						<TbCopy className='shrink-0' />
+					</button>
+				</TooltipTrigger>
+				{/* TODO: consider putting in portal to avoid inheriting parent's styling */}
+				<TooltipContent>{t('clipboard.copied')}</TooltipContent>
+			</Tooltip>
+			{/* The tooltip only shows "Copied"; this says it */}
+			<span role='status' className='sr-only'>
+				{showCopied ? t('clipboard.copied') : ''}
+			</span>
+		</>
 	)
 }

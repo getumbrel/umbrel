@@ -17,9 +17,20 @@ struct CredentialsSheet: View {
 	@State private var dontShowAgain = false
 
 	var body: some View {
+		NavigationStack {
+			content
+				.toolbar {
+					DrawerCloseToolbarItem(action: { dismiss() })
+				}
+		}
+		.presentationDetents([dynamicTypeSize.isAccessibilitySize ? .large : .medium])
+		.presentationDragIndicator(.visible)
+		.presentationBackground(Color(hex: 0x1C1C1E))
+	}
+
+	private var content: some View {
 		VStack(spacing: 0) {
 			AppIconView(url: app.iconURL, size: 64, corner: 16)
-				.padding(.top, 40)
 
 			Text(app.name ?? app.id)
 				.font(.title3.weight(.semibold))
@@ -68,9 +79,6 @@ struct CredentialsSheet: View {
 			.padding(.bottom, 20)
 		}
 		.padding(.horizontal, 24)
-		.presentationDetents([dynamicTypeSize.isAccessibilitySize ? .large : .medium])
-		.presentationDragIndicator(.visible)
-		.presentationBackground(Color(hex: 0x1C1C1E))
 	}
 
 	private func openApp() {

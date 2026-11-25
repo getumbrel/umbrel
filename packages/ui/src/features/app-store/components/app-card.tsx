@@ -61,7 +61,7 @@ export function AppCard({
 			<AppIcon src={app.icon} className='pointer-events-none relative size-[52px] rounded-12 md:size-14' />
 			<div className='pointer-events-none relative flex min-w-0 flex-1 flex-col gap-0.5'>
 				<h3 className='truncate text-14 leading-tight font-semibold -tracking-3 md:text-15'>{app.name}</h3>
-				<p className='line-clamp-2 w-full min-w-0 text-12 leading-tight opacity-40 md:text-13'>{app.tagline}</p>
+				<p className='line-clamp-2 w-full min-w-0 text-12 leading-tight text-white/40 md:text-13'>{app.tagline}</p>
 			</div>
 			<AppCardAction app={app} status={status} lifecycleState={lifecycleState} progress={progress} />
 		</div>
@@ -164,7 +164,9 @@ export function AppCardAction({
 			>
 				{label}
 				{showProgress && (
-					<span className='ml-1 inline-block w-[4ch] text-right opacity-60'>{Math.round(progress)}%</span>
+					<span className='ml-1 inline-block w-[4ch] text-right opacity-60 contrast-more:opacity-85'>
+						{Math.round(progress)}%
+					</span>
 				)}
 			</ProgressButton>
 		</span>
@@ -219,9 +221,12 @@ export function AppCardCompact({app, status}: {app: RegistryApp; status?: AppSto
 				</div>
 				<div className='relative flex w-full min-w-0 flex-col items-center gap-0.5 pt-0.5 text-center'>
 					<h3 className='w-full truncate text-13 leading-tight font-semibold -tracking-2 md:text-14'>{app.name}</h3>
+					{/* The status wraps rather than spill out of a narrow tile; the rail
+					    stretches its tiles, so they stay one height */}
 					<AppStatusLabel
 						status={status && status !== 'available' && status !== 'incompatible' ? status : undefined}
-						fallback={<span className='w-full truncate text-12 opacity-35'>{app.developer}</span>}
+						className='max-w-full text-balance whitespace-normal'
+						fallback={<span className='w-full truncate text-12 text-white/35'>{app.developer}</span>}
 					/>
 				</div>
 			</div>
@@ -264,7 +269,7 @@ export function AppChip({app, className}: {app: RegistryApp; className?: string}
 			state={{fromAppStore: true}}
 			onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 			className={cn(
-				'flex shrink-0 items-center gap-1.5 rounded-full bg-black/35 py-1.5 pr-3 pl-1.5 outline-hidden backdrop-blur-md transition-colors duration-200 hover:bg-black/55 focus-visible:ring-2 focus-visible:ring-white/40',
+				'flex shrink-0 items-center gap-1.5 rounded-full bg-black/35 py-1.5 pr-3 pl-1.5 outline-hidden backdrop-blur-md transition-colors duration-200 hover:bg-black/55 focus-visible:ring-2 focus-visible:ring-white/40 contrast-more:bg-black/80 contrast-more:hover:bg-black',
 				className,
 			)}
 		>

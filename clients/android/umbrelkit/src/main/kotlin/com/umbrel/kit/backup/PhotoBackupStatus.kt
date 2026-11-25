@@ -23,8 +23,7 @@ sealed class PhotoBackupStatus {
 
 	/**
 	 * Only failed items remain: ones the Umbrel refused or kept failing on after other uploads
-	 * got through. Until the app can list them there's nothing for the user to do, and the
-	 * photo viewer still marks each one.
+	 * got through. Profile lists them, with their Try Again.
 	 */
 	data object UpToDateExceptFailures : PhotoBackupStatus()
 
@@ -36,15 +35,25 @@ sealed class PhotoBackupStatus {
 			Off -> "Backup off"
 			SettingUp -> "Starting backup…"
 			BackgroundRestricted -> "Backup paused"
-			WaitingForUmbrel -> "Waiting for Umbrel"
+			WaitingForUmbrel -> "Waiting for your Umbrel"
 			WaitingForWiFi -> "Waiting for Wi-Fi"
 			CheckingStorage -> "Checking storage…"
 			Paused -> "Backup paused"
 			Error -> "Backup needs attention"
-			is BackingUp -> remaining?.let { "${NumberFormat.getIntegerInstance().format(it)} ${if (it == 1L) "item" else "items"} queued" } ?: "Checking backup…"
+			is BackingUp -> remaining?.let { "Backing up · ${NumberFormat.getIntegerInstance().format(it)} left" } ?: "Checking backup…"
 			UpToDate -> "All backed up"
 			UpToDateExceptFailures, UpToDateExceptSkipped -> "Up to date"
 		}
+
+	/**
+	 * While this phone sends its library again to a backup it took over, which can take hours,
+	 * setting up and backing up name that backup. Anything in the way of backup says so instead.
+	 */
+	fun continuingText(name: String): String? = when (this) {
+		SettingUp -> "Continuing “$name” backup…"
+		is BackingUp -> remaining?.let { "Continuing “$name” backup · ${NumberFormat.getIntegerInstance().format(it)} left" } ?: "Continuing “$name” backup…"
+		else -> null
+	}
 
 	val tone: Tone
 		get() = when (this) {
@@ -78,7 +87,7 @@ enum class PhotoBackupNotice(val title: String, val message: String, val action:
 		Action.ALLOW_LOCATION_ACCESS,
 		"Allow",
 	),
-	RECONNECT("Reconnect photo backup", "Umbrel needs to reconnect photo backup. Your existing backups are safe.", Action.RETRY_BACKUP, "Reconnect"),
+	RECONNECT("Photo backup stopped", "Reconnect to keep backing up, or turn it off in Profile.", Action.RETRY_BACKUP, "Reconnect"),
 	NEEDS_ATTENTION(
 		"Photo backup needs attention",
 		"Backup couldn’t continue. Try again. If this keeps happening, contact Umbrel Support.",
@@ -86,25 +95,10 @@ enum class PhotoBackupNotice(val title: String, val message: String, val action:
 		"Try Again",
 	),
 	UNREADABLE_ITEMS("Some items couldn’t be read", "Backup will try them again automatically.", null, null),
-
-	/**
-	 * Setup stopped before a new source would store the account's phone backups again. The
-	 * screens name that source with [mayBackUpTwiceMessage]; this message stands in for it.
-	 */
-	MAY_BACK_UP_TWICE("Photos may be backed up twice", mayBackUpTwice("another phone"), Action.BACK_UP_ANYWAY, "Review"),
 	;
 
-	enum class Action { SET_UP_TAILSCALE, RETRY_STORAGE, RETRY_BACKUP, ALLOW_LOCATION_ACCESS, BACK_UP_ANYWAY }
-
-	companion object {
-		/** The new-phone question, shared by its notice and both of its alerts. */
-		fun mayBackUpTwiceMessage(existing: String): String = mayBackUpTwice(existing)
-	}
+	enum class Action { SET_UP_TAILSCALE, RETRY_STORAGE, RETRY_BACKUP, ALLOW_LOCATION_ACCESS }
 }
-
-// Top level, because enum entries are built before their companion object
-private fun mayBackUpTwice(existing: String) =
-	"This account already has photos from “$existing”. If this phone was restored from it, backing up stores your photos again."
 
 /**
  * Everything the screens show about backup for one account, reduced from the same inputs
@@ -116,10 +110,15 @@ data class PhotoBackupPresentation(
 	/** The source whose receipts and totals belong to this account, kept after backup is turned off. */
 	val sourceId: String?,
 	val statistics: PhotoBackupStatistics?,
+	/**
+	 * How many items couldn't back up, failed or unreadable, which [PhotoBackupManager.failedAssets]
+	 * lists. None while backup isn't set up for this account, when nothing tries them again.
+	 */
+	val failedCount: Long = 0,
 	/** The name this phone has in Photos on the Umbrel, known only while backup is set up. */
 	val sourceName: String? = null,
-	/** The existing source the unanswered new-phone question names. */
-	val newSourceQuestion: String? = null,
+	/** The backup this phone took over from the phone it was set up from, until it's first up to date. */
+	val continuingName: String? = null,
 	/**
 	 * Whether [sourceId] could be read. While secure storage can't be read, a missing id isn't
 	 * proof that this account has no backups here.
@@ -140,6 +139,8 @@ data class PhotoBackupPresentation(
 		val ledgerStatistics: PhotoBackupStatistics?,
 		val setupInProgress: Boolean,
 		val setupFailed: Boolean,
+		/** The backup this phone took over from the phone it was set up from, until it's first up to date. */
+		val continuingName: String? = null,
 		val storageRetryRequested: Boolean,
 		val recoveryRetryRequested: Boolean,
 		val backgroundRestricted: Boolean,
@@ -147,11 +148,6 @@ data class PhotoBackupPresentation(
 		val library: PhotoLibraryCounts,
 		/** The app's default network, which uploads use; null when there is none. */
 		val defaultNetwork: PhotoBackupNetwork.Traits?,
-		/**
-		 * Setup stopped before starting a new source because the account already has phone
-		 * backups: the existing source's name, until the user answers.
-		 */
-		val newSourceQuestion: String? = null,
 		val sourceResolved: Boolean = true,
 	)
 
@@ -164,8 +160,9 @@ data class PhotoBackupPresentation(
 				notice(inputs, status, snapshot),
 				inputs.sourceId,
 				snapshot.statistics,
+				if (inputs.configuration == null) 0 else snapshot.statistics?.let { it.failedCount + it.unreadableCount } ?: 0,
 				inputs.configuration?.source?.name,
-				inputs.newSourceQuestion,
+				inputs.continuingName,
 				inputs.sourceResolved,
 			)
 		}
@@ -190,10 +187,9 @@ data class PhotoBackupPresentation(
 			// Losing access pauses backup rather than turning it off. The setup card, shown
 			// wherever the library can't be read, offers the way back.
 			if (!inputs.libraryAccess.canReadLibrary) return PhotoBackupStatus.Paused
-			if (inputs.newSourceQuestion != null) return PhotoBackupStatus.Paused
 			if (inputs.recoveryRetryRequested) return PhotoBackupStatus.SettingUp
-			// The folder choice is on screen; setup starts when the user confirms it.
-			if (inputs.configuration == null && !inputs.preference.foldersChosen && inputs.libraryAccess == PhotoLibraryAccess.FULL) {
+			// The folder choice is on screen; backup starts when the user confirms it.
+			if (!inputs.preference.foldersChosen && inputs.libraryAccess == PhotoLibraryAccess.FULL) {
 				return PhotoBackupStatus.SettingUp
 			}
 			// Setup work is described first; once setup is idle, the system restriction is the
@@ -264,7 +260,6 @@ data class PhotoBackupPresentation(
 
 		private fun notice(inputs: Inputs, status: PhotoBackupStatus, snapshot: PhotoBackupSnapshot): PhotoBackupNotice? {
 			if (!inputs.libraryAccess.canReadLibrary || !inputs.targetActive || !inputs.preference.isEnabled) return null
-			if (inputs.newSourceQuestion != null) return PhotoBackupNotice.MAY_BACK_UP_TWICE
 			return when (status) {
 				PhotoBackupStatus.BackgroundRestricted -> PhotoBackupNotice.BACKGROUND_RESTRICTED
 				PhotoBackupStatus.WaitingForUmbrel -> PhotoBackupNotice.WAITING_FOR_UMBREL

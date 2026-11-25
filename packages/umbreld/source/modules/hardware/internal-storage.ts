@@ -15,7 +15,7 @@ function kelvinToCelsius(kelvin: number): number {
 
 export type SsdDevice = {
 	type: 'ssd'
-	transport: 'nvme' | 'sata' | 'sas'
+	transport: 'nvme' | 'sata' | 'sas' | 'ufs'
 	device: string
 	id?: string
 	pciSlotNumber?: number
@@ -117,7 +117,8 @@ async function getNvmeTemperatureThresholds(
 
 // Get the disk/by-id name for a device
 // These paths are more stable than the device name which ddepedns on enumeration order.
-async function getDeviceId(deviceName: string): Promise<string | undefined> {
+// UFS storage is always identified by its device path, see 99-umbrel-disk-by-id.rules.
+async function getDeviceId(deviceName: string, {ufs = false}: {ufs?: boolean} = {}): Promise<string | undefined> {
 	const byIdDir = '/dev/disk/by-umbrel-id'
 	try {
 		const entries = await fse.readdir(byIdDir)
@@ -127,6 +128,7 @@ async function getDeviceId(deviceName: string): Promise<string | undefined> {
 			try {
 				// Skip partition entries (they end with -partN)
 				if (/-part\d+$/.test(entry)) continue
+				if (ufs !== entry.startsWith('ufs-')) continue
 
 				const fullPath = nodePath.join(byIdDir, entry)
 				const target = await fse.readlink(fullPath)
@@ -178,15 +180,35 @@ async function getDevicePciSlotNumber(deviceName: string): Promise<number | unde
 	return undefined
 }
 
+// UFS storage is soldered onto the board of some mini PCs. The kernel attaches each of its logical
+// units as a SCSI disk that lsblk reports no transport for, so it's recognised by the UFS host
+// controller driver the disk's SCSI host belongs to.
+async function isUfsDisk(deviceName: string) {
+	try {
+		const scsiDevicePath = await fse.realpath(`/sys/block/${deviceName}/device`)
+		const host = scsiDevicePath.match(/\/(host\d+)\//)?.[1]
+		if (!host) return false
+		const hostDriver = await fse.readFile(`/sys/class/scsi_host/${host}/proc_name`, 'utf8')
+		return hostDriver.trim() === 'ufshcd'
+	} catch {
+		return false
+	}
+}
+
+// UFS storage also has small boot logical units, a few megabytes each, that hold firmware
+const minimumUfsDiskSize = 1024 ** 3
+
 // Whether an lsblk device is an internal disk, by transport protocol. SAS covers drives behind
-// a SAS HBA, including SATA drives which the controller presents as SCSI devices. This is an
+// a SAS HBA, including SATA drives which the controller presents as SCSI devices. lsblk reports
+// no transport for UFS storage, so its disks are passed in with the ufs transport. This is an
 // allowlist so network-backed (iscsi, fc), USB and unknown-transport disks stay excluded.
 // Disks the kernel attaches with no capacity are excluded too. Used enterprise SAS drives
 // formatted with 520 byte sectors or T10 protection type 2 show up like this and can't be used
 // until they're reformatted.
 export function isInternalStorageDisk(device: {type?: string; tran?: string | null; size?: number}) {
-	const supportedTransports = ['nvme', 'sata', 'sas']
-	return device.type === 'disk' && supportedTransports.includes(device.tran ?? '') && (device.size ?? 0) > 0
+	const supportedTransports = ['nvme', 'sata', 'sas', 'ufs']
+	const minimumSize = device.tran === 'ufs' ? minimumUfsDiskSize : 1
+	return device.type === 'disk' && supportedTransports.includes(device.tran ?? '') && (device.size ?? 0) >= minimumSize
 }
 
 // Get all internal storage devices using lsblk and nvme commands
@@ -204,29 +226,37 @@ export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 	const {stdout} = await $`lsblk --output NAME,MODEL,SERIAL,SIZE,TYPE,TRAN,ROTA --json --bytes`
 	const {blockdevices} = JSON.parse(stdout) as {blockdevices: LsBlkDevice[]}
 
-	const internalBlockDevices = blockdevices.filter(isInternalStorageDisk)
+	const blockDevicesWithTransport = await Promise.all(
+		blockdevices.map(async (device) =>
+			!device.tran && device.type === 'disk' && (await isUfsDisk(device.name)) ? {...device, tran: 'ufs'} : device,
+		),
+	)
+	const internalBlockDevices = blockDevicesWithTransport.filter(isInternalStorageDisk)
 
 	// Fetch SMART data, device IDs, and PCIe slot numbers for all devices in parallel
 	const devices: StorageDevice[] = await Promise.all(
 		internalBlockDevices.map(async (device): Promise<StorageDevice> => {
 			const devicePath = `/dev/${device.name}`
-			const id = await getDeviceId(device.name).catch(() => undefined)
 			const size = device.size ?? 0
 			const transport = device.tran as SsdDevice['transport']
 			const isNvme = transport === 'nvme'
+			const isUfs = transport === 'ufs'
+			const id = await getDeviceId(device.name, {ufs: isUfs}).catch(() => undefined)
 			const name = device.model?.trim() ?? `Unknown ${transport.toUpperCase()} Device`
 			const model = device.model?.trim() ?? 'Unknown'
 			const serial = device.serial?.trim() ?? 'Unknown'
 			const roundedSize = getRoundedDeviceSize(size)
 			const [smartData, temperatureThresholds, pciSlotNumber] = await Promise.all([
-				getSmartData(devicePath),
+				// UFS storage doesn't support SMART
+				isUfs ? ({smartStatus: 'unknown'} as SmartData) : getSmartData(devicePath),
 				isNvme
 					? getNvmeTemperatureThresholds(devicePath)
 					: ({} as {temperatureWarning?: number; temperatureCritical?: number}),
 				isNvme ? getDevicePciSlotNumber(device.name).catch(() => undefined) : undefined,
 			])
 
-			const isSsd = isNvme || device.rota === false
+			// UFS storage is flash, whatever it reports
+			const isSsd = isNvme || isUfs || device.rota === false
 
 			if (isSsd) {
 				return {

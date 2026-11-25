@@ -50,8 +50,12 @@ export function AccountDrawerOrDialog() {
 							</div>
 						</div>
 					)}
+					{/* Grows so a label that needs two lines, in a longer language or at a
+					    larger text size, keeps them apart */}
 					<SegmentedControl
 						size='lg'
+						className='h-auto min-h-[40px]'
+						tabClassName='py-1 leading-tight'
 						tabs={tabs}
 						value={activeTab}
 						onValueChange={(tab) => navigate(`/settings/account/${tab}`, {replace: true})}

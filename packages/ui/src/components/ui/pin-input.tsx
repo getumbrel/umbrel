@@ -16,13 +16,15 @@ const dotClass = tw`absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translat
 
 export type CodeState = 'input' | 'loading' | 'error' | 'success'
 type PinInputProps = {
+	// The input's accessible name, e.g. the prompt shown above it
+	label: string
 	length: number
 	autoFocus?: boolean
 	disabled?: boolean
 	onCodeCheck: (code: string) => Promise<boolean>
 }
 
-export const PinInput = ({length, onCodeCheck, autoFocus, disabled = false}: PinInputProps) => {
+export const PinInput = ({label, length, onCodeCheck, autoFocus, disabled = false}: PinInputProps) => {
 	const [state, setState] = useState<CodeState>('input')
 	const inputRef = useRef<HTMLInputElement>(null)
 	const focused = useIsFocused(inputRef as RefObject<HTMLInputElement>)
@@ -47,6 +49,7 @@ export const PinInput = ({length, onCodeCheck, autoFocus, disabled = false}: Pin
 			inputMode='numeric'
 			pattern='[0-9]*'
 			autoComplete='one-time-code'
+			aria-label={label}
 			onChange={({currentTarget: input}) => {
 				// only accept numbers
 				input.value = input.value.replace(/\D+/g, '')

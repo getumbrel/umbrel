@@ -23,6 +23,7 @@ import machines from '../../machines/routes.ts'
 import lanIngress from '../../lan-ingress/routes.ts'
 import mcp from '../../mcp/routes.ts'
 import photos from '../../photos/routes.ts'
+import search from '../../search/routes.ts'
 
 import type {WebSocketServer} from 'ws'
 import type Umbreld from '../../../index.ts'
@@ -47,6 +48,7 @@ const appRouter = router({
 	lanIngress,
 	mcp,
 	photos,
+	search,
 })
 
 export type AppRouter = typeof appRouter

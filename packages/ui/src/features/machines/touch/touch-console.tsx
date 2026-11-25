@@ -34,6 +34,7 @@ import {
 
 import '@/features/machines/touch/touch-console.css'
 
+import {useIncreaseContrast} from '@/hooks/use-accessibility'
 import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
@@ -774,9 +775,9 @@ function StatusNotice({status, onTakeOver}: {status: GuestStatus; onTakeOver: ()
 			animate={{opacity: 1}}
 			exit={{opacity: 0}}
 			transition={{duration: 0.2}}
-			className='absolute inset-x-0 top-[max(env(safe-area-inset-top),12px)] z-10 flex justify-center'
+			className='absolute inset-x-0 top-[max(env(safe-area-inset-top),12px)] z-10 flex justify-center px-4'
 		>
-			<div className='console-glass flex items-center gap-3 rounded-full py-1.5 pr-1.5 pl-4 text-[13px] font-medium text-white/80'>
+			<div className='console-glass flex min-w-0 items-center gap-3 rounded-full py-1.5 pr-1.5 pl-4 text-13 font-medium text-white/80'>
 				<span className='py-1'>
 					{status === 'superseded'
 						? t('machines.console-controlled-elsewhere')
@@ -788,12 +789,12 @@ function StatusNotice({status, onTakeOver}: {status: GuestStatus; onTakeOver: ()
 					<button
 						type='button'
 						onClick={onTakeOver}
-						className='rounded-full bg-white px-3 py-1 font-semibold text-black outline-none active:opacity-70'
+						className='shrink-0 rounded-full bg-white px-3 py-1 font-semibold text-black outline-none active:opacity-70'
 					>
 						{t('machines.console-agent-take-over')}
 					</button>
 				) : (
-					<span className='mr-2.5 size-3 animate-spin rounded-full border-[1.5px] border-white/25 border-t-white/80' />
+					<span className='mr-2.5 size-3 shrink-0 animate-spin rounded-full border-[1.5px] border-white/25 border-t-white/80' />
 				)}
 			</div>
 		</motion.div>
@@ -807,9 +808,9 @@ function ModeNotice({text}: {text: string}) {
 			animate={{opacity: 1, y: 0}}
 			exit={{opacity: 0, y: -6}}
 			transition={{duration: 0.2, ease: [0.22, 1, 0.36, 1]}}
-			className='pointer-events-none absolute inset-x-0 top-[max(env(safe-area-inset-top),12px)] z-10 flex justify-center'
+			className='pointer-events-none absolute inset-x-0 top-[max(env(safe-area-inset-top),12px)] z-10 flex justify-center px-4'
 		>
-			<div className='console-glass rounded-full px-4 py-2 text-[13px] font-medium text-white/80'>{text}</div>
+			<div className='console-glass min-w-0 rounded-full px-4 py-2 text-13 font-medium text-white/80'>{text}</div>
 		</motion.div>
 	)
 }
@@ -823,7 +824,7 @@ function CopiedNotice({source, onCopy}: {source: string; onCopy: () => void}) {
 			transition={{duration: 0.2, ease: [0.22, 1, 0.36, 1]}}
 			className='absolute inset-x-0 top-[max(env(safe-area-inset-top),12px)] z-10 flex justify-center px-4'
 		>
-			<div className='console-glass flex min-w-0 items-center gap-3 rounded-full py-1.5 pr-1.5 pl-4 text-[13px] font-medium text-white/80'>
+			<div className='console-glass flex min-w-0 items-center gap-3 rounded-full py-1.5 pr-1.5 pl-4 text-13 font-medium text-white/80'>
 				<span className='truncate py-1'>{t('machines.touch-text-from', {machine: source})}</span>
 				<button
 					type='button'
@@ -902,7 +903,7 @@ function Trackpad({ref}: {ref: Ref<HTMLDivElement>}) {
 			<div
 				data-trackpad-hint
 				hidden={hinted}
-				className='pointer-events-none absolute inset-x-0 bottom-3 text-center text-[12px] leading-[17px] text-white/30 transition-opacity duration-500'
+				className='pointer-events-none absolute inset-x-0 bottom-3 text-center text-12 leading-[1.4] text-white/30 transition-opacity duration-500'
 			>
 				{t('machines.touch-trackpad-hint-click')}
 				<br />
@@ -942,7 +943,7 @@ function DeckFaces({
 			className='settings-edge-material relative flex h-11 shrink-0 rounded-full bg-white/8 p-[3px]'
 		>
 			<motion.div
-				className='absolute top-[3px] left-[3px] h-[38px] w-11 rounded-full bg-white/16 shadow-[0_1px_2px_rgb(0_0_0/0.25)]'
+				className='absolute top-[3px] left-[3px] h-[38px] w-11 rounded-full bg-white/16 shadow-[0_1px_2px_rgb(0_0_0/0.25)] contrast-more:bg-white/30 contrast-more:shadow-[inset_0_0_0_1px_rgb(255_255_255)]'
 				initial={false}
 				animate={{x: face === 'keys' ? 44 : 0}}
 				transition={DECK_SPRING}
@@ -984,7 +985,7 @@ function DeckButton({
 			type='button'
 			onClick={onClick}
 			className={cn(
-				'settings-edge-material flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-transparent bg-white/8 text-[14px] font-semibold -tracking-[0.01em] text-white/90 transition-[background-color,border-color,transform] duration-150 outline-none active:scale-[0.97]',
+				'settings-edge-material flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-transparent bg-white/8 text-14 font-semibold -tracking-[0.01em] text-white/90 transition-[background-color,border-color,transform] duration-150 outline-none active:scale-[0.97]',
 				active && 'border-white/60 bg-white/14',
 			)}
 		>
@@ -1032,6 +1033,8 @@ function ControlCapsule({
 	const drag = useRef<{x: number; y: number; from: number; moved: boolean} | undefined>(undefined)
 	const justDragged = useRef(false)
 	const [awake, setAwake] = useState(true)
+	// With contrast on the capsule never dims: it's the only control over the screen
+	const [increaseContrast] = useIncreaseContrast()
 	const sleepTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 	const wake = useCallback(() => {
 		setAwake(true)
@@ -1051,7 +1054,12 @@ function ControlCapsule({
 			layout='position'
 			transition={DECK_SPRING}
 			className='console-glass absolute top-1/2 z-10 flex touch-none flex-col gap-0.5 rounded-full p-1 transition-opacity duration-500'
-			style={{y: offset, marginTop: -(22 * actions.length + 4), [place.side]: inset, opacity: awake ? 1 : 0.5}}
+			style={{
+				y: offset,
+				marginTop: -(22 * actions.length + 4),
+				[place.side]: inset,
+				opacity: awake || increaseContrast ? 1 : 0.5,
+			}}
 			onPointerDown={(event) => {
 				justDragged.current = false
 				drag.current = {x: event.clientX, y: event.clientY, from: offset.get(), moved: false}
@@ -1195,7 +1203,7 @@ function MoreSheet({
 	onLeave: () => void
 }) {
 	const rowClass =
-		'flex h-12 w-full items-center gap-3 rounded-[12px] px-3 text-[15px] font-medium text-white/90 transition-colors duration-100 outline-none active:bg-white/10'
+		'flex min-h-12 w-full items-center gap-3 rounded-[12px] px-3 py-2 text-left text-15 leading-snug font-medium text-white/90 transition-colors duration-100 outline-none active:bg-white/10'
 	return (
 		<motion.div
 			className='absolute inset-0 z-30 flex items-end justify-center bg-black/45 sm:items-center'
@@ -1220,8 +1228,8 @@ function MoreSheet({
 				<div className='flex items-center gap-3 px-3 py-2'>
 					<img src={icon} alt='' className='size-10' />
 					<div className='min-w-0 flex-1'>
-						<div className='truncate text-[15px] font-semibold -tracking-[0.01em]'>{title}</div>
-						<div className='text-[12px] text-white/50'>{subtitle}</div>
+						<div className='truncate text-15 font-semibold -tracking-[0.01em]'>{title}</div>
+						<div className='text-12 text-white/50'>{subtitle}</div>
 					</div>
 					<button
 						type='button'
@@ -1260,7 +1268,7 @@ function MoreSheet({
 				<button type='button' className={rowClass} onClick={onLeave}>
 					<LogOut className='size-[18px] text-white/60' /> {t('machines.touch-back')}
 				</button>
-				<div className='mt-1 border-t border-white/8 px-3 pt-3 pb-2 text-[12.5px] leading-[19px] text-white/50'>
+				<div className='mt-1 border-t border-white/8 px-3 pt-3 pb-2 text-12 leading-normal text-white/50'>
 					<div className='mb-1 font-semibold text-white/70'>{t('machines.touch-help-screen-title')}</div>
 					{t('machines.touch-help-screen')}
 					<div className='mt-2 mb-1 font-semibold text-white/70'>{t('machines.touch-help-trackpad-title')}</div>

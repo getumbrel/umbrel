@@ -52,7 +52,7 @@ class PhotoLibraryViewModel(context: Context, private val backup: LibraryBackupR
 	private val _state = MutableStateFlow(PhotoLibraryState(access = mediaStore.access))
 	val state: StateFlow<PhotoLibraryState> = _state
 
-	val receipts = PhotoBackupReceipts(viewModelScope, backup::backedUp, backup.revisions)
+	val receipts = PhotoBackupReceipts(viewModelScope, backup::receipts, backup.revisions)
 
 	private val reloads = Channel<Unit>(Channel.CONFLATED)
 	private var changeDebounce: Job? = null

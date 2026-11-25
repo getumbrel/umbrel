@@ -54,9 +54,19 @@ fun appIconUrl(icon: String?): String? {
 object IconResponseLimit : Interceptor {
 	const val MAXIMUM_BYTES = 4L * 1024 * 1024
 
+	// The shared image loader also has a video decoder for library videos, so an icon labelled as
+	// video, or untyped with a video file name, would otherwise reach the phone's media framework.
+	// Same list as iOS.
+	private val ICON_TYPES = setOf("image/svg+xml", "image/png", "image/jpeg", "image/webp", "image/gif")
+
 	override fun intercept(chain: Interceptor.Chain): Response {
 		val response = chain.proceed(chain.request())
 		val body = response.body
+		val type = body.contentType()?.let { "${it.type}/${it.subtype}" }
+		if (type !in ICON_TYPES) {
+			response.close()
+			throw IOException("Icon response has an unsupported type")
+		}
 		if (body.contentLength() > MAXIMUM_BYTES) {
 			response.close()
 			throw IOException("Icon response is larger than $MAXIMUM_BYTES bytes")

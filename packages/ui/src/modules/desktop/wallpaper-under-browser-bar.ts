@@ -43,8 +43,8 @@ export function useWallpaperUnderBrowserBar(enabled: boolean) {
 /**
  * Safari still fills that band when it finds a fixed layer about as wide as the
  * window at the middle of its bottom edge, and keeps it for as long as that layer
- * lives, even once it has moved away. The dock's row reaches down there, and Safari
- * also carries a band over from the page before a reload or a new tab.
+ * lives, even once it has moved away. Layers over Home can reach down there, and
+ * Safari also carries a band over from the page before a reload or a new tab.
  *
  * Safari passes over an empty layer, unless it takes pointer events, and then looks
  * no further. So an empty strip along the edge, below the dock, keeps it from finding
@@ -58,7 +58,7 @@ function keepBrowserBarClear() {
 		el.style.cssText = `position:fixed;left:0;right:0;bottom:0;height:${height}px;z-index:2147483647;background:${background}`
 		return el
 	}
-	// Shorter than the dock's gap to the edge, so it only covers wallpaper
+	// Thin, so all it covers of the dock is the rim under its icons
 	const shield = strip(8, 'transparent')
 	// Taller than the 10px Safari ignores, and just visible enough for it to count
 	const probe = strip(12, 'rgb(0 0 0 / 0.01)')

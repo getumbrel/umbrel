@@ -51,7 +51,10 @@ class PhotoBackupLedger(file: File) : AutoCloseable {
 		val contentGeneration: Long,
 	)
 
-	data class AssetRecord(val state: AssetState, val uploadedBytes: Long)
+	/** [failureReason] is null unless the item couldn't back up. */
+	data class AssetRecord(val state: AssetState, val uploadedBytes: Long, val failureReason: PhotoBackupFailureReason? = null)
+
+	data class FailedAsset(val localIdentifier: String, val reason: PhotoBackupFailureReason)
 
 	/**
 	 * A full inventory in progress. Each media type is read in pages of descending MediaStore
@@ -601,11 +604,42 @@ class PhotoBackupLedger(file: File) : AutoCloseable {
 	/** Indexed lookup for one visible thumbnail; deleted assets have no record. */
 	fun assetRecord(sourceId: String, localIdentifier: String): AssetRecord? = synchronized(lock) {
 		query(
-			"SELECT state, uploadedBytes FROM photo_assets WHERE deviceId = ? AND localIdentifier = ? AND state != ?",
+			"SELECT state, uploadedBytes, lastError FROM photo_assets WHERE deviceId = ? AND localIdentifier = ? AND state != ?",
 			sourceId, localIdentifier, AssetState.DELETED.raw,
 		) { statement ->
 			if (!statement.step()) return@query null
-			AssetRecord(assetState(statement.getLong(0)), statement.getLong(1))
+			val state = assetState(statement.getLong(0))
+			AssetRecord(state, statement.getLong(1), PhotoBackupFailureReason.of(state, if (statement.isNull(2)) null else statement.getText(2)))
+		}
+	}
+
+	/**
+	 * The items [statistics] counts as failed or unreadable, newest first, each with why: the
+	 * same enabled media, outside the same skipped folders.
+	 */
+	fun failedAssets(sourceId: String, includePhotos: Boolean, includeVideos: Boolean, skippedFolders: Set<String> = emptySet()): List<FailedAsset> {
+		val mediaTypes = mediaTypes(includePhotos, includeVideos)
+		if (mediaTypes.isEmpty()) return emptyList()
+		return synchronized(lock) {
+			query(
+				"""
+				SELECT asset.localIdentifier, asset.state, asset.lastError
+				FROM photo_assets AS asset
+				WHERE asset.deviceId = ?
+					AND asset.state IN (${AssetState.FAILED.raw}, ${AssetState.UNREADABLE.raw})
+					AND asset.mediaType IN (${placeholders(mediaTypes.size)})
+					AND ${backedUpFolder("asset", skippedFolders)}
+				ORDER BY asset.creationDate DESC, asset.rowid
+				""".trimIndent(),
+				sourceId, *mediaTypes.toTypedArray(), *skippedFolders.toTypedArray(),
+			) { statement ->
+				buildList {
+					while (statement.step()) {
+						val reason = PhotoBackupFailureReason.of(assetState(statement.getLong(1)), if (statement.isNull(2)) null else statement.getText(2))
+						if (reason != null) add(FailedAsset(statement.getText(0), reason))
+					}
+				}
+			}
 		}
 	}
 

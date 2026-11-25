@@ -1,0 +1,41 @@
+[Unit]
+Description=Embedding model that reads photos for search
+# Stopped after umbreld at shutdown: one stopped while umbreld is still sending
+# it things would look to umbreld like it had fallen over on each of them
+Before=umbrel.service
+ConditionPathExists=/opt/litert-lm
+# The models are not part of the image. umbreld fetches them the first time
+# there is something for them to read, and leaves this once they are all
+# there (see models.ts in umbreld).
+ConditionPathExists=/home/umbrel/umbrel/models/installed
+
+[Service]
+# Not started at boot. It holds over a gigabyte while it runs, so it only runs
+# while there are photos to read: systemd starts it when umbreld sends the
+# first to its socket, and it exits five minutes after the last. Long enough
+# that photos arriving a few at a time, as a phone backs up, don't each wait
+# for the model to load.
+ExecStart=/usr/bin/python3 /opt/umbrel-embeddings/server.py --images --background --idle-seconds 300 \
+    --model /home/umbrel/umbrel/models/embeddinggemma-2-text-vision-440m.litertlm
+# Where umbreld says whether it is to read on the CPU for want of memory
+EnvironmentFile=-/run/umbrel-embeddings-index.env
+# Mesa also ships a Vulkan driver that renders on the CPU. LiteRT-LM would
+# take it for a GPU where there is no other, and spend 90 seconds on a photo
+# that the CPU itself reads in one and a half.
+Environment=VK_LOADER_DRIVERS_DISABLE=*lvp*
+# The model reads pictures of the user's files, so it gets nothing else: its
+# own user, no network, and of the home directories only the
+# models.
+# With the other models that read the library, and the first of everything on
+# the device to be stopped when it is out of memory (see umbrelbackground.slice)
+Slice=umbrelbackground.slice
+OOMScoreAdjust=1000
+DynamicUser=yes
+SupplementaryGroups=render
+PrivateNetwork=yes
+ProtectHome=tmpfs
+BindReadOnlyPaths=/home/umbrel/umbrel/models
+# Where LiteRT-LM and the GPU driver keep what they compile, so that it is
+# not compiled again at every start
+CacheDirectory=umbrel-embeddings-index
+Environment=XDG_CACHE_HOME=/var/cache/umbrel-embeddings-index

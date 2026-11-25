@@ -6,8 +6,8 @@
   Signing certificate profile's. The Publisher is part of the package's identity, so if
   the subject changes (the company's legal name, city or state), installed copies stop
   getting updates.
-  Packaged builds get launch-at-login through windows.startupTask and updates through
-  App Installer (see Umbrel.appinstaller).
+  Packaged builds get launch-at-login through windows.startupTask and updates from the
+  published App Installer file (see Umbrel.appinstaller).
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
@@ -16,7 +16,7 @@
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap5 uap10 rescap">
-  <Identity Name="Umbrel.Umbrel" Publisher="CN=&quot;Umbrel, Inc.&quot;, O=&quot;Umbrel, Inc.&quot;, L=Claymont, S=Delaware, C=US" Version="0.1.3.4" ProcessorArchitecture="x64" />
+  <Identity Name="Umbrel.Umbrel" Publisher="CN=&quot;Umbrel, Inc.&quot;, O=&quot;Umbrel, Inc.&quot;, L=Claymont, S=Delaware, C=US" Version="0.1.4.5" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Umbrel</DisplayName>
     <PublisherDisplayName>Umbrel, Inc.</PublisherDisplayName>

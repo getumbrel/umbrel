@@ -92,15 +92,17 @@ private fun SetupContent(
 
 	LaunchedEffect(attempt) {
 		unreachable = false
+		// Setup opens at an address the browser counts as the Umbrel, like every other page.
+		val hosts = target.hosts.filter(BrowserContext::isUmbrelHost)
 		val host = try {
-			Umbreld.resolvedHost(target)
+			Umbreld.resolvedHost(Umbreld.Target(target.deviceId, hosts))
 		} catch (failure: Exception) {
 			if (failure is kotlinx.coroutines.CancellationException) throw failure
 			unreachable = true
 			return@LaunchedEffect
 		}
 		// The owner is the only account that can exist at the end of setup.
-		val browserContext = BrowserContext.create(context.applicationContext, target.deviceId, "0", target.hosts + host, scope)
+		val browserContext = BrowserContext.create(context.applicationContext, target.deviceId, "0", hosts + host, scope)
 		val setup = BrowserPage("setup", BrowserPage.Identity("Set Up Umbrel", null, isUmbrel = true), browserContext)
 		var password: String? = null
 		var accountCreated = false

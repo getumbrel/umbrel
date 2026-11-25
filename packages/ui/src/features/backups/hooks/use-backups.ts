@@ -7,7 +7,7 @@ import {trpcReact, type RouterOutput} from '@/trpc/trpc'
 import {getUserFriendlyErrorMessage} from '../utils/error-messages'
 
 export type BackupDestination =
-	| {type: 'nas'; host: string; rootPath: string} // e.g. /Network/<host>
+	| {type: 'nas'; rootPath: string} // where the host's shares are mounted, e.g. /Network/<host>
 	| {type: 'external'; mountpoint: string} // partition mountpoint
 
 export type SetupBackupInput = {

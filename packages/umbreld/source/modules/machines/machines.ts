@@ -507,13 +507,13 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			name: 'Ubuntu',
 			variantName: 'Desktop',
 			version: 'Ubuntu 26.04 LTS',
-			sizeMb: 859,
+			sizeMb: 862,
 			estimatedInstalledSizeMb: 5_000,
 			arch: 'amd64',
 			platform: 'linux',
 			requiresCredentials: true,
-			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-amd64.img',
-			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
+			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20261108/ubuntu-26.04-server-cloudimg-amd64.img',
+			sha256: '7b90593f5532b49b7e3fe3d2743f0d1f0d822e5b07cebcd8e00c0df8069ecab9',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
 			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop', 'spice-vdagent'], graphical: true},
@@ -524,12 +524,12 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			name: 'Ubuntu',
 			variantName: 'Server',
 			version: 'Ubuntu 26.04 LTS',
-			sizeMb: 859,
+			sizeMb: 862,
 			arch: 'amd64',
 			platform: 'linux',
 			requiresCredentials: true,
-			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-amd64.img',
-			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
+			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20261108/ubuntu-26.04-server-cloudimg-amd64.img',
+			sha256: '7b90593f5532b49b7e3fe3d2743f0d1f0d822e5b07cebcd8e00c0df8069ecab9',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
 			cloudInit: {adminGroup: 'sudo'},
@@ -540,13 +540,13 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			name: 'Ubuntu',
 			variantName: 'Desktop',
 			version: 'Ubuntu 26.04 LTS',
-			sizeMb: 940,
+			sizeMb: 943,
 			estimatedInstalledSizeMb: 7_900,
 			arch: 'arm64',
 			platform: 'linux',
 			requiresCredentials: true,
-			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-arm64.img',
-			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
+			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20261108/ubuntu-26.04-server-cloudimg-arm64.img',
+			sha256: 'cf3b8472b84e7de37cdc2d2e9a9bf82b3edf0ab97113a1422eff048f26688e2f',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
 			cloudInit: {adminGroup: 'sudo', packages: ['ubuntu-desktop', 'spice-vdagent'], graphical: true},
@@ -557,12 +557,12 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			name: 'Ubuntu',
 			variantName: 'Server',
 			version: 'Ubuntu 26.04 LTS',
-			sizeMb: 940,
+			sizeMb: 943,
 			arch: 'arm64',
 			platform: 'linux',
 			requiresCredentials: true,
-			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-arm64.img',
-			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
+			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20261108/ubuntu-26.04-server-cloudimg-arm64.img',
+			sha256: 'cf3b8472b84e7de37cdc2d2e9a9bf82b3edf0ab97113a1422eff048f26688e2f',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
 			cloudInit: {adminGroup: 'sudo'},
@@ -740,12 +740,12 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			familyId: 'android',
 			name: 'Android',
 			version: 'Android 13 · Waydroid',
-			sizeMb: 859,
+			sizeMb: 862,
 			arch: 'amd64',
 			platform: 'linux',
 			requiresCredentials: true,
-			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-amd64.img',
-			sha256: '3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c',
+			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20261108/ubuntu-26.04-server-cloudimg-amd64.img',
+			sha256: '7b90593f5532b49b7e3fe3d2743f0d1f0d822e5b07cebcd8e00c0df8069ecab9',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-x86',
 			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
@@ -755,12 +755,12 @@ export const builtinMachinesCatalog = catalogSchema.parse({
 			familyId: 'android',
 			name: 'Android',
 			version: 'Android 13 · Waydroid',
-			sizeMb: 940,
+			sizeMb: 943,
 			arch: 'arm64',
 			platform: 'linux',
 			requiresCredentials: true,
-			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-arm64.img',
-			sha256: '3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1',
+			url: 'https://cloud-images.ubuntu.com/releases/resolute/release-20261108/ubuntu-26.04-server-cloudimg-arm64.img',
+			sha256: 'cf3b8472b84e7de37cdc2d2e9a9bf82b3edf0ab97113a1422eff048f26688e2f',
 			diskFormat: 'qcow2',
 			platformProfile: 'modern-arm64',
 			cloudInit: {adminGroup: 'sudo', commands: [['bash', '-c', ANDROID_INSTALL]], graphical: true},
@@ -981,12 +981,21 @@ export function renderCloudInitUserData(
 		],
 		ssh_pwauth: true,
 		chpasswd: {expire: false},
+		// Machines removes this seed once setup completes. Without it a guest
+		// that has no ds-identify, like Alpine, falls back to the None datasource
+		// on its next boot and treats itself as a brand new instance: it waits
+		// minutes on cloud metadata services, regenerates its SSH host keys and
+		// turns SSH password login back off. Keep using the cached datasource.
+		write_files: [{path: '/etc/cloud/cloud.cfg.d/99-umbrel-machine.cfg', content: 'manual_cache_clean: true\n'}],
 	}
 
-	if (provisioning.packages?.length) {
-		cloudConfig.package_update = true
-		cloudConfig.packages = provisioning.packages
-	}
+	// Catalog images are pinned releases that age between umbrelOS updates, so
+	// bring every package, kernel included, up to date before anything else is
+	// installed. A new machine then starts with current security fixes rather
+	// than whatever shipped in the image.
+	cloudConfig.package_update = true
+	cloudConfig.package_upgrade = true
+	if (provisioning.packages?.length) cloudConfig.packages = provisioning.packages
 
 	const commands = [...(provisioning.commands ?? [])]
 	if (provisioning.graphical) commands.push(['systemctl', 'set-default', 'graphical.target'])
@@ -1000,13 +1009,13 @@ export function renderCloudInitUserData(
 		}
 	}
 
-	if (provisioning.graphical) {
-		cloudConfig.power_state = {
-			delay: 'now',
-			mode: 'reboot',
-			message: 'Rebooting after machine setup',
-			condition: true,
-		}
+	// Reboot once setup has reported in, so the machine runs the kernel and
+	// libraries the upgrade installed, and graphical images start their desktop.
+	cloudConfig.power_state = {
+		delay: 'now',
+		mode: 'reboot',
+		message: 'Rebooting after machine setup',
+		condition: true,
 	}
 
 	return `#cloud-config\n${yaml.dump(cloudConfig, {noRefs: true, lineWidth: 120})}`

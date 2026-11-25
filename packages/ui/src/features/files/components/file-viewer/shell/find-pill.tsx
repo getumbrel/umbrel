@@ -76,9 +76,9 @@ export function FindPill({
 						if (event.shiftKey) onPrevious()
 						else onNext()
 					}}
-					className='mx-2 h-full w-40 min-w-0 bg-transparent text-13 text-white/90 outline-none placeholder:text-white/35 max-md:flex-1'
+					className='mx-2 h-full w-40 min-w-24 bg-transparent text-13 text-white/90 outline-none placeholder:text-white/35 max-md:flex-1'
 				/>
-				<span aria-live='polite' className='shrink-0 pr-1 text-12 whitespace-nowrap text-white/45 tabular-nums'>
+				<span aria-live='polite' className='min-w-0 truncate pr-1 text-12 text-white/45 tabular-nums'>
 					{status}
 				</span>
 				<PillButton

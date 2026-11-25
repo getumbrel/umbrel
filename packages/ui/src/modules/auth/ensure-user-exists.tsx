@@ -1,8 +1,7 @@
 import {useEffect} from 'react'
 import {useTranslation} from 'react-i18next'
 
-import {BareCoverMessage} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
+import {LoadingCover} from '@/components/ui/cover'
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -50,11 +49,7 @@ function EnsureUser({
 	const wantsUserExists = exists
 
 	if (userExistsQ.isLoading) {
-		return (
-			<BareCoverMessage delayed>
-				<Loading />
-			</BareCoverMessage>
-		)
+		return <LoadingCover />
 	}
 
 	if (userExists === wantsUserExists) {

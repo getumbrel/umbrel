@@ -11,6 +11,7 @@ import {
 	PiClockCounterClockwiseFill,
 	PiDevicesFill,
 	PiKeyFill,
+	PiPersonArmsSpreadFill,
 	PiShareNetworkFill,
 	PiUsersThreeFill,
 	PiWrenchFill,
@@ -31,6 +32,7 @@ export type SettingsItemId =
 	| '2fa'
 	| 'users'
 	| 'language'
+	| 'accessibility'
 	| 'wifi'
 	| 'storage'
 	| 'apps'
@@ -69,6 +71,7 @@ const SETTINGS_PAGE_ITEM_ORDER: SettingsItemId[] = [
 	'widgets',
 	'sessions',
 	'language',
+	'accessibility',
 	'storage',
 	'apps',
 	'file-sharing',
@@ -222,6 +225,21 @@ export function createSettingsCatalog(
 		},
 		{
 			kind: 'page',
+			id: 'accessibility',
+			category: 'account',
+			command: {},
+			icon: PiPersonArmsSpreadFill,
+			title: t('accessibility'),
+			description: t('accessibility-description'),
+			to: '/settings/accessibility',
+			keywords: [
+				t('accessibility.text-size'),
+				t('accessibility.increase-contrast'),
+				t('accessibility.increase-contrast-description'),
+			],
+		},
+		{
+			kind: 'page',
 			id: 'wifi',
 			category: 'system',
 			command: {},
@@ -249,22 +267,25 @@ export function createSettingsCatalog(
 			title: t('storage-manager'),
 			description: t('storage-manager.description'),
 			to: '/settings/storage',
+			// The words Storage Manager itself uses, so searching for what is on screen finds it
 			keywords: [
-				t('storage-manager.mode'),
-				t('storage-manager.mode.failsafe'),
-				t('storage-manager.mode.failsafe.description'),
-				t('storage-manager.mode.full-storage'),
-				t('storage-manager.mode.full-storage.description'),
-				t('storage-manager.available-storage'),
-				t('storage-manager.health.title'),
-				t('storage-manager.health.title-drive'),
-				t('storage-manager.health.health-status'),
-				t('storage-manager.health.estimated-life'),
-				t('storage-manager.health.temperature'),
-				t('storage-manager.add-to-raid.title'),
-				t('storage-manager.install-ssd.title'),
-				t('storage-manager.swap'),
-				t('storage-manager.replace'),
+				t('storage-ui.failsafe'),
+				t('storage-ui.full-storage'),
+				// What people who know the technical names look for. These aren't translated.
+				'RAID',
+				'RAID-Z1',
+				'RAID-Z2',
+				'Mirror',
+				t('storage-ui.acceleration'),
+				t('storage-mgr.check'),
+				t('storage-ui.fact.temperature'),
+				t('storage-ui.fact.life-left'),
+				t('storage-ui.fact.serial'),
+				t('storage-mgr.action.add.hdd'),
+				t('storage-mgr.action.add.ssd'),
+				t('storage-mgr.action.replace.drive'),
+				t('storage-mgr.action.replace.ssd'),
+				t('storage-ui.technical-details'),
 			],
 		},
 		{
@@ -715,7 +736,8 @@ export function createSettingsCatalog(
 		},
 	]
 
-	const memberPreferenceItems = pageItems.filter(({id}) => id === 'wallpaper' || id === 'widgets' || id === 'language')
+	const memberPreferenceIds: SettingsItemId[] = ['wallpaper', 'widgets', 'language', 'accessibility']
+	const memberPreferenceItems = pageItems.filter(({id}) => memberPreferenceIds.includes(id))
 	// Members get the File sharing row in their single account section, right below Widgets
 	const memberFileSharingItems = sambaEnabled
 		? pageItems

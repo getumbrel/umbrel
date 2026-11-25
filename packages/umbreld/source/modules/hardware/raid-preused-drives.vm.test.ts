@@ -2,9 +2,9 @@ import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from
 
 import pWaitFor from 'p-wait-for'
 
-import {createTestVm} from '../test-utilities/create-test-umbreld.ts'
+import {createTestVm, raidzDrives} from '../test-utilities/create-test-umbreld.ts'
 
-describe('RAID operations with pre-used ZFS drives', () => {
+describe.each(raidzDrives)('RAID operations with pre-used ZFS drives ($name)', (drive) => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let device1Id: string
 	let device2Id: string
@@ -13,7 +13,7 @@ describe('RAID operations with pre-used ZFS drives', () => {
 	let failed = false
 
 	beforeAll(async () => {
-		umbreld = await createTestVm()
+		umbreld = await createTestVm({device: drive.device})
 	})
 
 	afterAll(async () => {
@@ -30,20 +30,20 @@ describe('RAID operations with pre-used ZFS drives', () => {
 
 	// Phase 1: Create initial RAID with 4 SSDs to "pre-use" them with ZFS
 	test('adds four NVMe devices and boots VM', async () => {
-		await umbreld.vm.addNvme({slot: 1})
-		await umbreld.vm.addNvme({slot: 2})
-		await umbreld.vm.addNvme({slot: 3})
-		await umbreld.vm.addNvme({slot: 4})
+		await drive.add(umbreld.vm, {slot: 1})
+		await drive.add(umbreld.vm, {slot: 2})
+		await drive.add(umbreld.vm, {slot: 3})
+		await drive.add(umbreld.vm, {slot: 4})
 		await umbreld.vm.powerOn()
 	})
 
 	test('detects all four NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(4)
-		device1Id = devices.find((d) => d.slot === 1)!.id!
-		device2Id = devices.find((d) => d.slot === 2)!.id!
-		device3Id = devices.find((d) => d.slot === 3)!.id!
-		device4Id = devices.find((d) => d.slot === 4)!.id!
+		device1Id = devices.find(drive.inSlot(1))!.id!
+		device2Id = devices.find(drive.inSlot(2))!.id!
+		device3Id = devices.find(drive.inSlot(3))!.id!
+		device4Id = devices.find(drive.inSlot(4))!.id!
 	})
 
 	test('registers user with storage RAID using all 4 devices', async () => {
@@ -83,10 +83,10 @@ describe('RAID operations with pre-used ZFS drives', () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(4)
 		// Re-capture device IDs (should be the same)
-		device1Id = devices.find((d) => d.slot === 1)!.id!
-		device2Id = devices.find((d) => d.slot === 2)!.id!
-		device3Id = devices.find((d) => d.slot === 3)!.id!
-		device4Id = devices.find((d) => d.slot === 4)!.id!
+		device1Id = devices.find(drive.inSlot(1))!.id!
+		device2Id = devices.find(drive.inSlot(2))!.id!
+		device3Id = devices.find(drive.inSlot(3))!.id!
+		device4Id = devices.find(drive.inSlot(4))!.id!
 	})
 
 	test('sets up storage mode RAID with pre-used SSD (device 1)', async () => {
@@ -253,8 +253,8 @@ describe('RAID operations with pre-used ZFS drives', () => {
 	test('detects all devices after second factory reset', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
 		expect(devices).toHaveLength(4)
-		device1Id = devices.find((d) => d.slot === 1)!.id!
-		device2Id = devices.find((d) => d.slot === 2)!.id!
+		device1Id = devices.find(drive.inSlot(1))!.id!
+		device2Id = devices.find(drive.inSlot(2))!.id!
 	})
 
 	// Phase 8: Test storage mode expansion with pre-used SSD

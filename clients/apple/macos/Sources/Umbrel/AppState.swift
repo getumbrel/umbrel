@@ -87,6 +87,11 @@ final class AppState {
 	private var initialFallbackPending = true
 	private var probes: [String: ProbeRecord] = [:] // deviceId -> latest identity probe
 	private var probesInFlight: Set<String> = [] // device ids
+	// Bumped by a verified answer from outside a probe, so a slower probe still running
+	// can't overwrite it
+	private var probeGenerations: [String: Int] = [:]
+	// Saved Umbrels that answer at one of their addresses with their id under a new CA
+	private var identityChangedIds: Set<String> = []
 	private var connectionHosts: [String: String] = [:] // actual endpoint selected by UmbrelKit
 	private var completedInitialReachabilityCheck = false
 	private(set) var initialDiscoveryInProgress = true
@@ -238,6 +243,11 @@ final class AppState {
 
 		// Saved devices that aren't currently reachable
 		for (id, saved) in config.savedDevices where byId[id] == nil {
+			// Opening the panel at launch can start the first probe before the initial
+			// sweep, which then skips it as in flight. Until it answers, nothing is known.
+			let reachability: DeviceReachability = probes[id] != nil
+				|| (completedInitialReachabilityCheck && !probesInFlight.contains(id))
+				? .offline : .unverified
 			byId[id] = Device(
 				id: id,
 				name: saved.name,
@@ -246,16 +256,13 @@ final class AppState {
 				addresses: saved.addresses,
 				model: saved.model,
 				userName: saved.userName,
-				// Opening the panel at launch can start the first probe before the initial
-				// sweep, which then skips it as in flight. Until it answers, nothing is known.
-				reachability: probes[id] != nil
-					|| (completedInitialReachabilityCheck && !probesInFlight.contains(id))
-					? .offline : .unverified,
+				reachability: reachability,
 				saved: true,
 				connection: connectionState(id: id),
 				shares: [],
 				onboarded: nil,
-				dashboardUsesHTTPS: saved.dashboardUsesHTTPS == true
+				dashboardUsesHTTPS: saved.dashboardUsesHTTPS == true,
+				identityChanged: reachability == .offline && identityChangedIds.contains(id)
 			)
 		}
 
@@ -460,7 +467,7 @@ final class AppState {
 				reportConfigStorageIssue(error)
 			}
 		}
-		probeCompleted(deviceId: device.id, host: device.host, identity: device.discoveryInfo)
+		recordVerifiedRoute(deviceId: device.id, host: device.host, identity: device.discoveryInfo)
 	}
 
 	// The first search ends once Bonjour has had its window and both its candidates and
@@ -606,7 +613,7 @@ final class AppState {
 					throw error
 				}
 				manuallyIdentifiedCandidates[device.id] = nil
-				probeCompleted(
+				recordVerifiedRoute(
 					deviceId: device.id,
 					host: device.host,
 					identity: device.discoveryInfo
@@ -718,7 +725,7 @@ final class AppState {
 		guard !due.isEmpty else { return }
 		probesInFlight.formUnion(due)
 
-		await withTaskGroup(of: (String, String?, Umbreld.DiscoveryInfo?).self) { group in
+		await withTaskGroup(of: (String, Int, ProbeResult).self) { group in
 			for deviceId in due {
 				// A device forgotten after it was scheduled gets no probe, so clear it here;
 				// otherwise it would count as in flight for the rest of the run.
@@ -726,15 +733,50 @@ final class AppState {
 					probesInFlight.remove(deviceId)
 					continue
 				}
+				let generation = probeGenerations[deviceId, default: 0]
 				group.addTask {
-					let result = await Self.firstReachableEndpoint(for: saved)
-					return (deviceId, result?.host, result?.identity)
+					(deviceId, generation, await Self.probe(saved))
 				}
 			}
-			for await (deviceId, host, identity) in group {
-				probeCompleted(deviceId: deviceId, host: host, identity: identity)
+			for await (deviceId, generation, result) in group {
+				// A newer answer, or Forget, came in while this probe ran
+				guard generation == probeGenerations[deviceId, default: 0] else {
+					probesInFlight.remove(deviceId)
+					continue
+				}
+				if result.identityChanged {
+					identityChangedIds.insert(deviceId)
+				} else {
+					identityChangedIds.remove(deviceId)
+				}
+				probeCompleted(deviceId: deviceId, host: result.endpoint?.host, identity: result.endpoint?.identity)
 			}
 		}
+	}
+
+	private struct ProbeResult: Sendable {
+		var endpoint: (host: String, identity: Umbreld.DiscoveryInfo)?
+		var identityChanged = false
+	}
+
+	// Something that answered without proving the pin is either this Umbrel with a new
+	// identity or another server, and each needs something different from the user.
+	// When nothing answered at all, there's nothing more to ask.
+	private nonisolated static func probe(_ saved: SavedDevice) async -> ProbeResult {
+		let target = saved.nativeTarget
+		let answeredWithoutPin: Bool
+		do {
+			let host = try await Umbreld.resolvedHost(for: target)
+			if let identity = await Umbreld.identify(host: host, expectedDeviceId: saved.id) {
+				return ProbeResult(endpoint: (host, identity))
+			}
+			// A cached route that verified before and doesn't now
+			answeredWithoutPin = true
+		} catch {
+			answeredWithoutPin = Umbreld.isIdentityChange(error)
+		}
+		guard answeredWithoutPin else { return ProbeResult() }
+		return ProbeResult(identityChanged: await Umbreld.identityChanged(for: target))
 	}
 
 	private nonisolated static func firstReachableEndpoint(
@@ -748,8 +790,21 @@ final class AppState {
 
 	private func probeCompleted(deviceId: String, host: String?, identity: Umbreld.DiscoveryInfo?) {
 		probesInFlight.remove(deviceId)
+		recordProbe(deviceId: deviceId, host: host, identity: identity)
+	}
+
+	// A verified answer from outside a probe: the hostname scan, Connect by address or
+	// sign-in. It's newer than any probe still running, which drops its own answer when
+	// it lands.
+	private func recordVerifiedRoute(deviceId: String, host: String, identity: Umbreld.DiscoveryInfo) {
+		probeGenerations[deviceId, default: 0] += 1
+		recordProbe(deviceId: deviceId, host: host, identity: identity)
+	}
+
+	private func recordProbe(deviceId: String, host: String?, identity: Umbreld.DiscoveryInfo?) {
 		probes[deviceId] = ProbeRecord(host: host, identity: identity, checkedAt: Date())
 		if let identity, let host {
+			identityChangedIds.remove(deviceId)
 			connectionHosts[deviceId] = host
 			Self.logger.notice(
 				"Discovery identified device: id=\(identity.id, privacy: .private(mask: .hash)) host=\(host, privacy: .private(mask: .hash))"
@@ -762,8 +817,8 @@ final class AppState {
 	}
 
 	// True while a user-initiated connect/disconnect/mount is running. The popup
-	// suppresses its click-away auto-hide during these: first-mount system dialogs
-	// (SMB trust, network-volume permission) briefly take key status, which would
+	// suppresses its click-away auto-hide during these: the first mount's system
+	// dialog (network-volume permission) briefly takes key status, which would
 	// otherwise read as "clicked elsewhere" and close the popup mid-flow.
 	var hasForegroundActivity: Bool {
 		!connecting.isEmpty || !disconnecting.isEmpty || !foregroundMounts.isEmpty
@@ -836,6 +891,7 @@ final class AppState {
 		do {
 			try config.save(savedDevice)
 			explicitlyClaimedDeviceIds.remove(deviceId)
+			identityChangedIds.remove(deviceId)
 		} catch {
 			clearSession(deviceId: deviceId)
 			connectionHosts[deviceId] = nil
@@ -844,7 +900,7 @@ final class AppState {
 		}
 		// Once the device is saved, normal reachability probes own its online state.
 		if let manualDevice = manuallyIdentifiedCandidates.removeValue(forKey: deviceId) {
-			probeCompleted(
+			recordVerifiedRoute(
 				deviceId: deviceId,
 				host: connectionHosts[deviceId] ?? manualDevice.host,
 				identity: manualDevice.discoveryInfo
@@ -852,7 +908,7 @@ final class AppState {
 		}
 		if let fallbackDevice = fallbackIdentifiedCandidates.first(where: { $0.id == deviceId }) {
 			fallbackIdentifiedCandidates.removeAll { $0.id == deviceId }
-			probeCompleted(
+			recordVerifiedRoute(
 				deviceId: deviceId,
 				host: connectionHosts[deviceId] ?? fallbackDevice.host,
 				identity: fallbackDevice.discoveryInfo
@@ -892,8 +948,25 @@ final class AppState {
 		explicitlyClaimedDeviceIds.remove(deviceId)
 		manuallyIdentifiedCandidates[deviceId] = nil
 		connectionHosts[deviceId] = nil
+		probeGenerations[deviceId, default: 0] += 1
+		identityChangedIds.remove(deviceId)
 		try config.remove(id: deviceId)
 		rebuild()
+	}
+
+	// For a saved Umbrel with a new identity, once the user confirms it was restored or
+	// its certificate reset: forget it, then look again, so it shows up as it is now and
+	// is signed in to like a new one.
+	func reconnect(deviceId: String) async throws {
+		try await forget(deviceId: deviceId)
+		Task {
+			// A rescan already running took its saved ids before the Umbrel was forgotten,
+			// so look again once it ends
+			while scanning {
+				try? await Task.sleep(for: .milliseconds(100))
+			}
+			await rescan()
+		}
 	}
 
 	// Enable file sharing for the authenticated account's home directory, then mount it.
@@ -944,7 +1017,7 @@ final class AppState {
 			guard let result = await Self.firstReachableEndpoint(for: saved) else {
 				throw DeviceIdentityUnavailableError()
 			}
-			probeCompleted(deviceId: deviceId, host: result.host, identity: result.identity)
+			recordVerifiedRoute(deviceId: deviceId, host: result.host, identity: result.identity)
 			return
 		}
 		guard !explicitlyClaimedDeviceIds.contains(deviceId) else { return }
@@ -1356,7 +1429,8 @@ final class AppState {
 		let connectionHost: String
 		do {
 			// API calls may have moved from a stale LAN route to Tailscale (or vice
-			// versa). Resolve after them so Finder mounts the same verified endpoint.
+			// versa). Resolve after them so Finder mounts the route the app is using now.
+			// The pin covers the app's check only: macOS resolves the host again by itself.
 			connectionHost = try await Umbreld.resolvedHost(for: target)
 			connectionHosts[deviceId] = connectionHost
 		} catch {
@@ -1454,8 +1528,7 @@ final class AppState {
 					sharename: share.sharename,
 					username: credential.username,
 					password: sharePassword,
-					forceNewSession: needsFreshSession,
-					silent: silent
+					forceNewSession: needsFreshSession
 				)
 				remember(
 					Mounter.MountedShare(host: connectionHost, sharename: share.sharename, path: path),
@@ -1665,6 +1738,16 @@ final class AppState {
 			} catch {
 				if (error as? Umbreld.Error)?.isAuthError == true {
 					await sessionExpired(device.id, session: session)
+					continue
+				}
+				if Umbreld.isIdentityChange(error) {
+					// The Umbrel now refuses its pin, as after a certificate reset. Its Bonjour
+					// record was verified before that and no longer shows it's online, so drop
+					// it and probe the saved routes, which tells a new identity apart from
+					// another server.
+					mdnsIdentifiedCandidates.removeAll { $0.id == device.id }
+					rebuild()
+					await probeDevices([device.id], force: true)
 					continue
 				}
 				// Network blip: retry next cycle

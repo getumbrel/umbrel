@@ -20,7 +20,7 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {Button} from '@/components/ui/button'
-import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialogSeparator, ImmersiveDialogTitle} from '@/components/ui/immersive-dialog'
 import {Input, PasswordInput} from '@/components/ui/input'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
@@ -34,14 +34,9 @@ import {
 	useRestoreBackup as useBackupsRestore,
 	useRepositoryBackups,
 } from '@/features/backups/hooks/use-backups'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
-import {
-	BACKUP_FILE_NAME,
-	getDisplayRepositoryPath,
-	getRepositoryDisplayName,
-	getRepositoryPathFromBackupFile,
-	getRepositoryRelativePath,
-} from '@/features/backups/utils/filepath-helpers'
+import {BACKUP_FILE_NAME, getRepositoryPathFromBackupFile} from '@/features/backups/utils/filepath-helpers'
 import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
@@ -82,6 +77,9 @@ const headerMetaForStep = (s: Step) => {
 			return {title: '', subtitle: ''}
 	}
 }
+
+// Inset, so the scrolling lists' edges don't clip it
+const rowFocusClass = 'outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
 
 // ---------------------------------------------
 // Main Component
@@ -234,7 +232,9 @@ export function BackupsRestoreWizard() {
 						const h = headerMetaForStep(step)
 						return (
 							<>
-								<div className='text-24 font-medium text-white'>{h.title}</div>
+								<ImmersiveDialogTitle asChild>
+									<h2 className='text-24 font-medium text-white'>{h.title}</h2>
+								</ImmersiveDialogTitle>
 								{h.subtitle ? <div className='text-15 text-white/60'>{h.subtitle}</div> : null}
 							</>
 						)
@@ -313,7 +313,7 @@ export function BackupsRestoreWizard() {
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<div className='mt-2'>
-							<span className='mb-2 block text-left text-13 opacity-60'>
+							<span className='mb-2 block text-left text-13 text-white/60'>
 								{t('backups-restore.enter-password-to-confirm')}
 							</span>
 							<PasswordInput
@@ -386,9 +386,7 @@ function RepositoryStep({
 		</>
 	)
 
-	const repoName = (path: string) => getRepositoryDisplayName(path) || t('unknown')
-
-	const repoPathDisplay = (path: string) => getRepositoryRelativePath(path)
+	const describeBackupLocation = useDescribeBackupLocation()
 
 	// Simple folder browser state for manual mode
 	const [isBrowserOpen, setBrowserOpen] = useState(false)
@@ -405,16 +403,19 @@ function RepositoryStep({
 						{isLoading ? (
 							<LoadingCard />
 						) : repositories && repositories.length > 0 ? (
-							<div className='umbrel-stable-gutter max-h-[min(60vh,500px)] overflow-y-auto'>
+							<div className='max-h-[min(60vh,500px)] overflow-y-auto'>
 								<div className='space-y-3'>
 									{repositories.map((repo) => {
 										const selected = repo.id === selectedId
+										const location = describeBackupLocation(repo.path)
 										return (
 											// We do not allow continuing with a disconnected device. If not connected,the row is visually disabled and non-interactive.
-											<div
+											<button
+												type='button'
 												key={repo.id}
 												className={[
-													'flex w-full min-w-0 items-center gap-3 rounded-xl border p-4 transition-colors',
+													'flex w-full min-w-0 items-center gap-3 rounded-xl border p-4 text-left transition-colors',
+													rowFocusClass,
 													selected
 														? 'border-brand bg-brand/15'
 														: isConnected(repo.path)
@@ -425,8 +426,9 @@ function RepositoryStep({
 													if (!isConnected(repo.path)) return
 													onSelect(repo.id)
 												}}
+												aria-pressed={selected}
 												aria-disabled={!isConnected(repo.path)}
-												tabIndex={isConnected(repo.path) ? 0 : -1}
+												tabIndex={isConnected(repo.path) ? undefined : -1}
 												title={!isConnected(repo.path) ? t('backups-configure.not-connected') : undefined}
 											>
 												<div className='flex items-center gap-2'>
@@ -444,10 +446,10 @@ function RepositoryStep({
 												</div>
 												<div className='min-w-0 flex-1'>
 													<div className='text-sm break-words whitespace-normal' title={repo.path}>
-														<span className='font-medium'>{repoName(repo.path)}</span>
-														<span> · {repoPathDisplay(repo.path)}</span>
+														<span className='font-medium'>{location.name}</span>
+														<span> · {location.folder}</span>
 													</div>
-													<div className='text-[12px] opacity-60'>
+													<div className='text-12 text-white/60'>
 														{repo.lastBackup
 															? t('backups-restore.last-backup', {
 																	date: formatFilesystemDate(Number(repo.lastBackup), lang),
@@ -455,15 +457,16 @@ function RepositoryStep({
 															: t('backups-restore.no-backups-yet')}
 													</div>
 												</div>
-											</div>
+											</button>
 										)
 									})}
 								</div>
 							</div>
 						) : null}
 						{/* Manual add callout row (always shown in known mode) */}
-						<div
-							className='flex w-full min-w-0 items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 transition-colors hover:border-brand hover:bg-brand/15'
+						<button
+							type='button'
+							className={`flex w-full min-w-0 items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 text-left transition-colors hover:border-brand hover:bg-brand/15 ${rowFocusClass}`}
 							onClick={() => onModeChange('manual')}
 						>
 							<div className='flex h-10 w-10 shrink-0 items-center justify-center'>
@@ -475,9 +478,9 @@ function RepositoryStep({
 							</div>
 							<div className='min-w-0 flex-1'>
 								<div className='text-sm font-medium'>{t('backups-restore.restore-from-unlisted')}</div>
-								<div className='text-[12px] opacity-60'>{t('backups-restore.browse-nas-or-external')}</div>
+								<div className='text-12 text-white/60'>{t('backups-restore.browse-nas-or-external')}</div>
 							</div>
-						</div>
+						</button>
 					</>
 				) : (
 					<div className='space-y-4'>
@@ -485,6 +488,7 @@ function RepositoryStep({
 						<div className='mb-1 flex items-center gap-2'>
 							<button
 								type='button'
+								aria-label={t('back')}
 								className='inline-flex items-center justify-center text-white/70 hover:text-white'
 								onClick={() => onModeChange('known')}
 							>
@@ -499,7 +503,7 @@ function RepositoryStep({
 									type='text'
 									value={manualPath}
 									readOnly
-									className='pr-28'
+									className='pr-[calc(7.5rem+10*var(--text-boost))]'
 									title={manualPath || ''}
 									aria-disabled={!manualPath}
 									tabIndex={manualPath ? 0 : -1}
@@ -599,7 +603,7 @@ function BackupsStep({
 					<EmptyCard text={t('backups-restore.no-backups-found')} />
 				) : (
 					<div
-						className='umbrel-stable-gutter max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-linear-to-b from-white/[0.03] to-transparent pt-1 pb-8 pl-1 md:max-h-[min(60vh,560px)]'
+						className='max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-linear-to-b from-white/[0.03] to-transparent pt-1 pb-8 pl-1 md:max-h-[min(60vh,560px)]'
 						style={{
 							maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 80px), transparent)',
 						}}
@@ -624,16 +628,18 @@ function BackupsStep({
 								const isLast = i === backups.length - 1
 
 								return (
-									<div
+									<button
+										type='button'
 										key={id || Math.random()}
 										className={[
-											'group relative flex w-full items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
+											'group relative flex w-full items-center gap-4 rounded-12 px-3 py-2 text-left md:px-4 md:py-3.5',
+											rowFocusClass,
 											selected
 												? 'bg-linear-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
 												: 'hover:bg-white/[0.06]',
 										].join(' ')}
 										onClick={() => id && onSelect(id)}
-										title={id}
+										aria-pressed={selected}
 									>
 										{/* Selection indicator */}
 										<div className='relative flex size-10 shrink-0 items-center justify-center'>
@@ -701,14 +707,14 @@ function BackupsStep({
 										{isFirst && (
 											<div
 												className={[
-													'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase transition-all duration-200',
+													'shrink-0 rounded-full px-2 py-0.5 text-10 font-medium tracking-wider uppercase transition-all duration-200',
 													selected ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60',
 												].join(' ')}
 											>
 												{t('backups-restore.latest')}
 											</div>
 										)}
-									</div>
+									</button>
 								)
 							})}
 						</div>
@@ -731,12 +737,10 @@ function ReviewStep({repository, backup}: {repository?: BackupRepository; backup
 	const size = backup?.size
 	const sizeTxt = typeof size === 'number' ? formatFilesystemSize(size) : t('unknown')
 
-	const repoDisplayPath = useMemo(() => {
-		const p = repository?.path || ''
-		if (!p) return t('backups-restore.unknown-repository')
-		const display = getDisplayRepositoryPath(p)
-		return display || t('backups-restore.unknown-repository')
-	}, [repository?.path])
+	const describeBackupLocation = useDescribeBackupLocation()
+	const repoDisplayPath = repository?.path
+		? describeBackupLocation(repository.path).path
+		: t('backups-restore.unknown-repository')
 
 	return (
 		<div className='space-y-4'>

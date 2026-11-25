@@ -27,7 +27,7 @@ export function SearchResults({query}: {query: string}) {
 				<SectionHeading
 					title={
 						<>
-							<span className='opacity-50'>{t('app-store.search.results-for')}</span> {query}
+							<span className='text-white/50'>{t('app-store.search.results-for')}</span> {query}
 						</>
 					}
 					// No count beside the empty state, which already says there are no results

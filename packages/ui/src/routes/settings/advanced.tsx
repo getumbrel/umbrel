@@ -6,12 +6,11 @@ import {useParams, useSearchParams} from 'react-router-dom'
 
 import {AnimatedHeight} from '@/components/ui/animated-height'
 import {CopyableField} from '@/components/ui/copyable-field'
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {Cover} from '@/components/ui/cover'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '@/components/ui/drawer'
 import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
-import {Loading} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
 import {toast} from '@/components/ui/toast'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
@@ -112,7 +111,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 			<TbChevronRight className='pointer-events-auto mt-0.5 size-4.5 shrink-0 self-center text-white/30' />
 		</button>
 	) : (
-		<div className={cn(cardClass, 'opacity-50')}>
+		<div className={cn(cardClass, 'opacity-50 contrast-more:opacity-100')}>
 			<CardText
 				title={t('thunderbolt-settings.title')}
 				description={t('thunderbolt-settings.unsupported-description')}
@@ -123,12 +122,11 @@ export default function AdvancedSettingsDrawerOrDialog() {
 	// Show loading cover state while enabling/disabling Tor
 	if (tor.isMutLoading) {
 		return (
-			<CoverMessage>
-				<Loading>{torEnabling ? t('enabling-tor') : t('tor.disable.progress')}</Loading>
-				<CoverMessageParagraph>
-					{torEnabling ? t('tor.enable.description') : t('tor.disable.description')}
-				</CoverMessageParagraph>
-			</CoverMessage>
+			<Cover
+				title={torEnabling ? t('enabling-tor') : t('tor.disable.progress')}
+				progress='spinner'
+				note={torEnabling ? t('tor.enable.description') : t('tor.disable.description')}
+			/>
 		)
 	}
 
@@ -241,7 +239,7 @@ function CardText({title, description, trailingIcon}: {title: string; descriptio
 				{title}
 				{trailingIcon && <Icon component={trailingIcon} className='ml-2 inline-block opacity-50' />}
 			</h3>
-			<p className='text-13 leading-tight opacity-45'>{description}</p>
+			<p className='text-13 leading-tight text-white/45'>{description}</p>
 		</div>
 	)
 }

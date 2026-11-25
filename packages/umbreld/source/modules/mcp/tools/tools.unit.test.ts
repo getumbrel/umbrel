@@ -5,6 +5,8 @@ import {normalizeAppMountTargetPath, normalizeAppStorageSourcePath} from '../../
 import registerAppTools from './apps.ts'
 import registerFileTools from './files.ts'
 import registerMachineTools from './machines.ts'
+import registerPhotoTools, {instant, stretch} from './photos.ts'
+import registerSearchTools from './search.ts'
 import type {McpToolContext} from './shared.ts'
 import registerSystemInfoTools from './system-info.ts'
 import registerSystemManagementTools from './system-management.ts'
@@ -96,6 +98,30 @@ function baseContext() {
 				trash: vi.fn(),
 				search: vi.fn(async () => []),
 			},
+			search: {
+				query: vi.fn(),
+				status: vi.fn(async () => ({available: true, indexing: {completed: 10, total: 10}})),
+				insights: vi.fn(async () => ({})),
+			},
+			photos: {
+				items: {
+					list: vi.fn(),
+					get: vi.fn(),
+					setFavorite: vi.fn(async () => 2),
+					delete: vi.fn(async () => 1),
+					restore: vi.fn(async () => 1),
+				},
+				albums: {
+					list: vi.fn(async () => [] as unknown[]),
+					create: vi.fn(),
+					rename: vi.fn(),
+					setCover: vi.fn(),
+					delete: vi.fn(),
+					addItems: vi.fn(async () => 2),
+					removeItems: vi.fn(async () => 1),
+				},
+				people: {list: vi.fn(), rename: vi.fn(), setHidden: vi.fn(), merge: vi.fn()},
+			},
 			machines: {
 				list: vi.fn(async () => []),
 				capabilities: vi.fn(async () => ({
@@ -136,10 +162,16 @@ function baseContext() {
 			assertFileAccess: vi.fn(async (path: string) => ({path, systemPath: `/system${path}`, grant: '/Home'})),
 			assertFileWriteAccess: vi.fn(async (path: string) => ({path, systemPath: `/system${path}`, grant: '/Home'})),
 			hasFullHomeAccess: vi.fn(async () => true),
+			hasPhotosAccess: vi.fn(async () => true),
+			// Refuses as the real one does whenever Photos access is taken away
+			async assertPhotosAccess(this: {hasPhotosAccess: () => Promise<boolean>}) {
+				if (!(await this.hasPhotosAccess())) throw new Error('[permission-denied] Photos access is not granted.')
+			},
 			assertMachineAccess: vi.fn(),
 			assertMachineCreateAccess: vi.fn(),
 			addMachineGrant: vi.fn(),
 		},
+		photos: {image: vi.fn(async () => ({data: 'd2VicA==', mimeType: 'image/webp'}))},
 	} as unknown as McpToolContext
 }
 
@@ -150,6 +182,7 @@ const noPermissions = {
 	manageSystem: false,
 	machines: [] as string[],
 	createMachines: false,
+	photos: false,
 }
 
 function appSettingsFixture() {
@@ -334,6 +367,7 @@ test('app details aggregates app and system routes into the compact MCP response
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	expect(parseToolResult(await registry.get('get_app_details').handler({appId: 'bitcoin'}))).toMatchObject({
 		id: 'bitcoin',
@@ -770,6 +804,7 @@ test('App Store tools return compact summaries and forward install alternatives 
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	expect(parseToolResult(await registry.get('list_apps').handler({}))).toMatchObject([
 		{id: 'bitcoin-knots', progress: 100, implements: ['bitcoin']},
@@ -812,6 +847,7 @@ test('app tools report incompatible updates without claiming they can be install
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	expect(parseToolResult(await registry.get('list_apps').handler({}))).toMatchObject([
 		{id: 'wallet', updateAvailable: true, updateCompatible: false},
@@ -830,6 +866,7 @@ test('app logs clamp requests, bound the route output and retain only the newest
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	const tool = registry.get('get_app_logs')
 
@@ -890,6 +927,7 @@ test('directory listing retains grant checks while delegating listing to Files',
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	expect(parseToolResult(await registry.get('list_directory').handler({path: '/Home', limit: 2}))).toMatchObject({
 		path: '/Home',
@@ -899,6 +937,346 @@ test('directory listing retains grant checks while delegating listing to Files',
 	})
 	expect(context.mcp.assertFileAccess).toHaveBeenCalledWith('/Home')
 	expect(context.rpc.files.listDirectoryPage).toHaveBeenCalledWith({path: '/Home', lastFile: undefined, limit: 2})
+})
+
+test('search finds files by what is in them, says why each matched, and says when files were not read', async () => {
+	const context = baseContext()
+	const file = (name: string) => ({
+		name,
+		path: `/Home/${name}`,
+		type: 'image/jpeg',
+		size: 1,
+		modified: 0,
+		operations: [],
+	})
+	vi.mocked(context.rpc.search.query).mockResolvedValue({
+		understood: {
+			chips: [{type: 'person', label: 'Dad', personId: 'p-1', asTyped: '"dad" beach'}],
+			text: 'beach',
+		},
+		results: [
+			{id: '/Home/beach.jpg', kind: 'photo', match: 'visual', score: 1, file: file('beach.jpg')},
+			{
+				id: '/Home/waves.mp4',
+				kind: 'video',
+				match: 'speech',
+				score: 0.5,
+				file: file('waves.mp4'),
+				snippet: {text: 'look at the waves', highlights: []},
+				moment: {startMs: 4000, endMs: 6000, durationMs: 9000, thumbnail: '/api/search/moment/1.jpg'},
+			},
+		],
+		total: 7,
+		nextCursor: 2,
+	} as never)
+	const registry = toolRegistry()
+	registerSearchTools(registry.server, context, homeAndPhotos)
+	const search = registry.get('search_files')
+	expect(search.config.inputSchema.parse({query: 'dad beach'})).toEqual({
+		query: 'dad beach',
+		scope: 'everything',
+		limit: 50,
+	})
+	expect(() => search.config.inputSchema.parse({query: 'dad beach', scope: 'files'})).toThrow()
+
+	// What matched and where, with nothing of what a file says: contents never go through tool results
+	expect(parseToolResult(await search.handler({query: 'dad beach', scope: 'photos', limit: 2}))).toEqual({
+		files: [
+			{name: 'beach.jpg', path: '/Home/beach.jpg', type: 'image/jpeg', size: 1, modified: 0, match: 'visual'},
+			{
+				name: 'waves.mp4',
+				path: '/Home/waves.mp4',
+				type: 'image/jpeg',
+				size: 1,
+				modified: 0,
+				match: 'speech',
+				moment: {startMs: 4000, endMs: 6000},
+			},
+		],
+		totalFiles: 7,
+		hasMore: true,
+		nextCursor: 2,
+		filters: [{type: 'person', label: 'Dad'}],
+	})
+	expect(context.rpc.search.query).toHaveBeenCalledWith({query: 'dad beach', scope: 'photos', limit: 2})
+	await search.handler({query: 'dad beach', scope: 'photos', limit: 2, cursor: 2})
+	expect(context.rpc.search.query).toHaveBeenLastCalledWith({query: 'dad beach', scope: 'photos', limit: 2, cursor: 2})
+
+	// With nothing but filters typed, what is in the library was found for fitting them
+	vi.mocked(context.rpc.search.query).mockResolvedValueOnce({
+		understood: {chips: [{type: 'date', label: '2024', from: 0, to: 1, asTyped: '"2024"'}], text: ''},
+		results: [
+			{id: '/Home/a.jpg', kind: 'photo', match: 'name', score: 1, file: file('a.jpg'), photo: {id: 'a'}},
+			{id: '/Home/2024.txt', kind: 'document', match: 'name', score: 0.5, file: file('2024.txt')},
+		],
+		total: 2,
+	} as never)
+	expect(parseToolResult(await search.handler({query: '2024', scope: 'everything', limit: 2}))).toMatchObject({
+		files: [
+			{name: 'a.jpg', match: 'filters'},
+			{name: '2024.txt', match: 'name'},
+		],
+		filters: [{type: 'date', label: '2024'}],
+	})
+
+	// Files not looked inside, or not all of them yet, are said so
+	const note = async (status: object) => {
+		vi.mocked(context.rpc.search.status).mockResolvedValueOnce(status as never)
+		return (parseToolResult(await search.handler({query: 'beach', scope: 'everything', limit: 2})) as {note?: string})
+			.note
+	}
+	const nothing = {completed: 0, total: 0}
+	expect(await note({available: false, reason: 'unsupported-device', indexing: nothing})).toContain(
+		'cannot look inside',
+	)
+	expect(await note({available: false, reason: 'starting', indexing: nothing})).toContain('not ready yet')
+	expect(await note({available: true, indexing: {completed: 1, total: 4}})).toContain('25% done')
+	expect(await note({available: true, indexing: {completed: 1, total: 4, off: true}})).toContain('turned off')
+	expect(await note({available: true, indexing: {completed: 4, total: 4}})).toBeUndefined()
+
+	// All of Home only with all of Home
+	vi.mocked(context.mcp.hasFullHomeAccess).mockResolvedValueOnce(false)
+	const denied = await search.handler({query: 'beach', scope: 'everything', limit: 2})
+	expect(denied).toMatchObject({isError: true})
+	expect(denied.content[0]).toMatchObject({type: 'text', text: expect.stringContaining('[permission-denied]')})
+
+	// Without Photos, Photos is not searched, and all of Home is searched as Files
+	// searches it, where what is in the library is a file like any other
+	vi.mocked(context.mcp.hasPhotosAccess).mockResolvedValue(false)
+	const refused = await search.handler({query: 'beach', scope: 'photos', limit: 2})
+	expect(refused.content[0]).toMatchObject({text: expect.stringContaining('[permission-denied] Photos access')})
+	vi.mocked(context.rpc.search.query).mockClear()
+	await search.handler({query: 'beach', scope: 'everything', limit: 2})
+	expect(context.rpc.search.query).toHaveBeenCalledWith({query: 'beach', scope: 'files', limit: 2})
+})
+
+const noGrants = {apps: [], appStore: false, files: [], manageSystem: false, machines: [], createMachines: false}
+const homeOnly = {...noGrants, files: ['/Home'], photos: false}
+const photosOnly = {...noGrants, photos: true}
+const homeAndPhotos = {...noGrants, files: ['/Home'], photos: true}
+
+test('search is offered for all of Home, for Photos, or for both', () => {
+	const offered = (permissions: typeof homeOnly) => {
+		const registry = toolRegistry()
+		registerSearchTools(registry.server, baseContext(), permissions)
+		try {
+			return registry.get('search_files').config.inputSchema.parse({query: 'beach'}).scope
+		} catch {
+			return undefined
+		}
+	}
+	expect(offered({...noGrants, files: ['/Home/Documents'], photos: false})).toBeUndefined()
+	expect(offered(homeOnly)).toBe('everything')
+	expect(offered(photosOnly)).toBe('photos')
+	expect(offered(homeAndPhotos)).toBe('everything')
+})
+
+test('search of Photos is narrowed by who, when and which album, and names each photo for the Photos tools', async () => {
+	const context = baseContext()
+	vi.mocked(context.rpc.search.query).mockResolvedValue({
+		understood: {chips: [], text: 'lisbon'},
+		results: [
+			{
+				id: '/Home/Photos/a.jpg',
+				kind: 'photo',
+				match: 'visual',
+				score: 1,
+				file: {name: 'a.jpg', path: '/Home/Photos/a.jpg', type: 'image/jpeg', size: 1, modified: 0},
+				photo: {id: 'photo-a'},
+			},
+		],
+		total: 1,
+	} as never)
+	const registry = toolRegistry()
+	registerSearchTools(registry.server, context, photosOnly)
+	const search = registry.get('search_files')
+	const narrowed = {
+		query: 'lisbon',
+		scope: 'photos',
+		limit: 50,
+		from: '2026-11-21',
+		to: '2026-11-22',
+		personIds: ['p-1'],
+	}
+	expect(parseToolResult(await search.handler(narrowed))).toMatchObject({
+		files: [{name: 'a.jpg', photoId: 'photo-a', match: 'visual'}],
+	})
+	// The two days by the device's clock, both whole
+	expect(context.rpc.search.query).toHaveBeenCalledWith({
+		query: 'lisbon',
+		scope: 'photos',
+		limit: 50,
+		filter: {
+			dates: [{from: new Date(2026, 10, 21).getTime(), to: new Date(2026, 10, 23).getTime()}],
+			personIds: ['p-1'],
+		},
+	})
+	// Only Photos is narrowed that way
+	const everywhere = await search.handler({...narrowed, scope: 'everything'})
+	expect(everywhere.content[0]).toMatchObject({text: expect.stringContaining("need scope 'photos'")})
+})
+
+test('dates an agent gives are days by the device clock, or moments', () => {
+	expect(instant('2026-11-21')).toBe(new Date(2026, 10, 21).getTime())
+	expect(instant('2026-11-21', true)).toBe(new Date(2026, 10, 22).getTime())
+	expect(instant('2026-11-21T18:00:00+07:00')).toBe(Date.UTC(2026, 10, 21, 11))
+	expect(() => instant('last weekend')).toThrow('[invalid-date]')
+	expect(stretch()).toBeUndefined()
+	expect(stretch('2026-11-21')).toEqual([{from: new Date(2026, 10, 21).getTime(), to: 8.64e15}])
+	expect(stretch(undefined, '2026-11-21')).toEqual([{from: 0, to: new Date(2026, 10, 22).getTime()}])
+})
+
+test('Photos tools list, gather and mark photos through the Photos routes, and need Photos access', async () => {
+	const context = baseContext()
+	// Folders, even all of Home, give photos as files and not the library
+	const none = toolRegistry()
+	registerPhotoTools(none.server, context, homeOnly)
+	expect(() => none.get('list_photos')).toThrow('was not registered')
+
+	const registry = toolRegistry()
+	registerPhotoTools(registry.server, context, photosOnly)
+	const call = async (name: string, input: Record<string, unknown>) =>
+		parseToolResult(await registry.get(name).handler(registry.get(name).config.inputSchema.parse(input)))
+	const taken = Date.UTC(2026, 10, 21, 10)
+	const item = {
+		id: 'photo-a',
+		kind: 'video',
+		takenAt: taken,
+		width: 4,
+		height: 3,
+		durationMs: 9000,
+		isFavorite: true,
+		tint: 1,
+	}
+
+	vi.mocked(context.rpc.photos.items.list).mockResolvedValue({items: [item], total: 1, nextCursor: 'next'} as never)
+	expect(await call('list_photos', {from: '2026-11-21', personIds: ['p-1'], albumId: 'al-1', favorite: true})).toEqual({
+		photos: [
+			{photoId: 'photo-a', kind: 'video', takenAt: '2026-11-21T10:00:00.000Z', durationMs: 9000, favorite: true},
+		],
+		totalPhotos: 1,
+		hasMore: true,
+		nextCursor: 'next',
+	})
+	expect(context.rpc.photos.items.list).toHaveBeenCalledWith({
+		filter: {
+			dates: [{from: new Date(2026, 10, 21).getTime(), to: 8.64e15}],
+			personIds: ['p-1'],
+			albumIds: ['al-1'],
+			favorite: true,
+		},
+		limit: 100,
+	})
+
+	vi.mocked(context.rpc.photos.items.get).mockResolvedValue({
+		...item,
+		fileName: 'clip.mp4',
+		path: '/Home/Photos/clip.mp4',
+		sizeBytes: 10,
+		source: {id: 's', name: 'Umbrel', type: 'local'},
+		createdAt: 0,
+		importedAt: 0,
+		exif: {make: 'Apple', model: 'iPhone'},
+		location: {lat: 38.7, lng: -9.1},
+		albums: [{id: 'al-1', name: 'Lisbon'}],
+		people: [
+			{id: 'p-1', name: 'Anna', face: {x: 0, y: 0, width: 1, height: 1}},
+			{id: 'p-2', face: {x: 0, y: 0, width: 1, height: 1}},
+		],
+	} as never)
+	// Who is in it by name, and nothing of where their faces are
+	expect(await call('get_photo', {photoId: 'photo-a'})).toMatchObject({
+		photoId: 'photo-a',
+		path: '/Home/Photos/clip.mp4',
+		camera: 'Apple iPhone',
+		location: {latitude: 38.7, longitude: -9.1},
+		albums: [{albumId: 'al-1', name: 'Lisbon'}],
+		people: [{personId: 'p-1', name: 'Anna'}, {personId: 'p-2'}],
+	})
+
+	// What Search read off it and heard in it is added once it has, each clipped,
+	// and the picture comes after the details unless it is turned off
+	const getPhoto = (input: Record<string, unknown>) =>
+		registry.get('get_photo').handler(registry.get('get_photo').config.inputSchema.parse(input))
+	const before = await getPhoto({photoId: 'photo-a'})
+	expect(parseToolResult(before)).not.toHaveProperty('text')
+	expect(parseToolResult(before)).not.toHaveProperty('transcript')
+	expect(before.content[1]).toEqual({type: 'image', data: 'd2VicA==', mimeType: 'image/webp'})
+	expect(context.photos.image).toHaveBeenCalledWith('photo-a')
+	expect(context.rpc.search.insights).toHaveBeenCalledWith({photoId: 'photo-a'})
+	vi.mocked(context.rpc.search.insights).mockResolvedValue({
+		text: 'x'.repeat(3000),
+		transcript: [
+			{startMs: 1500, endMs: 3000, text: 'Hello there'},
+			{startMs: 62_000, endMs: 63_000, text: 'y'.repeat(5000)},
+		],
+	})
+	const after = await getPhoto({photoId: 'photo-a', image: false})
+	const read = parseToolResult(after) as {text: string; transcript: string}
+	expect(read.text).toBe(`${'x'.repeat(2000)}…`)
+	expect(read.transcript).toBe(`${`[1s] Hello there\n[62s] ${'y'.repeat(5000)}`.slice(0, 4000)}…`)
+	expect(after.content).toHaveLength(1)
+	// Search failing leaves the rest of what is known
+	vi.mocked(context.rpc.search.insights).mockRejectedValue(new Error('[search-unavailable]'))
+	expect(parseToolResult(await getPhoto({photoId: 'photo-a', image: false}))).toMatchObject({photoId: 'photo-a'})
+
+	const album = {id: 'al-2', name: 'Trip', count: 2, takenFrom: taken, takenTo: taken, createdAt: 0}
+	vi.mocked(context.rpc.photos.albums.create).mockResolvedValue(album as never)
+	expect(await call('create_album', {name: ' Trip ', photoIds: ['photo-a', 'photo-b']})).toEqual({
+		albumId: 'al-2',
+		name: 'Trip',
+		photos: 2,
+		takenFrom: '2026-11-21T10:00:00.000Z',
+		takenTo: '2026-11-21T10:00:00.000Z',
+	})
+	expect(context.rpc.photos.albums.create).toHaveBeenCalledWith({name: 'Trip', ids: ['photo-a', 'photo-b']})
+
+	vi.mocked(context.rpc.photos.albums.list).mockResolvedValue([{...album, name: 'Lisbon trip'}])
+	expect(await call('update_album', {albumId: 'al-2', name: 'Lisbon trip', coverPhotoId: 'photo-a'})).toMatchObject({
+		name: 'Lisbon trip',
+	})
+	expect(context.rpc.photos.albums.rename).toHaveBeenCalledWith({id: 'al-2', name: 'Lisbon trip'})
+	expect(context.rpc.photos.albums.setCover).toHaveBeenCalledWith({id: 'al-2', itemId: 'photo-a'})
+	expect((await registry.get('update_album').handler({albumId: 'al-2'})).isError).toBe(true)
+
+	expect(await call('add_photos_to_album', {albumId: 'al-2', photoIds: ['photo-c']})).toEqual({added: 2})
+	expect(await call('remove_photos_from_album', {albumId: 'al-2', photoIds: ['photo-c']})).toEqual({removed: 1})
+	expect(await call('delete_album', {albumId: 'al-2'})).toEqual({deleted: 'al-2'})
+	expect(context.rpc.photos.albums.delete).toHaveBeenCalledWith({id: 'al-2'})
+
+	expect(await call('set_photos_favorite', {photoIds: ['photo-a', 'photo-b'], favorite: false})).toEqual({changed: 2})
+	expect(context.rpc.photos.items.setFavorite).toHaveBeenCalledWith({ids: ['photo-a', 'photo-b'], favorite: false})
+	expect(await call('trash_photos', {photoIds: ['photo-a']})).toEqual({moved: 1})
+	expect(await call('restore_photos', {photoIds: ['photo-a']})).toEqual({restored: 1})
+
+	vi.mocked(context.rpc.photos.people.list).mockResolvedValue([
+		{id: 'p-1', name: 'Anna', count: 12, isHidden: false, cover: {itemId: 'photo-a'}},
+		{id: 'p-2', count: 3, isHidden: false, cover: {itemId: 'photo-b'}},
+	] as never)
+	expect(await call('list_people', {})).toEqual({
+		people: [
+			{personId: 'p-1', name: 'Anna', photos: 12},
+			{personId: 'p-2', photos: 3},
+		],
+	})
+	await call('update_person', {personId: 'p-2', name: 'Ben', hidden: true})
+	expect(context.rpc.photos.people.rename).toHaveBeenCalledWith({id: 'p-2', name: 'Ben'})
+	expect(context.rpc.photos.people.setHidden).toHaveBeenCalledWith({id: 'p-2', hidden: true})
+	await call('merge_people', {into: 'p-1', personIds: ['p-2']})
+	expect(context.rpc.photos.people.merge).toHaveBeenCalledWith({into: 'p-1', ids: ['p-2']})
+
+	// What removes says so, and nothing here deletes for good
+	expect(registry.get('trash_photos').config.annotations.destructiveHint).toBe(true)
+	expect(registry.get('delete_album').config.annotations.destructiveHint).toBe(true)
+	expect(registry.get('create_album').config.annotations.destructiveHint).toBe(false)
+	expect(registry.get('list_photos').config.annotations.readOnlyHint).toBe(true)
+
+	// With Photos access taken away since, every one of them refuses
+	vi.mocked(context.mcp.hasPhotosAccess).mockResolvedValue(false)
+	for (const name of ['list_photos', 'create_album', 'set_photos_favorite', 'list_people']) {
+		const refused = await registry.get(name).handler({name: 'x', photoIds: ['a'], favorite: true})
+		expect(refused.content[0]).toMatchObject({text: expect.stringContaining('[permission-denied]')})
+	}
 })
 
 test('file transfers never expose replacement and explain safe collision choices', async () => {
@@ -912,6 +1290,7 @@ test('file transfers never expose replacement and explain safe collision choices
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	const copy = registry.get('copy')
 	const move = registry.get('move')
@@ -950,6 +1329,7 @@ test('app IDs and tool annotations preserve the MCP contract', () => {
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	const systemManagement = toolRegistry()
 	registerSystemManagementTools(systemManagement.server, context)
@@ -961,6 +1341,7 @@ test('app IDs and tool annotations preserve the MCP contract', () => {
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 
 	const longAppId = 'a'.repeat(65)

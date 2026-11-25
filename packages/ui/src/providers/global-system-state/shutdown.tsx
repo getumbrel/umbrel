@@ -1,7 +1,6 @@
 import {useTranslation} from 'react-i18next'
 
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
+import {Cover} from '@/components/ui/cover'
 import {trpcReact, type RouterError} from '@/trpc/trpc'
 
 export function useShutdown({
@@ -28,10 +27,5 @@ export function useShutdown({
 
 export function ShuttingDownCover() {
 	const {t} = useTranslation()
-	return (
-		<CoverMessage>
-			<Loading>{t('shut-down.shutting-down')}</Loading>
-			<CoverMessageParagraph>{t('shut-down.shutting-down-message')}</CoverMessageParagraph>
-		</CoverMessage>
-	)
+	return <Cover title={t('shut-down.shutting-down')} progress='spinner' />
 }

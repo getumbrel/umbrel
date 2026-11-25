@@ -4,7 +4,7 @@ import {useNavigate} from 'react-router-dom'
 
 import {links} from '@/constants/links'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {DriveIcon, SdCard} from '@/features/storage/components/list-manager/drive-visuals'
+import {DriveIcon, SdCard} from '@/features/storage/components/drive-visuals'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {Layout, primaryButtonProps, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'
@@ -63,7 +63,7 @@ export default function ExternalDriveChoice() {
 			<Layout
 				title={t('onboarding.external-drive.steps.title', {drive: driveName})}
 				// Drive names run long; keep this heading a size down from the rest of onboarding
-				titleClassName='sm:text-[24px]'
+				titleClassName='sm:text-24'
 				subTitle=''
 				subTitleMaxWidth={630}
 				showLogo={false}

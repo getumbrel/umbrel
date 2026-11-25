@@ -548,3 +548,41 @@ describe('blend', () => {
 		expect(sectionAt(half, 0)?.top).toBe((lo.tops[0]! + hi.tops[0]!) / 2)
 	})
 })
+
+describe('ranked', () => {
+	// A search's results: best match first, dates in no order at all
+	const items = [
+		item('best', at('2019-06-01T10:00:00')),
+		item('second', at('2026-08-27T10:00:00')),
+		item('third', at('2023-01-15T10:00:00')),
+		item('fourth', at('2026-08-27T11:00:00')),
+		item('fifth', at('2011-12-31T10:00:00')),
+	]
+	const ranked = groupItems({items, zoom: 'days', hasMore: false, language: 'en-US', ranked: 'Best matches'})
+
+	it('is one section in the order given, whatever the dates and the grouping', () => {
+		expect(ranked.sections).toEqual([{key: 'h:ranked', title: 'Best matches', start: 0, count: 5}])
+		expect(ranked.items.map(({id}) => id)).toEqual(['best', 'second', 'third', 'fourth', 'fifth'])
+		expect([...ranked.indexOf]).toEqual(items.map(({id}, index) => [id, index]))
+		// The same list as a timeline would be cut wherever the date changes
+		expect(group(items, 'days').sections).toHaveLength(5)
+	})
+
+	it('lays out as rows under a single header row, in rank order', () => {
+		const layout = layoutAt(ranked, 2, 100, 4, 20)
+		expect(layout.tops).toEqual([20])
+		expect(rectOf(layout, 0)).toEqual({x: 0, y: 20 + HEADER_HEIGHT, size: 100})
+		expect(rectOf(layout, 1)).toEqual({x: 104, y: 20 + HEADER_HEIGHT, size: 100})
+		expect(rectOf(layout, 4)).toEqual({x: 0, y: 20 + HEADER_HEIGHT + 2 * 104, size: 100})
+		expect(layout.total).toBe(20 + HEADER_HEIGHT + 3 * 104)
+		// The only header there is belongs to the section the bar names
+		expect(headersIn(layout, 0, layout.total).map(({key}) => key)).toEqual(['h:ranked'])
+		expect(sectionAt(layout, 500)?.title).toBe('Best matches')
+	})
+
+	it('has no sections when there are no results', () => {
+		const empty = groupItems({items: [], zoom: 'months', hasMore: false, language: 'en-US', ranked: 'Best matches'})
+		expect(empty.sections).toEqual([])
+		expect(layoutAt(empty, 4, 100, 4).total).toBe(0)
+	})
+})

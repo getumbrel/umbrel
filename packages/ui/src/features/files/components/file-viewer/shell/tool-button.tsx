@@ -29,7 +29,13 @@ export function ToolPill({
 		<button
 			type='button'
 			aria-pressed={active}
-			className={cn(toolPillClass, active && 'bg-white/20 hover:bg-white/25', className)}
+			className={cn(
+				toolPillClass,
+				// With contrast on a hover is as strong as this fill, so on also takes a white ring
+				active &&
+					'bg-white/20 hover:bg-white/25 contrast-more:bg-white/30 contrast-more:ring-1 contrast-more:ring-white contrast-more:ring-inset',
+				className,
+			)}
 			{...props}
 		>
 			{Children.map(children, (child) =>

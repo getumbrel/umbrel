@@ -81,6 +81,10 @@ final class Browser {
 	// Set by the presenter: dismisses whatever page is actually on screen.
 	@ObservationIgnored var dismissPresented: () -> Void = {}
 
+	// Whether the page's controls are in iPhone Duo's side column, leaving no title
+	// bar to drag the page away by
+	@ObservationIgnored var isBarInSideColumn = false
+
 	func close() {
 		isPresented = false
 		dismissPresented()

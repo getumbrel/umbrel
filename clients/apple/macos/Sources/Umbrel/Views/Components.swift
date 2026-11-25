@@ -205,6 +205,9 @@ func statusInfo(for device: Device) -> StatusInfo {
 	if device.saved && device.reachability == .unverified {
 		return StatusInfo(label: "", color: Palette.gray, showsProgress: true)
 	}
+	if device.saved && !device.online && device.identityChanged {
+		return StatusInfo(label: IdentityChange.status, color: Palette.red)
+	}
 	if device.saved && !device.online {
 		return StatusInfo(label: "Offline", color: Palette.red)
 	}
@@ -219,6 +222,23 @@ func statusInfo(for device: Device) -> StatusInfo {
 	default:
 		return StatusInfo(label: "Disconnected", color: Palette.red)
 	}
+}
+
+// What the app says when a saved Umbrel answers with a new identity. That's expected
+// after its certificate is reset or it's restored from a backup (backups leave out the
+// certificates), and anyone with access to the Umbrel may have done it. It's also what
+// someone pretending to be the Umbrel looks like, so the words ask people to check
+// before they reconnect. A factory reset or new storage gives a new id, so the device
+// page never shows this for them, but sign-in's shorter error for a refused
+// certificate still can. The wording matches the iOS and Windows apps.
+enum IdentityChange {
+	static let status = "Can’t verify"
+	static let title = "Can’t confirm this is your Umbrel"
+	static let message = "Its security identity changed. That’s expected if it was restored from a backup or its certificate was reset since this Mac last connected. If neither happened, don’t reconnect. Someone on this network could be pretending to be your Umbrel."
+	static let confirmTitle = "Was your Umbrel restored or its certificate reset?"
+	static let confirmMessage = "Only reconnect if one of these happened, and do it at home, on your own network. Not sure? Ask whoever manages your Umbrel.\n\nYou’ll sign in again."
+	// The shared UmbrelKit error, as a sentence
+	static let signInError = "Can’t confirm this is your Umbrel. Its security identity changed."
 }
 
 // Keep connection health and transport separate: the status stays easy to scan,

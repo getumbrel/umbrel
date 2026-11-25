@@ -57,10 +57,20 @@ jobs:
         if: ${{ !inputs.plan_only }}
         working-directory: packages/ui
         run: npm ci
+      # A run that fails keeps the translations it finished, so the next run only
+      # pays for the rest. Each attempt saves under its own key, like the CI caches.
+      - name: Restore translations from a run that did not finish
+        if: ${{ !inputs.plan_only }}
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/translations.jsonl
+          key: translations-${{ inputs.target_branch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: translations-${{ inputs.target_branch }}-
       - name: Generate translations
         if: ${{ !inputs.plan_only }}
         working-directory: packages/ui
         env:
+          TRANSLATIONS_CACHE: ${{ runner.temp }}/translations.jsonl
           TRANSLATIONS_OPENAI_API_KEY: ${{ secrets.TRANSLATIONS_OPENAI_API_KEY }}
           TRANSLATIONS_OPENAI_MODEL: ${{ secrets.TRANSLATIONS_OPENAI_MODEL }}
           TRANSLATIONS_SYSTEM_PROMPT: ${{ secrets.TRANSLATIONS_SYSTEM_PROMPT }}
@@ -75,23 +85,13 @@ jobs:
           npm run translations:test
           npm run translations:check
           npx prettier --check translations/last-translated.en.json
-      - name: Check source and translation branches have not moved
+      - name: Check translations have not changed during generation
         if: ${{ !inputs.plan_only }}
         env:
           BASE_SHA: ${{ steps.prepare.outputs.base-sha }}
           TRANSLATION_BRANCH: ${{ steps.prepare.outputs.translation-branch }}
           TRANSLATION_SHA: ${{ steps.prepare.outputs.translation-sha }}
-        run: |
-          current_sha=$(git ls-remote --exit-code origin "refs/heads/${TARGET_BRANCH}" | cut -f1)
-          if [[ "$current_sha" != "$BASE_SHA" ]]; then
-            echo "${TARGET_BRANCH} changed during generation. Run this workflow again against the updated branch." >&2
-            exit 1
-          fi
-          translation_sha=$(git ls-remote origin "refs/heads/${TRANSLATION_BRANCH}" | cut -f1)
-          if [[ "$translation_sha" != "$TRANSLATION_SHA" ]]; then
-            echo 'The translation branch changed during generation. Run again to include the latest corrections.' >&2
-            exit 1
-          fi
+        run: bash .github/scripts/check-translations-unchanged.sh
       - name: Create or update translation PR
         if: ${{ !inputs.plan_only }}
         id: pr
@@ -120,3 +120,9 @@ jobs:
           else
             echo 'Translations are already current; no PR is needed.' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Keep finished translations for the next run
+        if: ${{ !inputs.plan_only && (failure() || cancelled()) }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/translations.jsonl
+          key: translations-${{ inputs.target_branch }}-${{ github.run_id }}-${{ github.run_attempt }}

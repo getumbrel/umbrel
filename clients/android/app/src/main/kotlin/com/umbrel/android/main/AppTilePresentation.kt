@@ -1,5 +1,6 @@
 package com.umbrel.android.main
 
+import com.umbrel.android.IdentityChange
 import com.umbrel.kit.Umbreld
 
 /**
@@ -100,7 +101,7 @@ sealed class AppLaunchAlert {
 		get() = when (this) {
 			is Blocked -> "${app.name ?: app.id} is ${if (paused) "Paused" else "Offline"}"
 			is TorOnly -> "${app.name ?: app.id} Uses Tor"
-			is Unavailable -> if (identityChanged) "Umbrel Not Recognized" else "Can’t Reach Umbrel"
+			is Unavailable -> if (identityChanged) IdentityChange.ALERT_TITLE else "Can’t Reach Umbrel"
 		}
 
 	fun message(canManageApps: Boolean): String = when (this) {
@@ -114,7 +115,7 @@ sealed class AppLaunchAlert {
 			if (canManageApps) "This app is only available over Tor. Open Umbrel to view your Umbrel’s Tor address."
 			else "This app is only available over Tor. Ask the owner for your Umbrel’s Tor address, then open Umbrel in Tor Browser."
 		is Unavailable ->
-			if (identityChanged) "This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app."
+			if (identityChanged) IdentityChange.BLOCKED_MESSAGE
 			else "Check your connection and try again."
 	}
 

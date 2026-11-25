@@ -12,6 +12,11 @@ struct SplashView: View {
 			.resizable()
 			.scaledToFit()
 			.frame(width: 70)
+			// The mark centres on the whole display, not beside the status bar column on
+			// iPhone Duo: Apple's Duo guidance lets immersive, non-interactive screens
+			// span the full width. Top and bottom keep the safe area, as on iPhone.
+			.frame(maxWidth: .infinity)
+			.ignoresSafeArea(edges: .horizontal)
 			.task {
 				try? await Task.sleep(for: .seconds(1.3))
 				model.advance(to: .welcome)

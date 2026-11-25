@@ -1,0 +1,95 @@
+Acknowledgements
+
+umbrelOS is built with the data, models, fonts and open-source software below.
+
+
+MAP DATA
+
+Map data © OpenStreetMap contributors, available under the Open Database
+License (ODbL) 1.0.
+https://www.openstreetmap.org/copyright
+
+Basemap tiles and styles by Protomaps.
+https://protomaps.com
+
+Land cover © ESA WorldCover project / Contains modified Copernicus Sentinel
+data (2020) processed by ESA WorldCover consortium. Vectorized by the Daylight
+Map Distribution and licensed under CC BY 4.0. Provided as is, without
+warranties of any kind.
+https://worldcover2020.esa.int
+https://creativecommons.org/licenses/by/4.0/
+
+Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+
+Star positions from the Bright Star Catalogue, 5th Revised Edition (Hoffleit &
+Warren, 1991, NASA Astronomical Data Center), retrieved through the VizieR
+catalogue access tool, CDS, Strasbourg, France (catalogue V/50).
+
+
+PLACE NAMES
+
+Place names contain data from GeoNames (https://www.geonames.org), licensed
+under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Filtered to
+cities of more than 5,000 people with their regions, countries and alternate
+names, and converted to a lookup table. Provided as is, without warranty.
+
+
+SEARCH MODELS
+
+Parakeet TDT 0.6B v3 by NVIDIA
+(https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), licensed under CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/). Converted to GGUF and
+quantized to Q8_0 by handy-computer. Provided as is, without warranties.
+
+EmbeddingGemma 2 by Google (https://huggingface.co/google/embeddinggemma-2),
+in LiteRT-LM format by litert-community. Apache License 2.0.
+
+Qwen3-ASR-0.6B: Copyright 2026 Alibaba Cloud
+(https://huggingface.co/Qwen/Qwen3-ASR-0.6B). Converted to GGUF and quantized
+to Q6_K by handy-computer. Apache License 2.0.
+
+Whisper: Copyright (c) 2022 OpenAI (https://github.com/openai/whisper), MIT
+License. Converted to GGUF and quantized to Q8_0 by handy-computer, Apache
+License 2.0.
+
+PP-OCRv6: Copyright (c) 2016 PaddlePaddle Authors
+(https://github.com/PaddlePaddle/PaddleOCR). Converted to ONNX by RapidAI,
+Copyright (c) 2021 RapidAI (https://github.com/RapidAI/RapidOCR). Apache
+License 2.0.
+
+Silero VAD: Copyright (c) 2020-present Silero Team
+(https://github.com/snakers4/silero-vad). MIT License.
+
+IndicXlit: Copyright (c) 2022 AI4Bharat
+(https://github.com/AI4Bharat/IndicXlit). MIT License.
+
+
+FONTS
+
+Bebas Neue: Copyright 2019 The Bebas Neue Project Authors
+(https://github.com/dharmatype/Bebas-Neue). SIL Open Font License 1.1.
+
+Bungee: Copyright 2023 The Bungee Project Authors
+(https://github.com/djrrb/Bungee). SIL Open Font License 1.1.
+
+Caladea: Copyright 2012 The Caladea Project Authors
+(https://github.com/huertatipografica/Caladea). SIL Open Font License 1.1.
+
+Carlito: Copyright 2013 The Carlito Project Authors
+(https://github.com/googlefonts/carlito). SIL Open Font License 1.1.
+
+Caveat: Copyright 2014 The Caveat Project Authors
+(https://github.com/googlefonts/caveat). SIL Open Font License 1.1.
+
+Instrument Serif: Copyright 2022 The Instrument Serif Project Authors
+(https://github.com/Instrument/instrument-serif). SIL Open Font License 1.1.
+
+Permanent Marker: Copyright (c) 2010 by Font Diner, Inc. All rights reserved.
+Apache License 2.0.
+
+Playfair Display: Copyright 2017 The Playfair Display Project Authors
+(https://github.com/clauseggers/Playfair-Display), with Reserved Font Name
+"Playfair Display". SIL Open Font License 1.1.
+
+The texts of the MIT License, the SIL Open Font License 1.1 and the Apache
+License 2.0 are at the end of this file.

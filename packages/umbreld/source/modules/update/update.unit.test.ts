@@ -718,7 +718,8 @@ describe('Update', () => {
 			})
 		})
 
-		test('moves to a new key with a handover a release carries, and only the new key counts', async () => {
+		// umbrelOS 2.1.0 Beta 1 followed handovers like this one, so a stolen root key could lock out its own
+		test("ignores a handover a release carries, so its own root key still counts and the new one doesn't", async () => {
 			const newRootKey = createRootKey()
 			const handedOver = createSigningKeysList({
 				date: '2026-10-20T00:00:00Z',
@@ -727,24 +728,13 @@ describe('Update', () => {
 				handovers: [createRootKeyHandover({date: '2026-10-19T00:00:00Z', from: rootKey, to: newRootKey})],
 			})
 			await publishRelease('2.1.0', [], {signingKeysList: handedOver, rootKey: newRootKey})
-			await expect(install()).resolves.toEqual({success: true, error: false})
-
-			// The old root key can't sign releases or lists any more
-			await publishRelease('2.1.1', [], {rootKey})
 			await expect(install()).resolves.toEqual({
 				success: false,
 				error: 'This release has an invalid signature from the root key',
 			})
-			const fromOldRoot = createSigningKeysList({
-				date: '2026-12-01T00:00:00Z',
-				keys: [signingKey(alice), signingKey(bob)],
-				rootKey,
-			})
-			await publishRelease('2.1.2', bob, {signingKeysList: fromOldRoot})
-			await expect(install()).resolves.toEqual({
-				success: false,
-				error: "This release is signed by a key that isn't approved",
-			})
+
+			await publishRelease('2.1.0', [], {rootKey})
+			await expect(install()).resolves.toEqual({success: true, error: false})
 		})
 	})
 })

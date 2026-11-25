@@ -6,9 +6,11 @@ import {
 	Globe,
 	Heart,
 	Image,
+	MapIcon,
 	RectangleHorizontal,
 	ScanLine,
 	Trash2,
+	Users,
 	Video,
 	type LucideIcon,
 } from 'lucide-react'
@@ -24,6 +26,7 @@ import {ScrollArea} from '@/components/ui/scroll-area'
 import {contextMenuClasses} from '@/components/ui/shared/menu'
 import {AlbumCard} from '@/features/photos/components/albums/album-card'
 import {LivePhotoIcon} from '@/features/photos/components/live-photo-icon'
+import {PersonAvatar} from '@/features/photos/components/people/person-avatar'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {EnrichmentIndicator} from '@/features/photos/components/sidebar/enrichment-indicator'
 import {SidebarItem} from '@/features/photos/components/sidebar/sidebar-item'
@@ -33,6 +36,7 @@ import {SourceIcon} from '@/features/photos/components/sources/source-icon'
 import {useRemoveSource} from '@/features/photos/components/sources/use-remove-source'
 import {BASE_ROUTE_PATH, sectionPath, sourcePath, type PhotosSection} from '@/features/photos/constants'
 import {useAlbums} from '@/features/photos/hooks/use-library'
+import {usePeople} from '@/features/photos/hooks/use-people'
 import {usePhoneSourceConnected, usePhotoSources, type PhotoSource} from '@/features/photos/hooks/use-photo-sources'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -48,24 +52,19 @@ export function Sidebar({className}: {className?: string}) {
 	const {remove} = useRemoveSource()
 	const openDetails = (source: PhotoSource) => navigate(linkToDialog('photos-source', {id: source.id}))
 
-	// The Map row is hidden for now. /photos/map still works, and the info panel's
-	// location card still opens it — restore the row and its icon (MapIcon) to
-	// bring it back.
 	const libraryItems: Item[] = [
 		{section: 'all', label: t('photos-sidebar.all'), icon: GalleryHorizontalEnd},
 		{section: 'albums', label: t('photos-sidebar.albums'), icon: Album},
 		{section: 'favorites', label: t('photos-sidebar.favorites'), icon: Heart},
-		// {section: 'map', label: t('photos-sidebar.map'), icon: MapIcon},
+		{section: 'people', label: t('photos-sidebar.people'), icon: Users},
+		{section: 'map', label: t('photos-sidebar.map'), icon: MapIcon},
 		{section: 'photos', label: t('photos-sidebar.photos'), icon: Image},
 		{section: 'videos', label: t('photos-sidebar.videos'), icon: Video},
 		{section: 'deleted', label: t('photos-sidebar.deleted'), icon: Trash2},
 	]
 
 	// Smart collections, grouped under their own label like Files' Favorites.
-	// People stays cut from v1 (no face clustering yet) — restore its row and
-	// icon (Users) when it returns. Places live on the map.
 	const utilityItems: Item[] = [
-		// {section: 'people', label: t('photos-sidebar.people'), icon: Users},
 		{section: 'live-photos', label: t('photos-sidebar.live-photos'), icon: LivePhotoIcon},
 		{section: 'panoramas', label: t('photos-sidebar.panoramas'), icon: RectangleHorizontal},
 		{section: 'screenshots', label: t('photos-sidebar.screenshots'), icon: ScanLine},
@@ -79,11 +78,15 @@ export function Sidebar({className}: {className?: string}) {
 				key={section}
 				label={label}
 				icon={<Icon className='h-4 w-4' strokeWidth={1.75} />}
-				isActive={pathname === sectionPath(section)}
+				// A person's own page is still People
+				isActive={
+					pathname === sectionPath(section) || (section === 'people' && pathname.startsWith(`${sectionPath(section)}/`))
+				}
 				onClick={() => navigate(sectionPath(section))}
 				// While media is still being prepared, the Library row carries the
-				// progress ring — the whole library is what enrichment is filling
-				trailing={section === 'all' ? <EnrichmentIndicator /> : undefined}
+				// progress ring — the whole library is what enrichment is filling.
+				// The People row carries the faces it leads to.
+				trailing={section === 'all' ? <EnrichmentIndicator /> : section === 'people' ? <PeopleFaces /> : undefined}
 			/>
 		)
 	}
@@ -221,6 +224,30 @@ function PhoneBackupCard() {
 	)
 }
 
+// The first few faces of the People page, overlapped at the end of its row:
+// who is behind the word, at a size that keeps the row a row. Nothing until
+// there is someone — an empty row says no more than its label.
+const SIDEBAR_FACES = 3
+function PeopleFaces() {
+	const {people} = usePeople()
+	if (people.length === 0) return null
+	return (
+		<span aria-hidden className='flex shrink-0 items-center -space-x-1.5'>
+			{people.slice(0, SIDEBAR_FACES).map((person, index) => (
+				// Each face is cut around by the row's own shade, so the overlap reads as a stack
+				<PersonAvatar
+					key={person.id}
+					person={person}
+					size={18}
+					className='shadow-[0_0_0_1.5px_rgb(0_0_0/0.35)]'
+					// First on top, the way a row of heads is read
+					style={{zIndex: SIDEBAR_FACES - index}}
+				/>
+			))}
+		</span>
+	)
+}
+
 // The most recently touched albums as cards, under a link to all of them
 const SIDEBAR_ALBUMS = 4
 
@@ -264,7 +291,7 @@ function AlbumsSection({isActive, onClick}: {isActive: boolean; onClick: () => v
 const SidebarSection = ({children, label = ''}: {children: React.ReactNode; label?: string}) => {
 	return (
 		<section className='flex flex-col pr-4' aria-label={label}>
-			{label && <div className='px-2 py-1 text-[11px] font-medium text-white/40'>{label}</div>}
+			{label && <div className='px-2 py-1 text-11 font-medium text-white/40'>{label}</div>}
 			{children}
 		</section>
 	)

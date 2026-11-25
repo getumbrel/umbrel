@@ -5,9 +5,10 @@ import {JSONTree} from 'react-json-tree'
 import {usePreviousDistinct} from 'react-use'
 
 import {ConnectionLostScreen} from '@/components/ui/connection-lost-screen'
-import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {Cover, LoadingCover} from '@/components/ui/cover'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {toast} from '@/components/ui/toast'
+import {useDocumentHidden} from '@/hooks/use-document-hidden'
 import {usePrefixedLocalStorage} from '@/hooks/use-prefixed-local-storage'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
 import {RestartingCover, useRestart} from '@/providers/global-system-state/restart'
@@ -66,10 +67,11 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	}
 
 	// Intercept factory reset errors so the triggering component can handle them.
-	// Password errors (UNAUTHORIZED) are shown in the form field.
+	// Password errors (UNAUTHORIZED, or TOO_MANY_REQUESTS after too many wrong
+	// passwords) are shown in the form field.
 	// System errors (e.g., factory reset failed) are shown as toasts.
 	const onResetError = (error: RouterError) => {
-		if (error?.data?.code === 'UNAUTHORIZED') {
+		if (error?.data?.code === 'UNAUTHORIZED' || error?.data?.code === 'TOO_MANY_REQUESTS') {
 			setRouterError(error)
 		} else {
 			toast.error(t('factory-reset-failed', {message: error.message}), {area: 'umbrelos'})
@@ -133,24 +135,41 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	// instantly (ECONNREFUSED) while the device is down, then the first success
 	// triggers the post-restart redirect. Without fast polling the user would stare
 	// at the cover for up to 10s after the device is already ready.
-	// During normal operation we allow retries to absorb transient network blips
-	// (idle tab, brief disconnection, device sleep/wake) instead of immediately
-	// throwing into the root error boundary.
+	// During normal operation a failed check is followed by one every second, so
+	// the dashboard is back the moment the device is.
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
-		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
-		gcTime: 0,
-		retry: (failureCount) => {
-			if (triggered) return false
-			return failureCount < 3
+		refetchInterval: (query) => {
+			if (triggered) return 500
+			return query.state.status === 'error' ? MS_PER_SECOND : 10 * MS_PER_SECOND
 		},
-		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+		gcTime: 0,
+		retry: false,
 	})
 
 	const expectedDowntime = triggered || errorsSuppressedOnly
-	// A retry without cached status briefly becomes pending. Keep the message visible
-	// until status returns, while leaving planned downtime to its existing UI.
-	const connectionLost =
-		!expectedDowntime && (systemStatusQ.isError || (systemStatusQ.isFetched && systemStatusQ.data === undefined))
+	// A new check without cached status briefly becomes pending, so having been
+	// fetched without getting a status counts as failing too.
+	const failing = systemStatusQ.isError || (systemStatusQ.isFetched && systemStatusQ.data === undefined)
+
+	// One failed check says little, least of all one made as the tab comes back
+	// into view: a laptop that has just woken up needs a few seconds to rejoin its
+	// network. So the connection only counts as lost once the checks have kept
+	// failing for 15 seconds with the tab in view. The 15 seconds start over on
+	// every return to the tab, and once they are up the connection stays lost
+	// until a check succeeds.
+	const hidden = useDocumentHidden()
+	const [failedTooLong, setFailedTooLong] = useState(false)
+	useEffect(() => {
+		if (!failing) {
+			setFailedTooLong(false)
+			return
+		}
+		if (hidden) return
+		const timeout = setTimeout(() => setFailedTooLong(true), 15 * MS_PER_SECOND)
+		return () => clearTimeout(timeout)
+	}, [failing, hidden])
+	// Planned downtime is left to its existing UI
+	const connectionLost = failing && failedTooLong && !expectedDowntime
 
 	// Status is `undefined` upon mount. During a reboot, React Query can keep the
 	// last successful status while newer requests fail, so error state matters too.
@@ -280,10 +299,11 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		return <ConnectionLostScreen error={systemStatusQ.error} onReconnect={() => void systemStatusQ.refetch()} />
 	}
 
-	if (systemStatusQ.isLoading) {
+	// Until the device has answered once there is nothing to show
+	if (status === undefined) {
 		return (
 			<>
-				<BareCoverMessage delayed>{t('trpc.checking-backend')}</BareCoverMessage>
+				<LoadingCover />
 				{debugInfo}
 			</>
 		)
@@ -322,10 +342,12 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case 'shutting-down': {
 			if (shutdownComplete) {
 				return (
-					<BareCoverMessage>
-						{t('shut-down.complete')}
-						<CoverMessageParagraph>{t('shut-down.complete-text')}</CoverMessageParagraph>
-					</BareCoverMessage>
+					<Cover
+						surface='black'
+						mark='logo-dimmed'
+						title={t('shut-down.complete')}
+						description={t('shut-down.complete-text')}
+					/>
 				)
 			} else {
 				return (

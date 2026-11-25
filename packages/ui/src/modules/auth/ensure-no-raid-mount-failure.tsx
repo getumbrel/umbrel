@@ -1,7 +1,6 @@
 import {useTranslation} from 'react-i18next'
 
-import {BareCoverMessage} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
+import {LoadingCover} from '@/components/ui/cover'
 import {StoragePage, StorageReadError} from '@/features/storage/components/storage-page'
 import {OnboardingPage} from '@/layouts/bare/onboarding-page'
 import {trpcReact} from '@/trpc/trpc'
@@ -21,11 +20,7 @@ export function EnsureNoRaidMountFailure({children}: {children?: React.ReactNode
 
 	// Still loading - show spinner
 	if (mountFailureQ.isLoading) {
-		return (
-			<BareCoverMessage delayed>
-				<Loading />
-			</BareCoverMessage>
-		)
+		return <LoadingCover />
 	}
 
 	// Block an unknown mount state, but preserve the page when a background check fails.

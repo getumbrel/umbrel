@@ -133,3 +133,37 @@ test('closes every opened Photos file descriptor when the download is cancelled'
 	expect(handles.length).toBeGreaterThan(0)
 	await vi.waitFor(() => expect(handles.map((handle) => handle.fd)).toStrictEqual(handles.map(() => -1)))
 })
+
+test('fails the Photos zip stream when a selected file cannot be opened', async () => {
+	const directory = await mkdtemp(nodePath.join(tmpdir(), 'photos-unreadable-archive-'))
+	directories.push(directory)
+	const handles: Awaited<ReturnType<typeof open>>[] = []
+	const logger = {createChildLogger: () => ({})}
+	const umbreld = {
+		logger,
+		files: {
+			openFileForRead: async (virtualPath: string) => {
+				// The index still lists a photo that has since been removed from disk
+				if (virtualPath.endsWith('missing.jpg')) throw new Error('ENOENT: no such file or directory')
+				const systemPath = nodePath.join(directory, nodePath.basename(virtualPath))
+				// Large enough that a source can't be read to the end before the failure
+				await writeFile(systemPath, Buffer.alloc(1024 * 1024, 1))
+				const handle = await open(systemPath, 'r')
+				handles.push(handle)
+				return {handle, stats: await handle.stat({bigint: true}), virtualPath, systemPath, name: virtualPath}
+			},
+		},
+	} as unknown as Umbreld
+	const archive = new Archive(umbreld)
+	const files = ['one', 'missing', 'three'].map((name) => ({virtualPath: `/Users/member/${name}.jpg`}))
+	const response = new Writable({write: (_chunk, _encoding, callback) => callback()})
+
+	// The error must reach the caller's pipeline. Left unhandled on the source
+	// it is an uncaught exception, which exits umbreld.
+	await expect(pipeline(await archive.createAuthorizedFlatFileZipStream(files, 'member'), response)).rejects.toThrow(
+		'ENOENT',
+	)
+
+	// The other two files are still opened after the failure and their descriptors are closed
+	await vi.waitFor(() => expect(handles.map((handle) => handle.fd)).toStrictEqual([-1, -1]))
+})

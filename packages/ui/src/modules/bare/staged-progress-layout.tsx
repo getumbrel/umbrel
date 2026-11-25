@@ -9,7 +9,7 @@ import {cn} from '@/lib/utils'
 // Preserved from the 2026-08 onboarding design exploration ("Breeze" concept's
 // setup screen) — intended as a future replacement for the covers that show
 // long-running system operations (umbrelOS updates, migration, backup restore,
-// RAID setup) currently rendered via ProgressLayout. Not wired up anywhere yet.
+// RAID setup). Not wired up anywhere yet.
 //
 // Purely presentational: the caller owns translation and progress state.
 
@@ -39,14 +39,15 @@ export function StagedProgressLayout({
 				<UmbrelLogo className='w-[88px]' />
 			</motion.div>
 
-			<div className='mt-10 h-6'>
+			{/* At least a line of the label tall, so swapping labels doesn't move the bar below */}
+			<div className='mt-10 min-h-[1lh] text-16'>
 				<AnimatePresence mode='wait'>
 					<motion.p
 						key={label}
 						initial={{opacity: 0, y: 8}}
 						animate={{opacity: 1, y: 0, transition: {duration: 0.4, ease: EASE}}}
 						exit={{opacity: 0, y: -8, transition: {duration: 0.25}}}
-						className='text-[16px] font-medium text-white/85'
+						className='text-16 font-medium text-white/85'
 					>
 						{label}
 					</motion.p>
@@ -67,7 +68,7 @@ export function StagedProgressLayout({
 				)}
 			</div>
 
-			{footnote && <p className='mt-6 text-[13px] text-white/35'>{footnote}</p>}
+			{footnote && <p className='mt-6 text-13 text-white/35'>{footnote}</p>}
 		</div>
 	)
 }

@@ -9,32 +9,38 @@ struct AppsView: View {
 	@Environment(Browser.self) private var browser
 	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
+	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
 	@State private var isShowingUnavailable = false
+	@State private var fold: FoldBand?
 
-	private var columns: [GridItem] {
-		Array(repeating: GridItem(.flexible(), spacing: 4), count: dynamicTypeSize.isAccessibilitySize ? 2 : 4)
-	}
+	private var iPhoneColumnCount: Int { dynamicTypeSize.isAccessibilitySize ? 2 : 4 }
 
 	var body: some View {
-		ScrollView(showsIndicators: false) {
-			VStack(alignment: .leading, spacing: 24) {
-				header
-				grid
-				if model.canManageApps { storeButton }
+		GeometryReader { geometry in
+			let width = max(0, geometry.size.width - Theme.contentInset * 2)
+			ScrollView(showsIndicators: false) {
+				VStack(alignment: .leading, spacing: 24) {
+					header
+					grid(width: width)
+					if model.canManageApps { storeButton }
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				// Measured here rather than on the grid, which has no size while there are no
+				// apps yet and would leave the store button centred on the fold.
+				.trackingFold($fold)
+				.padding(.horizontal, Theme.contentInset)
+				.modifier(TopClearancePadding())
+				.padding(.bottom, 32)
 			}
-			.frame(maxWidth: .infinity, alignment: .leading)
-			.padding(.horizontal, Theme.contentInset)
-			.padding(.top, 56)
-			.padding(.bottom, 32)
-		}
-		.refreshable {
-			await model.refreshVisibleData(for: .apps, force: true)
-		}
-		.background { SeeThroughTab() }
-		.alert(model.unreachableTitle, isPresented: $isShowingUnavailable) {
-			Button("OK", role: .cancel) {}
-		} message: {
-			Text(model.unreachableMessage)
+			.refreshable {
+				await model.refreshVisibleData(for: .apps, force: true)
+			}
+			.background { SeeThroughTab() }
+			.alert(model.unreachableTitle, isPresented: $isShowingUnavailable) {
+				Button("OK", role: .cancel) {}
+			} message: {
+				Text(model.unreachableMessage)
+			}
 		}
 	}
 
@@ -92,14 +98,38 @@ struct AppsView: View {
 	}
 
 	// Every installed app, four per row, icons directly on the wallpaper (white labels).
-	private var grid: some View {
-		LazyVGrid(columns: columns, spacing: 4) {
-			ForEach(model.installedApps) { app in
-				AppTileButton(app: app, labelColor: .white)
-					.frame(maxWidth: .infinity)
-					.frame(height: 100)
+	// A regular-width window fits more apps per row at the same size, half on each
+	// side of the fold while the device is partly folded.
+	@ViewBuilder
+	private func grid(width: CGFloat) -> some View {
+		let columns = horizontalSizeClass == .regular
+			? WideLayout.columns(
+				for: width,
+				iPhone: iPhoneColumnCount,
+				tileWidth: WideLayout.tileWidth * 4 / CGFloat(iPhoneColumnCount)
+			)
+			: iPhoneColumnCount
+		if horizontalSizeClass == .regular, fold != nil {
+			// Only while partly folded, which needs the gap on the fold. Everywhere else the
+			// grid is lazy, so a long list of apps only builds the tiles on screen.
+			FoldGrid(columns: columns, spacing: 4, fold: fold) {
+				ForEach(model.installedApps) { app in
+					tile(app)
+				}
+			}
+		} else {
+			LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: columns), spacing: 4) {
+				ForEach(model.installedApps) { app in
+					tile(app)
+				}
 			}
 		}
+	}
+
+	private func tile(_ app: Umbreld.AppSummary) -> some View {
+		AppTileButton(app: app, labelColor: .white)
+			.frame(maxWidth: .infinity)
+			.frame(height: 100)
 	}
 
 	private var storeButton: some View {
@@ -122,7 +152,10 @@ struct AppsView: View {
 			.glassGlint(in: Capsule())
 		}
 		.buttonStyle(.plain)
-		.frame(maxWidth: .infinity)
+		// Partly folded, it centres under the grid's left half rather than on the crease.
+		// The grid shares this width and origin, so the fold measured above applies to both.
+		.frame(maxWidth: fold?.lowerBound ?? .infinity)
+		.frame(maxWidth: .infinity, alignment: .leading)
 	}
 
 	private func openAppStore(queryItems: [URLQueryItem] = []) {

@@ -191,9 +191,9 @@ export default function CreateAccount() {
 								{/* A light sweeps left to right across the text once as it arrives. The lock is inline
 									rather than a flex item so it hugs the first word when the text wraps on narrow
 									screens, and `align` centres it on the cap height. */}
-								<p className='px-4 py-1 text-center text-12 leading-4 font-medium -tracking-3 text-balance'>
+								<p className='px-4 py-1 text-center text-12 leading-snug font-medium -tracking-3 text-balance'>
 									<FaLock className='mr-1.5 inline-block size-[11px] align-[-0.1em] text-white/40' />
-									<span className='animate-text-shine bg-[linear-gradient(90deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.45)_40%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.45)_60%,rgba(255,255,255,0.45)_100%)] bg-[length:300%_100%] bg-clip-text bg-no-repeat text-transparent'>
+									<span className='animate-text-shine bg-[linear-gradient(90deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.45)_40%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.45)_60%,rgba(255,255,255,0.45)_100%)] bg-[length:300%_100%] bg-clip-text bg-no-repeat text-transparent contrast-more:bg-none contrast-more:text-white/70'>
 										{t('onboarding.create-account.password-note')}
 									</span>
 								</p>

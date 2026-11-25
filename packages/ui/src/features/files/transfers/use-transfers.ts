@@ -5,6 +5,7 @@ import {AiOutlineFileExclamation} from 'react-icons/ai'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
+import {refreshSearchSoon} from '@/features/search/refresh-search'
 import {AUTH_TOKEN_LOCAL_STORAGE_KEY} from '@/modules/auth/token-renewal'
 import {ConfirmationContext, useConfirmation} from '@/providers/confirmation'
 import {trpcReact, type RouterOutput} from '@/trpc/trpc'
@@ -577,7 +578,7 @@ function useTransferSideEffects() {
 				if (item.state === 'completed' || item.state === 'failed') {
 					utils.files.list.invalidate()
 					utils.files.recents.invalidate()
-					utils.files.search.invalidate()
+					refreshSearchSoon(utils)
 					if (item.kind === 'move') {
 						utils.files.favorites.invalidate()
 						utils.files.shares.invalidate()

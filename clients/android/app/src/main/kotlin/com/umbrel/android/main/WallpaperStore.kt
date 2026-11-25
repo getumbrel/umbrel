@@ -20,8 +20,10 @@ import kotlin.math.sqrt
 
 /**
  * The account's umbrelOS wallpaper, its smaller device-card rendition, and the blurred
- * companion that frosts the cards. Wallpaper ids are content-stable across Umbrels, so one
- * disk cache serves every device. Bytes come through UmbrelKit's pinned transport.
+ * companion that frosts the cards. A wallpaper's id and hash name the same files on every
+ * Umbrel, so one disk cache serves every device. umbrelOS releases before wallpaper hashes
+ * send none, and those wallpapers are cached under their id alone. Bytes come through
+ * UmbrelKit's pinned transport.
  *
  * Memory is evictable: the screen keeps what it shows, and the LRU can drop other decoded
  * bitmaps and recreate them from disk.
@@ -39,37 +41,38 @@ class WallpaperStore(context: Context) {
 
 	// A screen recreated for the same device renders its wallpaper on the first frame from
 	// memory; disk and network work stay asynchronous below.
-	fun memoryCached(id: String): Bitmap? = memory.get(key(id, Variant.FULL_SCREEN))
-	fun memoryCachedCard(id: String): Bitmap? = memory.get(key(id, Variant.DEVICE_CARD))
-	fun memoryBlurred(id: String): Bitmap? = memory.get(blurKey(id))
+	fun memoryCached(id: String, hash: String?): Bitmap? = key(id, hash, Variant.FULL_SCREEN.suffix)?.let(memory::get)
+	fun memoryCachedCard(id: String, hash: String?): Bitmap? = key(id, hash, Variant.DEVICE_CARD.suffix)?.let(memory::get)
+	fun memoryBlurred(id: String, hash: String?): Bitmap? = key(id, hash, BLUR_SUFFIX)?.let(memory::get)
 
-	suspend fun cached(id: String): Bitmap? = cached(id, Variant.FULL_SCREEN)
+	suspend fun cached(id: String, hash: String?): Bitmap? = cached(id, hash, Variant.FULL_SCREEN)
 
-	suspend fun cachedCard(id: String): Bitmap? {
-		cached(id, Variant.DEVICE_CARD)?.let { return it }
+	suspend fun cachedCard(id: String, hash: String?): Bitmap? {
+		cached(id, hash, Variant.DEVICE_CARD)?.let { return it }
 		// A prior full-screen download is also a valid source for the smaller card.
-		val data = read(key(id, Variant.FULL_SCREEN)) ?: return null
+		val cardKey = key(id, hash, Variant.DEVICE_CARD.suffix) ?: return null
+		val data = read(key(id, hash, Variant.FULL_SCREEN.suffix) ?: return null) ?: return null
 		val image = decode(data, Variant.DEVICE_CARD.maxPixelSize) ?: return null
-		memory.put(key(id, Variant.DEVICE_CARD), image)
+		memory.put(cardKey, image)
 		return image
 	}
 
 	/** The full-screen wallpaper, downloading it once, plus its blurred companion. */
-	suspend fun load(id: String, target: Umbreld.Target): Bitmap? {
-		val image = load(id, target, Variant.FULL_SCREEN) ?: return null
-		blurred(id)
+	suspend fun load(id: String, hash: String?, target: Umbreld.Target): Bitmap? {
+		val image = load(id, hash, target, Variant.FULL_SCREEN) ?: return null
+		blurred(id, hash)
 		return image
 	}
 
-	suspend fun loadCard(id: String, target: Umbreld.Target): Bitmap? =
-		cachedCard(id) ?: load(id, target, Variant.DEVICE_CARD)
+	suspend fun loadCard(id: String, hash: String?, target: Umbreld.Target): Bitmap? =
+		cachedCard(id, hash) ?: load(id, hash, target, Variant.DEVICE_CARD)
 
 	/**
 	 * The blurred companion, built once from whichever source is on disk. The frost is
 	 * deliberately soft, so it starts from a smaller decode than the sharp backdrop.
 	 */
-	suspend fun blurred(id: String): Bitmap? {
-		val key = blurKey(id)
+	suspend fun blurred(id: String, hash: String?): Bitmap? {
+		val key = key(id, hash, BLUR_SUFFIX) ?: return null
 		memory.get(key)?.let { return it }
 		read(key)?.let { data ->
 			decode(data, BLUR_MAX_PIXEL_SIZE)?.let { image ->
@@ -77,7 +80,8 @@ class WallpaperStore(context: Context) {
 				return image
 			}
 		}
-		val source = read(key(id, Variant.FULL_SCREEN)) ?: read(key(id, Variant.DEVICE_CARD)) ?: return null
+		val source = read(key(id, hash, Variant.FULL_SCREEN.suffix) ?: return null)
+			?: read(key(id, hash, Variant.DEVICE_CARD.suffix) ?: return null) ?: return null
 		val blurred = withContext(Dispatchers.Default) {
 			val image = decode(source, BLUR_MAX_PIXEL_SIZE, software = true) ?: return@withContext null
 			val pixels = IntArray(image.width * image.height)
@@ -92,11 +96,12 @@ class WallpaperStore(context: Context) {
 		}
 		memory.put(key, blurred)
 		write(key, encoded)
+		trimVersions(id, BLUR_SUFFIX)
 		return blurred
 	}
 
-	private suspend fun cached(id: String, variant: Variant): Bitmap? {
-		val key = key(id, variant)
+	private suspend fun cached(id: String, hash: String?, variant: Variant): Bitmap? {
+		val key = key(id, hash, variant.suffix) ?: return null
 		memory.get(key)?.let { return it }
 		val data = read(key) ?: return null
 		val image = decode(data, variant.maxPixelSize) ?: return null
@@ -104,13 +109,15 @@ class WallpaperStore(context: Context) {
 		return image
 	}
 
-	private suspend fun load(id: String, target: Umbreld.Target, variant: Variant): Bitmap? {
-		cached(id, variant)?.let { return it }
+	private suspend fun load(id: String, hash: String?, target: Umbreld.Target, variant: Variant): Bitmap? {
+		val key = key(id, hash, variant.suffix) ?: return null
+		cached(id, hash, variant)?.let { return it }
 		// Android 12 added AVIF decoding; earlier releases go straight to the JPEG original.
 		val preferred = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) fetch(id, target, variant.rendition, variant.maxPixelSize) else null
 		val loaded = preferred ?: fetch(id, target, Umbreld.WallpaperImageRendition.JPEG_FALLBACK, variant.maxPixelSize) ?: return null
-		memory.put(key(id, variant), loaded.second)
-		write(key(id, variant), loaded.first)
+		memory.put(key, loaded.second)
+		write(key, loaded.first)
+		trimVersions(id, variant.suffix)
 		return loaded.second
 	}
 
@@ -146,13 +153,34 @@ class WallpaperStore(context: Context) {
 		}
 	}
 
-	// Wallpaper ids are a numeric preset set (UmbrelKit rejects anything else), so they
-	// are safe as file names.
 	private fun file(key: String): File = File(directory, "$key.image")
 
-	private fun key(id: String, variant: Variant): String = "$id-${variant.suffix}"
+	/**
+	 * Umbrels on different umbrelOS releases can show the same wallpaper with different
+	 * files, and each device card needs its own copy offline, so a few versions of each
+	 * wallpaper are kept. Beyond that the oldest are removed, so hashes that keep changing
+	 * can't fill the disk.
+	 */
+	private suspend fun trimVersions(id: String, suffix: String) = withContext(Dispatchers.IO) {
+		val ending = "-$suffix.image"
+		val versions = directory.listFiles()?.filter { file ->
+			if (!file.name.endsWith(ending)) return@filter false
+			val version = file.name.dropLast(ending.length)
+			version == id || (version.startsWith("$id-") && Umbreld.validWallpaperHash(version.drop(id.length + 1)) != null)
+		}.orEmpty()
+		versions.sortedByDescending { it.lastModified() }.drop(VERSIONS_KEPT).forEach { it.delete() }
+	}
 
-	private fun blurKey(id: String): String = "$id-blur"
+	private fun key(id: String, hash: String?, suffix: String): String? = versionKey(id, hash)?.let { "$it-$suffix" }
+
+	/**
+	 * Keys become file names. Ids are numeric presets and hashes short lowercase hex, and
+	 * both are checked here because they come from the Umbrel; anything else isn't cached.
+	 */
+	private fun versionKey(id: String, hash: String?): String? {
+		if (id.isEmpty() || !id.all { it in '0'..'9' }) return null
+		return Umbreld.validWallpaperHash(hash)?.let { "$id-$it" } ?: id
+	}
 
 	/**
 	 * Decodes a bounded bitmap straight from the compressed source, so a 5K original never
@@ -180,6 +208,8 @@ class WallpaperStore(context: Context) {
 
 	private companion object {
 		const val BLUR_MAX_PIXEL_SIZE = 1_440
+		const val BLUR_SUFFIX = "blur"
+		const val VERSIONS_KEPT = 3
 
 		// Matches the Core Image Gaussian radius the iOS app uses, which is a standard
 		// deviation in source pixels.

@@ -48,7 +48,7 @@ function SplitLeftContent({titleKey = 'backup'}: {titleKey?: string}) {
 		<div className='flex flex-col items-center'>
 			<FadeInImg src={backupsIcon} width={67} height={67} alt='' />
 			<div className='mt-2.5 px-2 text-center text-15 font-medium'>{t(titleKey)}</div>
-			<div className='text-13 opacity-40'>{t('umbrel')}</div>
+			<div className='text-13 text-white/40'>{t('umbrel')}</div>
 		</div>
 	)
 }

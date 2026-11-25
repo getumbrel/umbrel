@@ -208,6 +208,9 @@ public final class Discovery: @unchecked Sendable {
 		var byHost: [String: Candidate] = [:]
 		for resolver in resolvers.values {
 			guard let host = resolver.host else { continue } // not resolved yet
+			// Any device on the network can advertise any target name. Skip anything that
+			// isn't a literal IPv4 address or .local name before it reaches identification.
+			guard SavedDevice.isValidLocalEndpointHost(host) else { continue }
 			var candidate = Candidate(
 				host: host,
 				addresses: resolver.addresses,

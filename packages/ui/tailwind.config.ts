@@ -24,6 +24,10 @@ const defaultMonoFonts = [
 	'monospace',
 ]
 
+// Every text size grows by --text-boost, which Settings > Accessibility > Text size
+// sets (see index.css). Sizes written as arbitrary values (`text-[13px]`) stay fixed.
+const textSize = (px: number) => `calc(${px}px + var(--text-boost))`
+
 export default {
 	theme: {
 		fontFamily: {
@@ -60,6 +64,10 @@ export default {
 				brand: 'hsl(var(--color-brand) / <alpha-value>)',
 				'brand-lighter': 'hsl(var(--color-brand-lighter) / <alpha-value>)',
 				'brand-lightest': 'hsl(var(--color-brand-lightest) / <alpha-value>)',
+				//
+				// What a search matched (see --color-match in index.css)
+				match: 'hsl(var(--color-match) / <alpha-value>)',
+				'match-ink': 'hsl(var(--color-match-ink) / <alpha-value>)',
 				//
 				// Keyboard focus ring. Defined in index.css so the global
 				// `:focus-visible` outline and `ring-ring` stay the same colour.
@@ -117,22 +125,9 @@ export default {
 				4: '0.04',
 				6: '0.06',
 			},
-			fontSize: {
-				9: '9px',
-				11: '11px',
-				12: '12px',
-				13: '13px',
-				14: '14px',
-				15: '15px',
-				16: '16px',
-				17: '17px',
-				19: '19px',
-				24: '24px',
-				32: '32px',
-				36: '36px',
-				48: '48px',
-				56: '56px',
-			},
+			fontSize: Object.fromEntries(
+				[9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 24, 28, 32, 36, 48, 56].map((px) => [px, textSize(px)]),
+			),
 			backdropBlur: {
 				'4xl': '180px',
 			},
@@ -203,6 +198,12 @@ export default {
 					from: {backgroundPosition: '100% 0'},
 					to: {backgroundPosition: '0% 0'},
 				},
+				// The light in a cover's progress bar while there is nothing to measure: from one end
+				// of the track to the other and back, never out of sight (see components/ui/cover.tsx)
+				'cover-glide': {
+					from: {translate: '0'},
+					to: {translate: '100%'},
+				},
 				'files-folder-blink-on-drag-hover': {
 					'0%, 100%': {backgroundColor: 'hsl(var(--color-brand))'},
 					'25%, 75%': {backgroundColor: 'transparent'},
@@ -215,10 +216,13 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				shake: 'shake 0.7s ease-out both',
 				'sliding-loader': 'sliding-loader 1s ease infinite',
+				'cover-glide': 'cover-glide 1.6s ease-in-out infinite alternate',
 				'files-folder-blink-on-drag-hover': 'files-folder-blink-on-drag-hover 0.4s linear',
 				'text-shine': 'text-shine 2.8s cubic-bezier(0.33, 0, 0.15, 1) 0.2s 1',
 			},
 			typography: () => ({
+				// Markdown's own sizes are in em, so its base size carries the setting
+				sm: {css: {fontSize: 'calc(0.875rem + var(--text-boost))'}},
 				neutral: {
 					css: {
 						'--tw-prose-invert-bullets': 'rgb(255 255 255 / 50%)',

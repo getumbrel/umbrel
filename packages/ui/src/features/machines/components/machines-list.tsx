@@ -124,7 +124,9 @@ function MachineRow({machine, index}: {machine: Machine; index: number}) {
 				// becomes a tile (machine-tile in index.css): the copy goes under the
 				// monitor and the controls take the corner.
 				'settings-edge-material relative flex items-center gap-2 rounded-24 bg-white/5 p-3 transition-colors duration-300 [container:machine-row/inline-size] hover:bg-white/8 sm:gap-4 sm:p-4 low:gap-2 low:p-3',
-				isError && 'border border-[#f63636]/40 bg-[#f63636]/[0.08] hover:bg-[#f63636]/[0.12]',
+				// With contrast on, the red line alone marks the card, not the material's white edge too
+				isError &&
+					'border border-[#f63636]/40 bg-[#f63636]/[0.08] hover:bg-[#f63636]/[0.12] contrast-more:border-[#ff6b6b] contrast-more:shadow-none!',
 			)}
 		>
 			<button
@@ -162,7 +164,7 @@ function MachineRow({machine, index}: {machine: Machine; index: number}) {
 						className={cn('h-5 w-full items-center overflow-hidden', isError ? 'flex' : 'hidden sm:flex low:hidden')}
 					>
 						{isError ? (
-							<span className='min-w-0 truncate text-12 -tracking-2 text-[#f63636]/80'>
+							<span className='min-w-0 truncate text-12 -tracking-2 text-[#f63636]/80 contrast-more:text-[#ff6b6b]'>
 								{machine.errorMessage ? getMachinesErrorMessage(machine.errorMessage) : t('machines.error-title')}
 							</span>
 						) : (
@@ -322,8 +324,9 @@ export function MachineMenu({
 					</button>
 				</DropdownMenuTrigger>
 			</DarkTooltip>
-			{/* p-1: match the homescreen context menu's tight padding */}
-			<DropdownMenuContent align='start' className='w-60 p-1'>
+			{/* p-1: match the homescreen context menu's tight padding. At least 240px,
+			    and wider for a longer label (menus never pass the screen's edge) */}
+			<DropdownMenuContent align='start' className='min-w-60 p-1'>
 				{/* Block cards share the menu items' radius so they nest concentrically
 				    inside the 20px menu surface at its p-1 inset */}
 				<div className='mb-1 flex flex-col gap-2 rounded-[var(--material-item-radius)] bg-white/8 p-3'>
@@ -337,32 +340,27 @@ export function MachineMenu({
 					<Progress value={storagePercent} size='thicker' variant='primary' />
 				</div>
 				{machine.performanceWarning && (
-					<div className='mb-1 rounded-[var(--material-item-radius)] border border-amber-400/20 bg-amber-400/10 p-3 text-12 leading-snug text-amber-200/90'>
+					// contain-inline-size: the warning wraps to the menu's width instead of setting it
+					<div className='mb-1 rounded-[var(--material-item-radius)] border border-amber-400/20 bg-amber-400/10 p-3 text-12 leading-snug text-amber-200/90 contain-inline-size'>
 						{machine.performanceWarning}
 					</div>
 				)}
-				<DropdownMenuItem
-					className='gap-2 whitespace-nowrap'
-					onSelect={() => navigate(`${machinePath(machine.id)}/settings`)}
-				>
+				<DropdownMenuItem className='gap-2' onSelect={() => navigate(`${machinePath(machine.id)}/settings`)}>
 					<Settings className='size-4 shrink-0' />
 					{t('machines.settings')}
 				</DropdownMenuItem>
-				<DropdownMenuItem
-					className='gap-2 whitespace-nowrap'
-					onSelect={() => setPinned({id: machine.id, pinned: !machine.pinned})}
-				>
+				<DropdownMenuItem className='gap-2' onSelect={() => setPinned({id: machine.id, pinned: !machine.pinned})}>
 					{machine.pinned ? <PinOff className='size-4 shrink-0' /> : <Pin className='size-4 shrink-0' />}
 					{machine.pinned ? t('machines.unpin-from-homescreen') : t('machines.pin-to-homescreen')}
 				</DropdownMenuItem>
 				{machine.installationMediaAttached && !machine.firstBootSetup && machine.state !== 'installing' && (
-					<DropdownMenuItem className='gap-2 whitespace-nowrap' onSelect={handleEjectInstallMedia}>
+					<DropdownMenuItem className='gap-2' onSelect={handleEjectInstallMedia}>
 						<Disc3 className='size-4 shrink-0' />
 						{t('machines.eject-install-media')}
 					</DropdownMenuItem>
 				)}
 				{withRestart && machine.state === 'running' && (
-					<DropdownMenuItem className='gap-2 whitespace-nowrap' onSelect={() => restart({id: machine.id})}>
+					<DropdownMenuItem className='gap-2' onSelect={() => restart({id: machine.id})}>
 						<RotateCw className='size-4 shrink-0' />
 						{t('machines.restart')}
 					</DropdownMenuItem>
@@ -371,7 +369,7 @@ export function MachineMenu({
 				   'installing', where "Cancel install" (uninstall) is the right action */}
 				{machine.state !== 'stopped' && machine.state !== 'installing' && (
 					<DropdownMenuItem
-						className='gap-2 whitespace-nowrap text-destructive2-lightest focus:text-destructive2-lightest data-[highlighted]:text-destructive2-lightest'
+						className='gap-2 text-destructive2-lightest focus:text-destructive2-lightest data-[highlighted]:text-destructive2-lightest'
 						onSelect={() => forceStop({id: machine.id})}
 					>
 						<Square className='size-4 shrink-0 fill-current' />
@@ -379,7 +377,7 @@ export function MachineMenu({
 					</DropdownMenuItem>
 				)}
 				<DropdownMenuItem
-					className='gap-2 whitespace-nowrap text-destructive2-lightest focus:text-destructive2-lightest data-[highlighted]:text-destructive2-lightest'
+					className='gap-2 text-destructive2-lightest focus:text-destructive2-lightest data-[highlighted]:text-destructive2-lightest'
 					onSelect={handleUninstall}
 				>
 					<Trash2 className='size-4 shrink-0' />

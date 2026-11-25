@@ -108,6 +108,14 @@ export type Settings = {
 	autoHyphenation: boolean
 	// Word versions change layout rules; 15 is Word 2013 and later
 	compatibilityMode: number
+	// Whether paragraphs are spaced as HTML's are: between two is the larger of what one asks for after it and the
+	// other before it rather than both, and automatic spacing is a browser's. Word's way unless a document turns it off.
+	htmlSpacing: boolean
+	// Whether the mark of a paragraph that ends with a page break goes to the next page with a line of its own, as in
+	// early versions of Word, instead of staying behind with the break
+	markFollowsBreak: boolean
+	// Whether the lines in a table's cells are set on the section's line grid, as the text around the table is
+	gridInTables: boolean
 	languages: {latin?: string; eastAsia?: string; bidi?: string}
 	colorMapping: Map<string, string>
 	displayBackgroundShape: boolean
@@ -158,6 +166,9 @@ export function parseSettings(root: XmlElement | undefined): Settings {
 		gutterAtTop: onOff(get('gutterAtTop')) ?? false,
 		autoHyphenation: onOff(get('autoHyphenation')) ?? false,
 		compatibilityMode: int(mode ? attr(mode, 'val') : undefined) ?? 12,
+		htmlSpacing: !onOff(compat && child(compat, 'doNotUseHTMLParagraphAutoSpacing')),
+		markFollowsBreak: onOff(compat && child(compat, 'splitPgBreakAndParaMark')) ?? false,
+		gridInTables: onOff(compat && child(compat, 'adjustLineHeightInTable')) ?? false,
 		languages: {
 			latin: (languages && attr(languages, 'val')) || undefined,
 			eastAsia: (languages && attr(languages, 'eastAsia')) || undefined,
@@ -215,7 +226,10 @@ export type Formatting = {pPr: ParaProps; rPr: RunProps; tblPr: TableProps; tcPr
 
 type StyleDefinition = {
 	type: string
+	// As Word knows it whatever language the file was written in ("heading 1", "List Paragraph"); ids are localised
+	name?: string
 	basedOn?: string
+	next?: string
 	formatting: Formatting
 	conditional: Map<string, Formatting>
 }
@@ -260,11 +274,15 @@ export class Styles {
 		const rPrDefault = defaults && child(defaults, 'rPrDefault')
 		const pPrDefault = defaults && child(defaults, 'pPrDefault')
 		this.runDefaults = parseRunProps(rPrDefault && child(rPrDefault, 'rPr'), theme)
-		this.paraDefaults = parseParaProps(pPrDefault && child(pPrDefault, 'pPr'), theme)
+		// A paragraph's first or last line is never left alone on a page, unless the document says it may be
+		this.paraDefaults = {widowControl: true, ...parseParaProps(pPrDefault && child(pPrDefault, 'pPr'), theme)}
 		let defaultParagraph: string | undefined
 		let defaultTable: string | undefined
 		for (const style of root ? children(root, 'style') : []) {
-			const id = attr(style, 'styleId')
+			const name = value(child(style, 'name'))
+			// A style written without an id is known by its name, which is what names it where it's used: a reporting
+			// tool's style for the empty cells of its layout tables is written so
+			const id = attr(style, 'styleId') ?? name
 			const type = attr(style, 'type') ?? 'paragraph'
 			if (!id || this.definitions.has(id)) continue
 			const conditional = new Map<string, Formatting>()
@@ -274,7 +292,9 @@ export class Styles {
 			}
 			this.definitions.set(id, {
 				type,
+				name,
 				basedOn: value(child(style, 'basedOn')),
+				next: value(child(style, 'next')),
 				formatting: formatting(style, theme),
 				conditional,
 			})
@@ -339,6 +359,17 @@ export class Styles {
 	// The style a paragraph actually has: its own if defined, else the default
 	paragraphStyleId(id: string | undefined): string | undefined {
 		return this.has(id, 'paragraph') ? id : this.defaultParagraph
+	}
+
+	// The style Word starts the next paragraph in after one in this style, when it names a different one
+	following(id: string | undefined): string | undefined {
+		const next = id === undefined ? undefined : this.definitions.get(id)?.next
+		return next !== undefined && next !== id && this.has(next, 'paragraph') ? next : undefined
+	}
+
+	// Whether this is the style Word gives a paragraph when it joins a list (and takes away when it leaves)
+	listParagraph(id: string | undefined): boolean {
+		return id !== undefined && this.definitions.get(id)?.name?.toLowerCase() === 'list paragraph'
 	}
 
 	// Runs: the paragraph's base, a character style toggling over it, direct formatting setting outright

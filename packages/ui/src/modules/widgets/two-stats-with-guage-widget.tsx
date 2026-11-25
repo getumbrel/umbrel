@@ -28,7 +28,7 @@ export function TwoStatsWidget({
 								{item?.text ?? LOADING_DASH}
 							</p>
 							{item?.subtext && (
-								<p className='truncate text-[10px] leading-tight font-semibold opacity-45 w-tall:text-11 w-expanded:text-12'>
+								<p className='truncate text-10 leading-tight font-semibold text-white/45 w-tall:text-11 w-expanded:text-12'>
 									{item.subtext}
 								</p>
 							)}
@@ -53,7 +53,7 @@ function Compact({items}: TwoStatsWithProgressWidgetProps) {
 				<div key={i} className='relative'>
 					<Arc strokeWidth={strokeWidth} size={size} progress={item?.progress ?? 0} />
 					<div
-						className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 truncate text-center text-[10px] leading-none font-semibold tabular-nums'
+						className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 truncate text-center text-10 leading-none font-semibold tabular-nums'
 						style={{width: size - strokeWidth * 2}}
 					>
 						{item?.text ?? LOADING_DASH}

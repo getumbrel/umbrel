@@ -2,18 +2,15 @@ import {createHash} from 'node:crypto'
 import nodePath from 'node:path'
 import {Readable} from 'node:stream'
 
-import {execa} from 'execa'
 import fse from 'fs-extra'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
 import Umbreld from '../../index.ts'
+import {sandboxed} from '../utilities/sandbox.ts'
 import temporaryDirectory from '../utilities/temporary-directory.ts'
 import {MAX_AVATAR_UPLOAD_BYTES, removeAccountAvatar, resolveAccountAvatar, setAccountAvatar} from './avatar.ts'
 
-vi.mock('execa', async (importOriginal) => ({
-	...(await importOriginal<typeof import('execa')>()),
-	execa: vi.fn(),
-}))
+vi.mock('../utilities/sandbox.ts')
 
 const jpegUpload = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46])
 const pngUpload = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -40,14 +37,25 @@ describe('account avatars', () => {
 		sourceInspection = 'JPEG 640 480'
 		conversionError = undefined
 
-		vi.mocked(execa).mockImplementation((async (command: string, args: readonly string[]) => {
+		// ImageMagick reads an image from its standard input and writes the
+		// avatar to descriptor 3. An upload is inspected, converted, and the
+		// avatar that came out inspected in turn.
+		let converted = false
+		vi.mocked(sandboxed).mockImplementation((async (
+			command: string,
+			_arguments: readonly string[],
+			_sandbox: unknown,
+			options: {stdio: number[]},
+		) => {
 			if (command === 'identify') {
-				const source = args.at(-1) ?? ''
-				return {stdout: source.includes('.tmp.webp') ? 'WEBP 512 512' : sourceInspection}
+				const inspection = converted ? 'WEBP 512 512' : sourceInspection
+				converted = false
+				return {stdout: inspection}
 			}
 			if (command === 'convert') {
 				if (conversionError) throw conversionError
-				await fse.writeFile(args.at(-1)!, convertedBytes)
+				await fse.write(options.stdio[3], convertedBytes)
+				converted = true
 				return {stdout: ''}
 			}
 			throw new Error(`Unexpected command: ${command}`)
@@ -73,12 +81,13 @@ describe('account avatars', () => {
 		expect(await umbreld.store.get('user.avatarHash')).toBe(expectedHash)
 		expect(await fse.readFile(accountAvatarPath(umbreld, '0', expectedHash))).toEqual(convertedBytes)
 
-		const execaCalls = vi.mocked(execa).mock.calls as unknown as [
+		const toolCalls = vi.mocked(sandboxed).mock.calls as unknown as [
 			command: string,
 			arguments: readonly string[],
+			sandbox: Record<string, unknown>,
 			options: Record<string, unknown>,
 		][]
-		const convertCall = execaCalls.find(([command]) => command === 'convert')!
+		const convertCall = toolCalls.find(([command]) => command === 'convert')!
 		const imageMagickLimits = [
 			'-limit',
 			'memory',
@@ -96,7 +105,7 @@ describe('account avatars', () => {
 			'area',
 			'50MP',
 		]
-		for (const [command, args] of execaCalls) {
+		for (const [command, args] of toolCalls) {
 			if (command === 'identify' || command === 'convert') {
 				expect(args.slice(0, imageMagickLimits.length)).toEqual(imageMagickLimits)
 			}
@@ -119,7 +128,14 @@ describe('account avatars', () => {
 			]),
 		)
 		expect(convertCall[1].find((argument) => argument.endsWith('[0]'))).toBeDefined()
-		expect(convertCall[2]).toMatchObject({timeout: 15_000})
+		expect(convertCall[2]).toStrictEqual({
+			network: false,
+			gpu: false,
+			readablePaths: [],
+			writablePaths: [],
+			memoryLimit: 2 * 1024 ** 3,
+		})
+		expect(convertCall[3]).toMatchObject({timeout: 15_000})
 	})
 
 	test.each([

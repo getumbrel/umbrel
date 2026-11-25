@@ -3,7 +3,8 @@ import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {toast, type ToastOptions} from '@/components/ui/toast'
-import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
+import {getHeadline} from '@/features/storage/headline'
+import {toSingleHost} from '@/features/storage/hooks/use-storage-headline'
 import {trpcReact} from '@/trpc/trpc'
 import {sleep} from '@/utils/misc'
 import {isCpuTooHot, isTrpcDiskFull, isTrpcMemoryLow} from '@/utils/system'
@@ -16,7 +17,7 @@ function useMounted() {
 }
 
 export function useSettingsNotificationCount() {
-	const {t} = useTranslation()
+	const {t, i18n} = useTranslation()
 	const navigate = useNavigate()
 	const utils = trpcReact.useUtils()
 
@@ -40,13 +41,23 @@ export function useSettingsNotificationCount() {
 			utils.system.systemDiskUsage.fetch(),
 			utils.hardware.raid.getStatus.fetch(),
 			utils.hardware.internalStorage.getDevices.fetch(),
+			utils.hardware.umbrelPro.isUmbrelPro.fetch(),
+			utils.systemNg.device.getIdentity.fetch(),
 		])
 
 		const toastIds: (string | number)[] = []
 
 		res.then((allData) => {
-			const [checkUpdateResult, cpuTempResult, memoryResult, diskResult, raidStatusResult, devicesResult] =
-				allData ?? []
+			const [
+				checkUpdateResult,
+				cpuTempResult,
+				memoryResult,
+				diskResult,
+				raidStatusResult,
+				devicesResult,
+				isProResult,
+				identityResult,
+			] = allData ?? []
 
 			let currCount = 0
 
@@ -146,39 +157,26 @@ export function useSettingsNotificationCount() {
 				}
 			}
 
-			// TODO: Consider adding real-time notifications via eventBus subscription for RAID status changes
-			// Check RAID status for issues
-			if (raidStatusResult?.status === 'fulfilled') {
-				const raidStatus = raidStatusResult.value
-
-				if (raidStatus.exists && raidStatus.status && raidStatus.status !== 'ONLINE') {
+			// What Storage Manager would lead with, when that is something wrong: a drive that has
+			// failed or may fail, damaged data, storage that has stopped. One toast, in its words.
+			// Running out of space has its own toast above.
+			if (
+				raidStatusResult?.status === 'fulfilled' &&
+				devicesResult?.status === 'fulfilled' &&
+				isProResult?.status === 'fulfilled'
+			) {
+				const headline = getHeadline({
+					raid: raidStatusResult.value,
+					devices: devicesResult.value,
+					isPro: isProResult.value,
+					host: toSingleHost(identityResult?.status === 'fulfilled' ? identityResult.value : undefined),
+					t,
+					locale: i18n.language,
+				})
+				if (headline?.alarming && !headline.space) {
 					currCount++
-					const id = toast.warning(t('notifications.raid.issue.title'), {
-						...storageManagerToastOptions,
-						description: t('notifications.raid.issue.description'),
-					})
-					toastIds.push(id)
-				}
-			}
-
-			// Check drive health for issues (temperature, wear, SMART status). SSD wording
-			// only when every affected device is an SSD - HDDs get generic drive wording.
-			// Translation keys stay literal inside t() so CI's unused-key scan finds them.
-			if (devicesResult?.status === 'fulfilled') {
-				const unhealthyDevices = devicesResult.value.filter((device) => getDeviceHealth(device).hasWarning)
-
-				if (unhealthyDevices.length > 0) {
-					const allSsd = unhealthyDevices.every((device) => device.type === 'ssd')
-					currCount++
-					const id = toast.warning(
-						allSsd ? t('notifications.ssd.health.title') : t('notifications.drive.health.title'),
-						{
-							...storageManagerToastOptions,
-							description: allSsd
-								? t('notifications.ssd.health.description')
-								: t('notifications.drive.health.description'),
-						},
-					)
+					const raise = headline.tone === 'critical' ? toast.error : toast.warning
+					const id = raise(headline.title, {...storageManagerToastOptions, description: headline.body})
 					toastIds.push(id)
 				}
 			}

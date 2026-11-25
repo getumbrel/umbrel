@@ -133,7 +133,7 @@ export function CredentialsSection({userApp}: {userApp: UserApp}) {
 function CredentialsRow({label, children}: {label: ReactNode; children: ReactNode}) {
 	return (
 		<div className='flex flex-row items-center gap-2'>
-			<span className='flex-1 text-14 opacity-50'>{label}</span>
+			<span className='flex-1 text-14 text-white/50'>{label}</span>
 			{children}
 		</div>
 	)

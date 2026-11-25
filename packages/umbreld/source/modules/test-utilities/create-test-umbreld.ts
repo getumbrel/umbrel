@@ -1,5 +1,9 @@
+import fs from 'node:fs'
+import http from 'node:http'
+import type {AddressInfo} from 'node:net'
 import path from 'node:path'
 import {Buffer} from 'node:buffer'
+import {pipeline} from 'node:stream/promises'
 import {fileURLToPath} from 'node:url'
 import {createTRPCProxyClient, httpBatchLink, createWSClient, wsLink, splitLink} from '@trpc/client'
 import got from 'got'
@@ -176,16 +180,19 @@ function createTestHelpers(port: number | (() => number)) {
 		raidDevices,
 		raidType,
 		acceleratorDevices,
+		failsafeLayout,
 	}: {
 		raidDevices?: string[]
 		raidType?: 'storage' | 'failsafe'
 		acceleratorDevices?: string[]
+		failsafeLayout?: 'raidz1' | 'raidz2' | 'mirror'
 	} = {}) {
 		await unauthenticatedClient.user.register.mutate({
 			...userCredentials,
 			raidDevices,
 			raidType,
 			acceleratorDevices,
+			failsafeLayout,
 		})
 	}
 
@@ -372,12 +379,77 @@ export default async function createTestUmbreld({
 export type DriveBus = 'sata' | 'sas'
 export const driveBuses: DriveBus[] = ['sata', 'sas']
 
+type TestVm = Awaited<ReturnType<typeof createTestVm>>['vm']
+
+// The kinds of drive a raidz failsafe array can be built from. Raidz tests run against all of
+// them via describe.each(raidzDrives), so HDD raidz arrays get the same coverage as SSD ones.
+// Each kind knows which VM to boot, how to fit and pull its drives, how to pick a drive out of
+// getDevices() by the slot it was fitted in, and which failsafe layout to register with.
+export const raidzDrives = [
+	{
+		name: 'NVMe SSD',
+		type: 'ssd' as const,
+		device: 'umbrel-pro' as const,
+		// SSD arrays are raidz1 without asking
+		failsafeLayout: undefined,
+		add: (vm: TestVm, options: {slot: number; size?: string}) => vm.addNvme(options),
+		remove: (vm: TestVm, options: {slot: number}) => vm.removeNvme(options),
+		disconnect: (vm: TestVm, options: {slot: number}) => vm.disconnectNvme(options),
+		inSlot: (slot: number) => (device: {serial: string}) => device.serial.startsWith(`nvme${slot}-`),
+	},
+	...driveBuses.map((bus) => ({
+		name: `${bus.toUpperCase()} HDD`,
+		type: 'hdd' as const,
+		device: 'nas' as const,
+		// HDD arrays are mirrors unless raidz1 is asked for
+		failsafeLayout: 'raidz1' as const,
+		// VM HDDs default to 1T, so default to the NVMe size to keep sizes the same for every kind
+		add: (vm: TestVm, {slot, size = '64G'}: {slot: number; size?: string}) => vm.addHdd({slot, size, bus}),
+		remove: (vm: TestVm, {slot}: {slot: number}) => vm.removeHdd({slot, bus}),
+		disconnect: (vm: TestVm, {slot}: {slot: number}) => vm.disconnectHdd({slot, bus}),
+		inSlot: (slot: number) => (device: {serial: string}) =>
+			device.serial.startsWith(`${bus === 'sas' ? 'sashdd' : 'hdd'}${slot}-`),
+	})),
+]
+
+// Serves the models umbrelOS fetches once it is running (see files/models.ts)
+// from where `scripts/download-models` puts them, in the layout the download
+// server has them in, with range requests like it. VMs reach it at
+// http://10.0.2.2:<port>.
+async function serveModels() {
+	const directory = path.resolve(currentDirectory, '../../../../os/build/models')
+	if (!fs.existsSync(directory)) {
+		throw new Error(`No models at ${directory}: run scripts/download-models from the repository root first`)
+	}
+	const server = http.createServer((request, response) => {
+		const file = path.join(directory, path.normalize(decodeURIComponent(request.url ?? '/')))
+		const size = file.startsWith(`${directory}${path.sep}`) && fs.statSync(file, {throwIfNoEntry: false})?.size
+		if (!size) return response.writeHead(404).end()
+		const range = /^bytes=(\d+)-$/.exec(request.headers.range ?? '')
+		const start = range ? Number(range[1]) : 0
+		response.writeHead(range ? 206 : 200, {
+			'content-length': size - start,
+			...(range ? {'content-range': `bytes ${start}-${size - 1}/${size}`} : {}),
+		})
+		pipeline(fs.createReadStream(file, {start}), response).catch(() => {})
+	})
+	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+	return {
+		port: (server.address() as AddressInfo).port,
+		async close() {
+			server.closeAllConnections()
+			await new Promise((resolve) => server.close(resolve))
+		},
+	}
+}
+
 export async function createTestVm({
 	device,
 	bootDisk,
 	image,
 	memory,
 	cores,
+	models = false,
 	forwardPorts = [],
 	startupTimeout = 300_000,
 	stateDirectoryName,
@@ -387,6 +459,10 @@ export async function createTestVm({
 	image?: string
 	memory?: number
 	cores?: number
+	// Whether the VM can fetch the models that read the library, from this
+	// machine. Without it there is nowhere for it to fetch them from: a test
+	// that doesn't ask for them never has a VM download them from the internet.
+	models?: boolean
 	forwardPorts?: Array<{hostPort?: number; guestPort: number}>
 	startupTimeout?: number
 	stateDirectoryName?: string
@@ -413,6 +489,9 @@ export async function createTestVm({
 	}
 	const stateDir = stateDirectoryName ? path.join(generatedStateDirectory, stateDirectoryName) : generatedStateDirectory
 	const env = {VM_STATE_DIR: stateDir}
+	const modelsServer = models ? await serveModels() : undefined
+	// Port 1 has nothing listening, so a VM that asks is refused at once
+	const modelsUrl = `http://10.0.2.2:${modelsServer?.port ?? 1}`
 
 	let sshPort = 0
 	let httpPort = 0
@@ -462,16 +541,25 @@ export async function createTestVm({
 
 	// Boots the VM and waits for umbreld to respond. With `cdrom` an ISO is
 	// attached as the primary boot device (e.g. the USB installer). With
-	// `bootNvmeSlot` the VM boots from the NVMe device in that slot (e.g. after
-	// the USB installer flashed it). With `waitForShutdown` it instead waits
+	// `bootNvmeSlot` the VM boots from the NVMe device in that slot, with
+	// `bootSataSlot` from the SATA drive in that slot, and with `bootUfs` from
+	// the UFS storage (e.g. after the USB installer flashed them). With `waitForShutdown` it instead waits
 	// for the VM to power itself off, for boots that are expected to complete
 	// and shut down on their own (e.g. the USB installer auto-flashing a
 	// device).
 	async function powerOnOnce({
 		cdrom,
 		bootNvmeSlot,
+		bootSataSlot,
+		bootUfs = false,
 		waitForShutdown = false,
-	}: {cdrom?: string; bootNvmeSlot?: number; waitForShutdown?: boolean} = {}) {
+	}: {
+		cdrom?: string
+		bootNvmeSlot?: number
+		bootSataSlot?: number
+		bootUfs?: boolean
+		waitForShutdown?: boolean
+	} = {}) {
 		let vmOutput = ''
 		let vmExited = false
 		let vmExitCode: number | null = null
@@ -483,6 +571,8 @@ export async function createTestVm({
 		const coreArgs = cores ? ['--cores', String(cores)] : []
 		const cdromArgs = cdrom ? ['--cdrom', cdrom] : []
 		const bootNvmeSlotArgs = bootNvmeSlot ? ['--boot-nvme-slot', String(bootNvmeSlot)] : []
+		const bootSataSlotArgs = bootSataSlot ? ['--boot-sata-slot', String(bootSataSlot)] : []
+		const bootUfsArgs = bootUfs ? ['--boot-ufs'] : []
 		const forwardPortArgs = allocatedForwardPorts.flatMap(({hostPort, guestPort}) => [
 			'--forward-port',
 			`${hostPort}:${guestPort}`,
@@ -490,7 +580,7 @@ export async function createTestVm({
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot ${imageArgs} ${deviceArgs} ${bootDiskArgs} ${memoryArgs} ${coreArgs} ${cdromArgs} ${bootNvmeSlotArgs} ${forwardPortArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot ${imageArgs} ${deviceArgs} ${bootDiskArgs} ${memoryArgs} ${coreArgs} ${cdromArgs} ${bootNvmeSlotArgs} ${bootSataSlotArgs} ${bootUfsArgs} ${forwardPortArgs} --credential ${`umbrel.models-url=${modelsUrl}`} --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcessPid = vmProcess.pid
 
 		// Capture output and track if process exits
@@ -560,7 +650,15 @@ export async function createTestVm({
 		)
 	}
 
-	async function powerOn(options: {cdrom?: string; bootNvmeSlot?: number; waitForShutdown?: boolean} = {}) {
+	async function powerOn(
+		options: {
+			cdrom?: string
+			bootNvmeSlot?: number
+			bootSataSlot?: number
+			bootUfs?: boolean
+			waitForShutdown?: boolean
+		} = {},
+	) {
 		await retryVmPortCollisions({
 			attempt: () => powerOnOnce(options),
 			refreshPorts: refreshDynamicPorts,
@@ -657,6 +755,16 @@ export async function createTestVm({
 		await $({env})`${vmScript} nvme destroy ${slot}`
 	}
 
+	// Onboard UFS storage, as fitted to some mini PCs. Like real UFS it has 4096
+	// byte logical blocks and lsblk reports no transport for it.
+	async function addUfs({size}: {size?: string} = {}) {
+		await $({env})`${vmScript} ufs add ${size ? ['--size', size] : []}`
+	}
+
+	async function removeUfs() {
+		await $({env})`${vmScript} ufs destroy`
+	}
+
 	async function addBayDrive({
 		bus,
 		slot,
@@ -690,12 +798,14 @@ export async function createTestVm({
 		await $({env})`${vmScript} ${bus} destroy ${slot}`
 	}
 
-	async function addUsbStorage({slot, size}: {slot: number; size?: string}) {
-		if (size) {
-			await $({env})`${vmScript} usb add ${slot} --size ${size}`
-		} else {
-			await $({env})`${vmScript} usb add ${slot}`
-		}
+	// A USB drive. QEMU can't mark a USB port as external the way a real
+	// computer's firmware does, so the OS sees the drive as one it can't tell
+	// from a built-in disk. `removable` makes it report removable media instead,
+	// as a USB flash drive does, for code that looks for a drive plugged in from
+	// outside.
+	async function addUsbStorage({slot, size, removable}: {slot: number; size?: string; removable?: boolean}) {
+		const options = [...(size ? ['--size', size] : []), ...(removable ? ['--removable'] : [])]
+		await $({env})`${vmScript} usb add ${slot} ${options}`
 	}
 
 	async function removeUsbStorage({slot}: {slot: number}) {
@@ -788,8 +898,15 @@ export async function createTestVm({
 		await $({env})`${vmScript} power-button`
 	}
 
+	// Types text on the keyboard, e.g. to answer the USB installer's prompts.
+	// Supports lowercase letters, digits, spaces and \n for Enter.
+	async function typeText(text: string) {
+		await $({env})`${vmScript} type ${text}`
+	}
+
 	async function cleanup() {
 		await powerOff()
+		await modelsServer?.close()
 		await directory.destroyRoot()
 	}
 
@@ -933,6 +1050,8 @@ printf '\\n${authFailureMarker}\\n'
 		forcePowerOff,
 		addNvme,
 		removeNvme,
+		addUfs,
+		removeUfs,
 		disconnectNvme,
 		connectNvme,
 		disconnectHdd,
@@ -956,6 +1075,7 @@ printf '\\n${authFailureMarker}\\n'
 		connectUsbNet,
 		reflash,
 		pressPowerButton,
+		typeText,
 		ssh,
 		sshAsRoot,
 	}

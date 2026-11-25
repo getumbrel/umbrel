@@ -5,9 +5,8 @@ export const BASE_ROUTE_PATH = '/photos' as const
 export type PhotoSubKind = 'live' | 'panorama' | 'screenshot' | 'spherical'
 
 // Sidebar sections. Each maps to a child route under /photos; "all" is the
-// index route. 'people' and 'locations' are cut from v1 (the backend can't
-// ship face/geo clustering in time); their UI is kept but unrouted until they
-// return.
+// index route. 'locations' is cut from v1 (the backend can't ship geo
+// clustering in time); its UI is kept but unrouted until it returns.
 export const PHOTOS_SECTIONS = [
 	'all',
 	'favorites',
@@ -20,6 +19,7 @@ export const PHOTOS_SECTIONS = [
 	'deleted',
 	'sources',
 	'albums',
+	'people',
 	'map',
 ] as const
 
@@ -27,6 +27,11 @@ export type PhotosSection = (typeof PHOTOS_SECTIONS)[number]
 
 export function sectionPath(section: PhotosSection) {
 	return section === 'all' ? BASE_ROUTE_PATH : `${BASE_ROUTE_PATH}/${section}`
+}
+
+// One person's view: /photos/people/<id>
+export function personPath(personId: string) {
+	return `${BASE_ROUTE_PATH}/people/${personId}`
 }
 
 // A source's own view: /photos/source/<id>. This Umbrel itself is the 'my-umbrel' source.
@@ -55,7 +60,8 @@ export type FilterSection = keyof typeof SECTION_FILTERS
 export const isFilterSection = (section: string | undefined): section is FilterSection =>
 	section !== undefined && section in SECTION_FILTERS
 
-// Albums without an id is a collection page, not a timeline (People and
-// Locations rejoin this union when they ship)
-export type CollectionSection = 'albums'
-export const isCollectionSection = (section: string | undefined): section is CollectionSection => section === 'albums'
+// Albums and People without an id are collection pages, not timelines
+// (Locations rejoins this union when it ships)
+export type CollectionSection = 'albums' | 'people'
+export const isCollectionSection = (section: string | undefined): section is CollectionSection =>
+	section === 'albums' || section === 'people'

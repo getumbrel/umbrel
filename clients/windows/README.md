@@ -34,9 +34,12 @@ live in [Umbrel.Core](Umbrel.Core), a .NET port of the Swift
   the current-user scope under `%LOCALAPPDATA%\Umbrel\secrets`. Saved devices live
   beside them in `config.json` with the same shape as the Apple apps.
 - **Shares** are mapped with `WNetUseConnection` and `CONNECT_REDIRECT`, so Windows
-  assigns and reports the drive letter. Mappings are session-scoped: they outlive the
-  app like Finder mounts, are re-adopted on the next launch after the host proves its
-  pinned identity, and are dropped at logoff.
+  assigns and reports the drive letter. The mapping also passes
+  `CONNECT_REQUIRE_INTEGRITY`, so Windows requires SMB signing and only maps a server
+  that holds the share password, also on Windows versions and editions that don't
+  require signing themselves. Mappings are session-scoped: they outlive the app like
+  Finder mounts, are re-adopted on the next launch after the host proves its pinned
+  identity, and are dropped at logoff.
 - **Run at startup** uses the `windows.startupTask` extension, which the installed app
   turns on once on first run; turning it off later in Settings is respected. Unpackaged
   builds use the per-user `Run` key only when it's turned on from the tray menu, so a
@@ -83,6 +86,10 @@ The script signs the package, timestamps it (Artifact Signing certificates last 
 days) and verifies the signature. The `Publisher` in `Package.appxmanifest` and
 `Umbrel.appinstaller` must equal the certificate profile's subject exactly.
 
+The package carries its own .NET runtime, and the SDK on the packaging machine decides
+its patch level. The script refuses a runtime that is behind Microsoft's latest patch, so
+update the .NET SDK before packaging.
+
 Before publishing, install that exact package on a PC where development builds cannot
 mask a packaging error.
 
@@ -91,10 +98,22 @@ mask a packaging error.
 The app is installed through `Umbrel.appinstaller`, which points at the published
 package. It has no `UpdateSettings`, so Windows never updates the app on its own.
 Umbrel checks every 6 hours like the Mac app, starting a minute after launch (Windows
-only reopens an updated app that ran for 60 s), and from Check for Updates, using
-`Package.CheckUpdateAvailabilityAsync` on the package looked up through
-`PackageManager` (calling it on `Package.Current` fails). It installs only after the
-user chooses Install Update, via `AddPackageByAppInstallerFileAsync`.
+only reopens an updated app that ran for 60 s), and from Check for Updates. It installs
+only after the user chooses Install Update.
+
+The app checks by reading the feed itself, from the address fixed in
+`Umbrel/Services/UpdateChecker.cs`, not from the address Windows recorded at install,
+which Windows doesn't always keep after an update. So the feed must stay at that
+address: installed apps look nowhere else.
+
+The feed isn't signed, so the app doesn't hand it to Windows to install from either. It
+accepts the feed only if it names Umbrel's own package and publisher, a four-part
+version and an HTTPS package address (`Umbrel.Core/UpdateFeed.cs`), and offers the
+update when that version is higher than the installed one. It then has Windows update
+from that package with `UpdatePackageAsync`, which installs only a higher version of a
+package that is already installed. So an installed app uses nothing from the feed but
+`MainPackage`'s `Version` and `Uri`: `UpdateSettings`, `Dependencies` or a `MainBundle`
+added there would not take effect for updates from the app.
 
 Every release must increment the versions in `Umbrel/Umbrel.csproj`,
 `Package.appxmanifest`, `app.manifest` and `Umbrel.appinstaller` together, including the

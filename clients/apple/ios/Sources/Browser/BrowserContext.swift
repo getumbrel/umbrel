@@ -24,7 +24,7 @@ final class BrowserContext {
 	private var openWebViews: [OpenWebView] = []
 
 	// Web content only ever sees the session's fingerprint, never this world.
-	private static let world = WKContentWorld.world(name: "umbrel")
+	static let world = WKContentWorld.world(name: "umbrel")
 
 	init(deviceId: String, accountId: String, hosts: [String]) {
 		self.deviceId = deviceId
@@ -107,8 +107,9 @@ final class BrowserContext {
 	// already showing that wallpaper, edge to edge, so umbrelOS's copy is made
 	// invisible and its page background cleared: one wallpaper, with umbrelOS's
 	// interface on top of it. The images stay in the page (umbrelOS samples them for
-	// its glass), they are simply not drawn. Wallpaper previews in Settings are
-	// positioned differently and are left alone. A video wallpaper is left alone
+	// its glass), they are simply not drawn, and the page pins them over the app's
+	// wallpaper so the glass matches what's behind it (see pinWallpaper). Wallpaper
+	// previews in Settings are positioned differently and are left alone. A video wallpaper is left alone
 	// too: the app only has a still of it, so umbrelOS keeps drawing its own, moving
 	// one within its page.
 	//
@@ -116,6 +117,11 @@ final class BrowserContext {
 	// reads as a dark flash when a window is the first thing shown. Here they arrive
 	// fully formed. The backing starts invisible and only the fade reveals it, so
 	// skipping the fade also has to show it.
+	//
+	// umbrelOS's sheets, drawers and full windows cast a large soft shadow across the
+	// wallpaper. umbrelOS's page stops short of the screen at the side column and under
+	// a toolbar along the top, where that shadow would end in a hard line, so in the app
+	// windows have none.
 	//
 	// This is the one place the app knows anything about umbrelOS's markup. If a
 	// future umbrelOS changes it, the only effect is that its own wallpaper shows
@@ -132,8 +138,45 @@ final class BrowserContext {
 					picture > img.fixed.inset-0:not(.absolute),
 					img[data-wallpaper-full]:not(.absolute) { opacity: 0 !important; }
 					.umbrel-window-wallpaper { animation: none !important; opacity: 1 !important; }
+					:root { --window-background-shadow-opacity: 0 !important; }
+					html[data-umbrel-app-wallpaper] img[data-wallpaper-full]:not(.absolute),
+					html[data-umbrel-app-wallpaper] img[data-wallpaper-static-source]:not(.absolute) {
+						position: fixed !important;
+						inset: auto !important;
+						left: var(--umbrel-app-wallpaper-left) !important;
+						top: var(--umbrel-app-wallpaper-top) !important;
+						width: var(--umbrel-app-wallpaper-width) !important;
+						height: var(--umbrel-app-wallpaper-height) !important;
+					}
 				`
 				document.documentElement.appendChild(style)
+				// Runs under the home indicator like a page in Safari, so umbrelOS's sheets
+				// reach the bottom, and the dock reads the safe area to keep clear of it.
+				// An umbrelOS that runs edge to edge by itself also keeps clear of the
+				// screen's sides, so it can run under iPhone Duo's side column, and one that
+				// says so keeps clear of the top too, so it can run under the toolbar. Decided
+				// once the head is parsed: WebKit can finish loading before DOMContentLoaded.
+				const settle = () => {
+					const viewport = document.querySelector('meta[name=viewport]')
+					if (!viewport) return
+					const keepsClearOfSides = viewport.content.includes('viewport-fit=cover')
+					const safeArea = document.querySelector('meta[name=umbrel-safe-area]')?.content ?? ''
+					webkit.messageHandlers.keepsClearOfSides.postMessage(keepsClearOfSides)
+					webkit.messageHandlers.keepsClearOfTop.postMessage(safeArea.split(/[ ,]+/).includes('top'))
+					// Older umbrelOS measures the safe area as it first lays out, so it only
+					// goes edge to edge after that, as it always has
+					if (!keepsClearOfSides) {
+						document.addEventListener('DOMContentLoaded', () => {
+							viewport.content += ', viewport-fit=cover'
+						})
+					}
+				}
+				const observer = new MutationObserver(() => {
+					if (!document.body) return
+					observer.disconnect()
+					settle()
+				})
+				observer.observe(document, {childList: true, subtree: true})
 			})()
 			"""
 		return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Self.world)
@@ -190,15 +233,23 @@ final class BrowserContext {
 	// umbrelOS only accepts a token and a cookie from the same session, so cookies left
 	// by another session are replaced, but only while umbrelOS still accepts this one:
 	// the other may be a sign-in made on one of umbrelOS's own pages after this ended.
+	// First, where umbrelOS can, the app makes a session from its own sign-in to use in
+	// place of any other.
 	func prepare(for url: URL) async {
-		guard let current = session, let host = url.host(), isUmbrel(url) else { return }
+		guard let host = url.host(), isUmbrel(url) else { return }
 		let store = dataStore.httpCookieStore
 		let existing = await store.allCookies()
 			.filter { Self.normalized($0.domain) == Self.normalized(host) && $0.path == "/" }
-		let replacesAnother = current.cookies(forHost: host).contains { cookie in
-			existing.contains { $0.name == cookie.name && $0.value != cookie.value }
+		if let current = session {
+			let replacesAnother = current.cookies(forHost: host).contains { cookie in
+				existing.contains { $0.name == cookie.name && $0.value != cookie.value }
+			}
+			// Without the force, this only asks umbrelOS if the session hasn't been checked in
+			// 12 hours, so one that ended while the app was unused is replaced before a page
+			// is shown its login screen.
+			await validateSession(force: replacesAnother)
 		}
-		if replacesAnother { await validateSession(force: true) }
+		if session?.linked != true { await makeSession() }
 		guard let session else { return }
 		for cookie in session.cookies(forHost: host)
 		where !existing.contains(where: { $0.name == cookie.name && $0.value == cookie.value }) {
@@ -253,7 +304,7 @@ final class BrowserContext {
 	// tells us when the session has ended so a dead one is never handed to a page.
 	func validateSession(target: Umbreld.Target, force: Bool = false) async {
 		guard let current = session else { return }
-		let key = "browser-session-validated:\(deviceId)"
+		let key = Self.validatedKey(deviceId)
 		let last = UserDefaults.standard.double(forKey: key)
 		guard force || Date().timeIntervalSince1970 - last > 12 * 60 * 60 else { return }
 		switch await Umbreld.renewBrowserSession(target: target, session: current) {
@@ -268,6 +319,42 @@ final class BrowserContext {
 		}
 	}
 
+	// umbrelOS makes a browser session from the app's own sign-in, so a browser without
+	// one (signed in before umbrelOS could do this, or unused for a week) gets one here
+	// rather than asking for the password. A session it replaces is left to expire, not
+	// logged out, so pages already using it keep working.
+	private var making: Task<Void, Never>?
+	// An older umbrelOS makes none. It's asked once; after that its login page shows.
+	private var makesSessions = true
+
+	private func makeSession() async {
+		if let making { return await making.value }
+		guard makesSessions,
+			let native = Keychain.readSession(deviceId: deviceId).session, native.accountId == accountId
+		else { return }
+		let task = Task {
+			let made: Umbreld.BrowserSession?
+			do {
+				made = try await Umbreld.makeBrowserSession(target: target, session: native)
+			} catch {
+				return
+			}
+			guard let made else {
+				makesSessions = false
+				return
+			}
+			// The app may have signed out while umbrelOS was asked.
+			guard Keychain.readSession(deviceId: deviceId).session?.belongsToSameLogin(as: native) == true
+			else { return }
+			session = made
+			Keychain.setBrowserSession(made)
+			UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.validatedKey(deviceId))
+		}
+		making = task
+		await task.value
+		making = nil
+	}
+
 	private var target: Umbreld.Target { Umbreld.Target(deviceId: deviceId, hosts: Array(hosts)) }
 
 	private func validateSession(force: Bool) async {
@@ -276,24 +363,36 @@ final class BrowserContext {
 
 	// ── Lifecycle ──
 
-	// Called with the password the user just typed into the native sign-in form, so
-	// they are never asked for it again by a web page. Best-effort: without it the
-	// browser simply shows umbrelOS's own login page once.
+	// Called with a native sign-in before it's stored, so a web page never asks for the
+	// password again. Making the browser session renews the sign-in's access, so the
+	// session returned is the one to store. Best-effort: without a browser session, the
+	// browser makes one when it first needs it, or shows umbrelOS's own login page once.
 	static func signIn(
 		target: Umbreld.Target,
-		userId: String,
+		session: Umbreld.Session,
 		password: String,
 		totpToken: String?
-	) async {
+	) async -> Umbreld.Session {
 		// Ends any previous browser session for this Umbrel rather than leaving it live
 		// on the server once its Keychain entry is replaced.
-		await signOut(target: target, accountId: userId)
-		guard let session = try? await Umbreld.loginBrowser(
-			target: target, userId: userId, password: password, totpToken: totpToken)
-		else { return }
-		Keychain.setBrowserSession(session)
-		UserDefaults.standard.set(
-			Date().timeIntervalSince1970, forKey: "browser-session-validated:\(target.deviceId)")
+		await signOut(target: target, accountId: session.accountId)
+		var native = session
+		var browserSession: Umbreld.BrowserSession?
+		if let made = try? await Umbreld.makeBrowserSession(target: target, signingIn: session) {
+			native = made.session
+			browserSession = made.browserSession
+		}
+		// An older umbrelOS makes none, so log in the way a browser does, as the app
+		// always has. Older Umbrels keep working.
+		if browserSession == nil {
+			browserSession = try? await Umbreld.loginBrowser(
+				target: target, userId: session.accountId, password: password, totpToken: totpToken)
+		}
+		if let browserSession {
+			Keychain.setBrowserSession(browserSession)
+			UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: validatedKey(target.deviceId))
+		}
+		return native
 	}
 
 	// Forgets the session and everything its web pages stored. The server-side
@@ -328,6 +427,10 @@ final class BrowserContext {
 			digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7],
 			digest[8], digest[9], digest[10], digest[11], digest[12], digest[13], digest[14], digest[15]
 		))
+	}
+
+	private static func validatedKey(_ deviceId: String) -> String {
+		"browser-session-validated:\(deviceId)"
 	}
 
 	private static func normalized(_ host: String) -> String {

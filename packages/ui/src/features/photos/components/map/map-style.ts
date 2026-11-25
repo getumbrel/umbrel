@@ -17,7 +17,7 @@ const LAND = '#28282b'
 const GREEN = {park: '#20372a', wood: '#1f3328', grass: '#25332a'}
 const ROAD = {service: '#36363a', minor: '#3d3d41', major: '#4c4c51', link: '#5d523b', highway: '#7a6642'}
 const TUNNEL = {minor: '#333336', major: '#3e3e42', highway: '#5a4f3a'}
-const LABEL = {bright: '#f2f2f7', soft: '#c7c7cc', muted: '#98989d', faint: '#6e6e73', halo: '#1c1c1e'}
+const LABEL = {bright: '#f2f2f7', muted: '#98989d', dim: '#7c7c81', faint: '#6e6e73', halo: '#1c1c1e'}
 const NIGHT: Flavor = {
 	...namedFlavor('dark'),
 	background: WATER,
@@ -83,13 +83,13 @@ const NIGHT: Flavor = {
 	roads_label_major: LABEL.muted,
 	roads_label_major_halo: LAND,
 	ocean_label: '#5f7fa3',
-	subplace_label: LABEL.muted,
+	subplace_label: LABEL.dim,
 	subplace_label_halo: LABEL.halo,
 	city_label: LABEL.bright,
 	city_label_halo: LABEL.halo,
 	state_label: LABEL.faint,
 	state_label_halo: LABEL.halo,
-	country_label: LABEL.soft,
+	country_label: LABEL.muted,
 	address_label: LABEL.faint,
 	address_label_halo: LAND,
 	landcover: {
@@ -149,13 +149,72 @@ function earthly(layer: LayerSpecification): LayerSpecification[] {
 	return [layer]
 }
 
+// From afar the map is quieter still, for the photos on it: the globe has its
+// countries' names and its oceans', and no cities — a handful of them, picked
+// by what fits, are a scatter of words among the photos — and the highways
+// come in with the towns they run between, not as a web across a continent
+const CITIES_FROM_ZOOM = 3.5
+const HIGHWAYS = /^roads_(tunnels_|bridges_)?highway/
+function fromAfar(layer: LayerSpecification): LayerSpecification {
+	if (layer.id === 'places_locality') return {...layer, minzoom: CITIES_FROM_ZOOM}
+	if (HIGHWAYS.test(layer.id)) {
+		const paint = {...layer.paint, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0, 7, 1]}
+		return {...layer, paint} as LayerSpecification
+	}
+	return layer
+}
+
+// Names of places and waters: written as they're spelled, not in capitals,
+// in white with a soft dark line round them, which is what they are read by
+// on ice and sand, and goes unseen on the dark of land and sea. Countries and
+// cities in full white, the seas, regions and neighbourhoods between them a
+// step back. Road names keep the greys of the streets they run along. Each
+// fades by its 'shown' state, which the globe turns down as it comes to the
+// horizon (see fadeNamesAtHorizon), and is set a size smaller than the
+// basemap's, to sit lightly over the photos
+const NAME = {
+	size: 0.8,
+	white: '#ffffff',
+	softer: 'rgb(255 255 255 / 0.72)',
+	line: 'rgb(28 28 30 / 0.5)',
+}
+const SOFTER_NAMES = new Set([
+	'water_label_ocean',
+	'water_label_lakes',
+	'water_waterway_label',
+	'places_region',
+	'places_subplace',
+	'earth_label_islands',
+])
+function named(layer: LayerSpecification): LayerSpecification {
+	if (layer.type !== 'symbol' || layer.id.startsWith('roads_')) return layer
+	return {
+		...layer,
+		layout: {...layer.layout, 'text-transform': 'none', 'text-size': scaled(layer.layout?.['text-size'], NAME.size)},
+		paint: {
+			...layer.paint,
+			'text-color': SOFTER_NAMES.has(layer.id) ? NAME.softer : NAME.white,
+			'text-halo-color': NAME.line,
+			'text-halo-width': 1,
+			'text-halo-blur': 0.5,
+			'text-opacity': ['coalesce', ['feature-state', 'shown'], 1],
+		},
+	} as LayerSpecification
+}
+
+// A text size by a share: a size, or each size a zoom's curve passes through
+// (a zoom can't be scaled from outside its curve)
+function scaled(size: unknown, by: number): unknown {
+	if (typeof size === 'number') return size * by
+	if (!Array.isArray(size) || size[0] !== 'interpolate') return size
+	return size.map((value, i) => (i < 4 || i % 2 ? value : typeof value === 'number' ? value * by : ['*', by, value]))
+}
+
 // Layers that need a sprite we don't ship, or that are noise on this map
 const LEFT_OUT = new Set(['pois', 'roads_oneway', 'roads_shields', 'address_label'])
 // Places no one lives: OpenStreetMap names fields, passes and lone farms
 // too, and in the country they outnumber the villages ten to one
 const UNSETTLED = ['locality', 'isolated_dwelling', 'farm']
-// The places a spot is named after: not a hamlet down the road
-const TOWNS = ['city', 'town', 'village']
 
 // The vector source the basemap's layers draw from
 const BASEMAP = 'basemap'
@@ -222,7 +281,7 @@ export function mapStyle({
 		layers: layers(BASEMAP, NIGHT, {lang})
 			.filter((layer) => !LEFT_OUT.has(layer.id))
 			.flatMap(earthly)
-			.map((layer) => oneName(withoutIcons(settled(layer)), lang)),
+			.map((layer) => named(oneName(withoutIcons(settled(fromAfar(layer))), lang))),
 	}
 }
 
@@ -317,21 +376,27 @@ export function fadeInLand(map: MapLibreMap) {
 	return stop
 }
 
-// The town or village a spot is in, from the basemap's own names — finer
+// The place a spot is named after, from the basemap's own names — finer
 // than the atlas, which knows only the bigger places — or nothing where the
-// map has none loaded there
-const SETTLEMENT_KM = 12
-export function settlementNear(map: MapLibreMap, lng: number, lat: number, lang: string) {
+// map has none loaded there. A name carries as far as its place is big: a
+// suburb's photos are the city's, though a village's name is drawn nearer
+// them. From afar (`broadly`) a village names nothing: it is a dot in what
+// is being looked at
+const REACH_KM: Record<string, number> = {city: 30, town: 12, village: 5}
+export function settlementNear(map: MapLibreMap, lng: number, lat: number, lang: string, broadly = false) {
 	if (!map.getSource(BASEMAP)) return
-	let nearest: {name: string; distance: number} | undefined
+	let nearest: {name: string; from: number} | undefined
 	for (const {properties, geometry} of map.querySourceFeatures(BASEMAP, {sourceLayer: 'places'})) {
-		if (properties.kind !== 'locality' || !TOWNS.includes(properties.kind_detail) || geometry.type !== 'Point') continue
+		const reach = REACH_KM[properties.kind_detail]
+		if (properties.kind !== 'locality' || !reach || geometry.type !== 'Point') continue
+		if (broadly && properties.kind_detail === 'village') continue
 		const [placeLng, placeLat] = geometry.coordinates as [number, number]
 		const across = (placeLng - lng) * Math.cos((lat * Math.PI) / 180)
-		const distance = Math.hypot(across, placeLat - lat) * 111.2
-		if (distance > SETTLEMENT_KM || (nearest && nearest.distance <= distance)) continue
+		// How far off it is, in its own reaches
+		const from = (Math.hypot(across, placeLat - lat) * 111.2) / reach
+		if (from > 1 || (nearest && nearest.from <= from)) continue
 		const name = properties[`name:${lang}`] ?? properties['name:en'] ?? properties.name
-		if (typeof name === 'string') nearest = {name, distance}
+		if (typeof name === 'string') nearest = {name, from}
 	}
 	return nearest?.name
 }

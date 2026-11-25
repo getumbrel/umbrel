@@ -1,18 +1,27 @@
 @reference "../../../../../index.css";
 
-.files-list-view-file-item {
-	@apply rounded-lg;
+/* Every other row lies on a faint band, so the eye can follow a name across
+   to its date and its size. The band belongs to the row's place in the list,
+   not to the file in it, so it holds still while files come and go. A selected
+   row wears the accent instead: the band steps out from under it, and a run of
+   selected rows is one even wash. */
+.files-list-view-file-item[data-striped] {
+	@apply rounded-10 bg-white/3 transition-colors duration-100;
+}
+.files-list-view-file-item[data-striped]:has(> [data-selected='true']) {
+	@apply bg-transparent;
 }
 
-/* Selected item */
+/* A selected row wears the accent: a wash and a hairline around it. Rows
+   selected one after another share one outline, so a run reads as one block. */
 .files-list-view-file-item[data-selected='true'] {
-	@apply bg-brand/10 shadow-[0_0_0_1px_hsl(var(--color-brand))];
+	@apply bg-brand/12 shadow-[inset_0_0_0_1px_hsl(var(--color-brand))];
 }
 
 /* First selected item in a sequence */
 /* Has top left radius, top right radius, top border, and side borders */
 .files-list-view-file-item[data-selection-position='first'] {
-	@apply rounded-t-lg rounded-b-none shadow-[inset_0_1px_0_hsl(var(--color-brand)),inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand))];
+	@apply rounded-t-10 rounded-b-none shadow-[inset_0_1px_0_hsl(var(--color-brand)),inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand))];
 }
 
 /* Middle items in a sequence */
@@ -24,11 +33,21 @@
 /* Last selected item in a sequence */
 /* Has bottom left radius, bottom right radius, bottom border, and side borders */
 .files-list-view-file-item[data-selection-position='last'] {
-	@apply rounded-t-none rounded-b-lg shadow-[inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand)),inset_0_-1px_0_hsl(var(--color-brand))];
+	@apply rounded-t-none rounded-b-10 shadow-[inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand)),inset_0_-1px_0_hsl(var(--color-brand))];
 }
 
 /* Standalone selected item (including first item in list) */
-/* Has top left radius, top right radius, top border, and side borders */
 .files-list-view-file-item[data-selection-position='standalone'] {
-	@apply rounded-lg shadow-[inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand)),inset_0_1px_0_hsl(var(--color-brand)),inset_0_-1px_0_hsl(var(--color-brand))];
+	@apply rounded-10 shadow-[inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand)),inset_0_1px_0_hsl(var(--color-brand)),inset_0_-1px_0_hsl(var(--color-brand))];
+}
+
+/* On a phone the rows run from edge to edge, as a phone's lists
+   do: no corners to round and no outline to draw, only the wash, with the
+   row's own circle saying it is selected */
+@media (width < 640px) {
+	.files-list-view-file-item,
+	.files-list-view-file-item[data-striped],
+	.files-list-view-file-item[data-selected='true'] {
+		@apply rounded-none shadow-none;
+	}
 }

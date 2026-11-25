@@ -29,8 +29,10 @@ const buttonVariants = cva(
 				'md-squared': 'rounded-8 h-[36px] px-[10px] text-13 gap-2',
 				default: 'rounded-full h-[30px] px-2.5 text-12',
 				'input-short': 'rounded-full h-9 px-4 text-13 font-medium min-w-[80px]',
+				// Full width on a phone, where a long label may need a second line: the
+				// trimmed line height is for the one-line pill from md up
 				dialog:
-					'rounded-full h-[42px] md:h-[30px] min-w-[80px] px-4 font-semibold w-full md:w-auto md:font-medium text-13',
+					'rounded-full min-h-[42px] max-md:py-2 max-md:leading-tight max-md:text-center max-md:text-balance md:h-[30px] md:min-h-0 min-w-[80px] px-4 font-semibold w-full md:w-auto md:font-medium text-13',
 				lg: 'rounded-full h-[40px] px-[15px] text-15',
 				xl: 'rounded-10 h-[50px] px-[15px] text-13',
 				'icon-only': 'rounded-full h-[30px] w-[30px]',

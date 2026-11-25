@@ -29,7 +29,7 @@ export function PickingActions({albumId}: {albumId: string}) {
 		album && (breakpoint === 'xl' || breakpoint === '2xl') ? (
 			<AddToAlbumLabel name={album.name} />
 		) : (
-			t('photos-album.add')
+			<span className='min-w-0 truncate'>{t('photos-album.add')}</span>
 		)
 
 	const finish = () => {
@@ -53,7 +53,8 @@ export function PickingActions({albumId}: {albumId: string}) {
 			{/* Up to 256px, and narrower when the bar is, clipping rather than spilling at its narrowest */}
 			<PillButton
 				icon={Album}
-				disabled={selection.ids.size === 0 || busy}
+				// Not while a Select all is still gathering what to add
+				disabled={selection.ids.size === 0 || selection.selectingAll || busy}
 				onClick={add}
 				className='max-w-64 min-w-0 shrink overflow-hidden'
 			>

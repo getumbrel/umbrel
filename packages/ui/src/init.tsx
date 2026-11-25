@@ -1,6 +1,7 @@
 import 'inter-ui/inter.css'
 import './index.css'
 import './utils/i18n'
+import './hooks/use-accessibility'
 
 import i18next from 'i18next'
 import React, {Suspense} from 'react'
@@ -12,10 +13,15 @@ import {CoverMessageTarget} from '@/components/ui/cover-message'
 import {RootErrorFallback} from '@/components/ui/root-error-fallback'
 import {Toaster} from '@/components/ui/toast'
 import {TooltipProvider} from '@/components/ui/tooltip'
+import {installOverlayScrollbars} from '@/modules/scrollbars/overlay-scrollbars'
+import {startAnimationsOnFirstFrame} from '@/utils/animation-start'
 import {monkeyPatchConsoleLog} from '@/utils/logs'
 import {allowsNativeContextMenu} from '@/utils/native-context-menu'
 
 monkeyPatchConsoleLog()
+startAnimationsOnFirstFrame()
+// Scrollbars that take no room, for everything that scrolls
+installOverlayScrollbars()
 
 // Disable the browser context menu for a native OS feel, except on text fields and opted-in surfaces
 document.addEventListener(

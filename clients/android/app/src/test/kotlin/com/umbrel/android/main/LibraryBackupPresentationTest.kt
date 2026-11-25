@@ -10,6 +10,7 @@ import com.umbrel.kit.backup.PhotoBackupStatus
 import com.umbrel.kit.backup.PhotoBackupTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,6 +28,15 @@ class LibraryBackupPresentationTest {
 		backupStatus = status,
 		otherBackupDeviceName = other,
 	)
+
+	// Backup that's on but isn't set up here yet has nothing Profile lists, so nothing is marked
+	@Test
+	fun failuresAreMarkedOnlyWhileProfileCountsSome() {
+		assertNull(failureFilter(state()))
+		assertEquals(LibraryFilter(includesPhotos = true, includesVideos = true, skippedFolders = emptySet()), failureFilter(state().copy(backupFailedCount = 2)))
+		// Backup that's off covers nothing
+		assertNull(failureFilter(state(preference = PhotoBackupPreference(), status = PhotoBackupStatus.Off).copy(backupFailedCount = 2)))
+	}
 
 	// The notice under the title says where backup goes, so the status reads as Home's does.
 	@Test
@@ -78,7 +88,6 @@ class LibraryBackupPresentationTest {
 		val elsewhere = state(preference = PhotoBackupPreference(), status = PhotoBackupStatus.Off, other = "Alex’s Umbrel Pro")
 		assertFalse(backupSwitchInProgress(elsewhere))
 		assertFalse(backupSwitchInProgress(elsewhere.copy(backupSetupInProgress = true)))
-		assertTrue(backupSwitchInProgress(elsewhere.copy(backupSwitchChecking = true)))
 		// Once claimed, this account owns backup and its setup is the switch.
 		assertTrue(backupSwitchInProgress(elsewhere.copy(backupPreference = on, backupSetupInProgress = true)))
 	}
@@ -101,23 +110,40 @@ class LibraryBackupPresentationTest {
 	}
 
 	@Test
-	fun theNewPhoneQuestionNamesTheExistingSource() {
-		assertEquals(
-			"This account already has photos from “Nate’s Pixel”. If this phone was restored from it, backing up stores your photos again.",
-			backupNoticeMessage(PhotoBackupNotice.MAY_BACK_UP_TWICE, state().copy(backupNewSourceQuestion = "Nate’s Pixel")),
-		)
-		assertEquals("Photos may be backed up twice", PhotoBackupNotice.MAY_BACK_UP_TWICE.title)
-		assertEquals("Review", PhotoBackupNotice.MAY_BACK_UP_TWICE.actionLabel)
-	}
-
-	@Test
 	fun statusFollowsTheUploader() {
 		assertEquals("All backed up", libraryBackupStatusText(state()))
 		assertEquals(MainTheme.online, libraryBackupStatusColor(state()))
-		assertEquals("2 items queued", libraryBackupStatusText(state(status = PhotoBackupStatus.BackingUp(2))))
+		assertEquals("Backing up · 2 left", libraryBackupStatusText(state(status = PhotoBackupStatus.BackingUp(2))))
 		assertEquals(MainTheme.syncing, libraryBackupStatusColor(state(status = PhotoBackupStatus.BackingUp(2))))
 		assertEquals(MainTheme.red, libraryBackupStatusColor(state(status = PhotoBackupStatus.Error)))
-		assertEquals("Waiting for Umbrel", libraryBackupStatusText(state(status = PhotoBackupStatus.WaitingForUmbrel)))
+		assertEquals("Waiting for your Umbrel", libraryBackupStatusText(state(status = PhotoBackupStatus.WaitingForUmbrel)))
+	}
+
+	// Asking to keep Android from pausing Umbrel matters whatever backup is doing, once it's set up
+	@Test
+	fun backupIsSetUpWhateverItsDoing() {
+		for (status in listOf(
+			PhotoBackupStatus.UpToDate,
+			PhotoBackupStatus.UpToDateExceptSkipped,
+			PhotoBackupStatus.UpToDateExceptFailures,
+			PhotoBackupStatus.BackingUp(3),
+			PhotoBackupStatus.WaitingForWiFi,
+			PhotoBackupStatus.WaitingForUmbrel,
+		)) {
+			assertTrue(status.toString(), backupIsSetUp(state(status = status)))
+		}
+		assertFalse(backupIsSetUp(state(status = PhotoBackupStatus.SettingUp)))
+		assertFalse(backupIsSetUp(state(status = PhotoBackupStatus.Off)))
+		assertFalse(backupIsSetUp(state(preference = PhotoBackupPreference(), status = PhotoBackupStatus.UpToDate)))
+	}
+
+	// Library names a backup taken over from another phone while it catches up; anything in the
+	// way says so instead
+	@Test
+	fun statusNamesABackupTakenOver() {
+		val continuing = state(status = PhotoBackupStatus.BackingUp(2)).copy(backupContinuingName = "Pixel 7")
+		assertEquals("Continuing “Pixel 7” backup · 2 left", libraryBackupStatusText(continuing))
+		assertEquals("Waiting for your Umbrel", libraryBackupStatusText(continuing.copy(backupStatus = PhotoBackupStatus.WaitingForUmbrel)))
 	}
 
 	// A source registered earlier keeps its saved name on the Umbrel, which the app only knows

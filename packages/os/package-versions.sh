@@ -51,7 +51,15 @@ echo "## Other software"
 echo
 {
     echo "kopia $(kopia --version | awk '{ print $1 }')"
+    # LiteRT-LM, which the build writes its version beside
+    echo "litert-lm $(cat /opt/litert-lm/version)"
     echo "node $(node --version | sed 's/^v//')"
+    # transcribe.cpp, unpacked from its wheel
+    for metadata in /opt/transcribe/transcribe_cpp-*.dist-info; do
+        if [ -d "${metadata}" ]; then
+            echo "transcribe.cpp $(basename "${metadata}" .dist-info | sed 's/^transcribe_cpp-//')"
+        fi
+    done
     echo "rclone $(rclone version | awk 'NR == 1 { sub(/^v/, "", $2); print $2 }')"
     echo "yq $(yq --version | awk '{ sub(/^v/, "", $NF); print $NF }')"
     # Node.js's bundled global packages, such as npm. umbreld is linked here

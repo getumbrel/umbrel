@@ -12,6 +12,9 @@ import {BackdropBlurVariantContext} from './backdrop-blur-context'
 export const widgetContainerCva = cva(
 	cn(
 		tw`rounded-12 sm:rounded-20 w-[var(--widget-w,270px)] h-[var(--widget-h,150px)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
+		// Home is laid out to the pixel, so like its app names a widget's text
+		// keeps its size whatever the text size setting
+		tw`[--text-boost:0px]`,
 		// animations
 		tw`transition-[scale,box-shadow] duration-300 hover:scale-105`,
 	),

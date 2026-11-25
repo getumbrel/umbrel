@@ -435,7 +435,7 @@ export function CloudConstellation({
 								key='coming-soon'
 								exit={reducedMotion ? {opacity: 0} : {opacity: 0, scale: 0.6, y: -6}}
 								transition={{duration: 0.25}}
-								className='-mt-1 rounded-full bg-white/8 px-1.5 py-0.5 text-[9px] leading-none font-medium text-white/50'
+								className='-mt-1 rounded-full bg-white/8 px-1.5 py-0.5 text-9 leading-none font-medium text-white/50'
 							>
 								{t('files-cloud.coming-soon')}
 							</motion.span>

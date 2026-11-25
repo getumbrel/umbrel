@@ -87,7 +87,7 @@ function DesktopPage() {
 		<div
 			className={
 				// `relative` positioning keeps children above <Wallpaper /> since that element is positioned too
-				'relative flex h-[100dvh] w-full flex-col items-center justify-between'
+				'relative flex h-[100dvh] w-full flex-col items-center justify-between pt-(--safe-top)'
 			}
 		>
 			<DesktopContent onSearchClick={() => setOpen(true)} />
@@ -96,4 +96,4 @@ function DesktopPage() {
 	)
 }
 
-const topRightPositionerClass = tw`absolute right-5 top-5 z-10`
+const topRightPositionerClass = tw`absolute right-5 top-[calc(20px+var(--safe-top))] z-10`

@@ -8,18 +8,31 @@ struct OnboardingBackground: View {
 	var tint: Color = Palette.purple
 	var secondaryTint: Color = Palette.purpleLight
 
-	// Coordinate space used to scale the glow positions from a 402pt-wide iPhone.
+	// The glows are designed on a 402x874pt iPhone.
 	private let designSize = CGSize(width: 402, height: 874)
 
 	var body: some View {
 		GeometryReader { proxy in
-			let scale = proxy.size.width / designSize.width
+			let size = proxy.size
+			// Each glow keeps its place relative to its own corner, so it stays in view
+			// on short or wide windows. It scales with the window's area.
+			let scale = (size.width * size.height / (designSize.width * designSize.height)).squareRoot()
 			ZStack {
 				Color.black
-				glow(tint, radius: 229, center: CGPoint(x: 7, y: 923), scale: scale)
-				glow(secondaryTint.opacity(0.2), radius: 209, center: CGPoint(x: 430, y: 132), scale: scale)
+				glow(
+					tint,
+					radius: 229,
+					center: CGPoint(x: 7 * scale, y: size.height + (923 - designSize.height) * scale),
+					scale: scale
+				)
+				glow(
+					secondaryTint.opacity(0.2),
+					radius: 209,
+					center: CGPoint(x: size.width + (430 - designSize.width) * scale, y: 132 * scale),
+					scale: scale
+				)
 			}
-			.frame(width: proxy.size.width, height: proxy.size.height)
+			.frame(width: size.width, height: size.height)
 		}
 		.ignoresSafeArea()
 	}
@@ -29,6 +42,6 @@ struct OnboardingBackground: View {
 			.fill(color)
 			.frame(width: radius * 2 * scale, height: radius * 2 * scale)
 			.blur(radius: 170 * scale)
-			.position(x: center.x * scale, y: center.y * scale)
+			.position(center)
 	}
 }

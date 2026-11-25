@@ -54,7 +54,7 @@ export function HttpsAccessInstructions({secureUrl}: {secureUrl: string}) {
 			<InstructionStep>
 				<span className='block'>
 					<span>{t('https-access-browser-step-warning')}</span>
-					<span className='mt-1 block text-[11px] leading-tight text-white/60'>
+					<span className='mt-1 block text-11 leading-tight text-white/60'>
 						{t('https-access-browser-step-warning-caution')}
 					</span>
 				</span>
@@ -228,7 +228,7 @@ function HttpsCertificateDetails({
 			{certificateAddresses.length > 0 && (
 				<div className='space-y-2 px-3 py-3 text-15 font-medium -tracking-3'>
 					<div>{t('https-access-certificate-umbrel-addresses')}</div>
-					<div className='umbrel-stable-gutter max-h-28 overflow-auto text-13 leading-snug font-normal break-words text-white/60'>
+					<div className='max-h-28 overflow-auto text-13 leading-snug font-normal break-words text-white/60'>
 						{certificateAddresses.join(', ')}
 					</div>
 				</div>
@@ -400,7 +400,7 @@ function HttpsCertificateInstructionSet({
 							<InlineCopyableField value={secureUrl} className='max-w-full min-w-0' />
 						</span>
 						{showFirefoxNote && (
-							<span className='block text-[11px] leading-tight font-medium text-white/45'>
+							<span className='block text-11 leading-tight font-medium text-white/45'>
 								{t('https-access-instructions.firefox-note')}
 							</span>
 						)}
@@ -427,4 +427,5 @@ function InstructionStep({children}: {children: React.ReactNode}) {
 }
 
 const detailListClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6`
-const detailRowClass = tw`flex items-center gap-3 px-3 h-[42px] text-15 font-medium -tracking-3 justify-between`
+// Grows when a long label and its value wrap
+const detailRowClass = tw`flex items-center gap-3 px-3 min-h-[42px] py-2 text-15 font-medium -tracking-3 justify-between`

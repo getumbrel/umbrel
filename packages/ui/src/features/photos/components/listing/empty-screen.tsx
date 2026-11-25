@@ -53,11 +53,14 @@ export function EmptyScreen({
 	frame,
 	title,
 	description,
+	chips,
 	actions,
 }: {
 	frame: Frame
 	title: string
 	description?: string
+	// What a search read out of its words, under what it says
+	chips?: ReactNode
 	actions?: ReactNode
 }) {
 	return (
@@ -66,9 +69,11 @@ export function EmptyScreen({
 			style={{paddingTop: frame.inset}}
 		>
 			<GhostGrid />
-			<p className='text-15 font-medium text-white/80'>{title}</p>
+			{/* A search's title quotes its words, which may run long and unbroken */}
+			<p className='max-w-md text-15 font-medium [overflow-wrap:anywhere] text-white/80'>{title}</p>
 			{description && <p className='max-w-sm text-13 text-white/50'>{description}</p>}
-			{actions && <div className='mt-3 flex items-center gap-2'>{actions}</div>}
+			{chips}
+			{actions && <div className='mt-3 flex flex-wrap items-center justify-center gap-2'>{actions}</div>}
 		</div>
 	)
 }

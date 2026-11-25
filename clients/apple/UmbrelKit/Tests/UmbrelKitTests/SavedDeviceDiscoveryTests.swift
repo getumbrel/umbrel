@@ -21,6 +21,109 @@ final class SavedDeviceDiscoveryTests: XCTestCase {
 		XCTAssertNil(Umbreld.localDiscoveryCandidate(candidate))
 	}
 
+	func testBonjourCandidateAcceptsOnlyLocalHosts() throws {
+		let rejected = [
+			"umbrel.example.com",
+			"attacker.example.com/trpc?x=",
+			"user@umbrel.local",
+			"umbrel.local:8080",
+			"192.168.1.20:8080",
+			"192.168.1.20:8080?x=.local",
+			"umbrel",
+			// Literal addresses outside the ranges a local network uses
+			"203.0.113.7",
+			"127.0.0.1",
+		]
+		for host in rejected {
+			XCTAssertNil(Umbreld.localDiscoveryCandidate(Candidate(host: host, name: "Umbrel")), host)
+			let filtered = try XCTUnwrap(Umbreld.localDiscoveryCandidate(
+				Candidate(host: "umbrel.local", addresses: [host, "192.168.1.20"], name: "Umbrel")
+			))
+			XCTAssertEqual(filtered.addresses, ["192.168.1.20"], host)
+		}
+
+		let local = Candidate(
+			host: "192.168.1.20",
+			addresses: ["10.0.0.5", "172.16.4.2", "169.254.7.9"],
+			name: "Umbrel"
+		)
+		XCTAssertEqual(Umbreld.localDiscoveryCandidate(local), local)
+	}
+
+	func testAdvertisedAddressOutsideTheLocalNetworkNeverReachesASavedDevice() async throws {
+		var saved = SavedDevice(id: "device", name: "Umbrel", host: "umbrel.local", addresses: [])
+		let candidate = Candidate(
+			host: "umbrel.local",
+			addresses: ["192.168.1.20", "203.0.113.7"],
+			name: "Umbrel",
+			id: "device"
+		)
+
+		// Only the name is asked, and it proves the saved identity
+		let discovered = await Umbreld.identifyCandidate(
+			candidate,
+			knownDeviceIds: ["device"],
+			probe: { host, _ in
+				host == "umbrel.local"
+					? Umbreld.IdentityProbeResult(
+						discoveryInfo: .init(id: "device", device: "Umbrel Home", onboarded: true),
+						candidateCertificate: nil
+					)
+					: nil
+			}
+		)
+		saved.mergeVerifiedDiscovery(try XCTUnwrap(discovered))
+
+		XCTAssertEqual(saved.connectionHosts, ["umbrel.local", "192.168.1.20"])
+	}
+
+	func testStoredRoutesKeepOnlyLocalHosts() {
+		let reported = [
+			"192.168.1.5", "fe80::1", "umbrel.example.com", "100.64.0.1", "umbrel.local",
+			"user@host.local", "192.168.1.5:8080", "",
+		]
+		var refreshed = SavedDevice(id: "device", name: "Umbrel", host: "umbrel.local", addresses: [])
+		refreshed.replaceAvailableAddresses(reported)
+		XCTAssertEqual(refreshed.addresses, ["192.168.1.5", "100.64.0.1", "umbrel.local"])
+		var remembered = SavedDevice(id: "device", name: "Umbrel", host: "umbrel.local", addresses: [])
+		remembered.rememberConnectionCandidates(reported)
+		XCTAssertEqual(remembered.addresses, ["192.168.1.5", "100.64.0.1", "umbrel.local"])
+
+		// A route that isn't a local host is skipped even if an earlier build saved it
+		let stored = SavedDevice(
+			id: "device",
+			name: "Umbrel",
+			host: "127.0.0.1:8080/path?x=",
+			addresses: ["192.168.1.5", "umbrel.example.com"]
+		)
+		XCTAssertEqual(stored.connectionHosts, ["192.168.1.5"])
+
+		// Discovery that answered anywhere else changes nothing
+		var saved = SavedDevice(id: "device", name: "Umbrel", host: "umbrel.local", addresses: [])
+		let original = saved
+		saved.mergeVerifiedDiscovery(IdentifiedDevice(
+			host: "umbrel.example.com",
+			discoveryHost: "umbrel.local",
+			addresses: ["192.168.1.9"],
+			name: "Other",
+			id: "device",
+			model: "Umbrel Home",
+			onboarded: true
+		))
+		XCTAssertEqual(saved, original)
+		saved.mergeVerifiedDiscovery(IdentifiedDevice(
+			host: "192.168.1.9",
+			discoveryHost: "umbrel.local",
+			addresses: ["192.168.1.9", "evil.example.com"],
+			name: "Umbrel",
+			id: "device",
+			model: "Umbrel Home",
+			onboarded: true
+		))
+		XCTAssertEqual(saved.host, "192.168.1.9")
+		XCTAssertEqual(saved.addresses, ["192.168.1.9"])
+	}
+
 	func testManualDiscoveryAddressAcceptsDirectIPsAndLocalHostnames() {
 		XCTAssertEqual(Umbreld.manualDiscoveryHost(from: "10.0.0.1"), "10.0.0.1")
 		XCTAssertEqual(Umbreld.manualDiscoveryHost(from: "172.16.0.1"), "172.16.0.1")

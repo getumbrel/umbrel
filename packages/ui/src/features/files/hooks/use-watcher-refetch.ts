@@ -1,5 +1,6 @@
 import {useEffect, useRef} from 'react'
 
+import {batchActivity} from '@/features/files/utils/batch-activity'
 import {trpcReact} from '@/trpc/trpc'
 
 // Above this many distinct changed directories per flush window it's cheaper
@@ -12,13 +13,25 @@ const MAX_TARGETED_INVALIDATIONS = 25
 // are marked stale for their next mount. The watcher emits one event per
 // file, so bursts collapse into one invalidation pass per second, and a
 // change touching many directories falls back to one refresh-everything pass.
+// While this session is itself working through a batch (see batchActivity),
+// the pass waits for it to finish.
 export function useWatcherRefetch() {
 	const utils = trpcReact.useUtils()
 	const dirtyRef = useRef<Set<string> | 'all'>(new Set())
 	const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+	const flushRef = useRef(() => {})
+	flushRef.current = () => {
+		const dirty = dirtyRef.current
+		if (dirty !== 'all' && dirty.size === 0) return
+		dirtyRef.current = new Set()
+		if (dirty === 'all') utils.files.list.invalidate()
+		else for (const path of dirty) utils.files.list.invalidate({path})
+	}
 
 	useEffect(() => {
+		const stopListening = batchActivity.onIdle(() => flushRef.current())
 		return () => {
+			stopListening()
 			clearTimeout(timerRef.current)
 			timerRef.current = undefined
 		}
@@ -40,10 +53,8 @@ export function useWatcherRefetch() {
 				}
 				timerRef.current ??= setTimeout(() => {
 					timerRef.current = undefined
-					const dirty = dirtyRef.current
-					dirtyRef.current = new Set()
-					if (dirty === 'all') utils.files.list.invalidate()
-					else for (const path of dirty) utils.files.list.invalidate({path})
+					// A batch of our own is still changing things: it is all read when it finishes
+					if (!batchActivity.isRunning()) flushRef.current()
 				}, 1000)
 			},
 			onError(err) {

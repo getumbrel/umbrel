@@ -17,6 +17,8 @@ struct Device: Identifiable, Equatable {
 	var shares: [Share]
 	var onboarded: Bool? // from TXT hint or identity probe; nil when unknown (offline)
 	var dashboardUsesHTTPS: Bool // browser links only; independent of native transport
+	// Saved and offline, and one of its addresses answers with its id under a new CA
+	var identityChanged = false
 
 	var online: Bool { reachability == .online }
 

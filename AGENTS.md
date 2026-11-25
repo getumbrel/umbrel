@@ -20,6 +20,10 @@
   git worktree remove worktrees/<branch>
   ```
 
+## Testing
+
+- Prefer VM tests that exercise real behaviour over unit tests. Add a unit test only when it pins down specific behaviour a VM test can't reasonably cover, never to mirror the implementation.
+
 ## Pull requests
 
 - Open the PR against the same repository as `git origin` unless you're asked to target another remote. Either way pass `--repo` explicitly, since `gh` infers a target when it's omitted.

@@ -280,6 +280,7 @@ describe('member lifecycle', () => {
 			member.userId,
 			'old-password',
 			totp.generateToken(totpUri),
+			'192.168.1.5',
 		)
 		expect(staleValidation.valid).toBe(true)
 		if (!staleValidation.valid) throw new Error('Expected valid login')
@@ -292,12 +293,19 @@ describe('member lifecycle', () => {
 				expectedSessionIssuanceRevision: staleValidation.sessionIssuanceRevision,
 			}),
 		).rejects.toThrow('Login credentials changed')
-		await expect(umbreld.user.validateAccountLogin(member.userId, 'old-password')).resolves.toEqual({
+		await expect(
+			umbreld.user.validateAccountLogin(member.userId, 'old-password', undefined, '192.168.1.5'),
+		).resolves.toEqual({
 			valid: false,
 			reason: 'incorrect-password',
 		})
 
-		const currentValidation = await umbreld.user.validateAccountLogin(member.userId, 'new-password')
+		const currentValidation = await umbreld.user.validateAccountLogin(
+			member.userId,
+			'new-password',
+			undefined,
+			'192.168.1.5',
+		)
 		expect(currentValidation.valid).toBe(true)
 		if (!currentValidation.valid) throw new Error('Expected valid login')
 		await expect(

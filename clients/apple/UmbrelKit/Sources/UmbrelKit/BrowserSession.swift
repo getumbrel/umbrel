@@ -3,11 +3,12 @@ import Foundation
 
 // The in-app browser shows umbrelOS and its apps exactly as a browser would, so it
 // needs the credentials umbrelOS gives a browser: a dashboard token plus two
-// host-scoped cookies. A native session deliberately cannot stand in for them.
+// host-scoped cookies. A native session can't be used in their place, but umbrelOS
+// makes them from one (see makeBrowserSession), linked to the app's sign-in.
 //
-// These are obtained once, alongside the native sign-in, and replayed into the web
-// view for whichever of the Umbrel's addresses is reachable. umbrelOS never rotates
-// them; it only slides their expiry while the session is in use.
+// They're replayed into the web view for whichever of the Umbrel's addresses is
+// reachable. umbrelOS never rotates them; it only slides their expiry while the
+// session is in use.
 extension Umbreld {
 	public struct BrowserSession: Codable, Sendable, Equatable {
 		public static let browserCookieName = "__Host-UMBREL_BROWSER_SESSION_HTTPS"
@@ -20,19 +21,58 @@ extension Umbreld {
 		// Cookie values are kept exactly as umbrelOS issued them.
 		public let browserCookie: String
 		public let appCookie: String?
+		// Made from the app's own sign-in, so umbrelOS ends it with that sign-in. Others
+		// (a password login, a sign-in on umbrelOS's own page) are replaced where umbrelOS
+		// can make one of these.
+		public let linked: Bool
 
 		public init(
 			deviceId: String,
 			accountId: String,
 			dashboardToken: String,
 			browserCookie: String,
-			appCookie: String?
+			appCookie: String?,
+			linked: Bool = false
 		) {
 			self.deviceId = deviceId
 			self.accountId = accountId
 			self.dashboardToken = dashboardToken
 			self.browserCookie = browserCookie
 			self.appCookie = appCookie
+			self.linked = linked
+		}
+
+		// Sessions stored before `linked` existed were all password logins.
+		public init(from decoder: Decoder) throws {
+			let container = try decoder.container(keyedBy: CodingKeys.self)
+			deviceId = try container.decode(String.self, forKey: .deviceId)
+			accountId = try container.decode(String.self, forKey: .accountId)
+			dashboardToken = try container.decode(String.self, forKey: .dashboardToken)
+			browserCookie = try container.decode(String.self, forKey: .browserCookie)
+			appCookie = try container.decodeIfPresent(String.self, forKey: .appCookie)
+			linked = try container.decodeIfPresent(Bool.self, forKey: .linked) ?? false
+		}
+
+		// The cookies come with the response that made the session.
+		init(
+			issuedBy response: HTTPURLResponse,
+			path: String,
+			deviceId: String,
+			accountId: String,
+			dashboardToken: String,
+			linked: Bool = false
+		) throws {
+			let cookies = Umbreld.issuedCookies(in: response)
+			guard let browserCookie = cookies[Self.browserCookieName] else {
+				throw Umbreld.Error(status: 0, message: "\(path): missing browser session", kind: .protocolFailure)
+			}
+			self.init(
+				deviceId: deviceId,
+				accountId: accountId,
+				dashboardToken: dashboardToken,
+				browserCookie: browserCookie,
+				appCookie: cookies[Self.appCookieName],
+				linked: linked)
 		}
 
 		// Identifies this login to a web page without revealing any credential.
@@ -103,16 +143,12 @@ extension Umbreld {
 				timeout: 10)
 			let dashboardToken: String = try decodeEnvelope(
 				data: data, status: response.statusCode, path: "user.login")
-			let cookies = issuedCookies(in: response)
-			guard let browserCookie = cookies[BrowserSession.browserCookieName] else {
-				throw Error(status: 0, message: "user.login: missing browser session", kind: .protocolFailure)
-			}
-			return BrowserSession(
+			return try BrowserSession(
+				issuedBy: response,
+				path: "user.login",
 				deviceId: target.deviceId,
 				accountId: userId,
-				dashboardToken: dashboardToken,
-				browserCookie: browserCookie,
-				appCookie: cookies[BrowserSession.appCookieName])
+				dashboardToken: dashboardToken)
 		}
 	}
 

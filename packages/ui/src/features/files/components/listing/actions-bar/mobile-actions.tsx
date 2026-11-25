@@ -1,120 +1,84 @@
+import {CircleCheck, Plus, Search} from 'lucide-react'
+import {AnimatePresence, motion, useReducedMotion} from 'motion/react'
 import {useTranslation} from 'react-i18next'
-import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
-import {TbDots} from 'react-icons/tb'
 
-import {Button} from '@/components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuPortal,
-	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
+import {PillButton} from '@/components/ui/edge-controls'
 import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
-import {SearchInput} from '@/features/files/components/listing/actions-bar/search-input'
-import {SORT_BY_OPTIONS} from '@/features/files/constants'
-import {usePreferences} from '@/features/files/hooks/use-preferences'
+import {useFilesSearch} from '@/features/files/hooks/use-files-search'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {cn} from '@/lib/utils'
-import {focusRingClass, touchTargetClass} from '@/utils/element-classes'
 
-// Turns tapping into selecting, for screens with no mouse to select with
-export function SelectToggle({className}: {className?: string}) {
-	const {t} = useTranslation()
-	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
-	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
-
-	return (
-		<Button
-			className={cn('h-[1.9rem] rounded-full px-3 text-13', className)}
-			variant={isSelectingOnMobile ? 'secondary' : 'default'}
-			size='default'
-			aria-label={t('files-action.select')}
-			onClick={() => setIsSelectingOnMobile(!isSelectingOnMobile)}
-		>
-			{isSelectingOnMobile ? t('done') : t('files-action.select')}
-		</Button>
-	)
+// CircleCheck's ring sits inset within its viewBox, so at the pills' shared
+// size-4 it reads a step smaller than its neighbours; drawn a touch larger
+// it sits optically equal (as in Photos)
+function SelectGlyph({className}: {className?: string}) {
+	return <CircleCheck className={cn(className, 'size-[18px]')} />
 }
 
-export function MobileActions({DropdownItems = null}: {DropdownItems?: React.ReactNode}) {
+// On phones and tablets the page's controls live in the title row, in the
+// room to the right of "Files", exactly where Photos keeps its own: add,
+// select, search, each a glyph. Nothing can be hovered or dragged over on a
+// touch screen, so selecting starts from a button here; while selecting, the
+// selection's actions take the bar's row and these step aside.
+export function MobileActions({className}: {className?: string}) {
 	const {t} = useTranslation()
-	const {preferences, setView, setSortBy} = usePreferences()
-	const {hideSearch, mobilePrimaryAction} = useActionsBarConfig()
+	const reduceMotion = useReducedMotion() ?? false
+	const {actions = [], hideSearch, selectable = true, hidePath, summary} = useActionsBarConfig()
 	const isReadOnly = useIsFilesReadOnly()
+	const isTouchDevice = useIsTouchDevice()
+	const search = useFilesSearch()
+	const isSelecting = useFilesStore((state) => state.isSelectingOnMobile)
+	const setIsSelecting = useFilesStore((state) => state.setIsSelectingOnMobile)
+
+	const offered = isReadOnly ? [] : actions.filter((action) => !action.desktopOnly)
+	// Something that can't be done right now (nothing to paste) isn't worth a row on a phone
+	const available = offered.filter((action) => !action.disabled)
+	const [only] = offered
 
 	return (
-		<div className='flex items-center gap-2'>
-			{/* Search (hide in read-only or when explicitly hidden) */}
-			{!hideSearch && !isReadOnly ? <SearchInput /> : null}
-
-			{/* Select toggle button, or the listing's own primary action where
-			    selection is meaningless */}
-			{mobilePrimaryAction ?? <SelectToggle />}
-
-			<DropdownMenu>
-				<DropdownMenuTrigger className={cn(touchTargetClass, '-m-0.5 rounded-full p-0.5', focusRingClass)}>
-					<TbDots className='h-5 w-5' />
-				</DropdownMenuTrigger>
-				<DropdownMenuContent className='w-44' align='start'>
-					{DropdownItems ? (
-						<>
-							{DropdownItems}
-							<DropdownMenuSeparator />
-						</>
-					) : null}
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>{t('files-view.view-as')}</DropdownMenuSubTrigger>
-						<DropdownMenuPortal>
-							<DropdownMenuSubContent>
-								<DropdownMenuCheckboxItem
-									checked={preferences?.view === 'icons'}
-									onCheckedChange={() => setView('icons')}
-								>
-									{t('files-view.icons')}
-								</DropdownMenuCheckboxItem>
-								<DropdownMenuCheckboxItem
-									checked={preferences?.view === 'list'}
-									onCheckedChange={() => setView('list')}
-								>
-									{t('files-view.list')}
-								</DropdownMenuCheckboxItem>
-							</DropdownMenuSubContent>
-						</DropdownMenuPortal>
-					</DropdownMenuSub>
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>{t('files-view.sort-by')}</DropdownMenuSubTrigger>
-						<DropdownMenuPortal>
-							<DropdownMenuSubContent>
-								{SORT_BY_OPTIONS.map((option) => (
-									<DropdownMenuItem
-										key={option.sortBy}
-										onClick={() => setSortBy(option.sortBy)}
-										className='flex items-center justify-between'
-									>
-										{t(option.labelTKey)}
-										{option.sortBy === preferences?.sortBy && (
-											<>
-												{preferences.sortOrder === 'ascending' ? (
-													<RiArrowDropUpLine className='h-5 w-5' />
-												) : (
-													<RiArrowDropDownLine className='h-5 w-5' />
-												)}
-											</>
-										)}
+		<AnimatePresence initial={false}>
+			{!isSelecting && (
+				<motion.div
+					key='page'
+					className={cn('flex items-center gap-2', className)}
+					initial={reduceMotion ? false : {opacity: 0, y: -4}}
+					animate={{opacity: 1, y: 0}}
+					exit={reduceMotion ? undefined : {opacity: 0, y: -4}}
+					transition={{duration: 0.2, ease: [0.215, 0.61, 0.355, 1]}}
+				>
+					{offered.length === 1 ? (
+						// A page with one thing to do wears it as its own glyph
+						<PillButton icon={only.icon} aria-label={only.label} disabled={only.disabled} onClick={only.onSelect} />
+					) : offered.length > 1 ? (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<PillButton icon={Plus} aria-label={t('files-action.add')} disabled={available.length === 0} />
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align='end' className='min-w-52'>
+								{available.map((action) => (
+									<DropdownMenuItem key={action.id} onSelect={action.onSelect} className='gap-3 py-2.5'>
+										<action.icon className='size-[18px] shrink-0 text-white/60' />
+										{action.label}
 									</DropdownMenuItem>
 								))}
-							</DropdownMenuSubContent>
-						</DropdownMenuPortal>
-					</DropdownMenuSub>
-				</DropdownMenuContent>
-			</DropdownMenu>
-		</div>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					) : null}
+					{/* The same circled check a selected item wears */}
+					{/* (Not where there is nothing to select, nor with a pointer, which
+					    selects with a click) */}
+					{isTouchDevice && selectable && !isReadOnly && !hidePath && summary?.count !== 0 && (
+						<PillButton icon={SelectGlyph} aria-label={t('files-action.select')} onClick={() => setIsSelecting(true)} />
+					)}
+					{/* Opens the title-row search (MobileSearch in FilesLayout) */}
+					{search && !hideSearch && !isReadOnly && (
+						<PillButton icon={Search} aria-label={t('files-search.placeholder')} onClick={() => search.setOpen(true)} />
+					)}
+				</motion.div>
+			)}
+		</AnimatePresence>
 	)
 }

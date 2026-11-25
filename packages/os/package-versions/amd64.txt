@@ -43,6 +43,7 @@ binutils-x86-64-linux-gnu 2.44-3
 bluez 5.82-1.1
 bsdextrautils 2.41.5-0+deb13u1
 bsdutils 1:2.41.5-0+deb13u1
+bubblewrap 0.12.0-1~deb13u1
 build-essential 12.12
 busybox 1:1.37.0-6+b9
 bzip2 1.0.8-6
@@ -179,6 +180,8 @@ iproute2 6.15.0-1
 iptables 1.8.11-2
 iputils-ping 3:20240905-3
 ipxe-qemu 1.21.1+git20250501.dad20602+dfsg-1
+isympy-common 1.13.3-5
+isympy3 1.13.3-5
 iucode-tool 2.3.1-3
 jq 1.7.1-6+deb13u4
 keyutils 1.6.3-6
@@ -264,6 +267,7 @@ libcodec2-1.2 1.2.0-3
 libcolord2 1.4.7-3
 libcom-err2 1.47.2-3+b12
 libcompress-raw-lzma-perl 2.213-1+b1
+libcpuinfo0 0.0~git20250327.39ea79a-1
 libcrypt-dev 1:4.4.38-1
 libcrypt1 1:4.4.38-1
 libcryptsetup12 2:2.7.5-2
@@ -290,6 +294,7 @@ libdeflate0 1.23-2
 libdevmapper1.02.1 2:1.02.205-2
 libdjvulibre-text 3.5.28-2.2
 libdjvulibre21 3.5.28-2.2
+libdnnl3.6 3.7.2+ds-2
 libdpkg-perl 1.22.22
 libdrm-amdgpu1 2.4.124-2
 libdrm-common 2.4.124-2
@@ -361,6 +366,7 @@ libgomp1 14.2.0-19
 libgpg-error-l10n 1.51-4
 libgpg-error0 1.51-4
 libgpgme11t64 1.24.2-3
+libgpgmepp6t64 1.24.2-3
 libgpm2 1.20.7-11+b2
 libgprofng0 2.44-3
 libgraphite2-3 1.3.14-2+deb13u1
@@ -523,6 +529,8 @@ libnvpair3linux 2.3.9-0+deb13u1
 libobjc4 14.2.0-19
 libogg0 1.3.5-3+b2
 libonig5 6.9.9-1+b1
+libonnx1t64 1.17.0-3+b1
+libonnxruntime1.21 1.21.0+dfsg-1
 libopenal-data 1:1.24.2-1
 libopenal1 1:1.24.2-1
 libopenexr-3-1-30 3.1.13-2
@@ -561,10 +569,13 @@ libpng16-16t64 1.6.48-1+deb13u6
 libpocketsphinx3 0.8+5prealpha+1-15+b4
 libpolkit-agent-1-0 126-2
 libpolkit-gobject-1-0 126-2
+libpoppler147 25.03.0-5+deb13u4
 libpopt0 1.19+dfsg-2
 libpostproc58 7:7.1.5-0+deb13u1
 libproc2-0 2:4.0.4-9
+libprotobuf32t64 3.21.12-11+deb13u1
 libpsl5t64 0.21.2-1.1+b1
+libpthreadpool0 0.0~git20240616.560c60d-1
 libpulse0 17.0+dfsg1-2+b1
 libpython3-stdlib 3.13.5-1
 libpython3.13 3.13.5-2+deb13u5
@@ -576,10 +587,12 @@ libqmi-utils 1.36.0-1
 libqrtr-glib0 1.2.2-1+b2
 libquadmath0 14.2.0-19
 librabbitmq4 0.15.0-1+deb13u2
+libraqm0 0.10.2-1
 librav1e0.7 0.7.1-9+b2
 libraw1394-11 2.1.2-2+b2
 libraw23t64 0.21.4-2+deb13u1
 librdmacm1t64 56.1-1
+libre2-11 20240702-3+b1
 libreadline8t64 8.2-6
 librist4 0.2.11+dfsg-1
 librsvg2-2 2.60.0+dfsg-1+deb13u1
@@ -734,6 +747,7 @@ libxml2 2.12.7+dfsg+really2.9.14-2.1+deb13u3
 libxml2-utils 2.12.7+dfsg+really2.9.14-2.1+deb13u3
 libxmu6 2:1.1.3-3+b4
 libxmuu1 2:1.1.3-3+b4
+libxnnpack0.20241108 0.0~git20241108.4ea82e5-2
 libxpm4 1:3.5.17-1+deb13u1
 libxrandr2 2:1.5.4-1+b3
 libxrender1 1:0.9.12-1
@@ -785,6 +799,7 @@ mdevctl 1.4.0-2+b1
 media-types 13.0.0
 mesa-libgallium 25.0.7-2+deb13u1
 mesa-vdpau-drivers 25.0.7-2+deb13u1
+mesa-vulkan-drivers 25.0.7-2+deb13u1
 modemmanager 1.24.0-1+deb13u1
 mount 2.41.5-0+deb13u1
 mtools 4.0.48-1
@@ -831,6 +846,7 @@ pinentry-curses 1.3.1-2
 pocketsphinx-en-us 0.8+5prealpha+1-15
 polkitd 126-2
 poppler-data 0.4.12-1
+poppler-utils 25.03.0-5+deb13u4
 ppp 2.5.2-1+1
 procps 2:4.0.4-9
 psmisc 23.7-2
@@ -842,9 +858,11 @@ python3-bcrypt 4.2.0-2.1+b1
 python3-certifi 2025.1.31+ds-1
 python3-cffi-backend 1.17.1-3
 python3-click 8.2.0+0.really.8.1.8-1
+python3-coloredlogs 15.0.1-1
 python3-cryptography 43.0.0-3+deb13u1
 python3-dbus 1.4.0-1
 python3-dnspython 2.7.0-1
+python3-flatbuffers 23.5.26+dfsg-4
 python3-gdbm 3.13.5-1
 python3-gi 3.50.0-4+b1
 python3-gpg 1.24.2-3
@@ -853,6 +871,7 @@ python3-h2 4.2.0-1
 python3-hpack 4.0.0-3
 python3-httpcore 1.0.7-1
 python3-httpx 0.28.1-1
+python3-humanfriendly 10.0-6
 python3-hyperframe 6.0.0-1
 python3-idna 3.10-1+deb13u1
 python3-ldb 2:2.11.0+samba4.22.11+dfsg-0+deb13u1
@@ -861,10 +880,19 @@ python3-markdown 3.7-2+deb13u1
 python3-markdown-it 3.0.0-3
 python3-mdurl 0.1.2-1
 python3-minimal 3.13.5-1
+python3-mpmath 1.3.0-1
+python3-numpy 1:2.2.4+ds-1
+python3-numpy-dev 1:2.2.4+ds-1
+python3-olefile 0.47-1
+python3-onnxruntime 1.21.0+dfsg-1
+python3-packaging 25.0-1
+python3-pil 11.1.0-5+deb13u4
+python3-protobuf 3.21.12-11+deb13u1
 python3-pygments 2.18.0+dfsg-2
 python3-rich 13.9.4-1
 python3-samba 2:4.22.11+dfsg-0+deb13u1
 python3-sniffio 1.3.1-1
+python3-sympy 1.13.3-5
 python3-talloc 2:2.4.3+samba4.22.11+dfsg-0+deb13u1
 python3-tdb 2:1.4.13+samba4.22.11+dfsg-0+deb13u1
 python3-uc-micro 1.0.3-1
@@ -997,9 +1025,11 @@ tor d4effb3a04f77d366dc47165247ec5a38469c2c289d97ad2081730fe5fec2703
 ## Other software
 
 kopia 0.23.1
-node 26.12.1
+litert-lm 0.18.0
+node 26.13.1
 npm 11.20.0
 rclone 1.75.2
+transcribe.cpp 0.4.2
 yq 4.54.1
 
 ## Executables not installed by a Debian package

@@ -9,6 +9,9 @@ struct DeviceFoundView: View {
 	@Environment(\.openURL) private var openURL
 	@ScaledMetric(relativeTo: .largeTitle) private var singleDeviceNameSize = 32.0
 	@ScaledMetric(relativeTo: .title) private var cardDeviceNameSize = 27.0
+	@State private var multipleHeaderHeight: CGFloat = 50
+	@State private var carouselTrailingInset: CGFloat = 0
+	@Environment(\.carouselEndsAtFold) private var carouselEndsAtFold
 
 	var body: some View {
 		Group {
@@ -68,32 +71,64 @@ struct DeviceFoundView: View {
 
 	private var multiple: some View {
 		// The carousel sits a fixed 24pt below the title rather than floating
-		// in the leftover space.
-		VStack(alignment: .leading, spacing: 24) {
-			VStack(alignment: .leading, spacing: 2) {
-				Text("Found \(model.discoveryResults.count) devices")
-					.font(.title3.weight(.semibold))
-					.foregroundStyle(Palette.textMuted)
-				ManualAddressPrompt(isLeading: true)
-			}
+		// in the leftover space. Short windows, like the iPhone SE and both
+		// displays of iPhone Duo, take the room from the space above the title
+		// first, then from the cards' height.
+		GeometryReader { proxy in
+			let cardHeight = min(513, max(380, proxy.size.height - multipleHeaderHeight - 24 - 48))
+			// Beside a side column or the fold, like on iPhone Duo's outer display, a narrow
+			// space narrows the cards so about 40pt of the next one still shows and it's clear
+			// they scroll. Other iPhones keep the full-size card.
+			let cardWidth: CGFloat =
+				(carouselTrailingInset > 0 || carouselEndsAtFold) && proxy.size.width - 20 - 20 - 340 < 20
+				? proxy.size.width - 20 - 20 - 40 : 340
+			// While adding a device the Cancel bar already sits above this space, so the
+			// title needs less room above it to land where it does in first-run setup.
+			let maxTopPadding: CGFloat = model.mode == .addDevice ? 64 : 120
+			let topPadding = min(maxTopPadding, max(24, proxy.size.height - multipleHeaderHeight - 24 - cardHeight - 24))
+			VStack(alignment: .leading, spacing: 24) {
+				VStack(alignment: .leading, spacing: 2) {
+					Text("Found \(model.discoveryResults.count) devices")
+						.font(.title3.weight(.semibold))
+						.foregroundStyle(Palette.textMuted)
+					ManualAddressPrompt(isLeading: true)
+				}
+				.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { multipleHeaderHeight = $0 }
 				.padding(.horizontal, 33)
-				.padding(.top, 120)
+				.padding(.top, topPadding)
 
-			ScrollView(.horizontal) {
-				HStack(spacing: 20) {
-					ForEach(model.discoveryResults) { result in
-						card(result)
-							.frame(width: 340, height: 513)
+				ScrollView(.horizontal) {
+					HStack(spacing: 20) {
+						ForEach(model.discoveryResults) { result in
+							card(result)
+								.frame(width: cardWidth, height: cardHeight)
+						}
+					}
+					.scrollTargetLayout()
+				}
+				.scrollTargetBehavior(.viewAligned)
+				.scrollIndicators(.hidden)
+				.contentMargins(.horizontal, 20, for: .scrollContent)
+				// The cards have buttons, so they stop at iPhone Duo's side column or fold rather
+				// than sliding under the controls or across the crease (the mask keeps to the
+				// safe area), fading out there instead of ending in a hard cut. At the edge of
+				// the screen there's no fade.
+				.mask(alignment: .leading) {
+					HStack(spacing: 0) {
+						Color.black
+						if carouselTrailingInset > 0 || carouselEndsAtFold {
+							LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+								.frame(width: 24)
+						}
 					}
 				}
-				.scrollTargetLayout()
-			}
-			.scrollTargetBehavior(.viewAligned)
-			.scrollIndicators(.hidden)
-			.contentMargins(.horizontal, 20, for: .scrollContent)
-			.entrance()
+				.onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.trailing } action: {
+					carouselTrailingInset = $0
+				}
+				.entrance()
 
-			Spacer()
+				Spacer(minLength: 0)
+			}
 		}
 	}
 
@@ -127,6 +162,7 @@ struct DeviceFoundView: View {
 			VStack(spacing: 4) {
 				Text(result.title)
 					.font(.system(size: nameSize, weight: .semibold))
+					.multilineTextAlignment(.center)
 					.foregroundStyle(.white)
 				Text(result.subtitle)
 					.font(.callout)

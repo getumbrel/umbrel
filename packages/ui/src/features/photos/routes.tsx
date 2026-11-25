@@ -35,11 +35,11 @@ export const photosRoutes: RouteObject[] = [
 				path: ':section',
 				element: <PhotosListing />,
 			},
-			// One album: the timeline filtered to it. People and Locations are cut
-			// from v1 — their routes come back with the backend:
-			// {path: 'people/:personId', element: <PhotosListing />},
+			// One album, or one person: the timeline filtered to it. Locations is
+			// cut from v1 — its route comes back with the backend:
 			// {path: 'locations/:locationId', element: <PhotosListing />},
 			{path: 'albums/:albumId', element: <PhotosListing />},
+			{path: 'people/:personId', element: <PhotosListing />},
 			// A single source (this Umbrel, a phone, a drive, a NAS)
 			{
 				path: 'source/:sourceId',

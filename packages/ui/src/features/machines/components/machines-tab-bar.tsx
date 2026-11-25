@@ -17,7 +17,9 @@ import {tw} from '@/utils/tw'
 // never shift when selection changes (it also supersedes the material's own
 // hairline, whose look survives via the box-shadow shine).
 const tabClass = tw`settings-edge-material flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-transparent bg-white/6 text-14 font-semibold -tracking-2 whitespace-nowrap text-white/85 transition-[background-color,border-color,color,transform] duration-200 hover:bg-white/12 hover:text-white focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white/20 active:scale-95`
-const tabActiveClass = tw`border-white/60 bg-white/14 text-white hover:bg-white/14`
+// With contrast on every pill has a line, so the open one goes solid white
+// at the edge and fills more
+const tabActiveClass = tw`border-white/60 bg-white/14 text-white hover:bg-white/14 contrast-more:border-white contrast-more:bg-white/30`
 
 // Each pill animates its own position during the column-width morph (the nav
 // itself is full-width and a scroll container, so animating it does nothing)
@@ -78,7 +80,7 @@ export function MachinesTabBar({machines}: {machines: Machine[]}) {
 			// the column's px-3, so they read as a row that scrolls
 			className={cn(
 				scrollerClass,
-				'-mx-3 -mt-1 -mb-3 flex min-w-0 flex-1 scroll-px-6 items-center gap-2 overflow-x-auto px-3 py-1 [scrollbar-width:none] md:mx-0 md:px-0 low:mr-0 low:pr-2 [&::-webkit-scrollbar]:hidden',
+				'umbrel-hide-scrollbar -mx-3 -mt-1 -mb-3 flex min-w-0 flex-1 scroll-px-6 items-center gap-2 overflow-x-auto px-3 py-1 md:mx-0 md:px-0 low:mr-0 low:pr-2',
 			)}
 		>
 			<DarkTooltip label={t('machines.all-machines')} side='bottom'>

@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
@@ -21,7 +22,9 @@ import com.umbrel.android.ui.NoticeCard
 import com.umbrel.android.ui.NoticeIconSize
 import com.umbrel.android.ui.Symbols
 import com.umbrel.kit.SavedDevice
+import com.umbrel.kit.backup.PhotoBackupLedger
 import com.umbrel.kit.backup.PhotoBackupNotice
+import com.umbrel.kit.backup.PhotoBackupStatus
 import com.umbrel.kit.backup.PhotoBackupTarget
 import com.umbrel.kit.backup.PhotoLibraryCounts
 import kotlinx.coroutines.Dispatchers
@@ -45,10 +48,16 @@ class LibraryBackupReader(private val model: MainViewModel) {
 	/** Emits whenever receipts may have changed. */
 	val revisions: Flow<Any> = model.state.map { it.backupReceiptRevision to it.backupSourceId }.distinctUntilChanged()
 
-	/** The identifiers among [items] whose current version has a completed upload receipt. */
-	suspend fun backedUp(items: List<LocalMediaItem>): Set<String> = reads.withLock {
+	/** The receipt of each of [items] whose current version is backed up or couldn't be. */
+	suspend fun receipts(items: List<LocalMediaItem>): Map<String, BackupReceipt> = reads.withLock {
 		withContext(Dispatchers.IO) {
-			items.filter(model::isBackedUp).mapTo(HashSet()) { it.localIdentifier }
+			val filter = failureFilter(model.state.value)
+			buildMap {
+				for (item in items) {
+					val receipt = backupReceipt(model.backupRecord(item), covered = filter?.shows(item) == true)
+					if (receipt != BackupReceipt.None) put(item.localIdentifier, receipt)
+				}
+			}
 		}
 	}
 
@@ -60,9 +69,33 @@ class LibraryBackupReader(private val model: MainViewModel) {
 
 // ── Presentation ──
 
+/**
+ * What backup covers, for marking an item that couldn't back up. Null while the ledger counts
+ * none for this account, as while backup is on but isn't set up here yet: Profile lists none
+ * then, so none is marked.
+ */
+internal fun failureFilter(state: MainUiState): LibraryFilter? = LibraryFilter.of(state).takeIf { state.backupFailedCount > 0 }
+
+/**
+ * What the grid and the viewer show for an item's ledger record. One that couldn't back up is
+ * marked only while backup is set up here and [covered] the item, its media type on and its
+ * folder not skipped, which is when Profile counts and lists it.
+ */
+internal fun backupReceipt(record: PhotoBackupLedger.AssetRecord?, covered: Boolean): BackupReceipt {
+	val failure = record?.failureReason
+	return when {
+		record?.state == PhotoBackupLedger.AssetState.UPLOADED -> BackupReceipt.BackedUp
+		covered && failure != null -> BackupReceipt.Failed(failure)
+		else -> BackupReceipt.None
+	}
+}
+
 /** Library's status row: how backup is going, or that it goes to another Umbrel, as on Home. */
-fun libraryBackupStatusText(state: MainUiState): String =
-	if (state.otherBackupDeviceName != null) "On another Umbrel" else state.backupStatus.text
+/** Library has room to name a backup this phone took over; Home keeps to the short status. */
+fun libraryBackupStatusText(state: MainUiState): String = when {
+	state.otherBackupDeviceName != null -> "On another Umbrel"
+	else -> state.backupContinuingName?.let(state.backupStatus::continuingText) ?: state.backupStatus.text
+}
 
 fun libraryBackupStatusColor(state: MainUiState): Color =
 	if (state.otherBackupDeviceName != null) MainTheme.gray else statusColor(state.backupStatus)
@@ -95,6 +128,10 @@ fun backupIsOnlyElsewhere(state: MainUiState): Boolean {
  */
 fun showsPhotoLibrary(canReadLibrary: Boolean, state: MainUiState): Boolean = canReadLibrary && !backupIsOnlyElsewhere(state)
 
+/** Backup is on here and past setup, whatever it's doing now. */
+internal fun backupIsSetUp(state: MainUiState): Boolean =
+	state.backupPreference.isEnabled && state.backupStatus != PhotoBackupStatus.Off && state.backupStatus != PhotoBackupStatus.SettingUp
+
 /**
  * Switching needs photo access, all of the library or a selection, which Android backs up
  * alike, or the chance to ask for it, as on iOS. Once Android no longer shows its request,
@@ -120,20 +157,13 @@ internal fun photoBackupSetupCardKind(state: MainUiState, access: PhotoAccess): 
 }
 
 /**
- * A confirmed switch to this Umbrel is under way: its check, then setup here. Setup's progress
- * is shared by every Umbrel, so it counts only once this account owns backup.
+ * A confirmed switch to this Umbrel is setting up here. Setup's progress is shared by every
+ * Umbrel, so it counts only once this account owns backup.
  */
-fun backupSwitchInProgress(state: MainUiState): Boolean =
-	state.backupSwitchChecking || (state.backupSetupInProgress && state.backupPreference.isEnabled)
+fun backupSwitchInProgress(state: MainUiState): Boolean = state.backupSetupInProgress && state.backupPreference.isEnabled
 
 /** What a confirmed switch came back needing, kept in the view model until it's answered. */
 sealed class BackupSwitchPrompt {
-	/** The account already has backups from [existing]; nothing has changed yet. */
-	data class NewSource(val destination: String, val existing: String, val canRequestAccess: Boolean) : BackupSwitchPrompt()
-
-	/** The Umbrel couldn't be asked, and backup is still on for [destination]. */
-	data class CouldNotCheck(val destination: String) : BackupSwitchPrompt()
-
 	/** Backup moved here before photo access was granted, so Android's request comes next. */
 	data object AccessRequest : BackupSwitchPrompt()
 }
@@ -181,7 +211,6 @@ fun PhotoBackupNoticeCard(model: MainViewModel, state: MainUiState) {
 	// reachable, Android waits for any route: the notice matters most while the Umbrel isn't.
 	val notice = state.backupNotice ?: return
 	val requests = rememberPhotoAccessRequests(model, state)
-	var reviewingNewSource by remember(notice) { mutableStateOf(false) }
 	val action: (() -> Unit)? = when (notice.action) {
 		PhotoBackupNotice.Action.SET_UP_TAILSCALE -> model::presentTailscaleSetup
 		PhotoBackupNotice.Action.RETRY_STORAGE -> model::retryBackupAfterStorage
@@ -189,9 +218,6 @@ fun PhotoBackupNoticeCard(model: MainViewModel, state: MainUiState) {
 		// Location belongs to the photo permission group, so asking again grants it without a
 		// dialog when photo access is already allowed; Settings is the way in once it's blocked.
 		PhotoBackupNotice.Action.ALLOW_LOCATION_ACCESS -> { { requests.requestLibraryAccess(false) } }
-		// Backing up again can store a whole library a second time, so a tap only opens the
-		// choice, unlike the notices whose action just retries
-		PhotoBackupNotice.Action.BACK_UP_ANYWAY -> { { reviewingNewSource = true } }
 		null -> null
 	}
 	NoticeCard(
@@ -202,40 +228,16 @@ fun PhotoBackupNoticeCard(model: MainViewModel, state: MainUiState) {
 		onClick = action,
 		iconSize = noticeIconSize(notice),
 	)
-	if (reviewingNewSource) {
-		AlertDialog(
-			onDismissRequest = { reviewingNewSource = false },
-			title = { Text("Back up as a new phone?") },
-			text = { Text(backupNoticeMessage(notice, state)) },
-			confirmButton = {
-				TextButton(onClick = {
-					reviewingNewSource = false
-					model.backUpAsNewSource()
-				}) { Text("Back Up Anyway") }
-			},
-			dismissButton = {
-				Row {
-					TextButton(onClick = { reviewingNewSource = false }) { Text("Cancel") }
-					TextButton(onClick = {
-						reviewingNewSource = false
-						model.turnOffBackup()
-					}) { Text("Turn Off Backup") }
-				}
-			},
-		)
-	}
 }
 
 /**
  * The notice's message. Once the Umbrel has a Tailscale address, Tailscale is set up there,
  * so waiting names both ways back, as Connection details does: Android can't say whether
- * Tailscale is switched on here or the Umbrel is off. The new-phone question names the
- * account's existing source.
+ * Tailscale is switched on here or the Umbrel is off.
  */
 internal fun backupNoticeMessage(notice: PhotoBackupNotice, state: MainUiState): String = when {
 	notice == PhotoBackupNotice.WAITING_FOR_UMBREL && state.device.tailscaleAddress != null ->
 		connectionMessage(ConnectionState.UNAVAILABLE, null, hasKnownTailscaleAddress = true)
-	notice == PhotoBackupNotice.MAY_BACK_UP_TWICE -> PhotoBackupNotice.mayBackUpTwiceMessage(state.backupNewSourceQuestion.orEmpty())
 	else -> notice.message
 }
 
@@ -249,7 +251,6 @@ private fun noticeIcon(notice: PhotoBackupNotice): ImageVector = when (notice) {
 	PhotoBackupNotice.LOCATION_ACCESS_REQUIRED -> Symbols.LocationOnMedium
 	PhotoBackupNotice.RECONNECT -> Symbols.KeyHorizontalMedium
 	PhotoBackupNotice.NEEDS_ATTENTION, PhotoBackupNotice.UNREADABLE_ITEMS -> Symbols.WarningAmberMedium
-	PhotoBackupNotice.MAY_BACK_UP_TWICE -> Symbols.ContentCopyMedium
 }
 
 // Sized so each draws as large as its SF Symbol does; the badged drives are wider than the
@@ -270,7 +271,7 @@ private fun noticeIconSize(notice: PhotoBackupNotice): Dp = when (notice) {
  * lost and backup is paused: the card asks for access back, and backup resumes on its own.
  */
 @Composable
-fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: (() -> Unit)? = null) {
+fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: (() -> Unit)? = null, modifier: Modifier = Modifier) {
 	val requests = rememberPhotoAccessRequests(model, state)
 	val other = state.otherBackupDeviceName
 	when (photoBackupSetupCardKind(state, requests.access)) {
@@ -279,6 +280,7 @@ fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: ((
 			val switching = backupSwitchInProgress(state)
 			PhotoBackupSwitchConfirmation(model, other.orEmpty(), requests.access) { confirm ->
 				EmptyStateCard(
+					modifier = modifier,
 					icon = Symbols.PhotoLibrary,
 					title = "Photo Backup is on for $other",
 					subtitle = "This phone can back up to one Umbrel at a time.",
@@ -291,6 +293,7 @@ fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: ((
 		}
 		PhotoBackupSetupCardKind.SWITCH_NEEDS_SETTINGS -> {
 			EmptyStateCard(
+				modifier = modifier,
 				icon = Symbols.PhotoLibrary,
 				title = "Photo Backup is on for $other",
 				subtitle = "This phone can back up to one Umbrel at a time. Allow photo access to back up to this Umbrel instead.",
@@ -303,6 +306,7 @@ fun PhotoBackupSetupCard(model: MainViewModel, state: MainUiState, learnMore: ((
 	val needsSettings = requests.access == PhotoAccess.BLOCKED
 	val paused = state.backupPreference.isEnabled
 	EmptyStateCard(
+		modifier = modifier,
 		icon = Symbols.PhotoLibrary,
 		title = when {
 			needsSettings -> "Full Photos access required"
@@ -372,7 +376,7 @@ internal fun PhotoBackupSwitchConfirmation(model: MainViewModel, destination: St
 			confirmButton = {
 				TextButton(onClick = {
 					confirming = false
-					model.backUpToThisUmbrel(asNewSource = false, canRequestAccess = access.canRequest)
+					model.backUpToThisUmbrel(canRequestAccess = access.canRequest)
 				}) { Text("Back Up to This Umbrel") }
 			},
 			dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } },
@@ -382,28 +386,12 @@ internal fun PhotoBackupSwitchConfirmation(model: MainViewModel, destination: St
 
 /**
  * What a confirmed switch came back needing. The view model keeps it, so changing tab, turning
- * the phone or closing Profile during the check doesn't lose it. The new-phone question is asked
- * before anything stops, so Cancel leaves backup where it is.
+ * the phone or closing Profile doesn't lose it.
  */
 @Composable
 fun PhotoBackupSwitchDialogs(model: MainViewModel, state: MainUiState) {
 	val requests = rememberPhotoAccessRequests(model, state)
 	when (val prompt = state.backupSwitchPrompt) {
-		is BackupSwitchPrompt.NewSource -> AlertDialog(
-			onDismissRequest = model::dismissBackupSwitchPrompt,
-			title = { Text("Back up as a new phone?") },
-			text = { Text(PhotoBackupNotice.mayBackUpTwiceMessage(prompt.existing)) },
-			confirmButton = {
-				TextButton(onClick = { model.backUpToThisUmbrel(asNewSource = true, canRequestAccess = prompt.canRequestAccess) }) { Text("Back Up Anyway") }
-			},
-			dismissButton = { TextButton(onClick = model::dismissBackupSwitchPrompt) { Text("Cancel") } },
-		)
-		is BackupSwitchPrompt.CouldNotCheck -> AlertDialog(
-			onDismissRequest = model::dismissBackupSwitchPrompt,
-			title = { Text("Couldn’t check this Umbrel") },
-			text = { Text("Photo Backup is still on for ${prompt.destination}. Try again in a moment.") },
-			confirmButton = { TextButton(onClick = model::dismissBackupSwitchPrompt) { Text("OK") } },
-		)
 		// As when backup is turned on: a refusal turns it back off
 		BackupSwitchPrompt.AccessRequest -> LaunchedEffect(prompt) {
 			model.dismissBackupSwitchPrompt()

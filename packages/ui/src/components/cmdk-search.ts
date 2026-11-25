@@ -1,5 +1,7 @@
 import type {ReactNode} from 'react'
 
+import type {SearchResult} from '@/features/search/types'
+
 // A command palette row. Sources (apps, settings, machines…) produce these and
 // `rankCmdkEntries` picks the ones to show for a query. Matching happens here,
 // in plain JS, so cmdk itself never scores anything: it only receives the
@@ -111,4 +113,33 @@ export function sortByMatch<T>(items: readonly T[], matchOf: (item: T) => number
 // with the lower priority number (the more direct kind of result) comes first
 export function orderSectionsByMatch<T extends {bestMatch: number; priority: number}>(sections: readonly T[]): T[] {
 	return [...sections].sort((a, b) => b.bestMatch - a.bestMatch || a.priority - b.priority)
+}
+
+// Search results, sorted into the palette's two kinds of section without
+// disturbing their order: things in the Photos library become tiles, the
+// rest become rows. A scope is already told apart by the search itself: a
+// Files search never says a result is in the library, and a Photos search
+// only returns what the library holds.
+export function splitSearchResults(results: readonly SearchResult[]) {
+	return {photos: results.filter((result) => result.photo), files: results.filter((result) => !result.photo)}
+}
+
+// A search result on the scale local entries are graded on, so a section of
+// them can be ordered against apps and settings. A name match is graded like
+// any title. Words or looks found inside a file rank with a keyword hit:
+// real, but less direct than a name that says it. The backend's own score
+// then separates results within a grade — downwards only, so at equal grade a
+// local entry is never outranked.
+const CONTENT_MATCH = CMDK_MATCH.keywordWordPrefix
+
+export function gradeSearchResult(result: SearchResult, match: CmdkMatcher | null) {
+	const grade =
+		result.match === 'name'
+			? Math.max(CMDK_MATCH.subsequence, match?.(result.file.name) ?? CMDK_MATCH.none)
+			: CONTENT_MATCH
+	return grade - (1 - Math.min(1, Math.max(0, result.score))) / 2
+}
+
+export function bestSearchGrade(results: readonly SearchResult[], match: CmdkMatcher | null) {
+	return results.reduce<number>((best, result) => Math.max(best, gradeSearchResult(result, match)), CMDK_MATCH.none)
 }

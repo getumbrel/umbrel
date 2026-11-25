@@ -49,6 +49,8 @@ export function CopyableField({
 			<Tooltip open={showCopied}>
 				<TooltipTrigger asChild>
 					<button
+						type='button'
+						aria-label={t('copy')}
 						className='rounded-4 px-1.5 transition-colors ring-inset hover:text-white/50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40'
 						onClick={async () => {
 							copyToClipboard(value)
@@ -63,6 +65,10 @@ export function CopyableField({
 				{/* TODO: consider putting in portal to avoid inheriting parent's styling */}
 				<TooltipContent>{t('clipboard.copied')}</TooltipContent>
 			</Tooltip>
+			{/* The tooltip only shows "Copied"; this says it */}
+			<span role='status' className='sr-only'>
+				{showCopied ? t('clipboard.copied') : ''}
+			</span>
 		</div>
 	)
 }

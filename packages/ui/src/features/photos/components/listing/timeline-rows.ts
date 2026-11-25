@@ -227,6 +227,10 @@ export type Timeline = {
 	// after a reflow, a page append or a delete
 	indexOf: Map<string, number>
 	hasMore: boolean
+	// When the list is a tail of the timeline, put on screen by a jump (see
+	// time-rail/use-seek.ts): the moment it runs back from. It holds
+	// everything taken before that, and the timeline has more after it.
+	before?: number
 	// Whether a footer line follows the last row once every page is loaded
 	footer: boolean
 }
@@ -235,17 +239,29 @@ export function groupItems({
 	items,
 	zoom,
 	hasMore,
+	before,
 	language,
 	footer = false,
+	ranked,
 }: {
 	items: Item[]
 	zoom: Zoom
 	hasMore: boolean
+	before?: number
 	language: string
 	footer?: boolean
+	// A ranked list (a search's results, best match first) has no dates to
+	// group by: it is one section under this title, in the order given. The
+	// rest of the grid neither knows nor cares — a section is a section.
+	ranked?: string
 }): Timeline {
 	const sections: Section[] = []
 	const indexOf = new Map<string, number>()
+	if (ranked !== undefined) {
+		items.forEach((item, index) => indexOf.set(item.id, index))
+		if (items.length > 0) sections.push({key: 'h:ranked', title: ranked, start: 0, count: items.length})
+		return {items, sections, indexOf, hasMore, footer}
+	}
 	let key: number | undefined
 	let open: Section | undefined
 	for (let index = 0; index < items.length; index++) {
@@ -259,7 +275,7 @@ export function groupItems({
 		}
 		open.count++
 	}
-	return {items, sections, indexOf, hasMore, footer}
+	return {items, sections, indexOf, hasMore, before, footer}
 }
 
 // ── Layout ────────────────────────────────────────────────────────────────

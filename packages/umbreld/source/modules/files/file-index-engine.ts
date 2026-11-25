@@ -1,6 +1,6 @@
 import nodePath from 'node:path'
 import type {BigIntStats, Stats} from 'node:fs'
-import {opendir, lstat} from 'node:fs/promises'
+import {opendir, lstat, stat} from 'node:fs/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
 import type DatabaseTypes from 'better-sqlite3'
@@ -8,11 +8,21 @@ import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
 import {migratePhotos} from '../photos/migrations.ts'
+import type {PeopleChange} from '../photos/people.ts'
+import type {SearchRead, SearchReadResult} from '../search/types.ts'
+import {placeIn, places} from './places.ts'
 import PhotosRepository from '../photos/repository.ts'
 import FileIndexReaderPool, {type FileIndexReaderPoolOptions} from './file-index/reader-pool.ts'
 import type {FileIndexReadArgs, FileIndexReadMethod, PhotosReadMethod} from './file-index/reader.ts'
 import {readDatabase, type ReadSql} from './file-index/read-database.ts'
-import {SCAN_DATABASE_PRIORITY, ON_DEMAND_DATABASE_PRIORITY} from './file-index/database-priority.ts'
+import {
+	BACKGROUND_DATABASE_PRIORITY,
+	SCAN_DATABASE_PRIORITY,
+	ON_DEMAND_DATABASE_PRIORITY,
+} from './file-index/database-priority.ts'
+import {embeddingsDatabasePath} from './embeddings-store.ts'
+import {readableKind} from './readable.ts'
+import {embeddingsAvailable} from './embeddings.ts'
 import {
 	supportsPhotos,
 	type PhotoBackupCloudIdentity,
@@ -21,7 +31,7 @@ import {
 	type PhotoScopeMode,
 } from '../photos/types.ts'
 import FileIndexEnrichment, {
-	BACKGROUND_QUIET_PERIOD_MS,
+	hashNotBefore,
 	assertPublishedRevision,
 	retryGivenUpEnrichmentAfterUpdate,
 	type FileIndexEnrichmentRuntime,
@@ -55,6 +65,20 @@ const TRANSIENT_OBSERVATION_REFRESH_MS = 24 * 60 * 60 * 1000
 export const DEFAULT_WATCHER_BULK_THRESHOLD = 250
 const DEFAULT_BATCH_SIZE = 256
 const MAX_LIVE_WORK_PER_SCAN_BATCH = 100
+// Every request shares the writer's thread, so a request that arrives while a
+// scan write runs waits for it, once per step of the request. For a while
+// after each request from Files or Photos, scan writes shrink their batch to
+// stay near this budget, so the next request someone makes doesn't land behind
+// a long write. Otherwise batches stay large, since each commit has a fixed cost.
+const SCAN_WRITE_BUDGET_MS = 50
+const MIN_SCAN_BATCH_SIZE = 64
+// Someone scrolling Photos often pauses for a few seconds before the next page
+const SMALL_BATCHES_AFTER_REQUEST_MS = 10_000
+// Long enough to bridge the steps of one request, short enough that a client
+// polling the index still leaves gaps for the scan
+const FOREGROUND_QUIET_MS = 50
+// Someone who keeps browsing still lets a long scan write a batch four times a second
+const MAX_FOREGROUND_PAUSE_MS = 250
 // A directory move rewrites its rows in one transaction that blocks other
 // index work, about 6 seconds per 100,000 entries on an N100. Larger trees
 // take the generic move instead.
@@ -63,6 +87,20 @@ const PHOTOS_ONLY_THUMBNAIL_VARIANT_SET = new Set<ThumbnailVariant>(
 	PHOTOS_THUMBNAIL_VARIANTS.filter((variant) => variant !== FILES_THUMBNAIL_VARIANT),
 )
 const PHOTOS_INDEXING_PROGRESS_INTERVAL_MS = 1000
+// Faces found by the models are given to people this long after the first
+// of a batch is found, and this many contents at a time when catching up
+const FACES_ASSIGNMENT_DELAY_MS = 2000
+const FACES_ASSIGNMENT_BATCH = 200
+const FACES_SWEEP_DELAY_MS = 60_000
+// How long the places an account has photos in are taken as read
+const PLACES_KEPT_MS = 60_000
+// How far along an account's files are is asked for with every step of the
+// work on them, and on a device with more than one account it is counted by
+// going through every file the account has. What was counted is kept for
+// this long, and for this many times as long as the counting took where that
+// is longer: no more than a twentieth of the time goes on counting.
+const COUNTS_KEPT_MS = 5000
+const COUNTS_KEPT_FOR_TIMES = 20
 
 export type FileIndexLogger = {
 	log(message?: string): void
@@ -110,20 +148,6 @@ type EntryWrite = {
 type PathMutation =
 	| {type: 'write'; entries: EntryWrite[]; markSeen: boolean}
 	| {type: 'delete'; rootId: number; relativePath: string}
-
-type PhotoEntrySnapshot = {
-	relative_path: string
-	name: string
-	type: EntryType
-	size: number
-	modified_ms: number
-	birthtime_ms: number | null
-	device: string
-	inode: string
-	modified_ns: string
-	thumbnail_identity_kind: ThumbnailIdentityKind | null
-	hidden: number
-}
 
 export type IndexedEntry = Omit<EntryWrite, 'rootId' | 'hidden' | 'hashNotBefore' | 'observedAt'> & {
 	id: number
@@ -297,9 +321,37 @@ function unreadableReconciliationError(root: RootState, unreadablePaths: Map<str
 	)
 }
 
+// A file renamed outside Files reaches a root scan as a new path. Its old row is
+// only deleted when the scan finishes, so a hashed row with the same device,
+// inode, size and modification time still holds its content. Without this,
+// renaming a large photo folder over SMB rehashes every file and Photos loses
+// those items until it has. A rename keeps the file's birth time, while a new
+// file that took a deleted file's inode gets a new one, so that file is hashed
+// instead of taking the deleted file's content. source.type lets the lookup use
+// the partial entries_by_size_identity index instead of scanning the root for
+// every row.
+export const REUSE_RENAMED_CONTENT_SQL = `
+	UPDATE entries AS destination SET
+		thumbnail_identity_kind = 'content',
+		content_id = source.content_id,
+		hash_failure_count = source.hash_failure_count,
+		hash_retry_at = source.hash_retry_at,
+		hash_error = source.hash_error
+	FROM entries AS source
+	WHERE destination.root_id = ? AND destination.relative_path = ?
+		AND destination.type = 'file' AND destination.content_id IS NULL
+		AND source.root_id = destination.root_id AND source.type = 'file'
+		AND source.device = destination.device AND source.inode = destination.inode
+		AND source.id IS NOT destination.id
+		AND source.thumbnail_identity_kind = 'content' AND source.content_id IS NOT NULL
+		AND source.size = destination.size AND source.modified_ns = destination.modified_ns
+		AND source.birthtime_ms IS destination.birthtime_ms
+`
+
 export default class FileIndexEngine {
 	readonly databasePath: string
 	readonly umbrelDatabasePath: string
+	readonly embeddingsDatabasePath: string
 	readonly logger: FileIndexLogger
 
 	#database?: Database
@@ -313,19 +365,30 @@ export default class FileIndexEngine {
 	#rootScans = new Map<string, RootReconciliation>()
 	#activeRootSnapshot?: ActiveRootSnapshot
 	#pendingLiveWork: PendingLiveWork[] = []
+	#moves = new Set<Promise<void>>()
 	#nextLiveWorkSequence = 0
 	#mutationQueue = new PQueue({concurrency: 1})
+	#foregroundActiveUntil = 0
+	#foregroundRequests = 0
+	#wakeOnStop = new Set<() => void>()
 	#scanQueue = new PQueue({concurrency: 1})
 	#reconciliationTimer?: ReturnType<typeof setTimeout>
 	#recoveryTimer?: ReturnType<typeof setTimeout>
 	#recoveryAttempt?: Promise<void>
 	#recoveryAttempts = 0
 	#artifactRecoveryBarrierRequired = false
+	#facesToAssign: Buffer[] = []
+	#facesAssignment?: ReturnType<typeof setTimeout>
+	#facesSweep?: ReturnType<typeof setTimeout>
+	#facesCaughtUp = false
 	#photosAvailable = false
 	#photosRecoveryTimer?: ReturnType<typeof setTimeout>
 	#photosRecoveryAttempt?: Promise<void>
 	#photosRecoveryAttempts = 0
 	#photos = new PhotosRepository()
+	// What each account's places can be called when typed, and until when that is taken as read
+	#placesNamed = new Map<string, {named: ReturnType<ReturnType<typeof places>['named']>; until: number}>()
+	#counted = new Map<string, {counts: Promise<unknown>; until: number}>()
 	#readers?: FileIndexReaderPool
 	#readerPoolOptions?: FileIndexReaderPoolOptions
 
@@ -363,6 +426,7 @@ export default class FileIndexEngine {
 	}: FileIndexEngineOptions) {
 		this.databasePath = nodePath.join(dataDirectory, 'file-index', 'index.db')
 		this.umbrelDatabasePath = nodePath.join(dataDirectory, 'umbrel.db')
+		this.embeddingsDatabasePath = embeddingsDatabasePath(dataDirectory)
 		this.logger = logger
 		this.#isHidden = isHidden
 		this.#onAvailabilityChange = onAvailabilityChange
@@ -404,6 +468,16 @@ export default class FileIndexEngine {
 						.then((accountIds) => this.#notifyPhotosChanged(accountIds))
 						.catch((error) => {
 							if (!this.#stopping) this.logger.error('Failed to report thumbnail availability', error)
+						})
+				},
+				onModelWorkSettled: (contentId, work, hash) => {
+					if (!this.#photosAvailable || this.#stopping) return
+					if (work === 'faces') this.#assignFaces(hash)
+					// Nothing about the photo itself changes, only how far indexing has got
+					void this.#readFiles('accountIdsForContent', [contentId])
+						.then((accountIds) => this.#notifyPhotosIndexingProgress(accountIds))
+						.catch((error) => {
+							if (!this.#stopping) this.logger.error('Failed to report indexing progress', error)
 						})
 				},
 				onHashFailure: async (entryId) => {
@@ -487,14 +561,25 @@ export default class FileIndexEngine {
 		}
 
 		if (this.#stopping) return
+		const readersStartedAt = performance.now()
 		this.#readers = new FileIndexReaderPool(
-			{databasePath: this.databasePath, umbrelDatabasePath: this.umbrelDatabasePath},
+			{
+				databasePath: this.databasePath,
+				umbrelDatabasePath: this.umbrelDatabasePath,
+				// Only where the models run, as for the connection that writes
+				embeddingsDatabasePath: embeddingsAvailable() ? this.embeddingsDatabasePath : undefined,
+			},
 			this.#readerPoolOptions,
 		)
 		await this.#readers.start()
+		this.logger.log(`Started file index readers in ${elapsedMs(readersStartedAt)}ms`)
 		this.#setAvailable(true)
 		this.logger.log(`Opened file index schema v${this.#schemaVersion}`)
-		if (this.#roots.size > 0) await this.#syncRoots()
+		if (this.#roots.size > 0) {
+			const rootsSyncedAt = performance.now()
+			await this.#syncRoots()
+			this.logger.log(`Synced file index roots in ${elapsedMs(rootsSyncedAt)}ms`)
+		}
 		if (!this.#artifactRecoveryBarrierRequired) this.#enrichment.allowDestructiveArtifactMaintenance()
 	}
 
@@ -526,13 +611,34 @@ export default class FileIndexEngine {
 				)
 			}
 		}
+		// Each step that can be slow on a large index logs how long it took, so a
+		// startup that never finishes shows which step it's stuck in.
+		const trace = (message: string) => this.logger.log(message)
+		const countedAt = performance.now()
+		const counts = this.#database
+			.prepare(
+				`SELECT
+					(SELECT COUNT(*) FROM entries) AS entries,
+					(SELECT COUNT(*) FROM contents) AS contents,
+					(SELECT COUNT(*) FROM directory_sizes_dirty_roots) AS dirtyRoots,
+					(SELECT COUNT(*) FROM directory_sizes_dirty_entries) AS dirtyEntries`,
+			)
+			.get() as {entries: number; contents: number; dirtyRoots: number; dirtyEntries: number}
+		this.logger.log(
+			`File index has ${counts.entries} entries and ${counts.contents} contents, with ${counts.dirtyRoots} roots and ${counts.dirtyEntries} entries waiting for directory sizes (counted in ${elapsedMs(countedAt)}ms)`,
+		)
+		const directorySizesSyncedAt = performance.now()
 		this.#directorySizes = new DirectorySizes(this.#database)
-		this.#directorySizes.sync()
+		this.#directorySizes.sync(trace)
+		this.logger.log(`Synced directory sizes in ${elapsedMs(directorySizesSyncedAt)}ms`)
 		this.#photosAvailable = false
-		await this.#openUmbrelDatabase().catch((error) => {
-			this.logger.error('Umbrel database is unavailable; file indexing will continue without Photos', error)
-			this.#schedulePhotosRecovery()
-		})
+		const photosSyncedAt = performance.now()
+		await this.#openUmbrelDatabase(trace)
+			.then(() => this.logger.log(`Synced Photos library in ${elapsedMs(photosSyncedAt)}ms`))
+			.catch((error) => {
+				this.logger.error('Umbrel database is unavailable; file indexing will continue without Photos', error)
+				this.#schedulePhotosRecovery()
+			})
 		this.#database.exec(`
 			CREATE TEMP TABLE reconciliation_seen (
 				root_id INTEGER NOT NULL,
@@ -584,21 +690,37 @@ export default class FileIndexEngine {
 		`)
 	}
 
-	async #openUmbrelDatabase() {
+	async #openUmbrelDatabase(trace?: (message: string) => void) {
 		await fse.ensureDir(nodePath.dirname(this.umbrelDatabasePath))
 		let umbrelDatabase: Database | undefined
 		let attached = false
 		try {
+			const migratedAt = performance.now()
 			umbrelDatabase = new BetterSqlite3(this.umbrelDatabasePath, {timeout: 5000})
 			migratePhotos(umbrelDatabase)
+			trace?.(`Photos database migrations completed in ${elapsedMs(migratedAt)}ms`)
 			umbrelDatabase.close()
 			umbrelDatabase = undefined
 			this.#requireDatabase().prepare('ATTACH DATABASE ? AS umbrel').run(this.umbrelDatabasePath)
 			attached = true
-			const sync = this.#requireDatabase().transaction(() => this.#syncPhotosState(this.#requireDatabase()))
+			// The faces People are made of are with what the models made of
+			// everything else (see ./embeddings-store.ts). Where the models aren't
+			// installed there are none.
+			if (embeddingsAvailable()) {
+				try {
+					this.#requireDatabase().prepare('ATTACH DATABASE ? AS embeddings').run(this.embeddingsDatabasePath)
+				} catch (error) {
+					// Photos works without what the models have read: there are
+					// only no people in it, and nothing is found by what it shows
+					this.logger.error('Failed to open what the models have read', error)
+				}
+			}
+			const sync = this.#requireDatabase().transaction(() => this.#syncPhotosState(this.#requireDatabase(), trace))
 			sync.immediate()
 			this.#photosAvailable = true
 			this.#photosRecoveryAttempts = 0
+			this.#facesCaughtUp = false
+			this.#assignFaces()
 		} catch (error) {
 			this.#photosAvailable = false
 			try {
@@ -607,6 +729,9 @@ export default class FileIndexEngine {
 			if (attached) {
 				try {
 					this.#requireDatabase().exec('DETACH DATABASE umbrel')
+				} catch {}
+				try {
+					this.#requireDatabase().exec('DETACH DATABASE embeddings')
 				} catch {}
 			}
 			throw error
@@ -796,7 +921,7 @@ export default class FileIndexEngine {
 		await this.#loadRootState()
 	}
 
-	#syncPhotosState(database: Database) {
+	#syncPhotosState(database: Database, trace?: (message: string) => void) {
 		if (this.#rootsConfigured) {
 			const activeAccounts = new Set(
 				[...this.#roots.values()].filter(({kind}) => kind === 'home').map(({ownerId}) => ownerId),
@@ -808,7 +933,7 @@ export default class FileIndexEngine {
 				if (!activeAccounts.has(accountId)) this.#photos.removeAccount(database, accountId)
 			}
 		}
-		return this.#photos.syncAll(database)
+		return this.#photos.syncAll(database, undefined, trace)
 	}
 
 	async #loadRootState() {
@@ -823,6 +948,11 @@ export default class FileIndexEngine {
 				row.last_successful_scan_at === null ? undefined : Number(row.last_successful_scan_at)
 			registered.lastError = row.last_error ?? undefined
 		}
+	}
+
+	// Whether the models read the library (see FileIndexEnrichment#setModelsEnabled)
+	setModelWork(enabled: boolean) {
+		this.#enrichment.setModelsEnabled(enabled)
 	}
 
 	startBackgroundReconciliation() {
@@ -973,11 +1103,28 @@ export default class FileIndexEngine {
 			root.scanGeneration = generation
 			if (root.kind === 'home' && root.lastSuccessfulScanAt === undefined) this.#notifyPhotosChanged([root.ownerId])
 
+			// An update can renumber the filesystem a root lives on (see fileIdentity).
+			// Rewrite every renumbered entry in one statement, so the walk below finds
+			// them unchanged instead of writing each one back and journaling its size.
+			const rootDevice = (await stat(root.systemPath, {bigint: true}).catch(() => undefined))?.dev.toString()
+			if (rootDevice !== undefined) {
+				const previousDevice = await this.#mutate(
+					(database) => remapRenumberedDevice(database, root.id!, rootDevice),
+					SCAN_DATABASE_PRIORITY,
+				)
+				if (previousDevice !== undefined) {
+					this.logger.log(`Renumbered '${root.virtualPath}' entries from device ${previousDevice} to ${rootDevice}`)
+				}
+			}
+
 			// Root scans are serialized, so this table contains only the current
 			// snapshot. An unqualified delete lets SQLite clear it efficiently after
 			// a failed scan without walking every temporary row.
 			await this.#mutate((database) => run(database, 'DELETE FROM reconciliation_seen'), SCAN_DATABASE_PRIORITY)
 			let batch: EntryWrite[] = []
+			let batchSize = this.#batchSize
+			const minBatchSize = Math.min(MIN_SCAN_BATCH_SIZE, this.#batchSize)
+			let foregroundRequestsSeen = this.#foregroundRequests
 			for await (const entry of this.#walkTree(
 				root.systemPath,
 				() => this.#rootScanCancelled(root),
@@ -988,11 +1135,20 @@ export default class FileIndexEngine {
 				if (!write) continue
 				batch.push(write)
 				indexedEntries++
-				if (batch.length >= this.#batchSize) {
+				if (batch.length >= batchSize) {
+					await this.#yieldToForeground()
 					this.#throwIfRootScanCancelled(root)
-					await this.#writeEntries(batch, SCAN_DATABASE_PRIORITY, true)
+					const writeMs = await this.#writeEntries(batch, SCAN_DATABASE_PRIORITY, true)
+					// Requests that arrived since the last batch, during its rest, this
+					// batch's pause or its write, mean someone is using Files or Photos now
+					const contended = this.#foregroundRequests !== foregroundRequestsSeen
+					foregroundRequestsSeen = this.#foregroundRequests
+					const recentRequest = Date.now() - this.#foregroundActiveUntil < SMALL_BATCHES_AFTER_REQUEST_MS
+					const budgetMs = contended || recentRequest ? SCAN_WRITE_BUDGET_MS : Infinity
+					if (writeMs > budgetMs) batchSize = Math.max(minBatchSize, Math.floor(batchSize / 2))
+					else if (writeMs < budgetMs / 2) batchSize = Math.min(this.#batchSize, batchSize * 2)
 					batch = []
-					await new Promise<void>((resolve) => setImmediate(resolve))
+					await this.#restAfterBackgroundWrite(contended ? writeMs : 0)
 					await this.#drainPendingLiveWork(MAX_LIVE_WORK_PER_SCAN_BATCH)
 				}
 			}
@@ -1015,7 +1171,6 @@ export default class FileIndexEngine {
 			await this.#mutate((database) => {
 				this.#throwIfRootScanCancelled(root)
 				const finishScan = database.transaction(() => {
-					const detached = this.#photosAvailable ? this.#photos.detachUnseen(database, root.id!) : []
 					run(
 						database,
 						`DELETE FROM entries
@@ -1028,7 +1183,7 @@ export default class FileIndexEngine {
 							)`,
 						root.id,
 					)
-					if (this.#photosAvailable) this.#photos.refreshEffectiveTakenAt(database, detached)
+					this.#syncPhotos(database)
 					run(database, 'DELETE FROM reconciliation_seen')
 					run(
 						database,
@@ -1184,14 +1339,13 @@ export default class FileIndexEngine {
 				async () => {
 					for (const {path: systemPath, type} of batch) {
 						if (type === 'delete') await this.#reuseWatcherMove(systemPath, createdPaths, 5)
-						// A newly visible directory may already contain files (for example,
-						// an atomic move into the watched root). Use the existing coalesced
-						// root snapshot rather than maintaining a second subtree crawler.
-						// Directory updates only describe the directory inode; Watchman reports
-						// child changes separately. Re-scanning the whole root for each one
-						// turns modest directory churn into repeated million-entry walks.
-						const directoryReconciliation = type === 'create' ? 'root' : 'entry'
-						await this.#reconcileSystemPath(systemPath, 5, directoryReconciliation).catch((error) => {
+						// A directory event only needs the directory's own entry. Watchman
+						// reports every path beneath a directory that appears, including the
+						// contents of one moved in whole, and every path removed beneath one
+						// that goes. Re-scanning the whole root for each new directory turned
+						// every new folder, such as each photo backup shard, into a
+						// million-entry walk.
+						await this.#reconcileSystemPath(systemPath, 5, 'entry').catch((error) => {
 							this.logger.error(`Failed to update file index for '${systemPath}'`, error)
 						})
 					}
@@ -1229,17 +1383,7 @@ export default class FileIndexEngine {
 			if (!destination) return
 			const preserve = database.transaction(() => {
 				reuseMovedContent(database, root.id!, sourceRelativePath, root.id!, destination.relative_path)
-				if (this.#photosAvailable) {
-					this.#photos.moveItems(
-						database,
-						{accountId: root.ownerId, rootVirtualPath: root.virtualPath, relativePath: sourceRelativePath},
-						{
-							accountId: root.ownerId,
-							rootVirtualPath: root.virtualPath,
-							relativePath: destination.relative_path,
-						},
-					)
-				}
+				this.#syncPhotos(database)
 			})
 			preserve.immediate()
 		}, priority)
@@ -1257,6 +1401,16 @@ export default class FileIndexEngine {
 	async reconcilePath(systemPath: string) {
 		if (!this.#rootForSystemPath(systemPath) || !this.#available) return
 		await this.#schedulePathReconciliation(systemPath, 10, 'root')
+	}
+
+	// A directory the caller has just created was empty at that moment, so its own
+	// entry is all a scan could find. Anything written into it afterwards arrives as
+	// its own watcher event. Like reconcilePath, it indexes nothing in a root that
+	// isn't scanned.
+	async reconcileCreatedDirectory(systemPath: string) {
+		const root = this.#rootForSystemPath(systemPath)
+		if (!root || root.scanEnabled === false || !this.#available) return
+		await this.#schedulePathReconciliation(systemPath, 10, 'entry')
 	}
 
 	async #schedulePathReconciliation(
@@ -1285,7 +1439,19 @@ export default class FileIndexEngine {
 		}, 10)
 	}
 
+	// A move checks the file system and hops between the queues, so stop()
+	// can't see it by draining them and waits for it here instead
 	async movePath(sourceSystemPath: string, destinationSystemPath: string) {
+		const move = this.#movePath(sourceSystemPath, destinationSystemPath)
+		this.#moves.add(move)
+		try {
+			await move
+		} finally {
+			this.#moves.delete(move)
+		}
+	}
+
+	async #movePath(sourceSystemPath: string, destinationSystemPath: string) {
 		if (await this.#moveDirectoryRows(sourceSystemPath, destinationSystemPath)) return
 		// Reconcile the live destination before dropping the stale source path.
 		try {
@@ -1311,21 +1477,7 @@ export default class FileIndexEngine {
 							destinationRoot.id!,
 							destinationRelativePath,
 						)
-						if (this.#photosAvailable) {
-							return this.#photos.moveItems(
-								database,
-								{
-									accountId: sourceRoot.ownerId,
-									rootVirtualPath: sourceRoot.virtualPath,
-									relativePath: sourceRelativePath,
-								},
-								{
-									accountId: destinationRoot.ownerId,
-									rootVirtualPath: destinationRoot.virtualPath,
-									relativePath: destinationRelativePath,
-								},
-							)
-						}
+						this.#syncPhotos(database)
 					})
 					move.immediate()
 				})
@@ -1334,7 +1486,7 @@ export default class FileIndexEngine {
 				// destination's identity before acknowledging a Photos move. Existing
 				// hashes/metadata are reused, or rebuilt if orphan cleanup removed them.
 				if (this.#photosAvailable && supportsPhotos(nodePath.basename(destinationSystemPath))) {
-					const entry = await this.getEntryBySystemPath(destinationSystemPath)
+					const entry = await this.#entryBySystemPath(destinationSystemPath)
 					if (entry?.type === 'file' && !entry.hidden && entry.thumbnailIdentityKind === 'content') {
 						await this.#enrichment.ensureMediaMetadata(entry.id)
 					}
@@ -1399,7 +1551,6 @@ export default class FileIndexEngine {
 						.get(root.id, `${source}/`, `${source}0`, MAX_IN_PLACE_MOVE_ENTRIES + 1) as {entries: number}
 					if (entries > MAX_IN_PLACE_MOVE_ENTRIES) return false
 
-					const detached = this.#photosAvailable ? this.#photos.detachPath(database, root.id!, source) : []
 					this.#applyPathMutation(database, {type: 'delete', rootId: root.id!, relativePath: destination})
 					run(
 						database,
@@ -1433,7 +1584,6 @@ export default class FileIndexEngine {
 						)
 					}
 					this.#applyPathMutation(database, {type: 'write', entries: writes, markSeen})
-					if (detached.length > 0) this.#photos.refreshEffectiveTakenAt(database, detached)
 					return true
 				}, 10)
 			} catch (error) {
@@ -1466,7 +1616,9 @@ export default class FileIndexEngine {
 			try {
 				stats = await lstat(systemPath, {bigint: true})
 			} catch (error) {
-				if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+				// ENOTDIR means a parent is now a file, so the path is gone too
+				const code = (error as NodeJS.ErrnoException).code
+				if (code === 'ENOENT' || code === 'ENOTDIR') {
 					await this.#deleteRelativePath(root, relativePath, priority)
 					return
 				}
@@ -1478,8 +1630,9 @@ export default class FileIndexEngine {
 			}
 
 			if (stats.isDirectory() && directoryReconciliation === 'root') {
-				// A directory event does not tell us which children changed. A full root
-				// scan is the smallest simple operation that can also remove stale rows.
+				// A caller asking for a directory wants its contents indexed without
+				// waiting for watcher events. A full root scan is the smallest simple
+				// operation that can also remove stale rows.
 				return {completion: this.reconcileRoot(root.virtualPath, 'directory-changed')}
 			}
 
@@ -1501,8 +1654,19 @@ export default class FileIndexEngine {
 		const name = nodePath.basename(systemPath)
 		const type = entryType(stats)
 		const identity = fileIdentity(stats)
+		// A photo or video, which Files and Photos show a picture of, is told by
+		// its content where the root is scanned. So is a document or recording
+		// that the models read there, where they are installed.
 		const thumbnailEligible = type === 'file' && supportsThumbnail(name)
-		const thumbnailIdentityKind = thumbnailEligible ? (root.scanEnabled === false ? 'transient' : 'content') : null
+		const read =
+			type === 'file' && root.scanEnabled !== false && embeddingsAvailable() && readableKind(name) !== undefined
+		const thumbnailIdentityKind = thumbnailEligible
+			? root.scanEnabled === false
+				? 'transient'
+				: 'content'
+			: read
+				? 'content'
+				: null
 
 		return {
 			rootId: root.id,
@@ -1517,7 +1681,8 @@ export default class FileIndexEngine {
 			modifiedNs: identity.modifiedNs,
 			ctimeNs: identity.ctimeNs,
 			thumbnailIdentityKind,
-			hashNotBefore: thumbnailIdentityKind === 'content' ? Date.now() + BACKGROUND_QUIET_PERIOD_MS : null,
+			hashNotBefore:
+				thumbnailIdentityKind === 'content' ? hashNotBefore(Number(stats.size), Number(stats.ctimeMs)) : null,
 			observedAt: root.scanEnabled === false ? Date.now() : null,
 			hidden: Number(this.#isHidden(name)),
 		}
@@ -1527,37 +1692,91 @@ export default class FileIndexEngine {
 		return !isReservedMemberTrashPath(root, relativePathWithin(root.systemPath, systemPath))
 	}
 
+	// Returns how long the write transaction took
 	async #writeEntries(entries: EntryWrite[], priority = 0, markSeen = false) {
-		if (entries.length === 0) return
+		if (entries.length === 0) return 0
 		const activeRootId = this.#activeRootSnapshot?.root.id
 		if (activeRootId && entries.every(({rootId}) => rootId === activeRootId)) markSeen = true
-		await this.#mutate((database) => this.#applyPathMutation(database, {type: 'write', entries, markSeen}), priority)
+		let transactionMs = 0
+		await this.#mutate(
+			(database) => this.#applyPathMutation(database, {type: 'write', entries, markSeen}),
+			priority,
+			(milliseconds) => (transactionMs = milliseconds),
+		)
 		this.#enrichment.kick()
+		return transactionMs
+	}
+
+	// Requests from people using Files or Photos mark the index busy for a moment
+	#noteForeground() {
+		this.#foregroundActiveUntil = Date.now() + FOREGROUND_QUIET_MS
+		this.#foregroundRequests++
+	}
+
+	// A long scan, such as one reconciling a renamed folder, rests after a write
+	// that requests overlapped for as long as it took, up to the longest pause.
+	// Requests then find the index free at least half the time: on an Umbrel
+	// Pro, the slowest thumbnail while renaming 51,000 photos was 1.1 s with the
+	// rest and 4.6 s without. Batches nobody overlapped carry straight on.
+	async #restAfterBackgroundWrite(restMs: number) {
+		if (restMs < 1) return new Promise<void>((resolve) => setImmediate(resolve))
+		await this.#sleepUnlessStopping(Math.min(restMs, MAX_FOREGROUND_PAUSE_MS))
+	}
+
+	// Background writes wait for a quiet moment between requests, up to a limit
+	async #yieldToForeground() {
+		const deadline = Date.now() + MAX_FOREGROUND_PAUSE_MS
+		while (!this.#stopping && Date.now() < Math.min(this.#foregroundActiveUntil, deadline)) {
+			await this.#sleepUnlessStopping(Math.min(this.#foregroundActiveUntil, deadline) - Date.now())
+		}
+	}
+
+	// Waits that stop() cuts short, so shutting down doesn't wait out a pause
+	#sleepUnlessStopping(milliseconds: number) {
+		return new Promise<void>((resolve) => {
+			if (this.#stopping) return resolve()
+			const wake = () => {
+				clearTimeout(timer)
+				this.#wakeOnStop.delete(wake)
+				resolve()
+			}
+			const timer = setTimeout(wake, milliseconds)
+			this.#wakeOnStop.add(wake)
+		})
 	}
 
 	async #deleteRelativePath(root: RootState, relativePath: string, priority: number) {
 		const rootId = root.id
 		if (!rootId) return
-		await this.#mutate(
-			(database) => this.#applyPathMutation(database, {type: 'delete', rootId, relativePath}),
-			priority,
-		)
+		const deleted = await this.#mutate((database) => {
+			// Nothing is indexed at or beneath most deleted paths the watcher reports,
+			// such as temporary files created and removed between batches. Skip them
+			// so they don't make Photos clients refetch.
+			// Two lookups, since SQLite can't use the path index for an OR of both
+			if (
+				relativePath !== '' &&
+				!database.prepare('SELECT 1 FROM entries WHERE root_id = ? AND relative_path = ?').get(rootId, relativePath) &&
+				!database
+					.prepare('SELECT 1 FROM entries WHERE root_id = ? AND relative_path >= ? AND relative_path < ? LIMIT 1')
+					.get(rootId, `${relativePath}/`, `${relativePath}0`)
+			) {
+				return false
+			}
+			this.#applyPathMutation(database, {type: 'delete', rootId, relativePath})
+			return true
+		}, priority)
+		if (!deleted) return
 		if (isPhotosRootKind(root.kind)) this.#notifyPhotosChanged([root.ownerId])
 		this.#enrichment.kick()
 	}
 
 	#applyPathMutation(database: Database, mutation: PathMutation) {
-		const photosChangedAccountIds = new Set<string>()
 		// #mutate owns the transaction, including size maintenance.
 		const apply = (mutation: PathMutation) => {
 			if (mutation.type === 'delete') {
-				const detached = this.#photosAvailable
-					? this.#photos.detachPath(database, mutation.rootId, mutation.relativePath)
-					: []
 				if (mutation.relativePath === '') {
 					run(database, 'DELETE FROM entries WHERE root_id = ?', mutation.rootId)
 					run(database, 'DELETE FROM reconciliation_seen WHERE root_id = ?', mutation.rootId)
-					if (this.#photosAvailable) this.#photos.refreshEffectiveTakenAt(database, detached)
 					return
 				}
 				// SQLite's default binary ordering places every `path/...`
@@ -1593,7 +1812,6 @@ export default class FileIndexEngine {
 					prefix,
 					prefixEnd,
 				)
-				if (this.#photosAvailable) this.#photos.refreshEffectiveTakenAt(database, detached)
 				return
 			}
 
@@ -1706,41 +1924,11 @@ export default class FileIndexEngine {
 						ON CONFLICT(root_id, relative_path) DO NOTHING
 					`)
 				: undefined
-			const previousPhotoEntries = new Map<number, Map<string, PhotoEntrySnapshot>>()
-			if (this.#photosAvailable) {
-				const pathsByRoot = new Map<number, Set<string>>()
-				for (const {rootId, relativePath} of mutation.entries) {
-					const paths = pathsByRoot.get(rootId) ?? new Set<string>()
-					paths.add(relativePath)
-					pathsByRoot.set(rootId, paths)
-				}
-				for (const [rootId, paths] of pathsByRoot) {
-					const rows = database
-						.prepare(
-							`SELECT entries.relative_path, entries.name, entries.type, entries.size,
-								entries.modified_ms, entries.birthtime_ms, entries.device, entries.inode,
-								entries.modified_ns, entries.thumbnail_identity_kind, entries.hidden
-							FROM entries
-							JOIN index_roots ON index_roots.id = entries.root_id
-							WHERE entries.root_id = ?
-								AND entries.relative_path IN (${[...paths].map(() => '?').join(', ')})
-								AND entries.content_id IS NOT NULL
-								AND index_roots.kind IN ('home', 'trash')`,
-						)
-						.all(rootId, ...paths) as PhotoEntrySnapshot[]
-					previousPhotoEntries.set(rootId, new Map(rows.map((row) => [row.relative_path, row])))
-				}
-			}
-
+			const reuseRenamedContentStatement = database.prepare(REUSE_RENAMED_CONTENT_SQL)
 			for (const entry of mutation.entries) {
 				markSeenStatement?.run(entry.rootId, entry.relativePath)
-				const previous = previousPhotoEntries.get(entry.rootId)?.get(entry.relativePath)
-				const detached =
-					previous && photoEntrySortInputsChanged(previous, entry)
-						? this.#photos.detachEntry(database, entry.rootId, entry.relativePath)
-						: []
 				const observationCutoff = entry.observedAt === null ? null : entry.observedAt - TRANSIENT_OBSERVATION_REFRESH_MS
-				const result = writeStatement.run(
+				const written = writeStatement.run(
 					entry.rootId,
 					entry.relativePath,
 					entry.name,
@@ -1761,22 +1949,25 @@ export default class FileIndexEngine {
 					observationCutoff,
 					observationCutoff,
 				)
-				if (result.changes > 0 && this.#photosAvailable) {
-					if (this.#photos.syncEntry(database, entry)) {
-						const owner = database.prepare('SELECT owner_id FROM index_roots WHERE id = ?').get(entry.rootId) as
-							| {owner_id: string}
-							| undefined
-						if (owner) photosChangedAccountIds.add(owner.owner_id)
-					}
-				}
-				if (detached.length > 0) this.#photos.refreshEffectiveTakenAt(database, detached)
+				if (written.changes > 0 && entry.type === 'file')
+					reuseRenamedContentStatement.run(entry.rootId, entry.relativePath)
 			}
 		}
 		apply(mutation)
-		this.#notifyPhotosChanged(photosChangedAccountIds)
+		this.#syncPhotos(database)
+	}
+
+	// Triggers journal every change to an entry, metadata or durable state that
+	// Photos reads, within the same transaction. Apply them once per mutation:
+	// a batch of changed entries then costs one batched library refresh per
+	// account rather than one per item, however many entries changed and why.
+	#syncPhotos(database: Database) {
+		if (!this.#photosAvailable) return
+		this.#notifyPhotosChanged(this.#photos.syncChangedContents(database))
 	}
 
 	async getEntryByVirtualPath(virtualPath: string): Promise<IndexedEntry | undefined> {
+		this.#noteForeground()
 		const root = this.#rootForVirtualPath(virtualPath)
 		if (!root?.id || !this.#available) return undefined
 		const relativePath = relativeVirtualPath(root.virtualPath, virtualPath)
@@ -1788,6 +1979,13 @@ export default class FileIndexEngine {
 	}
 
 	async getEntryBySystemPath(systemPath: string): Promise<IndexedEntry | undefined> {
+		this.#noteForeground()
+		return this.#entryBySystemPath(systemPath)
+	}
+
+	// The same lookup for index work, Files moves and Photos uploads, which
+	// aren't someone browsing and shouldn't slow scans down
+	async #entryBySystemPath(systemPath: string): Promise<IndexedEntry | undefined> {
 		const root = this.#rootForSystemPath(systemPath)
 		if (!root?.id || !this.#available) return undefined
 		const relativePath = relativePathWithin(root.systemPath, systemPath)
@@ -1799,6 +1997,7 @@ export default class FileIndexEngine {
 	}
 
 	async ensureThumbnail(systemPath: string, variant?: ThumbnailVariant): Promise<ThumbnailReference> {
+		this.#noteForeground()
 		if (!supportsThumbnail(nodePath.basename(systemPath))) throw new Error('Unsupported or missing thumbnail source')
 		const stats = await lstat(systemPath).catch(() => undefined)
 		if (!stats?.isFile()) throw new Error('Unsupported or missing thumbnail source')
@@ -1817,7 +2016,7 @@ export default class FileIndexEngine {
 	) {
 		this.#requirePhotos()
 		await this.reconcilePath(systemPath)
-		const entry = await this.getEntryBySystemPath(systemPath)
+		const entry = await this.#entryBySystemPath(systemPath)
 		if (!entry?.thumbnailEligible || entry.type !== 'file') throw new Error('Uploaded Photos item was not indexed')
 		await this.#enrichment.attachKnownContentHash(entry.id, hash, expectedRevision)
 		return this.#mutate((database) => {
@@ -1857,7 +2056,7 @@ export default class FileIndexEngine {
 	) {
 		this.#requirePhotos()
 		await this.reconcilePath(systemPath)
-		const entry = await this.getEntryBySystemPath(systemPath)
+		const entry = await this.#entryBySystemPath(systemPath)
 		if (
 			!entry ||
 			entry.type !== 'file' ||
@@ -2024,6 +2223,7 @@ export default class FileIndexEngine {
 	}
 
 	async getExistingThumbnail(systemPath: string, variant?: ThumbnailVariant): Promise<ThumbnailReference | undefined> {
+		this.#noteForeground()
 		const entry = await this.#currentThumbnailEntry(systemPath)
 		if (!entry) return
 		return this.#enrichment.getExistingThumbnail(entry.id, variant)
@@ -2061,6 +2261,8 @@ export default class FileIndexEngine {
 	}
 
 	async #readPhotos<M extends PhotosReadMethod>(method: M, args: FileIndexReadArgs<M>) {
+		// Indexing progress is also read after each Photos change, so it isn't browsing
+		if (method !== 'indexingState') this.#noteForeground()
 		this.#requirePhotos()
 		const readers = this.#readerPool()
 		for (let attempt = 0; ; attempt++) {
@@ -2096,6 +2298,57 @@ export default class FileIndexEngine {
 		return this.#readPhotos('listItems', [accountId, filter, cursor, limit])
 	}
 
+	// Search's questions of the index (see ../search/search.ts)
+	async photosSearch<R extends SearchRead>(accountId: string, request: R): Promise<SearchReadResult[R['type']]>
+	async photosSearch(accountId: string, request: SearchRead): Promise<SearchReadResult[SearchRead['type']]> {
+		const read = <T extends SearchRead>(asked: T) =>
+			this.#readPhotos('search', [accountId, asked]) as Promise<SearchReadResult[T['type']]>
+		// Places have their names here, where the table of them is loaded (see
+		// places.ts). Which ones an account has photos in is asked at most once
+		// a minute: it is read from its whole library, for every search.
+		if (request.type === 'place') {
+			let known = this.#placesNamed.get(accountId)
+			if (!known || known.until < Date.now()) {
+				known = {named: places().named(await read({type: 'places'})), until: Date.now() + PLACES_KEPT_MS}
+				this.#placesNamed.set(accountId, known)
+			}
+			return placeIn(request.text, known.named)
+		}
+		if (request.type === 'insights') {
+			const {where, ...insights} = await read(request)
+			return {...insights, ...(where ? {place: places().name(where)} : {})}
+		}
+		// How far along the account's files are, as last counted (see COUNTS_KEPT_MS)
+		const counted = <T extends {type: 'status'} | {type: 'progress'}>(asked: T) => {
+			const key = `${asked.type} ${accountId}`
+			let kept = this.#counted.get(key)
+			if (!kept || kept.until < Date.now()) {
+				const started = Date.now()
+				const counting = {counts: read(asked) as Promise<unknown>, until: Infinity}
+				counting.counts.then(
+					() =>
+						(counting.until = Date.now() + Math.max(COUNTS_KEPT_MS, COUNTS_KEPT_FOR_TIMES * (Date.now() - started))),
+					() => (counting.until = 0),
+				)
+				this.#counted.set(key, (kept = counting))
+			}
+			return kept.counts as Promise<SearchReadResult[T['type']]>
+		}
+		if (request.type === 'progress') return counted(request)
+		// Whether the models are waiting for memory, or for room to be fetched
+		// into, is the enrichment's to say
+		if (request.type === 'status') {
+			const status = {
+				...(await counted(request)),
+				...(this.#enrichment.modelsShortOfRoom ? {noRoomForModels: true} : {}),
+			}
+			const waiting = this.#enrichment.modelsWaitingForMemory
+			if (!waiting || status.completed >= status.total) return status
+			return {...status, waitingForMemorySince: waiting.since, ...(waiting.now ? {waitingForMemory: true} : {})}
+		}
+		return read(request)
+	}
+
 	async photosMapPoints(accountId: string, filter: PhotoFilter) {
 		return this.#readPhotos('mapPoints', [accountId, filter])
 	}
@@ -2128,6 +2381,48 @@ export default class FileIndexEngine {
 
 	async photosListAlbums(accountId: string) {
 		return this.#readPhotos('listAlbums', [accountId])
+	}
+
+	async photosListPeople(accountId: string, hidden: boolean) {
+		return this.#readPhotos('listPeople', [accountId, hidden])
+	}
+
+	async photosListPersonSuggestions(accountId: string) {
+		return this.#readPhotos('listPersonSuggestions', [accountId])
+	}
+
+	async photosChangePeople(accountId: string, change: PeopleChange) {
+		return this.#mutate((database) => this.#photos.changePeople(this.#photosDatabase(database), accountId, change))
+	}
+
+	// Gives the faces the models have just found to people, a few contents at
+	// a time: a library being read for the first time finds them by the
+	// thousand, and each batch is one write.
+	#assignFaces(hash?: Buffer) {
+		if (hash) this.#facesToAssign.push(hash)
+		this.#facesAssignment ??= setTimeout(() => {
+			this.#facesAssignment = undefined
+			const hashes = this.#facesToAssign.splice(0)
+			if (!this.#photosAvailable || this.#stopping) return
+			void this.#mutate((database) => {
+				const photos = this.#photosDatabase(database)
+				// With nothing just found, whatever was missed: found while nobody
+				// was told, or in a library the content has only now arrived in
+				const contents = hashes.length > 0 ? hashes : this.#photos.unassignedFaces(photos, FACES_ASSIGNMENT_BATCH)
+				if (contents.length === 0) this.#facesCaughtUp = true
+				return this.#photos.assignFaces(photos, contents)
+			}, BACKGROUND_DATABASE_PRIORITY)
+				.then((accountIds) => {
+					this.#notifyPhotosChanged(accountIds, true)
+					if (!this.#facesCaughtUp) this.#assignFaces()
+				})
+				.catch((error) => {
+					// What was worked out about people on the way was not written down
+					this.#photos.forgetPeople()
+					if (!this.#stopping) this.logger.error('Failed to give faces to people', error)
+				})
+		}, FACES_ASSIGNMENT_DELAY_MS)
+		this.#facesAssignment.unref()
 	}
 
 	async photosCreateAlbum(accountId: string, name: string, ids?: string[]) {
@@ -2233,8 +2528,13 @@ export default class FileIndexEngine {
 	async #currentThumbnailEntry(systemPath: string) {
 		const entry = await this.getEntryBySystemPath(systemPath)
 		if (!entry?.thumbnailEligible || entry.type !== 'file') return
-		const stats = await lstat(systemPath, {bigint: true}).catch(() => undefined)
-		if (!stats?.isFile()) return
+		const stats = await lstat(systemPath, {bigint: true}).catch((error: NodeJS.ErrnoException) => error)
+		// A file moved outside Files, such as with the rest of a renamed folder,
+		// keeps its content's thumbnail until the scan that's moving its row gets
+		// there, instead of every thumbnail in the folder failing for minutes
+		if (stats instanceof Error)
+			return stats.code === 'ENOENT' && entry.thumbnailIdentityKind === 'content' ? entry : undefined
+		if (!stats.isFile()) return
 		const identity = fileIdentity(stats)
 		const revisionChanged =
 			entry.inode !== identity.inode ||
@@ -2260,6 +2560,7 @@ export default class FileIndexEngine {
 		if (!root?.id || !root.searchEnabled || !this.#available) {
 			throw new Error(`File index root '${virtualRoot}' is unavailable`)
 		}
+		this.#noteForeground()
 		const results = await this.#readFiles('searchCandidates', [root, query, maxResults])
 		if (this.#roots.get(root.virtualPath) !== root)
 			throw new Error(`File index root '${virtualRoot}' changed during search`)
@@ -2330,6 +2631,7 @@ export default class FileIndexEngine {
 			if (relativePath && isReservedMemberTrashPath(root, relativePath)) return []
 			return [{virtualPath, rootId: root.id, relativePath}]
 		})
+		this.#noteForeground()
 		const results = await this.#readFiles('directorySizes', [requests])
 		return results.filter(({virtualPath}) => {
 			const root = this.#rootForVirtualPath(virtualPath)
@@ -2406,22 +2708,29 @@ export default class FileIndexEngine {
 			.sort((a, b) => b.virtualPath.length - a.virtualPath.length)[0]
 	}
 
-	async #mutate<T>(operation: (database: Database) => T, priority = 0): Promise<T> {
+	async #mutate<T>(
+		operation: (database: Database) => T,
+		priority = 0,
+		onTransactionDuration?: (milliseconds: number) => void,
+	): Promise<T> {
 		return (await this.#mutationQueue.add(
 			() => {
 				const database = this.#requireDatabase()
+				const startedAt = performance.now()
 				// Entry changes and their folder totals share one commit. Nested
 				// transactions become savepoints; any maintenance failure rolls back
 				// the entries too. WAL readers keep seeing the previous complete state
 				// until commit, so size reads never need to recalculate a subtree.
 				// Callbacks must be synchronous; reader handshakes use the queue directly.
-				return database
+				const result = database
 					.transaction(() => {
 						const result = operation(database)
 						this.#directorySizes?.sync()
 						return result
 					})
 					.immediate()
+				onTransactionDuration?.(performance.now() - startedAt)
+				return result
 			},
 			{priority},
 		)) as T
@@ -2447,10 +2756,22 @@ export default class FileIndexEngine {
 		this.#onAvailabilityChange?.(available)
 	}
 
-	#notifyPhotosChanged(accountIds: Iterable<string>) {
+	#notifyPhotosChanged(accountIds: Iterable<string>, byFaces = false) {
 		if (!this.#photosAvailable || (!this.#onPhotosChange && !this.#onPhotosIndexingProgress) || this.#stopping) return
 		const changedAccountIds = [...new Set(accountIds)]
 		if (changedAccountIds.length === 0) return
+		// A library that changed may have gained something whose faces are
+		// already known: a folder made part of Photos, or a copy of what
+		// someone else has. Nobody is told of those one at a time, so every
+		// library is looked through for them, at most this often.
+		if (!byFaces) {
+			this.#facesSweep ??= setTimeout(() => {
+				this.#facesSweep = undefined
+				this.#facesCaughtUp = false
+				this.#assignFaces()
+			}, FACES_SWEEP_DELAY_MS)
+			this.#facesSweep.unref()
+		}
 
 		if (this.#onPhotosChange) {
 			for (const accountId of changedAccountIds) this.#photosChangedAccountIds.add(accountId)
@@ -2462,34 +2783,43 @@ export default class FileIndexEngine {
 			}, 250)
 		}
 
-		if (this.#onPhotosIndexingProgress) {
-			for (const accountId of changedAccountIds) this.#photosIndexingProgressAccountIds.add(accountId)
-			this.#photosIndexingProgressTimer ??= setTimeout(() => {
-				this.#photosIndexingProgressTimer = undefined
-				const accountIds = [...this.#photosIndexingProgressAccountIds]
-				this.#photosIndexingProgressAccountIds.clear()
-				void Promise.all(
-					accountIds.map(async (accountId) => ({
-						accountId,
-						state: await this.photosIndexingState(accountId),
-					})),
-				)
-					.then((progress) => {
-						if (!this.#stopping) this.#onPhotosIndexingProgress?.(progress)
-					})
-					.catch((error) => this.logger.error('Failed to report Photos indexing progress', error))
-			}, PHOTOS_INDEXING_PROGRESS_INTERVAL_MS)
-		}
+		this.#notifyPhotosIndexingProgress(changedAccountIds)
+	}
+
+	#notifyPhotosIndexingProgress(accountIds: Iterable<string>) {
+		if (!this.#photosAvailable || !this.#onPhotosIndexingProgress || this.#stopping) return
+		for (const accountId of accountIds) this.#photosIndexingProgressAccountIds.add(accountId)
+		if (this.#photosIndexingProgressAccountIds.size === 0) return
+		this.#photosIndexingProgressTimer ??= setTimeout(() => {
+			this.#photosIndexingProgressTimer = undefined
+			const accountIds = [...this.#photosIndexingProgressAccountIds]
+			this.#photosIndexingProgressAccountIds.clear()
+			void Promise.all(
+				accountIds.map(async (accountId) => ({
+					accountId,
+					state: await this.photosIndexingState(accountId),
+				})),
+			)
+				.then((progress) => {
+					if (!this.#stopping) this.#onPhotosIndexingProgress?.(progress)
+				})
+				.catch((error) => this.logger.error('Failed to report Photos indexing progress', error))
+		}, PHOTOS_INDEXING_PROGRESS_INTERVAL_MS)
 	}
 
 	async stop() {
 		if (!this.#started) return
 		this.#stopping = true
+		for (const wake of this.#wakeOnStop) wake()
 		await this.#readers?.stop()
 		this.#readers = undefined
 		if (this.#reconciliationTimer) clearTimeout(this.#reconciliationTimer)
 		if (this.#recoveryTimer) clearTimeout(this.#recoveryTimer)
 		if (this.#photosRecoveryTimer) clearTimeout(this.#photosRecoveryTimer)
+		clearTimeout(this.#facesAssignment)
+		this.#facesAssignment = undefined
+		clearTimeout(this.#facesSweep)
+		this.#facesSweep = undefined
 		if (this.#photosChangeTimer) clearTimeout(this.#photosChangeTimer)
 		if (this.#photosIndexingProgressTimer) clearTimeout(this.#photosIndexingProgressTimer)
 		this.#reconciliationTimer = undefined
@@ -2502,6 +2832,7 @@ export default class FileIndexEngine {
 		await this.#recoveryAttempt
 		await this.#photosRecoveryAttempt
 		await this.#enrichment.stop()
+		await Promise.allSettled(this.#moves)
 		await this.#scanQueue.onIdle()
 		await this.#mutationQueue.onIdle()
 		try {
@@ -2560,6 +2891,10 @@ function reuseMovedContent(
 		)
 }
 
+function elapsedMs(startedAt: number) {
+	return Math.round(performance.now() - startedAt)
+}
+
 function databaseQuarantineReason(error: unknown) {
 	if (error instanceof UnsupportedFileIndexSchemaError) return 'unsupported-schema'
 	const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
@@ -2606,6 +2941,13 @@ function entryType(stats: FileStats): EntryType {
 	return 'file'
 }
 
+// The device and inode together identify a file, because inode numbers are only
+// unique within one filesystem. On local filesystems an inode lasts as long as
+// the file does, but the device number can change between boots. Filesystems
+// without a block device, such as ZFS datasets, are numbered in mount order, and
+// block devices in the order they're detected. An update that mounts one more
+// filesystem earlier, as kernel 7.2 did, renumbers every entry, so a device-only
+// change must stay cheap to apply.
 function fileIdentity(stats: FileStats) {
 	if (isBigIntStats(stats)) {
 		return {
@@ -2630,21 +2972,6 @@ function fileIdentity(stats: FileStats) {
 
 function isBigIntStats(stats: FileStats): stats is BigIntStats {
 	return typeof stats.size === 'bigint'
-}
-
-function photoEntrySortInputsChanged(previous: PhotoEntrySnapshot, next: EntryWrite) {
-	return (
-		previous.name !== next.name ||
-		previous.type !== next.type ||
-		Number(previous.size) !== next.size ||
-		Number(previous.modified_ms) !== next.modifiedMs ||
-		(previous.birthtime_ms === null ? null : Number(previous.birthtime_ms)) !== next.birthtimeMs ||
-		previous.device !== next.device ||
-		previous.inode !== next.inode ||
-		previous.modified_ns !== next.modifiedNs ||
-		previous.thumbnail_identity_kind !== next.thumbnailIdentityKind ||
-		Number(previous.hidden) !== next.hidden
-	)
 }
 
 function entrySelectSql() {
@@ -2674,10 +3001,34 @@ function indexedEntry(row: EntryRow): IndexedEntry {
 		modifiedNs: row.modified_ns,
 		ctimeNs: row.ctime_ns,
 		thumbnailIdentityKind: row.thumbnail_identity_kind,
-		thumbnailEligible: Number(row.thumbnail_identity_kind !== null),
+		thumbnailEligible: Number(row.thumbnail_identity_kind !== null && supportsThumbnail(row.name)),
 		observedAt: row.observed_at === null ? undefined : Number(row.observed_at),
 		hidden: Boolean(row.hidden),
 	}
+}
+
+// Returns the device number the root's entries were moved from, if they were.
+function remapRenumberedDevice(database: Database, rootId: number, rootDevice: string) {
+	// The usual case: the root's filesystem kept its number. The index makes this
+	// lookup and the count below cheap.
+	if (database.prepare('SELECT 1 FROM entries WHERE root_id = ? AND device = ? LIMIT 1').get(rootId, rootDevice)) {
+		return
+	}
+	// The number most entries recorded is the root filesystem's previous one.
+	// Filesystems mounted inside the root keep their own entries. A wrong guess,
+	// such as a root holding only a mount, costs a wasted rewrite: the walk still
+	// compares every entry with lstat and writes back any device that differs.
+	const previous = database
+		.prepare(
+			`SELECT device FROM entries WHERE root_id = ? AND device != ''
+			GROUP BY device ORDER BY COUNT(*) DESC LIMIT 1`,
+		)
+		.get(rootId) as {device: string} | undefined
+	if (!previous) return
+	// Folder sizes journal every rewritten file, and a journal this large makes
+	// them rebuild the root once instead of applying each file.
+	run(database, 'UPDATE entries SET device = ? WHERE root_id = ? AND device = ?', rootDevice, rootId, previous.device)
+	return previous.device
 }
 
 function run(database: Database, sql: string, ...parameters: unknown[]) {

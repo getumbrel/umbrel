@@ -17,7 +17,7 @@ android {
 		targetSdk = 36
 		// versionCode is the build number (CURRENT_PROJECT_VERSION on Apple); versionName is
 		// the marketing version. Increment versionCode for every Play upload.
-		versionCode = 4
+		versionCode = 8
 		versionName = "0.1"
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 	}
@@ -99,6 +99,7 @@ dependencies {
 	implementation(libs.compose.ui.graphics)
 	implementation(libs.compose.foundation)
 	implementation(libs.compose.material3)
+	implementation(libs.compose.material3.adaptive)
 	implementation(libs.compose.ui.tooling.preview)
 	debugImplementation(libs.compose.ui.tooling)
 	debugImplementation(libs.compose.ui.test.manifest)

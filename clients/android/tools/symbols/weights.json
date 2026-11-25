@@ -121,9 +121,6 @@
  "South": [
   600
  ],
- "InfoI": [
-  500
- ],
  "Schedule": [
   400,
   600
@@ -180,5 +177,24 @@
  ],
  "Smartphone": [
   500
+ ],
+ "Info": [
+  500
+ ],
+ "InfoFilled": [
+  500
+ ],
+ "Error": [
+  600
+ ],
+ "ErrorOutline": [
+  400
+ ],
+ "Warning": [
+  400,
+  600
+ ],
+ "Draft": [
+  400
  ]
 }

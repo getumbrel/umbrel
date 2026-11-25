@@ -320,7 +320,8 @@ export default function CreateMachine() {
 							<span className='-mt-2 text-12 -tracking-2 text-destructive2-lightest'>{t('machines.name-taken')}</span>
 						)}
 						<span className='-mt-3 text-13 -tracking-2 text-white/40'>{sourceVersion}</span>
-						<span className='mt-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-12 -tracking-2 text-white/50 tabular-nums'>
+						{/* A pill on one line, and a rounded box rather than a lozenge if it wraps */}
+						<span className='mt-2 rounded-[1.25em] border border-white/10 bg-white/5 px-3 py-1.5 text-center text-12 -tracking-2 text-balance text-white/50 tabular-nums'>
 							{t('machines.cores-count', {count: effectiveCores})} ·{' '}
 							{t('machines.gb', {value: fixedMemoryGb ?? memoryGb})} ·{' '}
 							{diskSizeValid ? t('machines.gb', {value: diskSizeGb}) : '—'}
@@ -399,7 +400,8 @@ export default function CreateMachine() {
 							<div className='flex flex-col items-end gap-1.5'>
 								<Stepper
 									middle={
-										<div className='relative w-24'>
+										// Sized in em, so the digits keep their room as the text grows
+										<div className='relative w-[6.4em] text-15'>
 											{/* The digits-only handler lets us avoid native number-input spinners. */}
 											<Input
 												type='text'
@@ -411,7 +413,7 @@ export default function CreateMachine() {
 												aria-label={t('machines.disk-size')}
 												aria-invalid={diskInvalid || undefined}
 												aria-describedby={diskInvalid ? diskMinimumErrorId : undefined}
-												className='pr-9 text-right text-white tabular-nums'
+												className='pr-[2.4em] text-right text-white tabular-nums'
 											/>
 											<span className='pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-13 text-white'>
 												GB
@@ -496,7 +498,7 @@ export default function CreateMachine() {
 													>
 														<p className='px-1 pt-2 text-center text-12 leading-snug font-medium -tracking-2'>
 															<FaLock className='mr-1.5 inline-block size-[11px] align-[-0.1em] text-white/40' />
-															<span className='animate-text-shine bg-[linear-gradient(90deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.45)_40%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.45)_60%,rgba(255,255,255,0.45)_100%)] bg-[length:300%_100%] bg-clip-text bg-no-repeat text-transparent'>
+															<span className='animate-text-shine bg-[linear-gradient(90deg,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.45)_40%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.45)_60%,rgba(255,255,255,0.45)_100%)] bg-[length:300%_100%] bg-clip-text bg-no-repeat text-transparent contrast-more:animate-none contrast-more:bg-none contrast-more:text-white/85'>
 																{t('machines.configure-sign-in-save-note', {name: trimmedName || sourceName})}
 															</span>
 														</p>
@@ -545,8 +547,8 @@ export default function CreateMachine() {
 						<MachineNetworkModeRow value={networkMode} onChange={setNetworkMode} disabled={isCreating} />
 						{/* Custom images may target either supported guest architecture */}
 						{isCustomSource && (
-							<SpecRow label={t('machines.architecture')}>
-								<div className='flex flex-col items-end gap-2'>
+							<SpecRow label={t('machines.architecture')} wide>
+								<div className='flex flex-col items-start gap-2 @[30rem]:items-end'>
 									<div className='flex gap-2'>
 										{(['amd64', 'arm64'] as const).map((option) => (
 											<button
@@ -554,6 +556,7 @@ export default function CreateMachine() {
 												type='button'
 												disabled={isCreating}
 												onClick={() => setArch(option)}
+												aria-pressed={selectedArch === option}
 												className={machineSegmentButtonClass(selectedArch === option)}
 											>
 												{option === 'amd64' ? 'AMD64' : 'ARM64'}
@@ -577,6 +580,7 @@ export default function CreateMachine() {
 								type='button'
 								className='flex h-12 w-full items-center justify-between px-4 text-13 font-medium text-white/70 transition-colors hover:bg-white/5'
 								onClick={() => setAdvancedOpen((open) => !open)}
+								aria-expanded={advancedOpen}
 								disabled={isCreating}
 							>
 								{t('machines.advanced')}
@@ -623,6 +627,7 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'bios')}
 													onClick={() => setFirmware(option)}
+													aria-pressed={(selectedArch === 'arm64' ? 'uefi' : firmware) === option}
 													className={machineSegmentButtonClass(
 														(selectedArch === 'arm64' ? 'uefi' : firmware) === option,
 													)}
@@ -642,6 +647,7 @@ export default function CreateMachine() {
 													type='button'
 													disabled={isCreating || (selectedArch === 'arm64' && option === 'sata')}
 													onClick={() => setDiskBus(option)}
+													aria-pressed={(selectedArch === 'arm64' ? 'virtio' : diskBus) === option}
 													className={machineSegmentButtonClass(
 														(selectedArch === 'arm64' ? 'virtio' : diskBus) === option,
 													)}
@@ -690,14 +696,14 @@ export default function CreateMachine() {
 				initial={{opacity: 0}}
 				animate={{opacity: 1}}
 				transition={{delay: 0.2, duration: 0.35, ease: 'easeOut'}}
-				className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 sm:flex-row sm:items-center'
+				className='flex flex-col items-stretch justify-between gap-4 border-t border-white/6 pt-6 md:flex-row md:items-center'
 			>
-				<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-sm:hidden'}`}>
+				<span className={`text-13 -tracking-2 text-white/35 ${requiresCredentials ? '' : 'invisible max-md:hidden'}`}>
 					{t('machines.configure-installs-itself', {os: sourceName})}
 				</span>
-				{/* Stacked with the primary on top below sm (dialog-size buttons are
-				    full-width there), a Cancel→Create row from sm up */}
-				<div className='flex shrink-0 flex-col-reverse gap-2.5 sm:flex-row sm:items-center'>
+				{/* Stacked with the primary on top below md (dialog-size buttons are
+				    full-width there), a Cancel→Create row from md up */}
+				<div className='flex shrink-0 flex-col-reverse gap-2.5 md:flex-row md:items-center'>
 					<Button size='dialog' onClick={() => navigate(MACHINES_ADD_PATH)} disabled={isCreating}>
 						{t('cancel')}
 					</Button>

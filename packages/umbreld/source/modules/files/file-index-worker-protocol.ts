@@ -21,6 +21,7 @@ export type FileIndexRequestMethod =
 	| 'reconcileAll'
 	| 'reconcileRoot'
 	| 'reconcilePath'
+	| 'reconcileCreatedDirectory'
 	| 'removePath'
 	| 'movePath'
 	| 'createUmbrelDatabaseBackup'
@@ -51,6 +52,10 @@ export type FileIndexRequestMethod =
 	| 'photosResolveItemFiles'
 	| 'photosResolveLiveCompanion'
 	| 'photosListAlbums'
+	| 'photosListPeople'
+	| 'photosListPersonSuggestions'
+	| 'photosChangePeople'
+	| 'photosSearch'
 	| 'photosCreateAlbum'
 	| 'photosRenameAlbum'
 	| 'photosSetAlbumCover'
@@ -71,6 +76,7 @@ export type FileIndexNotificationMethod =
 	| 'noteWatcherChanges'
 	| 'noteWatcherBurst'
 	| 'startBackgroundReconciliation'
+	| 'setModelWork'
 	| 'scheduleFullReconciliation'
 
 export type FileIndexWorkerRequest = {

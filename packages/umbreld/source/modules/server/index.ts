@@ -26,10 +26,12 @@ import createAppAuthRouter from './app-auth.ts'
 import {authorizeHttpRequest} from '../auth/http-request.ts'
 import {getSystemDiskUsage} from '../system/system.ts'
 import UploadDiskPreflight from './upload-disk-preflight.ts'
+import {uiStaticOptions} from './cache-control.ts'
 import createErrorHandler from './error-handler.ts'
 
 import fileApi from '../files/api.ts'
 import photosApi from '../photos/api.ts'
+import searchApi from '../search/api.ts'
 import accountAvatarApi from '../user/avatar-api.ts'
 
 // Keep known-size internal uploads from collectively consuming the platform's
@@ -127,6 +129,8 @@ class Server {
 					// Also allow blob: URLs for images being uploaded in Files (since their thumbnails don't exist yet)
 					// and data: URLs for browser-rendered VM cursor images from noVNC.
 					imgSrc: ['*', 'blob:', 'data:'],
+					// Allow blob: URLs for videos Files plays from memory (a video inside a ZIP archive)
+					mediaSrc: ["'self'", 'blob:'],
 					// Allow fetching data from our apps API (e.g., for Discover page in App Store)
 					connectSrc: ["'self'", 'https://apps.umbrel.com'],
 					// Allow plain text access over the local network
@@ -247,6 +251,7 @@ class Server {
 		// Photos serves account-scoped thumbnails, originals, downloads and uploads
 		// over Files' authorization, enrichment and streaming primitives.
 		this.app.use('/api/photos', photosApi(this.umbreld, this.uploadDiskPreflight))
+		this.app.use('/api/search', searchApi(this.umbreld))
 		// Account avatars use raw request streams for writes and public,
 		// content-addressed reads for the pre-login account picker.
 		this.app.use('/api/accounts', accountAvatarApi(this.umbreld))
@@ -319,21 +324,14 @@ class Server {
 			const currentDirname = dirname(currentFilename)
 			const uiPath = join(currentDirname, '../../../ui')
 
-			// Built assets include a hash of the contents in the filename and
-			// wallpapers do not ever change, so we can cache these aggressively
-			const cacheAggressively: express.RequestHandler = (_, response, next) => {
-				const approximatelyOneYearInSeconds = 365 * 24 * 60 * 60 // RFC 2616, 14.21
-				response.set('Cache-Control', `public, max-age=${approximatelyOneYearInSeconds}, immutable`)
-				next()
-			}
-			this.app.get('/assets/*', cacheAggressively)
-			this.app.get('/wallpapers/*', cacheAggressively)
-
-			// Other files without a hash in their filename should revalidate based on
-			// ETag and Last-Modified instead to force the browser to automatically
-			// refresh their contents after an OTA update for example.
-			const staticOptions = {cacheControl: true, etag: true, lastModified: true, maxAge: 0}
+			const staticOptions = uiStaticOptions(uiPath)
 			this.app.use('/', express.static(uiPath, staticOptions))
+
+			// A missing asset is an error, not a page: answering with the dashboard would
+			// hand an image or script request a 200 with the wrong content
+			this.app.get('/assets/*', (_request, response) => {
+				response.status(404).set('Cache-Control', 'no-store').end()
+			})
 
 			// SPA fallback: serve index.html for all unmatched routes
 			this.app.get('*', (request, response) => {

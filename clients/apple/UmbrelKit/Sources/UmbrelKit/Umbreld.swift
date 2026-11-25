@@ -115,6 +115,35 @@ public enum Umbreld {
 	public struct Wallpaper: Decodable, Sendable, Equatable {
 		public let id: String
 		public let brandColorHsl: String
+		// A hash of the wallpaper's files, sent by umbrelOS releases that version them.
+		// It changes when the files do, so caches key on it.
+		public let hash: String?
+
+		public init(id: String, brandColorHsl: String, hash: String? = nil) {
+			self.id = id
+			self.brandColorHsl = brandColorHsl
+			self.hash = Self.validHash(hash)
+		}
+
+		public init(from decoder: Decoder) throws {
+			let container = try decoder.container(keyedBy: CodingKeys.self)
+			id = try container.decode(String.self, forKey: .id)
+			brandColorHsl = try container.decode(String.self, forKey: .brandColorHsl)
+			hash = Self.validHash(try? container.decodeIfPresent(String.self, forKey: .hash))
+		}
+
+		private enum CodingKeys: String, CodingKey {
+			case id, brandColorHsl, hash
+		}
+
+		// The hash comes from the Umbrel and ends up in cache filenames, so anything but
+		// short lowercase hex is treated as absent.
+		public static func validHash(_ value: String?) -> String? {
+			guard let value, (8...64).contains(value.count),
+				value.allSatisfy({ ("0"..."9").contains($0) || ("a"..."f").contains($0) })
+			else { return nil }
+			return value
+		}
 	}
 
 	public enum WallpaperImageRendition: Sendable {
@@ -146,8 +175,7 @@ public enum Umbreld {
 		public var id: String { userId }
 	}
 
-	// Browser probes carry no credentials and never follow redirects. A candidate must
-	// answer as the saved Umbrel itself before Safari is allowed to open it.
+	// Browser probes carry no credentials and never follow redirects.
 	private static let browserProbeSession: URLSession = {
 		let config = URLSessionConfiguration.ephemeral
 		config.timeoutIntervalForRequest = 10
@@ -681,6 +709,10 @@ public enum Umbreld {
 			?? acceptedCandidate.id.flatMap { knownDeviceIds.contains($0) ? $0 : nil }
 		var attemptedHosts = Set<String>()
 		for host in [acceptedCandidate.host] + acceptedCandidate.addresses where attemptedHosts.insert(host).inserted {
+			// Only a literal IPv4 address or .local name is ever probed, so a candidate
+			// can't aim the plaintext bootstrap at an internet name or splice extra URL
+			// syntax into the request.
+			guard SavedDevice.isValidLocalEndpointHost(host) else { continue }
 			guard !Task.isCancelled else { return nil }
 			guard var verified = await probe(host, hintedDeviceId) else { continue }
 			var identity = verified.discoveryInfo
@@ -709,14 +741,23 @@ public enum Umbreld {
 		return nil
 	}
 
-	// Bonjour is an unauthenticated source of local connection candidates. Never let
-	// it introduce a Tailscale-range endpoint; those come only from the authenticated
+	// Bonjour is an unauthenticated source of local connection candidates: any device on
+	// the network can advertise any target and any addresses. Accept only .local names
+	// and literal addresses in the ranges a local network uses, so a host that discovery
+	// adds only works for someone on the same network. That matters because a saved host
+	// is also handed to the browser and to Finder mounts, where the pin doesn't apply. A
+	// Tailscale-range endpoint is refused too; those come only from the authenticated
 	// system.getIpAddresses response after sign-in.
 	static func localDiscoveryCandidate(_ candidate: Candidate) -> Candidate? {
-		guard !SavedDevice.isTailscaleAddress(candidate.host) else { return nil }
+		guard isLocalDiscoveryHost(candidate.host) else { return nil }
 		var candidate = candidate
-		candidate.addresses.removeAll(where: SavedDevice.isTailscaleAddress)
+		candidate.addresses.removeAll { !isLocalDiscoveryHost($0) }
 		return candidate
+	}
+
+	private static func isLocalDiscoveryHost(_ host: String) -> Bool {
+		SavedDevice.isBonjourHostname(host)
+			|| (SavedDevice.isSupportedManualIPv4Address(host) && !SavedDevice.isTailscaleAddress(host))
 	}
 
 	// Probe a discovery snapshot concurrently and collapse duplicate advertisements
@@ -1491,6 +1532,29 @@ public enum Umbreld {
 		}
 	}
 
+	// A browser session for the in-app browser, made from the app's own sign-in so the
+	// browser never asks for the password. umbrelOS links the two: they show as one login
+	// and end together. Each one replaces the last, and making one also renews access.
+	// Nil when umbrelOS can't make them: an older one ignores the request and only renews.
+	public static func makeBrowserSession(target: Target, session: Session) async throws -> BrowserSession? {
+		// Each refresh replaces the last one's browser session, so a retry is safe too.
+		try await withResolvedHost(for: target, replay: .safe) { host in
+			try await sessionCoordinator.browserSession(host: host, supplied: session)
+		}
+	}
+
+	// The same for a sign-in that isn't stored yet. Its access is renewed, so the session
+	// returned takes the place of the one passed in.
+	public static func makeBrowserSession(
+		target: Target,
+		signingIn session: Session
+	) async throws -> (session: Session, browserSession: BrowserSession?) {
+		let refreshed = try await withResolvedHost(for: target, replay: .safe) { host in
+			try await refreshDirect(host: host, session: session, browserSession: true)
+		}
+		return (refreshed.session, refreshed.browserSession)
+	}
+
 	public static func logout(host: String, session: Session) async throws {
 		let body = try JSONEncoder().encode(EmptyInput())
 		var activeSession = session
@@ -1506,7 +1570,12 @@ public enum Umbreld {
 			// A caller may remove the local Keychain item before this best-effort request.
 			// Refresh from the captured device credential without storing anything, so
 			// delayed cleanup can never overwrite a subsequent sign-in.
-			activeSession = try await refreshSessionDirect(host: host, session: activeSession)
+			do {
+				activeSession = try await refreshSessionDirect(host: host, session: activeSession)
+			} catch let error as Error where error.isAuthError {
+				// Already ended: logging out its browser session ends it too.
+				return
+			}
 			response = try await performRequestRaw(
 				host: host,
 				path: "user.logout",
@@ -1703,6 +1772,127 @@ public enum Umbreld {
 				throw Error(status: 0, message: "Could not reach \(host)", kind: .protocolFailure)
 			}
 		}
+	}
+
+	// What PhotoKit's extension knows at the start of an activation
+	public enum PhotoBackupRouteCheck: Equatable, Sendable {
+		case unproven
+		// The Umbrel answered, but not which of the uploads PhotoKit reports as sent it has
+		case unconfirmed
+		// missing: reported as sent, and the Umbrel doesn't have them
+		case proven(receipts: [PhotoBackupResourceReceipt], missing: Set<String>)
+	}
+
+	// PhotoKit's jobs send plain HTTP to the Umbrel's Tailscale address, and an address
+	// in Tailscale's range doesn't show packets go through Tailscale. So the extension
+	// believes and sends nothing until the Umbrel proves itself there over HTTPS, with the
+	// copy of its pin the app shares (Keychain.sharePhotoBackupCA).
+	public static func photoBackupRouteCheck(
+		host: String,
+		deviceId: String,
+		grant: String,
+		sent: [PhotoBackupResourceClaim]
+	) async -> PhotoBackupRouteCheck {
+		await photoBackupRouteCheck(
+			sent: sent,
+			answers: { await photoBackupUmbrelAnswers(host: host, deviceId: deviceId) },
+			claim: { await claimPhotoBackupResources(host: host, deviceId: deviceId, grant: grant, resources: $0) }
+		)
+	}
+
+	static func photoBackupRouteCheck(
+		sent: [PhotoBackupResourceClaim],
+		answers: () async -> Bool,
+		claim: ([PhotoBackupResourceClaim]) async -> PhotoBackupUpload.ClaimAnswer
+	) async -> PhotoBackupRouteCheck {
+		guard await answers() else { return .unproven }
+		guard !sent.isEmpty else { return .proven(receipts: [], missing: []) }
+		switch await claim(sent) {
+		case .receipts(let receipts):
+			return .proven(
+				receipts: receipts,
+				missing: Set(sent.map(\.resourceKey)).subtracting(receipts.map(\.resourceKey))
+			)
+		case .declined:
+			// umbrelOS before claims can't say which files it has, so PhotoKit's word stands
+			// there. Sending them again would never end.
+			return .proven(receipts: [], missing: [])
+		case .unanswered:
+			return .unconfirmed
+		}
+	}
+
+	static func photoBackupUmbrelAnswers(host: String, deviceId: String) async -> Bool {
+		do {
+			let request = try httpsRequest(
+				host: host,
+				path: "system.localHttpsIdentity",
+				timeout: photoBackupRouteProofTimeout
+			)
+			let (data, response) = try await photoBackupPinnedData(
+				for: request,
+				deviceId: deviceId,
+				maximumBytes: 64 * 1_024
+			)
+			try requireIdentity(deviceId, data: data, response: response)
+			return true
+		} catch {
+			return false
+		}
+	}
+
+	// The extension's claims, over the same pinned connection, so nothing that answers
+	// the plain HTTP address can say the Umbrel already has a file. These checks ignore
+	// the cellular setting: they are small, and say nothing about the network a queued
+	// upload later goes out on.
+	public static func claimPhotoBackupResources(
+		host: String,
+		deviceId: String,
+		grant: String,
+		resources: [PhotoBackupResourceClaim]
+	) async -> PhotoBackupUpload.ClaimAnswer {
+		guard let url = URL(string: "https://\(host)\(PhotoBackupUpload.claimPath)") else { return .unanswered }
+		var receipts = [PhotoBackupResourceReceipt]()
+		for start in stride(from: 0, to: resources.count, by: PhotoBackupUpload.claimsPerRequest) {
+			let batch = Array(resources[start..<min(start + PhotoBackupUpload.claimsPerRequest, resources.count)])
+			guard var request = try? PhotoBackupUpload.claimRequest(url: url, grant: grant, resources: batch) else {
+				return .unanswered
+			}
+			// process() waits for the answer, and PhotoKit gives it about a minute
+			request.timeoutInterval = 15
+			let answer = try? await photoBackupPinnedData(
+				for: request,
+				deviceId: deviceId,
+				// umbreld's largest claim answer is about 30 KiB
+				maximumBytes: 1_024 * 1_024
+			)
+			switch PhotoBackupUpload.claimAnswer(
+				statusCode: (answer?.1 as? HTTPURLResponse)?.statusCode,
+				data: answer?.0 ?? Data(),
+				requested: batch
+			) {
+			case .receipts(let found):
+				receipts += found
+			case let other:
+				return other
+			}
+		}
+		return .receipts(receipts)
+	}
+
+	private static func photoBackupPinnedData(
+		for request: URLRequest,
+		deviceId: String,
+		maximumBytes: Int
+	) async throws -> (Data, URLResponse) {
+		guard case .found(let certificate) = Keychain.readPhotoBackupCA(deviceId: deviceId) else {
+			throw LocalHTTPSTransportError.notEnrolled
+		}
+		return try await LocalHTTPSTransport.data(
+			for: request,
+			anchorCertificate: certificate,
+			maximumBytes: maximumBytes
+		)
 	}
 
 	public static func photoSources(host: String, session: Session) async throws -> [PhotoSourceSummary] {
@@ -2085,10 +2275,12 @@ public enum Umbreld {
 		}
 	}
 
-	// Browser routing has more hostname choices than native transport, but it keeps the
-	// same identity rule: a name or address is usable only when the public identity
-	// endpoint reports the saved device id. No session or other secret is sent here.
-	// Over HTTPS it trusts only the certificates this device trusts, as Safari does.
+	// A reachability test before the browser is sent to a route, not an identity check:
+	// the id is public, so anything on the network can report it. It only keeps the
+	// browser off an address that now belongs to something else, such as another Umbrel.
+	// The browser is outside the app's pin whatever this returns, so nothing secret may
+	// depend on the answer, and no session or other secret is sent here. Over HTTPS it
+	// trusts only the certificates this device trusts, as Safari does.
 	// system.localHttpsIdentity answers over HTTP and HTTPS on every umbrelOS 2.0 and
 	// does no work beyond reading the id, so these short timeouts don't cut off a busy
 	// Umbrel.
@@ -2177,10 +2369,13 @@ public enum Umbreld {
 	struct NativeRefreshInput: Encodable {
 		let deviceToken: String
 		let client: NativeClient
+		// Left out unless asked for, so a plain refresh reads exactly as it always has.
+		let browserSession: Bool?
 
-		init(deviceToken: String, client: NativeClient = .current) {
+		init(deviceToken: String, client: NativeClient = .current, browserSession: Bool = false) {
 			self.deviceToken = deviceToken
 			self.client = client
+			self.browserSession = browserSession ? true : nil
 		}
 	}
 
@@ -2228,6 +2423,13 @@ public enum Umbreld {
 	struct NativeAccessResponse: Decodable {
 		let accessToken: String
 		let accessExpiresAt: Int64
+		// Only when a browser session was asked for, and umbrelOS can make one.
+		let dashboardToken: String?
+	}
+
+	struct NativeRefresh: Sendable {
+		let session: Session
+		let browserSession: BrowserSession?
 	}
 
 	private struct IgnoredResult: Decodable {
@@ -2248,6 +2450,8 @@ public enum Umbreld {
 	// Short timeout for identity probes: sweeps hit several hosts in parallel and
 	// nonexistent .local hostnames should fail fast
 	private static let probeTimeout: TimeInterval = 3
+	// Longer for PhotoKit's extension, which cancels its queued uploads when the check fails
+	private static let photoBackupRouteProofTimeout: TimeInterval = 10
 	// discoveryInfo after the host has proven itself. It reads the hardware, which can
 	// take seconds on a busy umbrelOS 2.0.0.
 	private static let identityResponseTimeout: TimeInterval = 8
@@ -2404,7 +2608,14 @@ public enum Umbreld {
 			}
 		}
 
-		private var refreshTasks: [LoginIdentity: Task<Session, Swift.Error>] = [:]
+		// Every refresh replaces the access credential, so a login has one at a time. One
+		// that made a browser session serves a plain refresh as well.
+		private struct Refresh {
+			let task: Task<NativeRefresh, Swift.Error>
+			let makesBrowserSession: Bool
+		}
+
+		private var refreshes: [LoginIdentity: Refresh] = [:]
 
 		func session(
 			host: String,
@@ -2430,17 +2641,39 @@ public enum Umbreld {
 				throw Umbreld.Error(status: 0, message: "Session storage is temporarily unavailable")
 			}
 
+			return try await refresh(host: host, current: current, makingBrowserSession: false).session
+		}
+
+		func browserSession(host: String, supplied: Session) async throws -> BrowserSession? {
+			let stored = Keychain.readSession(deviceId: supplied.deviceId)
+			guard let current = stored.session, current.belongsToSameLogin(as: supplied) else {
+				throw Umbreld.Error(status: 401, message: "This account is no longer signed in")
+			}
+			if case .unavailable = stored {
+				throw Umbreld.Error(status: 0, message: "Session storage is temporarily unavailable")
+			}
+			return try await refresh(host: host, current: current, makingBrowserSession: true).browserSession
+		}
+
+		private func refresh(host: String, current: Session, makingBrowserSession: Bool) async throws -> NativeRefresh {
 			let identity = LoginIdentity(current)
-			if let refreshTask = refreshTasks[identity] {
-				return try await refreshTask.value
+			if let inFlight = refreshes[identity] {
+				if inFlight.makesBrowserSession || !makingBrowserSession {
+					return try await inFlight.task.value
+				}
+				// A plain refresh can't serve a browser session: let it finish, then ask.
+				_ = try await inFlight.task.value
+				if refreshes[identity]?.task == inFlight.task { refreshes[identity] = nil }
+				return try await refresh(host: host, current: current, makingBrowserSession: true)
 			}
 
 			// Actor methods are reentrant across await. Publish one task before doing
 			// network I/O so concurrent API calls share the same refresh.
-			let refreshTask = Task<Session, Swift.Error> {
+			let task = Task<NativeRefresh, Swift.Error> {
 				do {
-					let refreshed = try await Umbreld.refreshSessionDirect(host: host, session: current)
-					guard Keychain.replaceSession(refreshed, matching: current) else {
+					let refreshed = try await Umbreld.refreshDirect(
+						host: host, session: current, browserSession: makingBrowserSession)
+					guard Keychain.replaceSession(refreshed.session, matching: current) else {
 						throw Umbreld.Error(status: 0, message: "Couldn\u{2019}t save the renewed session")
 					}
 					return refreshed
@@ -2449,9 +2682,9 @@ public enum Umbreld {
 					throw error
 				}
 			}
-			refreshTasks[identity] = refreshTask
-			defer { refreshTasks[identity] = nil }
-			return try await refreshTask.value
+			refreshes[identity] = Refresh(task: task, makesBrowserSession: makingBrowserSession)
+			defer { if refreshes[identity]?.task == task { refreshes[identity] = nil } }
+			return try await task.value
 		}
 	}
 
@@ -2530,23 +2763,43 @@ public enum Umbreld {
 	}
 
 	private static func refreshSessionDirect(host: String, session: Session) async throws -> Session {
-		let body = try JSONEncoder().encode(NativeRefreshInput(deviceToken: session.deviceToken))
+		try await refreshDirect(host: host, session: session).session
+	}
+
+	private static func refreshDirect(
+		host: String,
+		session: Session,
+		browserSession: Bool = false
+	) async throws -> NativeRefresh {
+		let path = "user.refreshNativeAccess"
+		let body = try JSONEncoder().encode(
+			NativeRefreshInput(deviceToken: session.deviceToken, browserSession: browserSession))
 		let (data, response) = try await performRequestRaw(
 			host: host,
-			path: "user.refreshNativeAccess",
+			path: path,
 			method: "POST",
 			deviceId: session.deviceId,
 			accessToken: nil,
 			body: body,
 			timeout: 10)
-		let access: NativeAccessResponse = try decodeEnvelope(
-			data: data, status: response.statusCode, path: "user.refreshNativeAccess")
-		return Session(
-			deviceId: session.deviceId,
-			accountId: session.accountId,
-			accessToken: access.accessToken,
-			accessExpiresAt: access.accessExpiresAt,
-			deviceToken: session.deviceToken)
+		let access: NativeAccessResponse = try decodeEnvelope(data: data, status: response.statusCode, path: path)
+		return NativeRefresh(
+			session: Session(
+				deviceId: session.deviceId,
+				accountId: session.accountId,
+				accessToken: access.accessToken,
+				accessExpiresAt: access.accessExpiresAt,
+				deviceToken: session.deviceToken),
+			// Unreadable, it's treated as never made: the renewed access is still kept.
+			browserSession: access.dashboardToken.flatMap { dashboardToken in
+				try? BrowserSession(
+					issuedBy: response,
+					path: path,
+					deviceId: session.deviceId,
+					accountId: session.accountId,
+					dashboardToken: dashboardToken,
+					linked: true)
+			})
 	}
 
 	private static func requestRaw(

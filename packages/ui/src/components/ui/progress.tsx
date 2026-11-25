@@ -30,7 +30,6 @@ const progressIndicatorVariants = cva('h-full w-full flex-1 bg-white transition-
 
 function Progress({
 	className,
-	trackClassName,
 	value,
 	variant,
 	size,
@@ -40,17 +39,17 @@ function Progress({
 	VariantProps<typeof progressVariants> &
 	VariantProps<typeof progressIndicatorVariants> & {
 		ref?: React.Ref<React.ComponentRef<typeof ProgressPrimitive.Root>>
-		/** Extra classes for the track only (not the filled indicator) */
-		trackClassName?: string
 	}) {
+	// The value reaches the root too, so the bar reports how far along it is
+	// rather than reading as indeterminate. Anything that isn't a number in range
+	// (some callers can pass NaN) is left indeterminate.
+	const ariaValue = typeof value === 'number' && Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : null
+
 	return (
-		<ProgressPrimitive.Root
-			ref={ref}
-			className={cn(progressVariants({className, size}), className, trackClassName)}
-			{...props}
-		>
+		// `className` is the track's alone: on the indicator too, a margin would push the fill out of the track
+		<ProgressPrimitive.Root ref={ref} className={cn(progressVariants({size}), className)} value={ariaValue} {...props}>
 			<ProgressPrimitive.Indicator
-				className={cn(progressIndicatorVariants({variant}), className)}
+				className={progressIndicatorVariants({variant})}
 				style={{transform: `translateX(-${100 - (value || 0)}%)`}}
 			/>
 		</ProgressPrimitive.Root>

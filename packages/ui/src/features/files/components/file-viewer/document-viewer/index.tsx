@@ -12,15 +12,16 @@ import {
 	type DocxErrorCode,
 } from '@/features/files/components/file-viewer/document-viewer/engine'
 import {useDocumentFind} from '@/features/files/components/file-viewer/document-viewer/find'
+import {FormatBar} from '@/features/files/components/file-viewer/document-viewer/format-bar'
 import {
 	useViewerDetail,
 	useViewerEscape,
 	useViewerSave,
 	ViewerTools,
 } from '@/features/files/components/file-viewer/shell/context'
-import {EditHint, nudge} from '@/features/files/components/file-viewer/shell/edit-hint'
+import {nudge} from '@/features/files/components/file-viewer/shell/edit-hint'
 import {FindPill} from '@/features/files/components/file-viewer/shell/find-pill'
-import {pageShortcut, pageTurn} from '@/features/files/components/file-viewer/shell/keys'
+import {isTyping, pageShortcut, pageTurn} from '@/features/files/components/file-viewer/shell/keys'
 import {
 	stageButtonClass,
 	StageDownload,
@@ -39,9 +40,13 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import type {FileSystemItem} from '@/features/files/types'
 import {LightboxButton} from '@/features/photos/components/viewer/lightbox-button'
+import {revealOffset} from '@/hooks/use-stay-above-keyboard'
 import {cn} from '@/lib/utils'
 import {isBeneathModal} from '@/utils/is-beneath-modal'
 
+// What a document may weigh before it's downloaded to be shown: the file is held whole while open, and a phone has
+// far less room for it
+const MAX_BYTES = {desktop: 512 * 2 ** 20, touch: 128 * 2 ** 20}
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 5
 // The space around and between pages on a narrow stage and a wide one (the host's padding follows the same 768px
@@ -52,11 +57,16 @@ type Opened = {doc: DocxDocument} | {error: DocxErrorCode}
 
 type Stage = {width: number; height: number}
 const spaceFor = (stage: Stage) => (stage.width < 768 ? SPACE.narrow : SPACE.wide)
-// The stage as a fit sees it: its width beside the vertical scrollbar's gutter, its height without the sideways
-// scrollbar of pages zoomed past it (a fit takes that away)
+// The stage as a fit sees it
 const stageOf = (scroller: HTMLElement): Stage => ({width: scroller.clientWidth, height: scroller.offsetHeight})
 
 export default function DocumentViewer({item, mode}: ViewerProps) {
+	const isTouch = useIsTouchDevice()
+	if ((item.size ?? 0) > MAX_BYTES[isTouch ? 'touch' : 'desktop']) return <CantOpen item={item} error='limits' />
+	return <DocumentFile item={item} mode={mode} />
+}
+
+function DocumentFile({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
 	const file = useFileBytes(item)
 	const readOnly = useIsFilesReadOnly() || !item.operations.includes('writable')
@@ -142,11 +152,11 @@ function Pages({
 	const protection = writable ? doc.protection : undefined
 	const editable = writable && !protection
 	const touch = useIsTouchDevice()
-	// A phone on its side has no height to spare: the page gets all of it, with no notice or edit hint above it
+	// A phone on its side has no height to spare: the page gets all of it, with no notice above it
 	const short = useShortScreen()
 	const scrollerRef = useRef<HTMLDivElement>(null)
 	const hostRef = useRef<HTMLDivElement>(null)
-	const hintRef = useRef<HTMLParagraphElement>(null)
+	const barRef = useRef<HTMLDivElement>(null)
 	const findInputRef = useRef<HTMLInputElement>(null)
 	const [area, setArea] = useState<HTMLDivElement | null>(null)
 	// The pages as laid out (the engine hands over new ones when edits lay them out again)
@@ -167,7 +177,7 @@ function Pages({
 	const [editing, setEditing] = useState(false)
 	const [dirty, setDirty] = useState(false)
 	const [revision, setRevision] = useState(openedRevision)
-	// Bumped as the text changes, for find to read it again
+	// Bumped as the document changes: find reads its text again, the format bar its formatting and history
 	const [version, setVersion] = useState(0)
 	// The stage size the fit was last worked out for
 	const fitted = useRef<Stage>({width: 0, height: 0})
@@ -178,6 +188,24 @@ function Pages({
 	const painted = pages.length > 0
 	const isEditing = editing && editable
 	const find = useDocumentFind({pages, version, scrollerRef, page: page - 1, shown: [first, last]})
+
+	// Brings the caret back into view where an edit took it elsewhere (typing keeps it in view by itself): clear of the
+	// format bar, and of an on-screen keyboard over the foot of the stage. Selected text with any of it in view stays
+	// where it is: a whole document made bold isn't scrolled to its end.
+	const revealCaret = (caret: DOMRect, anchor: DOMRect) => {
+		const scroller = scrollerRef.current
+		if (!scroller) return
+		const view = scroller.getBoundingClientRect()
+		const shown = window.visualViewport
+		const top = Math.max(barRef.current?.getBoundingClientRect().bottom ?? view.top, shown?.offsetTop ?? 0)
+		const bottom = Math.min(view.top + scroller.clientHeight, shown ? shown.offsetTop + shown.height : Infinity)
+		const selected = anchor !== caret
+		if (selected && Math.min(caret.top, anchor.top) < bottom && Math.max(caret.bottom, anchor.bottom) > top) return
+		scroller.scrollTop += revealOffset(caret, {top, bottom})
+		// Sideways too, for a page zoomed past the stage's width
+		const right = view.left + scroller.clientWidth
+		scroller.scrollLeft += revealOffset({top: caret.left, bottom: caret.right}, {top: view.left, bottom: right})
+	}
 
 	// Laid out once, at the document's own size; then fitted to the stage (and faded in, see the host). Nothing reads
 	// layout in between: a first layout of a long document's pages is costly (in WebKit above all), and the stage's
@@ -202,7 +230,8 @@ function Pages({
 					decorate(pages)
 					setPages(pages)
 				},
-				onRefuse: () => nudge(hintRef.current),
+				onRefuse: () => nudge(barRef.current),
+				onCaret: revealCaret,
 			})
 			.then(
 				({pages}) => {
@@ -374,18 +403,26 @@ function Pages({
 		scrollerRef.current?.focus({preventScroll: true})
 	}
 
-	// ⌘F finds, ⌘+ ⌘− ⌘0 zoom the pages rather than the window, ⌘A selects the document's text (not the viewer's), and
-	// ←/→ turn the page when nothing scrolls sideways
+	// ⌘F finds, ⌘+ ⌘− ⌘0 zoom the pages rather than the window, ⌘A selects the document's text (not the viewer's), ⌘Z
+	// and ⇧⌘Z undo and redo wherever the keyboard is, and ←/→ turn the page when nothing scrolls sideways
 	useEffect(() => {
 		const scroller = scrollerRef.current
 		if (!scroller || !painted) return
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (isBeneathModal(scroller, event)) return
 			if (pageShortcut(event, {find: openFind, zoom: stepZoom, actualSize: () => applyZoom(1)})) return
-			const mod = event.metaKey || event.ctrlKey
-			if (mod && !event.altKey && event.key.toLowerCase() === 'a' && event.target === scroller) {
+			const mod = (event.metaKey || event.ctrlKey) && !event.altKey
+			const key = event.key.toLowerCase()
+			if (mod && key === 'a' && event.target === scroller) {
 				event.preventDefault()
-				document.getSelection()?.selectAllChildren(hostRef.current!)
+				doc.selectAll()
+				return
+			}
+			// The text being edited answers for itself, as does a field with text of its own
+			if (isEditing && mod && (key === 'z' || key === 'y') && !isTyping(event.target)) {
+				event.preventDefault()
+				if (key === 'z' && !event.shiftKey) doc.undo()
+				else doc.redo()
 				return
 			}
 			const turn = pageTurn(event, scroller, mode)
@@ -450,91 +487,106 @@ function Pages({
 				)}
 			</ViewerTools>
 
-			<div className='relative flex min-h-0 flex-1 flex-col'>
-				{/* While editing, the hint floats at the top, as the notice does (in its band, when the document has
-				    one: the notice steps aside meanwhile), unless find has the top. Outside the area, so the band
-				    doesn't open for the hint alone: the pages scroll out from under it. */}
-				{isEditing && !find.open && !short && <EditHint ref={hintRef} />}
-
-				<div ref={setArea} className='group/area relative min-h-0 flex-1'>
+			{/* While a notice is up (anything with role=status in here), the area says how much room it takes, for the
+			    pages below to keep. Said on the area itself and handed down as a variable: a rule of the "any descendant
+			    of an area that has a notice" kind (Tailwind's group-has-*) has Chrome restyle the whole page whenever an
+			    element is added or removed anywhere in umbrelOS, viewer open or not. */}
+			<div
+				ref={setArea}
+				className={cn(
+					'relative min-h-0 flex-1',
+					!short &&
+						'has-[[role=status]]:[--notice-room:calc(5rem_+_4_*_var(--text-boost))] has-[[role=status]]:[--stage-transition:opacity]',
+				)}
+			>
+				<div
+					ref={scrollerRef}
+					tabIndex={-1}
+					role='document'
+					aria-label={item.name}
+					className={cn(
+						'@container absolute inset-0 touch-pan-x touch-pan-y overflow-auto overscroll-contain outline-none',
+						// The browser keeps the caret clear of the format bar as it brings it into view
+						isEditing && 'scroll-pt-16',
+					)}
+				>
+					{/* The engine's pages, centred inside the gutters a fit leaves (a page wider than that starts at the
+					    left one). While the notice is up the first page starts below it, rather than under it: there from
+					    the start (the padding only eases when there is no notice), and easing back up once the notice is
+					    dismissed. The room kept grows with the text, as the notice's lines do. While editing it starts
+					    below the format bar, which has the notice's band where there is one, and otherwise eases the pages
+					    down as it comes in. */}
 					<div
-						ref={scrollerRef}
-						tabIndex={-1}
-						role='document'
-						aria-label={item.name}
-						className='@container absolute inset-0 touch-pan-x touch-pan-y overflow-auto overscroll-contain outline-none [scrollbar-gutter:stable]'
-					>
-						{/* The engine's pages, centred inside the gutters a fit leaves (a page wider than that starts at
-						    the left one). While the notice is up the first page starts below it, rather than under it:
-						    there from the start, and easing back up once the notice is dismissed. */}
-						<div
-							ref={hostRef}
-							className={cn(
-								'px-4 pt-4 pb-14 transition-[opacity,padding] duration-300 ease-out motion-reduce:!transition-none @3xl:px-6 @3xl:pt-6',
-								!short && 'group-has-[[role=status]]/area:!pt-20 group-has-[[role=status]]/area:transition-opacity',
-								!painted && 'opacity-0',
-							)}
-						/>
-						{/* As wide as the widest page with a gutter either side: a page zoomed past the stage's width
-						    scrolls on to a gutter at its far side too (the column alone leaves it flush with the edge) */}
-						<div
-							className='invisible absolute top-0 left-0 box-content h-px px-4 @3xl:px-6'
-							style={{width: widest * scale}}
-						/>
-					</div>
-
-					{failed ? (
-						<div className='absolute inset-0 flex'>
-							<CantOpen item={item} error={failed} />
-						</div>
-					) : (
-						!painted && (
-							<div className='absolute inset-0 flex'>
-								<StageLoading item={item} />
-							</div>
-						)
-					)}
-
-					{painted && (
-						<>
-							{find.open && (
-								<FindPill
-									inputRef={findInputRef}
-									query={find.query}
-									onQuery={find.search}
-									current={find.current}
-									total={find.total}
-									searching={find.searching}
-									onNext={() => find.step(1)}
-									onPrevious={() => find.step(-1)}
-									onClose={closeFind}
-								/>
-							)}
-							{/* Find takes the top of the stage while it's open, and the edit hint while editing (the first
-							    page keeps its place below either way). A phone on its side shows neither the notice nor
-							    the hint: with no height to spare, they'd sit on the page. */}
-							{notice && (
-								<div hidden={find.open || isEditing || short}>
-									<StageNotice>{notice}</StageNotice>
-								</div>
-							)}
-							{/* A quick look is a glance at the pages, with nothing over them */}
-							{mode === 'open' && (
-								<ZoomPill
-									zoom={scale * 100}
-									preset={zoom === 'auto' ? undefined : zoom}
-									onZoomIn={() => stepZoom(1)}
-									onZoomOut={() => stepZoom(-1)}
-									onPreset={applyZoom}
-									page={page}
-									pageCount={pages.length}
-									onPage={goToPage}
-									target={area}
-								/>
-							)}
-						</>
-					)}
+						ref={hostRef}
+						className={cn(
+							'px-4 pb-14 [transition-property:var(--stage-transition,opacity,padding)] duration-300 ease-out motion-reduce:!transition-none @3xl:px-6',
+							isEditing
+								? 'pt-[var(--notice-room,4rem)]'
+								: 'pt-[var(--notice-room,1rem)] @3xl:pt-[var(--notice-room,1.5rem)]',
+							!painted && 'opacity-0',
+						)}
+					/>
+					{/* As wide as the widest page with a gutter either side: a page zoomed past the stage's width scrolls
+					    on to a gutter at its far side too (the column alone leaves it flush with the edge) */}
+					<div
+						className='invisible absolute top-0 left-0 box-content h-px px-4 @3xl:px-6'
+						style={{width: widest * scale}}
+					/>
 				</div>
+
+				{failed ? (
+					<div className='absolute inset-0 flex'>
+						<CantOpen item={item} error={failed} />
+					</div>
+				) : (
+					!painted && (
+						<div className='absolute inset-0 flex'>
+							<StageLoading item={item} />
+						</div>
+					)
+				)}
+
+				{painted && (
+					<>
+						{/* Find takes the top of the stage while it's open: from the notice, and from the format bar, whose
+						    selection is in find's field then (the first page keeps its place below either way). A phone on
+						    its side shows no notice: with no height to spare, it would sit on the page. */}
+						{isEditing && !find.open && <FormatBar ref={barRef} doc={doc} version={version} />}
+						{find.open && (
+							<FindPill
+								inputRef={findInputRef}
+								query={find.query}
+								onQuery={find.search}
+								current={find.current}
+								total={find.total}
+								searching={find.searching}
+								onNext={() => find.step(1)}
+								onPrevious={() => find.step(-1)}
+								onClose={closeFind}
+							/>
+						)}
+						{/* The notice steps aside for the format bar too, which has its place while editing */}
+						{notice && (
+							<div hidden={find.open || isEditing || short}>
+								<StageNotice>{notice}</StageNotice>
+							</div>
+						)}
+						{/* A quick look is a glance at the pages, with nothing over them */}
+						{mode === 'open' && (
+							<ZoomPill
+								zoom={scale * 100}
+								preset={zoom === 'auto' ? undefined : zoom}
+								onZoomIn={() => stepZoom(1)}
+								onZoomOut={() => stepZoom(-1)}
+								onPreset={applyZoom}
+								page={page}
+								pageCount={pages.length}
+								onPage={goToPage}
+								target={area}
+							/>
+						)}
+					</>
+				)}
 			</div>
 		</>
 	)

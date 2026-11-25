@@ -49,7 +49,8 @@ export function signBitcoinMessage(message: string, privateKey: crypto.KeyObject
 
 // An approved signing keys list in schema 1, written out here rather than with umbreld's own formatting so
 // tests notice if that changes
-// A root key handover, which `from` signs to hand the root key over to `to`
+// A root key handover, which `from` signs to hand the root key over to `to`, in the format umbrelOS 2.1.0
+// Beta 1 followed and later releases ignore
 export function createRootKeyHandover({date, from, to}: {date: string; from: RootKey; to: RootKey}) {
 	const message = [
 		'--- umbrelOS Root Key Handover ---',
@@ -61,8 +62,8 @@ export function createRootKeyHandover({date, from, to}: {date: string; from: Roo
 	return `${message}\nRoot-Signature: ${signBitcoinMessage(message, from.privateKey)}\n`
 }
 
-// An approved signing keys list in schema 1 signed by rootKey, ending with the handovers from the first
-// root key to it. It's written out here rather than with umbreld's own formatting so tests notice if
+// An approved signing keys list in schema 1 signed by rootKey, with any root key handovers after it, which
+// devices ignore. It's written out here rather than with umbreld's own formatting so tests notice if
 // that changes.
 export function createSigningKeysList({
 	date,

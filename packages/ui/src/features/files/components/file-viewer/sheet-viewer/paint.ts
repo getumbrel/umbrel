@@ -8,6 +8,7 @@
 // reads right to left (Arabic, Hebrew) is mirrored only as it's drawn, so
 // column A sits at the right and text stays readable.
 
+import {RIGHT_TO_LEFT} from '@/features/files/components/file-viewer/shared/scripts'
 import type {Axis} from '@/features/files/components/file-viewer/sheet-viewer/axis'
 import {columnName} from '@/features/files/components/file-viewer/sheet-viewer/engine/xlsx/package'
 import type {
@@ -62,6 +63,14 @@ const LOOKS: Record<GridSource['look'], Look> = {
 		tint: 0.16,
 	},
 }
+// With Increase contrast a CSV's lines and headers step up, as the app's own whites do. A workbook keeps its colours.
+const DARK_CONTRAST: Look = {
+	...LOOKS.dark,
+	grid: 'rgba(255, 255, 255, 0.25)',
+	frozen: 'rgba(255, 255, 255, 0.4)',
+	headerText: 'rgba(255, 255, 255, 0.7)',
+	headerLine: 'rgba(255, 255, 255, 0.25)',
+}
 
 const MATCH = 'rgba(255, 214, 10, 0.35)'
 const CURRENT_MATCH = 'rgba(255, 149, 0, 0.55)'
@@ -95,6 +104,7 @@ type Marks = {
 	brand: string // the brand colour's hsl() components
 	match: (row: number, col: number) => 0 | 1 | 2 // none, a match, the current match
 	editing?: Cell
+	contrast?: boolean
 }
 
 // A run of lines in view: the frozen ones, or those scrolled into view.
@@ -156,7 +166,7 @@ function visible(axis: Axis, lane: Lane): Line[] {
 }
 
 export function paint(ctx: CanvasRenderingContext2D, view: View, source: GridSource, marks: Marks) {
-	const look = LOOKS[source.look]
+	const look = source.look === 'dark' && marks.contrast ? DARK_CONTRAST : LOOKS[source.look]
 	ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0)
 	ctx.clearRect(0, 0, view.width, view.height)
 	if (look.background) {
@@ -210,15 +220,12 @@ type Appearance = {
 	strike: boolean
 }
 
-// Hebrew, Arabic, Syriac, Thaana and N'Ko, and Hebrew and Arabic presentation forms
-const RTL = /[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufefc]/
-
 // The direction text reads in: as the cell says, or else as its first letter
 // does (Excel's "context" reading order), or else as the sheet does
 function directionOf(text: string | undefined, order: string, sheet: 'ltr' | 'rtl'): 'ltr' | 'rtl' {
 	if (order === 'ltr' || order === 'rtl') return order
 	const letter = text?.match(/\p{L}/u)?.[0]
-	return letter ? (RTL.test(letter) ? 'rtl' : 'ltr') : sheet
+	return letter ? (RIGHT_TO_LEFT.test(letter) ? 'rtl' : 'ltr') : sheet
 }
 
 // How a cell is drawn, and what typing into it looks like

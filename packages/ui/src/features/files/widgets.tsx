@@ -105,7 +105,7 @@ export function FilesListWidget({
 
 			{/* Empty state */}
 			{items?.length === 0 ? (
-				<p className='grid flex-1 place-items-center px-1 pb-4 text-center text-11 opacity-50'>{t(noItemsText)}</p>
+				<p className='grid flex-1 place-items-center px-1 pb-4 text-center text-11 text-white/50'>{t(noItemsText)}</p>
 			) : (
 				(items ?? [undefined, undefined, undefined])
 					.slice(0, 3)
@@ -130,16 +130,30 @@ function SkeletonListItem() {
 	)
 }
 
+// A recent file's row sits inside the widget's own button (which opens Files), so
+// it's a role=button that takes Enter and Space itself rather than a nested <button>
+function rowOpenProps(onOpen: () => void) {
+	return {
+		role: 'button',
+		tabIndex: 0,
+		onClick: (e: React.MouseEvent) => {
+			// The row opens the file, not Files
+			e.stopPropagation()
+			onOpen()
+		},
+		onKeyDown: (e: React.KeyboardEvent) => {
+			if (e.key !== 'Enter' && e.key !== ' ') return
+			e.preventDefault()
+			e.stopPropagation()
+			onOpen()
+		},
+	}
+}
+
 function ListItem({item, onOpen}: {item: FileSystemItem; onOpen: () => void}) {
 	return (
 		<div
-			role='button'
-			tabIndex={0}
-			onClick={(e) => {
-				// The row opens the file, not Files
-				e.stopPropagation()
-				onOpen()
-			}}
+			{...rowOpenProps(onOpen)}
 			className='flex min-w-0 items-center gap-1.5 rounded-lg px-1 py-1 transition-colors hover:bg-white/10 w-expanded:gap-2'
 		>
 			<FileItemIcon item={item} className='size-5 max-w-5 shrink-0 w-expanded:size-7 w-expanded:max-w-7' />
@@ -159,12 +173,7 @@ function CompactRecents({items, onOpen}: {items?: FileSystemItem[]; onOpen: (ite
 				? take(items, 3).map((item) => (
 						<div
 							key={item.path}
-							role='button'
-							tabIndex={0}
-							onClick={(e) => {
-								e.stopPropagation()
-								onOpen(item)
-							}}
+							{...rowOpenProps(() => onOpen(item))}
 							className='flex min-w-0 items-center gap-1 rounded-5 px-0.5 transition-colors hover:bg-white/10'
 						>
 							<FileItemIcon item={item} className='size-4 max-w-4 shrink-0' />
@@ -212,7 +221,7 @@ export function FilesGridWidget({
 		>
 			{/* Empty state */}
 			{gridItems?.length === 0 ? (
-				<p className='grid h-full place-items-center px-1 text-center text-11 opacity-50'>{t(noItemsText)}</p>
+				<p className='grid h-full place-items-center px-1 text-center text-11 text-white/50'>{t(noItemsText)}</p>
 			) : (
 				(gridItems ?? [undefined, undefined, undefined, undefined]).map((item, i) => (
 					<button
@@ -239,7 +248,7 @@ export function FilesGridWidget({
 						<span
 							className={cn(
 								'min-w-0 truncate text-11 leading-tight font-medium text-white/90',
-								count >= 4 && 'max-w-full text-[10px] w-tall:text-11',
+								count >= 4 && 'max-w-full text-10 w-tall:text-11',
 							)}
 							title={item?.name}
 						>
@@ -265,7 +274,7 @@ function CompactFavorites({
 	const {t} = useTranslation()
 	if (paths?.length === 0) {
 		return (
-			<div className={cn(compactContainerClass, 'items-center justify-center text-center text-[10px] opacity-60')}>
+			<div className={cn(compactContainerClass, 'items-center justify-center text-center text-10 text-white/60')}>
 				{t(noItemsText)}
 			</div>
 		)

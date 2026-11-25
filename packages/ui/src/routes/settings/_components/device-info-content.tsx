@@ -115,7 +115,7 @@ export function DeviceInfoContent({
 							<button
 								type='button'
 								aria-label={t('storage-manager')}
-								className='rounded-4 opacity-20 transition-opacity hover:opacity-40 focus:outline-hidden focus-visible:opacity-60'
+								className='rounded-4 opacity-20 transition-opacity hover:opacity-40 focus:outline-hidden focus-visible:opacity-60 contrast-more:opacity-70 contrast-more:hover:opacity-100 contrast-more:focus-visible:opacity-100'
 								onClick={() => navigate('/settings/storage')}
 							>
 								<TbChevronRight className='shrink-0' />
@@ -124,6 +124,17 @@ export function DeviceInfoContent({
 					</div>
 				)}
 			</div>
+			{/* The credits and licences of what umbrelOS is built with: a plain-text
+			    file the build writes (see acknowledgements/plugin.ts). Beneath the
+			    details, in their column when the device sits beside them */}
+			<a
+				href='/acknowledgements.txt'
+				target='_blank'
+				rel='noreferrer'
+				className='mx-auto -mt-2 block w-fit rounded-4 px-1 text-center text-12 font-medium text-white/40 outline-hidden transition-colors hover:text-white/70 focus-visible:text-white/70 focus-visible:ring-2 focus-visible:ring-ring contrast-more:text-white/80 low:col-start-2 low:mt-0'
+			>
+				{t('device-info.acknowledgements')}
+			</a>
 		</div>
 	)
 }
@@ -156,7 +167,7 @@ export function GpuInfoRows({
 					<span key={`${gpu.vendor}-${gpu.model}-${index}`} className='flex flex-col items-end gap-0.5'>
 						<span className='flex min-w-0 items-center gap-1.5 leading-snug'>
 							{visibleGpus.length > 1 && (
-								<span className='shrink-0 rounded-4 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide whitespace-nowrap text-white/50'>
+								<span className='shrink-0 rounded-4 bg-white/10 px-1.5 py-0.5 text-10 font-semibold tracking-wide whitespace-nowrap text-white/50'>
 									{`${label} ${index + 1}`}
 								</span>
 							)}
@@ -175,7 +186,8 @@ export function GpuInfoRows({
 }
 const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6`
 const listItemClass = tw`flex items-center gap-3 px-3 h-[50px] text-15 font-medium -tracking-3 justify-between`
-const listItemClassNarrow = cn(listItemClass, tw`h-[42px]`)
+// Grows when a long label and its value wrap
+const listItemClassNarrow = cn(listItemClass, tw`h-auto min-h-[42px] py-2`)
 
 export const HostEnvironmentIcon = ({
 	environment,

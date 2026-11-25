@@ -823,7 +823,9 @@ export default function UsersDialog() {
 											onClick={() => openEditView(member.userId)}
 										>
 											<AccountAvatar name={member.name} userId={member.userId} avatarUrl={member.avatarUrl} size={32} />
-											<span className='min-w-0 flex-1 truncate text-14 font-medium -tracking-2 text-white/90'>
+											{/* Based on a quarter of the row rather than on nothing, so when the
+											    grants don't fit the name shares the squeeze instead of vanishing */}
+											<span className='min-w-0 grow basis-1/4 truncate text-14 font-medium -tracking-2 text-white/90'>
 												{member.name}
 											</span>
 											{folderCount > 0 && (
@@ -949,7 +951,7 @@ export default function UsersDialog() {
 							<BackButton onClick={returnToList}>{t('users')}</BackButton>
 							{/* The buttons sit beside the name while the whole name fits next to
 							    them; otherwise (a long name, a phone, a longer language) they move
-							    to a row of their own, at its end */}
+							    to a row of their own, at its end, and wrap there if they must */}
 							<div className='flex flex-wrap items-center gap-x-4 gap-y-3 pt-2'>
 								<div className='flex min-w-0 flex-auto items-center gap-4'>
 									<AccountAvatarEditor account={editingMember} size={72} />
@@ -960,7 +962,7 @@ export default function UsersDialog() {
 										</p>
 									</div>
 								</div>
-								<div className='ml-auto flex shrink-0 items-center gap-2'>
+								<div className='ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2'>
 									<Button size='default' className='shrink-0' onClick={() => setIsManagingSessions(true)}>
 										{t('active-logins.title')}
 									</Button>
@@ -1055,7 +1057,9 @@ export default function UsersDialog() {
 					<AlertDialogAction variant='destructive' disabled={isDeleting} onClick={handleDelete}>
 						{t('users.delete')}
 					</AlertDialogAction>
-					<AlertDialogCancel disabled={isDeleting}>{t('cancel')}</AlertDialogCancel>
+					<AlertDialogCancel autoFocus disabled={isDeleting}>
+						{t('cancel')}
+					</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -1228,7 +1232,7 @@ function ShareSection({
 		<section className='flex flex-col gap-2'>
 			<div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
 				<SectionLabel>{copy.title}</SectionLabel>
-				<div className='flex items-center gap-3'>
+				<div className='flex flex-wrap items-center justify-end gap-x-3 gap-y-2'>
 					<ShareAllToggle
 						label={compactShareAllLabel ? copy.compactShareAllLabel : copy.shareAllLabel}
 						tooltip={copy.shareAllTooltip}
@@ -1269,7 +1273,7 @@ function StorageAccessSection({
 	return (
 		<section className='flex flex-col gap-2'>
 			<SectionLabel>{t('users.storage-access')}</SectionLabel>
-			<div className={shareListClass()}>
+			<div className={listClass}>
 				<ShareEveryoneRow
 					className='p-3'
 					title={t('users.usb-storage')}
@@ -1279,7 +1283,7 @@ function StorageAccessSection({
 					onCheckedChange={onExternalStorageChange}
 				/>
 				<ShareEveryoneRow
-					className='border-t border-white/6 p-3'
+					className='p-3'
 					title={t('users.network-storage')}
 					description={t('users.network-storage-description')}
 					checked={networkStorage}
@@ -1305,7 +1309,7 @@ function SambaAccessSection({
 	return (
 		<section className='flex flex-col gap-2'>
 			<SectionLabel>{t('settings.file-sharing')}</SectionLabel>
-			<div className={shareListClass()}>
+			<div className={listClass}>
 				<ShareEveryoneRow
 					className='p-3'
 					title={t('users.samba-access-toggle')}

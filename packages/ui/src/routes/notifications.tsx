@@ -1,6 +1,6 @@
 import {TFunction} from 'i18next'
 import {motion} from 'motion/react'
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {RiErrorWarningFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
@@ -17,10 +17,12 @@ import {
 import {Button} from '@/components/ui/button'
 import {toast} from '@/components/ui/toast'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {getDeviceNameFromPath} from '@/features/backups/utils/backup-location-helpers'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {CloudBreakDiagram} from '@/features/files/components/cloud-break-diagram'
 import {useHomePath} from '@/features/files/hooks/use-home-path'
 import {cloudAccountBrand} from '@/features/files/utils/cloud'
+import {damageNotice} from '@/features/storage/manager/status'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {ONBOARDING_COMPLETE_NOTIFICATION, useNotifications} from '@/hooks/use-notifications'
 import {cn} from '@/lib/utils'
 import {SettingsListIcon} from '@/routes/settings/_components/list-row'
@@ -36,13 +38,18 @@ function NotificationContent({children}: {children: string}) {
 	const contentRef = useRef<HTMLDivElement>(null)
 	const [isExpanded, setIsExpanded] = useState(false)
 	const [showReadMore, setShowReadMore] = useState(false)
+	// Three lines of the description (text-13, leading-tight), which grow with the text size
+	const lineHeight = (13 + useLargerText()) * 1.25
+	const collapsedHeight = lineHeight * 3
 
-	useEffect(() => {
+	// A description a line over is shown whole rather than folded for the
+	// sake of that line: measured before the first paint, so it never opens cut
+	useLayoutEffect(() => {
 		if (!contentRef.current) return
 		const el = contentRef.current
-		const WIGGLE_ROOM = 20
-		setShowReadMore(el.scrollHeight > el.clientHeight + WIGGLE_ROOM)
-	}, [children])
+		// One line of the current size, and a pixel for its rounding
+		setShowReadMore(el.scrollHeight > collapsedHeight + lineHeight + 1)
+	}, [children, collapsedHeight, lineHeight])
 
 	return (
 		<div className='flex flex-col gap-2'>
@@ -50,10 +57,11 @@ function NotificationContent({children}: {children: string}) {
 				ref={contentRef}
 				initial={false}
 				animate={{
-					height: isExpanded ? 'auto' : '3em',
+					height: isExpanded || !showReadMore ? 'auto' : collapsedHeight,
 				}}
 				transition={{
-					duration: 0.4,
+					// Only unfolding is a movement; settling on a height is not
+					duration: isExpanded ? 0.4 : 0,
 					ease: [0.32, 0.72, 0, 1],
 				}}
 				className='overflow-hidden'
@@ -117,6 +125,7 @@ function parseBackupNotificationId(notification: string): {repoId: string | null
 function getBackupFailingContent(
 	notification: string,
 	backupRepositoriesQuery: {data?: Array<{id: string; path: string}>},
+	describeBackupLocation: ReturnType<typeof useDescribeBackupLocation>,
 	onGoToBackups: () => void,
 	onClearNotification: () => void,
 	t: TFunction,
@@ -126,15 +135,16 @@ function getBackupFailingContent(
 	// Find repository details if we have a repo ID
 	const repository = repoId ? backupRepositoriesQuery.data?.find((r) => r.id === repoId) : null
 
-	// Get device name from path if available
-	const deviceName = repository?.path ? getDeviceNameFromPath(repository.path) : null
+	// Name the drive or NAS if we know where the repository is
+	const deviceName = repository?.path ? describeBackupLocation(repository.path).name : null
 
+	// Both buttons are in the Tab order; the primary one takes the initial focus
 	const actionButtons = (
 		<>
-			<Button variant='default' size='dialog' onClick={onClearNotification} tabIndex={-1}>
+			<Button variant='default' size='dialog' onClick={onClearNotification}>
 				{t('ok')}
 			</Button>
-			<AlertDialogAction variant='primary' onClick={onGoToBackups} tabIndex={0}>
+			<AlertDialogAction variant='primary' onClick={onGoToBackups} autoFocus>
 				{t('notifications.backups-failing.go-to-backups')}
 			</AlertDialogAction>
 		</>
@@ -205,6 +215,7 @@ export function Notifications() {
 	const backupRepositoriesQuery = trpcReact.backups.getRepositories.useQuery(undefined, {
 		enabled: hasBackupNotification,
 	})
+	const describeBackupLocation = useDescribeBackupLocation({enabled: hasBackupNotification})
 
 	// Query apps to resolve app names for app storage notifications (only when
 	// needed). This component renders outside AppsProvider so we query directly.
@@ -212,6 +223,15 @@ export function Notifications() {
 	const appsQuery = trpcReact.apps.list.useQuery(undefined, {
 		enabled: hasAppStorageNotification,
 	})
+
+	// What the storage reports of the damage a storage check left behind (only when umbreld has
+	// raised it), so the notification says what Storage Manager says
+	const hasScrubNotification = notifications.includes('raid-scrub-errors')
+	const raidStatusQuery = trpcReact.hardware.raid.getStatus.useQuery(undefined, {enabled: hasScrubNotification})
+	const scrubErrors = Math.max(
+		raidStatusQuery.data?.dataErrors ?? 0,
+		raidStatusQuery.data?.scrub?.state === 'finished' ? raidStatusQuery.data.scrub.errors : 0,
+	)
 
 	// Query cloud accounts (only when a cloud auth notification is present)
 	const hasCloudNotification = notifications.some((n) => n.startsWith('cloud-auth:'))
@@ -292,8 +312,11 @@ export function Notifications() {
 				clearNotification(notification)
 				navigate('/settings/storage')
 			}
+			// The count is what the storage reports now. Without one, the notification still says
+			// what umbreld raised it for.
+			const damage = scrubErrors > 0 ? damageNotice(t, scrubErrors) : undefined
 			return {
-				title: t('notifications.raid.issue.title'),
+				title: damage?.title ?? t('notifications.raid.issue.title'),
 				icon: (
 					<div className='relative'>
 						<SettingsListIcon
@@ -304,14 +327,58 @@ export function Notifications() {
 						<RiErrorWarningFill className='absolute -top-2 -right-2 size-8 text-[#FF3434] drop-shadow-[0_2px_3px_rgba(0,0,0,0.55)]' />
 					</div>
 				),
-				description: t('notifications.raid.issue.description'),
+				description: damage?.body ?? t('notifications.raid.issue.description'),
 				action: (
 					<>
-						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)} tabIndex={-1}>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
 							{t('notifications.dismiss')}
 						</Button>
-						<AlertDialogAction variant='primary' onClick={onGoToStorageManager} tabIndex={0}>
+						<AlertDialogAction variant='primary' onClick={onGoToStorageManager} autoFocus>
 							{t('notifications.raid.issue.action')}
+						</AlertDialogAction>
+					</>
+				),
+			}
+		}
+
+		// The models that read files for search have waited a day for memory
+		if (notification === 'search-indexing-waiting-for-memory') {
+			const onOpenLiveUsage = () => {
+				clearNotification(notification)
+				navigate(linkToDialog('live-usage', {tab: 'memory'}))
+			}
+			return {
+				title: t('notifications.search-indexing-memory.title'),
+				description: t('notifications.search-indexing-memory.description'),
+				action: (
+					<>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
+							{t('ok')}
+						</Button>
+						<AlertDialogAction variant='primary' onClick={onOpenLiveUsage} autoFocus>
+							{t('open-live-usage')}
+						</AlertDialogAction>
+					</>
+				),
+			}
+		}
+
+		// The device has no room for the models that read files for search
+		if (notification === 'search-models-no-room') {
+			const onOpenLiveUsage = () => {
+				clearNotification(notification)
+				navigate(linkToDialog('live-usage', {tab: 'storage'}))
+			}
+			return {
+				title: t('notifications.search-models-no-room.title'),
+				description: t('notifications.search-models-no-room.description'),
+				action: (
+					<>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
+							{t('ok')}
+						</Button>
+						<AlertDialogAction variant='primary' onClick={onOpenLiveUsage} autoFocus>
+							{t('open-live-usage')}
 						</AlertDialogAction>
 					</>
 				),
@@ -327,7 +394,14 @@ export function Notifications() {
 			const onClearNotification = () => {
 				clearNotification(notification)
 			}
-			return getBackupFailingContent(notification, backupRepositoriesQuery, onGoToBackups, onClearNotification, t)
+			return getBackupFailingContent(
+				notification,
+				backupRepositoriesQuery,
+				describeBackupLocation,
+				onGoToBackups,
+				onClearNotification,
+				t,
+			)
 		}
 
 		// Handle cloud auth notifications: cloud-auth:<accountId>
@@ -348,10 +422,10 @@ export function Notifications() {
 					: t('notifications.cloud-auth.description-generic'),
 				action: (
 					<>
-						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)} tabIndex={-1}>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
 							{t('ok')}
 						</Button>
-						<AlertDialogAction variant='primary' onClick={onSignIn} tabIndex={0}>
+						<AlertDialogAction variant='primary' onClick={onSignIn} autoFocus>
 							{t('notifications.cloud-auth.sign-in')}
 						</AlertDialogAction>
 					</>
@@ -411,7 +485,7 @@ export function Notifications() {
 				description: t('notifications.app-storage-settings-changed.description', {app: appName}),
 				action: (
 					<>
-						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)} tabIndex={-1}>
+						<Button variant='default' size='dialog' onClick={() => clearNotification(notification)}>
 							{t('ok')}
 						</Button>
 						<AlertDialogAction
@@ -420,7 +494,7 @@ export function Notifications() {
 								clearNotification(notification)
 								navigate(linkToDialog('app-settings', {for: appId, view: 'storage'}))
 							}}
-							tabIndex={0}
+							autoFocus
 						>
 							{t('notifications.app-storage-settings-changed.review')}
 						</AlertDialogAction>

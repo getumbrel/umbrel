@@ -208,7 +208,7 @@ export default function Login() {
 		return (
 			<>
 				<Wallpaper stayBlurred />
-				<div className='fixed inset-0 bg-black/10' />
+				<div className='fixed inset-0 bg-black/10 contrast-more:bg-black/40' />
 			</>
 		)
 	}
@@ -218,7 +218,7 @@ export default function Login() {
 		return (
 			<>
 				<Wallpaper stayBlurred />
-				<div className='fixed inset-0 bg-black/20' />
+				<div className='fixed inset-0 bg-black/20 contrast-more:bg-black/40' />
 				<div className='relative z-10 flex w-full flex-1 animate-in flex-col items-center justify-center gap-5 duration-300 fade-in low:gap-3'>
 					{/* A lone account's avatar says nothing the greeting doesn't —
 					    show the Umbrel logo instead, like the multi-user picker.
@@ -270,7 +270,7 @@ export default function Login() {
 					</motion.picture>
 				)}
 			</AnimatePresence>
-			<div className='fixed inset-0 bg-black/10' />
+			<div className='fixed inset-0 bg-black/10 contrast-more:bg-black/40' />
 			<div
 				className={cn(
 					// No overflow clip here: any clip boundary slices the plucked
@@ -310,7 +310,7 @@ export default function Login() {
 						{captionAccount && (
 							<motion.span
 								key={captionAccount.userId}
-								className='absolute inset-x-0 text-17 font-semibold -tracking-2 text-white/90'
+								className='absolute inset-x-0 truncate px-4 text-17 font-semibold -tracking-2 text-white/90'
 								style={{textShadow: '0 1px 3px rgba(0, 0, 0, 0.4)'}}
 								initial={{opacity: 0}}
 								animate={{opacity: 1}}

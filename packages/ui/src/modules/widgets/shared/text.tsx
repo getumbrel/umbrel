@@ -47,7 +47,7 @@ export function FileName({name, className}: {name: string; className?: string}) 
 			</span>
 			<span className='shrink-0'>
 				<span className='hidden w-regular:inline'>{tail}</span>
-				<span className='hidden opacity-45 w-regular:inline'>{extension}</span>
+				<span className='hidden text-white/45 w-regular:inline'>{extension}</span>
 			</span>
 		</span>
 	)

@@ -94,7 +94,7 @@ struct RootView: View {
 					onRemove: { await remove(device) },
 					onReconnect: { await reconnect(device) }
 				) { account, userId, password, totpToken in
-					let session = try await Umbreld.login(
+					let login = try await Umbreld.login(
 						target: device.nativeTarget,
 						userId: userId,
 						password: password,
@@ -104,25 +104,32 @@ struct RootView: View {
 					// The cleanup runs in its own task: this one is cancelled, so its requests
 					// would never be sent.
 					if Task.isCancelled {
-						Task { try? await Umbreld.logout(target: device.nativeTarget, session: session) }
+						Task { try? await Umbreld.logout(target: device.nativeTarget, session: login) }
 						throw CancellationError()
 					}
-					guard Keychain.setSession(session, deviceId: device.id) else {
-						throw SignInError.sessionStorageFailed
-					}
-					await BrowserContext.signIn(
+					let session = await BrowserContext.signIn(
 						target: device.nativeTarget,
-						userId: userId,
+						session: login,
 						password: password,
 						totpToken: totpToken
 					)
 					if Task.isCancelled {
-						Keychain.deleteSession(deviceId: device.id)
 						Task {
 							await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
 							try? await Umbreld.logout(target: device.nativeTarget, session: session)
 						}
 						throw CancellationError()
+					}
+					guard Keychain.setSession(session, deviceId: device.id) else {
+						try? await Umbreld.logout(target: device.nativeTarget, session: session)
+						await BrowserContext.signOut(target: device.nativeTarget, accountId: userId)
+						throw SignInError.sessionStorageFailed
+					}
+					// The login this replaces can have ended without the app clearing its backup
+					// (on the list of Umbrels no MainModel exists to do it). A grant ends with its
+					// login, so backup is cleared as MainModel does and set up again with a new one.
+					if PhotoBackupStore.configuration()?.deviceId == device.id {
+						MainModel.disablePhotoBackupLocally(deviceId: device.id)
 					}
 					// Reconnecting an account must not move the iPhone library away from
 					// another Umbrel. Backup ownership changes only through backup controls.
@@ -148,6 +155,7 @@ struct RootView: View {
 									name: account.name,
 									wallpaperId: account.wallpaper.id,
 									wallpaperBrandColorHsl: account.wallpaper.brandColorHsl,
+									wallpaperHash: account.wallpaper.hash,
 									role: account.userId == "0" ? "owner" : "member"
 								)
 							} else if let profile = $0.accountProfile(for: session.accountId) {
@@ -156,6 +164,7 @@ struct RootView: View {
 									name: profile.name,
 									wallpaperId: profile.wallpaperId,
 									wallpaperBrandColorHsl: profile.wallpaperBrandColorHsl,
+									wallpaperHash: profile.wallpaperHash,
 									role: profile.role
 								)
 							} else {

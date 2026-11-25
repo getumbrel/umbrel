@@ -4,12 +4,14 @@ import {useTranslation} from 'react-i18next'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {PillButton} from '@/components/ui/edge-controls'
+import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {DeletedActions} from '@/features/photos/components/actions-bar/deleted-actions'
 import {MapControls} from '@/features/photos/components/actions-bar/map-controls'
 import {UploadButton} from '@/features/photos/components/actions-bar/upload-button'
 import {useBarRoute} from '@/features/photos/components/actions-bar/use-bar-route'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
 import {usePhotosView} from '@/features/photos/components/view-context'
+import {usePeople} from '@/features/photos/hooks/use-people'
 import {cn} from '@/lib/utils'
 import {useLinkToDialog} from '@/utils/dialog'
 
@@ -37,7 +39,10 @@ export function MobileActions({className}: {className?: string}) {
 	const {search, mapControls} = usePhotosView()
 	const reduceMotion = useReducedMotion() ?? false
 	const {collection, isSources, isMap, inDeleted, hasGrid, isTimeline} = useBarRoute()
-	const {albumId, sourceId} = useParams()
+	const isTouchDevice = useIsTouchDevice()
+	const {albumId, sourceId, personId} = useParams()
+	// Nobody to select on an empty People page
+	const hasPeople = usePeople({enabled: collection === 'people'}).people.length > 0
 
 	return (
 		<AnimatePresence initial={false}>
@@ -60,13 +65,18 @@ export function MobileActions({className}: {className?: string}) {
 							onClick={() => navigate(linkToDialog('photos-source', {id: sourceId}))}
 						/>
 					)}
-					{isTimeline && !sourceId && <UploadButton iconOnly />}
+					{isTimeline && !sourceId && !personId && <UploadButton iconOnly />}
 					{/* The map's zoom, its way back to everything and its list, beside the search */}
 					{isMap && mapControls && <MapControls controls={mapControls} compact />}
 					{inDeleted && <DeletedActions iconOnly />}
 					{/* The same circled check a tile wears when selected — the row
-					    stays a clean run of glyphs */}
-					{hasGrid && (
+					    stays a clean run of glyphs. For fingers only: under a pointer
+					    every tile offers its own circle, and a drag draws a box, as on
+					    the desktop, whose bar has no such button either. In a narrow
+					    window a mouse also brings the zoom steps to this row, and has
+					    no room to spare for a button it doesn't need. People are
+					    selected from here under a pointer too. */}
+					{((hasGrid && isTouchDevice) || (collection === 'people' && hasPeople)) && (
 						<PillButton icon={SelectGlyph} aria-label={t('photos-selection.select')} onClick={selection.start} />
 					)}
 					{collection === 'albums' && (

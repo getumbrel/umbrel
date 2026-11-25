@@ -8,6 +8,7 @@ data class SavedAccountProfile(
 	val wallpaperId: String,
 	val wallpaperBrandColorHsl: String? = null,
 	val role: String,
+	val wallpaperHash: String? = null,
 )
 
 /**
@@ -22,8 +23,9 @@ data class SavedDevice(
 	val addresses: List<String> = emptyList(),
 	val model: String? = null,
 	val userName: String? = null,
-	// Cached wallpaper ID for rendering the device card while offline.
+	// Cached wallpaper ID and hash for rendering the device card while offline.
 	val wallpaperId: String? = null,
+	val wallpaperHash: String? = null,
 	// Identity and wallpaper belong to an account, not to the physical Umbrel. The
 	// top-level fields cache the last-used presentation for device lists.
 	val accountProfiles: Map<String, SavedAccountProfile>? = null,
@@ -56,9 +58,14 @@ data class SavedDevice(
 	 * Only an [IdentifiedDevice] has proved the stable discovery id through the saved
 	 * Umbrel's HTTPS identity. Its answering endpoint becomes primary, stale mDNS names are
 	 * discarded, and current IP candidates remain as fallbacks.
+	 *
+	 * The pin proved the endpoint that answered, not its name: a .local name can point
+	 * somewhere else a moment later. That is fine for the app's own requests, which check
+	 * the pin on every connection. A browser handed this host gets no such check, so a saved
+	 * host is a place to look for the Umbrel, never proof of it.
 	 */
 	fun mergeVerifiedDiscovery(discovered: IdentifiedDevice): SavedDevice {
-		if (discovered.id != id) return this
+		if (discovered.id != id || !isValidLocalEndpointHost(discovered.host)) return this
 		return copy(
 			host = discovered.host,
 			addresses = uniqueAddresses(addresses.filterNot(::isBonjourHostname) + discovered.addresses),
@@ -81,15 +88,17 @@ data class SavedDevice(
 		wallpaperId: String,
 		wallpaperBrandColorHsl: String? = null,
 		role: String,
+		wallpaperHash: String? = null,
 	): SavedDevice {
 		val profiles = (accountProfiles ?: emptyMap()) +
-			(accountId to SavedAccountProfile(name, wallpaperId, wallpaperBrandColorHsl, role))
+			(accountId to SavedAccountProfile(name, wallpaperId, wallpaperBrandColorHsl, role, wallpaperHash))
 		return copy(
 			accountProfiles = profiles,
 			lastAccountId = accountId,
 			// Device cards deliberately show the last-used account while signed out.
 			userName = name,
 			wallpaperId = wallpaperId,
+			wallpaperHash = wallpaperHash,
 		)
 	}
 
@@ -155,11 +164,23 @@ data class SavedDevice(
 
 		fun isValidLocalEndpointHost(host: String): Boolean = isIPv4Address(host) || isBonjourHostname(host)
 
+		/**
+		 * A .local name, or an IPv4 address on an ordinary LAN, IPv4 link-local or in Tailscale's
+		 * range. Public certificate authorities issue certificates for none of these, so whatever
+		 * answers there can pass a check against the Umbrel's own CA but never the phone's system
+		 * trust. The in-app browser opens the Umbrel only at these, because WebView applies system
+		 * trust before the app is asked.
+		 */
+		fun isPrivateEndpointHost(host: String): Boolean = isSupportedManualIPv4Address(host) || isBonjourHostname(host)
+
 		private fun isAsciiLetterOrDigit(c: Char): Boolean = c in '0'..'9' || c in 'A'..'Z' || c in 'a'..'z'
 
 		private fun uniqueAddresses(values: List<String>): List<String> {
 			val seen = HashSet<String>()
-			return values.filter { it.isNotEmpty() && seen.add(it.lowercase()) }
+			// Stored routes become request URLs and browser links. Keep only literal IPv4
+			// addresses and .local names, so an advertised or server-reported value can never
+			// name another kind of host.
+			return values.filter { isValidLocalEndpointHost(it) && seen.add(it.lowercase()) }
 		}
 	}
 }

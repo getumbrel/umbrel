@@ -1,8 +1,27 @@
 import {useEffect, useRef, useState, type ComponentType} from 'react'
 import {useTranslation} from 'react-i18next'
-import {IoLogoApple} from 'react-icons/io5'
+import {IoLogoAndroid, IoLogoApple, IoLogoWindows} from 'react-icons/io5'
 import {TbChevronLeft, TbChevronRight, TbPlayerPlayFilled} from 'react-icons/tb'
+import {Link} from 'react-router-dom'
 
+import appsImage from '@/assets/whats-new/apps.webp'
+import failsafeVideo from '@/assets/whats-new/failsafe.mp4'
+import failsafePoster from '@/assets/whats-new/failsafe.webp'
+import filesVideo from '@/assets/whats-new/files.mp4'
+import filesPoster from '@/assets/whats-new/files.webp'
+import machinesImage from '@/assets/whats-new/machines.webp'
+import mapVideo from '@/assets/whats-new/map.mp4'
+import mapPoster from '@/assets/whats-new/map.webp'
+import murmurVideo from '@/assets/whats-new/murmur.mp4'
+import murmurPoster from '@/assets/whats-new/murmur.webp'
+import peopleVideo from '@/assets/whats-new/people.mp4'
+import peoplePoster from '@/assets/whats-new/people.webp'
+import searchVideo from '@/assets/whats-new/search.mp4'
+import searchPoster from '@/assets/whats-new/search.webp'
+import transcriptionVideo from '@/assets/whats-new/transcription.mp4'
+import transcriptionPoster from '@/assets/whats-new/transcription.webp'
+import welcomeVideo from '@/assets/whats-new/welcome.mp4'
+import welcomePoster from '@/assets/whats-new/welcome.webp'
 import {FadeScroller} from '@/components/fade-scroller'
 import {Button} from '@/components/ui/button'
 import {
@@ -21,10 +40,11 @@ import {
 	ImmersiveDialogFooter,
 	ImmersiveDialogOverlay,
 } from '@/components/ui/immersive-dialog'
+import {appPath} from '@/constants/app-store'
 import {lightboxButtonClass} from '@/features/photos/components/viewer/lightbox-button'
-import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {cn} from '@/lib/utils'
 import {WHATS_NEW_VERSION_NAME} from '@/routes/whats-new'
+import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
@@ -34,11 +54,14 @@ import {tw} from '@/utils/tw'
 const IMAGE_SLIDE_MS = 10000
 
 /** Glass control floating over the media: the lightbox's rail button, tinted for bright footage */
-const mediaButtonClass = cn(lightboxButtonClass, 'bg-black/25 backdrop-blur-md hover:bg-black/40')
+const mediaButtonClass = cn(
+	lightboxButtonClass,
+	'bg-black/25 backdrop-blur-md hover:bg-black/40 contrast-more:bg-black/85 contrast-more:backdrop-blur-none contrast-more:hover:bg-black',
+)
 
 /** A link floating over the media in the same glass. Built on its own, because the rail button's
  * responsive sizes would square the pill off */
-const mediaPillClass = tw`settings-edge-material flex h-12 shrink-0 items-center gap-2 rounded-full bg-black/25 pr-5 pl-4 text-sm font-medium text-white backdrop-blur-md transition-[background-color,transform] duration-200 hover:bg-black/40 focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white/20 active:scale-90`
+const mediaPillClass = tw`settings-edge-material flex h-12 max-w-[calc(100%-2rem)] items-center gap-2 rounded-full bg-black/25 pr-5 pl-4 text-sm font-medium text-white backdrop-blur-md transition-[background-color,transform] duration-200 hover:bg-black/40 focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white/20 active:scale-90 contrast-more:bg-black/85 contrast-more:backdrop-blur-none contrast-more:hover:bg-black`
 
 /** Beside the media, under 500px tall, the footer's buttons stay compact and side by side as on desktop,
  * leaving the text the room that stacked phone buttons would take */
@@ -56,18 +79,33 @@ type Feature = {
 	descriptionTKey: string
 	/** Optional fine print under the description */
 	noteTKey?: string
-	/** Drop the fine print on Umbrel Pro, where it doesn't apply */
-	noteHiddenOnUmbrelPro?: boolean
-	/** Optional call-to-action shown beside Next, opening in a new tab */
+	/** Needs the on-device models behind smart search, which some devices can't run (the Raspberry Pi 4,
+	 * and x86 CPUs without AES-NI). There, fine print says so instead */
+	needsSmartSearch?: {unsupportedNoteTKey: string}
+	/** Downloads listed under the description, each opening in a new tab */
+	downloads?: {href: string; labelTKey: string; icon: ComponentType<{className?: string}>}[]
+	/** Optional call-to-action shown beside Next */
 	link?: {
-		href: string
 		labelTKey: string
 		icon: ComponentType<{className?: string}>
-		/** Also float the link as a glass pill over the media */
-		overlay?: boolean
-		/** Faded at the pill's right edge: the linked video's runtime */
-		overlayDuration?: string
-	}
+	} & (
+		| {
+				/** Opens in a new tab */
+				href: string
+				to?: never
+				/** Also float the link as a glass pill over the media */
+				overlay?: boolean
+				/** Faded at the pill's right edge: the linked video's runtime */
+				overlayDuration?: string
+		  }
+		| {
+				/** A page in umbrelOS, which takes the place of the dialog */
+				to: string
+				href?: never
+				overlay?: never
+				overlayDuration?: never
+		  }
+	)
 } & (
 	| {image: string; video?: never; poster?: never; loop?: never}
 	| {
@@ -80,91 +118,113 @@ type Feature = {
 	  }
 )
 
+/** Murmur's own app icon, for its slide's button */
+function MurmurIcon({className}: {className?: string}) {
+	return (
+		<img src='/assets/mcp/murmur.webp' alt='' draggable={false} className={cn(className, 'size-4.5 rounded-[5px]')} />
+	)
+}
+
+// TODO: Replace the 2.0 media standing in for each slide with footage of what it describes
 const FEATURES: Feature[] = [
 	{
-		id: 'redesign',
-		video: '/assets/whats-new/welcome.mp4',
-		poster: '/assets/whats-new/welcome.webp',
+		id: 'welcome',
+		video: welcomeVideo,
+		poster: welcomePoster,
 		loop: true,
 		link: {
-			href: 'https://youtu.be/lBsKk_NNg2A',
-			labelTKey: 'whats-new-umbrelos-2-0.redesign-watch-keynote',
+			href: 'https://youtu.be/IXVEoYV17t4',
+			labelTKey: 'whats-new-umbrelos-2-1.welcome-watch-launch',
 			icon: TbPlayerPlayFilled,
 			overlay: true,
-			overlayDuration: '10:53',
+			overlayDuration: '2:00',
 		},
-		titleTKey: 'whats-new-umbrelos-2-0.redesign-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.redesign-description',
+		titleTKey: 'whats-new-umbrelos-2-1.welcome-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.welcome-description',
 	},
 	{
-		id: 'photos',
-		video: '/assets/whats-new/photos.mp4',
-		poster: '/assets/whats-new/photos.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.photos-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.photos-description',
-		link: {
-			href: 'https://link.umbrel.com/ios-app',
-			labelTKey: 'whats-new-umbrelos-2-0.photos-get-ios-app',
-			icon: IoLogoApple,
-		},
+		id: 'smart-search',
+		video: searchVideo,
+		poster: searchPoster,
+		titleTKey: 'whats-new-umbrelos-2-1.smart-search-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.smart-search-description',
+		needsSmartSearch: {unsupportedNoteTKey: 'whats-new-umbrelos-2-1.smart-search-unsupported'},
 	},
 	{
-		id: 'ai-agents',
-		video: '/assets/whats-new/ai-agents.mp4',
-		poster: '/assets/whats-new/ai-agents.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.ai-agents-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.ai-agents-description',
+		id: 'people',
+		video: peopleVideo,
+		poster: peoplePoster,
+		titleTKey: 'whats-new-umbrelos-2-1.people-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.people-description',
+		needsSmartSearch: {unsupportedNoteTKey: 'whats-new-umbrelos-2-1.people-unsupported'},
+	},
+	{
+		id: 'map',
+		video: mapVideo,
+		poster: mapPoster,
+		titleTKey: 'whats-new-umbrelos-2-1.map-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.map-description',
+	},
+	{
+		id: 'transcription',
+		video: transcriptionVideo,
+		poster: transcriptionPoster,
+		titleTKey: 'whats-new-umbrelos-2-1.transcription-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.transcription-description',
+		needsSmartSearch: {unsupportedNoteTKey: 'whats-new-umbrelos-2-1.transcription-unsupported'},
+	},
+	{
+		id: 'failsafe',
+		video: failsafeVideo,
+		poster: failsafePoster,
+		titleTKey: 'whats-new-umbrelos-2-1.failsafe-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.failsafe-description',
+		noteTKey: 'whats-new-umbrelos-2-1.failsafe-note',
+	},
+	{
+		id: 'files',
+		video: filesVideo,
+		poster: filesPoster,
+		titleTKey: 'whats-new-umbrelos-2-1.files-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.files-description',
 	},
 	{
 		id: 'machines',
-		video: '/assets/whats-new/machines.mp4',
-		poster: '/assets/whats-new/machines.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.machines-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.machines-description',
+		image: machinesImage,
+		titleTKey: 'whats-new-umbrelos-2-1.machines-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.machines-description',
+		noteTKey: 'whats-new-umbrelos-2-1.machines-note',
 	},
 	{
-		id: 'multi-user',
-		video: '/assets/whats-new/multi-user.mp4',
-		poster: '/assets/whats-new/multi-user.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.multi-user-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.multi-user-description',
+		id: 'apps',
+		image: appsImage,
+		titleTKey: 'whats-new-umbrelos-2-1.apps-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.apps-description',
+		downloads: [
+			{href: 'https://link.umbrel.com/ios-app', labelTKey: 'whats-new-umbrelos-2-1.apps-iphone', icon: IoLogoApple},
+			{
+				href: 'https://link.umbrel.com/android-app',
+				labelTKey: 'whats-new-umbrelos-2-1.apps-android',
+				icon: IoLogoAndroid,
+			},
+			{href: 'https://link.umbrel.com/macos-app', labelTKey: 'whats-new-umbrelos-2-1.apps-mac', icon: IoLogoApple},
+			{
+				href: 'https://link.umbrel.com/windows-app',
+				labelTKey: 'whats-new-umbrelos-2-1.apps-windows',
+				icon: IoLogoWindows,
+			},
+		],
 	},
 	{
-		id: 'storage-manager',
-		image: '/assets/whats-new/storage-manager.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.storage-manager-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.storage-manager-description',
-		noteTKey: 'whats-new-umbrelos-2-0.storage-manager-note',
-		noteHiddenOnUmbrelPro: true,
-	},
-	{
-		id: 'cloud',
-		video: '/assets/whats-new/cloud.mp4',
-		poster: '/assets/whats-new/cloud.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.cloud-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.cloud-description',
-	},
-	{
-		id: 'gpu',
-		image: '/assets/whats-new/gpu.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.gpu-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.gpu-description',
-	},
-	{
-		id: 'app-settings',
-		image: '/assets/whats-new/app-settings.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.app-settings-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.app-settings-description',
-	},
-	{
-		id: 'mac-app',
-		image: '/assets/whats-new/mac-app.webp',
-		titleTKey: 'whats-new-umbrelos-2-0.mac-app-heading',
-		descriptionTKey: 'whats-new-umbrelos-2-0.mac-app-description',
+		id: 'murmur',
+		video: murmurVideo,
+		poster: murmurPoster,
+		titleTKey: 'whats-new-umbrelos-2-1.murmur-heading',
+		descriptionTKey: 'whats-new-umbrelos-2-1.murmur-description',
 		link: {
-			href: 'https://link.umbrel.com/macos-app',
-			labelTKey: 'whats-new-umbrelos-2-0.mac-app-download',
-			icon: IoLogoApple,
+			to: appPath('murmur'),
+			labelTKey: 'whats-new-umbrelos-2-1.murmur-get',
+			icon: MurmurIcon,
 		},
 	},
 ]
@@ -182,10 +242,16 @@ export default function WhatsNewModal() {
 
 	const feature = FEATURES[currentIndex]
 	const isVideoSlide = !!feature.video
-	// Pro-gated fine print waits for the answer, so a Pro never sees it flash in
-	const umbrelPro = useIsUmbrelPro()
-	const showNote = (slide: Feature) =>
-		!!slide.noteTKey && (!slide.noteHiddenOnUmbrelPro || (umbrelPro.hasData && !umbrelPro.isUmbrelPro))
+	// Only a device that can't run the models says so. Until the answer is in, or if it can't be had,
+	// nothing is said, so a device that can never sees the fine print flash in
+	const searchStatusQ = trpcReact.search.status.useQuery(undefined, {
+		enabled: dialogProps.open,
+		retry: false,
+		refetchOnWindowFocus: false,
+	})
+	const smartSearchUnsupported = searchStatusQ.data?.reason === 'unsupported-device'
+	const noteTKey = (slide: Feature) =>
+		slide.needsSmartSearch && smartSearchUnsupported ? slide.needsSmartSearch.unsupportedNoteTKey : slide.noteTKey
 	// A looping video holds its slide until the user moves on, so nothing counts down
 	const isLoopingSlide = isVideoSlide && !!feature.loop
 
@@ -283,6 +349,8 @@ export default function WhatsNewModal() {
 					// Side by side, under 500px tall, the text needs the width it has above the media: at 600px
 					// it got 252px in Safari's landscape phone, too narrow for its two buttons in a row
 					className='low:max-w-[800px]'
+					// Over the footage, the close button's cross stands out in white, on the usual circle
+					closeCrossClassName='text-white/80'
 					onOpenAutoFocus={(e) => {
 						// The dialog opens on its own, so move focus into it (rather than
 						// leaving it behind the overlay) without ringing the first button.
@@ -295,12 +363,13 @@ export default function WhatsNewModal() {
 
 					{/* Bleeds to the dialog's edges, the media curving with its corners. The media takes the height
 					    the text and buttons leave, up to 4:3 (75cqw), so a short window crops it rather than
-					    leaving a gap. Under 500px tall it moves beside them instead, where the text scrolls. */}
+					    leaving a gap, and no less than 40cqw, so long or large text scrolls rather than squeezing
+					    it shut. Under 500px tall it moves beside them instead, where the text scrolls. */}
 					<div className='@container relative -mx-6 -my-4 flex flex-1 flex-col overflow-hidden md:-m-8 low:grid low:grid-cols-2 low:grid-rows-[auto_minmax(0,1fr)_auto]'>
 						{/* Media Carousel */}
 						<Carousel
 							setApi={setApi}
-							className='group max-h-[75cqw] min-h-0 w-full flex-1 overflow-hidden rounded-t-[var(--window-radius)] low:row-span-3 low:max-h-none low:rounded-none low:rounded-s-[var(--window-radius)]'
+							className='group max-h-[75cqw] min-h-[40cqw] w-full flex-1 overflow-hidden rounded-t-[var(--window-radius)] low:row-span-3 low:max-h-none low:min-h-0 low:rounded-none low:rounded-s-[var(--window-radius)]'
 							onPointerEnter={() => setHovered(true)}
 							onPointerLeave={() => setHovered(false)}
 						>
@@ -324,7 +393,7 @@ export default function WhatsNewModal() {
 											) : (
 												<img src={feature.image} alt='' draggable={false} className='size-full object-cover' />
 											)}
-											{feature.link?.overlay && (
+											{feature.link?.overlay && feature.link.href && (
 												<div className='absolute inset-0 flex items-center justify-center'>
 													<a
 														href={feature.link.href}
@@ -333,8 +402,8 @@ export default function WhatsNewModal() {
 														draggable={false}
 														className={mediaPillClass}
 													>
-														<feature.link.icon className='size-4' />
-														{t(feature.link.labelTKey)}
+														<feature.link.icon className='size-4 shrink-0' />
+														<span className='min-w-0 truncate'>{t(feature.link.labelTKey)}</span>
 														{feature.link.overlayDuration && (
 															<span className='text-white/50 tabular-nums'>{feature.link.overlayDuration}</span>
 														)}
@@ -399,7 +468,20 @@ export default function WhatsNewModal() {
 								>
 									<h3 className='text-2xl font-semibold -tracking-3 md:text-3xl low:text-2xl'>{t(slide.titleTKey)}</h3>
 									<p className='text-base leading-tight text-white/70'>{t(slide.descriptionTKey)}</p>
-									{showNote(slide) && <p className='text-13 leading-tight text-white/40'>{t(slide.noteTKey!)}</p>}
+									{noteTKey(slide) && <p className='text-13 leading-tight text-white/40'>{t(noteTKey(slide)!)}</p>}
+									{slide.downloads && (
+										// Two by two on a phone, where four in a row would run out of room; in a row anywhere wider
+										<div className='grid grid-cols-2 gap-2 pt-1 sm:flex sm:flex-wrap'>
+											{slide.downloads.map((download) => (
+												<Button key={download.href} asChild className='h-8 gap-1.5 px-3.5 text-12'>
+													<a href={download.href} target='_blank' rel='noopener noreferrer'>
+														<download.icon className='size-3.5 shrink-0' />
+														{t(download.labelTKey)}
+													</a>
+												</Button>
+											))}
+										</div>
+									)}
 								</div>
 							))}
 						</FadeScroller>
@@ -409,10 +491,17 @@ export default function WhatsNewModal() {
 							{feature.link && (
 								// Stacked on mobile the footer wraps in reverse, so ordering this last puts it above Next
 								<Button variant='default' size='dialog' className={cn('max-md:order-1', lowFooterButtonClass)} asChild>
-									<a href={feature.link.href} target='_blank' rel='noopener noreferrer'>
-										<feature.link.icon className='size-3.5' />
-										{t(feature.link.labelTKey)}
-									</a>
+									{feature.link.to ? (
+										<Link to={feature.link.to}>
+											<feature.link.icon className='size-3.5' />
+											{t(feature.link.labelTKey)}
+										</Link>
+									) : (
+										<a href={feature.link.href} target='_blank' rel='noopener noreferrer'>
+											<feature.link.icon className='size-3.5' />
+											{t(feature.link.labelTKey)}
+										</a>
+									)}
 								</Button>
 							)}
 							<Button variant='secondary' size='dialog' className={lowFooterButtonClass} onClick={handleNext}>

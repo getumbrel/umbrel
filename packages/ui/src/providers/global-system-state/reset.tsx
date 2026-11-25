@@ -1,7 +1,6 @@
 import {useTranslation} from 'react-i18next'
 
-import {BarePage} from '@/layouts/bare/bare-page'
-import {ProgressLayout} from '@/modules/bare/progress-layout'
+import {Cover} from '@/components/ui/cover'
 import {trpcReact, type RouterError} from '@/trpc/trpc'
 
 export function useReset({onMutate, onError}: {onMutate?: () => void; onError?: (err: RouterError) => void}) {
@@ -20,13 +19,11 @@ export function useReset({onMutate, onError}: {onMutate?: () => void; onError?: 
 export function ResettingCover() {
 	const {t} = useTranslation()
 	return (
-		<BarePage>
-			<ProgressLayout
-				title={t('factory-reset.rebooting.title')}
-				callout={t('factory-reset.rebooting.message')}
-				message={t('factory-reset.rebooting.status')}
-				isRunning
-			/>
-		</BarePage>
+		<Cover
+			title={t('factory-reset.rebooting.title')}
+			progress='spinner'
+			status={t('factory-reset.rebooting.status')}
+			note={t('factory-reset.rebooting.message')}
+		/>
 	)
 }

@@ -1,4 +1,4 @@
-import {Album, Check, CircleMinus, Download, Heart, Plus, RotateCcw, Trash2} from 'lucide-react'
+import {Album, Check, CircleMinus, Download, Heart, Plus, RotateCcw, Trash2, UserX} from 'lucide-react'
 import {useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode} from 'react'
 import {useTranslation} from 'react-i18next'
 import {useNavigate, useParams} from 'react-router-dom'
@@ -13,10 +13,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {PillButton, PillButtonGroup, PillButtonGroupItem} from '@/components/ui/edge-controls'
 import {toast} from '@/components/ui/toast'
-import {useRouteFilter} from '@/features/photos/components/listing'
+import {useListing} from '@/features/photos/components/listing/use-listing'
 import {usePhotosSelection} from '@/features/photos/components/selection-context'
-import {useDownloadItems, useItemActions, useItems} from '@/features/photos/hooks/use-items'
+import {useDownloadItems, useItemActions} from '@/features/photos/hooks/use-items'
 import {useAlbumActions, useAlbums} from '@/features/photos/hooks/use-library'
+import {usePeopleActions} from '@/features/photos/hooks/use-people'
+import {useLargerText} from '@/hooks/use-accessibility'
 import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation/use-confirmation'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -24,33 +26,38 @@ import {formatNumberI18n} from '@/utils/number'
 import {useBreakpoint} from '@/utils/tw'
 
 // What the actions bar offers while items are selected: add to an album (in
-// an album: remove from it), favorite, download, delete — or in Deleted,
+// an album: remove from it; on a person's page also "Not this person"),
+// favorite, download, delete — or in Deleted,
 // restore and delete for good — and Done. Deleting for good asks first;
 // the rest just happen. Actions that leave the items in place (favorite,
 // download) keep the selection — Done ends it — while the others end it
-// themselves. Below xl the actions share one pill as icons with tooltips
+// themselves. They wait while a Select all is still gathering the view. Below xl the actions share one pill as icons with tooltips
 // (with labels they only just fit a 1100px window, and not a 1024px one,
-// and on a phone they would crowd the count out).
+// and on a phone they would crowd the count out); with larger text, below 2xl.
 export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 	const {t, i18n} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const confirm = useConfirmation()
 	const breakpoint = useBreakpoint()
-	const iconOnly = breakpoint !== 'xl' && breakpoint !== '2xl'
-	const {ids, done} = usePhotosSelection()
-	const {albumId} = useParams()
+	const largerText = useLargerText()
+	const iconOnly = !(breakpoint === '2xl' || (breakpoint === 'xl' && largerText === 0))
+	const {ids, done, selectingAll} = usePhotosSelection()
+	const {albumId, personId} = useParams()
+	const {removeFromPerson} = usePeopleActions()
 	const {setFavorite, deleteItems, restoreItems, deletePermanently} = useItemActions()
 	const download = useDownloadItems()
 	const {addToAlbum, removeFromAlbum} = useAlbumActions()
 	const {data: albums} = useAlbums({enabled: !inDeleted && !albumId})
 	// The selected items themselves, from the list on screen (the same query,
 	// so nothing is fetched twice), for what favoriting them should do
-	const {items} = useItems(useRouteFilter())
-	const allFavorites = useMemo(
-		() => ids.size > 0 && items.every((item) => !ids.has(item.id) || item.isFavorite),
-		[items, ids],
-	)
+	const {items} = useListing()
+	// … which is only known of the ones the list holds: with none of them in
+	// it, "every one a favorite" would be true of nothing at all
+	const allFavorites = useMemo(() => {
+		const selected = items.filter((item) => ids.has(item.id))
+		return selected.length > 0 && selected.every((item) => item.isFavorite)
+	}, [items, ids])
 	const count = ids.size
 	const formattedCount = formatNumberI18n({n: count, showDecimals: false, locale: i18n.language})
 	const list = () => [...ids]
@@ -73,8 +80,28 @@ export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 			})
 			.catch(failed)
 	const removeFromThisAlbum = () => removeFromAlbum({id: albumId!, ids: list()}).then(done).catch(failed)
-	const remove = () => deleteItems({ids: list()}).then(done).catch(failed)
-	const restore = () => restoreItems({ids: list()}).then(done).catch(failed)
+	// A delete or a restore carries on past what the server cannot move (a
+	// photo in a read-only cloud folder, say): done all the same, and told how
+	// many were left where they were
+	const leftBehind = (failed: string[]) =>
+		formatNumberI18n({n: failed.length, showDecimals: false, locale: i18n.language})
+	const notDeleted = ({failed}: {failed: string[]}) => {
+		done()
+		if (failed.length === 0) return
+		toast.error(t('photos-selection.not-deleted', {count: failed.length, formattedCount: leftBehind(failed)}), {
+			area: 'photos',
+		})
+	}
+	const notRestored = ({failed}: {failed: string[]}) => {
+		done()
+		if (failed.length === 0) return
+		toast.error(t('photos-selection.not-restored', {count: failed.length, formattedCount: leftBehind(failed)}), {
+			area: 'photos',
+		})
+	}
+	const notThisPerson = () => removeFromPerson({id: personId!, ids: list()}).then(done).catch(failed)
+	const remove = () => deleteItems({ids: list()}).then(notDeleted).catch(failed)
+	const restore = () => restoreItems({ids: list()}).then(notRestored).catch(failed)
 	const purge = async () => {
 		const ok = await confirm({
 			title: t('photos-selection.delete-permanently-title', {count, formattedCount}),
@@ -88,10 +115,12 @@ export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 			() => false,
 		)
 		if (!ok) return
-		deletePermanently({ids: list()}).then(done).catch(failed)
+		deletePermanently({ids: list()}).then(notDeleted).catch(failed)
 	}
 
-	const none = count === 0
+	// Nothing to act on — or not all of it yet: a Select all is still loading
+	// the rest of the view, and an action now would take only what has arrived
+	const none = count === 0 || selectingAll
 	const actions = inDeleted ? (
 		<>
 			<ActionPill
@@ -137,6 +166,15 @@ export function SelectionActions({inDeleted}: {inDeleted: boolean}) {
 						))}
 					</DropdownMenuContent>
 				</DropdownMenu>
+			)}
+			{personId && (
+				<ActionPill
+					icon={UserX}
+					label={t('photos-people.not-this-person')}
+					iconOnly={iconOnly}
+					disabled={none}
+					onClick={notThisPerson}
+				/>
 			)}
 			<ActionPill
 				icon={Heart}

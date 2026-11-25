@@ -5,6 +5,9 @@ import * as React from 'react'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {cn} from '@/lib/utils'
 import {useWallpaper, WallpaperAvifSource} from '@/providers/wallpaper'
+import {IS_IPHONE_BROWSER} from '@/utils/misc'
+
+import {sampleWindowSurfaceEdgeColor} from './window-surface-color'
 
 const Sheet = SheetPrimitive.Root
 
@@ -25,7 +28,7 @@ const sheetVariants = cva('fixed z-30 gap-4 contrast-more:bg-black overflow-hidd
 		side: {
 			top: `inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top ${slideSheetAnimation}`,
 			bottom: `inset-x-0 bottom-0 data-[state=closed]:slide-out-to-bottom-1/2 data-[state=open]:slide-in-from-bottom-1/2 ${slideSheetAnimation}`,
-			'bottom-zoom': 'inset-x-0 bottom-0 umbrel-sheet-zoom',
+			'bottom-zoom': 'left-(--safe-left) right-(--safe-right) bottom-0 umbrel-sheet-zoom',
 			left: `inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm ${slideSheetAnimation}`,
 			right: `inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm ${slideSheetAnimation}`,
 		},
@@ -34,6 +37,35 @@ const sheetVariants = cva('fixed z-30 gap-4 contrast-more:bg-black overflow-hidd
 		side: 'bottom',
 	},
 })
+
+/**
+ * A sheet stops at Safari's bar on an iPhone, and Safari fills the band below
+ * with the colour of the fixed layer it finds along the window's bottom edge.
+ * The sheet gives it one to find: a floor in the colour the sheet shows down
+ * there, which the sheet settles into and the band carries on. This is that
+ * colour.
+ *
+ * It comes from the sheet's own wallpaper image, so that's what this watches:
+ * the image loads anew when the wallpaper changes, and its box changes with the
+ * window's and collapses when the sheet drops its wallpaper.
+ */
+function useFloorColor(wallpaperImage: HTMLImageElement | null) {
+	const [color, setColor] = React.useState<string>()
+	React.useEffect(() => {
+		if (!wallpaperImage || !IS_IPHONE_BROWSER) return
+		const update = () => setColor((color) => sampleWindowSurfaceEdgeColor(wallpaperImage) ?? color)
+		update()
+		wallpaperImage.addEventListener('load', update)
+		const observer = new ResizeObserver(update)
+		observer.observe(wallpaperImage)
+		return () => {
+			observer.disconnect()
+			wallpaperImage.removeEventListener('load', update)
+			setColor(undefined)
+		}
+	}, [wallpaperImage])
+	return color
+}
 
 interface SheetContentProps
 	extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>, VariantProps<typeof sheetVariants> {
@@ -52,6 +84,8 @@ function SheetContent({
 	...props
 }: SheetContentProps) {
 	const {wallpaper} = useWallpaper()
+	const [wallpaperImage, setWallpaperImage] = React.useState<HTMLImageElement | null>(null)
+	const floorColor = useFloorColor(wallpaperImage)
 
 	return (
 		// <SheetPortal container={document.getElementById("container")}>
@@ -84,6 +118,7 @@ function SheetContent({
 						<picture>
 							<WallpaperAvifSource wallpaper={wallpaper} tier='thumbnails' />
 							<img
+								ref={setWallpaperImage}
 								src={wallpaper.url}
 								alt=''
 								aria-hidden='true'
@@ -97,6 +132,18 @@ function SheetContent({
 				{/* Window edge and inner shine */}
 				<div className='umbrel-window-chrome umbrel-window-surface-top pointer-events-none absolute inset-0 z-50' />
 			</SheetPrimitive.Content>
+			{/* The floor, on a phone, where the sheet spans the window. It follows the
+			    sheet rather than sitting in it: Safari only reads layers fixed to the
+			    window, and inside the sheet's transform it would be fixed to the sheet.
+			    Safari also passes over a layer 10px tall or less, so under its fade the
+			    floor is 12px of solid colour. */}
+			{floorColor && (
+				<div
+					aria-hidden='true'
+					className='umbrel-window-floor pointer-events-none fixed inset-x-0 bottom-0 z-30 h-7 md:hidden'
+					style={{backgroundColor: floorColor}}
+				/>
+			)}
 		</>
 		// </SheetPortal>
 	)

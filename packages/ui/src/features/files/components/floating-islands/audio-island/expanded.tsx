@@ -1,9 +1,13 @@
+import {Captions} from 'lucide-react'
 import React from 'react'
 import {useTranslation} from 'react-i18next'
 import {RiPauseFill, RiPlayFill} from 'react-icons/ri'
 
 import {Button} from '@/components/ui/button'
 import {MusicEqualizer} from '@/features/files/components/floating-islands/audio-island/equalizer'
+import type {TranscriptLine} from '@/features/search/transcript'
+import {TranscriptView} from '@/features/search/transcript-view'
+import {cn} from '@/lib/utils'
 
 interface ExpandedContentProps {
 	fileName: string
@@ -16,6 +20,13 @@ interface ExpandedContentProps {
 	onTogglePlay: (e?: React.MouseEvent) => void
 	onProgressChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 	analyserNode?: AnalyserNode
+	audio: HTMLAudioElement | null
+	// What is said in the recording, where Search has transcribed it: shown
+	// between the title and the controls (see TranscriptView) unless switched off
+	transcript?: readonly TranscriptLine[]
+	matched?: readonly string[]
+	showTranscript: boolean
+	onToggleTranscript: () => void
 }
 
 const formatTime = (time: number) => {
@@ -35,8 +46,14 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 	onTogglePlay,
 	onProgressChange,
 	analyserNode,
+	audio,
+	transcript,
+	matched,
+	showTranscript,
+	onToggleTranscript,
 }) => {
 	const {t} = useTranslation()
+	const following = transcript !== undefined && showTranscript
 	const progressPercentage = duration ? (currentTime / duration) * 100 : 0
 	if (authorizationFailed) {
 		return (
@@ -50,8 +67,9 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 	}
 
 	return (
-		<>
-			<div className='flex justify-between py-6 pt-10'>
+		<div className='flex h-full flex-col'>
+			{/* With a transcript the title gives up the air under it to the lines */}
+			<div className={cn('flex shrink-0 justify-between pt-10', following ? 'pb-2' : 'pb-6')}>
 				<div className='my-auto ml-6 flex-1 overflow-hidden text-left'>
 					<p className='mb-0 truncate text-sm text-white/60'>{t('files-audio-island.now-playing')}</p>
 					<span className='text-md my-0 block truncate text-white/90'>{fileName}</span>
@@ -61,7 +79,11 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 				</div>
 			</div>
 
-			<div className='mb-2 grid grid-cols-8 items-center gap-2 px-6'>
+			{following && (
+				<TranscriptView transcript={transcript} media={audio} matched={matched} variant='island' className='flex-1' />
+			)}
+
+			<div className={cn('mb-2 grid shrink-0 grid-cols-8 items-center gap-2 px-6', following && 'mt-2')}>
 				<div className='text-left'>
 					<p className='text-sm text-white/60'>{formatTime(currentTime)}</p>
 				</div>
@@ -90,7 +112,7 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 				</div>
 			</div>
 
-			<div className='my-1 flex items-center justify-center'>
+			<div className='relative my-1 flex shrink-0 items-center justify-center'>
 				<button
 					onClick={onTogglePlay}
 					className='flex items-center justify-center'
@@ -98,7 +120,26 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 				>
 					{isPlaying ? <RiPauseFill className='h-5 w-5 text-white' /> : <RiPlayFill className='h-5 w-5 text-white' />}
 				</button>
+				{/* Only a recording with a transcript has the switch for it */}
+				{transcript && (
+					<button
+						type='button'
+						onClick={(event) => {
+							event.stopPropagation()
+							onToggleTranscript()
+						}}
+						aria-label={t('photos-item.transcript')}
+						title={t('photos-item.transcript')}
+						aria-pressed={showTranscript}
+						className={cn(
+							'absolute right-5 flex size-6 items-center justify-center rounded-full transition-colors',
+							showTranscript ? 'bg-white/20 text-white' : 'text-white/50 hover:bg-white/10 hover:text-white',
+						)}
+					>
+						<Captions className='size-3.5' />
+					</button>
+				)}
 			</div>
-		</>
+		</div>
 	)
 }

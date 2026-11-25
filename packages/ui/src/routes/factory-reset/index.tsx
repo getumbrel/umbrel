@@ -76,7 +76,7 @@ function SplitLeftContent() {
 				<TbRotate2 className='h-[40px] w-[40px]' />
 			</div>
 			<div className='mt-2.5 px-2 text-center text-15 font-medium'>{t('factory-reset')}</div>
-			<div className='text-13 opacity-40'>{t('umbrel')}</div>
+			<div className='text-13 text-white/40'>{t('umbrel')}</div>
 		</div>
 	)
 }

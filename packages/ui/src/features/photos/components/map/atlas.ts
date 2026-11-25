@@ -1,11 +1,13 @@
 import {useEffect, useState} from 'react'
 
+import OFFLINE_MAP_DATA_URL from '@/assets/photos/offline-map-v1.json?url'
+
 // The atlas: Natural Earth's countries and populated places, bundled with
 // the UI (built by scripts/build-photos-offline-map.mjs). The map names the
 // area it shows from it, the inspector names where a photo was taken, and
 // with no basemap on the device, the map draws its countries.
 
-export const OFFLINE_MAP_DATA_URL = '/assets/photos/offline-map-v1.json'
+export {OFFLINE_MAP_DATA_URL}
 
 type Point = [lng: number, lat: number]
 type Bounds = [west: number, south: number, east: number, north: number]

@@ -70,3 +70,15 @@ export function orbPaletteCssBackground(palette: OrbPalette) {
 function clamp(value: number, min: number, max: number) {
 	return Math.min(max, Math.max(min, value))
 }
+
+// The palette as CSS custom properties of bare channels, so styles can mix
+// their own alpha: `rgb(var(--orb-primary) / 0.4)`
+export function orbPaletteVars(palette: OrbPalette): Record<`--orb-${keyof OrbPalette}`, string> {
+	const channels = ([r, g, b]: Rgb) => [r, g, b].map((v) => Math.round(clamp(v, 0, 1) * 255)).join(' ')
+	return {
+		'--orb-deep': channels(palette.deep),
+		'--orb-primary': channels(palette.primary),
+		'--orb-secondary': channels(palette.secondary),
+		'--orb-milk': channels(palette.milk),
+	}
+}

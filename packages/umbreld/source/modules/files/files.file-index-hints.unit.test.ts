@@ -42,12 +42,12 @@ test('a successful create posts its index hint without waiting for it', async ()
 	const {files} = filesFixture(systemPath)
 	let releaseIndexHint!: () => void
 	const indexHintReleased = new Promise<void>((resolve) => (releaseIndexHint = resolve))
-	const reconcilePath = vi.fn(() => indexHintReleased)
-	Object.assign(files, {fileIndex: {reconcilePath}})
+	const reconcileCreatedDirectory = vi.fn(() => indexHintReleased)
+	Object.assign(files, {fileIndex: {reconcileCreatedDirectory}})
 
 	await expect(files.createDirectory('/Home/created')).resolves.toMatchObject({created: true})
 
-	expect(reconcilePath).toHaveBeenCalledWith(systemPath)
+	expect(reconcileCreatedDirectory).toHaveBeenCalledWith(systemPath)
 	expect(await fse.pathExists(systemPath)).toBe(true)
 	releaseIndexHint()
 })

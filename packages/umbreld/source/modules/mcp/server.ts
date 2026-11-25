@@ -1,3 +1,4 @@
+import {readFile} from 'node:fs/promises'
 import nodePath from 'node:path'
 
 import type {ErrorRequestHandler, RequestHandler, Response, Router} from 'express'
@@ -14,6 +15,8 @@ import type {McpPermissions} from './mcp.ts'
 import registerAppTools from './tools/apps.ts'
 import registerFileTools from './tools/files.ts'
 import registerMachineTools from './tools/machines.ts'
+import registerPhotoTools from './tools/photos.ts'
+import registerSearchTools from './tools/search.ts'
 import {MCP_PERMISSION_REMEDIATION, type McpToolContext} from './tools/shared.ts'
 import registerSystemInfoTools from './tools/system-info.ts'
 import registerSystemManagementTools from './tools/system-management.ts'
@@ -86,6 +89,7 @@ function instructionsFor(permissions: McpPermissions, baseUrl: string) {
 		`System management: ${permissions.manageSystem ? 'granted' : 'not granted'}.`,
 		`Machine control access: ${machineAccess}.`,
 		`Machine creation: ${permissions.createMachines ? 'granted' : 'not granted'}.`,
+		`Photos access: ${permissions.photos ? 'granted' : 'not granted'}.`,
 		// Ungranted tools are never registered, so the permission errors that
 		// point to Settings never reach the agent. Without this it only knows it
 		// lacks a tool, and tells the user the request is impossible.
@@ -104,13 +108,30 @@ function instructionsFor(permissions: McpPermissions, baseUrl: string) {
 			: '',
 		'File deletion is available only by moving internal-storage items to Trash. Files in /External (USB storage) and /Network (Network storage) cannot be deleted through MCP because those locations require permanent deletion, which is unavailable.',
 		"MCP never replaces an existing file. On a name conflict, ask the user whether to move the existing internal-storage item to Trash or keep both. For /External and /Network, use collision 'keep-both'; the response path is the generated copy name.",
-		'File search, when available, covers only /Home.',
+		'File search, when available, covers only /Home, and finds files by what is in them as well as by name.',
+		permissions.photos
+			? "The owner's Photos library can be listed and arranged: find photos with search_files (scope 'photos') or list_photos, then gather them into albums, mark favourites, or move them to Recently Deleted by their photoId. get_photo returns the picture itself, so you can look at a photo before describing or choosing it. To gather the photos of an occasion, narrow by when (from, to), who (personIds, from list_people) and where (the place's name as the query), and read every page before making the album."
+			: '',
 		hasFileAccess
 			? `File contents transfer over HTTP, never through tool results. Download URL: ${filesUrl}/download?path=/Home/file.bin. Download example: curl -H "Authorization: Bearer <your token>" "${filesUrl}/download?path=/Home/file.bin" -o file.bin. Upload URL: ${filesUrl}/upload?path=/Home/file.bin. Upload example: curl -H "Authorization: Bearer <your token>" --data-binary @file.bin "${filesUrl}/upload?path=/Home/file.bin".`
 			: '',
 	]
 		.filter(Boolean)
 		.join(' ')
+}
+
+// The rendition Photos shows in its grid, 512 pixels on the short side
+async function photoImage(umbreld: Umbreld, photoId: string) {
+	const item = await umbreld.photos.resolveItem(OWNER_ACCOUNT_ID, photoId)
+	if (!item) throw new Error(`[photos-item-not-found] '${photoId}'`)
+	const thumbnailUrl = await umbreld.files.thumbnails.getThumbnailOnDemand(
+		item.path,
+		OWNER_ACCOUNT_ID,
+		'preview-512-webp-v2',
+	)
+	const filename = nodePath.posix.basename(new URL(thumbnailUrl, 'http://localhost').pathname)
+	const systemPath = await umbreld.files.thumbnails.resolveThumbnailRequest(filename, item.path, OWNER_ACCOUNT_ID)
+	return {data: (await readFile(systemPath)).toString('base64'), mimeType: 'image/webp'}
 }
 
 // The bearer credential names the agent: its label and type from settings,
@@ -128,6 +149,7 @@ export async function createUmbrelMcpServer(umbreld: Umbreld, requestInfo?: Requ
 		dataDirectory: umbreld.dataDirectory,
 		machines: umbreld.machines,
 		agent: await agentFor(umbreld, requestInfo),
+		photos: {image: (photoId) => photoImage(umbreld, photoId)},
 	} satisfies McpToolContext
 	const server = new McpServer(
 		{name: 'umbrelOS', version: umbreld.version},
@@ -136,6 +158,8 @@ export async function createUmbrelMcpServer(umbreld: Umbreld, requestInfo?: Requ
 	registerSystemInfoTools(server, context)
 	registerAppTools(server, context, permissions)
 	registerFileTools(server, context, permissions)
+	registerSearchTools(server, context, permissions)
+	registerPhotoTools(server, context, permissions)
 	if (permissions.manageSystem) registerSystemManagementTools(server, context)
 	registerMachineTools(server, context, permissions)
 	return server

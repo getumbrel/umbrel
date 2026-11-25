@@ -35,7 +35,9 @@ export function MachineIcon({machine}: {machine: Machine}) {
 						className='w-[var(--app-icon)] rounded-[var(--app-icon-radius)] ring-white/25 transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6'
 					/>
 					<div className='max-w-full text-[length:var(--app-label)] leading-normal drop-shadow-desktop-label'>
-						<div className='truncate contrast-more:bg-black contrast-more:px-1'>{machine.name}</div>
+						<div className='truncate contrast-more:-mx-1 contrast-more:rounded-4 contrast-more:bg-black contrast-more:px-1'>
+							{machine.name}
+						</div>
 					</div>
 				</motion.button>
 			</ContextMenuTrigger>

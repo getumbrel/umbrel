@@ -42,7 +42,13 @@ export function StorefrontSectionView({
 			return section.layout === 'rail' ? (
 				<AppRailSection overline={section.subtitle} title={section.title} apps={section.apps} statuses={statuses} />
 			) : (
-				<AppGridSection overline={section.subtitle} title={section.title} apps={section.apps} statuses={statuses} />
+				<AppGridSection
+					overline={section.subtitle}
+					title={section.title}
+					apps={section.apps}
+					statuses={statuses}
+					completeRows
+				/>
 			)
 		case 'category-feature':
 			return (
@@ -186,7 +192,7 @@ function SpotlightBanner({
 					className='absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.015]'
 					onError={() => onArtworkError(app.id)}
 				/>
-				<span className='absolute right-3 bottom-3 flex items-center gap-0.5 rounded-full bg-black/40 py-1.5 pr-2 pl-3 text-12 font-medium text-white/90 backdrop-blur-md transition-colors duration-200 group-hover:bg-black/60 max-md:hidden md:right-5 md:bottom-5'>
+				<span className='absolute right-3 bottom-3 flex items-center gap-0.5 rounded-full bg-black/40 py-1.5 pr-2 pl-3 text-12 font-medium text-white/90 backdrop-blur-md transition-colors duration-200 group-hover:bg-black/60 contrast-more:bg-black/80 contrast-more:group-hover:bg-black max-md:hidden md:right-5 md:bottom-5'>
 					{t('app.view')}
 					<TbChevronRight className='h-3.5 w-3.5' />
 				</span>
@@ -254,7 +260,7 @@ function CategoryFeatureSection({
 			>
 				<div className='flex flex-col gap-1.5'>
 					<h2 className='text-20 leading-tight font-semibold -tracking-3 sm:text-24'>{title}</h2>
-					<p className='max-w-md text-13 leading-snug opacity-60'>{description}</p>
+					<p className='max-w-md text-13 leading-snug text-white/60'>{description}</p>
 				</div>
 				{/* A right-anchored rail still has to scroll from its start when the
 				    chips overflow, so the first chip carries an auto left margin

@@ -1,4 +1,5 @@
 import fse from 'fs-extra'
+import {$} from 'execa'
 import {z} from 'zod'
 import yaml from 'js-yaml'
 import semver from 'semver'
@@ -89,18 +90,27 @@ class Migration {
 
 	async activateImportedDataDirectory() {
 		const importData = `${this.umbreld.dataDirectory}/import`
-		const importDataExists = await fse.exists(importData)
-		if (!importDataExists) return
-		this.logger.log('Found Umbrel data to import, activating...')
-		// We have to move the import dir parrallel to the data dir and then overwrte.
-		// This is because fse.move doesn't work if the source is a subdirectory of the destination.
+		// The import lives inside the data directory it replaces, so it's first moved alongside it.
 		// This is fine to do on Umbrel Home because all of /home is on the large data partition.
 		// On Rasperry Pi the data partition is small on the SD card and only the data dir on the
 		// large external USB storage. We don't currently support data import on Pi so it's ok for now
 		// but we'll need to handle this if we want to support it in the future.
 		const temporaryData = `${this.umbreld.dataDirectory}-import-temp`
-		await fse.move(importData, temporaryData, {overwrite: true})
-		await fse.move(temporaryData, this.umbreld.dataDirectory, {overwrite: true})
+		if (await fse.exists(importData)) {
+			this.logger.log('Found Umbrel data to import, activating...')
+			await fse.move(importData, temporaryData, {overwrite: true})
+			// Swap the two directories in a single atomic step, so there's never a moment without a
+			// complete data directory. Afterwards the temporary directory holds the old data.
+			await $`mv --exchange --no-target-directory ${temporaryData} ${this.umbreld.dataDirectory}`
+		}
+		// Delete the old data. If we were stopped before finishing last time it's still here, so it's
+		// deleted on any start. If we were stopped before the swap it's an import that was never
+		// activated: we're still running the data we had, and the import has to be done again.
+		if (await fse.exists(temporaryData)) {
+			await fse
+				.remove(temporaryData)
+				.catch((error) => this.logger.error('Failed to delete the replaced data directory', error))
+		}
 	}
 
 	async migrateLegacyData() {
@@ -182,6 +192,15 @@ class Migration {
 		this.logger.log('Downloads directory migrated')
 	}
 
+	// Before 2.1 the owner could share an app's folder under /Apps with members,
+	// which let them change the scripts that run as root when the app starts.
+	// Stop any of those shares before anything can serve a request with them.
+	async removeAppFolderMemberShares() {
+		if (await this.umbreld.files.memberShares.removeWithin('/Apps')) {
+			this.logger.log('Stopped sharing app folders with members')
+		}
+	}
+
 	async start() {
 		this.logger.log('Checking if any migrations are needed...')
 
@@ -230,6 +249,13 @@ class Migration {
 			await this.migrateDownloadsDirectory()
 		} catch (error) {
 			this.logger.error(`Failed to migrate Downloads directory`, error)
+		}
+
+		// Stop sharing app folders with members
+		try {
+			await this.removeAppFolderMemberShares()
+		} catch (error) {
+			this.logger.error(`Failed to stop sharing app folders with members`, error)
 		}
 
 		// Write the current version to signal what version we've migrated up to.

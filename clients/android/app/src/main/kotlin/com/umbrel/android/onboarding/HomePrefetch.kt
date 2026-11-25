@@ -31,13 +31,13 @@ internal fun prefetchHome(container: AppContainer, device: SavedDevice, session:
 			withContext(Dispatchers.Main) {
 				try {
 					container.deviceStore.update(device.id) {
-						it.saveAccountProfile(session.accountId, info.name, info.wallpaper.id, info.wallpaper.brandColorHsl, info.role)
+						it.saveAccountProfile(session.accountId, info.name, info.wallpaper.id, info.wallpaper.brandColorHsl, info.role, info.wallpaper.hash)
 					}
 				} catch (error: Config.StorageException) {
 					// DeviceStore reports the issue.
 				}
 			}
-			container.wallpapers.load(info.wallpaper.id, target)
+			container.wallpapers.load(info.wallpaper.id, info.wallpaper.hash, target)
 		}
 		// Only snapshot when the app list arrived; a half-failed prefetch shouldn't replace
 		// Home's skeletons with empty content.

@@ -19,7 +19,7 @@ export function SectionHeading({
 				{/* Overlines only come from the apps.umbrel.com feed, which is English. Marking them
 				    so keeps the capitals English too: no Turkish "EDİTOR'S PİCKS" */}
 				{overline && (
-					<p lang='en' className='text-11 leading-tight font-semibold tracking-wide uppercase opacity-40'>
+					<p lang='en' className='text-11 leading-tight font-semibold tracking-wide text-white/40 uppercase'>
 						{overline}
 					</p>
 				)}

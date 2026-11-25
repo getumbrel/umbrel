@@ -1,8 +1,6 @@
 import {useTranslation} from 'react-i18next'
 
-import {BarePage} from '@/layouts/bare/bare-page'
-import FailedLayout from '@/modules/bare/failed-layout'
-import {ProgressLayout} from '@/modules/bare/progress-layout'
+import {Cover, CoverRetryActions} from '@/components/ui/cover'
 import {trpcReact} from '@/trpc/trpc'
 
 export function useMigrate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
@@ -25,34 +23,26 @@ export function MigratingCover({onRetry}: {onRetry: () => void}) {
 	const {progress, description, running, error} = updateStatusQ.data ?? {}
 	const indeterminate = updateStatusQ.isLoading || !running
 
+	if (error) {
+		return (
+			<Cover
+				mark='warning'
+				title={t('migrate.failed.title')}
+				description={error}
+				actions={<CoverRetryActions retry={t('migrate.failed.retry')} onRetry={onRetry} />}
+			/>
+		)
+	}
+
+	// There is no cover for success: umbrelOS goes straight to rebooting
 	return (
-		<BarePage>
-			{!error && (
-				<ProgressLayout
-					title={t('migration-assistant')}
-					callout={t('migrate.callout')}
-					progress={indeterminate ? undefined : progress}
-					message={description}
-					isRunning={!!running}
-				/>
-			)}
-			{error && (
-				<FailedLayout
-					title={t('migrate.failed.title')}
-					description={error}
-					buttonText={t('migrate.failed.retry')}
-					buttonOnClick={onRetry}
-				/>
-			)}
-			{/* We go straight to rebooting */}
-			{/* {progress === 100 && (
-				<SuccessLayout
-					title={t('migrate.success.title')}
-					description={t('migrate.success.description')}
-					buttonText={t('continue-to-log-in')}
-				/>
-			)} */}
-		</BarePage>
+		<Cover
+			title={t('migration-assistant')}
+			progress={indeterminate ? 'indeterminate' : (progress ?? 'indeterminate')}
+			// An empty step gets the default too
+			status={description || t('connecting')}
+			note={t('migrate.callout')}
+		/>
 	)
 }
 

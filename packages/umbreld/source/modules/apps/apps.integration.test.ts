@@ -664,6 +664,7 @@ test.sequential('moveDataRoot() moves app data and recovers every journal bounda
 	const moveMarkerSystemPath = (token: string) => path.join(destinationSystemPath, `.umbrel-moving-${token}`)
 	const originalComposeContents = await fse.readFile(composePath, 'utf8')
 	const originalManifestContents = await fse.readFile(manifestPath, 'utf8')
+	const templateDataPath = path.join(await umbreld.instance.appStore.getAppTemplateFilePath(appId), 'data')
 	const originalGetStorageDestination = umbreld.instance.files.getStorageDestination.bind(umbreld.instance.files)
 	const originalGetExternalStorageFilesystemType = umbreld.instance.files.getExternalStorageFilesystemType.bind(
 		umbreld.instance.files,
@@ -927,6 +928,9 @@ test.sequential('moveDataRoot() moves app data and recovers every journal bounda
 		await expect(umbreld.client.apps.moveDataRoot.mutate({appId, destinationParentPath})).resolves.toBe(true)
 		await waitForReady('preparing the unavailable-storage reset')
 		await expect(umbreld.client.apps.resetDataRoot.mutate({appId})).rejects.toThrow('apps-data-root-reset-available')
+		// Starting fresh restores the package's committed data/ files like an install
+		await fse.outputFile(path.join(templateDataPath, 'server', 'package-default.txt'), 'package default')
+		await fse.ensureDir(path.join(templateDataPath, 'empty'))
 		storageAvailable = false
 		const originalStoreGet = app.store.get.bind(app.store)
 		let failInitializationOnce = true
@@ -960,6 +964,10 @@ test.sequential('moveDataRoot() moves app data and recovers every journal bounda
 		await expect(fse.readFile(path.join(destinationSystemPath, 'server', 'move-test.txt'), 'utf8')).resolves.toBe(
 			'authoritative app data',
 		)
+		await expect(fse.readFile(path.join(sourceDataRoot, 'server', 'package-default.txt'), 'utf8')).resolves.toBe(
+			'package default',
+		)
+		await expect(fse.pathExists(path.join(sourceDataRoot, 'empty'))).resolves.toBe(true)
 
 		// Starting fresh for an intentionally stopped app initializes the new root
 		// without changing its persisted auto-start choice.
@@ -987,6 +995,7 @@ test.sequential('moveDataRoot() moves app data and recovers every journal bounda
 			fse.writeFile(composePath, originalComposeContents),
 			fse.writeFile(manifestPath, originalManifestContents),
 			fse.remove(externalSystemRoot),
+			fse.remove(templateDataPath),
 		])
 		await app.regenerateUserSettingsCompose()
 		getStorageDestinationSpy.mockRestore()

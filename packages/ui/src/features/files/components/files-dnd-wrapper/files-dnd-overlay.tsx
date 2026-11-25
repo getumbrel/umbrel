@@ -34,7 +34,7 @@ export function FilesDndOverlay() {
 		<DragOverlay dropAnimation={null} modifiers={[trailCursor]}>
 			<div className='relative flex w-[160px] flex-col items-center gap-0'>
 				{totalItemsBeingDragged > 1 && (
-					<div className='absolute top-[-10px] right-[-10px] z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/25 bg-brand shadow-xs'>
+					<div className='absolute top-[-10px] right-[-10px] z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-white/25 bg-brand px-1 shadow-xs'>
 						<span className='text-xs font-medium text-white'>{totalItemsBeingDragged}</span>
 					</div>
 				)}

@@ -11,7 +11,12 @@ import {
 } from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
 
-import {BASE_ROUTE_PATH} from '@/features/photos/constants'
+import {BASE_ROUTE_PATH, personPath} from '@/features/photos/constants'
+
+// What a cover is being chosen for: an album's face, or a person's
+export type CoverTarget = {kind: 'album' | 'person'; id: string}
+const coverPagePath = ({kind, id}: CoverTarget) =>
+	kind === 'album' ? `${BASE_ROUTE_PATH}/albums/${id}` : personPath(id)
 
 type PhotosSelection = {
 	// The selected items. A new set on every change, so a consumer can compare
@@ -29,8 +34,18 @@ type PhotosSelection = {
 	toggle: (id: string) => void
 	// Replace the selection
 	set: (ids: Iterable<string>) => void
-	// Drop what is no longer in the list
-	retain: (known: ReadonlySet<string>) => void
+	// Everything in a list that hasn't all loaded: what is here is selected at
+	// once, and all of it once `rest` brings the id of everything the list
+	// holds (null if it couldn't be had). `kept` is what is selected in other
+	// lists, which stays. Anything else done to the selection meanwhile means
+	// the user has moved on: the rest is then not selected when it arrives.
+	selectAll: (loaded: Iterable<string>, rest: Promise<readonly string[] | null>, kept?: Iterable<string>) => void
+	// … and while it is still on its way: the count is not yet what it will
+	// be, so nothing should act on the selection
+	selectingAll: boolean
+	// Drop what has left a list: what it held (`was`) and no longer does
+	// (`now`). What was selected somewhere else is not the list's to drop.
+	retain: (was: Pick<ReadonlySet<string>, 'has'>, now: ReadonlySet<string>) => void
 	// The album items are being picked for, while they are: selection mode
 	// that follows the user from view to view — the library, Videos, a
 	// person, another album — gathering one selection for the album, until
@@ -38,15 +53,15 @@ type PhotosSelection = {
 	// the whole library.
 	pickingFor: string | undefined
 	pickFor: (albumId: string) => void
-	// The album a cover is being chosen for, while one is: selection mode on
-	// the album's own page where the first item chosen becomes the cover (a
-	// cover must be one of the album's items, so leaving the page cancels).
-	// While it's on, the selection itself is inert — nothing accumulates.
-	coveringFor: string | undefined
-	coverFor: (albumId: string) => void
-	// Ends cover mode after a choice. When `coverFor` navigated to the album's
-	// page (the albums grid, another view's sidebar card), the choice returns
-	// the user where they came from; choosing from the album's own page stays.
+	// The album or person a cover is being chosen for, while one is: selection
+	// mode on its own page where the first item chosen becomes the cover (a
+	// cover must be one of its items, so leaving the page cancels). While it's
+	// on, the selection itself is inert — nothing accumulates.
+	coveringFor: CoverTarget | undefined
+	coverFor: (target: CoverTarget) => void
+	// Ends cover mode after a choice. When `coverFor` navigated to the page
+	// (the albums or people grid, another view's sidebar card), the choice
+	// returns the user where they came from; choosing from the page itself stays.
 	coverChosen: () => void
 }
 
@@ -64,14 +79,22 @@ const PhotosSelectionContext = createContext<PhotosSelection | undefined>(undefi
 export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 	const [ids, setIds] = useState(EMPTY)
 	const [explicit, setExplicit] = useState(false)
+	// The Select all still waiting on the rest of its list, if one is
+	const allRef = useRef<object | null>(null)
+	const [selectingAll, setSelectingAll] = useState(false)
+	const stopAll = useCallback(() => {
+		if (!allRef.current) return
+		allRef.current = null
+		setSelectingAll(false)
+	}, [])
 	const [pickingFor, setPickingFor] = useState<string>()
-	const [coveringFor, setCoveringFor] = useState<string>()
+	const [coveringFor, setCoveringFor] = useState<CoverTarget>()
 	// Where `coverFor` navigated from, when it did: a chosen cover returns
 	// there. Cancelling stays put, and leaving the page cancels instead.
 	const coveringFrom = useRef<string>(undefined)
 	// Read by the otherwise-stable callbacks, so entering cover mode doesn't
 	// change their identity for every consumer that lists them as deps
-	const covering = useRef<string>(undefined)
+	const covering = useRef<CoverTarget>(undefined)
 	useLayoutEffect(() => {
 		covering.current = coveringFor
 	}, [coveringFor])
@@ -82,10 +105,12 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 	const {pathname} = useLocation()
 	const navigate = useNavigate()
 	useEffect(() => {
+		// The list a Select all was loading has been left either way
+		stopAll()
 		if (pickingFor) return
 		setIds(EMPTY)
 		setExplicit(false)
-	}, [pathname, pickingFor])
+	}, [pathname, pickingFor, stopAll])
 	// Covering is the album page's own mode: anywhere else there is nothing
 	// valid to choose (the backend only accepts one of the album's items).
 	// Cancelled on leaving the page — but only once the mode has arrived
@@ -93,13 +118,13 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 	// can run between the two, when the pathname is still the old page's.
 	// Which album arrived, not whether: an arrival for album A must not count
 	// against a covering just switched to album B mid-navigation.
-	const coveringArrived = useRef<string>(undefined)
+	const coveringArrived = useRef<CoverTarget>(undefined)
 	useEffect(() => {
 		if (!coveringFor) {
 			coveringArrived.current = undefined
 			return
 		}
-		if (pathname === `${BASE_ROUTE_PATH}/albums/${coveringFor}`) coveringArrived.current = coveringFor
+		if (pathname === coverPagePath(coveringFor)) coveringArrived.current = coveringFor
 		else if (coveringArrived.current === coveringFor) {
 			coveringArrived.current = undefined
 			coveringFrom.current = undefined
@@ -109,35 +134,38 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 
 	const start = useCallback(() => setExplicit(true), [])
 	const done = useCallback(() => {
+		stopAll()
 		setIds(EMPTY)
 		setExplicit(false)
 		setPickingFor(undefined)
 		setCoveringFor(undefined)
 		coveringFrom.current = undefined
-	}, [])
+	}, [stopAll])
 	const pickFor = useCallback(
 		(albumId: string) => {
+			stopAll()
 			setIds(EMPTY)
 			setCoveringFor(undefined)
 			coveringFrom.current = undefined
 			setPickingFor(albumId)
 			navigate(BASE_ROUTE_PATH)
 		},
-		[navigate],
+		[navigate, stopAll],
 	)
 	const coverFor = useCallback(
-		(albumId: string) => {
+		(target: CoverTarget) => {
+			stopAll()
 			setIds(EMPTY)
 			setExplicit(false)
 			setPickingFor(undefined)
-			setCoveringFor(albumId)
-			// Already on the album's page (its own sidebar card): navigating
+			setCoveringFor(target)
+			// Already on the page (an album's own sidebar card): navigating
 			// again would only push a dead history entry
-			const path = `${BASE_ROUTE_PATH}/albums/${albumId}`
+			const path = coverPagePath(target)
 			coveringFrom.current = pathname !== path ? pathname : undefined
 			if (pathname !== path) navigate(path)
 		},
-		[navigate, pathname],
+		[navigate, pathname, stopAll],
 	)
 	const coverChosen = useCallback(() => {
 		const returnTo = coveringFrom.current
@@ -145,21 +173,48 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 		if (returnTo) navigate(returnTo)
 	}, [done, navigate])
 	const toggle = useCallback(
-		(id: string) =>
+		(id: string) => {
+			stopAll()
 			setIds((prev) => {
 				if (covering.current) return prev
 				const next = new Set(prev)
 				if (!next.delete(id)) next.add(id)
 				return next
-			}),
+			})
+		},
+		[stopAll],
+	)
+	const set = useCallback(
+		(next: Iterable<string>) => {
+			stopAll()
+			setIds((prev) => (covering.current ? prev : new Set(next)))
+		},
+		[stopAll],
+	)
+	const selectAll = useCallback(
+		(loaded: Iterable<string>, rest: Promise<readonly string[] | null>, kept: Iterable<string> = []) => {
+			if (covering.current) return
+			const held = [...kept]
+			const request = {}
+			allRef.current = request
+			setSelectingAll(true)
+			setIds(new Set([...held, ...loaded]))
+			const finish = (all: readonly string[] | null) => {
+				// Something else was done with the selection since: it stands
+				if (allRef.current !== request) return
+				allRef.current = null
+				setSelectingAll(false)
+				if (all) setIds(new Set([...held, ...all]))
+			}
+			rest.then(finish, () => finish(null))
+		},
 		[],
 	)
-	const set = useCallback((next: Iterable<string>) => setIds((prev) => (covering.current ? prev : new Set(next))), [])
 	const retain = useCallback(
-		(known: ReadonlySet<string>) =>
+		(was: Pick<ReadonlySet<string>, 'has'>, now: ReadonlySet<string>) =>
 			setIds((prev) => {
 				if (prev.size === 0) return prev
-				const next = new Set([...prev].filter((id) => known.has(id)))
+				const next = new Set([...prev].filter((id) => now.has(id) || !was.has(id)))
 				return next.size === prev.size ? prev : next
 			}),
 		[],
@@ -173,6 +228,8 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 			done,
 			toggle,
 			set,
+			selectAll,
+			selectingAll,
 			retain,
 			pickingFor,
 			pickFor,
@@ -180,7 +237,22 @@ export function PhotosSelectionProvider({children}: {children: ReactNode}) {
 			coverFor,
 			coverChosen,
 		}),
-		[ids, explicit, start, done, toggle, set, retain, pickingFor, pickFor, coveringFor, coverFor, coverChosen],
+		[
+			ids,
+			explicit,
+			start,
+			done,
+			toggle,
+			set,
+			selectAll,
+			selectingAll,
+			retain,
+			pickingFor,
+			pickFor,
+			coveringFor,
+			coverFor,
+			coverChosen,
+		],
 	)
 	return <PhotosSelectionContext value={value}>{children}</PhotosSelectionContext>
 }

@@ -296,6 +296,172 @@ describe('Auth', () => {
 		)
 	})
 
+	describe('browser sessions an app makes from its native session', () => {
+		const browserSessionFor = async (deviceToken: string) => {
+			const refreshed = await auth.refreshNativeAccess(deviceToken, nativeClient, {browserSession: true})
+			const browser = refreshed.browserSession!
+			const principal = await auth.authenticateDashboardCredentials(browser.dashboardToken, browser.browserSessionToken)
+			return {...browser, principal, accessToken: refreshed.accessToken}
+		}
+
+		test('give the app a full browser session for its account without a password', async () => {
+			memberIds.add('Alice')
+			const native = await auth.createNativeSession({accountId: 'Alice', nativeClient})
+
+			const browser = await browserSessionFor(native.deviceToken)
+
+			expect(browser.principal).toMatchObject({accountId: 'Alice', actor: 'account'})
+			expect(browser.principal.sessionId).not.toBe(native.principal.sessionId)
+			await expect(auth.authenticate(browser.appGatewayToken, 'app-gateway')).resolves.toEqual(browser.principal)
+			await expect(auth.authenticate(browser.accessToken, 'native-access')).resolves.toEqual(native.principal)
+			expect(() => auth.issueWebSocketTicket(browser.principal, 'trpc')).not.toThrow()
+			await expect(auth.renewSession(browser.principal)).resolves.toMatchObject({principal: browser.principal})
+			await expect(auth.refreshNativeAccess(native.deviceToken, nativeClient)).resolves.not.toHaveProperty(
+				'browserSession.dashboardToken',
+			)
+		})
+
+		test('are never made from anything but an active native device credential', async () => {
+			const browser = await auth.createSession()
+			const native = await auth.createNativeSession({nativeClient})
+
+			await expect(
+				auth.refreshNativeAccess(browser.dashboardToken, nativeClient, {browserSession: true}),
+			).rejects.toThrow('Invalid native device credential')
+			await expect(auth.refreshNativeAccess(native.accessToken, nativeClient, {browserSession: true})).rejects.toThrow(
+				'Invalid native device credential',
+			)
+			await auth.revokeSession(native.principal.sessionId)
+			await expect(auth.refreshNativeAccess(native.deviceToken, nativeClient, {browserSession: true})).rejects.toThrow(
+				'Invalid native device credential',
+			)
+			await expect(auth.listSessions(browser.principal)).resolves.toHaveLength(1)
+		})
+
+		test('keep one per app, each replacing the last', async () => {
+			const phone = await auth.createNativeSession({nativeClient})
+			const otherPhone = await auth.createNativeSession({nativeClient})
+			const first = await browserSessionFor(phone.deviceToken)
+			const firstSocket = new TestSocket()
+			auth.registerWebSocket(first.principal, firstSocket as unknown as WebSocket)
+			const otherPhoneBrowser = await browserSessionFor(otherPhone.deviceToken)
+
+			const second = await browserSessionFor(phone.deviceToken)
+
+			await expect(auth.authenticate(first.dashboardToken, 'dashboard')).rejects.toThrow('Invalid credential')
+			expect(firstSocket.terminated).toBe(true)
+			await expect(auth.authenticate(second.dashboardToken, 'dashboard')).resolves.toEqual(second.principal)
+			await expect(auth.authenticate(otherPhoneBrowser.dashboardToken, 'dashboard')).resolves.toEqual(
+				otherPhoneBrowser.principal,
+			)
+		})
+
+		test('are revoked with the app, connections included', async () => {
+			const native = await auth.createNativeSession({nativeClient})
+			const browser = await browserSessionFor(native.deviceToken)
+			const socket = new TestSocket()
+			const appSocket = new TestAppSocket()
+			auth.registerWebSocket(browser.principal, socket as unknown as WebSocket)
+			auth.registerAppSocket(browser.principal, 'files', appSocket as unknown as Socket, auth.appAccessRevision)
+
+			await expect(auth.revokeSession(native.principal.sessionId)).resolves.toBe(true)
+
+			await expect(auth.authenticate(browser.dashboardToken, 'dashboard')).rejects.toThrow('Invalid credential')
+			await expect(auth.validatePrincipal(browser.principal)).rejects.toThrow('Invalid session')
+			expect(socket.terminated).toBe(true)
+			expect(appSocket.destroyed).toBe(true)
+		})
+
+		test('show in Active Logins as the app, and revoking that row revokes both', async () => {
+			const desktop = await auth.createSession({userAgent: 'Desktop Browser/1.0'})
+			const native = await auth.createNativeSession({nativeClient})
+			const browser = await browserSessionFor(native.deviceToken)
+
+			const fromTheApp = await auth.listSessions(browser.principal)
+			expect(fromTheApp.map((session) => session.id).sort()).toEqual(
+				[desktop.principal.sessionId, native.principal.sessionId].sort(),
+			)
+			expect(fromTheApp.find((session) => session.current)?.id).toBe(native.principal.sessionId)
+
+			await expect(auth.revokeSessionForAccount(browser.principal, native.principal.sessionId)).resolves.toEqual({
+				revoked: true,
+				revokedCurrent: true,
+			})
+			await expect(auth.authenticate(browser.dashboardToken, 'dashboard')).rejects.toThrow('Invalid credential')
+			await expect(auth.listSessions(desktop.principal)).resolves.toHaveLength(1)
+		})
+
+		test('keep the app signed in when it logs out other sessions, and count logins', async () => {
+			const native = await auth.createNativeSession({nativeClient})
+			const browser = await browserSessionFor(native.deviceToken)
+			const desktop = await auth.createSession()
+			const otherPhone = await auth.createNativeSession({nativeClient})
+			const otherPhoneBrowser = await browserSessionFor(otherPhone.deviceToken)
+
+			await expect(auth.revokeOtherSessionsForAccount(browser.principal)).resolves.toBe(2)
+
+			await expect(auth.authenticate(browser.dashboardToken, 'dashboard')).resolves.toEqual(browser.principal)
+			await expect(auth.refreshNativeAccess(native.deviceToken, nativeClient)).resolves.toMatchObject({
+				principal: native.principal,
+			})
+			await expect(auth.authenticate(desktop.dashboardToken, 'dashboard')).rejects.toThrow('Invalid credential')
+			await expect(auth.authenticate(otherPhoneBrowser.dashboardToken, 'dashboard')).rejects.toThrow(
+				'Invalid credential',
+			)
+		})
+
+		test('sign the app out when umbrelOS logs out of them', async () => {
+			const native = await auth.createNativeSession({nativeClient})
+			const browser = await browserSessionFor(native.deviceToken)
+
+			await expect(auth.logout(browser.principal)).resolves.toBe(true)
+
+			await expect(auth.refreshNativeAccess(native.deviceToken, nativeClient)).rejects.toThrow(
+				'Invalid native device credential',
+			)
+			await expect(auth.authenticate(browser.dashboardToken, 'dashboard')).rejects.toThrow('Invalid credential')
+		})
+
+		test('are the same login as the app, however many it makes', async () => {
+			const native = await auth.createNativeSession({nativeClient})
+			const desktop = await auth.createSession()
+
+			const first = await browserSessionFor(native.deviceToken)
+			expect(auth.loginId(first.principal)).toBe(native.principal.sessionId)
+			const second = await browserSessionFor(native.deviceToken)
+			expect(auth.loginId(second.principal)).toBe(native.principal.sessionId)
+
+			expect(auth.loginId(native.principal)).toBe(native.principal.sessionId)
+			expect(auth.loginId(desktop.principal)).toBe(desktop.principal.sessionId)
+			expect(auth.loginId({sessionId: 'system', accountId: OWNER_ACCOUNT_ID, actor: 'system'})).toBe('system')
+		})
+
+		test('have no login once replaced or revoked, so a request still running cannot be counted apart from the app', async () => {
+			const native = await auth.createNativeSession({nativeClient})
+			const first = await browserSessionFor(native.deviceToken)
+			const second = await browserSessionFor(native.deviceToken)
+
+			expect(() => auth.loginId(first.principal)).toThrow('Invalid session')
+			// Logging out of the replaced one leaves the app and its current browser session alone
+			await expect(auth.logout(first.principal)).resolves.toBe(false)
+			expect(auth.loginId(second.principal)).toBe(native.principal.sessionId)
+
+			await auth.revokeSession(native.principal.sessionId)
+			expect(() => auth.loginId(second.principal)).toThrow('Invalid session')
+			expect(() => auth.loginId(native.principal)).toThrow('Invalid session')
+		})
+
+		test('survive a restart', async () => {
+			const native = await auth.createNativeSession({nativeClient})
+			const browser = await browserSessionFor(native.deviceToken)
+			await auth.stop()
+
+			auth = new Auth(umbreld)
+			await auth.start()
+			await expect(auth.authenticate(browser.dashboardToken, 'dashboard')).resolves.toEqual(browser.principal)
+		})
+	})
+
 	test('creates account-scoped member sessions and rejects deleted accounts', async () => {
 		memberIds.add('Alice')
 		const memberSession = await auth.createSession({accountId: 'Alice'})

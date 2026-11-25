@@ -5,54 +5,92 @@ import {
 	monthStartUtc,
 	scrollForMonth,
 	scrollForTime,
+	spansMonth,
 	type MonthKey,
 	type ScrollWindow,
 } from '@/features/photos/components/listing/time-rail/rail-scale'
-import type {Seek} from '@/features/photos/components/listing/time-rail/use-seek'
+import type {Arrival, Seek} from '@/features/photos/components/listing/time-rail/use-seek'
 import type {Layout} from '@/features/photos/components/listing/timeline-rows'
 
 // Landings: an eased scroll nearby; across anything longer than this many
 // viewports, a fade-through teleport — tweening 100k px is a smear, not motion
 const TWEEN_MAX_VIEWPORTS = 12
+// How long a landing waits for the grid to take up the list it was handed
+const ADOPT_MS = 2000
+// A scrub over months the list doesn't hold asks for one only once it has
+// stayed on it this long — a pause, or the slow last stretch of a drag.
+// Every month the pointer merely crosses would otherwise cost a request,
+// and on a slow link their answers would arrive ahead of the one that is
+// wanted.
+const SCRUB_REST_MS = 100
 
 export type CommittedView = {layout: Layout; height: number}
 export type ElementRef<T> = {readonly current: T | null}
 
+// A list on its way to the screen and where it should be scrolled to when it
+// gets there: `first` is its first item, which is how the grid knows the
+// list, and `top` the scrollTop for the layout the grid gives it. The grid
+// takes it up in the commit that adopts the list (see TimelineGrid), so the
+// list and its place arrive in one paint.
+export type Landing = {first: string | undefined; top: (view: CommittedView) => number | undefined}
+
 // Travelling to a month: what the desktop rail and the phone's scrubber both
-// do once they know where the user wants to be. A month already loaded is a
-// scroll away — tweened nearby, faded through across a long way; one past the
-// loading frontier is a seek (see use-seek.ts) that pages toward it, then a
-// landing on the real thing once the grid has adopted the pages. The user's
-// own scroll or press during a seek means "never mind".
+// do once they know where the user wants to be. A month the list on screen
+// holds is a scroll away — tweened nearby, faded through across a long way;
+// one beyond it is a seek (see use-seek.ts), which puts the month's own
+// stretch of the timeline on screen with the grid landed on it. A jump
+// fades through to that; a scrub is followed there as its photographs
+// arrive, the way it is followed through what is already loaded. The user's
+// own scroll or press while a jump's seek is awaited means "never mind".
 export function useLanding({
 	scrollerRef,
 	contentRef,
 	viewRef,
+	landingRef,
 	inset,
 	endSpacer,
-	hasMore,
 	seek,
 	resolve = scrollForMonth,
 }: {
 	scrollerRef: ElementRef<HTMLDivElement>
 	contentRef: ElementRef<HTMLDivElement>
 	viewRef: ElementRef<CommittedView>
+	landingRef: {current: Landing | null}
 	inset: number
 	endSpacer: number
-	hasMore: boolean
 	seek: Seek
-	// The scrollTop that shows a month, once it is loaded (scrollForMonth
-	// unless the caller has its own idea of where a month sits)
+	// The scrollTop that shows a month the list holds (scrollForMonth unless
+	// the caller has its own idea of where a month sits)
 	resolve?: (layout: Layout, key: MonthKey, fraction: number, window: ScrollWindow) => number | undefined
 }) {
 	const reduceMotion = useReducedMotion() ?? false
 	const pollRaf = useRef(0)
 	const tweenRef = useRef<{stop: () => void} | null>(null)
 	const timersRef = useRef<number[]>([])
+	// The month a scrub beyond the list is resting on, and the timer that asks for it
+	const rest = useRef<{key: MonthKey; timer: number} | null>(null)
+	const mounted = useRef(true)
+	// The fade-through under way: a later one takes the grid over while it is
+	// out, and the earlier one leaves bringing it back to that
+	const fade = useRef(0)
 
 	const scrollWindow = useCallback(
 		(view: CommittedView): ScrollWindow => ({inset, viewport: view.height, trailing: endSpacer}),
 		[inset, endSpacer],
+	)
+
+	// Where a month is in the list on screen: the scrollTop that shows it — or
+	// its neighbour, when the list runs through where it would be and holds
+	// none of it. Undefined when the month is beyond what the list holds, and
+	// going there is a seek.
+	const locate = useCallback(
+		(view: CommittedView, key: MonthKey, fraction: number) => {
+			const where = scrollWindow(view)
+			const target = resolve(view.layout, key, fraction, where)
+			if (target !== undefined || !spansMonth(view.layout, key)) return target
+			return scrollForTime(view.layout, monthStartUtc(key + 1), where)
+		},
+		[scrollWindow, resolve],
 	)
 
 	const stopTween = useCallback(() => {
@@ -96,27 +134,28 @@ export function useLanding({
 		timersRef.current.push(window.setTimeout(fn, ms))
 	}, [])
 
-	// Across a distance no tween survives: fade the grid through, jump, and
-	// let the commit mount the destination before fading back — arrivals then
-	// wash in as their thumbnails land, which is the transition
-	const teleport = useCallback(
-		(target: number) => {
-			const scroller = scrollerRef.current
+	// Across a distance no tween survives: fade the grid through. `arrive`
+	// puts the destination under it while it is out, and the commit mounts
+	// that before the grid fades back — arrivals then wash in as their
+	// thumbnails land, which is the transition
+	const through = useCallback(
+		(arrive: () => void | Promise<void>) => {
 			const content = contentRef.current
-			if (!scroller) return
-			if (!content) {
-				scroller.scrollTop = target
-				return
-			}
+			if (!content) return void arrive()
+			const id = ++fade.current
+			const latest = () => mounted.current && fade.current === id
 			content.style.transition = 'opacity 130ms ease-out'
 			content.style.opacity = '0'
-			later(() => {
-				scroller.scrollTop = target
+			later(async () => {
+				await arrive()
+				if (!latest()) return
 				requestAnimationFrame(() =>
 					requestAnimationFrame(() => {
+						if (!latest()) return
 						content.style.transition = 'opacity 240ms ease-in'
 						content.style.opacity = '1'
 						later(() => {
+							if (!latest()) return
 							content.style.transition = ''
 							content.style.opacity = ''
 						}, 260)
@@ -124,7 +163,7 @@ export function useLanding({
 				)
 			}, 140)
 		},
-		[contentRef, scrollerRef, later],
+		[contentRef, later],
 	)
 
 	const land = useCallback(
@@ -134,81 +173,111 @@ export function useLanding({
 			if (!scroller || !view) return
 			stopTween()
 			const distance = Math.abs(target - scroller.scrollTop)
-			if (reduceMotion || distance > TWEEN_MAX_VIEWPORTS * view.height) teleport(target)
-			else tween(target)
+			if (reduceMotion || distance > TWEEN_MAX_VIEWPORTS * view.height) {
+				through(() => {
+					scroller.scrollTop = target
+				})
+			} else tween(target)
 		},
-		[reduceMotion, scrollerRef, viewRef, stopTween, teleport, tween],
+		[reduceMotion, scrollerRef, viewRef, stopTween, through, tween],
 	)
 
-	// After a seek: the pages are in the cache but the grid adopts them on its
-	// own paced beat — poll the committed layout for the month, briefly. A
-	// seek that ran the list dry without finding the month ('exhausted': it
-	// was an estimate, or the filter skips it) has nothing further to wait
-	// for: land at the month's neighbour the moment the final pages commit,
-	// not after the full deadline.
-	const landOnMonth = useCallback(
-		(key: MonthKey, fraction: number, exhausted = false) => {
-			cancelAnimationFrame(pollRaf.current)
-			const deadline = performance.now() + 2000
-			const attempt = () => {
-				const view = viewRef.current
-				if (!view) return
+	// A seek has the month's photographs: put their list on screen with the
+	// grid on the month — or on whatever the list has nearest it. Resolves
+	// once the grid has taken the list up.
+	const arrive = useCallback(
+		(key: MonthKey, fraction: number, {first, show}: Arrival) => {
+			stopTween()
+			const top = (view: CommittedView) => {
 				const where = scrollWindow(view)
-				const target = resolve(view.layout, key, fraction, where)
-				if (target !== undefined) return land(target)
-				const settled = exhausted && !view.layout.hasMore
-				if (!settled && performance.now() < deadline) {
-					pollRaf.current = requestAnimationFrame(attempt)
-					return
-				}
-				// The listing turned out not to hold the month: its neighbour
-				const fallback = scrollForTime(view.layout, monthStartUtc(key + 1), where)
-				if (fallback !== undefined) land(fallback)
+				return resolve(view.layout, key, fraction, where) ?? scrollForTime(view.layout, monthStartUtc(key + 1), where)
 			}
-			attempt()
+			const view = viewRef.current
+			const scroller = scrollerRef.current
+			// Already the list on screen: only the scroll is left to do
+			if (view && scroller && (first === undefined || view.layout.items[0]?.id === first)) {
+				show()
+				const target = top(view)
+				if (target !== undefined) scroller.scrollTop = target
+				return Promise.resolve()
+			}
+			const landing = {first, top}
+			landingRef.current = landing
+			show()
+			return new Promise<void>((taken) => {
+				cancelAnimationFrame(pollRaf.current)
+				const deadline = performance.now() + ADOPT_MS
+				const look = () => {
+					if (landingRef.current !== landing) return taken()
+					if (performance.now() < deadline) return void (pollRaf.current = requestAnimationFrame(look))
+					landingRef.current = null
+					taken()
+				}
+				look()
+			})
 		},
-		[viewRef, scrollWindow, land, resolve],
+		[stopTween, scrollWindow, resolve, viewRef, scrollerRef, landingRef],
 	)
+
+	// A scrub has come back onto what the list holds, or ended there
+	const scrubWithin = useCallback(() => {
+		window.clearTimeout(rest.current?.timer)
+		rest.current = null
+	}, [])
 
 	const jump = useCallback(
 		(key: MonthKey, fraction: number) => {
+			scrubWithin()
 			const view = viewRef.current
 			if (!view) return
-			const where = scrollWindow(view)
-			const direct = resolve(view.layout, key, fraction, where)
-			if (direct !== undefined) return land(direct)
-			if (!hasMore) {
-				const nearest = scrollForTime(view.layout, monthStartUtc(key + 1), where)
-				if (nearest !== undefined) land(nearest)
-				return
-			}
-			seek.start(key, (outcome) => {
-				if (outcome === 'cancelled') return
-				landOnMonth(key, fraction, outcome === 'exhausted')
-			})
+			const target = locate(view, key, fraction)
+			if (target !== undefined) return land(target)
+			seek.start(key, (arrival) => through(() => arrive(key, fraction, arrival)))
 		},
-		[viewRef, scrollWindow, land, hasMore, seek, landOnMonth, resolve],
+		[scrubWithin, viewRef, locate, land, seek, through, arrive],
 	)
 
-	// The user's own scroll or press during a seek means "never mind"
+	// A scrub has come onto a month the list doesn't hold. Once it rests
+	// there (see SCRUB_REST_MS), or ends there, the month's stretch of the
+	// timeline is asked for and put on screen as it arrives: the grid follows
+	// the scrub beyond the list as it does through it, a beat behind.
+	const scrubBeyond = useCallback(
+		(key: MonthKey, fraction: number, ended = false) => {
+			// Still on the month it was already resting on: that wait stands
+			if (!ended && rest.current?.key === key) return
+			scrubWithin()
+			const ask = () => seek.start(key, (arrival) => void arrive(key, fraction, arrival))
+			if (ended) ask()
+			else rest.current = {key, timer: window.setTimeout(ask, SCRUB_REST_MS)}
+		},
+		[scrubWithin, seek, arrive],
+	)
+
+	// The user's own scroll or press while a seek is awaited means "never mind"
+	const seeking = seek.target !== null
+	const cancelSeek = seek.cancel
 	useEffect(() => {
-		if (!seek.busy) return
+		if (!seeking) return
 		const scroller = scrollerRef.current
 		if (!scroller) return
-		const abandon = () => seek.cancel()
 		const on = ['wheel', 'pointerdown', 'touchstart'] as const
-		for (const type of on) scroller.addEventListener(type, abandon, {passive: true})
+		for (const type of on) scroller.addEventListener(type, cancelSeek, {passive: true})
 		return () => {
-			for (const type of on) scroller.removeEventListener(type, abandon)
+			for (const type of on) scroller.removeEventListener(type, cancelSeek)
 		}
-	}, [seek, scrollerRef])
+	}, [seeking, cancelSeek, scrollerRef])
 
-	useEffect(
-		() => () => {
+	useEffect(() => {
+		mounted.current = true
+		return () => {
+			mounted.current = false
 			cancelAnimationFrame(pollRaf.current)
+			window.clearTimeout(rest.current?.timer)
 			for (const timer of timersRef.current) window.clearTimeout(timer)
 			stopTween()
-			// A teleport interrupted by this unmount (a zoom-out crossing the
+			// … nor leave the grid a landing nobody is waiting on any more
+			landingRef.current = null
+			// A fade-through interrupted by this unmount (a zoom-out crossing the
 			// rail's threshold mid-landing) must not strand the grid faded out:
 			// the content div outlives the rail, and its restore timers just died
 			const content = contentRef.current
@@ -216,9 +285,8 @@ export function useLanding({
 				content.style.transition = ''
 				content.style.opacity = ''
 			}
-		},
-		[stopTween, contentRef],
-	)
+		}
+	}, [stopTween, contentRef, landingRef])
 
-	return {scrollWindow, stopTween, land, jump}
+	return {scrollWindow, locate, stopTween, land, jump, scrubBeyond, scrubWithin}
 }

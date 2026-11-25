@@ -40,8 +40,9 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 	const widgetQ = trpcReact.widget.data.useQuery(
 		{widgetId: manifestConfig.id},
 		{
-			retry: false,
-			// We do want refetching to happen on a schedule though
+			// A failed refresh is tried again (the default) rather than emptying the widget at once.
+			// The refresh sent as the tab comes back into view fails whenever the connection dropped
+			// while the tab was away, and the connection is back within moments.
 			refetchInterval,
 		},
 	)

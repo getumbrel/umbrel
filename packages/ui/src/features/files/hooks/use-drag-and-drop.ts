@@ -27,6 +27,8 @@ export function useDragAndDrop() {
 		if (isReadOnly) return
 		const draggedItem = event.active.data.current as FileSystemItem
 		if (!draggedItem || !isMovable(draggedItem)) return
+		// Select all is still loading the rest of the folder: what is selected so far is not what was asked for
+		if (useFilesStore.getState().isSelectingAll) return
 
 		// if the item is not already selected, reset the selection with the new item
 		if (!selectedItems.find((item) => item.path === draggedItem.path)) {

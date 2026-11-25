@@ -4,7 +4,7 @@ import type {McpServer} from '@modelcontextprotocol/server'
 import {z} from 'zod4'
 
 import type {McpPermissions} from '../mcp.ts'
-import {MCP_PERMISSION_REMEDIATION, runTool, type McpToolContext} from './shared.ts'
+import {runTool, type McpToolContext} from './shared.ts'
 
 type FileDto = {
 	name: string
@@ -14,7 +14,7 @@ type FileDto = {
 	modified: number
 }
 
-function fileDto(file: FileDto): FileDto {
+export function fileDto(file: FileDto): FileDto {
 	return {
 		name: file.name,
 		path: file.path,
@@ -274,33 +274,4 @@ export default function registerFileTools(server: McpServer, context: McpToolCon
 				return {path: await context.rpc.files.trash({path})}
 			}),
 	)
-
-	if (permissions.files === 'all' || permissions.files.includes('/Home')) {
-		server.registerTool(
-			'search_files',
-			{
-				title: 'Search Home files',
-				description: 'Fuzzy-search file names across /Home. This tool is available only with full Home access.',
-				inputSchema: z.object({
-					query: z.string().min(1).describe('The file name or partial file name to find.'),
-					limit: z.number().int().min(1).max(250).default(50),
-				}),
-				annotations: {
-					readOnlyHint: true,
-					destructiveHint: false,
-					idempotentHint: true,
-					openWorldHint: false,
-				},
-			},
-			(input) =>
-				runTool(context, 'search_files', input, async () => {
-					if (!(await context.mcp.hasFullHomeAccess())) {
-						throw new Error(
-							`[permission-denied] Full /Home access is required for search. ${MCP_PERMISSION_REMEDIATION}`,
-						)
-					}
-					return (await context.rpc.files.search({query: input.query, maxResults: input.limit})).map(fileDto)
-				}),
-		)
-	}
 }

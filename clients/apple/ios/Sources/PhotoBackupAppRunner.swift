@@ -41,7 +41,7 @@ final class PhotoBackupAppRunner {
 	@ObservationIgnored private var task: Task<Void, Never>?
 	@ObservationIgnored private var networkChanges: Task<Void, Never>?
 	@ObservationIgnored private var path: NWPath?
-	// The short time after the app leaves
+	// Held while a pass runs, for the short time after the app leaves
 	@ObservationIgnored private var backgroundTime: BackgroundTaskAssertion?
 	// Longer time iOS gives overnight
 	@ObservationIgnored private var backgroundTask: BGTask?
@@ -80,19 +80,7 @@ final class PhotoBackupAppRunner {
 			stopWatchingNetwork()
 			// The pass finishes the file in flight, then ends. Everything is durable, so
 			// the rest waits for later. Expiry cancels a file that takes longer.
-			if task != nil, backgroundTime == nil {
-				let control = control
-				let assertion = BackgroundTaskAssertion(name: "Photo backup") { [weak self] in
-					control.stopLedger()
-					self?.task?.cancel()
-				}
-				if assertion.isValid {
-					backgroundTime = assertion
-				} else {
-					control.stopLedger()
-					task?.cancel()
-				}
-			}
+			holdBackgroundTime()
 		}
 	}
 
@@ -101,8 +89,29 @@ final class PhotoBackupAppRunner {
 	func run() {
 		guard canRun else { return }
 		requested = true
-		guard task == nil, path != nil else { return }
-		task = Task { await loop() }
+		if task == nil, path != nil {
+			task = Task { await loop() }
+		}
+		holdBackgroundTime()
+	}
+
+	// iOS ends an app it suspends during a write to the shared ledger (0xdead10cc), and
+	// says to ask for time well before the write. It grants the time asynchronously, so
+	// asking as the app leaves can be too late. A pass holds it from the start instead.
+	private func holdBackgroundTime() {
+		guard task != nil, backgroundTask == nil, backgroundTime?.isValid != true else { return }
+		let control = control
+		let assertion = BackgroundTaskAssertion(name: "Photo backup") { [weak self] in
+			// iOS also calls this if it can't grant the time, which can be while the app is open
+			guard self?.isActive == false else { return }
+			control.stopLedger()
+			self?.task?.cancel()
+		}
+		backgroundTime = assertion
+		if !assertion.isValid, !isActive {
+			control.stopLedger()
+			task?.cancel()
+		}
 	}
 
 	// Ends the pass in flight, as when backup is turned off, moved or set up again.
@@ -155,6 +164,8 @@ final class PhotoBackupAppRunner {
 	private func finishBackgroundTask(success: Bool) {
 		guard let finished = backgroundTask else { return }
 		backgroundTask = nil
+		// A pass still running carries on while the app is open
+		if isActive { holdBackgroundTime() }
 		// Before completing: iOS may suspend the app as soon as it's told
 		scheduleOvernight()
 		finished.setTaskCompleted(success: success)
@@ -280,6 +291,11 @@ final class PhotoBackupAppRunner {
 		guard case .found(let configuration) = PhotoBackupStore.configurationRead(),
 			PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
 		else { return nil }
+		// PhotoKit's extension creates no uploads without its copy of the Umbrel's pin.
+		// Setup gives it one; this gives it to backups set up before it needed one.
+		if configuration.route == .tailscale {
+			Keychain.sharePhotoBackupCA(deviceId: configuration.deviceId)
+		}
 		// A network change starts the next pass
 		guard configuration.allowsCellularAccess || !onlyCellular else {
 			activity = .waitingForWiFi

@@ -1,0 +1,187 @@
+#!/usr/bin/env node
+// Builds the table of places umbreld names where a photo was taken from
+// (packages/umbreld/source/modules/files/places.ts), out of the files
+// GeoNames publishes (geonames.org, CC BY 4.0): every city, town and village
+// of more than five thousand people, the regions and countries they are in,
+// and what each is called in the languages umbrelOS speaks.
+//
+//   scripts/build-places <directory>
+//
+// The directory keeps what is downloaded, which is large. GeoNames replaces
+// its files every day and keeps no old ones, so the table is the record of
+// what it was built from, and building it again brings it up to date.
+//
+// One place to a line, its fields separated by tabs:
+//
+//   c  TH       Thailand  [other names…]
+//   r  TH.40    Bangkok   [other names…]
+//   g  1609350  Bangkok   13.75398  100.50144  TH.40  5104476  [other names…]
+//
+// for a country, a region and a city (by its GeoNames id, with where it is,
+// the region it is in and how many people live there). The other names are what people type to mean the place. Nothing
+// shows them.
+
+import {spawn} from 'node:child_process'
+import {createWriteStream, existsSync} from 'node:fs'
+import {mkdir, readFile, rename, writeFile} from 'node:fs/promises'
+import path from 'node:path'
+import {createInterface} from 'node:readline'
+import {Readable} from 'node:stream'
+import {pipeline} from 'node:stream/promises'
+import {fileURLToPath} from 'node:url'
+import {gzipSync} from 'node:zlib'
+
+const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const output = path.join(repository, 'packages/umbreld/source/modules/files/places.tsv.gz')
+const directory = process.argv[2] && path.resolve(process.argv[2])
+if (!directory) {
+	console.error('usage: scripts/build-places <directory>')
+	process.exit(1)
+}
+
+const DUMPS = 'https://download.geonames.org/export/dump'
+
+// The languages umbrelOS speaks (packages/ui/public/locales), by the tags
+// GeoNames files names under. What it tags 'link', 'post', 'iata' and so on
+// is not a language, and is never a name here.
+const LANGUAGES = {
+	...Object.fromEntries('bg cs da de el en es et fr hr hu is it ja ko nb nl pl pt ro ru sk sl sv tr uk zh'.split(' ').map((tag) => [tag, tag])),
+	...{no: 'nb', 'pt-BR': 'pt', 'zh-CN': 'zh', 'zh-Hans': 'zh', 'zh-TW': 'zh', 'zh-Hant': 'zh'},
+}
+
+// The script a name has to be in to be one that people of the language type.
+// GeoNames has Cyrillic names filed under Romanian and Chinese ones under
+// Korean.
+const CYRILLIC = /^[\p{Script=Cyrillic}\p{M} ’'.-]+$/u
+const SCRIPTS = {
+	bg: CYRILLIC,
+	ru: CYRILLIC,
+	uk: CYRILLIC,
+	el: /^[\p{Script=Greek}\p{M} ’'.-]+$/u,
+	zh: /^[\p{Script=Han}·・-]+$/u,
+	ja: /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー・々]+$/u,
+	ko: /^[\p{Script=Hangul} ]+$/u,
+}
+const LATIN = /^[\p{Script=Latin}\p{M} ’'.-]+$/u
+
+// Nobody types an official title to find their holiday
+const LONGEST_NAME = 32
+// A small town is called by its own name everywhere: other languages only
+// have a spelling of it nobody types the same way twice. So a town with
+// fewer people than this keeps only the names it has in its own country's
+// languages.
+const FOREIGN_NAME_POPULATION = 15_000
+
+// What Chinese, Japanese and Korean put after a place's name to say what kind
+// of place it is: "横浜市" is the city of Yokohama, and people type "横浜".
+// Each with how much has to be left for the rest to still be a name: "京都"
+// is not the capital of somewhere called "京".
+const SUFFIXES = {
+	zh: [
+		...['特别行政区', '特別行政區', '自治区', '自治區', '特别市', '特別市'].map((suffix) => [suffix, 2]),
+		...['市', '县', '縣', '省'].map((suffix) => [suffix, 2]),
+	],
+	ja: [
+		['市', 2],
+		['県', 2],
+		['府', 2],
+		['都', 3],
+	],
+	ko: [
+		['특별자치시', 2],
+		['특별자치도', 2],
+		['특별시', 2],
+		['광역시', 2],
+		['시', 2],
+		['군', 2],
+		['도', 3],
+	],
+}
+
+async function fetched(name) {
+	const file = path.join(directory, name)
+	if (!existsSync(file)) {
+		console.error(`Fetching ${name}`)
+		const response = await fetch(`${DUMPS}/${name}`)
+		if (!response.ok) throw new Error(`${name}: ${response.status}`)
+		await pipeline(Readable.fromWeb(response.body), createWriteStream(`${file}.partial`))
+		await rename(`${file}.partial`, file)
+	}
+	return file
+}
+
+// The lines of a file, or of the one file inside a ZIP, as their fields
+async function* rows(name) {
+	const file = await fetched(name)
+	const unzip = name.endsWith('.zip') ? spawn('unzip', ['-p', file, name.replace('.zip', '.txt')]) : undefined
+	const input = unzip ? unzip.stdout : (await import('node:fs')).createReadStream(file)
+	for await (const line of createInterface({input, crlfDelay: Infinity})) {
+		if (line && !line.startsWith('#')) yield line.split('\t')
+	}
+}
+
+await mkdir(directory, {recursive: true})
+
+// GeoNames id → the place it names here, and the languages of its country
+const named = new Map()
+const countries = new Map()
+for await (const [code, , , , name, , , , , , , , , , , languages, id] of rows('countryInfo.txt')) {
+	const spoken = new Set(languages.split(',').map((language) => LANGUAGES[language] ?? LANGUAGES[language.split('-')[0]]))
+	const country = {name, others: new Set(), spoken, foreign: true}
+	countries.set(code, country)
+	named.set(id, country)
+}
+const regions = new Map()
+for await (const [code, name, ascii, id] of rows('admin1CodesASCII.txt')) {
+	const country = countries.get(code.split('.')[0])
+	if (!country) continue
+	const region = {name, others: new Set([ascii]), spoken: country.spoken, foreign: true}
+	regions.set(code, region)
+	named.set(id, region)
+}
+const cities = []
+for await (const fields of rows('cities5000.zip')) {
+	const [id, name, ascii, , latitude, longitude, , feature, country, , admin] = fields
+	// A part of a city (PPLX) is the city to whoever was there
+	if (!countries.has(country) || feature === 'PPLX') continue
+	const population = Number(fields[14])
+	const city = {
+		...{id: Number(id), name, latitude, longitude, population},
+		region: regions.has(`${country}.${admin}`) ? `${country}.${admin}` : country,
+		others: new Set([ascii]),
+		spoken: countries.get(country).spoken,
+		foreign: population >= FOREIGN_NAME_POPULATION,
+	}
+	cities.push(city)
+	named.set(id, city)
+}
+
+for await (const [, id, tag, name, , , , historic] of rows('alternateNamesV2.zip')) {
+	const place = named.get(id)
+	const language = LANGUAGES[tag]
+	if (!place || !language || historic === '1' || name.length > LONGEST_NAME) continue
+	if (!(SCRIPTS[language] ?? LATIN).test(name)) continue
+	if (!place.foreign && !place.spoken.has(language)) continue
+	place.others.add(name.trim())
+	for (const [suffix, least] of SUFFIXES[language] ?? []) {
+		if (name.endsWith(suffix) && [...name].length - [...suffix].length >= least) place.others.add(name.slice(0, -suffix.length).trim())
+	}
+}
+
+// As names are compared, so that one name is listed once
+const fold = (name) => name.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase()
+const others = (place) => {
+	const seen = new Set([fold(place.name)])
+	return [...place.others].sort().filter((name) => name && !seen.has(fold(name)) && seen.add(fold(name)))
+}
+
+const lines = [
+	...[...countries].sort().map(([code, country]) => ['c', code, country.name, ...others(country)]),
+	...[...regions].sort().map(([code, region]) => ['r', code, region.name, ...others(region)]),
+	...cities
+		.sort((first, second) => first.id - second.id)
+		.map((city) => ['g', city.id, city.name, city.latitude, city.longitude, city.region, city.population, ...others(city)]),
+]
+await writeFile(output, gzipSync(lines.map((fields) => fields.join('\t')).join('\n') + '\n', {level: 9}))
+const size = (await readFile(output)).length
+console.log(`${countries.size} countries, ${regions.size} regions and ${cities.length} cities in ${output} (${(size / 1e6).toFixed(1)} MB)`)

@@ -42,6 +42,7 @@ import {
 } from '@/features/files/components/file-viewer/sheet-viewer/paint'
 import {floatingGlassClass, floatingMenuClass} from '@/features/files/components/file-viewer/shell/zoom-pill'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
+import {useIncreaseContrast} from '@/hooks/use-accessibility'
 import {cn} from '@/lib/utils'
 
 const HEADER_HEIGHT = 24
@@ -107,6 +108,7 @@ export function Grid(props: GridProps) {
 	const {source, selection, editing, interactive, editable, bottomInset} = props
 	const {t} = useTranslation()
 	const isTouch = useIsTouchDevice()
+	const [contrast] = useIncreaseContrast()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const scrollerRef = useRef<HTMLDivElement>(null)
@@ -241,6 +243,7 @@ export function Grid(props: GridProps) {
 			size.width,
 			size.height,
 			dpr,
+			contrast,
 		]
 	}
 
@@ -272,6 +275,7 @@ export function Grid(props: GridProps) {
 			brand,
 			match,
 			editing: editing?.cell,
+			contrast,
 		})
 		// What's in view is asked for, with what's around it
 		const rowLanes = lanes(source.rows, v.frozen.rows, v.frozen.height, v.headerHeight, v.scrollY, v.height)

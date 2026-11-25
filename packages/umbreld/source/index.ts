@@ -25,6 +25,7 @@ import LanIngress from './modules/lan-ingress/lan-ingress.ts'
 import Auth from './modules/auth/auth.ts'
 import Mcp, {type McpStoreSettings} from './modules/mcp/mcp.ts'
 import Photos, {type PhotoBackupSource, type PhotoBackupSourceRemoval} from './modules/photos/photos.ts'
+import Search from './modules/search/search.ts'
 
 import type {CloudStore} from './modules/files/cloud-types.ts'
 
@@ -73,6 +74,9 @@ type StoreSchema = {
 	// are security identities used by sessions, paths, and shares, so they must
 	// never be assigned to a different account after deletion.
 	members?: MemberRecord[]
+	// Whether the owner has been told that there is no room for the models
+	// that read the library (see modules/search)
+	searchToldOfNoRoomForModels?: boolean
 	settings: {
 		releaseChannel: 'stable' | 'beta'
 		wifi?: {
@@ -81,6 +85,9 @@ type StoreSchema = {
 		}
 		externalDns?: boolean
 		hostname?: string
+		// Whether the models read the library so that it is found by what is
+		// in it: on unless its owner has turned it off
+		searchIndexing?: boolean
 		staticIp?: Record<
 			string,
 			{
@@ -191,6 +198,7 @@ export default class Umbreld {
 	auth: Auth
 	mcp: Mcp
 	photos: Photos
+	search: Search
 	isBackupRestoreFirstStart = false
 	private stopped = false
 
@@ -227,6 +235,7 @@ export default class Umbreld {
 		this.auth = new Auth(this)
 		this.mcp = new Mcp(this)
 		this.photos = new Photos(this)
+		this.search = new Search(this)
 	}
 
 	async start() {
@@ -328,6 +337,10 @@ export default class Umbreld {
 			this.logger.error('Timed out waiting for Thunderbolt authorization restore; continuing startup')
 		}
 
+		// The models leave a library alone whose owner has had them do so, from
+		// before the index starts its background work
+		this.files.fileIndex.setModelWork((await this.store.get('settings.searchIndexing')) !== false)
+
 		// Initialise modules
 		await Promise.all([
 			this.user.start(),
@@ -344,7 +357,11 @@ export default class Umbreld {
 		// Account deletion spans several modules. Retry any cleanup that was
 		// interrupted after the member was durably marked as deleted.
 		await this.user.finishPendingDeletions()
-		await this.photos.start().catch((error) => this.logger.error('Failed to start Photos', error))
+
+		// Photos waits for the file index, which can take a long time to open, so
+		// the rest of startup doesn't wait for Photos.
+		this.photos.start().catch((error) => this.logger.error('Failed to start Photos', error))
+		await this.search.start()
 
 		// Apps bind their declared host ports first. Machines then reconcile
 		// autostart domains and can report a precise port conflict for restored
@@ -408,6 +425,7 @@ export default class Umbreld {
 				this.update.stop(),
 				this.auth.stop(),
 				this.photos.stop(),
+				this.search.stop(),
 			])
 			this.stopped = true
 			return true

@@ -130,6 +130,21 @@ class LocalHttpsTest {
 		assertEquals(listOf(Call("100.90.0.1", null)), recorder.calls)
 	}
 
+	@Test
+	fun identificationNeverProbesNonLocalHosts() = runBlocking {
+		val recorder = IdentityProbeRecorder { _, _ -> null }
+
+		val result = Umbreld.identifyCandidate(
+			Candidate("umbrel.example.com", listOf("192.168.1.20", "127.0.0.1:8080?x=", "evil.example.com"), "Umbrel"),
+			knownDeviceIds = emptySet(),
+			allowsTailscaleHost = true,
+			probe = recorder,
+		)
+
+		assertNull(result)
+		assertEquals(listOf(Call("192.168.1.20", null)), recorder.calls)
+	}
+
 	// Not in the Swift suite: the rest of the probe matrix.
 
 	@Test

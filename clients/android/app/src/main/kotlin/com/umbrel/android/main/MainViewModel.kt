@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.umbrel.android.AppContainer
+import com.umbrel.android.IdentityChange
 import com.umbrel.android.SavedDeviceRemovalSteps
 import com.umbrel.android.browser.Browser
 import com.umbrel.android.browser.BrowserContext
@@ -69,6 +70,7 @@ data class MainUiState(
 	val accountRole: String = if (session?.accountId == "0") "owner" else "member",
 	val brandColorHsl: String? = null,
 	val wallpaperId: String? = null,
+	val wallpaperHash: String? = null,
 	val wallpaper: ImageBitmap? = null,
 	val blurredWallpaper: ImageBitmap? = null,
 	val apps: List<Umbreld.AppSummary> = emptyList(),
@@ -100,9 +102,15 @@ data class MainUiState(
 	/** The toggles: photos and videos are on only while this account owns backup. */
 	val backupPreference: PhotoBackupPreference = PhotoBackupPreference(),
 	val backupStatus: PhotoBackupStatus = PhotoBackupStatus.Off,
+	/** The backup this phone took over from another, until it's first up to date. */
+	val backupContinuingName: String? = null,
 	val backupNotice: PhotoBackupNotice? = null,
 	val backupSetupInProgress: Boolean = false,
 	val backupStatistics: PhotoBackupStatistics? = null,
+	/** How many items the ledger says couldn't back up. Profile lists those the library still shows. */
+	val backupFailedCount: Long = 0,
+	/** Try Again is returning those items to the queue. */
+	val backupFailureRetryInProgress: Boolean = false,
 	/** The account's backup source, kept after backup is turned off so receipts stay visible. */
 	val backupSourceId: String? = null,
 	/** How this phone appears in Photos on the Umbrel, when the app knows. */
@@ -112,10 +120,6 @@ data class MainUiState(
 	 * from this phone before they know whether there are any.
 	 */
 	val backupSourceResolved: Boolean = false,
-	/** The existing source the unanswered new-phone question names. */
-	val backupNewSourceQuestion: String? = null,
-	/** A confirmed "Back Up to This Umbrel" is checking this Umbrel, before anything changes. */
-	val backupSwitchChecking: Boolean = false,
 	/** What a confirmed switch came back needing, until it's answered. */
 	val backupSwitchPrompt: BackupSwitchPrompt? = null,
 	/** Changes whenever receipts may have changed, so visible thumbnails re-check their badge. */
@@ -148,10 +152,10 @@ data class MainUiState(
 	val hasTailscaleBrowserAddress: Boolean get() = BrowserRouting.hasTailscaleAddress(device)
 
 	/** What to say when the Umbrel can't be opened. */
-	val unreachableTitle: String get() = if (identityChanged) "Umbrel Not Recognized" else "Can’t Reach Umbrel"
+	val unreachableTitle: String get() = if (identityChanged) IdentityChange.ALERT_TITLE else "Can’t Reach Umbrel"
 	val unreachableMessage: String
 		get() = if (identityChanged) {
-			"This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app."
+			IdentityChange.BLOCKED_MESSAGE
 		} else {
 			"Check your connection and try again."
 		}
@@ -223,7 +227,6 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	private val deviceData = container.deviceData
 	private var ledger: PhotoBackupLedger? = null
 	private var presentationJob: Job? = null
-	private var switchJob: Job? = null
 
 	// Work that runs only while the screen is started, like scenePhase-bound tasks on iOS.
 	private var foreground: CoroutineScope? = null
@@ -232,9 +235,10 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	private var remoteRefreshInProgress = false
 	private var completedActivationRefresh = false
 	private var refreshTimes = RefreshPlan.Times()
-	private var renderedWallpaperId: String? = null
+	// The id and hash of the wallpaper on screen, so a changed hash loads the new files
+	private var renderedWallpaper: String? = null
 	private var wallpaperLoad: Job? = null
-	private var wallpaperLoadId: String? = null
+	private var wallpaperLoadVersion: String? = null
 	private var shownWallpaper: Bitmap? = null
 	private var shownBlurredWallpaper: Bitmap? = null
 
@@ -253,7 +257,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		val stored = SecretStore.readSession(deviceId)
 		if (stored !is SecretStore.SessionReadResult.Unavailable) backup.releaseStaleConfiguration(deviceId, stored.sessionOrCached?.accountId)
 		viewModelScope.launch { backup.state.collect { refreshBackupPresentation() } }
-		_state.value.wallpaperId?.let(::restoreCachedWallpaper)
+		_state.value.let { state -> state.wallpaperId?.let { restoreCachedWallpaper(it, state.wallpaperHash) } }
 	}
 
 	/**
@@ -264,10 +268,11 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	private fun initialState(device: SavedDevice, session: Umbreld.Session?): MainUiState {
 		val profile = session?.let { device.accountProfile(it.accountId) }
 		val wallpaperId = profile?.wallpaperId
-		val fullScreen = wallpaperId?.let(wallpapers::memoryCached)
-		val image = fullScreen ?: wallpaperId?.let(wallpapers::memoryCachedCard)
-		val blurred = wallpaperId?.let(wallpapers::memoryBlurred)
-		if (fullScreen != null) renderedWallpaperId = wallpaperId
+		val wallpaperHash = profile?.wallpaperHash
+		val fullScreen = wallpaperId?.let { wallpapers.memoryCached(it, wallpaperHash) }
+		val image = fullScreen ?: wallpaperId?.let { wallpapers.memoryCachedCard(it, wallpaperHash) }
+		val blurred = wallpaperId?.let { wallpapers.memoryBlurred(it, wallpaperHash) }
+		if (fullScreen != null) renderedWallpaper = wallpaperId?.let { wallpaperVersion(it, wallpaperHash) }
 		shownWallpaper = image
 		shownBlurredWallpaper = blurred
 		val snapshot = session?.let { deviceData.load(device.id, it.accountId) }
@@ -278,6 +283,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 			accountRole = profile?.role ?: if (session?.accountId == "0") "owner" else "member",
 			brandColorHsl = profile?.wallpaperBrandColorHsl,
 			wallpaperId = wallpaperId,
+			wallpaperHash = wallpaperHash,
 			wallpaper = image?.asImageBitmap(),
 			blurredWallpaper = blurred?.asImageBitmap(),
 			apps = snapshot?.apps.orEmpty(),
@@ -291,14 +297,14 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		)
 	}
 
-	private fun restoreCachedWallpaper(id: String) {
+	private fun restoreCachedWallpaper(id: String, hash: String?) {
 		viewModelScope.launch {
-			val fullScreen = wallpapers.cached(id)
-			val card = if (fullScreen == null) wallpapers.cachedCard(id) else null
-			val blurred = wallpapers.blurred(id)
-			if (_state.value.wallpaperId != id) return@launch
+			val fullScreen = wallpapers.cached(id, hash)
+			val card = if (fullScreen == null) wallpapers.cachedCard(id, hash) else null
+			val blurred = wallpapers.blurred(id, hash)
+			if (_state.value.wallpaperId != id || _state.value.wallpaperHash != hash) return@launch
 			showWallpaper(fullScreen ?: card, blurred, keepExisting = true)
-			if (fullScreen != null) renderedWallpaperId = id
+			if (fullScreen != null) renderedWallpaper = wallpaperVersion(id, hash)
 		}
 	}
 
@@ -601,19 +607,29 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		if (info.userId != _state.value.session?.accountId) return
 		val state = _state.value
 		val identityChanged = state.userName != info.name || state.wallpaperId != info.wallpaper.id ||
-			state.brandColorHsl != info.wallpaper.brandColorHsl || state.accountRole != info.role
+			state.wallpaperHash != info.wallpaper.hash || state.brandColorHsl != info.wallpaper.brandColorHsl ||
+			state.accountRole != info.role
 		if (identityChanged) {
 			_state.update {
-				it.copy(userName = info.name, wallpaperId = info.wallpaper.id, brandColorHsl = info.wallpaper.brandColorHsl, accountRole = info.role)
+				it.copy(
+					userName = info.name,
+					wallpaperId = info.wallpaper.id,
+					wallpaperHash = info.wallpaper.hash,
+					brandColorHsl = info.wallpaper.brandColorHsl,
+					accountRole = info.role,
+				)
 			}
 		}
-		if (renderedWallpaperId != info.wallpaper.id || shownWallpaper == null || shownBlurredWallpaper == null) {
-			startWallpaperLoad(info.wallpaper.id, target)
+		val version = wallpaperVersion(info.wallpaper.id, info.wallpaper.hash)
+		if (renderedWallpaper != version || shownWallpaper == null || shownBlurredWallpaper == null) {
+			startWallpaperLoad(info.wallpaper.id, info.wallpaper.hash, target)
 		}
 		if (!identityChanged) return
 		// Persist identity changes so the device list and the next launch match.
 		persist {
-			store.update(deviceId) { it.saveAccountProfile(info.userId, info.name, info.wallpaper.id, info.wallpaper.brandColorHsl, info.role) }
+			store.update(deviceId) {
+				it.saveAccountProfile(info.userId, info.name, info.wallpaper.id, info.wallpaper.brandColorHsl, info.role, info.wallpaper.hash)
+			}
 		}
 	}
 
@@ -622,11 +638,12 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	 * decode and blur of a wallpaper run on the CPU, and the apps and files shouldn't wait
 	 * behind them.
 	 */
-	private fun startWallpaperLoad(id: String, target: Umbreld.Target) {
-		if (wallpaperLoad?.isActive == true && wallpaperLoadId == id) return
+	private fun startWallpaperLoad(id: String, hash: String?, target: Umbreld.Target) {
+		val version = wallpaperVersion(id, hash)
+		if (wallpaperLoad?.isActive == true && wallpaperLoadVersion == version) return
 		wallpaperLoad?.cancel()
-		wallpaperLoadId = id
-		wallpaperLoad = viewModelScope.launch { loadWallpaperImages(id, target) }
+		wallpaperLoadVersion = version
+		wallpaperLoad = viewModelScope.launch { loadWallpaperImages(id, hash, target) }
 	}
 
 	/**
@@ -634,13 +651,15 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	 * align with the sharp backdrop. Both are cached on disk, so this only downloads the
 	 * first time a wallpaper is seen.
 	 */
-	private suspend fun loadWallpaperImages(id: String, target: Umbreld.Target) {
-		val image = wallpapers.load(id, target) ?: return
-		val blurred = wallpapers.blurred(id)
-		if (_state.value.wallpaperId != id) return
-		renderedWallpaperId = id
+	private suspend fun loadWallpaperImages(id: String, hash: String?, target: Umbreld.Target) {
+		val image = wallpapers.load(id, hash, target) ?: return
+		val blurred = wallpapers.blurred(id, hash)
+		if (_state.value.wallpaperId != id || _state.value.wallpaperHash != hash) return
+		renderedWallpaper = wallpaperVersion(id, hash)
 		showWallpaper(image, blurred)
 	}
+
+	private fun wallpaperVersion(id: String, hash: String?): String = "$id#${hash.orEmpty()}"
 
 	/** Applies one server response, touching state only for values that changed. */
 	private fun applyDeviceData(apps: List<Umbreld.AppSummary>?, disk: Umbreld.DiskUsage?, favorites: List<String>?, updateIds: List<String>?): Boolean {
@@ -681,8 +700,8 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 
 	/** A revoked session stops backup but keeps the preference, so signing in again resumes it. */
 	private fun sessionInvalidated(deviceId: String) {
-		backup.disableLocally(deviceId)
 		val state = _state.value
+		backup.disableLocally(deviceId, state.session?.accountId?.takeIf { state.device.id == deviceId })
 		if (state.device.id == deviceId) {
 			val accountId = state.session?.accountId
 			container.applicationScope.launch { runCatching { BrowserSessions.signOut(state.device.nativeTarget, accountId) } }
@@ -697,7 +716,9 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		val device = state.device
 		val session = state.session
 		// The backup preference survives sign-out so a deliberate sign-in resumes it.
-		backup.disableLocally(device.id)
+		backup.disableLocally(device.id, session?.accountId)
+		// Deleted before the Umbrel is told, so nothing usable stays on the phone if it can't be
+		// reached. The log-out below isn't retried: that would mean keeping the token.
 		SecretStore.deleteSession(device.id)
 		_state.update { it.copy(session = null) }
 		onDone()
@@ -810,7 +831,8 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	// identity. Every page is therefore a secure context with no certificate warning, and
 	// apps that need HTTPS simply work.
 
-	val browserHosts: List<String> get() = BrowserRouting.addressOptions(_state.value.device)
+	/** The saved addresses the browser counts as the Umbrel; see [BrowserContext.isUmbrelHost]. */
+	val browserHosts: List<String> get() = BrowserRouting.addressOptions(_state.value.device).filter(BrowserContext::isUmbrelHost)
 
 	suspend fun browserUrl(path: String = "", query: List<Pair<String, String>> = emptyList()): Uri? {
 		val host = browserHostForOpening() ?: return null
@@ -822,8 +844,13 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		return BrowserRouting.appUrl(app, BrowserContext.bracketed(host), "https")?.let(Uri::parse)
 	}
 
-	/** umbrelOS and its apps use the same connection as the rest of the app. */
-	private suspend fun browserHostForOpening(): String? = attempt { Umbreld.resolvedHost(_state.value.device.nativeTarget) }
+	/**
+	 * umbrelOS and its apps use the same connection as the rest of the app, at an address the
+	 * browser counts as the Umbrel.
+	 */
+	private suspend fun browserHostForOpening(): String? = attempt {
+		Umbreld.resolvedHost(Umbreld.Target(_state.value.device.id, browserHosts))
+	}
 
 	/**
 	 * Opens umbrelOS at [path], in the app. With [reportUnavailable], repeated taps are ignored
@@ -929,7 +956,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 			val session = state.session
 			val access = backup.libraryAccess()
 			if (session == null) {
-				_state.update { it.copy(photoLibraryAccess = access, backupPreference = PhotoBackupPreference(), backupStatus = PhotoBackupStatus.Off, backupNotice = null) }
+				_state.update { it.copy(photoLibraryAccess = access, backupPreference = PhotoBackupPreference(), backupStatus = PhotoBackupStatus.Off, backupContinuingName = null, backupNotice = null) }
 				return@launch
 			}
 			val device = state.device
@@ -946,13 +973,14 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 					photoLibraryAccess = access,
 					backupPreference = backup.preference(device.id, session.accountId),
 					backupStatus = presentation.status,
+					backupContinuingName = presentation.continuingName,
 					backupNotice = presentation.notice,
 					backupSetupInProgress = manager.setupInProgress,
 					backupStatistics = presentation.statistics,
+					backupFailedCount = presentation.failedCount,
 					backupSourceId = presentation.sourceId,
 					backupSourceName = backupSourceName(presentation.sourceName, presentation.sourceId) { PhotoBackupSourceName.current(appContext) },
 					backupSourceResolved = presentation.sourceResolved,
-					backupNewSourceQuestion = presentation.newSourceQuestion,
 					backupReceiptRevision = manager.revision,
 					otherBackupDeviceName = other,
 				)
@@ -996,62 +1024,28 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	}
 
 	/**
-	 * "Back Up to This Umbrel", once confirmed. [asNewSource] answers the new-phone question,
-	 * which the switch asks before anything stops. [canRequestAccess] says Android still shows
-	 * its photo access request, which then comes next. One switch at a time.
+	 * "Back Up to This Umbrel", once confirmed. [canRequestAccess] says Android still shows its
+	 * photo access request, which then comes next.
 	 */
-	fun backUpToThisUmbrel(asNewSource: Boolean, canRequestAccess: Boolean) {
+	fun backUpToThisUmbrel(canRequestAccess: Boolean) {
 		val state = _state.value
 		val session = state.session ?: return
-		val destination = state.otherBackupDeviceName ?: return
-		if (switchJob?.isActive == true) return
 		val device = state.device
-		_state.update { it.copy(backupSwitchChecking = true, backupSwitchPrompt = null) }
-		switchJob = viewModelScope.launch {
-			try {
-				val prompt = when (val outcome = backup.switchHere(device, session, asNewSource, canRequestAccess)) {
-					PhotoBackupManager.SwitchOutcome.Done -> BackupSwitchPrompt.AccessRequest.takeIf {
-						backup.preference(device.id, session.accountId).isEnabled && !backup.libraryAccess().canReadLibrary
-					}
-					is PhotoBackupManager.SwitchOutcome.AskNewSource -> BackupSwitchPrompt.NewSource(destination, outcome.existing, canRequestAccess)
-					PhotoBackupManager.SwitchOutcome.CouldNotCheck -> BackupSwitchPrompt.CouldNotCheck(destination)
-				}
-				_state.update { it.copy(backupSwitchPrompt = prompt) }
-			} finally {
-				// The switch's setup state is read here too, so the button doesn't show idle until
-				// the refresh below lands.
-				_state.update {
-					it.copy(
-						backupSwitchChecking = false,
-						backupSetupInProgress = backup.state.value.setupInProgress,
-						backupPreference = backup.preference(device.id, session.accountId),
-					)
-				}
-				refreshBackupPresentation()
-			}
+		backup.switchHere(device, session, canRequestAccess)
+		val enabled = backup.preference(device.id, session.accountId).isEnabled
+		// The switch's setup state is read here too, so the button doesn't show idle until the
+		// refresh below lands.
+		_state.update {
+			it.copy(
+				backupSwitchPrompt = BackupSwitchPrompt.AccessRequest.takeIf { enabled && !backup.libraryAccess().canReadLibrary },
+				backupSetupInProgress = backup.state.value.setupInProgress,
+				backupPreference = backup.preference(device.id, session.accountId),
+			)
 		}
+		refreshBackupPresentation()
 	}
 
 	fun dismissBackupSwitchPrompt() = _state.update { it.copy(backupSwitchPrompt = null) }
-
-	/** The new-phone question's "Back Up Anyway". */
-	fun backUpAsNewSource() {
-		val session = _state.value.session ?: return
-		val device = _state.value.device
-		viewModelScope.launch {
-			backup.backUpAsNewSource(device, session)
-			refreshBackupPresentation()
-		}
-	}
-
-	/** The new-phone question's "Turn Off Backup". */
-	fun turnOffBackup() {
-		val session = _state.value.session ?: return
-		val device = _state.value.device
-		backup.turnOffBackup(device, session)
-		_state.update { it.copy(backupPreference = backup.preference(device.id, session.accountId)) }
-		refreshBackupPresentation()
-	}
 
 	/** "Start Backup", or leaving the folder choice that comes with turning backup on. */
 	fun confirmFolderChoice() {
@@ -1062,7 +1056,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		refreshBackupPresentation()
 	}
 
-	/** A folder's switch, on the Folders page or as a photo's "Skip This Folder". */
+	/** A folder's switch on the Folders page. */
 	fun setFolderSkipped(folder: String, skipped: Boolean) {
 		val preference = _state.value.backupPreference
 		val folders = if (skipped) preference.skippedFolders + folder else preference.skippedFolders - folder
@@ -1075,6 +1069,47 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 	fun retryBackupAfterError() {
 		val session = _state.value.session ?: return
 		backup.retryAfterError(_state.value.device, session)
+	}
+
+	/**
+	 * Try Again on the items that couldn't back up. While backup is fine they return to the
+	 * queue at once and a transfer starts. A backup that's paused for storage or stopped is
+	 * retried as its notice's button retries it, which requeues them too.
+	 */
+	fun retryFailedBackups() {
+		when (failedUploadRetry(_state.value.backupNotice)) {
+			FailedUploadRetry.STORAGE -> retryBackupAfterStorage()
+			FailedUploadRetry.RECOVERY -> retryBackupAfterError()
+			FailedUploadRetry.REQUEUE -> requeueFailedBackups()
+		}
+	}
+
+	private fun requeueFailedBackups() {
+		val state = _state.value
+		val session = state.session ?: return
+		// One request at a time, however often the button is tapped
+		if (state.backupFailureRetryInProgress) return
+		_state.update { it.copy(backupFailureRetryInProgress = true) }
+		viewModelScope.launch {
+			try {
+				backup.retryFailedUploads(state.device, session)
+			} finally {
+				_state.update { it.copy(backupFailureRetryInProgress = false) }
+			}
+		}
+	}
+
+	/** The items [MainUiState.backupFailedCount] counts, newest first. Null when the ledger can't be read. */
+	suspend fun failedBackups(): List<PhotoBackupLedger.FailedAsset>? {
+		val state = _state.value
+		val session = state.session ?: return emptyList()
+		return withContext(Dispatchers.IO) {
+			try {
+				openLedger()?.let { backup.failedAssets(state.device, session.accountId, it) }
+			} catch (error: Exception) {
+				null
+			}
+		}
 	}
 
 	fun clearError() = _state.update { it.copy(error = null) }
@@ -1095,13 +1130,13 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 		null
 	}
 
-	/** Whether the item's current revision has a completed upload receipt. Reads the ledger. */
-	fun isBackedUp(item: LocalMediaItem): Boolean {
-		val sourceId = _state.value.backupSourceId ?: return false
+	/** The ledger's record of the item's current revision, if it has one. Reads the ledger. */
+	fun backupRecord(item: LocalMediaItem): PhotoBackupLedger.AssetRecord? {
+		val sourceId = _state.value.backupSourceId ?: return null
 		return try {
-			openLedger()?.assetRecord(sourceId, item.localIdentifier)?.state == PhotoBackupLedger.AssetState.UPLOADED
+			openLedger()?.assetRecord(sourceId, item.localIdentifier)
 		} catch (error: Exception) {
-			false
+			null
 		}
 	}
 
@@ -1129,7 +1164,7 @@ class MainViewModel(context: Context, deviceId: String) : ViewModel() {
 			return store.removals.remove(device, container.applicationScope, addsDevice, object : SavedDeviceRemovalSteps {
 				override fun removeSaved() = store.remove(deviceId)
 
-				override fun removeBackup() = container.backup.removeDevice(deviceId)
+				override fun removeBackup() = container.backup.removeDevice(deviceId, session?.accountId)
 
 				// Best effort: the device is removed whether or not the Umbrel answers.
 				override suspend fun signOutBrowser() {

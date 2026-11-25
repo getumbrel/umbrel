@@ -396,8 +396,13 @@ object PhotoBackupScheduler {
 	@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 	private fun scheduleTransferJob(context: Context, configuration: PhotoBackupConfiguration): Boolean {
 		val scheduler = transferJobs(context)
-		// Scheduling the same id again would stop a running transfer.
-		if (scheduler.getPendingJobReason(TRANSFER_JOB_ID) == JobScheduler.PENDING_JOB_REASON_EXECUTING) return true
+		// Scheduling the same id again stops a running transfer, so one that already follows the
+		// mobile data setting is left alone.
+		if (scheduler.getPendingJobReason(TRANSFER_JOB_ID) == JobScheduler.PENDING_JOB_REASON_EXECUTING &&
+			scheduler.getPendingJob(TRANSFER_JOB_ID)?.let(::allowsMobileData) == configuration.allowsCellularAccess
+		) {
+			return true
+		}
 		return try {
 			scheduler.schedule(transferJob(context, configuration)) == JobScheduler.RESULT_SUCCESS
 		} catch (error: SecurityException) {
@@ -413,6 +418,14 @@ object PhotoBackupScheduler {
 			.setPersisted(true)
 			.setRequiredNetwork(networkRequest(configuration.allowsCellularAccess, userInitiated = true))
 			.build()
+
+	/**
+	 * Read from the capability rather than by comparing requests: JobScheduler adds the app's
+	 * uid to the request it stores, and keeps only capabilities and transports across a reboot.
+	 */
+	@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+	internal fun allowsMobileData(job: JobInfo): Boolean =
+		job.requiredNetwork?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) != true
 
 	/** A separate namespace keeps the transfer job's id clear of WorkManager's job ids. */
 	@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)

@@ -144,6 +144,7 @@ test('publishes the updated indexing snapshot when a source scope changes', asyn
 		logger: {createChildLogger: () => ({log: vi.fn()})},
 		eventBus: {emit},
 		files: {fileIndex: {photosUpdateSource, photosIndexingState}},
+		search: {status: vi.fn(async () => ({available: true, indexing: {completed: 3, total: 3}}))},
 	} as unknown as Umbreld
 	const photos = new Photos(umbreld)
 

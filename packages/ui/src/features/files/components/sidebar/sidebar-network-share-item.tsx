@@ -32,30 +32,30 @@ export function SidebarNetworkShareItem({host, rootPath, onEject, disabled, isMo
 			id={`sidebar-${rootPath}`}
 			path={rootPath}
 			disabled={!isMounted}
-			onClick={() => navigateToDirectory(rootPath)}
 			className={cn(
-				'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
+				'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] pr-2 text-12 hover:bg-linear-to-b',
 				isActive ? selectedClass : 'text-white/60 hover:bg-white/10 hover:text-white',
 			)}
-			role='button'
 		>
-			<FileItemIcon
-				item={{path: rootPath, type: 'directory', operations: [], size: 0, modified: 0, name: host}}
-				className='h-5 w-5 flex-shrink-0'
-			/>
-			<span className={cn('min-w-0 flex-1', !isMounted && 'opacity-50')}>
-				<span className='block truncate'>{host}</span>
-			</span>
+			<button
+				type='button'
+				aria-current={isActive ? 'page' : undefined}
+				onClick={() => navigateToDirectory(rootPath)}
+				className={cn('flex min-w-0 flex-1 items-center gap-1.5 rounded-lg py-1.5 pl-2 text-left', focusRingClass)}
+			>
+				<FileItemIcon
+					item={{path: rootPath, type: 'directory', operations: [], size: 0, modified: 0, name: host}}
+					className='h-5 w-5 flex-shrink-0'
+				/>
+				<span className={cn('min-w-0 flex-1', !isMounted && 'opacity-50')}>
+					<span className='block truncate'>{host}</span>
+				</span>
+			</button>
 
 			{/* Eject button */}
 			<button
-				onClick={(e) => {
-					// prevent navigating into /Network
-					e.stopPropagation()
-
-					// eject (remove) the host
-					onEject()
-				}}
+				type='button'
+				onClick={onEject}
 				aria-label={t('files-action.remove-network-host')}
 				disabled={disabled}
 				className={cn(

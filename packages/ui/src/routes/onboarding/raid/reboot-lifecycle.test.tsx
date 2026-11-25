@@ -48,6 +48,11 @@ vi.mock('@/components/ui/cover-message', () => ({
 	CoverMessage: ({children}: PropsWithChildren) => children,
 	CoverMessageParagraph: ({children}: PropsWithChildren) => children,
 }))
+vi.mock('@/components/ui/cover', () => ({
+	Cover: ({title}: {title: string}) => title,
+	CoverRetryActions: () => null,
+	LoadingCover: () => null,
+}))
 vi.mock('@/components/ui/connection-lost-screen', () => ({ConnectionLostScreen: () => <div>connection-lost</div>}))
 vi.mock('@/components/ui/loading', () => ({Loading: () => null, Spinner: () => null}))
 vi.mock('@/components/ui/toast', () => ({toast: {error: () => {}}}))
@@ -79,11 +84,14 @@ const credentials = {name: 'Test', password: 'test123', language: 'en'}
 const disk = {
 	id: 'disk-A',
 	device: 'sdb',
+	transport: 'sata',
 	name: 'Drive',
 	model: 'Test',
+	serial: 'SERIAL-A',
 	slot: 1,
 	size: 1e12,
 	roundedSize: 1e12,
+	smartStatus: 'healthy',
 	isSystemDrive: false,
 }
 const recoveryRoutes = ['/onboarding/hdd-raid', '/onboarding/ssd-raid/setup', '/onboarding/raid/setup']
@@ -117,6 +125,15 @@ beforeEach(() => {
 	const testWindow = Object.create(window)
 	Object.defineProperty(testWindow, 'location', {value: destination})
 	vi.stubGlobal('window', testWindow)
+	// jsdom has no layout, and a sheet's scroll area asks to be told about it
+	vi.stubGlobal(
+		'ResizeObserver',
+		class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		},
+	)
 })
 
 afterEach(() => {
@@ -198,6 +215,7 @@ async function mount(path: string) {
 					'hardware.raid.recoverExistingInstall': restoreOutcome === 'accepted',
 					'hardware.raid.checkInitialRaidSetupStatus': userExists,
 					'user.register': true,
+					'system.memorySize': 16 * 2 ** 30,
 				}
 				if (!(op.path in responses)) throw new Error(`Unsupported query: ${op.path}`)
 				observer.next({result: {data: responses[op.path]}})
@@ -286,11 +304,11 @@ const calls = (path: string) => queries.filter((query) => query === path).length
 
 test.each(recoveryRoutes)('recovery survives exhausted discovery retries during reboot on %s', async (path) => {
 	await mount(path)
-	await click('onboarding.raid.recovery.restore')
+	await click('storage-setup.earlier.restore')
 	await advance(1000)
 	offline = true
 	await advance(20_000)
-	expect(host.textContent).toContain('onboarding.raid.recovery.restoring.title')
+	expect(host.textContent).toContain('storage-setup.working.title.restore')
 	expect(host.textContent).not.toContain('onboarding.raid.error.detection-failed')
 	offline = false
 	userExists = true
@@ -302,11 +320,11 @@ test.each(recoveryRoutes)('recovery survives exhausted discovery retries during 
 
 test('an empty inventory cannot redirect away from active SSD recovery', async () => {
 	await mount('/onboarding/ssd-raid/setup')
-	await click('onboarding.raid.recovery.restore')
+	await click('storage-setup.earlier.restore')
 	inventory = 'empty'
 	await advance(4000)
 	expect(router.state.location.pathname).toBe('/onboarding/ssd-raid/setup')
-	expect(host.textContent).toContain('onboarding.raid.recovery.restoring.title')
+	expect(host.textContent).toContain('storage-setup.working.title.restore')
 	status = 'running'
 	userExists = true
 	await advance(3000)
@@ -323,7 +341,7 @@ test('a stale focus check during HDD setup reboot preserves the one registration
 	expect(calls('hardware.raid.checkRaidMountFailure')).toBe(1)
 	await refocus()
 	expect(calls('hardware.raid.checkRaidMountFailure')).toBe(2)
-	expect(host.textContent).toContain('onboarding.raid.configuring.title')
+	expect(host.textContent).toContain('storage-setup.working.title')
 	offline = false
 	userExists = true
 	await advance(3000)
@@ -374,14 +392,19 @@ test.each(recoveryRoutes)('initial inventory errors still block fresh setup on %
 	expect(calls('user.register')).toBe(0)
 })
 
+// The drive is drawn in Umbrel Pro's tray, or listed in a bay on anything else. Either way it
+// is named for a screen reader by its model.
+const driveShown = () => host.querySelector('[aria-label*="Drive"]') !== null
+const trayShown = () => host.querySelector('img[src*="ssd-tray"]') !== null
+
 test.each(['Umbrel Pro', 'Umbrel Home', 'Custom PC'])(
 	'boot diagnostics identify %s without an owner token',
 	async (name) => {
 		productName = name
 		mountFailed = true
 		await mount('/raid-error')
-		expect(host.textContent).toContain('Drive')
-		expect(host.querySelector('img[alt="onboarding.raid.ssd-tray-alt"]') !== null).toBe(name === 'Umbrel Pro')
+		expect(driveShown()).toBe(true)
+		expect(trayShown()).toBe(name === 'Umbrel Pro')
 		expect(calls('hardware.umbrelPro.isUmbrelPro')).toBe(0)
 	},
 )
@@ -390,13 +413,13 @@ test('boot diagnostics remain usable when identity fails and Check again recover
 	mountFailed = true
 	identityOffline = true
 	await mount('/raid-error')
-	expect(host.textContent).toContain('Drive')
-	expect(host.textContent).toContain('storage-status.check-failed')
-	expect(host.querySelector('img[alt="onboarding.raid.ssd-tray-alt"]')).toBeNull()
+	expect(driveShown()).toBe(true)
+	expect(host.textContent).toContain('storage-start.check-failed')
+	expect(trayShown()).toBe(false)
 	identityOffline = false
 	await click('storage-status.check-again')
-	expect(host.textContent).not.toContain('storage-status.check-failed')
-	expect(host.querySelector('img[alt="onboarding.raid.ssd-tray-alt"]')).not.toBeNull()
+	expect(host.textContent).not.toContain('storage-start.check-failed')
+	expect(trayShown()).toBe(true)
 })
 
 test('boot diagnostics preserve Pro identity when its background refresh fails', async () => {
@@ -404,8 +427,8 @@ test('boot diagnostics preserve Pro identity when its background refresh fails',
 	await mount('/raid-error')
 	identityOffline = true
 	await click('storage-status.check-again')
-	expect(host.querySelector('img[alt="onboarding.raid.ssd-tray-alt"]')).not.toBeNull()
-	expect(host.textContent).toContain('storage-status.check-failed')
+	expect(trayShown()).toBe(true)
+	expect(host.textContent).toContain('storage-start.check-failed')
 })
 
 test('a transient initial mount-check failure recovers automatically', async () => {
@@ -436,29 +459,35 @@ async function clickDialog(label: string) {
 	await advance(200)
 }
 
-test.each(recoveryRoutes)('failed restore offers confirmed setup as new on %s', async (path) => {
-	restoreOutcome = 'failed'
-	await mount(path)
-	await click('onboarding.raid.recovery.restore')
-	expect(host.textContent).toContain('onboarding.raid.recovery.failed.title')
-	await click('onboarding.raid.recovery.set-up-new')
-	expect(document.body.textContent).toContain('onboarding.raid.recovery.set-up-new-dialog.description')
-	expect(calls('user.register')).toBe(0)
-	await clickDialog('cancel')
-	expect(host.textContent).toContain('onboarding.raid.recovery.failed.title')
-	await click('onboarding.raid.recovery.set-up-new')
-	await clickDialog('onboarding.raid.recovery.set-up-new-dialog.confirm')
-	expect(host.textContent).not.toContain('onboarding.raid.recovery.failed.title')
-	expect(calls('user.register')).toBe(0)
-	expect(calls('hardware.raid.recoverExistingInstall')).toBe(1)
-})
+test.each(recoveryRoutes)(
+	'a failed restore leads on to setting up as new, which erases nothing by itself on %s',
+	async (path) => {
+		restoreOutcome = 'failed'
+		await mount(path)
+		await click('storage-setup.earlier.restore')
+		expect(host.textContent).toContain('storage-setup.failed.title.restore')
+		// Setting up as new only opens the storage step
+		await click('storage-setup.earlier.new')
+		expect(host.textContent).not.toContain('storage-setup.failed.title.restore')
+		expect(calls('user.register')).toBe(0)
+		// Its confirmation is the one place the drives are erased, and it says the earlier setup goes
+		await click('continue')
+		expect(document.body.textContent).toContain('storage-setup.erase.earlier')
+		await clickDialog('cancel')
+		expect(calls('user.register')).toBe(0)
+		await click('continue')
+		await clickDialog('storage-setup.erase.confirm')
+		expect(calls('user.register')).toBe(1)
+		expect(calls('hardware.raid.recoverExistingInstall')).toBe(1)
+	},
+)
 
 test.each(recoveryRoutes)(
 	'lost restore response allows a deliberate return after a sustained wait on %s',
 	async (path) => {
 		restoreOutcome = 'lost'
 		await mount(path)
-		await click('onboarding.raid.recovery.restore')
+		await click('storage-setup.earlier.restore')
 		expect(host.textContent).not.toContain('onboarding.raid.return-to-start')
 		await advance(STORAGE_WAIT_NOTICE_DELAY_MS + 1000)
 		await click('onboarding.raid.return-to-start')
@@ -480,17 +509,17 @@ test.each(['/onboarding/hdd-raid/setup', '/onboarding/ssd-raid/setup', '/onboard
 		registrationDelay = 120_000
 		await mount(path)
 		if (!path.includes('hdd')) {
-			await click('onboarding.raid.continue')
-			if (path.includes('ssd')) await clickDialog('onboarding.raid.recovery.set-up-new-dialog.confirm')
+			await click('continue')
+			await clickDialog('storage-setup.erase.confirm')
 		}
 		expect(calls('user.register')).toBe(1)
 		expect(calls('hardware.raid.checkInitialRaidSetupStatus')).toBe(0)
 		await advance(registrationDelay)
 		expect(calls('hardware.raid.checkInitialRaidSetupStatus')).toBeGreaterThan(0)
 		await advance(registrationStartedAt + STORAGE_WAIT_NOTICE_DELAY_MS - Date.now() - 1)
-		expect(host.textContent).not.toContain('onboarding.raid.still-working')
+		expect(host.textContent).not.toContain('storage-setup.working.still')
 		await advance(1)
-		expect(host.textContent).toContain('onboarding.raid.still-working')
+		expect(host.textContent).toContain('storage-setup.working.still')
 		expect(calls('user.register')).toBe(1)
 	},
 )
@@ -502,8 +531,8 @@ test.each(['/onboarding/hdd-raid/setup', '/onboarding/ssd-raid/setup', '/onboard
 		registrationLost = true
 		await mount(path)
 		if (!path.includes('hdd')) {
-			await click('onboarding.raid.continue')
-			if (path.includes('ssd')) await clickDialog('onboarding.raid.recovery.set-up-new-dialog.confirm')
+			await click('continue')
+			await clickDialog('storage-setup.erase.confirm')
 		}
 		expect(calls('user.register')).toBe(1)
 		expect(host.textContent).not.toContain('onboarding.raid.return-to-start')

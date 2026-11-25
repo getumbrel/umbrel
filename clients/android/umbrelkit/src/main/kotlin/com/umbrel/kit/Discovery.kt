@@ -1,6 +1,7 @@
 package com.umbrel.kit
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
@@ -152,6 +153,8 @@ class Discovery(context: Context) {
 			(Build.VERSION.SDK_INT == Build.VERSION_CODES.TIRAMISU &&
 				SdkExtensions.getExtensionVersion(Build.VERSION_CODES.TIRAMISU) < 7)
 		if (!needsLock) return
+		// Wi-Fi is optional: without it, discovery runs over Ethernet, which needs no lock.
+		if (!appContext.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI)) return
 		val wifi = appContext.getSystemService(WifiManager::class.java) ?: return
 		multicastLock = wifi.createMulticastLock("umbrel-discovery").apply {
 			setReferenceCounted(false)
@@ -276,6 +279,9 @@ class Discovery(context: Context) {
 			val byHost = HashMap<String, Candidate>()
 			for (entry in entries.values) {
 				val host = entry.host ?: continue // not resolved yet
+				// Any device on the network can advertise any hostname. Skip anything that isn't
+				// a literal IPv4 address or .local name before it reaches identification.
+				if (!SavedDevice.isValidLocalEndpointHost(host)) continue
 				var candidate = Candidate(host, entry.addresses, entry.serviceName, entry.id, entry.model, entry.onboarded)
 				byHost[host.lowercase()]?.let { existing ->
 					candidate = candidate.copy(addresses = (existing.addresses + candidate.addresses).distinct().sorted())

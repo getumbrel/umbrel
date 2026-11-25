@@ -1,0 +1,32 @@
+[Unit]
+Description=Embedding model that reads documents and speech for search
+# Stopped after umbreld at shutdown: one stopped while umbreld is still sending
+# it things would look to umbreld like it had fallen over on each of them
+Before=umbrel.service
+ConditionPathExists=/opt/litert-lm
+# The models are not part of the image. umbreld fetches them the first time
+# there is something for them to read, and leaves this once they are all
+# there (see models.ts in umbreld).
+ConditionPathExists=/home/umbrel/umbrel/models/installed
+
+[Service]
+# What a passage of a document or of what is said is about, for search by
+# meaning. Only the text half of the model, on the CPU: it gives a passage
+# the same embedding as the whole model does, in a seventh of the memory that
+# takes on a GPU, and a few times as slowly. umbreld sends every passage
+# here, so that the model that reads photos is only loaded while there are
+# photos to read (see file-index-enrichment.ts). It only runs while there is
+# something to read, and exits five minutes after the last.
+ExecStart=/usr/bin/python3 /opt/umbrel-embeddings/server.py --background --idle-seconds 300 \
+    --model /home/umbrel/umbrel/models/embeddinggemma-2-text-270m.litertlm
+# With the other models that read the library, and the first of everything on
+# the device to be stopped when it is out of memory (see umbrelbackground.slice)
+Slice=umbrelbackground.slice
+OOMScoreAdjust=1000
+DynamicUser=yes
+PrivateNetwork=yes
+ProtectHome=tmpfs
+BindReadOnlyPaths=/home/umbrel/umbrel/models
+# Where LiteRT-LM keeps the model as it has prepared it for the CPU, so that
+# it is not prepared again at every start
+CacheDirectory=umbrel-embeddings-passages

@@ -21,8 +21,51 @@ const MAC_WHEEL_STEP = 4.000244140625
 // way down, and becomes a pan; pinches and real wheels go on to MapLibre's
 // own zoom. A streak is read once, by its first event, so a pan can't turn
 // into a zoom halfway through a flick.
+//
+// A scroll's steps aren't taken at once but followed, closing on where
+// they lead a share at a time, so the map glides between them and settles
+// rather than jumping a step and stopping dead. Let go of mid-glide (a click,
+// a drag), or with the map sent somewhere else (a pinch, a flight to a
+// marker), it stops where it is.
+//
+// Each share is taken as the map draws a frame, not in a frame of the page's
+// own: the map draws what it is told in the frame after, so everything laid
+// over it, which moves when it is told, would run a frame ahead of the map
+// all the way. MapLibre takes its own gestures this way, and gives no public
+// way in to it: _requestRenderFrame is the one its camera uses, and is in its
+// types, so a MapLibre without it fails the type check, not the map.
 export function attachMapGestures(map: MapLibreMap) {
 	const container = map.getContainer()
+	// A flick is let go of at the speed it was going, and slows to a stop over
+	// a while, easing out, rather than dropping to a third of that speed and
+	// stopping short (MapLibre's own)
+	map.dragPan.enable({linearity: 0.55, easing: easeOut, deceleration: 1800, maxSpeed: 1200})
+	const pending = {x: 0, y: 0}
+	let gliding = 0
+	let last = 0
+	// (Our own steps are moves of the map as well, and aren't what stops them)
+	let stepping = false
+	const glide = () => {
+		const time = performance.now()
+		const share = 1 - Math.exp(-(last ? time - last : 16) / FOLLOW_MS)
+		last = time
+		const step = {x: pending.x * share, y: pending.y * share}
+		const settled = Math.hypot(pending.x - step.x, pending.y - step.y) < 0.5
+		const by = settled ? {...pending} : step
+		pending.x -= by.x
+		pending.y -= by.y
+		stepping = true
+		map.panBy([by.x, by.y], {animate: false})
+		stepping = false
+		gliding = settled ? 0 : map._requestRenderFrame(glide)
+		if (settled) last = 0
+	}
+	const stopGliding = () => {
+		map._cancelRenderFrame(gliding)
+		gliding = 0
+		last = 0
+		pending.x = pending.y = 0
+	}
 	let streak: {panning: boolean; at: number} | undefined
 	const onWheel = (event: WheelEvent) => {
 		const now = performance.now()
@@ -37,14 +80,34 @@ export function attachMapGestures(map: MapLibreMap) {
 			}
 		}
 		streak.at = now
-		if (!streak.panning || event.ctrlKey) return
+		// A pinch or a wheel is MapLibre's to zoom by, and nothing is left of a
+		// glide that would go on panning under it
+		if (!streak.panning || event.ctrlKey) return stopGliding()
 		event.preventDefault()
 		event.stopPropagation()
-		map.panBy([event.deltaX, event.deltaY], {animate: false})
+		pending.x += event.deltaX
+		pending.y += event.deltaY
+		gliding ||= map._requestRenderFrame(glide)
+	}
+	const onMoveStart = () => {
+		if (!stepping) stopGliding()
 	}
 	container.addEventListener('wheel', onWheel, {capture: true, passive: false})
-	return () => container.removeEventListener('wheel', onWheel, {capture: true})
+	container.addEventListener('pointerdown', stopGliding, {capture: true})
+	map.on('movestart', onMoveStart)
+	return () => {
+		stopGliding()
+		container.removeEventListener('wheel', onWheel, {capture: true})
+		container.removeEventListener('pointerdown', stopGliding, {capture: true})
+		map.off('movestart', onMoveStart)
+	}
 }
+
+// How quickly a scroll's glide closes on where it leads: most of the way in
+// about twice this
+const FOLLOW_MS = 70
+// Fast to begin with, as fast as it was let go of, and long and soft to its end
+const easeOut = (t: number) => 1 - (1 - t) ** 3
 
 const MAX_LATITUDE = 85.051129
 

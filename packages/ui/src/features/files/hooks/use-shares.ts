@@ -10,6 +10,28 @@ import type {RouterError} from '@/trpc/trpc'
 
 const SAMBA_STATE_REFETCH_INTERVAL_MS = 30_000
 
+// Whether a path is shared, for an icon's badge. Every icon asks, and a
+// listing mounts and unmounts icons with every scroll, so this is a narrow
+// read of the two queries below and nothing else: useShares itself, mounted
+// once per icon, opened an event subscription for each one and refetched
+// three queries each time a row scrolled into view. An icon's answer may be
+// as old as the interval the shares are polled at anyway, and a share added
+// or removed here still shows at once (that invalidates the query).
+export function useIsPathShared(path: string, {enabled = true}: {enabled?: boolean} = {}) {
+	const {data: canManageShares} = trpcReact.user.get.useQuery(undefined, {
+		enabled,
+		select: (user) => user.role === 'owner' || user.sambaEnabled === true,
+		staleTime: SAMBA_STATE_REFETCH_INTERVAL_MS,
+	})
+	const {data: isShared} = trpcReact.files.shares.useQuery(undefined, {
+		enabled: enabled && canManageShares === true,
+		select: (shares) => shares.some((share: Share) => share && share.path === path),
+		placeholderData: keepPreviousData,
+		staleTime: SAMBA_STATE_REFETCH_INTERVAL_MS,
+	})
+	return isShared ?? false
+}
+
 /**
  * Hook to manage file shares in the file system.
  * Provides functionality to fetch shares, add/remove shares, and get share password.

@@ -11,8 +11,8 @@ import semver from 'semver'
 //
 // Approving and revoking signers are the same action: publish a new list containing every active key,
 // signed by the root and dated later than the last one. The list also sets how many approved signers
-// each release needs. Devices fetch it daily and before every update, and only replace their copy with
-// a validly signed newer list, so serving an old list can't undo a revocation. Lists don't expire
+// each release needs. Devices fetch it before every update check and install, and only replace their copy
+// with a validly signed newer list, so serving an old list can't undo a revocation. Lists don't expire
 // though, so a device that can't reach any source keeps trusting the newest list it has seen. The list
 // can also revoke signed releases by the hash of their manifest, which devices then refuse to install.
 //
@@ -39,10 +39,11 @@ import semver from 'semver'
 // its format wrote it, for later parsers, and devices don't refuse a block for it. A change older devices
 // mustn't ignore goes in a block with a new header, which they don't read.
 
-// The root key every release trusts, where the chain of root key handovers starts. When the root key
-// moves to a new hardware wallet, the current key signs a handover to the new one, which lists carry from
-// then on, so a device follows the chain to the new key and stops trusting the old one. This key stays
-// the same, as every list's chain starts from it.
+// The root key this release trusts. It only signs keys lists and, in an emergency, releases, so a stolen
+// key can never lock it out: whatever lists a thief publishes, this key still counts, and a release it
+// signs can recover devices. The root key moves to a new hardware wallet with a release, signed by the
+// release signers, that changes this key and bundles a list the new key signed. There's no way to hand
+// it over with a keys list, which a thief could use to take over every device for good.
 //
 // It's the key at m/84'/0'/0'/0/0 on the root key's hardware wallet, whose address is
 // bc1qz6c2t7ncjlm6fdy5a0y46cxy8m5nm0hkcxcamh.
@@ -56,7 +57,6 @@ const SIGNER_MESSAGE_PREFIX = 'umbrelOS release signature\n'
 const SCHEMA = '1'
 
 const SIGNING_KEYS_HEADER = '--- umbrelOS Signing Keys ---'
-const ROOT_KEY_HANDOVER_HEADER = '--- umbrelOS Root Key Handover ---'
 // The fields that end a signed block, one line for each signature: Root-Signature: <base64> by the root key
 // and Signature: <name> <base64> by a release signer
 const ROOT_SIGNATURE = 'Root-Signature'
@@ -89,15 +89,13 @@ export type SigningKey = {name: string; publicKey: string}
 // A release signer's signature, in base64, and the name of the approved key it says it's from
 export type ReleaseSignature = {name: string; signature: string}
 export type RevokedRelease = {manifest: string; label?: string}
-export type RootKeyHandover = {date: Date; from: string; to: string; message: string; rootSignatures: string[]}
 export type SigningKeysList = {
 	date: Date
 	requiredSignatures: number
 	keys: SigningKey[]
 	// Signed releases devices refuse to install, by the SHA-256 of their manifest, and a label for people
 	revokedReleases: RevokedRelease[]
-	// The handovers from the first root key to the one that signed the list, which is rootKey
-	handovers: RootKeyHandover[]
+	// The root key that signed it, this release's
 	rootKey: string
 	text: string
 }
@@ -222,17 +220,6 @@ export function formatSigningKeysListMessage({
 	].join('\n')
 }
 
-// The message a root key signs to hand over to a new one
-export function formatRootKeyHandoverMessage({date, from, to}: {date: Date; from: string; to: string}) {
-	return [
-		ROOT_KEY_HANDOVER_HEADER,
-		`Schema: ${SCHEMA}`,
-		`Date: ${formatDate(date)}`,
-		`From: ${from}`,
-		`To: ${to}`,
-	].join('\n')
-}
-
 // The most signatures of a message a device checks, of each kind, far more than any release needs
 const MAX_SIGNATURES = 32
 
@@ -278,7 +265,6 @@ const formatSignedBlock = (
 
 export function formatSigningKeysList({
 	rootSignatures,
-	handovers = [],
 	...list
 }: {
 	date: Date
@@ -286,12 +272,8 @@ export function formatSigningKeysList({
 	keys: SigningKey[]
 	revokedReleases?: RevokedRelease[]
 	rootSignatures: string[]
-	handovers?: Pick<RootKeyHandover, 'message' | 'rootSignatures'>[]
 }) {
-	return [
-		formatSignedBlock(formatSigningKeysListMessage(list), {rootSignatures}),
-		...handovers.map((handover) => formatSignedBlock(handover.message, {rootSignatures: handover.rootSignatures})),
-	].join('\n')
+	return formatSignedBlock(formatSigningKeysListMessage(list), {rootSignatures})
 }
 
 // Split text into blocks, each a "--- Title ---" header and the lines after it up to a blank line. Lines
@@ -318,30 +300,6 @@ const formatBlocks = (blocks: string[][]) => blocks.map((block) => `${block.join
 
 const isPublicKey = (value: string) => /^0[23][0-9a-f]{64}$/.test(value)
 
-// Parse a root key handover, which a root key signs to hand over to a new one:
-//
-// --- umbrelOS Root Key Handover ---
-// Schema: 1
-// Date: 2027-03-01T12:00:00Z
-// From: <the current root's public key>
-// To: <the new root's public key>
-// Root-Signature: <base64 signature by the current root key>
-function parseRootKeyHandover(lines: string[]): RootKeyHandover {
-	const fail = (message: string) => new Error(`Root key handover ${message}`)
-	const {messageLines, message, rootSignatures} = parseSignedBlock(lines)
-	const [header, ...fieldLines] = messageLines
-	if (header !== ROOT_KEY_HANDOVER_HEADER) throw fail('has an invalid header')
-	const fields = parseFields(fieldLines, fail)
-
-	const date = parseDate(fields.one('Date'))
-	if (!date) throw fail('has an invalid date')
-	const from = fields.one('From')
-	const to = fields.one('To')
-	if (!isPublicKey(from) || !isPublicKey(to) || from === to) throw fail('has an invalid key')
-
-	return {date, from, to, message, rootSignatures}
-}
-
 // Parse an approved signing keys list without checking its signatures:
 //
 // --- umbrelOS Signing Keys ---
@@ -352,20 +310,16 @@ function parseRootKeyHandover(lines: string[]): RootKeyHandover {
 // Revoked-Release: sha256:<SHA-256 of the revoked release's manifest> 2.1.0
 // Root-Signature: <base64 signature by the root key>
 //
-// --- umbrelOS Root Key Handover ---
-// ...
-//
 // Releases need signatures from Required-Signatures different approved keys, and devices refuse to
 // install a revoked release however it's signed. Revoked-Release commits to exactly one release, by its
 // manifest's hash, and anything after the hash, like its version, is a label for people. It's a signed block, so the root key signs
 // every line above Root-Signature, and a list waiting for the root key has no Root-Signature yet.
 //
-// The list's handover blocks are the chain of root key handovers from the release's root key to the one
-// that signed it, oldest first. Without any, the release's root key signed it. Other blocks are left for
-// later schemas.
+// Other blocks are left for later schemas. That includes root key handovers, which umbrelOS 2.1.0 Beta 1
+// followed and this ignores, so a list is only ever valid if this release's root key signed it.
 export function parseSigningKeysList(text: string) {
 	const fail = (message: string) => new Error(`Approved signing keys list ${message}`)
-	const [block, ...otherBlocks] = parseBlocks(text, {lenient: true})!
+	const [block] = parseBlocks(text, {lenient: true})!
 	if (block?.[0] !== SIGNING_KEYS_HEADER) throw fail('has an invalid header')
 	const {messageLines, message, rootSignatures} = parseSignedBlock(block)
 
@@ -399,63 +353,28 @@ export function parseSigningKeysList(text: string) {
 		requiredSignatures: Number(requiredSignatures),
 		keys,
 		revokedReleases,
-		handovers: otherBlocks
-			.filter(([header]) => header === ROOT_KEY_HANDOVER_HEADER)
-			.map((handoverBlock) => parseRootKeyHandover(handoverBlock)),
 		message,
 		rootSignatures,
 	}
 }
 
-// The root key at the end of the chain of handovers from the release's root key. The first handover has
-// to be from that key and every one has to be signed by the root key it hands over from, so every
-// handover a device holds is verified.
-export function followRootKeyHandovers(handovers: RootKeyHandover[], rootPublicKey = ROOT_PUBLIC_KEY) {
-	let rootKey = rootPublicKey
-	let previous: RootKeyHandover | undefined
-	for (const handover of handovers) {
-		if (handover.from !== rootKey || (previous && handover.date <= previous.date)) {
-			throw new Error('Root key handovers are out of order')
-		}
-		if (!handover.rootSignatures.some((signature) => verifyBitcoinMessage(handover.message, signature, rootKey))) {
-			throw new Error('Root key handover is not signed by the root key it hands over from')
-		}
-		rootKey = handover.to
-		previous = handover
-	}
-	return rootKey
-}
-
-// Parse an approved signing keys list, accepting it only if the root key signed it, following any
-// handovers from this release's root key. Its text is just its blocks, without any lines outside them a
-// source added, so it's saved and carried in signature files as it was signed.
+// Parse an approved signing keys list, accepting it only if this release's root key signed it. Its text is
+// just its blocks, without any lines outside them a source added, so it's saved and carried in signature
+// files as it was signed.
 export function verifySigningKeysList(text: string, rootPublicKey = ROOT_PUBLIC_KEY): SigningKeysList {
 	const {message, rootSignatures, ...list} = parseSigningKeysList(text)
-	const rootKey = followRootKeyHandovers(list.handovers, rootPublicKey)
-	if (!rootSignatures.some((signature) => verifyBitcoinMessage(message, signature, rootKey))) {
+	if (!rootSignatures.some((signature) => verifyBitcoinMessage(message, signature, rootPublicKey))) {
 		throw new Error('Approved signing keys list is not signed by the root key')
 	}
-	return {...list, rootKey, text: formatBlocks(parseBlocks(text, {lenient: true})!)}
+	return {...list, rootKey: rootPublicKey, text: formatBlocks(parseBlocks(text, {lenient: true})!)}
 }
 
-// Whether a list's handovers start with exactly the handovers of the list a device has, so its chain is
-// the device's chain continued: any handovers after the device's have to be signed by the root key the
-// device trusts now, and none of the device's can be swapped for another, or left out to replay one from
-// before a root key was handed back.
-const continuesHandovers = (list: SigningKeysList, from: SigningKeysList) =>
-	from.handovers.every((handover, index) => list.handovers[index]?.message === handover.message)
-
-// The most recently dated list, preferring the earlier one on a tie, out of those that continue the
-// handovers of the device's own list, which comes first. Once a device has seen the root key handed
-// over, the retired key can't sign lists or hand over to another key for it. A device that hasn't seen
-// the handover trusts the retired key until it does, so hand over while the old key is safe, publish the
-// handover straight away and put the new key in the next release.
+// The most recently dated list, preferring the earlier one on a tie, so the device's own list, which comes
+// first, is only replaced by a later one
 export function newestSigningKeysList(lists: (SigningKeysList | undefined)[]) {
 	const [current, ...others] = lists.filter((list) => list !== undefined)
 	if (!current) return undefined
-	return others
-		.filter((list) => continuesHandovers(list, current))
-		.reduce((newest, list) => (list.date > newest.date ? list : newest), current)
+	return others.reduce((newest, list) => (list.date > newest.date ? list : newest), current)
 }
 
 // DER prefix of a P-256 SubjectPublicKeyInfo holding a 33 byte compressed point
@@ -550,7 +469,7 @@ export function readSignatureFile(text: string, rootPublicKey = ROOT_PUBLIC_KEY)
 		? parseSignedBlock(signaturesBlock)
 		: {signatures: [] as ReleaseSignature[], rootSignatures: [] as string[]}
 	const keysBlock = blocks.find(([header]) => header === SIGNING_KEYS_HEADER)
-	const listBlocks = keysBlock ? [keysBlock, ...blocks.filter(([header]) => header === ROOT_KEY_HANDOVER_HEADER)] : []
+	const listBlocks = keysBlock ? [keysBlock] : []
 
 	try {
 		const signingKeys = verifySigningKeysList(formatBlocks(listBlocks), rootPublicKey)

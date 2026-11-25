@@ -1,5 +1,7 @@
 import {parentPort, threadId, workerData} from 'node:worker_threads'
 
+import type {PeopleChange} from '../photos/people.ts'
+import type {SearchRead} from '../search/types.ts'
 import type {PhotoBackupCloudIdentity, PhotoFilter, PhotoScopeMode} from '../photos/types.ts'
 import FileIndexEngine, {type FileIndexRoot, type WatcherChange} from './file-index-engine.ts'
 import {
@@ -225,6 +227,8 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 			return index.reconcileRoot(stringArg(args), stringArg(args, 1))
 		case 'reconcilePath':
 			return index.reconcilePath(stringArg(args))
+		case 'reconcileCreatedDirectory':
+			return index.reconcileCreatedDirectory(stringArg(args))
 		case 'removePath':
 			return index.removePath(stringArg(args))
 		case 'movePath':
@@ -320,6 +324,14 @@ async function request(method: FileIndexRequestMethod, args: unknown[]) {
 			return index.photosResolveLiveCompanion(stringArg(args), stringArg(args, 1))
 		case 'photosListAlbums':
 			return index.photosListAlbums(stringArg(args))
+		case 'photosListPeople':
+			return index.photosListPeople(stringArg(args), booleanArg(args, 1))
+		case 'photosListPersonSuggestions':
+			return index.photosListPersonSuggestions(stringArg(args))
+		case 'photosChangePeople':
+			return index.photosChangePeople(stringArg(args), objectArg<PeopleChange>(args, 1))
+		case 'photosSearch':
+			return index.photosSearch(stringArg(args), objectArg<SearchRead>(args, 1))
 		case 'photosCreateAlbum':
 			return index.photosCreateAlbum(stringArg(args), stringArg(args, 1), optionalStringsArg(args, 2))
 		case 'photosRenameAlbum':
@@ -371,6 +383,9 @@ function notification(method: FileIndexNotificationMethod, args: unknown[]) {
 			return
 		case 'startBackgroundReconciliation':
 			index.startBackgroundReconciliation()
+			return
+		case 'setModelWork':
+			index.setModelWork(args[0] === true)
 			return
 		case 'scheduleFullReconciliation':
 			index.scheduleFullReconciliation(stringArg(args))

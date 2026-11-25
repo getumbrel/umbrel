@@ -54,6 +54,13 @@ public final class PhotoBackupLedger {
 		public let state: AssetState
 		public let modificationDate: Date
 		public let uploadedBytes: Int64
+		// Nil unless the asset failed
+		public let failureReason: PhotoBackupFailureReason?
+	}
+
+	public struct FailedAsset: Equatable, Sendable {
+		public let localIdentifier: String
+		public let reason: PhotoBackupFailureReason
 	}
 
 	// One page of a walk over the ledger's assets, and where the next page starts
@@ -121,6 +128,11 @@ public final class PhotoBackupLedger {
 
 	private static let changeTokenKey = "photoLibraryChangeToken"
 	private static let automaticRetryProgressKey = "automaticRetryUploadedCount"
+	private static let inventoryGenerationKey = "inventoryGeneration"
+	// How many keys a statement updates, or changes a transaction writes, at a time.
+	// Each such write is quick, and the count stays well under SQLite's limit on
+	// bound parameters.
+	private static let writeBatchSize = 500
 	private static let schemaVersion: Int64 = 2
 	private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 	private let queue = DispatchQueue(label: "com.umbrel.app.photo-backup-ledger")
@@ -340,8 +352,9 @@ public final class PhotoBackupLedger {
 	public func startInventoryScan(deviceId: String, changeToken: Data) throws -> InventoryScan {
 		try queue.sync {
 			if let existing = try inventoryScanLocked(deviceId: deviceId) { return existing }
+			let recorded = try highestRecordedGenerationLocked(deviceId: deviceId)
 			return try transaction {
-				let generation = try nextInventoryGenerationLocked(deviceId: deviceId)
+				let generation = try nextInventoryGenerationLocked(deviceId: deviceId, recorded: recorded)
 				let statement = try prepare(
 					"INSERT INTO photo_inventory_scans (deviceId, generation, changeToken) VALUES (?, ?, ?)")
 				defer { sqlite3_finalize(statement) }
@@ -386,17 +399,41 @@ public final class PhotoBackupLedger {
 
 	public func finishInventoryScan(deviceId: String, generation: Int64) throws {
 		try queue.sync {
+			// Finding the assets the scan didn't see reads every asset of the device, which
+			// takes a while on a large library, so it runs before the write lock instead of
+			// under it. iOS ends an app it suspends while that lock is held (0xdead10cc).
+			let query = try prepare(
+				"""
+				SELECT localIdentifier FROM photo_assets
+				WHERE deviceId = ? AND inventoryGeneration != ? AND state != ?
+				""")
+			defer { sqlite3_finalize(query) }
+			try bind(deviceId, at: 1, in: query)
+			try bind(generation, at: 2, in: query)
+			try bind(Self.assetDeleted, at: 3, in: query)
+			let missing = try textColumn(at: 0, in: query)
 			try transaction {
 				guard let scan = try inventoryScanLocked(deviceId: deviceId), scan.generation == generation else {
 					throw InventoryScanError.superseded
 				}
-				let missing = try prepare(
-					"UPDATE photo_assets SET state = ?, lastError = NULL WHERE deviceId = ? AND inventoryGeneration != ?")
-				defer { sqlite3_finalize(missing) }
-				try bind(Self.assetDeleted, at: 1, in: missing)
-				try bind(deviceId, at: 2, in: missing)
-				try bind(generation, at: 3, in: missing)
-				try stepDone(missing)
+				// By key, so the write is quick. An asset the other process recorded for this
+				// scan in the meantime is checked again and kept.
+				for identifiers in batches(missing) {
+					let statement = try prepare(
+						"""
+						UPDATE photo_assets SET state = ?, lastError = NULL
+						WHERE deviceId = ? AND inventoryGeneration != ?
+							AND localIdentifier IN (\(identifiers.map { _ in "?" }.joined(separator: ",")))
+						""")
+					defer { sqlite3_finalize(statement) }
+					try bind(Self.assetDeleted, at: 1, in: statement)
+					try bind(deviceId, at: 2, in: statement)
+					try bind(generation, at: 3, in: statement)
+					for (offset, identifier) in identifiers.enumerated() {
+						try bind(identifier, at: Int32(offset + 4), in: statement)
+					}
+					try stepDone(statement)
+				}
 				try setMetadataLocked(scan.changeToken, key: Self.changeTokenKey, deviceId: deviceId)
 				try deleteInventoryScanLocked(deviceId: deviceId)
 			}
@@ -410,17 +447,28 @@ public final class PhotoBackupLedger {
 		deviceId: String,
 		changeToken: Data
 	) throws {
+		// Persistent history doesn't distinguish content from metadata updates. Requeue
+		// a newer unknown update to avoid missing an edit. When the host observed the
+		// same update live, its richer object-change details already advanced
+		// metadata-only watermarks and make this replay a no-op.
+		let changes = (inserted + updated).map(AssetChange.seed) + deleted.map(AssetChange.delete)
 		try queue.sync {
-			try transaction {
-				for candidate in inserted { try seedCandidateLocked(candidate, deviceId: deviceId) }
-				// Persistent history doesn't distinguish content from metadata updates.
-				// Requeue a newer unknown update to avoid missing an edit. When the host
-				// observed the same update live, its richer object-change details already
-				// advanced metadata-only watermarks and make this replay a no-op.
-				for candidate in updated { try seedCandidateLocked(candidate, deviceId: deviceId) }
-				for identifier in deleted { try markDeletedLocked(deviceId: deviceId, localIdentifier: identifier) }
-				try setMetadataLocked(changeToken, key: Self.changeTokenKey, deviceId: deviceId)
-			}
+			// A large change set is written in short transactions, so the write lock is
+			// never held long. iOS ends an app it suspends while holding it (0xdead10cc).
+			// The token is committed with the last one, so a pass cut short replays the
+			// same history, and each change is applied once whether or not it was
+			// already committed.
+			var next = 0
+			repeat {
+				let batch = changes[next..<min(next + Self.writeBatchSize, changes.count)]
+				try transaction {
+					for change in batch { try applyLocked(change, deviceId: deviceId) }
+					if batch.endIndex == changes.endIndex {
+						try setMetadataLocked(changeToken, key: Self.changeTokenKey, deviceId: deviceId)
+					}
+				}
+				next = batch.endIndex
+			} while next < changes.count
 		}
 	}
 
@@ -438,21 +486,21 @@ public final class PhotoBackupLedger {
 		deviceId: String
 	) throws -> Bool {
 		guard !inserted.isEmpty || !contentChanged.isEmpty || !metadataChanged.isEmpty else { return false }
+		let changes = (inserted + contentChanged).map(AssetChange.seed) + metadataChanged.map(AssetChange.metadata)
 		return try queue.sync {
-			try transaction {
-				var backupChanged = false
-				for candidate in inserted + contentChanged {
-					if try seedCandidateLocked(candidate, deviceId: deviceId) {
-						backupChanged = true
+			// In short transactions, as a big iCloud sync changes thousands of assets at
+			// once. iOS ends an app it suspends while it holds the write lock (0xdead10cc).
+			var backupChanged = false
+			for batch in batches(changes) {
+				try transaction {
+					for change in batch {
+						if try applyLocked(change, deviceId: deviceId) {
+							backupChanged = true
+						}
 					}
 				}
-				for candidate in metadataChanged {
-					if try recordMetadataChangeLocked(candidate, deviceId: deviceId) {
-						backupChanged = true
-					}
-				}
-				return backupChanged
 			}
+			return backupChanged
 		}
 	}
 
@@ -931,14 +979,18 @@ public final class PhotoBackupLedger {
 		guard !mediaTypes.isEmpty else { return }
 
 		try queue.sync {
+			// Finding them reads every resource of the device, which takes a while on a
+			// large library, so it runs before the write lock instead of under it. iOS
+			// ends an app it suspends while that lock is held (0xdead10cc). Usually
+			// nothing is orphaned and the lock is never taken.
 			let mediaPlaceholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
 			let activePlaceholders = activeResourceKeys.map { _ in "?" }.joined(separator: ",")
 			let activeClause = activeResourceKeys.isEmpty
 				? ""
 				: "AND resource.resourceKey NOT IN (\(activePlaceholders))"
-			let statement = try prepare(
+			let query = try prepare(
 				"""
-				UPDATE photo_resources AS resource SET state = ?
+				SELECT resource.resourceKey FROM photo_resources AS resource
 				WHERE resource.state = ?
 					AND resource.deviceId = ?
 					AND EXISTS (
@@ -951,25 +1003,43 @@ public final class PhotoBackupLedger {
 					)
 					\(activeClause)
 				""")
-			defer { sqlite3_finalize(statement) }
+			defer { sqlite3_finalize(query) }
 			var index: Int32 = 1
-			try bind(Self.resourcePending, at: index, in: statement)
+			try bind(Self.resourceRegistered, at: index, in: query)
 			index += 1
-			try bind(Self.resourceRegistered, at: index, in: statement)
+			try bind(deviceId, at: index, in: query)
 			index += 1
-			try bind(deviceId, at: index, in: statement)
-			index += 1
-			try bind(Self.assetDeleted, at: index, in: statement)
+			try bind(Self.assetDeleted, at: index, in: query)
 			index += 1
 			for mediaType in mediaTypes {
-				try bind(mediaType, at: index, in: statement)
+				try bind(mediaType, at: index, in: query)
 				index += 1
 			}
 			for key in activeResourceKeys.sorted() {
-				try bind(key, at: index, in: statement)
+				try bind(key, at: index, in: query)
 				index += 1
 			}
-			try stepDone(statement)
+			let orphaned = try textColumn(at: 0, in: query)
+			guard !orphaned.isEmpty else { return }
+
+			// By key, so the write is quick. Only resources still registered return to
+			// pending, in case the extension finished one in the meantime.
+			try transaction {
+				for keys in batches(orphaned) {
+					let statement = try prepare(
+						"""
+						UPDATE photo_resources SET state = ?
+						WHERE state = ? AND resourceKey IN (\(keys.map { _ in "?" }.joined(separator: ",")))
+						""")
+					defer { sqlite3_finalize(statement) }
+					try bind(Self.resourcePending, at: 1, in: statement)
+					try bind(Self.resourceRegistered, at: 2, in: statement)
+					for (offset, key) in keys.enumerated() {
+						try bind(key, at: Int32(offset + 3), in: statement)
+					}
+					try stepDone(statement)
+				}
+			}
 		}
 	}
 
@@ -1089,60 +1159,10 @@ public final class PhotoBackupLedger {
 
 	// Retries only the failed resources and keeps successful Live Photo siblings. Used by
 	// Try Again, a backup configuration change and the storage probe; the extension's
-	// automatic retry is requeueFailedAssetsAfterProgress.
+	// automatic retry is requeueFailedAssetsAfterProgress. The failed assets are found
+	// before the write lock and requeued by key, so the lock is held briefly, and with
+	// nothing failed it isn't taken at all.
 	public func requeueFailedAssets(
-		deviceId: String,
-		includePhotos: Bool,
-		includeVideos: Bool
-	) throws {
-		try queue.sync {
-			try transaction {
-				try requeueFailedAssetsLocked(
-					deviceId: deviceId,
-					includePhotos: includePhotos,
-					includeVideos: includeVideos
-				)
-			}
-		}
-	}
-
-	// Most failures are Umbrel answering an upload with a temporary server error,
-	// and umbreld recognizes an exact retry without storing a second copy. Once only
-	// failed resources remain, retry them once in the same pass. Remembering the
-	// uploaded count at that retry means a resource that keeps failing is tried
-	// again only after other backups have made progress, never in a loop.
-	public func requeueFailedAssetsAfterProgress(
-		deviceId: String,
-		includePhotos: Bool,
-		includeVideos: Bool
-	) throws -> Bool {
-		return try queue.sync {
-			try transaction {
-				let statistics = try statisticsLocked(
-					deviceId: deviceId,
-					includePhotos: includePhotos,
-					includeVideos: includeVideos
-				)
-				guard statistics.failedCount > 0,
-					statistics.queuedCount == 0,
-					statistics.preparedCount == 0
-				else { return false }
-				let progress = Data(String(statistics.uploadedCount).utf8)
-				guard try metadataLocked(key: Self.automaticRetryProgressKey, deviceId: deviceId) != progress else {
-					return false
-				}
-				try requeueFailedAssetsLocked(
-					deviceId: deviceId,
-					includePhotos: includePhotos,
-					includeVideos: includeVideos
-				)
-				try setMetadataLocked(progress, key: Self.automaticRetryProgressKey, deviceId: deviceId)
-				return true
-			}
-		}
-	}
-
-	private func requeueFailedAssetsLocked(
 		deviceId: String,
 		includePhotos: Bool,
 		includeVideos: Bool
@@ -1152,43 +1172,145 @@ public final class PhotoBackupLedger {
 		if includeVideos { mediaTypes.append(2) }
 		guard !mediaTypes.isEmpty else { return }
 
-		let placeholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
-		let resources = try prepare(
-			"""
-			UPDATE photo_resources SET state = ?, lastError = NULL
-			WHERE state = ? AND EXISTS (
-				SELECT 1 FROM photo_assets
-				WHERE photo_assets.deviceId = photo_resources.deviceId
-					AND photo_assets.localIdentifier = photo_resources.localIdentifier
-					AND photo_assets.revision = photo_resources.revision
-					AND photo_assets.deviceId = ?
-					AND photo_assets.state = ?
-					AND photo_assets.mediaType IN (\(placeholders))
-			)
-			""")
-		defer { sqlite3_finalize(resources) }
-		try bind(Self.resourcePending, at: 1, in: resources)
-		try bind(Self.resourceFailed, at: 2, in: resources)
-		try bind(deviceId, at: 3, in: resources)
-		try bind(Self.assetFailed, at: 4, in: resources)
-		for (offset, mediaType) in mediaTypes.enumerated() {
-			try bind(mediaType, at: Int32(5 + offset), in: resources)
+		try queue.sync {
+			let failed = try failedAssetIdentifiersLocked(deviceId: deviceId, mediaTypes: mediaTypes)
+			guard !failed.isEmpty else { return }
+			try transaction {
+				try requeueFailedAssetsLocked(failed, deviceId: deviceId, mediaTypes: mediaTypes)
+			}
 		}
-		try stepDone(resources)
+	}
 
-		let assets = try prepare(
+	// Most failures are Umbrel answering an upload with a temporary server error,
+	// and umbreld recognizes an exact retry without storing a second copy. Once only
+	// failed resources remain, retry them once in the same pass. Remembering the
+	// uploaded count at that retry means a resource that keeps failing is tried
+	// again only after other backups have made progress, never in a loop.
+	//
+	// Counting the ledger and finding the failed assets read every asset and take a
+	// while on a large library, so they run before the write lock instead of under it.
+	// iOS ends an app it suspends while that lock is held (0xdead10cc), and most passes
+	// find nothing to retry, so they never take it. The progress check is repeated
+	// under the lock, so the app and the extension deciding to retry at the same count
+	// still retry once.
+	public func requeueFailedAssetsAfterProgress(
+		deviceId: String,
+		includePhotos: Bool,
+		includeVideos: Bool
+	) throws -> Bool {
+		var mediaTypes = [Int64]()
+		if includePhotos { mediaTypes.append(1) }
+		if includeVideos { mediaTypes.append(2) }
+		guard !mediaTypes.isEmpty else { return false }
+
+		return try queue.sync {
+			let statistics = try statisticsLocked(
+				deviceId: deviceId,
+				includePhotos: includePhotos,
+				includeVideos: includeVideos
+			)
+			guard statistics.failedCount > 0,
+				statistics.queuedCount == 0,
+				statistics.preparedCount == 0
+			else { return false }
+			let progress = Data(String(statistics.uploadedCount).utf8)
+			guard try metadataLocked(key: Self.automaticRetryProgressKey, deviceId: deviceId) != progress else {
+				return false
+			}
+			let failed = try failedAssetIdentifiersLocked(deviceId: deviceId, mediaTypes: mediaTypes)
+			return try transaction {
+				guard try metadataLocked(key: Self.automaticRetryProgressKey, deviceId: deviceId) != progress else {
+					return false
+				}
+				try requeueFailedAssetsLocked(failed, deviceId: deviceId, mediaTypes: mediaTypes)
+				try setMetadataLocked(progress, key: Self.automaticRetryProgressKey, deviceId: deviceId)
+				return true
+			}
+		}
+	}
+
+	// The assets of these media types whose upload failed. Reads every asset of the
+	// device, so it belongs before the write lock.
+	private func failedAssetIdentifiersLocked(deviceId: String, mediaTypes: [Int64]) throws -> [String] {
+		let placeholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
+		let statement = try prepare(
 			"""
-			UPDATE photo_assets SET state = ?, lastError = NULL
+			SELECT localIdentifier FROM photo_assets
 			WHERE deviceId = ? AND state = ? AND mediaType IN (\(placeholders))
 			""")
-		defer { sqlite3_finalize(assets) }
-		try bind(Self.assetPending, at: 1, in: assets)
-		try bind(deviceId, at: 2, in: assets)
-		try bind(Self.assetFailed, at: 3, in: assets)
+		defer { sqlite3_finalize(statement) }
+		try bind(deviceId, at: 1, in: statement)
+		try bind(Self.assetFailed, at: 2, in: statement)
 		for (offset, mediaType) in mediaTypes.enumerated() {
-			try bind(mediaType, at: Int32(4 + offset), in: assets)
+			try bind(mediaType, at: Int32(3 + offset), in: statement)
 		}
-		try stepDone(assets)
+		return try textColumn(at: 0, in: statement)
+	}
+
+	// Returns these assets and their failed resources to the queue. By key, so the
+	// write is quick. Only an asset still failed is touched, in case the other process
+	// requeued it or recorded an edit in the meantime.
+	private func requeueFailedAssetsLocked(_ identifiers: [String], deviceId: String, mediaTypes: [Int64]) throws {
+		let mediaPlaceholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
+		for batch in batches(identifiers) {
+			let placeholders = batch.map { _ in "?" }.joined(separator: ",")
+			let resources = try prepare(
+				"""
+				UPDATE photo_resources SET state = ?, lastError = NULL
+				WHERE deviceId = ? AND localIdentifier IN (\(placeholders)) AND state = ?
+					AND EXISTS (
+						SELECT 1 FROM photo_assets
+						WHERE photo_assets.deviceId = photo_resources.deviceId
+							AND photo_assets.localIdentifier = photo_resources.localIdentifier
+							AND photo_assets.revision = photo_resources.revision
+							AND photo_assets.state = ?
+							AND photo_assets.mediaType IN (\(mediaPlaceholders))
+					)
+				""")
+			defer { sqlite3_finalize(resources) }
+			var index: Int32 = 1
+			try bind(Self.resourcePending, at: index, in: resources)
+			index += 1
+			try bind(deviceId, at: index, in: resources)
+			index += 1
+			for identifier in batch {
+				try bind(identifier, at: index, in: resources)
+				index += 1
+			}
+			try bind(Self.resourceFailed, at: index, in: resources)
+			index += 1
+			try bind(Self.assetFailed, at: index, in: resources)
+			index += 1
+			for mediaType in mediaTypes {
+				try bind(mediaType, at: index, in: resources)
+				index += 1
+			}
+			try stepDone(resources)
+
+			let assets = try prepare(
+				"""
+				UPDATE photo_assets SET state = ?, lastError = NULL
+				WHERE deviceId = ? AND localIdentifier IN (\(placeholders)) AND state = ?
+					AND mediaType IN (\(mediaPlaceholders))
+				""")
+			defer { sqlite3_finalize(assets) }
+			index = 1
+			try bind(Self.assetPending, at: index, in: assets)
+			index += 1
+			try bind(deviceId, at: index, in: assets)
+			index += 1
+			for identifier in batch {
+				try bind(identifier, at: index, in: assets)
+				index += 1
+			}
+			try bind(Self.assetFailed, at: index, in: assets)
+			index += 1
+			for mediaType in mediaTypes {
+				try bind(mediaType, at: index, in: assets)
+				index += 1
+			}
+			try stepDone(assets)
+		}
 	}
 
 	public func statistics(
@@ -1268,7 +1390,7 @@ public final class PhotoBackupLedger {
 		try queue.sync {
 			let statement = try prepare(
 				"""
-				SELECT state, modificationDate, uploadedBytes
+				SELECT state, modificationDate, uploadedBytes, lastError
 				FROM photo_assets
 				WHERE deviceId = ? AND localIdentifier = ? AND state != ?
 				""")
@@ -1280,16 +1402,53 @@ public final class PhotoBackupLedger {
 			case SQLITE_DONE:
 				return nil
 			case SQLITE_ROW:
-				guard let state = AssetState(rawValue: sqlite3_column_int64(statement, 0)) else {
-					throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup asset has an invalid state")
-				}
-				return AssetRecord(
-					state: state,
-					modificationDate: Date(timeIntervalSince1970: sqlite3_column_double(statement, 1)),
-					uploadedBytes: sqlite3_column_int64(statement, 2)
-				)
+				return try assetRecord(in: statement, from: 0)
 			case let result:
 				throw databaseError(result)
+			}
+		}
+	}
+
+	// The assets statistics counts as failed, newest first, each with why. Reads every
+	// asset of the device, so it belongs off the main thread.
+	public func failedAssets(
+		deviceId: String,
+		includePhotos: Bool,
+		includeVideos: Bool
+	) throws -> [FailedAsset] {
+		var mediaTypes = [Int64]()
+		if includePhotos { mediaTypes.append(1) }
+		if includeVideos { mediaTypes.append(2) }
+		guard !mediaTypes.isEmpty else { return [] }
+
+		return try queue.sync {
+			let placeholders = mediaTypes.map { _ in "?" }.joined(separator: ",")
+			let statement = try prepare(
+				"""
+				SELECT localIdentifier, lastError FROM photo_assets
+				WHERE deviceId = ? AND state = ? AND mediaType IN (\(placeholders))
+				ORDER BY creationDate DESC, rowid
+				""")
+			defer { sqlite3_finalize(statement) }
+			try bind(deviceId, at: 1, in: statement)
+			try bind(Self.assetFailed, at: 2, in: statement)
+			for (offset, mediaType) in mediaTypes.enumerated() {
+				try bind(mediaType, at: Int32(3 + offset), in: statement)
+			}
+			var assets = [FailedAsset]()
+			while true {
+				switch sqlite3_step(statement) {
+				case SQLITE_ROW:
+					assets.append(
+						FailedAsset(
+							localIdentifier: try requiredText(at: 0, in: statement),
+							reason: PhotoBackupFailureReason(message: optionalText(at: 1, in: statement))
+						))
+				case SQLITE_DONE:
+					return assets
+				case let result:
+					throw databaseError(result)
+				}
 			}
 		}
 	}
@@ -1300,7 +1459,10 @@ public final class PhotoBackupLedger {
 	public func assetRecords(deviceId: String) throws -> [String: AssetRecord] {
 		try queue.sync {
 			let statement = try prepare(
-				"SELECT localIdentifier, state, modificationDate, uploadedBytes FROM photo_assets WHERE deviceId = ? AND state != ?")
+				"""
+				SELECT localIdentifier, state, modificationDate, uploadedBytes, lastError
+				FROM photo_assets WHERE deviceId = ? AND state != ?
+				""")
 			defer { sqlite3_finalize(statement) }
 			try bind(deviceId, at: 1, in: statement)
 			try bind(Self.assetDeleted, at: 2, in: statement)
@@ -1308,15 +1470,7 @@ public final class PhotoBackupLedger {
 			while true {
 				switch sqlite3_step(statement) {
 				case SQLITE_ROW:
-					let identifier = try requiredText(at: 0, in: statement)
-					guard let state = AssetState(rawValue: sqlite3_column_int64(statement, 1)) else {
-						throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup asset has an invalid state")
-					}
-					records[identifier] = AssetRecord(
-						state: state,
-						modificationDate: Date(timeIntervalSince1970: sqlite3_column_double(statement, 2)),
-						uploadedBytes: sqlite3_column_int64(statement, 3)
-					)
+					records[try requiredText(at: 0, in: statement)] = try assetRecord(in: statement, from: 1)
 				case SQLITE_DONE:
 					return records
 				case let result:
@@ -1330,6 +1484,21 @@ public final class PhotoBackupLedger {
 		try assetRecords(deviceId: deviceId).mapValues(\.state)
 	}
 
+	// From the state, modificationDate, uploadedBytes and lastError columns, in that order
+	private func assetRecord(in statement: OpaquePointer, from column: Int32) throws -> AssetRecord {
+		guard let state = AssetState(rawValue: sqlite3_column_int64(statement, column)) else {
+			throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup asset has an invalid state")
+		}
+		return AssetRecord(
+			state: state,
+			modificationDate: Date(timeIntervalSince1970: sqlite3_column_double(statement, column + 1)),
+			uploadedBytes: sqlite3_column_int64(statement, column + 2),
+			failureReason: state == .failed
+				? PhotoBackupFailureReason(message: optionalText(at: column + 3, in: statement))
+				: nil
+		)
+	}
+
 	private struct AssetRow {
 		let revision: Int64
 		let state: Int64
@@ -1340,6 +1509,29 @@ public final class PhotoBackupLedger {
 		let deviceId: String
 		let localIdentifier: String
 		let revision: Int64
+	}
+
+	// One change to one asset, so a change set can be written a batch at a time
+	private enum AssetChange {
+		// An asset that is new, or whose content changed
+		case seed(AssetCandidate)
+		// An asset whose metadata changed, as the host app observes it
+		case metadata(AssetCandidate)
+		case delete(String)
+	}
+
+	// Returns true when the change queued an upload
+	@discardableResult
+	private func applyLocked(_ change: AssetChange, deviceId: String) throws -> Bool {
+		switch change {
+		case .seed(let candidate):
+			return try seedCandidateLocked(candidate, deviceId: deviceId)
+		case .metadata(let candidate):
+			return try recordMetadataChangeLocked(candidate, deviceId: deviceId)
+		case .delete(let identifier):
+			try markDeletedLocked(deviceId: deviceId, localIdentifier: identifier)
+			return false
+		}
 	}
 
 	@discardableResult
@@ -1657,9 +1849,27 @@ public final class PhotoBackupLedger {
 		}
 	}
 
-	private func nextInventoryGenerationLocked(deviceId: String) throws -> Int64 {
+	// Generations only have to keep going up. The last one is kept in the metadata, so
+	// the write lock isn't held while every asset is read to find the highest. That
+	// read still happens before the lock when a scan starts, and the higher of the two
+	// wins, so a ledger written by a build without the counter, before or after one with
+	// it, never hands out a generation its assets already have.
+	private func nextInventoryGenerationLocked(deviceId: String, recorded: Int64? = nil) throws -> Int64 {
+		var last = try recorded ?? highestRecordedGenerationLocked(deviceId: deviceId)
+		if let stored = try metadataLocked(key: Self.inventoryGenerationKey, deviceId: deviceId) {
+			guard let value = Int64(String(decoding: stored, as: UTF8.self)) else {
+				throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup inventory generation is invalid")
+			}
+			last = max(last, value)
+		}
+		let generation = last + 1
+		try setMetadataLocked(Data(String(generation).utf8), key: Self.inventoryGenerationKey, deviceId: deviceId)
+		return generation
+	}
+
+	private func highestRecordedGenerationLocked(deviceId: String) throws -> Int64 {
 		let statement = try prepare(
-			"SELECT COALESCE(MAX(inventoryGeneration), 0) + 1 FROM photo_assets WHERE deviceId = ?")
+			"SELECT COALESCE(MAX(inventoryGeneration), 0) FROM photo_assets WHERE deviceId = ?")
 		defer { sqlite3_finalize(statement) }
 		try bind(deviceId, at: 1, in: statement)
 		let result = sqlite3_step(statement)
@@ -1770,6 +1980,28 @@ public final class PhotoBackupLedger {
 			throw DatabaseError(code: SQLITE_CORRUPT, message: "Photo backup row is missing required data")
 		}
 		return String(cString: text)
+	}
+
+	// The text at this column of every remaining row
+	private func textColumn(at index: Int32, in statement: OpaquePointer) throws -> [String] {
+		var values = [String]()
+		while true {
+			switch sqlite3_step(statement) {
+			case SQLITE_ROW:
+				values.append(try requiredText(at: index, in: statement))
+			case SQLITE_DONE:
+				return values
+			case let result:
+				throw databaseError(result)
+			}
+		}
+	}
+
+	// At most writeBatchSize values at a time
+	private func batches<T>(_ values: [T]) -> [ArraySlice<T>] {
+		stride(from: 0, to: values.count, by: Self.writeBatchSize).map {
+			values[$0..<min($0 + Self.writeBatchSize, values.count)]
+		}
 	}
 
 	private func optionalText(at index: Int32, in statement: OpaquePointer) -> String? {

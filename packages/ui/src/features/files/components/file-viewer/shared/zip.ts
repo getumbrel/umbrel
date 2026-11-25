@@ -26,8 +26,8 @@ export type ZipEntry = {
 	// When it last changed, in ms since the epoch, or 0 when the archive doesn't say
 	modified: number
 }
-// Reads [start, end) of an archive kept elsewhere: an HTTP Range request, say
-export type ZipReader = (start: number, end: number) => Promise<Uint8Array>
+// Reads [start, end) of an archive kept elsewhere: an HTTP Range request, say. A signal cuts the read short.
+export type ZipReader = (start: number, end: number, signal?: AbortSignal) => Promise<Uint8Array>
 
 // One entry can't usefully pass 512 MiB: that's about the longest string V8
 // can build, so a bigger part could never be read as text anyway. A central
@@ -109,6 +109,9 @@ export class ZipArchive {
 		// that could be most of the file
 		const {offset} = directoryOf(new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), base, resolved)
 		if (offset < 0) {
+			// A directory ends where its end record begins, so no more of it is missing than it may measure. One said
+			// to start further back isn't where the file says, and reading from there would fetch all that lies between
+			if (-offset > resolved.maxDirectorySize) throw corrupt('Central directory is out of bounds')
 			const whole = new Uint8Array(bytes.length - offset)
 			whole.set(await read(base + offset, base))
 			whole.set(bytes, -offset)
@@ -200,17 +203,19 @@ export class ZipArchive {
 		return record ? refusalOf(record, limits)?.code : 'missing'
 	}
 
-	// A fresh buffer each call, owned by the caller (safe to transfer or wrap in a Blob)
-	async bytes(name: string): Promise<Uint8Array<ArrayBuffer>> {
+	// A fresh buffer each call, owned by the caller (safe to transfer or wrap in a Blob). A signal stops the reading
+	// and inflating, which then fail with its reason.
+	async bytes(name: string, signal?: AbortSignal): Promise<Uint8Array<ArrayBuffer>> {
 		const state = stateOf(this)
 		const record = state.byName.get(name)
 		if (!record) throw new ZipError('missing', `No entry named ${name}`)
 		const refused = refusalOf(record, state.limits)
 		if (refused) throw refused
 		const {entry} = record
-		const data = await compressed(state, record)
+		const data = await compressed(state, record, signal)
+		signal?.throwIfAborted()
 		let output: Uint8Array<ArrayBuffer>
-		if (entry.method === 8) output = await inflate(data, entry.size)
+		if (entry.method === 8) output = await inflate(data, entry.size, signal)
 		else if (data.length === entry.size) output = new Uint8Array(data)
 		else throw corrupt(`${name} has inconsistent sizes`)
 		if (crc32(output) !== entry.crc32) throw corrupt(`${name} failed its CRC check`)
@@ -456,13 +461,17 @@ function dataStart(view: DataView, localOffset: number): number {
 
 // An entry's compressed bytes: from those in hand, or, for an archive read piecewise, read when they aren't among
 // them (its local header first, for the length of the name and extra field before the data)
-async function compressed({bytes, view, base, read}: ArchiveState, {entry, localOffset}: EntryRecord) {
+async function compressed(
+	{bytes, view, base, read}: ArchiveState,
+	{entry, localOffset}: EntryRecord,
+	signal: AbortSignal | undefined,
+) {
 	let data: Uint8Array
 	if (read && localOffset < 0) {
-		const header = await read(base + localOffset, base + localOffset + 30)
+		const header = await read(base + localOffset, base + localOffset + 30, signal)
 		const start = base + localOffset + dataStart(new DataView(header.buffer, header.byteOffset, header.byteLength), 0)
 		// An empty entry has nothing to read, and an empty range is no range at all
-		data = entry.compressedSize ? await read(start, start + entry.compressedSize) : new Uint8Array(0)
+		data = entry.compressedSize ? await read(start, start + entry.compressedSize, signal) : new Uint8Array(0)
 	} else {
 		const start = dataStart(view, localOffset)
 		data = bytes.subarray(start, start + entry.compressedSize)
@@ -501,7 +510,7 @@ function localEnd(view: DataView, record: EntryRecord): number {
 // memory to the declared size plus one slice's worth.
 const INFLATE_SLICE = 64 * 1024
 
-async function inflate(data: Uint8Array, size: number): Promise<Uint8Array<ArrayBuffer>> {
+async function inflate(data: Uint8Array, size: number, signal?: AbortSignal): Promise<Uint8Array<ArrayBuffer>> {
 	let output: Uint8Array<ArrayBuffer>
 	try {
 		output = new Uint8Array(size)
@@ -524,6 +533,7 @@ async function inflate(data: Uint8Array, size: number): Promise<Uint8Array<Array
 	let offset = 0
 	try {
 		for (;;) {
+			signal?.throwIfAborted()
 			const {done, value} = await reader.read()
 			if (done) break
 			if (value.length > size - offset) throw corrupt('Entry inflates beyond its declared size')
@@ -532,6 +542,7 @@ async function inflate(data: Uint8Array, size: number): Promise<Uint8Array<Array
 		}
 	} catch (error) {
 		reader.cancel().catch(() => {})
+		signal?.throwIfAborted()
 		throw error instanceof ZipError ? error : corrupt('Invalid compressed data')
 	}
 	if (offset !== size) throw corrupt('Entry inflates short of its declared size')

@@ -15,9 +15,7 @@ export function RecommendedBadge({className, small = false}: {className?: string
 			)}
 		>
 			<IoShieldHalf className={cn('text-white', small ? 'size-3.5' : 'size-4')} />
-			<span className={cn('text-white', small ? 'text-[12px]' : 'text-[13px]')}>
-				{t('onboarding.raid.recommended')}
-			</span>
+			<span className={cn('text-white', small ? 'text-12' : 'text-13')}>{t('onboarding.raid.recommended')}</span>
 		</div>
 	)
 }

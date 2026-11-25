@@ -34,6 +34,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -68,6 +69,7 @@ import androidx.compose.ui.platform.LocalAutofillManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -94,6 +96,7 @@ import com.umbrel.android.ui.Symbols
 import com.umbrel.android.ui.interFor
 import com.umbrel.android.ui.isAccessibilityTextSize
 import com.umbrel.android.ui.openUrl
+import com.umbrel.android.ui.windowFoldBand
 import com.umbrel.kit.Config
 import com.umbrel.kit.Umbreld
 import kotlinx.coroutines.CancellationException
@@ -151,7 +154,7 @@ fun SignInSheet(
 	onDismiss: () -> Unit,
 	onRemove: (suspend () -> Unit)?,
 	// Removes a saved Umbrel the app no longer recognizes and starts adding it again. Without
-	// one, "not recognized" goes back to the list, where it can be found again.
+	// one, a changed identity goes back to the list, where it can be found again.
 	onReconnect: (suspend () -> Unit)? = null,
 	// Its Umbrel is being removed. The sheet stays as it is until it's gone, as on iOS, but
 	// nothing in it acts meanwhile.
@@ -216,10 +219,20 @@ fun SignInSheet(
 
 	val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 	val accessibilitySize = isAccessibilityTextSize()
+	// Half open like a book, the sheet takes the left half, where onboarding moves too,
+	// rather than sitting across the hinge
+	val fold = windowFoldBand()
+	val windowWidth = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() }
+	val beforeFold = fold?.let { windowWidth - it.start } ?: 0.dp
 	ModalBottomSheet(
 		onDismissRequest = onDismiss,
-		modifier = if (accessibilitySize) Modifier else Modifier.padding(start = SheetInset, end = SheetInset, bottom = SheetInset),
+		modifier = if (accessibilitySize) {
+			Modifier.padding(end = beforeFold)
+		} else {
+			Modifier.padding(start = SheetInset, end = SheetInset + beforeFold, bottom = SheetInset)
+		},
 		sheetState = sheetState,
+		sheetMaxWidth = if (fold != null) Dp.Unspecified else BottomSheetDefaults.SheetMaxWidth,
 		shape = if (accessibilitySize) {
 			RoundedCornerShape(topStart = SheetCornerRadius, topEnd = SheetCornerRadius)
 		} else {
@@ -340,11 +353,11 @@ private fun SignInForm(
 			// Without a saved Umbrel to reconnect (first-time onboarding), going back to the list
 			// finds it again as it is now.
 			SignInStep.NOT_RECOGNIZED -> Message(
-				title = "Umbrel not recognized",
+				title = IdentityChange.TITLE,
 				description = if (onReconnect == null) {
 					"Go back and choose your Umbrel again."
 				} else {
-					"This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel to keep using it in this app."
+					IdentityChange.MESSAGE
 				},
 				actionTitle = if (onReconnect == null) "Go Back" else if (reconnecting) "Reconnecting…" else "Reconnect",
 				onAction = {
@@ -373,8 +386,8 @@ private fun SignInForm(
 	if (confirmingReconnect && onReconnect != null) {
 		AlertDialog(
 			onDismissRequest = { confirmingReconnect = false },
-			title = { Text("Reconnect your Umbrel?") },
-			text = { Text("You’ll sign in again. If photo backup is on, you’ll need to turn it back on. Everything on your Umbrel stays as it is.") },
+			title = { Text(IdentityChange.CONFIRM_TITLE) },
+			text = { Text(IdentityChange.CONFIRM_MESSAGE) },
 			confirmButton = {
 				TextButton(onClick = {
 					confirmingReconnect = false

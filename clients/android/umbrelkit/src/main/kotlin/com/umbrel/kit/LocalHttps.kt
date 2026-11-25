@@ -28,7 +28,7 @@ class LocalHttpsTransportException(val kind: Kind) : Exception(kind.description)
 	enum class Kind(val description: String) {
 		NOT_ENROLLED("This Umbrel has not established a secure connection yet"),
 		INVALID_CERTIFICATE("This Umbrel returned an invalid security certificate"),
-		IDENTITY_CHANGED("This Umbrel’s security identity changed. Remove it and add it again to reconnect"),
+		IDENTITY_CHANGED("Can’t confirm this is your Umbrel. Its security identity changed"),
 		STORAGE_UNAVAILABLE("Secure connection storage is temporarily unavailable"),
 		TRUST_FAILED("Couldn’t verify this Umbrel’s secure connection"),
 	}

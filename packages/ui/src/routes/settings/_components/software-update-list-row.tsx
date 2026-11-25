@@ -24,8 +24,8 @@ export function SoftwareUpdateListRow({isActive, icon}: {isActive: boolean; icon
 				isActive={isActive}
 				title={currentVersion?.name || `umbrelOS ${LOADING_DASH}`}
 				description={
-					<span className='flex items-center gap-1'>
-						<Icon component={RiArrowUpCircleFill} className='text-brand' />
+					<span className='block'>
+						<Icon component={RiArrowUpCircleFill} className='mr-1 inline align-[-2px] text-brand' />
 						{t('software-update.new-version', {name: latestVersion?.name || LOADING_DASH})}
 					</span>
 				}
@@ -43,10 +43,12 @@ export function SoftwareUpdateListRow({isActive, icon}: {isActive: boolean; icon
 			isActive={isActive}
 			title={currentVersion?.name || `umbrelOS ${LOADING_DASH}`}
 			description={
-				<span className='flex items-center gap-1'>
+				// Text with inline icons rather than a flex row, so the sentence and its
+				// link wrap together like a paragraph
+				<span className='block'>
 					{state === 'at-latest' || state === 'checking' ? (
 						<>
-							<Icon component={RiCheckboxCircleFill} className='text-success' />
+							<Icon component={RiCheckboxCircleFill} className='mr-1 inline align-[-2px] text-success' />
 							{t('software-update.on-latest')}
 							{' · '}
 							<Trans
@@ -61,7 +63,7 @@ export function SoftwareUpdateListRow({isActive, icon}: {isActive: boolean; icon
 						<>
 							{/* Invisible icon to prevent layout shift */}
 							{t('check-for-latest-version')}
-							<Icon component={RiArrowUpCircleFill} className='invisible' />
+							<Icon component={RiArrowUpCircleFill} className='invisible inline align-[-2px]' />
 						</>
 					)}
 				</span>

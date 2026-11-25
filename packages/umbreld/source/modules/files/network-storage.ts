@@ -7,6 +7,7 @@ import {$} from 'execa'
 import ky from 'ky'
 
 import {getHostname} from '../system/system.ts'
+import {sandboxed} from '../utilities/sandbox.ts'
 
 import type Umbreld from '../../index.ts'
 
@@ -228,7 +229,17 @@ export default class NetworkStorage {
 	async addShare(newShare: Omit<NetworkShare, 'mountPath'>) {
 		// Generate mount path
 		const sanitize = (string: string) => string.replace(/[^a-zA-Z0-9\-\.\' \(\)]/g, '')
-		const mountPath = `/Network/${sanitize(newShare.host)}/${sanitize(newShare.share)}`
+		const host = sanitize(newShare.host)
+		const shareName = sanitize(newShare.share)
+
+		// Each name must be a real directory name. An empty name, `.` or `..`
+		// would resolve the mount path to the host directory or to /Network
+		// itself, mounting over every share beneath it.
+		if ([host, shareName].some((name) => ['', '.', '..'].includes(name))) {
+			throw new Error('Invalid network share host or share name')
+		}
+
+		const mountPath = `/Network/${host}/${shareName}`
 
 		// Check if the share already exists
 		const alreadyExists = await this.getShare(mountPath)
@@ -291,7 +302,16 @@ export default class NetworkStorage {
 	// Discover available servers
 	// Used to help the user find servers if they don't already know the address
 	async discoverServers() {
-		const avahiBrowse = await $`avahi-browse --resolve --terminate _smb._tcp --parsable`
+		// What comes back is whatever devices on the network announce, so
+		// avahi-browse runs sandboxed. It asks the mDNS responder over the system
+		// bus, as nobody, and that socket is all it is given: no network of its
+		// own and nothing else on this device.
+		const avahiBrowse = await sandboxed('avahi-browse', ['--resolve', '--terminate', '_smb._tcp', '--parsable'], {
+			network: false,
+			gpu: false,
+			readablePaths: ['/run/dbus/system_bus_socket'],
+			writablePaths: [],
+		})
 
 		const hostname = await getHostname().catch(() => '')
 
@@ -316,7 +336,15 @@ export default class NetworkStorage {
 		// and returns some weird compatibility error. Is there some way we can disable whatever
 		// is causing the hang so we can get the command to return as soon as we have the info
 		// we care about?
-		const smbclient = await $`smbclient --list //${host} --user ${username} --password ${password} --grepable`
+		//
+		// smbclient reads whatever the server answers with, so it runs sandboxed:
+		// allowed the network and nothing on this device. It has no Samba config to
+		// read there, and is told not to look for one.
+		const smbclient = await sandboxed(
+			'smbclient',
+			['--configfile', '/dev/null', '--list', `//${host}`, '--user', username, '--password', password, '--grepable'],
+			{network: true, gpu: false, readablePaths: [], writablePaths: []},
+		)
 
 		const shares = smbclient.stdout
 			// Process line by line

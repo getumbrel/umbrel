@@ -17,6 +17,7 @@ import com.umbrel.android.BuildConfig
 import com.umbrel.android.R
 import com.umbrel.kit.BrowserSession
 import com.umbrel.kit.BrowserSessionStatus
+import com.umbrel.kit.SavedDevice
 import com.umbrel.kit.SecretStore
 import com.umbrel.kit.Umbreld
 import com.umbrel.kit.browserSessionAccountId
@@ -49,7 +50,7 @@ internal class BrowserContext private constructor(
 	session: BrowserSession?,
 	private val scope: CoroutineScope,
 ) {
-	var hosts: Set<String> = hosts.map(::normalized).toSet()
+	var hosts: Set<String> = umbrelHosts(hosts)
 		private set
 
 	var session: BrowserSession? = session
@@ -78,7 +79,7 @@ internal class BrowserContext private constructor(
 	private val target: Umbreld.Target get() = Umbreld.Target(deviceId, hosts.toList())
 
 	fun updateHosts(hosts: Collection<String>) {
-		val updated = this.hosts + hosts.map(::normalized)
+		val updated = this.hosts + umbrelHosts(hosts)
 		if (updated == this.hosts) return
 		this.hosts = updated
 		replaceScripts()
@@ -218,7 +219,10 @@ internal class BrowserContext private constructor(
 		val existing = cookies(host)
 		session?.let { current ->
 			val replacesAnother = current.cookies.any { (name, value) -> existing[name].let { it != null && it != value } }
-			if (replacesAnother) validateSession(force = true)
+			// Without the force, this only asks umbrelOS if the session hasn't been checked in
+			// 12 hours, so one that ended while the app was unused is replaced before a page is
+			// shown its login screen.
+			validateSession(force = replacesAnother)
 		}
 		if (session?.linked != true) makeSession()
 		val session = session ?: return
@@ -348,7 +352,8 @@ internal class BrowserContext private constructor(
 		 * showing that wallpaper, edge to edge, so umbrelOS's copy is made invisible and its
 		 * page background cleared: one wallpaper, with umbrelOS's interface on top of it. The
 		 * images stay in the page (umbrelOS samples them for its glass), they are simply not
-		 * drawn. Wallpaper previews in Settings are positioned differently and are left alone.
+		 * drawn, and the page pins them over the app's wallpaper so the glass matches what's
+		 * behind it (see BrowserPage.pinWallpaper). Wallpaper previews in Settings are positioned differently and are left alone.
 		 * A video wallpaper is left alone too: the app only has a still of it, so umbrelOS
 		 * keeps drawing its own, moving one within its page.
 		 *
@@ -370,6 +375,14 @@ internal class BrowserContext private constructor(
 					picture > img.fixed.inset-0:not(.absolute),
 					img[data-wallpaper-full]:not(.absolute) { opacity: 0 !important; }
 					.umbrel-window-wallpaper { animation: none !important; opacity: 1 !important; }
+					html[data-umbrel-app-wallpaper] img[data-wallpaper-full]:not(.absolute) {
+						position: fixed !important;
+						inset: auto !important;
+						left: var(--umbrel-app-wallpaper-left) !important;
+						top: var(--umbrel-app-wallpaper-top) !important;
+						width: var(--umbrel-app-wallpaper-width) !important;
+						height: var(--umbrel-app-wallpaper-height) !important;
+					}
 				`
 				document.documentElement.appendChild(style)
 			})()
@@ -383,6 +396,20 @@ internal class BrowserContext private constructor(
 		fun offscreenContext(context: Context): Context = ContextThemeWrapper(context.applicationContext, R.style.Theme_Umbrel)
 
 		fun normalized(host: String): String = host.removePrefix("[").removeSuffix("]").trimEnd('.').lowercase()
+
+		/**
+		 * Whether a page at a saved address counts as the Umbrel. WebView checks a page's
+		 * certificate against the system's certificate authorities first, asks the app only when
+		 * that fails, and gives the app no way to refuse a certificate that check accepted. So the
+		 * Umbrel's pinned CA decides alone only where no public authority issues certificates:
+		 * .local names, and private, link-local and Tailscale IPv4 addresses. Any other saved
+		 * address, a public one for example, is another website here: its pages get no session
+		 * and show their own address.
+		 */
+		fun isUmbrelHost(host: String): Boolean = SavedDevice.isPrivateEndpointHost(normalized(host))
+
+		/** The addresses among [hosts] that count as the Umbrel, as [isUmbrel] compares them. */
+		fun umbrelHosts(hosts: Collection<String>): Set<String> = hosts.filter(::isUmbrelHost).map(::normalized).toSet()
 
 		/** An IPv6 literal in the brackets a URL needs. */
 		fun bracketed(host: String): String =

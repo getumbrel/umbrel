@@ -21,6 +21,7 @@ const memberAllowedEvents = new Set<(typeof events)[number]>([
 	'notifications:change',
 	'photos:change',
 	'photos:indexing-progress',
+	'search:indexing-progress',
 ])
 
 export default router({
@@ -79,6 +80,12 @@ export default router({
 							const progress = event as EventTypes['photos:indexing-progress']
 							if (progress.accountId !== userId) continue
 							yield progress.state
+							continue
+						}
+						if (input.event === 'search:indexing-progress') {
+							const progress = event as EventTypes['search:indexing-progress']
+							if (progress.accountId !== userId) continue
+							yield progress.status
 							continue
 						}
 						// Reformat the files:watcher:change event so it's suitable to be consumed by the client

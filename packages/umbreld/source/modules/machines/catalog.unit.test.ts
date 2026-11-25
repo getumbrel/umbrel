@@ -253,7 +253,7 @@ describe('built-in Machines catalog', () => {
 			if (image.familyId === 'debian') expect(image.url).toMatch(/\/20260706-2531\/.+-20260706-2531\.qcow2$/)
 			if (image.familyId === 'alpine')
 				expect(image.url).toMatch(/\/v3\.24\/releases\/cloud\/.+3\.24\.1.+uefi-cloudinit.+\.qcow2$/)
-			if (image.familyId === 'android') expect(image.url).toContain('/release-20260627/ubuntu-26.04-server-cloudimg-')
+			if (image.familyId === 'android') expect(image.url).toContain('/release-20261108/ubuntu-26.04-server-cloudimg-')
 		}
 	})
 })

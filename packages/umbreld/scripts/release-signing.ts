@@ -26,10 +26,8 @@ import {
 	RELEASE_NOTES_SIGNATURE_FILE,
 	ROOT_PUBLIC_KEY,
 	SIGNING_KEYS_URLS,
-	followRootKeyHandovers,
 	formatManifestMessage,
 	formatReleaseNotesMessage,
-	formatRootKeyHandoverMessage,
 	formatSignatureFile,
 	formatSigningKeysList,
 	formatSigningKeysListMessage,
@@ -48,6 +46,13 @@ import {
 	type SigningKey,
 	type SigningKeysList,
 } from '../source/modules/update/release-signing.ts'
+import {
+	blockstreamMerkleRoot,
+	isComplete,
+	isUpgradeOf,
+	readTimestamp,
+	verifyBitcoinAttestations,
+} from './opentimestamps.ts'
 
 const usage = `
     Usage
@@ -62,11 +67,12 @@ const usage = `
         revoke-release <manifest>         Stop devices installing a signed release, given its manifest's
                                           URL or path, like releases/2.1.0-manifest.txt
         sign-keys-list                    Sign the approved keys list with the root key in Sparrow
-        hand-over-root <public key>       Hand the root key over to a new hardware wallet's key
         sign <release>                    Sign a release's manifest and release notes with this Mac's
                                           signing key, adding to any signatures they already have
         root-sign <release>               Sign a release with the root key alone, for emergencies
         verify <release>                  Check a release the way a device does
+        sync                              Show what in releases/ would add to the download server: more
+                                          signatures, later signed release notes, completed timestamps
 
     A release is its directory on the download server, like https://download.umbrel.com/release/2.1.0/ for
     a production release or https://download.umbrel.com/<tag>/ for a test build, or a local directory
@@ -79,15 +85,16 @@ const usage = `
     Options
         --confirm <code>                  sign: sign what it showed, given the confirmation code it printed.
                                           delete-key: delete the key, given the key it showed.
-        --signature <signature>           sign-keys-list, hand-over-root, root-sign: the root key's
+        --signature <signature>           sign-keys-list, root-sign: the root key's
                                           signature of the message it showed, from Sparrow. root-sign: of
                                           the manifest.
         --release-notes-signature <sig>   root-sign: the root key's signature of the release notes
-        --date <date>                     sign-keys-list, hand-over-root: the date the message it showed
+        --date <date>                     sign-keys-list: the date the message it showed
                                           has, which the signature covers
         --release-notes <file>            sign, root-sign: sign only these release notes, like to fix
                                           them. verify: check them instead of the release's.
         --files <directory>               verify: also check downloaded release files against the manifest
+        --output <directory>              sync: write the files to upload there, laid out like the bucket
 `
 
 // This Mac's signing key, wrapped: the Secure Enclave's encrypted form of it, which only this Mac's Secure
@@ -217,16 +224,10 @@ type ListChange = {keys: SigningKey[]; requiredSignatures: number; revokedReleas
 
 // Write the bundled list with a change, unsigned until the root key holder signs it
 async function updateKeysList(change: (list: ListChange) => Partial<ListChange>) {
-	const {keys, requiredSignatures, revokedReleases, handovers} = parseSigningKeysList(
+	const {keys, requiredSignatures, revokedReleases} = parseSigningKeysList(
 		await fs.readFile(BUNDLED_SIGNING_KEYS_PATH, 'utf8'),
 	)
-	const list = {
-		keys,
-		requiredSignatures,
-		revokedReleases,
-		handovers,
-		...change({keys, requiredSignatures, revokedReleases}),
-	}
+	const list = {keys, requiredSignatures, revokedReleases, ...change({keys, requiredSignatures, revokedReleases})}
 	if (list.requiredSignatures > list.keys.length) {
 		console.warn(
 			`\nReleases need ${list.requiredSignatures} signatures but only ${list.keys.length} keys are approved, so no release can be installed.`,
@@ -237,49 +238,6 @@ async function updateKeysList(change: (list: ListChange) => Partial<ListChange>)
 		`\nUpdated ${path.relative(process.cwd(), BUNDLED_SIGNING_KEYS_PATH)}. Commit it and open a pull request.`,
 	)
 	console.log("CI fails until it's signed with the root key, using ./scripts/release-signing sign-keys-list.")
-}
-
-// Hand the root key over to a new hardware wallet's key, like before retiring the current one. The current
-// root key signs the handover, and the list then needs signing with the new key. Without the signature it
-// shows the handover to sign.
-async function handOverRoot(newRootKey: string, {signature, date: dateString}: RootSignatureOptions = {}) {
-	if (!/^0[23][0-9a-f]{64}$/.test(newRootKey)) {
-		throw new Error(
-			"Give the new root key as a compressed public key in hex, like the one in the wallet's output descriptor",
-		)
-	}
-	const list = verifySigningKeysList(await fs.readFile(BUNDLED_SIGNING_KEYS_PATH, 'utf8'))
-	if (newRootKey === list.rootKey) throw new Error("That's already the root key")
-
-	const date = signedDate(dateString, list.date, ...list.handovers.map((handover) => handover.date))
-	const message = formatRootKeyHandoverMessage({date, from: list.rootKey, to: newRootKey})
-	if (!signature) {
-		printRootSigningSteps(list.rootKey, message)
-		console.log('Then save the handover with the signature:')
-		console.log(`  ${tool(`hand-over-root ${newRootKey} --date ${formatDate(date)} --signature <signature>`)}`)
-		return
-	}
-	if (!verifyBitcoinMessage(message, signature, list.rootKey)) {
-		throw new Error(`That isn't a signature of the handover by the root key ${list.rootKey}`)
-	}
-
-	await fs.writeFile(
-		BUNDLED_SIGNING_KEYS_PATH,
-		formatSigningKeysList({
-			...list,
-			date,
-			rootSignatures: [],
-			handovers: [...list.handovers, {message, rootSignatures: [signature]}],
-		}),
-	)
-	console.log(
-		`\nHanded the root key over to ${newRootKey} in ${path.relative(process.cwd(), BUNDLED_SIGNING_KEYS_PATH)}.`,
-	)
-	console.log('Sign the list with the new root key using ./scripts/release-signing sign-keys-list, then commit')
-	console.log("and publish it. CI fails until it's signed. Devices accept lists from the old root key until they")
-	console.log('see the handover, so keep the old hardware wallet safe until the list is published.')
-	console.log('\nLeave ROOT_PUBLIC_KEY as it is: every list carries the chain of handovers from it, which devices')
-	console.log('follow to the new key.')
 }
 
 // Whether the bundled list approves a key, or an earlier root-signed list did, and what to do about it if
@@ -438,7 +396,7 @@ function signedDate(dateString: string | undefined, ...after: Date[]) {
 	if (Number.isNaN(date.getTime()) || formatDate(date) !== dateString) {
 		throw new Error(`Give the date as it was shown, like 2026-11-03T10:00:00Z: ${dateString}`)
 	}
-	if (after.some((other) => date <= other)) throw new Error(`${dateString} doesn't follow the last list or handover`)
+	if (after.some((other) => date <= other)) throw new Error(`${dateString} doesn't follow the last list`)
 	return date
 }
 
@@ -446,24 +404,13 @@ type RootSignatureOptions = {signature?: string; date?: string}
 
 // Sign the bundled list with the root key. Without the signature it shows the message to sign.
 async function signKeysList({signature, date: dateString}: RootSignatureOptions = {}) {
-	const {keys, requiredSignatures, revokedReleases, handovers} = parseSigningKeysList(
+	const {keys, requiredSignatures, revokedReleases} = parseSigningKeysList(
 		await fs.readFile(BUNDLED_SIGNING_KEYS_PATH, 'utf8'),
 	)
-	// The root key at the end of the list's handovers, like the new one after a handover
-	const rootKey = followRootKeyHandovers(handovers)
+	const rootKey = ROOT_PUBLIC_KEY
 
 	const previous = await findSigningKeys().catch(() => undefined)
-	// Devices only take a list whose handovers start with exactly the ones of the list they have
-	if (previous && !previous.handovers.every((handover, index) => handovers[index]?.message === handover.message)) {
-		throw new Error(
-			"Its handovers don't continue the published list's, so devices wouldn't take it. Start from the published list's handovers.",
-		)
-	}
-	const date = signedDate(
-		dateString,
-		...(previous ? [previous.date] : []),
-		...handovers.map((handover) => handover.date),
-	)
+	const date = signedDate(dateString, ...(previous ? [previous.date] : []))
 	const message = formatSigningKeysListMessage({date, requiredSignatures, keys, revokedReleases})
 	if (!signature) {
 		printRootSigningSteps(rootKey, message)
@@ -481,7 +428,6 @@ async function signKeysList({signature, date: dateString}: RootSignatureOptions 
 		keys,
 		revokedReleases,
 		rootSignatures: [signature],
-		handovers,
 	})
 	verifySigningKeysList(text)
 	const archived = path.join(KEYS_ARCHIVE_DIRECTORY, archivedSigningKeysListName(date))
@@ -490,7 +436,7 @@ async function signKeysList({signature, date: dateString}: RootSignatureOptions 
 	console.log(
 		`\nSigned ${path.relative(process.cwd(), BUNDLED_SIGNING_KEYS_PATH)}, copied it to ${path.relative(process.cwd(), PUBLISHED_SIGNING_KEYS_PATH)} and archived it to ${path.relative(process.cwd(), archived)}.`,
 	)
-	console.log("Commit them, and once they're merged publish the list so devices pick it up within a day:")
+	console.log("Commit them, and once they're merged publish the list so devices pick it up at their next update check:")
 	console.log(`  ${SIGNING_KEYS_URLS[0]}`)
 	console.log(`  ${SIGNING_KEYS_URLS[1]}, by publishing the repo`)
 }
@@ -638,6 +584,13 @@ async function prepareSigning(directory: string, {releaseNotes}: SignOptions) {
 		throw new Error(`${releaseFile(directory, MANIFEST_FILE)} isn't a release manifest devices would accept`)
 	}
 	const release = parseReleaseManifest(files.manifest)
+	// Fixed release notes only replace the ones on the download server if they're dated later, and every
+	// signer has to sign the same date, so it's written into the notes rather than added here
+	if (releaseNotes && !releaseNotesDate(files.releaseNotes ?? '')) {
+		throw new Error(
+			`Date ${releaseNotes} so they replace the release's notes on the download server, with this as their first line:\n<!-- umbrelOS release notes ${formatDate(new Date())} -->`,
+		)
+	}
 	const messages = signedMessages(files)
 	if (messages[RELEASE_NOTES_SIGNATURE_FILE] === undefined) {
 		console.warn(`The release has no ${RELEASE_NOTES_FILE}, so only its manifest is signed.`)
@@ -873,6 +826,268 @@ async function verify(source: string, {releaseNotes, files}: {releaseNotes?: str
 	if (checked === 0) throw new Error(`None of the release's files are in ${files}`)
 }
 
+// Keeping the download server in step with releases/, which CI does on every push to staging (see
+// .github/workflows/sync-releases.yml), so a release's signatures and timestamps go out once they're merged.
+// It only ever adds to what's there:
+//
+// - a manifest's signature file, if it has every valid signer the one on the server has and more;
+// - release notes and their signature file, if they're signed and dated later than the server's, or the
+//   server's aren't signed, or the same notes with every valid signer the server's have and more;
+// - a timestamp, if it's a completed upgrade of exactly the pending one on the server, with Bitcoin
+//   attestations that match real blocks.
+//
+// It never uploads a manifest, release file or anything the device verifier wouldn't accept, and only
+// uploads to releases the download server serves from R2.
+
+const DOWNLOAD_SERVER = 'https://download.umbrel.com/release/'
+const R2_HOST = /^umbrel-release-assets\.[0-9a-f]+\.r2\.cloudflarestorage\.com$/
+const ROOT_KEY_SIGNER = 'the root key'
+
+// The first line of release notes can date them, so a fix can replace notes already on the download
+// server. Markdown hides it, so devices don't show it.
+const RELEASE_NOTES_DATE = /^<!-- umbrelOS release notes (\S+) -->$/
+
+export function releaseNotesDate(releaseNotes: string) {
+	const dateString = releaseNotes.split('\n', 1)[0].match(RELEASE_NOTES_DATE)?.[1]
+	if (!dateString) return undefined
+	const date = new Date(dateString)
+	return !Number.isNaN(date.getTime()) && formatDate(date) === dateString ? date : undefined
+}
+
+// Who validly signed a message in a signature file: approved signers, by name, and the root key
+export function validSigners(
+	message: string,
+	signatureFile: string,
+	signingKeys: Pick<SigningKeysList, 'keys' | 'rootKey'>,
+) {
+	const {signatures, rootSignatures} = readSignatureFile(signatureFile)
+	const signers = new Set<string>()
+	for (const {name, signature} of signatures) {
+		const key = signingKeys.keys.find((key) => key.name === name)
+		if (key && verifySignerSignature(message, signature, key.publicKey)) signers.add(name)
+	}
+	if (rootSignatures.some((signature) => verifyBitcoinMessage(message, signature, signingKeys.rootKey))) {
+		signers.add(ROOT_KEY_SIGNER)
+	}
+	return signers
+}
+
+// Whether a signature file adds to the one on the server: it has every signer the server's has and more, so
+// replacing it never drops a signature
+export const addsSigners = (ours: Set<string>, theirs?: Set<string>) =>
+	!theirs || ([...theirs].every((signer) => ours.has(signer)) && ours.size > theirs.size)
+
+const meetsRequirement = (signers: Set<string>, signingKeys: Pick<SigningKeysList, 'requiredSignatures'>) =>
+	signers.has(ROOT_KEY_SIGNER) || signers.size >= signingKeys.requiredSignatures
+
+// A file on the download server, and the R2 object it's served from. Releases it serves from anywhere other
+// than R2, like GitHub for ones before 1.4.0, are undefined, since uploading to R2 wouldn't change them.
+export type ServerFile = {key: string; data?: Buffer}
+
+async function readServerFile(url: string): Promise<ServerFile | undefined> {
+	const redirect = await fetch(url, {redirect: 'manual'})
+	const location = redirect.headers.get('location')
+	if (redirect.status < 300 || redirect.status >= 400 || !location) return undefined
+	const object = new URL(location)
+	if (!R2_HOST.test(object.hostname)) return undefined
+	const key = decodeURIComponent(object.pathname.slice(1))
+	const response = await fetch(object)
+	if (response.status === 404) return {key}
+	if (!response.ok) throw new Error(`Failed to download ${url}: HTTP ${response.status}`)
+	return {key, data: Buffer.from(await response.arrayBuffer())}
+}
+
+export type Upload = {key: string; data: Buffer; reason: string}
+
+type SyncOptions = {
+	directory?: string
+	server?: string
+	readServer?: (url: string) => Promise<ServerFile | undefined>
+	findKeys?: (others: (SigningKeysList | undefined)[]) => Promise<SigningKeysList>
+	merkleRootAt?: (height: number) => Promise<string>
+}
+
+// Everything in releases/ that would add to the download server, and why
+export async function planReleaseSync({
+	directory = ARCHIVE_DIRECTORY,
+	server = DOWNLOAD_SERVER,
+	readServer = readServerFile,
+	findKeys = findSigningKeys,
+	merkleRootAt = blockstreamMerkleRoot,
+}: SyncOptions = {}) {
+	const uploads: Upload[] = []
+	const archived = (version: string, file: string) => path.join(directory, `${version}-${file}`)
+	const readArchived = (version: string, file: string) => fs.readFile(archived(version, file)).catch(() => undefined)
+	const text = (file?: ServerFile) => file?.data?.toString('utf8')
+
+	// A timestamp replaces the server's only if it completes exactly that pending timestamp
+	async function planTimestamp(label: string, ours: Buffer | undefined, url: string) {
+		if (!ours) return
+		const theirs = await readServer(url)
+		if (!theirs?.data || theirs.data.equals(ours)) return
+		const theirTimestamp = (() => {
+			try {
+				return readTimestamp(theirs.data!)
+			} catch {
+				return undefined
+			}
+		})()
+		if (!theirTimestamp || isComplete(theirTimestamp)) return
+		const ourTimestamp = readTimestamp(ours)
+		if (!isUpgradeOf(ourTimestamp, theirTimestamp)) {
+			console.warn(`Skipping ${label}: it isn't an upgrade of the timestamp on the download server`)
+			return
+		}
+		if (!(await verifyBitcoinAttestations(ourTimestamp, merkleRootAt))) {
+			console.warn(`Skipping ${label}: its Bitcoin attestations don't match the blocks they name`)
+			return
+		}
+		uploads.push({key: theirs.key, data: ours, reason: `${label}, completed with Bitcoin attestations`})
+	}
+
+	const files = await fs.readdir(directory)
+	for (const file of files.filter((file) => file.endsWith('-manifest.txt'))) {
+		const version = file.slice(0, -'-manifest.txt'.length)
+		const base = `${server}${version}/`
+		const manifest = (await readArchived(version, MANIFEST_FILE))!.toString('utf8')
+		const serverManifest = await readServer(`${base}${MANIFEST_FILE}`)
+		if (!serverManifest) continue
+		if (text(serverManifest) !== manifest) {
+			throw new Error(`The download server's manifest for ${version} isn't the one archived in releases/`)
+		}
+
+		const releaseFiles: ReleaseFiles = {
+			manifest,
+			releaseNotes: (await readArchived(version, RELEASE_NOTES_FILE))?.toString('utf8'),
+			signatureFiles: {
+				[MANIFEST_SIGNATURE_FILE]: (await readArchived(version, MANIFEST_SIGNATURE_FILE))?.toString('utf8'),
+				[RELEASE_NOTES_SIGNATURE_FILE]: (await readArchived(version, RELEASE_NOTES_SIGNATURE_FILE))?.toString('utf8'),
+			},
+		}
+		const {signatureFiles, releaseNotes} = releaseFiles
+		const manifestSignatures = readSignatureFile(signatureFiles[MANIFEST_SIGNATURE_FILE] ?? '')
+		const notesSignatures = signatureFiles[RELEASE_NOTES_SIGNATURE_FILE]
+			? readSignatureFile(signatureFiles[RELEASE_NOTES_SIGNATURE_FILE])
+			: undefined
+		const signingKeys = await findKeys(carriedSigningKeys(releaseFiles))
+		// Like a device would, so nothing goes out that devices would refuse
+		const verified = await verifyRelease({
+			manifest,
+			manifestSignatures,
+			releaseNotes,
+			releaseNotesSignatures: notesSignatures,
+			signingKeys,
+		})
+		const signersOf = (message: string, signatureFile?: string) => {
+			if (signatureFile === undefined) return undefined
+			try {
+				return validSigners(message, signatureFile, signingKeys)
+			} catch {
+				return new Set<string>()
+			}
+		}
+		const added = (ours: Set<string>, theirs?: Set<string>) =>
+			[...ours].filter((signer) => !theirs?.has(signer)).join(' and ')
+
+		const manifestMessage = formatManifestMessage(manifest)
+		const serverSignatures = await readServer(`${base}${MANIFEST_SIGNATURE_FILE}`)
+		const ours = signersOf(manifestMessage, signatureFiles[MANIFEST_SIGNATURE_FILE])!
+		const theirs = signersOf(manifestMessage, text(serverSignatures))
+		if (serverSignatures && addsSigners(ours, theirs)) {
+			uploads.push({
+				key: serverSignatures.key,
+				data: Buffer.from(signatureFiles[MANIFEST_SIGNATURE_FILE]!),
+				reason: `${version} ${MANIFEST_SIGNATURE_FILE}, adding ${added(ours, theirs)}`,
+			})
+		}
+
+		if (releaseNotes !== undefined && !verified.releaseNotesError) {
+			const serverNotes = await readServer(`${base}${RELEASE_NOTES_FILE}`)
+			const serverNotesSignatures = await readServer(`${base}${RELEASE_NOTES_SIGNATURE_FILE}`)
+			const notesMessage = formatReleaseNotesMessage(version, releaseNotes)
+			const ourNotesSigners = signersOf(notesMessage, signatureFiles[RELEASE_NOTES_SIGNATURE_FILE])!
+			const notesSignatureUpload = (reason: string) => ({
+				key: serverNotesSignatures!.key,
+				data: Buffer.from(signatureFiles[RELEASE_NOTES_SIGNATURE_FILE]!),
+				reason: `${version} ${RELEASE_NOTES_SIGNATURE_FILE}, ${reason}`,
+			})
+			if (serverNotes && serverNotesSignatures) {
+				const theirNotes = text(serverNotes)
+				if (theirNotes === releaseNotes) {
+					const theirNotesSigners = signersOf(notesMessage, text(serverNotesSignatures))
+					if (addsSigners(ourNotesSigners, theirNotesSigners)) {
+						uploads.push(notesSignatureUpload(`adding ${added(ourNotesSigners, theirNotesSigners)}`))
+					}
+				} else {
+					const theirsSigned =
+						theirNotes !== undefined &&
+						meetsRequirement(
+							signersOf(formatReleaseNotesMessage(version, theirNotes), text(serverNotesSignatures)) ?? new Set(),
+							signingKeys,
+						)
+					const ourDate = releaseNotesDate(releaseNotes)
+					const theirDate = theirsSigned ? releaseNotesDate(theirNotes!) : undefined
+					if (!theirsSigned || (ourDate && (!theirDate || ourDate > theirDate))) {
+						const why = theirsSigned
+							? `dated ${formatDate(ourDate!)}, later than the server's`
+							: "the server's aren't signed"
+						uploads.push({
+							key: serverNotes.key,
+							data: Buffer.from(releaseNotes),
+							reason: `${version} ${RELEASE_NOTES_FILE}, ${why}`,
+						})
+						uploads.push(notesSignatureUpload('for those release notes'))
+					}
+				}
+			}
+		}
+
+		await planTimestamp(
+			`${version} manifest.txt.ots`,
+			await readArchived(version, 'manifest.txt.ots'),
+			`${base}manifest.txt.ots`,
+		)
+	}
+
+	// Releases from before signing only have their SHA256SUMS, timestamped
+	for (const file of files.filter((file) => file.endsWith('-SHA256SUMS'))) {
+		const version = file.slice(0, -'-SHA256SUMS'.length)
+		const base = `${server}${version}/`
+		const sums = (await readArchived(version, 'SHA256SUMS'))!
+		const serverSums = await readServer(`${base}SHA256SUMS`)
+		if (!serverSums) continue
+		if (!serverSums.data?.equals(sums)) {
+			throw new Error(`The download server's SHA256SUMS for ${version} isn't the one archived in releases/`)
+		}
+		await planTimestamp(
+			`${version} SHA256SUMS.ots`,
+			await readArchived(version, 'SHA256SUMS.ots'),
+			`${base}SHA256SUMS.ots`,
+		)
+	}
+
+	return uploads
+}
+
+// Show what would add to the download server, and write those files to a directory laid out like the R2
+// bucket, for CI to upload
+async function sync({output}: {output?: string}) {
+	const uploads = await planReleaseSync()
+	if (uploads.length === 0) {
+		console.log('The download server is up to date with releases/')
+		return
+	}
+	for (const {key, reason} of uploads) console.log(`${key}: ${reason}`)
+	if (!output) return
+	for (const {key, data} of uploads) {
+		const target = path.join(output, key)
+		if (path.relative(output, target).startsWith('..')) throw new Error(`Refusing to write outside ${output}: ${key}`)
+		await fs.mkdir(path.dirname(target), {recursive: true})
+		await fs.writeFile(target, data)
+	}
+	console.log(`Wrote ${uploads.length} file${uploads.length === 1 ? '' : 's'} to upload to ${output}`)
+}
+
 // Run as a script, rather than imported by tests
 if (import.meta.url === pathToFileURL(path.resolve(process.argv[1] ?? '')).href) {
 	const parsed = (() => {
@@ -886,6 +1101,7 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1] ?? '')).href)
 					signature: {type: 'string'},
 					'release-notes-signature': {type: 'string'},
 					date: {type: 'string'},
+					output: {type: 'string'},
 				},
 			})
 		} catch (error) {
@@ -917,14 +1133,14 @@ if (import.meta.url === pathToFileURL(path.resolve(process.argv[1] ?? '')).href)
 			await revokeRelease(commandArguments[0])
 		} else if (command === 'sign-keys-list' && commandArguments.length === 0) {
 			await signKeysList(options)
-		} else if (command === 'hand-over-root' && commandArguments.length === 1) {
-			await handOverRoot(commandArguments[0], options)
 		} else if (command === 'root-sign' && commandArguments.length === 1) {
 			await rootSign(commandArguments[0], options)
 		} else if (command === 'sign' && commandArguments.length === 1) {
 			await sign(commandArguments[0], options)
 		} else if (command === 'verify' && commandArguments.length === 1) {
 			await verify(commandArguments[0], options)
+		} else if (command === 'sync' && commandArguments.length === 0) {
+			await sync(options)
 		} else {
 			console.error(usage)
 			process.exitCode = 1

@@ -3,23 +3,31 @@ import {useTranslation} from 'react-i18next'
 
 import {ZipArchive} from '@/features/files/components/file-viewer/shared/zip'
 import {stageButtonClass, StageLoading, StageMessage} from '@/features/files/components/file-viewer/shell/stage-states'
-import {fileViewUrl, rangeReader} from '@/features/files/components/file-viewer/shell/use-file-bytes'
+import {
+	rangeReader,
+	useFileDownloadUrl,
+	useFileSource,
+	useFileUrl,
+} from '@/features/files/components/file-viewer/shell/use-file-bytes'
 import {viewers, type ViewerProps} from '@/features/files/components/file-viewer/viewers'
 import {cn} from '@/lib/utils'
-import {useAuthorizedHttpUrl, useAuthorizedHttpUrlQuery} from '@/modules/auth/http-auth'
 
 // Pages, Keynote and Numbers files carry Apple's own rendering of their first
 // page, slide or sheet. Their real contents (protobuf archives that change
 // with every Apple release) have no faithful open renderer, so the preview
 // is what's shown, and said to be one.
 const PREVIEWS = ['preview.jpg', 'preview-web.jpg', 'QuickLook/Thumbnail.jpg']
+// A preview is inflated whole to be shown, and Apple's are small pictures: what a crafted package calls its preview
+// can unpack to a thousand times the file's size, so one far bigger than any real preview isn't read at all.
+const MAX_PREVIEW_SIZE = 32 * 2 ** 20
 
 type Preview = {status: 'loading'} | {status: 'ready'; url: string} | {status: 'missing'} | {status: 'not-zip'}
 
 export default function IworkViewer({item, mode}: ViewerProps) {
 	const {t} = useTranslation()
-	const view = useAuthorizedHttpUrlQuery(fileViewUrl(item.path))
-	const downloadUrl = useAuthorizedHttpUrl(`/api/files/download?path=${encodeURIComponent(item.path)}`)
+	const source = useFileSource()
+	const view = useFileUrl(item)
+	const downloadUrl = useFileDownloadUrl(item)
 	const [preview, setPreview] = useState<Preview>({status: 'loading'})
 	const [loaded, setLoaded] = useState(false)
 
@@ -30,13 +38,13 @@ export default function IworkViewer({item, mode}: ViewerProps) {
 	useEffect(() => {
 		if (view.status !== 'ready') return
 		const abort = new AbortController()
-		const read = rangeReader(view.url, abort.signal)
+		const read = rangeReader(source?.blob ?? view.url, abort.signal)
 		let url: string | undefined
 		void (async () => {
-			const archive = await ZipArchive.read(item.size ?? 0, read)
-			const name = PREVIEWS.find((candidate) => archive.has(candidate))
+			const archive = await ZipArchive.read(item.size ?? 0, read, {maxEntrySize: MAX_PREVIEW_SIZE})
+			const name = PREVIEWS.find((candidate) => !archive.refusal(candidate))
 			if (!name) return setPreview({status: 'missing'})
-			const jpeg = await archive.bytes(name)
+			const jpeg = await archive.bytes(name, abort.signal)
 			if (abort.signal.aborted) return
 			url = URL.createObjectURL(new Blob([jpeg], {type: 'image/jpeg'}))
 			setPreview({status: 'ready', url})

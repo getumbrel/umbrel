@@ -281,8 +281,7 @@ function CommunityAppsMenuTrigger() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger
-				tabIndex={-1}
-				className='settings-edge-material flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/3 text-white/70 transition-colors duration-200 hover:bg-white/6 hover:text-white'
+				className='settings-edge-material flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/3 text-white/70 outline-hidden transition-colors duration-200 hover:bg-white/6 hover:text-white focus-visible:ring-2 focus-visible:ring-white/25'
 				aria-label={t('app-store.menu.community-app-stores')}
 			>
 				<TbDots className='h-4.5 w-4.5' />

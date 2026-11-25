@@ -66,7 +66,7 @@ export function UpdatesDialog({
 		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent
-					className='umbrel-app-store-modal top-[10%] max-h-[calc(100vh-20%)] translate-y-0 gap-0 p-0 py-5 data-[state=closed]:slide-out-to-top-[0%] data-[state=open]:slide-in-from-top-[0%]'
+					className='umbrel-app-store-modal top-[calc(10%+var(--safe-top))] max-h-[calc(100vh-20%-var(--safe-top))] translate-y-0 gap-0 p-0 py-5 data-[state=closed]:slide-out-to-top-[0%] data-[state=open]:slide-in-from-top-[0%]'
 					slide={false}
 				>
 					<DialogHeader className='px-5 pb-5'>
@@ -78,7 +78,7 @@ export function UpdatesDialog({
 					<Separator />
 					<ScrollArea className='flex max-h-[500px] flex-col gap-y-2.5 px-5'>
 						{appsWithUpdates.length === 0 && (
-							<p className='p-4 text-center text-13 opacity-40'>{t('app-updates.no-updates')}</p>
+							<p className='p-4 text-center text-13 text-white/40'>{t('app-updates.no-updates')}</p>
 						)}
 						{appsWithUpdates.map((app, i) => (
 							<Fragment key={app.id}>
@@ -107,7 +107,7 @@ function AppItem({app}: {app: RegistryApp}) {
 				<AppIcon src={app.icon} size={36} className='rounded-8' />
 				<div className='flex min-w-0 flex-col'>
 					<h3 className='text-13 font-semibold'>{app.name}</h3>
-					<p className='text-13 opacity-40'>{app.version}</p>
+					<p className='text-13 text-white/40'>{app.version}</p>
 					{!app.compatible && <p className='text-12 text-amber-300/70'>{t('app-updates.os-update-needed')}</p>}
 				</div>
 				<div className='flex-1' />
@@ -124,7 +124,7 @@ function AppItem({app}: {app: RegistryApp}) {
 					{state === 'updating' ? (
 						<>
 							{t('app.updating')}{' '}
-							<span className='inline-block w-[4ch] text-right -tracking-[0.08em] opacity-40'>
+							<span className='inline-block w-[4ch] text-right -tracking-[0.08em] opacity-40 contrast-more:opacity-75'>
 								{progress === undefined ? UNKNOWN() : <AnimatedNumber to={progress} />}%
 							</span>
 						</>
@@ -143,7 +143,7 @@ function AppItem({app}: {app: RegistryApp}) {
 					<ReadMoreMarkdownSection
 						key={app.releaseNotes}
 						lines={3}
-						className='text-13 leading-snug -tracking-3 opacity-50'
+						className='text-13 leading-snug -tracking-3 text-white/50'
 					>
 						{app.releaseNotes}
 					</ReadMoreMarkdownSection>

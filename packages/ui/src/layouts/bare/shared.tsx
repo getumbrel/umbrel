@@ -13,7 +13,7 @@ export function Title({children, className}: {children: React.ReactNode; classNa
 	return (
 		<h1
 			className={cn(
-				'text-center text-[24px] leading-tight font-bold -tracking-2 text-balance opacity-85 sm:text-[32px]',
+				'text-center text-24 leading-tight font-bold -tracking-2 text-balance opacity-85 sm:text-32',
 				className,
 			)}
 			style={{
@@ -35,7 +35,7 @@ export function SubTitle({
 	className?: string
 } & HTMLProps<HTMLParagraphElement>) {
 	return (
-		<p className={cn('text-center text-[15px] font-medium text-balance text-white/70', className)} {...props}>
+		<p className={cn('text-center text-15 font-medium text-balance text-white/70', className)} {...props}>
 			{children}
 		</p>
 	)
@@ -44,12 +44,12 @@ export function SubTitle({
 export const footerClass = tw`flex items-center justify-center gap-4`
 export const footerLinkClass = tw`text-13 transition-colors font-normal text-white/60 -tracking-3 hover:text-white/80 focus:outline-hidden focus-visible:ring-3`
 
-export const buttonClass = tw`flex h-[42px] items-center rounded-full bg-white/75 px-4 text-14 font-medium -tracking-1 text-black ring-white/40 transition-all duration-300 hover:bg-white/85 focus:outline-hidden focus-visible:ring-3 active:scale-100 active:bg-white/90 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
+export const buttonClass = tw`flex min-h-[42px] py-2 text-center items-center rounded-full bg-white/75 px-4 text-14 font-medium -tracking-1 text-black ring-white/40 transition-all duration-300 hover:bg-white/85 focus:outline-hidden focus-visible:ring-3 active:scale-100 active:bg-white/90 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
 export const primaryButtonProps = {
 	className: buttonClass,
 	style: {boxShadow: '0px 2px 4px 0px #FFFFFF inset'},
 } as const
-export const secondaryButtonClasss = tw`flex h-[42px] items-center rounded-full bg-neutral-600/40 backdrop-blur-xs px-4 text-14 font-medium -tracking-1 text-white ring-white/40 transition-all duration-300 hover:bg-neutral-600/60 focus:outline-hidden focus-visible:ring-3 active:scale-100 active:bg-neutral-600/60 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
+export const secondaryButtonClasss = tw`flex min-h-[42px] py-2 text-center items-center rounded-full bg-neutral-600/40 backdrop-blur-xs px-4 text-14 font-medium -tracking-1 text-white ring-white/40 transition-all duration-300 hover:bg-neutral-600/60 focus:outline-hidden focus-visible:ring-3 active:scale-100 active:bg-neutral-600/60 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
 
 export const formGroupClass = tw`flex w-full max-w-sm flex-col gap-2.5`
 

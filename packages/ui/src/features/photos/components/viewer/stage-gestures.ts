@@ -53,9 +53,9 @@ const CLEAR = 1 / 520
 // The dark between panes as they slide with the finger — the neighbours ride
 // one stage-width plus this to each side (the item viewer lays them out there)
 export const PANE_GAP = 24
-// The strip of a video the browser draws its controls in: a drag from there
+// The strip of a video its player draws the timeline in: a drag from there
 // is a scrub, not a gesture
-const VIDEO_CONTROLS_PX = 72
+const VIDEO_CONTROLS_PX = 96
 // A tap is a press that neither moved past LOCK nor stayed down this long;
 // two of them this close in time and place are a double-tap
 const TAP_MS = 250
@@ -955,9 +955,9 @@ export function useStageGestures({
 			const pointers = pointersRef.current
 			if (pointers.size >= 2) return
 			if (!pointers.size) {
-				// A drag from a video's control strip is the browser's (scrubbing);
+				// A drag from a video's control strip is the player's (scrubbing);
 				// the rest of the video is stage like any other
-				const video = target.closest?.('video')
+				const video = target.closest?.('video, [data-video-player]')
 				if (video && event.clientY > video.getBoundingClientRect().bottom - VIDEO_CONTROLS_PX) return
 			}
 			pointers.set(event.pointerId, {x: event.clientX, y: event.clientY})

@@ -71,13 +71,37 @@ describe('symbol fonts', () => {
 		expect(map(0xf0f0)).toBeUndefined()
 	})
 
-	test('Wingdings check boxes and bullets, and private-use characters left to their font', () => {
-		expect(['F0FC', 'F0FD', 'F0A7', 'F0D8', 'F06E'].map((code) => symbolChar('Wingdings', parseInt(code, 16)))).toEqual(
-			['✓', '☒', '▪', '➢', '■'],
-		)
-		expect(symbolChar('Wingdings', 0xf021)).toBeUndefined()
-		expect(symbolChar('Wingdings 2', 0xf050)).toBeUndefined()
+	test('Wingdings check boxes, bullets and signs, and private-use characters left to their font', () => {
+		const map = (font: string) => (code: number) => symbolChar(font, code)
+		expect([0xf0fc, 0xf0fd, 0xf06c, 0xf0d8, 0xf06e].map(map('Wingdings'))).toEqual(['✓', '☒', '●', '➢', '■'])
+		// What Word makes of "-->", "<=>" and "==>" as they're typed
+		expect([0xf0e0, 0xf0f3, 0xf0e8].map(map('Wingdings'))).toEqual(['→', '⬄', '➔'])
+		// A run of glyphs ends where the next code has no character of its own
+		expect([0xf080, 0xf08a, 0xf095, 0xf096, 0xf0f8, 0xf0f9].map(map('Wingdings'))).toEqual([
+			'⓪',
+			'➉',
+			'➓',
+			undefined,
+			'⬂',
+			undefined,
+		])
+		expect([0xf050, 0xf053, 0xf0a3].map(map('Wingdings 2'))).toEqual(['✓', '☒', '☐'])
+		expect(symbolChar('Wingdings', 0xf030)).toBeUndefined()
+		expect(symbolChar('Wingdings 3', 0xf050)).toBeUndefined()
 		expect(symbolChar('Some Font', 0xe001)).toBeUndefined()
 		expect(symbolChar('MS Gothic', 0x2612)).toBe('☒')
+	})
+
+	test('a glyph whose character has an emoji as well is asked for as text', () => {
+		const text = (char: string) => `${char}\ufe0e`
+		// The small square of a list, a ticked box, and what Word makes of "<==" and ":)"; a phone and a letter
+		expect([0xf0a7, 0xf0fe, 0xf0e7, 0xf04a, 0xf028, 0xf02a].map((code) => symbolChar('Wingdings', code))).toEqual(
+			['▪', '☑', '⬅', '☺', '☎', '✉'].map(text),
+		)
+		expect(symbolChar('Wingdings 2', 0xf052)).toBe(text('☑'))
+		expect([0xf0a9, 0xf0d3, 0xf0ab].map((code) => symbolChar('Symbol', code))).toEqual(['♥', '©', '↔'].map(text))
+		// Not a digit, which is an emoji only on a key, nor a character of a font that isn't a symbol font
+		expect(symbolChar('Symbol', 0xf031)).toBe('1')
+		expect(symbolChar('MS Gothic', 0x2611)).toBe('☑')
 	})
 })

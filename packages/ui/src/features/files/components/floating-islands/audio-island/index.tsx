@@ -1,11 +1,38 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react'
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {useWindowSize} from 'react-use'
 
 import {ExpandedContent} from '@/features/files/components/floating-islands/audio-island/expanded'
 import {MinimizedContent} from '@/features/files/components/floating-islands/audio-island/minimized'
 import {useFilesStore} from '@/features/files/store/use-files-store'
+import {snippetTerms} from '@/features/search/snippet'
 import {useAuthorizedHttpUrlQuery} from '@/modules/auth/http-auth'
-import {Island, IslandExpanded, IslandMinimized} from '@/modules/floating-island/bare-island'
+import {Island, IslandExpanded, IslandMinimized, type IslandSizes} from '@/modules/floating-island/bare-island'
 import {useGlobalFiles} from '@/providers/global-files'
+import {trpcReact} from '@/trpc/trpc'
+
+// The island as it is for any audio, and as it stands when the recording has
+// a transcript to follow: the same pill, the same player, grown upwards by
+// the height of a few lines
+const PLAIN_SIZES: IslandSizes = {
+	minimized: {width: 150, height: 40, borderRadius: 22},
+	expanded: {width: 371, height: 180, borderRadius: 32},
+}
+const TRANSCRIPT_SIZES: IslandSizes = {...PLAIN_SIZES, expanded: {width: 371, height: 388, borderRadius: 32}}
+// The window height below which an island that tall would crowd the screen
+// (a phone held sideways): there it stays the plain player
+const TRANSCRIPT_ROOM = 560
+
+// Whether a recording's transcript is shown with it. On unless turned off:
+// the words are why a recording found by search was opened, and nobody
+// finds a view they have to switch on first. The choice is kept.
+const TRANSCRIPT_KEY = 'files:audio-transcript'
+function readShowTranscript() {
+	try {
+		return localStorage.getItem(TRANSCRIPT_KEY) !== 'off'
+	} catch {
+		return true
+	}
+}
 
 interface PlayerState {
 	isPlaying: boolean
@@ -19,7 +46,29 @@ export function AudioIsland() {
 
 	const {audio, setAudio} = useGlobalFiles()
 
-	const {path, name} = audio
+	const {path, name, startSeconds, matched} = audio
+	// What is said in it, when Search has transcribed it. Most audio has no
+	// transcript, and Search may not be running at all: then this is simply
+	// absent and the island is the one it always was.
+	const {data: insights} = trpcReact.search.insights.useQuery(
+		{path: path ?? ''},
+		{enabled: Boolean(path), retry: false, refetchOnWindowFocus: false, staleTime: 60_000},
+	)
+	const roomy = useWindowSize().height >= TRANSCRIPT_ROOM
+	const transcript =
+		roomy && path && insights?.transcript && insights.transcript.length > 0 ? insights.transcript : undefined
+	const matchedTerms = useMemo(() => snippetTerms(matched), [matched])
+	const [showTranscript, setShowTranscript] = useState(readShowTranscript)
+	const toggleTranscript = useCallback(() => {
+		setShowTranscript((shown) => {
+			try {
+				localStorage.setItem(TRANSCRIPT_KEY, shown ? 'off' : 'on')
+			} catch {
+				// Not kept, then; it still applies to this session
+			}
+			return !shown
+		})
+	}, [])
 	const [playerState, setPlayerState] = useState<PlayerState>({
 		isPlaying: false,
 		currentTime: 0,
@@ -27,6 +76,8 @@ export function AudioIsland() {
 	})
 
 	const audioRef = useRef<HTMLAudioElement>(null)
+	// … and as state, for what follows it from a render
+	const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
 	const audioContextRef = useRef<AudioContext | undefined>(undefined)
 	const analyserNodeRef = useRef<AnalyserNode | undefined>(undefined)
 	const sourceNodeRef = useRef<MediaElementAudioSourceNode | undefined>(undefined)
@@ -91,6 +142,20 @@ export function AudioIsland() {
 		audio.addEventListener('loadeddata', handleLoadedData)
 		return () => audio.removeEventListener('loadeddata', handleLoadedData)
 	}, [updatePlayerState])
+
+	// Begin at the requested moment, once the duration is known. Keyed on the
+	// audio state itself: picking the same recording at another moment seeks
+	// the element already loaded.
+	useEffect(() => {
+		const element = audioRef.current
+		if (!element || !startSeconds) return
+		const seek = () => {
+			element.currentTime = startSeconds
+		}
+		if (element.readyState >= HTMLMediaElement.HAVE_METADATA) return seek()
+		element.addEventListener('loadedmetadata', seek, {once: true})
+		return () => element.removeEventListener('loadedmetadata', seek)
+	}, [audio, startSeconds])
 
 	// Initialize Web Audio API
 	useEffect(() => {
@@ -215,9 +280,16 @@ export function AudioIsland() {
 	return (
 		<>
 			<div className='invisible absolute z-[-1]'>
-				<audio ref={audioRef} src={downloadUrl.url} preload='auto' />
+				<audio
+					ref={(element) => {
+						audioRef.current = element
+						setAudioElement(element)
+					}}
+					src={downloadUrl.url}
+					preload='auto'
+				/>
 			</div>
-			<Island id='audio-island' onClose={onClose}>
+			<Island id='audio-island' onClose={onClose} sizes={transcript && showTranscript ? TRANSCRIPT_SIZES : PLAIN_SIZES}>
 				<IslandMinimized>
 					<MinimizedContent
 						fileName={fileName}
@@ -240,6 +312,11 @@ export function AudioIsland() {
 						onTogglePlay={handleTogglePlay}
 						onProgressChange={handleProgress}
 						analyserNode={analyserNodeRef.current}
+						audio={audioElement}
+						transcript={transcript}
+						matched={matchedTerms}
+						showTranscript={showTranscript}
+						onToggleTranscript={toggleTranscript}
 					/>
 				</IslandExpanded>
 			</Island>

@@ -186,23 +186,27 @@ export const machineRowButtonClass = cn(
 )
 
 // One choice among a few (architecture, firmware, disk bus), the same on
-// Create and in a machine's settings
+// Create and in a machine's settings. With contrast on every segment has a
+// line, so the chosen one takes a 2px white edge, which no wallpaper colour
+// can dim.
 export const machineSegmentButtonClass = (active: boolean) =>
 	cn(
 		tw`h-9 rounded-full border px-4 text-13 font-medium transition-colors disabled:opacity-35`,
-		active ? tw`border-brand bg-brand/20 text-white` : tw`border-white/10 bg-white/5 text-white/60 hover:bg-white/10`,
+		active
+			? tw`border-brand bg-brand/20 text-white contrast-more:border-white contrast-more:ring-1 contrast-more:ring-white`
+			: tw`border-white/10 bg-white/5 text-white/60 hover:bg-white/10`,
 	)
 
-// Machine view rail: 48px, or 40px where seven won't fit a row or a short
-// column. Same minimal surface as the row buttons plus the settings-card edge
-// material, whose inset top shine separates the floating buttons from the dark
-// canvas behind them
+// Machine view rail: 48px, or 40px where its buttons won't fit a row or the
+// column beside the screen. Same minimal surface as the row buttons plus the
+// settings-card edge material, whose inset top shine separates the floating
+// buttons from the dark canvas behind them
 export const machineRailButtonClass = cn(
 	machineControlButtonClass,
-	tw`settings-edge-material size-10 bg-white/6 hover:bg-white/12 disabled:opacity-40 sm:size-12 [@media(height<660px)]:size-10`,
+	tw`settings-edge-material size-10 bg-white/6 hover:bg-white/12 disabled:opacity-40 sm:size-12 rail-tight:size-10`,
 )
 
 // Repeated feature color: stop/error red (#f63636). Arbitrary-value Tailwind
 // classes must be literal at build time, so we hoist the whole class string
 // rather than interpolating the hex into a className.
-export const machineStopTextClass = tw`text-[#f63636]`
+export const machineStopTextClass = tw`text-[#f63636] contrast-more:text-[#ff6b6b]`

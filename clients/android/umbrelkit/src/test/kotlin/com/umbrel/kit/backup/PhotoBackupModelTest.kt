@@ -267,8 +267,9 @@ class PhotoBackupModelTest {
 			PhotoBackupStatus.WaitingForUmbrel,
 			PhotoBackupPresentation.resolve(inputs(preference = unchosen, configured = false, access = PhotoLibraryAccess.SELECTED)).status,
 		)
-		// Backup that's already set up keeps running.
-		assertEquals(PhotoBackupStatus.UpToDate, PhotoBackupPresentation.resolve(inputs(preference = unchosen)).status)
+		// Backup set up with a selection waits for the choice too once it can see every folder.
+		assertEquals(PhotoBackupStatus.SettingUp, PhotoBackupPresentation.resolve(inputs(preference = unchosen)).status)
+		assertEquals(PhotoBackupStatus.UpToDate, PhotoBackupPresentation.resolve(inputs(preference = unchosen, access = PhotoLibraryAccess.SELECTED)).status)
 	}
 
 	@Test
@@ -285,6 +286,17 @@ class PhotoBackupModelTest {
 		assertEquals(PhotoBackupStatus.BackingUp(2), PhotoBackupPresentation.resolve(inputs(statistics = failedAndQueued, library = PhotoLibraryCounts(mapOf(CAMERA to 3)))).status)
 		// "All backed up" stays for when every item is.
 		assertEquals(PhotoBackupStatus.UpToDate, PhotoBackupPresentation.resolve(inputs()).status)
+	}
+
+	// Failed and unreadable items both couldn't back up. Without a backup set up here
+	// nothing tries them again, so there's nothing to show.
+	@Test
+	fun thePresentationCountsWhatCouldntBackUpOnlyWhileBackupIsSetUp() {
+		val statistics = PhotoBackupStatistics(0, 0, 1, 0, failedCount = 2, uploadedBytes = 10, unreadableCount = 3)
+
+		assertEquals(5L, PhotoBackupPresentation.resolve(inputs(statistics = statistics)).failedCount)
+		assertEquals(0L, PhotoBackupPresentation.resolve(inputs(statistics = statistics, configured = false)).failedCount)
+		assertEquals(0L, PhotoBackupPresentation.resolve(inputs()).failedCount)
 	}
 
 	@Test
@@ -371,6 +383,19 @@ class PhotoBackupModelTest {
 		setupInProgress: Boolean = false,
 		setupFailed: Boolean = false,
 	) = PhotoBackupPresentationMode.resolve(intentEnabled, targetActive, configurationMatchesTarget, snapshotMatchesSource, snapshotPhase, setupInProgress, setupFailed)
+
+	// ── A backup taken over from another phone ──
+
+	@Test
+	fun settingUpAndBackingUpNameTheBackupBeingCarriedOn() {
+		assertEquals("Continuing “Pixel 7” backup…", PhotoBackupStatus.SettingUp.continuingText("Pixel 7"))
+		assertEquals("Continuing “Pixel 7” backup · 12,400 left", PhotoBackupStatus.BackingUp(12_400).continuingText("Pixel 7"))
+		assertEquals("Continuing “Pixel 7” backup…", PhotoBackupStatus.BackingUp(null).continuingText("Pixel 7"))
+		// Anything in the way of backup says so instead
+		for (status in listOf(PhotoBackupStatus.WaitingForWiFi, PhotoBackupStatus.WaitingForUmbrel, PhotoBackupStatus.Paused, PhotoBackupStatus.Error, PhotoBackupStatus.UpToDate)) {
+			assertNull(status.toString(), status.continuingText("Pixel 7"))
+		}
+	}
 }
 
 /** Port of PhotoBackupRecoveryStateTests. */

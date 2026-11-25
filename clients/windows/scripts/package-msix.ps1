@@ -5,7 +5,8 @@
 .DESCRIPTION
   Runs on Windows with the .NET 10 SDK, the Windows SDK tools (makepri.exe, makeappx.exe
   and signtool.exe) and the Artifact Signing Client Tools. Steps:
-    1. dotnet publish (self-contained, win-x64 or win-arm64)
+    1. dotnet publish (self-contained, win-x64 or win-arm64), then stop if the bundled
+       .NET runtime is behind Microsoft's latest patch
     2. copy the publish output and Package.appxmanifest into a staging folder
     3. makepri: index the scaled and target-size icons into resources.pri
     4. makeappx pack
@@ -63,6 +64,17 @@ Remove-Item -Recurse -Force $publishDir, $stageDir -ErrorAction SilentlyContinue
 # package carries its own runtime.
 dotnet publish $project -c $Configuration -r "win-$Architecture" --self-contained true -o $publishDir
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+
+# The package carries its own .NET runtime, which only gets security fixes through a new
+# release of this app. Refuse to package one that is behind Microsoft's latest patch, and
+# stop rather than skip the check when the release list can't be fetched.
+$bundled = (Get-Content (Join-Path $publishDir "Umbrel.runtimeconfig.json") -Raw | ConvertFrom-Json).runtimeOptions.includedFrameworks[0].version
+$channel = $bundled -replace '^(\d+\.\d+)\..*$', '$1'
+try { $releases = Invoke-RestMethod "https://builds.dotnet.microsoft.com/dotnet/release-metadata/releases-index.json" }
+catch { throw "Could not fetch the .NET release list to check the bundled runtime: $_" }
+$latest = ($releases."releases-index" | Where-Object { $_."channel-version" -eq $channel })."latest-runtime"
+if (-not $latest) { throw "The .NET release list has no $channel channel to check the bundled runtime $bundled against." }
+if ([version]$bundled -lt [version]$latest) { throw "This SDK bundles .NET $bundled, but $latest is out. Update the .NET SDK (winget upgrade Microsoft.DotNet.SDK.10) and run again." }
 
 New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
 Copy-Item -Recurse -Force (Join-Path $publishDir "*") $stageDir

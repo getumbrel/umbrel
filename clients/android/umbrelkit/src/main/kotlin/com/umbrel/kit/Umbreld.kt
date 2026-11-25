@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -84,7 +85,22 @@ object Umbreld {
 	data class DiscoveryInfo(val id: String, val device: String, val onboarded: Boolean)
 
 	@Serializable
-	data class Wallpaper(val id: String, val brandColorHsl: String)
+	data class Wallpaper(
+		val id: String,
+		val brandColorHsl: String,
+		@SerialName("hash") private val rawHash: JsonElement? = null,
+	) {
+		/** A hash of the wallpaper's files, sent by umbrelOS releases that version them. */
+		val hash: String?
+			get() = validWallpaperHash((rawHash as? JsonPrimitive)?.takeIf { it.isString }?.content)
+	}
+
+	/**
+	 * The hash comes from the Umbrel and ends up in cache file names, so anything but short
+	 * lowercase hex is treated as absent.
+	 */
+	fun validWallpaperHash(value: String?): String? =
+		value?.takeIf { it.length in 8..64 && it.all { char -> char in '0'..'9' || char in 'a'..'f' } }
 
 	@Serializable
 	data class Account(val userId: String, val name: String, val wallpaper: Wallpaper, val avatarUrl: String? = null)
@@ -198,40 +214,30 @@ object Umbreld {
 		 */
 		val isPhone: Boolean get() = type == "iphone" || type == "android"
 
-		val isPhoneWithBackups: Boolean get() = isPhone && (stats.photos + stats.videos > 0 || lastImportAt != null)
 	}
 
-	/**
-	 * Asked before a phone starts a new backup source. umbrelOS 2.0 keys backups by source, so a
-	 * new or reinstalled phone backing up as a new source stores every photo the account
-	 * already has from its old one again.
-	 */
-	sealed class NewPhotoBackupSourceCheck {
-		data object Proceed : NewPhotoBackupSourceCheck()
-
-		/** Names of the account's phone sources that hold backups, most recent first. */
-		data class Ask(val existing: List<String>) : NewPhotoBackupSourceCheck()
+	@Serializable
+	data class PhotoBackupSources(val capabilities: List<String>, val sources: List<PhotoBackupSourceDetails>) {
+		val canContinueSource: Boolean get() = "continue-source" in capabilities
 
 		/**
-		 * The check didn't get through. Setup waits only while the Umbrel itself can't be
-		 * reached; one that answers but couldn't complete the check needs Try Again.
+		 * The backup this phone can carry on, when the Umbrel still has it. Not an iPhone's. One
+		 * without a platform predates umbrelOS recording it, and the id this app saved makes it
+		 * an Android phone's.
 		 */
-		data object Wait : NewPhotoBackupSourceCheck()
-		data class Fail(val message: String) : NewPhotoBackupSourceCheck()
-
-		companion object {
-			/** Cancellation isn't a result here: callers let it propagate. */
-			fun resolve(sources: Result<List<PhotoSourceSummary>>): NewPhotoBackupSourceCheck = sources.fold(
-				onSuccess = { list ->
-					val existing = list.filter { it.isPhoneWithBackups }.sortedByDescending { it.lastImportAt ?: 0.0 }.map { it.name }
-					if (existing.isEmpty()) Proceed else Ask(existing)
-				},
-				onFailure = { error ->
-					if ((error as? Error)?.isConnectivityFailure == true || error is IOException) Wait else Fail(error.message.orEmpty())
-				},
-			)
-		}
+		fun continuable(sourceId: String): PhotoBackupSourceDetails? =
+			sources.firstOrNull { it.id == sourceId && (it.platform == null || it.platform == "android") }?.takeIf { canContinueSource }
 	}
+
+	/** A phone's backup on the account, by the source id its app chose. */
+	@Serializable
+	data class PhotoBackupSourceDetails(
+		val id: String,
+		val name: String,
+		// "ios" or "android", from the phone's app. Backups from before umbrelOS recorded it
+		// have none, and are iPhones.
+		val platform: String? = null,
+	)
 
 	/**
 	 * An Umbrel whose long-standing public version endpoint reports a release older than
@@ -379,7 +385,7 @@ object Umbreld {
 		null
 	}
 
-	private suspend fun verifiedLocalHttpsIdentity(host: String, expectedDeviceId: String?): IdentityProbeResult {
+	internal suspend fun verifiedLocalHttpsIdentity(host: String, expectedDeviceId: String?): IdentityProbeResult {
 		// A saved Umbrel must validate directly against its existing pin.
 		if (expectedDeviceId != null) {
 			return when (storedLocalHttpsCa(expectedDeviceId)) {
@@ -672,7 +678,10 @@ object Umbreld {
 		val hintedDeviceId = requiredDeviceId ?: accepted.id?.takeIf { it in knownDeviceIds }
 		val attempted = HashSet<String>()
 		for (host in listOf(accepted.host) + accepted.addresses) {
-			if (!attempted.add(host)) continue
+			// Only a literal IPv4 address or .local name is ever probed, so a candidate can't
+			// aim the plaintext bootstrap at an internet name or splice extra URL syntax into
+			// the request.
+			if (!SavedDevice.isValidLocalEndpointHost(host) || !attempted.add(host)) continue
 			coroutineContext.ensureActive()
 			var verified = prober.probe(host, hintedDeviceId) ?: continue
 			var identity = verified.discoveryInfo
@@ -701,14 +710,22 @@ object Umbreld {
 	}
 
 	/**
-	 * mDNS is an unauthenticated source of local connection candidates. Never let it
-	 * introduce a Tailscale-range endpoint; those come only from the authenticated
-	 * system.getIpAddresses response after sign-in.
+	 * mDNS is an unauthenticated source of local connection candidates: any device on the
+	 * network can advertise any hostname and any addresses. Accept only .local names and
+	 * literal addresses in the ranges a local network uses, so a host that discovery adds
+	 * only works for someone on the same network. That matters because a saved host is also
+	 * handed to the browser, where the pin doesn't apply. A Tailscale-range endpoint is
+	 * refused too; those come only from the authenticated system.getIpAddresses response
+	 * after sign-in.
 	 */
 	internal fun localDiscoveryCandidate(candidate: Candidate): Candidate? {
-		if (SavedDevice.isTailscaleAddress(candidate.host)) return null
-		return candidate.copy(addresses = candidate.addresses.filterNot(SavedDevice::isTailscaleAddress))
+		if (!isLocalDiscoveryHost(candidate.host)) return null
+		return candidate.copy(addresses = candidate.addresses.filter(::isLocalDiscoveryHost))
 	}
+
+	private fun isLocalDiscoveryHost(host: String): Boolean =
+		SavedDevice.isBonjourHostname(host) ||
+			(SavedDevice.isSupportedManualIPv4Address(host) && !SavedDevice.isTailscaleAddress(host))
 
 	/** Probe a discovery snapshot concurrently and collapse duplicate records of one Umbrel. */
 	suspend fun identify(candidates: List<Candidate>, knownDeviceIds: Set<String> = emptySet()): List<IdentifiedDevice> =
@@ -1212,7 +1229,12 @@ object Umbreld {
 	)
 
 	@Serializable
-	internal data class PhotoBackupGrantInput(val sourceId: String, val suggestedName: String)
+	internal data class PhotoBackupGrantInput(
+		val sourceId: String,
+		val suggestedName: String,
+		// Only sent when carrying on another phone's backup, which umbrelOS then renames
+		val continuing: Boolean? = null,
+	)
 
 	@Serializable
 	internal data class PhotoBackupResourceReceiptInput(val sourceId: String, val resources: List<PhotoBackupResourceQuery>)
@@ -1305,11 +1327,16 @@ object Umbreld {
 	/** Signing out keeps the enrolled CA. Removing the Umbrel discards first-use trust. */
 	fun forgetLocalHttpsIdentity(deviceId: String) = LocalHttpsTransport.forget(deviceId)
 
-	suspend fun createPhotoBackupGrant(host: String, session: Session, sourceId: String, suggestedName: String): PhotoBackupGrant =
-		mutate(host, "photos.createBackupGrant", json.encodeToString(PhotoBackupGrantInput.serializer(), PhotoBackupGrantInput(sourceId, suggestedName)), session)
+	suspend fun createPhotoBackupGrant(host: String, session: Session, sourceId: String, suggestedName: String, continuing: Boolean = false): PhotoBackupGrant =
+		mutate(
+			host,
+			"photos.createBackupGrant",
+			json.encodeToString(PhotoBackupGrantInput.serializer(), PhotoBackupGrantInput(sourceId, suggestedName, continuing.takeIf { it })),
+			session,
+		)
 
-	suspend fun createPhotoBackupGrant(target: Target, session: Session, sourceId: String, suggestedName: String): PhotoBackupGrant =
-		withResolvedHost(target, ReplayPolicy.NEVER) { createPhotoBackupGrant(it, session, sourceId, suggestedName) }
+	suspend fun createPhotoBackupGrant(target: Target, session: Session, sourceId: String, suggestedName: String, continuing: Boolean = false): PhotoBackupGrant =
+		withResolvedHost(target, ReplayPolicy.NEVER) { createPhotoBackupGrant(it, session, sourceId, suggestedName, continuing) }
 
 	suspend fun revokePhotoBackupGrant(host: String, session: Session) {
 		mutate<Boolean>(host, "photos.revokeBackupGrant", json.encodeToString(EmptyInput.serializer(), EmptyInput()), session)
@@ -1347,6 +1374,19 @@ object Umbreld {
 
 	suspend fun photoSources(target: Target, session: Session): List<PhotoSourceSummary> =
 		withResolvedHost(target, ReplayPolicy.SAFE) { photoSources(it, session) }
+
+	/**
+	 * The account's phone backups by the ids their apps chose, so a phone can tell whether the
+	 * Umbrel still has its own. Null from umbrelOS 2.0, which doesn't have this.
+	 */
+	suspend fun photoBackupSources(target: Target, session: Session): PhotoBackupSources? = try {
+		withResolvedHost(target, ReplayPolicy.SAFE) { host ->
+			// The server totals the whole library for this, which can take a while
+			query<PhotoBackupSources>(host, "photos.backupSources", session = session, timeoutMillis = 30_000)
+		}
+	} catch (error: Error) {
+		if (error.status == 404) null else throw error
+	}
 
 	suspend fun user(host: String, session: Session): UserInfo = query(host, "user.get", session = session)
 	suspend fun user(target: Target, session: Session): UserInfo = withResolvedHost(target, ReplayPolicy.SAFE) { user(it, session) }
@@ -1402,12 +1442,14 @@ object Umbreld {
 	}
 
 	/**
-	 * Browser routing has more hostname choices than native transport, but keeps the same
-	 * identity rule: a name or address is usable only when the public identity endpoint
-	 * reports the saved device id. No session or other secret is sent here. Over HTTPS it
-	 * trusts only the certificates the phone's browser trusts. system.localHttpsIdentity
-	 * answers over HTTP and HTTPS on every umbrelOS 2.0 and does no work beyond reading the
-	 * id, so these short timeouts don't cut off a busy Umbrel.
+	 * A reachability test before the browser is sent to a route, not an identity check: the
+	 * id is public, so anything on the network can report it. It only keeps the browser off
+	 * an address that now belongs to something else, such as another Umbrel. The browser is
+	 * outside the app's pin whatever this returns, so nothing secret may depend on the
+	 * answer, and no session or other secret is sent here. Over HTTPS it trusts only the
+	 * certificates the phone's browser trusts. system.localHttpsIdentity answers over HTTP
+	 * and HTTPS on every umbrelOS 2.0 and does no work beyond reading the id, so these short
+	 * timeouts don't cut off a busy Umbrel.
 	 */
 	suspend fun isBrowserEndpoint(
 		host: String,

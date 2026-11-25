@@ -40,7 +40,7 @@ export function ConnectExistingModal({
 					<DialogDescription>{t('backups.modals.connect-existing.description')}</DialogDescription>
 				</DialogHeader>
 				<div className='w-full space-y-2 text-left'>
-					<FormLabel className='text-13 opacity-60'>{t('backups-restore.encryption-password')}</FormLabel>
+					<FormLabel className='text-13 text-white/60'>{t('backups-restore.encryption-password')}</FormLabel>
 					<PasswordInput value={password} onValueChange={onPasswordChange} />
 				</div>
 				<DialogFooter className='justify-center gap-2 pt-2'>

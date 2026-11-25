@@ -17,7 +17,7 @@ import {Separator} from '@/components/ui/separator'
 import {Switch} from '@/components/ui/switch'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useBackups} from '@/features/backups/hooks/use-backups'
-import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
+import {useStorageHeadline} from '@/features/storage/hooks/use-storage-headline'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {useIsMobile} from '@/hooks/use-is-mobile'
@@ -39,7 +39,7 @@ import {MemoryCardContent} from './memory-card-content'
 import {createSettingsCatalog, getSettingsPage, SettingsPageItem} from './settings-catalog'
 import {SettingsFilterPills, SettingsItemsGroup} from './settings-page-controls'
 import {SettingsFilterId, useSettingsFilterLabels} from './settings-taxonomy'
-import {SettingsAccountAvatar, settingsPanesGridClass, settingsSidePaneClass} from './shared'
+import {SettingsAccountAvatar, settingsPanesGridClass, settingsSidePaneClass, StorageAlarmDot} from './shared'
 import {SoftwareUpdateListRow} from './software-update-list-row'
 import {StorageCardContent} from './storage-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
@@ -73,6 +73,8 @@ function LiveUsageCardLink({
 		>
 			<motion.div
 				className='will-change-transform'
+				// Motion makes a tap target focusable; the link around it already is
+				tabIndex={-1}
 				whileHover={reduceMotion ? undefined : {scale: 1.02, filter: 'brightness(1.15)'}}
 				whileTap={reduceMotion ? undefined : {scale: 0.97}}
 				transition={{type: 'spring', duration: 0.2, bounce: 0.15}}
@@ -98,25 +100,18 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 	const {deviceName} = useIsHomeOrPro()
 	const {wallpaper} = useWallpaper()
 
-	const [userQ, wifiSupportedQ, is2faEnabledQ, raidStatusQ, devicesQ] = trpcReact.useQueries((t) => [
+	const [userQ, wifiSupportedQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.wifi.supported(undefined, {enabled: !isMember}),
 		t.user.is2faEnabled(undefined, {enabled: isMember}),
-		t.hardware.raid.getStatus(undefined, {enabled: !isMember}),
-		t.hardware.internalStorage.getDevices(undefined, {enabled: !isMember}),
 	])
 	const wifiQ = trpcReact.wifi.connected.useQuery(undefined, {enabled: !isMember && wifiSupportedQ.data === true})
 	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups({
 		repositoriesEnabled: !isMember,
 	})
-	const hasRaidIssue = raidStatusQ.data?.exists && raidStatusQ.data?.status && raidStatusQ.data?.status !== 'ONLINE'
-	const hasHealthIssue = devicesQ.data?.some((device) => getDeviceHealth(device).hasWarning)
-	const hasStorageIssue = hasRaidIssue || hasHealthIssue
-	// SSD wording only when the machine is known to be SSD-only - HDD, mixed, and not-yet-loaded
-	// setups get generic drive wording (correct for any device type)
-	const storageIssueLabel = devicesQ.data?.every((device) => device.type === 'ssd')
-		? t('storage-manager.health.title')
-		: t('storage-manager.health.title-drive')
+	// The Storage Manager row leads with what Storage Manager itself leads with
+	const storage = useStorageHeadline({enabled: !isMember})
+	const storageNeedsSaying = !!storage && (storage.alarming || storage.tone === 'busy')
 	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 	const ownerFirstName = userQ.data?.name ? firstNameFromFullName(userQ.data.name) : ''
 
@@ -238,15 +233,12 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 						title={
 							<span className='flex items-center gap-1.5'>
 								{item.title}
-								{hasStorageIssue && (
-									<span className='relative size-2.5' role='img' aria-label={storageIssueLabel}>
-										<span className='absolute inset-0 rounded-full bg-[#FF3434]' />
-										<span className='absolute inset-0 animate-ping rounded-full bg-[#FF3434] opacity-75' />
-									</span>
+								{storage?.alarming && (
+									<StorageAlarmDot critical={storage.tone === 'critical'} label={storage.title} className='size-2.5' />
 								)}
 							</span>
 						}
-						description={item.description}
+						description={storageNeedsSaying ? storage.title : item.description}
 						onClick={() => navigate(item.to)}
 					>
 						<RowChevron />
@@ -408,7 +400,7 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								</div>
 								{/* Wraps instead of truncating, so a language that puts a long phrase
 								    around the name ("Umbrel пользователя …") still shows the name */}
-								<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-[30px] font-semibold -tracking-4 text-balance break-words text-white/45'>
+								<h2 className='my-[5px] line-clamp-2 w-full text-center text-24 leading-tight font-semibold -tracking-4 text-balance break-words text-white/45'>
 									{ownerFirstName ? (
 										<Trans
 											t={t}
@@ -427,7 +419,7 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 
 							<SettingsSummary />
 
-							<div className='mt-1.5 mb-3 flex shrink-0 gap-2'>
+							<div className='mt-1.5 mb-3 flex shrink-0 flex-wrap gap-2'>
 								<ButtonLink to={linkToDialog('logout')} className='flex-1 px-1.5 text-11 whitespace-nowrap'>
 									{t('logout')}
 								</ButtonLink>
@@ -488,7 +480,7 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 					<div
 						data-testid='settings-controls-rail'
 						className={cn(
-							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2 panes:flex-wrap panes:pt-0',
+							'z-20 -mx-2 mb-1 flex shrink-0 items-center justify-between gap-3 px-2 py-2 lg:flex-wrap panes:flex-wrap panes:pt-0',
 							isMember && 'justify-end',
 						)}
 					>
@@ -498,15 +490,16 @@ export function SettingsContent({isMember = false}: {isMember?: boolean}) {
 								labels={filterLabels}
 								ariaLabel={t('settings.filters-label')}
 								onSelect={handleFilterSelect}
-								className='lg:shrink-0 low:hidden'
+								className='low:hidden'
 							/>
 						)}
-						{/* The pills are the row's fixed part from lg, the search takes what's left */}
+						{/* From lg the search keeps its width and moves under the pills, at the
+						    end, when they need the row; pills wider than the row scroll */}
 						<SearchField
 							value={searchQuery}
 							onChange={handleSearchChange}
 							label={t('search')}
-							className='lg:min-w-0 lg:shrink panes:w-full'
+							className='lg:ml-auto panes:w-full'
 						/>
 					</div>
 

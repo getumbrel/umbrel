@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.core.net.toUri
 import androidx.webkit.ScriptHandler
@@ -37,6 +38,7 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.umbrel.android.BuildConfig
+import com.umbrel.android.IdentityChange
 import com.umbrel.kit.LocalHttpsTransport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -137,6 +139,13 @@ internal class BrowserPage(
 	/** Whether the page has drawn something worth showing instead of the launch screen. */
 	var isRevealed by mutableStateOf(false)
 		private set
+
+	/**
+	 * umbrelOS keeps clear of the top safe area itself (it says so with a meta tag), so it can
+	 * run under the header with the header's height as its top safe area.
+	 */
+	var keepsClearOfTop by mutableStateOf(false)
+		private set
 	var failure by mutableStateOf<Failure?>(null)
 		private set
 	var barColor by mutableStateOf<Color?>(null)
@@ -182,6 +191,8 @@ internal class BrowserPage(
 	private var colorsJob: Job? = null
 	private val downloadsFolder = DownloadsFolder.of(webView.context)
 	private val pageDownloads = PageDownloads(scope, downloadsFolder, ::offer)
+	private val capturesFolder = CapturesFolder.of(webView.context)
+	private val captures = mutableListOf<File>()
 
 	// The web view the page downloads channel is installed in, and its script.
 	private var downloadsChannel: Pair<WebView, ScriptHandler>? = null
@@ -357,6 +368,8 @@ internal class BrowserPage(
 		fileChooser?.answer(null)
 		fileChooser = null
 		pageDownloads.reset()
+		capturesFolder.delete(captures.toList())
+		captures.clear()
 		release(webView)
 	}
 
@@ -440,10 +453,7 @@ internal class BrowserPage(
 	}
 
 	private val notRecognized: Failure
-		get() = Failure(
-			"Can’t Open ${identity.name}",
-			"This app no longer recognizes your Umbrel. This usually happens after your Umbrel or its certificate is reset. Reconnect your Umbrel from Home to keep using it in this app.",
-		)
+		get() = Failure(IdentityChange.ALERT_TITLE, IdentityChange.BLOCKED_MESSAGE)
 
 	// ── Dialogs ──
 
@@ -611,6 +621,55 @@ internal class BrowserPage(
 		if (passwordEntry != null) installPasswordEntry(view)
 		installScreenInsets(view)
 		installPageDownloads(view)
+		if (isSeeThrough) installSafeAreaReport(view)
+	}
+
+	/**
+	 * umbrelOS says whether it keeps clear of the top safe area as soon as its head is parsed,
+	 * like the iOS app reads it, so the layout is settled before umbrelOS first draws.
+	 */
+	private fun installSafeAreaReport(view: WebView) {
+		val origins = context.hosts.map { "https://${BrowserContext.bracketed(it)}" }.toSet()
+		// Without both, umbrelOS keeps starting beneath the header, as before.
+		if (origins.isEmpty() ||
+			!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) ||
+			!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+		) {
+			return
+		}
+		WebViewCompat.addWebMessageListener(view, SAFE_AREA_CHANNEL, origins) { _, message, sourceOrigin, isMainFrame, _ ->
+			if (!isMainFrame || !context.isDashboard(sourceOrigin)) return@addWebMessageListener
+			keepsClearOfTop = message.data == "top"
+		}
+		WebViewCompat.addDocumentStartJavaScript(view, SAFE_AREA_SCRIPT, origins)
+	}
+
+	// The script that pins the wallpaper, sent again after every load.
+	private var pinnedWallpaper: String? = null
+
+	/**
+	 * umbrelOS draws the glass behind its widgets and dock from its own copy of the wallpaper,
+	 * which the app hides and draws natively instead. That copy fills umbrelOS's page, while the
+	 * app's wallpaper fills the window. So it's pinned to [rect], where the app's wallpaper is
+	 * relative to the page, in the page's CSS pixels (density-independent pixels in a web view),
+	 * and the glass shows what's really behind it. A load starts the page's styles afresh, so
+	 * it's pinned again after each. umbrelOS's still of a video wallpaper is left in place: it
+	 * has to match the moving wallpaper umbrelOS draws in its own page.
+	 */
+	fun pinWallpaper(rect: Rect) {
+		val script = """
+			(() => {
+				const root = document.documentElement
+				root.style.setProperty('--umbrel-app-wallpaper-left', '${rect.left}px')
+				root.style.setProperty('--umbrel-app-wallpaper-top', '${rect.top}px')
+				root.style.setProperty('--umbrel-app-wallpaper-width', '${rect.width}px')
+				root.style.setProperty('--umbrel-app-wallpaper-height', '${rect.height}px')
+				root.setAttribute('data-umbrel-app-wallpaper', '')
+			})()
+		""".trimIndent()
+		if (script == pinnedWallpaper) return
+		pinnedWallpaper = script
+		webView.evaluateJavascript(script, null)
 	}
 
 	private fun installPasswordEntry(view: WebView) {
@@ -728,6 +787,7 @@ internal class BrowserPage(
 			settleDeadline = SystemClock.uptimeMillis() + 1_500
 			reveal(SETTLE_MILLIS)
 			watchColors()
+			pinnedWallpaper?.let { view.evaluateJavascript(it, null) }
 			scope.launch { context.adoptSession(view) }
 		}
 
@@ -946,6 +1006,15 @@ internal class BrowserPage(
 		fileChooser = null
 	}
 
+	/** A file for a photo the page's file input asked the camera for, deleted when the page is released. */
+	fun newCapture(): File = capturesFolder.newFile().also { captures += it }
+
+	/** The photo wasn't taken, so the page never gets its file. */
+	fun discardCapture(file: File) {
+		captures -= file
+		capturesFolder.delete(listOf(file))
+	}
+
 	/** Leaves full-screen video, as the system back gesture does. */
 	fun exitFullScreen() {
 		fullScreen?.exit?.invoke()
@@ -953,6 +1022,21 @@ internal class BrowserPage(
 	}
 
 	companion object {
+		private const val SAFE_AREA_CHANNEL = "umbrelSafeArea"
+
+		private val SAFE_AREA_SCRIPT = """
+			(() => {
+				if (window.top !== window) return
+				const observer = new MutationObserver(() => {
+					if (!document.body) return
+					observer.disconnect()
+					const safeArea = document.querySelector('meta[name=umbrel-safe-area]')?.content ?? ''
+					$SAFE_AREA_CHANNEL.postMessage(safeArea.split(/[ ,]+/).includes('top') ? 'top' : 'none')
+				})
+				observer.observe(document, {childList: true, subtree: true})
+			})()
+		""".trimIndent()
+
 		private val LocalSchemes = setOf("file", "content", "javascript")
 		private const val SETTLE_MILLIS = 300L
 

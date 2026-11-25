@@ -1,5 +1,6 @@
 import type DatabaseTypes from 'better-sqlite3'
 
+import {SUPPORTED_THUMBNAIL_EXTENSIONS} from '../files/thumbnail-support.ts'
 import {sourceScopeSql} from './library-sql.ts'
 
 type Database = DatabaseTypes.Database
@@ -8,6 +9,15 @@ const BATCH_SIZE = 200
 
 // Count unique content, not file copies or visible logical items. Unhashed
 // entries are separate work until they acquire a shared content identity.
+// What the models that read the library have still to do is not counted:
+// Search says how far along each of them is (see ../search/search.ts). A
+// file whose content is not known yet is Photos' work to do when it is a
+// photo or video by its name. Documents and recordings are told by their
+// content too, where the models read them, and are none of Photos' business.
+const UNREAD_MEDIA = `(entries.content_id IS NULL AND (${[...SUPPORTED_THUMBNAIL_EXTENSIONS]
+	.map((extension) => `entries.name LIKE '%${extension}'`)
+	.join(' OR ')}))`
+
 function workSql(predicate: string) {
 	return `SELECT index_roots.owner_id,
 		COALESCE(entries.content_id, -entries.id) AS work_id,
@@ -28,7 +38,7 @@ function workSql(predicate: string) {
 		LEFT JOIN media_metadata ON media_metadata.content_id = entries.content_id
 		WHERE index_roots.owner_id = ? AND index_roots.kind = 'home'
 			AND entries.type = 'file' AND entries.hidden = 0 AND entries.thumbnail_identity_kind = 'content'
-			AND (entries.content_id IS NULL OR media_metadata.content_id IS NOT NULL)
+			AND (${UNREAD_MEDIA} OR media_metadata.content_id IS NOT NULL)
 			AND ${sourceScopeSql('photos_source')} AND (${predicate})
 		GROUP BY work_id`
 }

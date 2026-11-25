@@ -134,7 +134,7 @@ export function ListRowSwitchIndicator({checked}: {checked: boolean}) {
 			aria-hidden='true'
 			className={cn(
 				'inline-flex h-[20px] w-[36px] shrink-0 items-center rounded-full border-2 border-transparent transition-colors',
-				checked ? 'bg-brand' : 'bg-white/10',
+				checked ? 'bg-brand' : 'bg-white/10 contrast-more:bg-white/40',
 			)}
 		>
 			<span

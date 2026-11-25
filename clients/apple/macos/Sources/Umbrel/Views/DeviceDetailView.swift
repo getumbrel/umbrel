@@ -20,6 +20,8 @@ struct DeviceDetailView: View {
 	@State private var showPasswordForm = false
 	@State private var page = DetailPage.overview
 	@State private var isConfirmingHTTPS = false
+	@State private var isConfirmingReconnect = false
+	@State private var isReconnecting = false
 	@State private var connectTask: Task<Void, Never>?
 	@State private var accessAvailability: [AccessEndpointKey: Bool] = [:]
 
@@ -97,6 +99,8 @@ struct DeviceDetailView: View {
 		} else if device.reachability == .unverified {
 			ProgressView()
 				.controlSize(.small)
+		} else if !device.online && device.identityChanged {
+			identityChangedContent
 		} else if !device.online && !(device.saved && showPasswordForm) {
 			VStack(alignment: .leading, spacing: 12) {
 				Text("Device is offline")
@@ -114,6 +118,33 @@ struct DeviceDetailView: View {
 			unsavedContent(device)
 		} else {
 			savedContent(device)
+		}
+	}
+
+	// A new identity, as after a certificate reset. Reconnect forgets the Umbrel, so the
+	// next sign-in trusts whatever answers then; it asks first, with Cancel as the default.
+	private var identityChangedContent: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			VStack(alignment: .leading, spacing: 6) {
+				Text(IdentityChange.title)
+					.font(.system(size: 13, weight: .semibold))
+				Text(IdentityChange.message)
+					.font(.system(size: 12))
+					.foregroundStyle(.secondary)
+					.fixedSize(horizontal: false, vertical: true)
+			}
+			Button(isReconnecting ? "Reconnecting\u{2026}" : "Reconnect") {
+				isConfirmingReconnect = true
+			}
+			.buttonStyle(PillButtonStyle())
+			.disabled(isReconnecting)
+		}
+		.alert(IdentityChange.confirmTitle, isPresented: $isConfirmingReconnect) {
+			Button("Cancel", role: .cancel) {}
+				.keyboardShortcut(.defaultAction)
+			Button("Reconnect", action: reconnect)
+		} message: {
+			Text(IdentityChange.confirmMessage)
 		}
 	}
 
@@ -318,6 +349,10 @@ struct DeviceDetailView: View {
 		}
 	}
 
+	// A row is a link to the address it shows. Don't swap in another route: the user
+	// picked this one, and the browser is outside the app's pin either way. A row's
+	// dimming comes from the app's own pinned check of that route, so it says whether
+	// the app reaches the Umbrel there, not what the browser will reach.
 	private func accessBox(_ device: Device) -> some View {
 		let methods = accessMethods(for: device)
 		return SectionBox {
@@ -465,6 +500,21 @@ struct DeviceDetailView: View {
 		}
 	}
 
+	private func reconnect() {
+		connectTask?.cancel()
+		actionError = nil
+		isReconnecting = true
+		Task {
+			defer { isReconnecting = false }
+			do {
+				try await state.reconnect(deviceId: deviceId)
+				onBack()
+			} catch {
+				actionError = error.localizedDescription
+			}
+		}
+	}
+
 	private var selectedAccount: Umbreld.Account? {
 		accounts.first { $0.userId == selectedUserId }
 	}
@@ -494,7 +544,10 @@ struct DeviceDetailView: View {
 			requires2fa = false
 			error = nil
 		} catch {
-			accountError = "Couldn\u{2019}t load accounts."
+			// A certificate this Umbrel's CA didn't issue, as after a factory reset
+			accountError = Umbreld.isIdentityChange(error)
+				? IdentityChange.signInError
+				: "Couldn\u{2019}t load accounts."
 		}
 	}
 

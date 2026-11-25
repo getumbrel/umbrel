@@ -4,11 +4,11 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.net.SocketTimeoutException
 
 class NativeApiContractTest {
 	private val nativeClient = NativeClientInfo(
@@ -20,6 +20,17 @@ class NativeApiContractTest {
 		osVersion = "16",
 	)
 	private val nativeClientJson = """{"id":"umbrel","platform":"android","deviceClass":"phone","appVersion":"0.1","appBuild":"20","osVersion":"16"}"""
+
+	// The hash names cache files, so a hostile Umbrel mustn't be able to steer it into a path.
+	@Test
+	fun wallpaperHashIsKeptOnlyWhenItIsShortLowercaseHex() {
+		fun hash(json: String): String? = decode<Umbreld.Wallpaper>("""{"result":{"data":$json}}""").hash
+		assertEquals("d9c1579f1571", hash("""{"id":"23","brandColorHsl":"24 90% 50%","hash":"d9c1579f1571"}"""))
+		assertNull(hash("""{"id":"23","brandColorHsl":"24 90% 50%"}"""))
+		for (invalid in listOf("\"../../x\"", "\"D9C1579F1571\"", "\"abc\"", "\"d9c1579f1571/\"", "12", "null", "{}")) {
+			assertNull(invalid, hash("""{"id":"23","brandColorHsl":"24 90% 50%","hash":$invalid}"""))
+		}
+	}
 
 	@Test
 	fun identityAndAccountResponsesDecodeWithAdditionalFields() {
@@ -150,56 +161,30 @@ class NativeApiContractTest {
 	}
 
 	@Test
-	fun photoSourcesDecodeAndFindPhoneBackups() {
+	fun photoSourcesDecodeAndFindPhones() {
 		val sources: List<Umbreld.PhotoSourceSummary> = decode(
 			"""{"result":{"data":[{"id":"umbrel","type":"umbrel","name":"Umbrel","createdAt":0,"stats":{"photos":120,"videos":4,"sizeBytes":9},"scope":{"mode":"everything","paths":[]}},{"id":"iphone:a","type":"iphone","name":"Pixel","createdAt":1,"stats":{"photos":0,"videos":0,"sizeBytes":0}},{"id":"iphone:b","type":"iphone","name":"Nate’s Pixel","createdAt":1,"stats":{"photos":0,"videos":3,"sizeBytes":5},"future":true},{"id":"iphone:c","type":"iphone","name":"Old Pixel","createdAt":1,"lastImportAt":1700000000000,"stats":{"photos":0,"videos":0,"sizeBytes":0}}]}}""",
 		)
 		assertEquals(listOf("Umbrel", "Pixel", "Nate’s Pixel", "Old Pixel"), sources.map { it.name })
-		// This Umbrel's own library and a phone that never imported anything don't count. One
-		// whose counts read 0 while the index rebuilds still does.
-		assertEquals(listOf(false, false, true, true), sources.map { it.isPhoneWithBackups })
+		assertEquals(listOf(false, true, true, true), sources.map { it.isPhone })
 	}
 
 	@Test
-	fun newSourceCheckAsksOnlyWhenTheAccountHasPhoneBackups() {
-		val library = Umbreld.PhotoSourceSummary("umbrel", "Umbrel", Umbreld.PhotoSourceSummary.Stats(500, 9))
-		val older = Umbreld.PhotoSourceSummary("iphone", "Old Pixel", Umbreld.PhotoSourceSummary.Stats(10, 0), lastImportAt = 1.0)
-		val newer = Umbreld.PhotoSourceSummary("iphone", "Nate’s Pixel", Umbreld.PhotoSourceSummary.Stats(10, 0), lastImportAt = 2.0)
-		val empty = Umbreld.PhotoSourceSummary("iphone", "Pixel", Umbreld.PhotoSourceSummary.Stats(0, 0))
-		// umbrelOS records Android phones as "iphone" for now; "android" is the type they get later
-		val tablet = Umbreld.PhotoSourceSummary("android", "Tablet", Umbreld.PhotoSourceSummary.Stats(3, 0))
-
-		assertEquals(Umbreld.NewPhotoBackupSourceCheck.Proceed, Umbreld.NewPhotoBackupSourceCheck.resolve(Result.success(listOf(library, empty))))
-		assertEquals(
-			Umbreld.NewPhotoBackupSourceCheck.Ask(listOf("Nate’s Pixel", "Old Pixel")),
-			Umbreld.NewPhotoBackupSourceCheck.resolve(Result.success(listOf(library, older, newer))),
+	fun photoBackupSourcesDecodeByTheAppsSourceIds() {
+		val listed: Umbreld.PhotoBackupSources = decode(
+			"""{"result":{"data":{"capabilities":["continue-source","future"],"sources":[{"id":"6f1c","name":"Pixel 7","createdAt":1,"lastSeenAt":2,"stats":{"photos":3,"videos":0,"sizeBytes":9}},{"id":"729a","name":"Pixel 8a","createdAt":1,"platform":"android","stats":{"photos":0,"videos":0,"sizeBytes":0}},{"id":"9e02","name":"Nate’s iPhone","createdAt":1,"platform":"ios","stats":{"photos":0,"videos":0,"sizeBytes":0}}]}}}""",
 		)
-		assertEquals(Umbreld.NewPhotoBackupSourceCheck.Ask(listOf("Tablet")), Umbreld.NewPhotoBackupSourceCheck.resolve(Result.success(listOf(library, tablet))))
-	}
-
-	// Wait means the request didn't get through, timed out included. Setup then waits only while
-	// the Umbrel can't be reached (PhotoBackupManagerTest), so a slow Umbrel isn't asked again on
-	// every refresh.
-	@Test
-	fun newSourceCheckWaitsOnlyWhenTheRequestDidNotGetThrough() {
-		assertEquals(
-			Umbreld.NewPhotoBackupSourceCheck.Wait,
-			Umbreld.NewPhotoBackupSourceCheck.resolve(Result.failure(Umbreld.Error(0, "offline", Umbreld.ErrorKind.CONNECTIVITY))),
-		)
-		assertEquals(
-			Umbreld.NewPhotoBackupSourceCheck.Wait,
-			Umbreld.NewPhotoBackupSourceCheck.resolve(Result.failure(Umbreld.Error(0, "Could not reach umbrel.local", Umbreld.ErrorKind.CONNECTIVITY, timedOut = true))),
-		)
-		assertEquals(Umbreld.NewPhotoBackupSourceCheck.Wait, Umbreld.NewPhotoBackupSourceCheck.resolve(Result.failure(SocketTimeoutException())))
-		// A server or decoding error is a real failure, never a wait
-		assertEquals(
-			Umbreld.NewPhotoBackupSourceCheck.Fail("Photos library is unavailable"),
-			Umbreld.NewPhotoBackupSourceCheck.resolve(Result.failure(Umbreld.Error(500, "Photos library is unavailable"))),
-		)
-		assertEquals(
-			Umbreld.NewPhotoBackupSourceCheck.Fail("photos.sources.list: unexpected response"),
-			Umbreld.NewPhotoBackupSourceCheck.resolve(Result.failure(Umbreld.Error(200, "photos.sources.list: unexpected response"))),
-		)
+		assertTrue(listed.canContinueSource)
+		assertEquals(listOf("6f1c", "729a", "9e02"), listed.sources.map { it.id })
+		assertEquals(listOf(null, "android", "ios"), listed.sources.map { it.platform })
+		assertFalse(Umbreld.PhotoBackupSources(emptyList(), emptyList()).canContinueSource)
+		// Not an iPhone's backup, and only where umbrelOS supports carrying one on. A backup from
+		// before umbrelOS recorded the platform has none.
+		assertEquals("729a", listed.continuable("729a")?.id)
+		assertEquals("6f1c", listed.continuable("6f1c")?.id)
+		assertNull(listed.continuable("9e02"))
+		assertNull(listed.continuable("missing"))
+		assertNull(listed.copy(capabilities = emptyList()).continuable("729a"))
 	}
 
 	@Test
@@ -228,6 +213,12 @@ class NativeApiContractTest {
 			"""{"sourceId":"123e4567-e89b-12d3-a456-426614174000","suggestedName":"Alice’s iPhone"}""",
 			Umbreld.PhotoBackupGrantInput.serializer(),
 			Umbreld.PhotoBackupGrantInput(sourceId = "123e4567-e89b-12d3-a456-426614174000", suggestedName = "Alice’s iPhone"),
+		)
+		// Only a phone carrying on another's backup says so, which renames it
+		assertWire(
+			"""{"sourceId":"123e4567-e89b-12d3-a456-426614174000","suggestedName":"Pixel 9","continuing":true}""",
+			Umbreld.PhotoBackupGrantInput.serializer(),
+			Umbreld.PhotoBackupGrantInput(sourceId = "123e4567-e89b-12d3-a456-426614174000", suggestedName = "Pixel 9", continuing = true),
 		)
 		assertWire(
 			"""{"sourceId":"123e4567-e89b-12d3-a456-426614174000","resources":[{"resourceKey":"${"a".repeat(64)}","fileExtension":"heic"}]}""",

@@ -35,6 +35,7 @@ import {Wallpaper} from './providers/wallpaper'
 import {NotFound} from './routes/not-found'
 import {Notifications} from './routes/notifications'
 import {Settings} from './routes/settings'
+import {storageLabRoutes} from './routes/storage-lab/routes'
 
 const CommunityAppStoreHome = React.lazy(() => import('./routes/community-app-store'))
 const CommunityAppPage = React.lazy(() => import('./routes/community-app-store/app-page'))
@@ -185,7 +186,9 @@ export const router = createBrowserRouter([
 		ErrorBoundary: ErrorBoundaryPageFallback,
 	},
 
-	...(import.meta.env.DEV ? [] : []),
+	// storage-lab: the FailSafe and Storage Manager screens on pretend hardware. Empty in a release
+	// build, which leaves the lab out altogether (see routes/storage-lab/routes.tsx).
+	...storageLabRoutes,
 
 	// onboarding: branded first-time setup experience
 	// Pro/Home: Video background, Other devices: Static wallpaper

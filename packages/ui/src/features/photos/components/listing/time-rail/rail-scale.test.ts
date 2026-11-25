@@ -28,6 +28,8 @@ import {
 	scrollForMonth,
 	scrollForTime,
 	scrollNamingMonth,
+	settleOnLabel,
+	spansMonth,
 	timeAtFraction,
 	timeAtScroll,
 	yearMarks,
@@ -366,6 +368,48 @@ describe('time ⇄ scroll', () => {
 	})
 })
 
+describe('spansMonth', () => {
+	const items = [...month(2024, 6, 4, 'jun'), ...month(2024, 3, 4, 'mar')]
+	const layoutWith = (edges: {hasMore?: boolean; before?: number}) =>
+		layoutAt(groupItems({items, zoom: 'months', hasMore: false, language: 'en-US', ...edges}), 4, 100, 0)
+
+	it('a list that is all there runs through every month, held or skipped', () => {
+		const layout = layoutWith({})
+		for (const [year, month1] of [
+			[2025, 1],
+			[2024, 6],
+			[2024, 4],
+			[2024, 3],
+			[2020, 1],
+		] as const) {
+			expect(spansMonth(layout, monthKeyFor(year, month1))).toBe(true)
+		}
+	})
+
+	it('stops at the loading frontier while pages remain', () => {
+		const layout = layoutWith({hasMore: true})
+		// Between two loaded months: skipped. The oldest loaded month may have
+		// more to come, and anything older is not loaded at all.
+		expect(spansMonth(layout, monthKeyFor(2024, 4))).toBe(true)
+		expect(spansMonth(layout, monthKeyFor(2024, 3))).toBe(false)
+		expect(spansMonth(layout, monthKeyFor(2024, 2))).toBe(false)
+	})
+
+	it('a tail starts where it was cut, and runs through everything below that', () => {
+		// Everything before August: July is in it (and skipped), August is not
+		const layout = layoutWith({before: Date.UTC(2024, 7, 1)})
+		expect(spansMonth(layout, monthKeyFor(2024, 8))).toBe(false)
+		expect(spansMonth(layout, monthKeyFor(2024, 7))).toBe(true)
+		expect(spansMonth(layout, monthKeyFor(2024, 5))).toBe(true)
+		expect(spansMonth(layout, monthKeyFor(2020, 1))).toBe(true)
+	})
+
+	it('an empty list runs through nothing', () => {
+		const layout = layoutAt(groupItems({items: [], zoom: 'months', hasMore: false, language: 'en-US'}), 4, 100, 0)
+		expect(spansMonth(layout, monthKeyFor(2024, 6))).toBe(false)
+	})
+})
+
 describe('agreeing with the bar', () => {
 	// A phone's frame: content starts 54px down, the bar names the section
 	// whose header has reached 2px above the scroller's top (see surface.tsx)
@@ -413,5 +457,23 @@ describe('agreeing with the bar', () => {
 		const years = layoutAt(groupItems({items, zoom: 'years', hasMore: false, language: 'en-US'}), 3, 120, 2, 16)
 		const target = rectOf(years, 14).y - frame.inset // a May row, under 2024's header
 		expect(monthNamedAt(years, target, frame)).toBe(monthKeyFor(2024, 5))
+	})
+})
+
+describe('settleOnLabel', () => {
+	// Labels are drawn centred on their marks, 40px apart here
+	const labels = [{y: 0}, {y: 40}, {y: 80}]
+
+	it('takes a point on the half of a label above its mark for the mark itself', () => {
+		expect(settleOnLabel(34, labels, 6)).toBe(40)
+		expect(settleOnLabel(39.5, labels, 6)).toBe(40)
+		expect(settleOnLabel(74, labels, 6)).toBe(80)
+	})
+
+	it('leaves a point at or below a mark, or clear above the label, where it is', () => {
+		expect(settleOnLabel(40, labels, 6)).toBe(40)
+		expect(settleOnLabel(45, labels, 6)).toBe(45)
+		expect(settleOnLabel(33.9, labels, 6)).toBe(33.9)
+		expect(settleOnLabel(20, [], 6)).toBe(20)
 	})
 })

@@ -2,7 +2,10 @@ import {TRPCError} from '@trpc/server'
 import z from 'zod'
 
 import {NativeSessionRequiredError, type Principal} from '../auth/auth.ts'
+import type {Context} from '../server/trpc/context.ts'
 import {privateProcedureWithMembers, router} from '../server/trpc/trpc.ts'
+
+import type {PeopleChange} from './people.ts'
 
 import {
 	isPhotoCloudIdentifier,
@@ -63,6 +66,7 @@ export const filterSchema = z.object({
 	deleted: z.boolean().optional(),
 	sourceIds: z.array(z.string()).optional(),
 	albumIds: z.array(z.string()).optional(),
+	personIds: z.array(z.string()).optional(),
 	dates: z.array(z.object({from: z.number(), to: z.number()})).optional(),
 	bounds: z
 		.object({
@@ -77,6 +81,12 @@ const ids = z.object({ids: z.array(z.string()).min(1)})
 const accountId = (context: {principal?: Principal}) => {
 	if (!context.principal) throw new TRPCError({code: 'UNAUTHORIZED'})
 	return context.principal.accountId
+}
+// A change to someone, which is to someone who isn't there when it changes nothing
+const changePeople = async (context: Context, change: PeopleChange) => {
+	if (!(await context.umbreld.photos.changePeople(accountId(context), change))) {
+		throw new TRPCError({code: 'NOT_FOUND'})
+	}
 }
 
 export default router({
@@ -181,6 +191,40 @@ export default router({
 
 	map: router({
 		basemap: privateProcedureWithMembers.query(({ctx}) => ctx.umbreld.photos.map.status()),
+	}),
+
+	people: router({
+		// Hidden people are left out unless asked for
+		list: privateProcedureWithMembers
+			.input(z.object({hidden: z.boolean().default(false)}).default({}))
+			.query(({ctx, input}) => ctx.umbreld.photos.listPeople(accountId(ctx), input.hidden)),
+		// An empty name makes the person unnamed again
+		rename: privateProcedureWithMembers
+			.input(z.object({id: z.string(), name: z.string().trim().max(100)}))
+			.mutation(({ctx, input}) => changePeople(ctx, {type: 'rename', ...input})),
+		// Folds `ids` into `into`: one person afterwards, keeping `into`'s name
+		merge: privateProcedureWithMembers
+			.input(ids.extend({into: z.string()}))
+			.mutation(({ctx, input}) => changePeople(ctx, {type: 'merge', ...input})),
+		setHidden: privateProcedureWithMembers
+			.input(z.object({id: z.string(), hidden: z.boolean()}))
+			.mutation(({ctx, input}) => changePeople(ctx, {type: 'setHidden', ...input})),
+		// Without an item, the cover goes back to the automatic choice
+		setCover: privateProcedureWithMembers
+			.input(z.object({id: z.string(), itemId: z.string().optional()}))
+			.mutation(({ctx, input}) => changePeople(ctx, {type: 'setCover', ...input})),
+		// "This isn't them": takes the person off these items for good, so
+		// recognition does not put them back
+		removeItems: privateProcedureWithMembers.input(ids.extend({id: z.string()})).mutation(async ({ctx, input}) => {
+			await ctx.umbreld.photos.changePeople(accountId(ctx), {type: 'removeItems', id: input.id, itemIds: input.ids})
+		}),
+		// "Is this also Anna?": unnamed people who look like someone named seen
+		// again. Yes is a merge into them; no is dismissSuggestion.
+		suggestions: privateProcedureWithMembers.query(({ctx}) => ctx.umbreld.photos.listPersonSuggestions(accountId(ctx))),
+		// "No, that isn't them": `candidateId` is never offered as `id` again
+		dismissSuggestion: privateProcedureWithMembers
+			.input(z.object({id: z.string(), candidateId: z.string()}))
+			.mutation(({ctx, input}) => changePeople(ctx, {type: 'dismissSuggestion', ...input})),
 	}),
 
 	albums: router({

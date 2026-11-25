@@ -361,6 +361,19 @@ describe('formatting cascade', () => {
 		expect(textRuns(find(model, 'emphasised'))[0].style.italic).toBe(true)
 	})
 
+	test('a style written without an id is known by its name', async () => {
+		// As a reporting tool writes the style of its layout tables' empty cells: with no type either
+		const empty =
+			'<w:style><w:name w:val="EmptyCell"/><w:basedOn w:val="Quote"/><w:rPr><w:sz w:val="2"/></w:rPr></w:style>'
+		const model = await open(
+			docx('<w:p><w:pPr><w:pStyle w:val="EmptyCell"/></w:pPr><w:r><w:t>small</w:t></w:r></w:p>', {
+				styles: styles + empty,
+			}),
+		)
+		expect(find(model, 'small').props.indent).toEqual({left: 57.6})
+		expect(textRuns(find(model, 'small'))[0].style).toMatchObject({size: 2, italic: true})
+	})
+
 	test('basedOn cycles end instead of looping', async () => {
 		const model = await open(
 			docx('<w:p><w:pPr><w:pStyle w:val="LoopA"/></w:pPr><w:r><w:t>loop</w:t></w:r></w:p>', {styles}),
@@ -399,6 +412,53 @@ describe('formatting cascade', () => {
 			caps: true,
 			smallCaps: true,
 		})
+	})
+
+	test("a paragraph's first or last line isn't left alone on a page, unless the document says it may be", async () => {
+		const body =
+			'<w:p><w:r><w:t>as it comes</w:t></w:r></w:p>' +
+			'<w:p><w:pPr><w:widowControl w:val="0"/></w:pPr><w:r><w:t>by itself</w:t></w:r></w:p>' +
+			'<w:p><w:pPr><w:pStyle w:val="Loose"/></w:pPr><w:r><w:t>by its style</w:t></w:r></w:p>'
+		const loose = '<w:style w:type="paragraph" w:styleId="Loose"><w:pPr><w:widowControl w:val="0"/></w:pPr></w:style>'
+		const control = (model: DocumentModel, needle: string) => find(model, needle).props.widowControl
+		const model = await open(docx(body, {styles: styles + loose}))
+		expect(control(model, 'as it comes')).toBe(true)
+		expect(control(model, 'by itself')).toBe(false)
+		expect(control(model, 'by its style')).toBe(false)
+		// For every paragraph, in the document's defaults
+		const defaults =
+			'<w:docDefaults><w:pPrDefault><w:pPr><w:widowControl w:val="0"/></w:pPr></w:pPrDefault></w:docDefaults>'
+		expect(control(await open(docx(body, {styles: defaults})), 'as it comes')).toBe(false)
+		// And with no styles to say anything
+		expect(control(await open(docx(body)), 'as it comes')).toBe(true)
+	})
+
+	test("a paragraph's own length takes the place of its style's automatic spacing", async () => {
+		const web =
+			'<w:style w:type="paragraph" w:styleId="Web"><w:pPr><w:spacing w:before="100" w:beforeAutospacing="1" w:after="100" w:afterAutospacing="1"/></w:pPr></w:style>'
+		const p = (text: string, spacing = '') =>
+			`<w:p><w:pPr><w:pStyle w:val="Web"/>${spacing}</w:pPr><w:r><w:t>${text}</w:t></w:r></w:p>`
+		const model = await open(
+			docx(
+				p('as its style') +
+					p('a length above', '<w:spacing w:before="0"/>') +
+					p('lengths', '<w:spacing w:before="0" w:after="240"/>') +
+					p('lines apart', '<w:spacing w:line="360" w:lineRule="auto"/>') +
+					p('automatic again', '<w:spacing w:before="0" w:beforeAutospacing="1"/>'),
+				{styles: styles + web},
+			),
+		)
+		const automatic = (needle: string) => {
+			const {beforeAuto, afterAuto} = find(model, needle).props.spacing!
+			return [beforeAuto, afterAuto]
+		}
+		expect(automatic('as its style')).toEqual([true, true])
+		expect(automatic('a length above')).toEqual([false, true])
+		expect(automatic('lengths')).toEqual([false, false])
+		expect(find(model, 'lengths').props.spacing).toMatchObject({before: 0, after: 16})
+		// Spacing that says nothing of the space above or below leaves it as it was
+		expect(automatic('lines apart')).toEqual([true, true])
+		expect(automatic('automatic again')).toEqual([true, true])
 	})
 })
 
@@ -460,6 +520,47 @@ describe('numbering', () => {
 		])
 		expect(find(model, 'one-a').props.indent).toEqual({left: 96, hanging: 24})
 	})
+
+	test("a number is set as its paragraph's mark is, but for the line under it", async () => {
+		const definition = (id: number, rPr: string) =>
+			`<w:abstractNum w:abstractNumId="${id}"><w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/><w:lvlText w:val="%1."/>${rPr}</w:lvl></w:abstractNum>`
+		const marked = (numId: number, text: string) =>
+			`<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="${numId}"/></w:numPr>` +
+			`<w:rPr><w:b/><w:u w:val="single" w:color="FF0000"/></w:rPr></w:pPr><w:r><w:t>${text}</w:t></w:r></w:p>`
+		const model = await open(
+			docx(marked(1, 'heading') + marked(2, 'lined'), {
+				numbering:
+					definition(0, '') +
+					definition(1, '<w:rPr><w:u w:val="double"/></w:rPr>') +
+					'<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num>',
+			}),
+		)
+		const number = (needle: string) => find(model, needle).numbering!.style
+		expect(find(model, 'heading').mark).toMatchObject({bold: true, underline: 'single'})
+		expect(number('heading').bold).toBe(true)
+		expect([number('heading').underline, number('heading').underlineColor]).toEqual([undefined, undefined])
+		// A level that asks for a line under its number has it, and not in the colour of the mark's
+		expect([number('lined').underline, number('lined').underlineColor]).toEqual(['double', undefined])
+	})
+
+	test('a bullet from a symbol font is the character it draws, and a picture bullet a round one', async () => {
+		const bullet = (id: number, char: string, font: string, extra = '') =>
+			`<w:abstractNum w:abstractNumId="${id}"><w:lvl w:ilvl="0"><w:numFmt w:val="bullet"/><w:lvlText w:val="${char}"/>${extra}<w:rPr><w:rFonts w:ascii="${font}" w:hAnsi="${font}"/></w:rPr></w:lvl></w:abstractNum>`
+		const bullets =
+			bullet(0, '&#xF0B2;', 'Wingdings') +
+			bullet(1, '&#xF0A3;', 'Wingdings 2') +
+			// The picture stands for the bullet, and the letter beside it for nothing: in Symbol it's a lambda
+			bullet(2, '&#xF06C;', 'Symbol', '<w:lvlPicBulletId w:val="0"/>') +
+			bullet(3, '&#xF07D;', 'Wingdings 3') +
+			[0, 1, 2, 3].map((id) => `<w:num w:numId="${id + 1}"><w:abstractNumId w:val="${id}"/></w:num>`).join('')
+		const model = await open(
+			docx(item(1, 0, 'diamond') + item(2, 0, 'box') + item(3, 0, 'picture') + item(4, 0, 'arrow'), {
+				numbering: bullets,
+			}),
+		)
+		// A glyph with no character of its own is left to its font
+		expect(all(model).map((p) => p.numbering?.label)).toEqual(['⟡', '☐', '•', '\uf07d'])
+	})
 })
 
 describe('text and fields', () => {
@@ -506,6 +607,44 @@ describe('text and fields', () => {
 		expect(text(broken)).toBe('stray end')
 	})
 
+	test("a form's check box shows as it's ticked, and its list the entry chosen", async () => {
+		const run = (content: string) => `<w:r><w:rPr><w:b/><w:i/></w:rPr>${content}</w:r>`
+		const form = (instruction: string, data: string, result = '') =>
+			run(`<w:fldChar w:fldCharType="begin"><w:ffData><w:name w:val="f"/><w:enabled/>${data}</w:ffData></w:fldChar>`) +
+			run(`<w:instrText xml:space="preserve"> ${instruction} </w:instrText>`) +
+			result +
+			run('<w:fldChar w:fldCharType="end"/>')
+		const box = (state: string) => form('FORMCHECKBOX', `<w:checkBox>${state}</w:checkBox>`)
+		const list = (chosen: string) =>
+			form('FORMDROPDOWN', `<w:ddList>${chosen}<w:listEntry w:val="one"/><w:listEntry w:val="two"/></w:ddList>`)
+		const model = await open(
+			docx(
+				`<w:p>${box('<w:sizeAuto/><w:default w:val="0"/>')}${box('<w:sizeAuto/><w:default w:val="1"/>')}` +
+					// Ticked or cleared since, whatever it started as
+					`${box('<w:size w:val="40"/><w:default w:val="0"/><w:checked/>')}${box('<w:sizeAuto/><w:default w:val="1"/><w:checked w:val="0"/>')}</w:p>` +
+					`<w:p>${list('<w:result w:val="1"/><w:default w:val="0"/>')}${run('<w:t xml:space="preserve"> </w:t>')}${list('<w:default w:val="1"/>')}` +
+					`${run('<w:t xml:space="preserve"> </w:t>')}${list('')}${run('<w:t xml:space="preserve"> </w:t>')}${list('<w:result w:val="7"/>')}</w:p>` +
+					// A text field's result is what was typed into it
+					`<w:p>${form('FORMTEXT', '<w:textInput/>', run('<w:fldChar w:fldCharType="separate"/>') + run('<w:t>typed</w:t>'))}</w:p>`,
+			),
+		)
+		const [boxes, lists, typed] = all(model)
+		expect(text(boxes)).toBe('\u2610\u2612\u2612\u2610')
+		// A box is a symbol: upright, and as large as the text unless the form says how large
+		expect(textRuns(boxes).map(({style}) => [style.bold, style.italic, style.size])).toEqual([
+			[false, false, undefined],
+			[false, false, undefined],
+			[false, false, 40],
+			[false, false, undefined],
+		])
+		expect(text(lists)).toBe('two two one ')
+		expect(textRuns(lists)[0].style).toMatchObject({bold: true, italic: true})
+		expect(text(typed)).toBe('typed')
+		expect([...textRuns(boxes), ...textRuns(lists).filter((run) => run.text.trim())].every((run) => !run.ref)).toBe(
+			true,
+		)
+	})
+
 	test('symbols, hyphens, breaks, and text in revisions and content controls', async () => {
 		const model = await open(
 			docx(
@@ -528,6 +667,41 @@ describe('text and fields', () => {
 			),
 		)
 		expect(all(model).map((p) => p.hidden)).toEqual([true, true, false])
+	})
+
+	test('the empty paragraph a cell ends with after a table inside it is laid out as nothing', async () => {
+		const p = (text = '') => `<w:p>${text && `<w:r><w:t>${text}</w:t></w:r>`}</w:p>`
+		const table = (...cells: string[]) =>
+			`<w:tbl><w:tr>${cells.map((cell) => `<w:tc>${cell}</w:tc>`).join('')}</w:tr></w:tbl>`
+		const inner = table(p('in'))
+		const model = await open(
+			docx(
+				table(
+					// The paragraph the cell has to end with, left empty (a bookmark is nothing to show)
+					inner + '<w:p><w:bookmarkStart w:id="1" w:name="mark"/><w:bookmarkEnd w:id="1"/></w:p>',
+					// With text of its own, or after another paragraph, it's a line like any other
+					inner + p('after'),
+					inner + p() + p(),
+					p(),
+				) +
+					// The paragraph after a table in the body has its line too
+					p(),
+			),
+		)
+		const shown = (blocks: Block[]): unknown[] =>
+			blocks.map((block) =>
+				block.kind === 'paragraph'
+					? `${text(block)}${block.hidden ? ' (nothing)' : ''}`
+					: block.rows.flatMap((row) => row.cells.map((cell) => shown(cell.blocks))),
+			)
+		expect(shown(model.sections[0].blocks)).toEqual([
+			[[[['in']], ' (nothing)'], [[['in']], 'after'], [[['in']], '', ''], ['']],
+			'',
+		])
+		// Rewritten where it stands, it's still nothing while it's empty
+		const [ending] = all(model).filter((p) => p.hidden)
+		expect(model.derive('<w:p><w:pPr><w:jc w:val="center"/></w:pPr></w:p>', ending).hidden).toBe(true)
+		expect(model.derive(p('now'), ending).hidden).toBe(false)
 	})
 })
 

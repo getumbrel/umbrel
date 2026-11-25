@@ -20,12 +20,23 @@ import {trpcReact} from '@/trpc/trpc'
 import {IS_IPHONE_BROWSER, keyBy} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
-import {wallpapers as wallpaperDefinitions, type WallpaperId} from '../../../umbreld/source/modules/user/wallpapers'
+import {
+	wallpapers as wallpaperDefinitions,
+	wallpapersKeyed as wallpaperDefinitionsKeyed,
+	type WallpaperId,
+} from '../../../umbreld/source/modules/user/wallpapers'
 
 export type WallpaperAvifTier = 'large' | 'medium' | 'small' | 'thumbnails'
 
+// The files keep their names when their content changes and are cached as immutable,
+// so the hash in the query is what makes a browser fetch a changed file.
+function versioned(path: string, id: WallpaperId | undefined) {
+	const hash = id && wallpaperDefinitionsKeyed[id]?.hash
+	return hash ? `${path}?v=${hash}` : path
+}
+
 export function getWallpaperJpgUrl(id: WallpaperId) {
-	return `/assets/wallpapers/${id}.jpg`
+	return versioned(`/assets/wallpapers/${id}.jpg`, id)
 }
 
 export const wallpapers = wallpaperDefinitions.map((wallpaper) => ({
@@ -37,7 +48,7 @@ export const wallpaperIds = wallpapers.map((wallpaper) => wallpaper.id)
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 
 export function getWallpaperAvifUrl(wallpaper: Wallpaper | typeof nullWallpaper, tier: WallpaperAvifTier) {
-	return `/assets/wallpapers/generated-avif/${tier}/${wallpaper.id}.avif`
+	return versioned(`/assets/wallpapers/generated-avif/${tier}/${wallpaper.id}.avif`, wallpaper.id)
 }
 
 export function WallpaperAvifSource({
@@ -254,8 +265,9 @@ export function useWallpaperCssVars(wallpaperId?: WallpaperId) {
 }
 
 // Safari on an iPhone can show the wallpaper under its bottom bar (see
-// useWallpaperUnderBrowserBar), so there the wallpaper is as tall as the screen.
-// Everywhere else it covers the viewport with the browser's bars tucked away.
+// useWallpaperUnderBrowserBar), so there the wallpaper reaches for the screen's
+// height. It only ever adds to the viewport's (see --wallpaper-height in
+// index.css): a folding iPhone opened out still reports its outer display here.
 function useWallpaperHeight() {
 	useLayoutEffect(() => {
 		if (!IS_IPHONE_BROWSER) return
@@ -264,13 +276,13 @@ function useWallpaperHeight() {
 			// The screen's sides stay put when the phone turns
 			const sideways = window.innerWidth > window.innerHeight
 			const height = sideways ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height)
-			el.style.setProperty('--wallpaper-height', `${height}px`)
+			el.style.setProperty('--screen-height', `${height}px`)
 		}
 		update()
 		window.addEventListener('resize', update)
 		return () => {
 			window.removeEventListener('resize', update)
-			el.style.removeProperty('--wallpaper-height')
+			el.style.removeProperty('--screen-height')
 		}
 	}, [])
 }
@@ -332,6 +344,7 @@ export function Wallpaper({
 				<FadeInImg
 					key={wallpaper.url + '-loading'}
 					src={wallpaper.url}
+					alt=''
 					// Stays fixed under Safari's bar on Home (see index.css): scaled up, it would make the page wider than the window
 					className={cn(
 						'pointer-events-none fixed inset-0 w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-700',
@@ -388,7 +401,17 @@ export function Wallpaper({
 					/>
 				</picture>
 			)}
-			{/* {isLoading && <div className='fixed left-0 top-0 '>Loading...</div>} */}
+			{/* Increase contrast dims the wallpaper, so text set straight on it stays readable */}
+			<div
+				aria-hidden='true'
+				data-wallpaper-layer={isPreview ? undefined : ''}
+				className={cn(
+					'pointer-events-none fixed inset-0 hidden w-full bg-black/50 contrast-more:block',
+					isPreview && 'absolute h-full',
+					!isPreview && 'h-(--wallpaper-height)',
+					className,
+				)}
+			/>
 		</>
 	)
 }
@@ -434,6 +457,7 @@ function FullWallpaperImage({
 				key={loadAttempt}
 				ref={setImageRef}
 				src={wallpaper.url}
+				alt=''
 				data-wallpaper-full=''
 				data-wallpaper-layer={isPreview ? undefined : ''}
 				className={cn(

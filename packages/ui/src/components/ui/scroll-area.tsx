@@ -45,7 +45,13 @@ function ScrollArea({
 			>
 				{children}
 			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar dialogInset={dialogInset} scrollbarClass={scrollbarClass} orientation={orientation} />
+			<ScrollBar
+				dialogInset={dialogInset}
+				scrollbarClass={scrollbarClass}
+				orientation={orientation}
+				// A scrollbar that stays up for as long as there is more to scroll to keeps quiet about it
+				quiet={props.type === 'auto' || props.type === 'always'}
+			/>
 			<ScrollAreaPrimitive.Corner />
 		</ScrollAreaPrimitive.Root>
 	)
@@ -56,11 +62,13 @@ function ScrollBar({
 	ref,
 	dialogInset,
 	scrollbarClass,
+	quiet,
 	orientation = 'vertical',
 	...props
 }: React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar> & {
 	dialogInset?: boolean
 	scrollbarClass?: string
+	quiet?: boolean
 	ref?: React.Ref<React.ComponentRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>>
 }) {
 	return (
@@ -68,17 +76,19 @@ function ScrollBar({
 			ref={ref}
 			orientation={orientation}
 			className={cn(
-				'group flex touch-none rounded-l transition-colors hover:bg-white/6',
-				orientation === 'vertical' && 'w-2.5 border-l border-l-transparent p-[3px]',
+				// The thumb of every scrollbar in umbrelOS (see modules/scrollbars and index.css)
+				'umbrel-scrollbar-track flex touch-none',
+				quiet && 'umbrel-scrollbar-track-quiet',
+				orientation === 'vertical' && 'w-[11px] px-[3.5px] py-0.5',
 				orientation === 'vertical' && dialogInset && 'my-5',
-				orientation === 'horizontal' && 'h-2.5 flex-col border-t border-t-transparent p-[3px]',
+				orientation === 'horizontal' && 'h-[11px] flex-col px-0.5 py-[3.5px]',
 				orientation === 'horizontal' && dialogInset && 'mx-5',
 				scrollbarClass,
 				className,
 			)}
 			{...props}
 		>
-			<ScrollAreaPrimitive.ScrollAreaThumb className='relative flex-1 rounded-full bg-white/10 group-hover:bg-white/50' />
+			<ScrollAreaPrimitive.ScrollAreaThumb className='umbrel-scrollbar-thumb relative' />
 		</ScrollAreaPrimitive.ScrollAreaScrollbar>
 	)
 }

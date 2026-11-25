@@ -52,20 +52,6 @@ const raid = router({
 	// Get RAID pool status
 	getStatus: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.raid.getStatus()),
 
-	// Setup RAID array from a list of devices
-	// TOOD: Remove this, just exposing for development and testing.
-	setup: privateProcedure
-		.input(
-			z.object({
-				devices: z.array(z.string()),
-				raidType: z.enum(['storage', 'failsafe']),
-				acceleratorDevices: z.array(z.string()).optional(),
-			}),
-		)
-		.mutation(async ({ctx, input}) =>
-			ctx.umbreld.hardware.raid.setup(input.devices, input.raidType, input.acceleratorDevices),
-		),
-
 	// Add a single device to an existing RAID array.
 	// Allowed for storage mode and failsafe raidz mode.
 	addDevice: privateProcedure
@@ -91,10 +77,26 @@ const raid = router({
 	// Manually scrub the RAID pool
 	scrub: privateProcedure.mutation(async ({ctx}) => ctx.umbreld.hardware.raid.scrub()),
 
-	// Transition an SSD storage array to failsafe (raidz) mode
+	// Transition a single-drive storage array to failsafe (raidz) mode
+	// The raidz1 layout, the default, takes one new device. HDD arrays can ask for the raidz2 layout, which also
+	// needs secondNewDeviceId.
+	// If a single accelerator already exists, acceleratorDeviceId supplies the SSD used to mirror it.
 	transitionToFailsafeRaidz: privateProcedure
-		.input(z.object({newDeviceId: z.string()}))
-		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.transitionToFailsafeRaidz(input.newDeviceId)),
+		.input(
+			z.object({
+				newDeviceId: z.string(),
+				secondNewDeviceId: z.string().optional(),
+				failsafeLayout: z.enum(['raidz1', 'raidz2']).optional(),
+				acceleratorDeviceId: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) =>
+			ctx.umbreld.hardware.raid.transitionToFailsafeRaidz(
+				input.secondNewDeviceId ? [input.newDeviceId, input.secondNewDeviceId] : [input.newDeviceId],
+				input.acceleratorDeviceId,
+				input.failsafeLayout,
+			),
+		),
 
 	// Transition an HDD storage array to failsafe (mirror) mode
 	// Each existing storage device must be paired with a new mirror device.

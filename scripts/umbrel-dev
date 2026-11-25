@@ -115,12 +115,15 @@ build_os_image() {
   # The dedicated cache job has already exported identical layers, and mass
   # concurrent re-exports regularly fail the build with cache backend errors
   # (429/504/not_found), so allow CI to skip the redundant export.
-  cache_to="--cache-to type=gha,mode=max,scope=umbrelos-amd64"
+  # In CI, refs other than the default branch use their own cache scope and read the
+  # default branch's as well. See UMBRELOS_CACHE_SCOPE_SUFFIX in .github/workflows/ci.yml.
+  local cache_suffix="${UMBRELOS_CACHE_SCOPE_SUFFIX:-}"
+  cache_to="--cache-to type=gha,mode=max,scope=umbrelos-amd64${cache_suffix}"
   if [[ "${UMBREL_DEV_SKIP_CACHE_EXPORT:-false}" = "true" ]]
   then
     cache_to=""
   fi
-  docker buildx build --cache-from type=gha,scope=umbrelos-amd64 ${cache_to} --load --file packages/os/umbrelos.Dockerfile --target umbrelos --tag "${INSTANCE_ID}" .
+  docker buildx build --cache-from type=gha,scope=umbrelos-amd64${cache_suffix} ${cache_suffix:+--cache-from type=gha,scope=umbrelos-amd64} ${cache_to} --load --file packages/os/umbrelos.Dockerfile --target umbrelos --tag "${INSTANCE_ID}" .
 }
 
 create_instance() {

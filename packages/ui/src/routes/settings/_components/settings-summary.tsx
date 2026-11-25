@@ -31,7 +31,12 @@ export function SettingsSummary({className}: {className?: string}) {
 	)
 
 	return (
-		<dl className={cn('settings-edge-material shrink-0 overflow-hidden rounded-24 text-13 -tracking-2', className)}>
+		<dl
+			className={cn(
+				'settings-edge-material shrink-0 divide-y divide-white/8 overflow-hidden rounded-24 text-13 -tracking-2',
+				className,
+			)}
+		>
 			<SummaryRow
 				label={t('running')}
 				value={osVersionQ.isLoading ? LOADING_DASH : (osVersionQ.data?.name ?? UNKNOWN())}
@@ -45,9 +50,10 @@ export function SettingsSummary({className}: {className?: string}) {
 
 function SummaryRow({label, value}: {label: string; value: ReactNode}) {
 	return (
-		<div className='flex min-h-[46px] items-center justify-between gap-4 border-b border-white/8 px-5 last:border-b-0'>
+		// A value that doesn't fit beside its label moves under it, and is only cut if it's wider than the row
+		<div className='flex min-h-[46px] flex-wrap items-center justify-between gap-x-4 gap-y-0.5 px-5 py-2'>
 			<dt className='shrink-0 font-semibold whitespace-nowrap text-white/45'>{label}</dt>
-			<dd className='min-w-0 truncate text-right font-medium text-white'>{value}</dd>
+			<dd className='ml-auto max-w-full min-w-0 truncate text-right font-medium text-white'>{value}</dd>
 		</div>
 	)
 }

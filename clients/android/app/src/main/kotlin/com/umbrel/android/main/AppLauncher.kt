@@ -18,7 +18,10 @@ data class BrowserEndpoint(val host: String, val kind: Kind) {
  * in which order, and which scheme each one uses.
  */
 object BrowserRouting {
-	/** The saved host and every address the Umbrel reported, without duplicates. */
+	/**
+	 * The saved host and every saved address, without duplicates. Addresses come from the
+	 * Umbrel's own list or from discovery.
+	 */
 	fun addressOptions(device: SavedDevice): List<String> {
 		val seen = HashSet<String>()
 		return (listOf(device.host) + device.addresses).filter { it.isNotEmpty() && seen.add(it) }
@@ -54,7 +57,7 @@ object BrowserRouting {
 	}
 
 	/**
-	 * The first candidate that answers as this Umbrel. A recent successful app request
+	 * The first candidate that reports this Umbrel's id. A recent successful app request
 	 * counts as an answer, except for the Tailscale name, which is probed on every open
 	 * because Tailscale can be switched off before that evidence expires.
 	 */

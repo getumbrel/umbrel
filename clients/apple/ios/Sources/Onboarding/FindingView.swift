@@ -26,7 +26,7 @@ struct FindingView: View {
 				title: "Finding your Umbrel",
 				subtitle: "Make sure your phone and Umbrel are on the same Wi-Fi network."
 			)
-			.padding(.top, 90)
+			.padding(.top, model.headerTopPadding)
 
 			Spacer()
 

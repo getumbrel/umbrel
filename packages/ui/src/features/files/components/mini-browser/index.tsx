@@ -15,6 +15,7 @@ import {EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/cons
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
+import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {useIsMobile, useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
@@ -54,12 +55,17 @@ type MiniBrowserProps = {
 	allowNewFolderCreation?: boolean
 	// Custom button label (overrides default based on selectionMode)
 	selectButtonLabel?: string
+	// Show each entry's size at the end of its row
+	showSizes?: boolean
 }
 
 // Visual indentation cap the Tree so it doesn't get too wide and overflow
 const INDENT_PER_LEVEL = 16
 const MAX_INDENT_LEVELS = 9
 const MOBILE_MAX_INDENT_LEVELS = 6
+// A size at the end of a row takes about three levels of indentation's room.
+// A phone's rows have none to spare, so there it comes out of the indentation, not the name
+const SIZE_INDENT_LEVELS = 3
 // Number of ancestor segments (in addition to the final name) to include in the compact path label
 const PATH_ANCESTORS_TO_SHOW = 1
 
@@ -71,6 +77,12 @@ function formatCompactPath(path: string, ancestorsToShow: number) {
 	const last = parts.slice(-take)
 	const prefix = parts.length > last.length ? '…/' : ''
 	return prefix + last.join('/')
+}
+
+// How many levels the tree indents before deeper entries show a compact path instead
+function useMaxIndentLevels(showSizes: boolean) {
+	if (!useIsSmallMobile()) return MAX_INDENT_LEVELS
+	return showSizes ? MOBILE_MAX_INDENT_LEVELS - SIZE_INDENT_LEVELS : MOBILE_MAX_INDENT_LEVELS
 }
 
 // MAIN COMPONENT
@@ -91,6 +103,7 @@ export function MiniBrowser({
 	selectableFilter,
 	allowNewFolderCreation = false,
 	selectButtonLabel,
+	showSizes = false,
 }: MiniBrowserProps) {
 	const {t} = useTranslation()
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
@@ -217,7 +230,7 @@ export function MiniBrowser({
 				</DialogHeader>
 
 				{/* Fixed height so the dialog doesn't resize as folders expand */}
-				<div className='umbrel-stable-gutter h-[min(60vh,480px)] overflow-x-hidden overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2'>
+				<div className='h-[min(60vh,480px)] overflow-x-hidden overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2'>
 					{/* Optional actions to render in the browser. e.g., "add NAS" button to open the add NAS dialog */}
 					{actions ? <div className='flex items-center justify-end'>{actions}</div> : null}
 
@@ -229,6 +242,7 @@ export function MiniBrowser({
 							onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
 							selectedPath={selected?.path ?? null}
 							selectionMode={selectionMode}
+							showSizes={showSizes}
 							newFolder={newFolder}
 							onCancelNewFolder={() => setNewFolder(null)}
 							onCreateFolder={(path) => createFolder.mutate({path})}
@@ -241,6 +255,7 @@ export function MiniBrowser({
 							onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
 							selectedPath={selected?.path ?? null}
 							selectionMode={selectionMode}
+							showSizes={showSizes}
 							newFolder={newFolder}
 							onCancelNewFolder={() => setNewFolder(null)}
 							onCreateFolder={(path) => createFolder.mutate({path})}
@@ -276,6 +291,7 @@ function MultiRootTree({
 	selectedPath,
 	expandTo,
 	selectionMode,
+	showSizes,
 	newFolder,
 	onCancelNewFolder,
 	onCreateFolder,
@@ -285,6 +301,7 @@ function MultiRootTree({
 	selectedPath: string | null
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
+	showSizes: boolean
 	newFolder: (FileSystemItem & {isNew: boolean}) | null
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
@@ -313,6 +330,7 @@ function MultiRootTree({
 					selectedPath={selectedPath}
 					expandTo={expandTo}
 					selectionMode={selectionMode}
+					showSizes={showSizes}
 					newFolder={newFolder}
 					onCancelNewFolder={onCancelNewFolder}
 					onCreateFolder={onCreateFolder}
@@ -362,6 +380,7 @@ function Tree({
 	selectedPath,
 	expandTo,
 	selectionMode,
+	showSizes,
 	newFolder,
 	onCancelNewFolder,
 	onCreateFolder,
@@ -372,6 +391,7 @@ function Tree({
 	selectedPath: string | null
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
+	showSizes: boolean
 	newFolder: (FileSystemItem & {isNew: boolean}) | null
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
@@ -429,13 +449,20 @@ function Tree({
 							selectedPath={selectedPath}
 							expandTo={expandTo}
 							selectionMode={selectionMode}
+							showSizes={showSizes}
 							newFolder={newFolder}
 							onCancelNewFolder={onCancelNewFolder}
 							onCreateFolder={onCreateFolder}
 						/>
 					))}
 					{isNewFolderAtThisLevel && (
-						<NewFolderNode entry={newFolder} depth={0} onCancel={onCancelNewFolder} onCreate={onCreateFolder} />
+						<NewFolderNode
+							entry={newFolder}
+							depth={0}
+							showSizes={showSizes}
+							onCancel={onCancelNewFolder}
+							onCreate={onCreateFolder}
+						/>
 					)}
 				</>
 			)}
@@ -452,6 +479,7 @@ function Node({
 	selectedPath,
 	expandTo,
 	selectionMode,
+	showSizes,
 	newFolder,
 	onCancelNewFolder,
 	onCreateFolder,
@@ -463,14 +491,14 @@ function Node({
 	selectedPath: string | null
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
+	showSizes: boolean
 	newFolder: (FileSystemItem & {isNew: boolean}) | null
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
 }) {
 	const [expanded, setExpanded] = useState(false)
 	const userInteractedRef = useRef(false)
-	const isMobile = useIsSmallMobile()
-	const maxIndentLevels = isMobile ? MOBILE_MAX_INDENT_LEVELS : MAX_INDENT_LEVELS
+	const maxIndentLevels = useMaxIndentLevels(showSizes)
 
 	const toggle = async () => {
 		userInteractedRef.current = true
@@ -507,11 +535,20 @@ function Node({
 	const isSelectable = entry.type === 'directory' || selectionMode === 'files-and-folders'
 	const isFaded = !isSelectable && entry.type !== 'directory'
 
+	const canExpand = entry.type === 'directory' && !isRepositoryDir
+
 	return (
 		<div>
-			<div
+			{/* A button, so the picker works from the keyboard: Enter or Space picks the entry,
+			    → and ← open and close a folder (the chevron and a double-click do with a mouse) */}
+			<button
+				type='button'
+				aria-pressed={isSelected}
+				aria-expanded={canExpand ? expanded : undefined}
+				aria-disabled={!isSelectable || undefined}
 				className={cn(
-					'flex min-w-0 items-center gap-2 rounded-md p-2',
+					// Inset: the picker's scroll area clips anything outside the rows
+					'flex w-full min-w-0 items-center gap-2 rounded-md p-2 text-left outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
 					isSelected ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
 					isFaded && 'opacity-50',
 				)}
@@ -521,7 +558,13 @@ function Node({
 					onSelect(entry.path, entry.type === 'directory')
 				}}
 				onDoubleClick={() => {
-					if (isRepositoryDir || entry.type !== 'directory') return
+					if (!canExpand) return
+					toggle()
+				}}
+				onKeyDown={(e) => {
+					const opens = e.key === 'ArrowRight'
+					if (!canExpand || (!opens && e.key !== 'ArrowLeft') || opens === expanded) return
+					e.preventDefault()
 					toggle()
 				}}
 			>
@@ -541,7 +584,12 @@ function Node({
 				<span className='min-w-0 flex-1 truncate text-sm' title={entry.path}>
 					{depth > maxIndentLevels ? formatCompactPath(entry.path, PATH_ANCESTORS_TO_SHOW) : entry.name}
 				</span>
-			</div>
+				{/* Folder sizes come from the index, so one that isn't indexed yet says
+				    nothing, and neither does anything empty */}
+				{showSizes && !!entry.size && (
+					<span className='shrink-0 text-12 text-white/60 tabular-nums'>{formatFilesystemSize(entry.size)}</span>
+				)}
+			</button>
 			{expanded && entry.type === 'directory' && !isRepositoryDir && (
 				<Subtree
 					path={entry.path}
@@ -551,6 +599,7 @@ function Node({
 					selectedPath={selectedPath}
 					expandTo={expandTo}
 					selectionMode={selectionMode}
+					showSizes={showSizes}
 					newFolder={newFolder}
 					onCancelNewFolder={onCancelNewFolder}
 					onCreateFolder={onCreateFolder}
@@ -569,6 +618,7 @@ function Subtree({
 	selectedPath,
 	expandTo,
 	selectionMode,
+	showSizes,
 	newFolder,
 	onCancelNewFolder,
 	onCreateFolder,
@@ -580,6 +630,7 @@ function Subtree({
 	selectedPath: string | null
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
+	showSizes: boolean
 	newFolder: (FileSystemItem & {isNew: boolean}) | null
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
@@ -589,8 +640,7 @@ function Subtree({
 
 	// Visual indentation for the Subtree
 	// We need less indentation for mobile devices so the tree doesn't get too wide and become unreadable
-	const isMobile = useIsSmallMobile()
-	const maxIndentLevels = isMobile ? MOBILE_MAX_INDENT_LEVELS : MAX_INDENT_LEVELS
+	const maxIndentLevels = useMaxIndentLevels(showSizes)
 	const leftPad = 8 + Math.min(depth, maxIndentLevels) * INDENT_PER_LEVEL
 	const folderName = useMemo(() => path.split('/').filter(Boolean).pop() || '/', [path])
 
@@ -622,13 +672,20 @@ function Subtree({
 					selectedPath={selectedPath}
 					expandTo={expandTo}
 					selectionMode={selectionMode}
+					showSizes={showSizes}
 					newFolder={newFolder}
 					onCancelNewFolder={onCancelNewFolder}
 					onCreateFolder={onCreateFolder}
 				/>
 			))}
 			{isNewFolderAtThisLevel && (
-				<NewFolderNode entry={newFolder} depth={depth} onCancel={onCancelNewFolder} onCreate={onCreateFolder} />
+				<NewFolderNode
+					entry={newFolder}
+					depth={depth}
+					showSizes={showSizes}
+					onCancel={onCancelNewFolder}
+					onCreate={onCreateFolder}
+				/>
 			)}
 			{/* We render the "Load more" control when listing is paginated */}
 			{!isLoading && children.length > 0 && hasMore && (
@@ -650,7 +707,7 @@ function Subtree({
 					{isLoadingMore ? <Loader2 className='size-3 animate-spin opacity-70' /> : null}
 					<span>
 						{isLoadingMore ? t('mini-browser.loading-more') : t('mini-browser.load-more')}
-						<span className='opacity-60'> · {folderName}</span>
+						<span className='text-white/60'> · {folderName}</span>
 					</span>
 				</button>
 			)}
@@ -662,18 +719,19 @@ function Subtree({
 function NewFolderNode({
 	entry,
 	depth,
+	showSizes,
 	onCancel,
 	onCreate,
 }: {
 	entry: FileSystemItem & {isNew: boolean}
 	depth: number
+	showSizes: boolean
 	onCancel: () => void
 	onCreate: (path: string) => void
 }) {
 	const [name, setName] = useState(entry.name)
 	const inputRef = useRef<HTMLInputElement>(null)
-	const isMobile = useIsSmallMobile()
-	const maxIndentLevels = isMobile ? MOBILE_MAX_INDENT_LEVELS : MAX_INDENT_LEVELS
+	const maxIndentLevels = useMaxIndentLevels(showSizes)
 
 	useEffect(() => {
 		const timer = setTimeout(() => {

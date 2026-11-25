@@ -104,6 +104,7 @@ const defaultPermissionsForTest = {
 	manageSystem: false,
 	machines: [],
 	createMachines: false,
+	photos: false,
 }
 
 test('disable rejects requests while preserving tokens, permissions, and activity for re-enable', async () => {
@@ -119,6 +120,7 @@ test('disable rejects requests while preserving tokens, permissions, and activit
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		},
 	})
 	await expect(mcp.getSettings()).resolves.toMatchObject({enabled: true})
@@ -130,6 +132,7 @@ test('disable rejects requests while preserving tokens, permissions, and activit
 		manageSystem: true,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	}
 	await mcp.setPermissions(permissions)
 	mcp.recordRequest(credential.id, {
@@ -170,6 +173,7 @@ test('permission mutations preserve every token and unrelated permissions', asyn
 		manageSystem: true,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	}
 
 	await mcp.setPermissions(basePermissions)
@@ -259,6 +263,7 @@ test('token lifecycle validates metadata, enforces the cap, and supports an enab
 		manageSystem: true,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	await mcp.revokeToken(tokens[0].id)
 	await expect(mcp.getSettings()).resolves.toMatchObject({
@@ -269,6 +274,7 @@ test('token lifecycle validates metadata, enforces the cap, and supports an enab
 			manageSystem: true,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		},
 	})
 	for (const token of tokens.slice(1)) await mcp.revokeToken(token.id)
@@ -280,6 +286,7 @@ test('token lifecycle validates metadata, enforces the cap, and supports an enab
 			manageSystem: true,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		},
 	})
 	await expect(store.get('mcp')).resolves.toStrictEqual({
@@ -291,6 +298,7 @@ test('token lifecycle validates metadata, enforces the cap, and supports an enab
 			manageSystem: true,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		},
 	})
 	const replacement = await mcp.createToken(tokenMetadata('Replacement'))
@@ -309,6 +317,7 @@ test('token lifecycle validates metadata, enforces the cap, and supports an enab
 			manageSystem: true,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		},
 	})
 })
@@ -402,6 +411,7 @@ test('permission updates validate installed apps and owner folder grant roots', 
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		}),
 	).resolves.toStrictEqual({
 		apps: ['plex'],
@@ -410,6 +420,7 @@ test('permission updates validate installed apps and owner folder grant roots', 
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 
 	await expect(
@@ -420,6 +431,7 @@ test('permission updates validate installed apps and owner folder grant roots', 
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		}),
 	).rejects.toThrow('app-not-installed')
 	await expect(
@@ -430,6 +442,7 @@ test('permission updates validate installed apps and owner folder grant roots', 
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		}),
 	).rejects.toThrow('invalid-base')
 	await expect(
@@ -440,6 +453,7 @@ test('permission updates validate installed apps and owner folder grant roots', 
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		}),
 	).rejects.toThrow('does-not-exist')
 })
@@ -453,6 +467,7 @@ test('missing grants explain how the device owner can grant access', async () =>
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	const remediation = 'The device owner can grant access in Settings → AI agents (MCP).'
 
@@ -461,6 +476,7 @@ test('missing grants explain how the device owner can grant access', async () =>
 	await expect(mcp.assertAppStoreAccess()).rejects.toThrow(remediation)
 	await expect(mcp.assertSystemAccess()).rejects.toThrow(remediation)
 	await expect(mcp.assertFileAccess('/Home/Private/note.txt')).rejects.toThrow(remediation)
+	await expect(mcp.assertPhotosAccess()).rejects.toThrow(remediation)
 })
 
 test('file grants combine explicit folders and app data without leaking sibling prefixes', async () => {
@@ -472,6 +488,7 @@ test('file grants combine explicit folders and app data without leaking sibling 
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 
 	await expect(mcp.assertFileAccess('/Home/Granted/note.txt')).resolves.toMatchObject({grant: '/Home/Granted'})
@@ -496,6 +513,7 @@ test('file grant containment rejects symlinks that escape a granted subtree', as
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 
 	await expect(mcp.assertFileAccess('/Home/Granted/escape/secret.txt')).rejects.toMatchObject({
@@ -513,6 +531,7 @@ test('app grants keep framework files and hooks read-only while allowing nested 
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 
 	// Protected paths remain readable.
@@ -549,6 +568,7 @@ test('all grants cover folder categories and current and future app data', async
 		manageSystem: true,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 
 	await expect(mcp.assertFileAccess('/Home/file.txt')).resolves.toMatchObject({grant: '/Home'})
@@ -573,6 +593,7 @@ test('only Home deletion events remove file grants', async () => {
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
 	const getWriteLock = vi.spyOn(store, 'getWriteLock')
 
@@ -625,6 +646,7 @@ test('startup removes stale Home grants while retaining existing grants', async 
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		},
 	})
 
@@ -648,6 +670,7 @@ test('startup removes stale Home grants while retaining existing grants', async 
 			manageSystem: false,
 			machines: [],
 			createMachines: false,
+			photos: false,
 		},
 	})
 	await mcp.stop()
@@ -817,5 +840,29 @@ test('stores written before machine grants existed read back with those grants o
 		manageSystem: false,
 		machines: [],
 		createMachines: false,
+		photos: false,
 	})
+})
+
+test('Photos access is its own grant, apart from folders', async () => {
+	const {mcp, store} = await createMcp()
+	// A store from before Photos access existed, even with all of Home, reads it off
+	const {photos: _, ...before} = {...defaultPermissionsForTest, files: ['/Home']}
+	await store.set('mcp', {
+		enabled: true,
+		tokens: {},
+		permissions: before as unknown as McpStoreSettings['permissions'],
+	})
+	await expect(mcp.hasFullHomeAccess()).resolves.toBe(true)
+	await expect(mcp.hasPhotosAccess()).resolves.toBe(false)
+	await expect(mcp.assertPhotosAccess()).rejects.toThrow('[permission-denied] Photos access is not granted.')
+
+	// And granted alone, it gives no folder
+	await expect(mcp.setPermissions({...defaultPermissionsForTest, photos: true})).resolves.toMatchObject({
+		files: [],
+		photos: true,
+	})
+	await expect(mcp.assertPhotosAccess()).resolves.toBeUndefined()
+	await expect(mcp.hasFullHomeAccess()).resolves.toBe(false)
+	await expect(mcp.assertFileAccess('/Home/Photos/a.jpg')).rejects.toThrow('[permission-denied]')
 })

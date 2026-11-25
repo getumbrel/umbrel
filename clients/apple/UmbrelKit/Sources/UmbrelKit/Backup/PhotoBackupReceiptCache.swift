@@ -65,5 +65,15 @@ public actor PhotoBackupReceiptCache {
 		return record
 	}
 
+	// Everything that couldn't back up, read here so it's off the main thread like the
+	// receipts. Nil when the ledger can't be read, which doesn't mean nothing failed.
+	public func failedAssets(
+		sourceId: String,
+		includePhotos: Bool,
+		includeVideos: Bool
+	) -> [PhotoBackupLedger.FailedAsset]? {
+		try? ledger?.failedAssets(deviceId: sourceId, includePhotos: includePhotos, includeVideos: includeVideos)
+	}
+
 	var cachedEntryCount: Int { entries.count }
 }

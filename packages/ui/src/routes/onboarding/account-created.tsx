@@ -53,7 +53,7 @@ export default function AccountCreated() {
 			{device.showDevice && device.image && (
 				<>
 					<img src={device.image} alt='' className={device.imageClassName} />
-					<p className='-mt-4 text-[13px] font-medium text-white/30'>{device.name}</p>
+					<p className='-mt-4 text-13 font-medium text-white/30'>{device.name}</p>
 				</>
 			)}
 

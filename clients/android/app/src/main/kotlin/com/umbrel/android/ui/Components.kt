@@ -1,5 +1,7 @@
 package com.umbrel.android.ui
 
+import android.icu.text.DateFormat as IcuDateFormat
+import android.icu.util.TimeZone as IcuTimeZone
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.RepeatMode
@@ -76,6 +78,9 @@ import com.umbrel.kit.UmbrelDeviceKind
 import kotlinx.coroutines.launch
 import java.math.RoundingMode
 import java.text.NumberFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.util.Date
 import java.util.Locale
 
 // SwiftUI's easeOut and easeInOut curves.
@@ -176,7 +181,7 @@ fun Modifier.frostBackground(shape: Shape): Modifier = frost(shape, LocalFrostWa
  * tint, with the glint rim.
  */
 @Composable
-fun SectionCard(modifier: Modifier = Modifier, padding: Dp = 8.dp, content: @Composable () -> Unit) {
+fun SectionCard(modifier: Modifier = Modifier, padding: Dp = 8.dp, contentAlignment: Alignment = Alignment.TopStart, content: @Composable () -> Unit) {
 	val shape = RoundedCornerShape(MainTheme.cardRadius)
 	Box(
 		modifier
@@ -184,6 +189,8 @@ fun SectionCard(modifier: Modifier = Modifier, padding: Dp = 8.dp, content: @Com
 			.frostBackground(shape)
 			.glassGlint(shape)
 			.padding(padding),
+		// Where the content sits in a card stretched to match the one beside it
+		contentAlignment = contentAlignment,
 	) {
 		content()
 	}
@@ -359,7 +366,7 @@ fun EmptyStateCard(
 	iconSize: Dp = 26.dp,
 	onClick: () -> Unit,
 ) {
-	SectionCard(modifier) {
+	SectionCard(modifier, contentAlignment = Alignment.Center) {
 		Column(
 			Modifier
 				.fillMaxWidth()
@@ -395,12 +402,14 @@ fun EmptyStateCard(
 	}
 }
 
+val CircleIconButtonSize = 42.dp
+
 /** A round glass control (header back button, sheet actions). */
 @Composable
 fun CircleIconButton(icon: ImageVector, contentDescription: String, modifier: Modifier = Modifier, iconSize: Dp = 20.dp, onClick: () -> Unit) {
 	Box(
 		modifier
-			.size(42.dp)
+			.size(CircleIconButtonSize)
 			.clip(CircleShape)
 			.glassControl(CircleShape)
 			.clickable(role = Role.Button, onClick = onClick),
@@ -430,8 +439,8 @@ fun Pulsing(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
  * staggers the swap top to bottom, about 60 ms apart, so Home reveals as one cascade.
  */
 @Composable
-fun LoadReveal(loaded: Boolean, order: Int = 0, content: @Composable () -> Unit, skeleton: @Composable () -> Unit) {
-	Crossfade(loaded, animationSpec = tween(350, delayMillis = order * 60, easing = AppleEaseOut), label = "loadReveal") { isLoaded ->
+fun LoadReveal(loaded: Boolean, order: Int = 0, modifier: Modifier = Modifier, content: @Composable () -> Unit, skeleton: @Composable () -> Unit) {
+	Crossfade(loaded, modifier, animationSpec = tween(350, delayMillis = order * 60, easing = AppleEaseOut), label = "loadReveal") { isLoaded ->
 		if (isLoaded) content() else skeleton()
 	}
 }
@@ -585,23 +594,31 @@ fun SheetToolbar(title: String, onClose: (() -> Unit)?, modifier: Modifier = Mod
 	}
 }
 
-/** A gray section header above a rounded #2C2C2E card of rows. */
+/** A gray section header above a rounded #2C2C2E card of rows, with "How it works" when [learnMore] is set. */
 @Composable
-fun SettingsSection(title: String, modifier: Modifier = Modifier, badge: String? = null, content: @Composable () -> Unit) {
+fun SettingsSection(title: String, modifier: Modifier = Modifier, learnMore: (() -> Unit)? = null, content: @Composable () -> Unit) {
 	Column(modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-		Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-			Text(title, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray)
-			if (badge != null) {
-				Text(
-					badge,
-					style = AppleType.caption2,
-					fontWeight = FontWeight.SemiBold,
-					color = Color.White.copy(alpha = 0.55f),
-					modifier = Modifier.background(Color.White.copy(alpha = 0.08f), CircleShape).padding(horizontal = 8.dp, vertical = 4.dp),
-				)
+		SettingsSectionHeader(title, learnMore = learnMore)
+		Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MainTheme.sheetRow)) { content() }
+	}
+}
+
+/** A section's gray header on its own, for a card a lazy list builds: its title, and a [value] or "How it works" at the end. */
+@Composable
+fun SettingsSectionHeader(title: String, modifier: Modifier = Modifier, value: String? = null, learnMore: (() -> Unit)? = null) {
+	Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+		Text(title, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray, modifier = Modifier.weight(1f))
+		if (value != null) Text(value, style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = MainTheme.gray)
+		if (learnMore != null) {
+			Row(
+				Modifier.clickable(role = Role.Button, onClick = learnMore),
+				horizontalArrangement = Arrangement.spacedBy(4.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				Text("How it works", style = AppleType.subheadline, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.65f))
+				Icon(Symbols.ArrowForwardIosSemibold, contentDescription = null, tint = Color.White.copy(alpha = 0.65f), modifier = Modifier.size(12.dp))
 			}
 		}
-		Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MainTheme.sheetRow)) { content() }
 	}
 }
 
@@ -722,3 +739,13 @@ fun formatStorageSize(bytes: Double, locale: Locale = Locale.getDefault()): Stri
 	}
 	return format.format(scaled) + units[unit]
 }
+
+/**
+ * A moment written the way [locale] writes the fields of an ICU [skeleton] ("yMMMd", "hm"),
+ * like iOS's Date.FormatStyle. ICU formats its own pattern: handing it to java.time crashes on
+ * Android 11 to 13, where java.time doesn't know letters ICU uses, like zh-TW's day period "B".
+ */
+fun formatDateSkeleton(skeleton: String, instant: Instant, zone: ZoneId, locale: Locale = Locale.getDefault()): String =
+	IcuDateFormat.getInstanceForSkeleton(skeleton, locale)
+		.apply { timeZone = IcuTimeZone.getTimeZone(zone.id) }
+		.format(Date.from(instant))

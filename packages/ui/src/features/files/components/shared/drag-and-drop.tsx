@@ -15,6 +15,9 @@ interface DraggableProps {
 	item: FileSystemItem
 	className?: string
 	disabled?: boolean
+	// Where a press must land to pick the item up, as a selector for parts of it.
+	// Without one, anywhere on it does.
+	handle?: string
 }
 
 interface DroppableProps {
@@ -27,9 +30,13 @@ interface DroppableProps {
 	disabled?: boolean
 }
 
-export const Draggable = ({id, children, className, item, disabled = false, ...props}: DraggableProps) => {
+export const Draggable = ({id, children, className, item, disabled = false, handle, ...props}: DraggableProps) => {
 	const isReadOnly = useIsFilesReadOnly()
-	const {attributes, listeners, setNodeRef} = useDraggable({
+	// dnd-kit's `attributes` (tabIndex, role, aria-describedby) are left off: only the
+	// pointer sensor is registered, so they'd make every item an invisible tab stop
+	// announcing keyboard dragging that doesn't exist. The listing's arrow keys
+	// move the selection instead (use-files-keyboard-shortcuts).
+	const {listeners, setNodeRef} = useDraggable({
 		id: id,
 		data: item,
 	})
@@ -38,11 +45,18 @@ export const Draggable = ({id, children, className, item, disabled = false, ...p
 
 	if (disabled || isTouchDevice || isReadOnly) return <div className={className}>{children}</div>
 
+	// A press off the handle is not the item's to take: it is left for whatever
+	// is behind the item (the listing's marquee)
+	const onPointerDown = (event: React.PointerEvent) => {
+		if (handle && !(event.target as Element).closest(handle)) return
+		listeners?.onPointerDown?.(event)
+	}
+
 	return (
 		<div
 			ref={setNodeRef}
 			{...listeners}
-			{...attributes}
+			onPointerDown={onPointerDown}
 			{...props}
 			className={cn('touch-none outline-hidden', className)}
 		>

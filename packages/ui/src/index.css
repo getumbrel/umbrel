@@ -1,7 +1,59 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import './increase-contrast.css';
 
 @config '../tailwind.config.ts';
+
+/* tw-animate's enter and exit keyframes without their `filter: blur()`. Nothing
+   here blurs in or out, and the channel is not free: with it Chrome animates on
+   the main thread, so an entrance freezes for as long as the content behind it
+   takes to mount, and anything with a filter of its own (the blurred backdrops)
+   animates that filter up from nothing. */
+@theme inline {
+	--animate-in: umbrel-enter var(--tw-animation-duration, var(--tw-duration, 0.15s)) var(--tw-ease, ease)
+		var(--tw-animation-delay, 0s) var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
+		var(--tw-animation-fill-mode, none);
+	--animate-out: umbrel-exit var(--tw-animation-duration, var(--tw-duration, 0.15s)) var(--tw-ease, ease)
+		var(--tw-animation-delay, 0s) var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
+		var(--tw-animation-fill-mode, none);
+
+	@keyframes umbrel-enter {
+		from {
+			transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+				scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1))
+				rotate(var(--tw-enter-rotate, 0));
+			opacity: var(--tw-enter-opacity, 1);
+		}
+	}
+
+	@keyframes umbrel-exit {
+		to {
+			transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+				scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1))
+				rotate(var(--tw-exit-rotate, 0));
+			opacity: var(--tw-exit-opacity, 1);
+		}
+	}
+}
+
+/* Increase contrast, from Settings > Accessibility or the device's own setting
+   (see hooks/use-accessibility.ts) */
+@custom-variant contrast-more (&:where([data-increase-contrast], [data-increase-contrast] *));
+
+/* Tailwind's named text sizes grow with the text size setting like our own
+   scale (see tailwind.config.ts). Inline, so a utility adds the boost where
+   it's used. */
+@theme inline {
+	--text-xs: calc(0.75rem + var(--text-boost));
+	--text-sm: calc(0.875rem + var(--text-boost));
+	--text-base: calc(1rem + var(--text-boost));
+	--text-lg: calc(1.125rem + var(--text-boost));
+	--text-xl: calc(1.25rem + var(--text-boost));
+	--text-2xl: calc(1.5rem + var(--text-boost));
+	--text-3xl: calc(1.875rem + var(--text-boost));
+	--text-4xl: calc(2.25rem + var(--text-boost));
+	--text-5xl: calc(3rem + var(--text-boost));
+}
 
 /*
   Widget size classes. A widget is a size container (`[container:widget/size]`
@@ -21,12 +73,26 @@
 		@slot;
 	}
 }
+/* Where that column of controls at full size would run past the bottom of the
+   screen beside it: short windows, and ones only just wide enough for it */
+@custom-variant rail-tight {
+	@media (height < 700px), (min-aspect-ratio: 13/10) and (width < 1040px) {
+		@slot;
+	}
+}
 /* Windows too short for Home's regular scale: phones on their side */
 @custom-variant low (@media (height < 500px));
 /* Tablets, inner displays and phones on their side: room for two panes, below the desktop layout */
 @custom-variant panes (@media (640px <= width < 1024px));
+/* Wide enough for storage setup and Storage Manager to put the drives beside the words with each
+   side about a phone wide: small tablets upright, and up. one-up is everything narrower. */
+@custom-variant two-up (@media (width >= 700px));
+@custom-variant one-up (@media (width < 700px));
 /* Phones on their side: too short for a page title above a toolbar */
 @custom-variant phone-side (@media (height < 500px) and (width < 1024px));
+/* Tablets upright, and windows of their size: wide enough for a bar to share the
+   title's row as it does on a desktop, and tall enough to keep the title */
+@custom-variant tablet (@media (640px <= width < 1024px) and (height >= 500px));
 
 /* A Machines list row too narrow for its monitor, copy and controls side by side:
    the two columns of a tablet. 368px is inside the row's padding, so a 400px row.
@@ -34,6 +100,33 @@
 @custom-variant machine-tile {
 	@media (width >= 640px) and (height >= 500px) {
 		@container machine-row (width < 368px) {
+			@slot;
+		}
+	}
+}
+
+/* The App Store grid's column count (appGridClass in features/app-store/constants.ts),
+   for a grid that's also the app-grid container (appGridCompleteRowsClass). CSS can't
+   ask a grid how many auto-fill columns it made, so this restates the rule: two from
+   560px and three from xl, each while every track keeps its minimum width beside the
+   10px gaps. The grid's font size is that minimum, which follows the text size, so
+   N columns fit from N × 1em plus the gaps, exactly where auto-fill adds one. Keep
+   the two in sync. */
+@custom-variant app-grid-2-up {
+	@media (560px <= width < 80rem) {
+		@container app-grid (width >= calc(2em + 0.625rem)) {
+			@slot;
+		}
+	}
+	@media (width >= 80rem) {
+		@container app-grid (calc(2em + 0.625rem) <= width < calc(3em + 1.25rem)) {
+			@slot;
+		}
+	}
+}
+@custom-variant app-grid-3-up {
+	@media (width >= 80rem) {
+		@container app-grid (width >= calc(3em + 1.25rem)) {
 			@slot;
 		}
 	}
@@ -71,6 +164,19 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+	/* Captions a video's transcript is shown as (see captions.ts): the
+	   player's own, so they follow the video into fullscreen and keep to the
+	   size the browser picks for the picture. In the UI's typeface, on a
+	   softer panel than the near-black default, so the picture still shows
+	   through around them. Safari puts a viewer's own caption style
+	   (Accessibility settings) before this. */
+	video::cue {
+		background-color: rgb(0 0 0 / 0.6);
+		color: white;
+		font-weight: 500;
+		font-family: var(--font-inter), system-ui, sans-serif;
+	}
+
 	*,
 	::after,
 	::before,
@@ -154,18 +260,47 @@ button,
 	cursor: default;
 }
 
+body {
+	padding-right: var(--safe-right);
+	padding-left: var(--safe-left);
+}
+
 html {
 	--font-inter: 'Inter';
+	/* The screen's safe area at the sides: a notch or Dynamic Island on an iPhone held
+	   sideways, or a side column of controls in an app showing umbrelOS. The page runs
+	   edge to edge (viewport-fit=cover in index.html); content and windows keep clear of
+	   these, while the wallpaper, dims and blurs behind them run to the screen's edges. */
+	--safe-left: env(safe-area-inset-left, 0px);
+	--safe-right: env(safe-area-inset-right, 0px);
+	--safe-x: calc(var(--safe-left) + var(--safe-right));
+	/* Moves something centred on the screen to the centre of the safe area */
+	--safe-center-shift: calc((var(--safe-left) - var(--safe-right)) / 2);
+	/* And at the top: the status bar in a web app on the Home Screen, or the toolbar of
+	   an app showing umbrelOS. Viewport heights (100dvh) include it. */
+	--safe-top: env(safe-area-inset-top, 0px);
+
+	/* Pixels added to every text size: Settings > Accessibility > Text size */
+	--text-boost: 0px;
 	/* Space above the sheet. Putting here because it's used in multiple places for calculations */
-	--sheet-top: 2vh;
+	--sheet-top: calc(2vh + var(--safe-top));
 	--wallpaper-blur: 12px;
-	/* An iPhone sets the screen's height (see useWallpaperHeight) */
-	--wallpaper-height: 100lvh;
+	/* Covers the viewport with the browser's bars tucked away, and reaches further
+	   on an iPhone, which sets the screen's height (see useWallpaperHeight) */
+	--wallpaper-height: max(100lvh, var(--screen-height, 0px));
 
 	/* Keyboard focus ring. Single source of truth: consumed by the `:focus-visible`
 	   rule above and by the `ring` colour in tailwind.config.ts, which backs the
 	   shared `focusRingClass`. */
 	--focus-ring: rgb(255 255 255 / 0.25);
+
+	/* What a search matched, wherever it is pointed at: words in a snippet or a
+	   card, a place on a picture, a moment in a video. A highlighter yellow,
+	   kept apart from the brand so that a match never reads as a control; on
+	   it, text is dark (`match-ink`). Chosen against the dark glass, dark and
+	   light photographs and video thumbnails. */
+	--color-match: 50 100% 52%;
+	--color-match-ink: 50 100% 6%;
 
 	/* System material recipe */
 	--material-tint-rgb: 0 0 0;
@@ -346,6 +481,18 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 		background-color: rgb(var(--window-background-tint-rgb) / var(--window-background-tint-opacity));
 	}
 
+	/* The one colour a sheet settles into along its bottom edge (see SheetContent).
+	   It arrives with the wallpaper it's taken from, and goes as the sheet closes. */
+	.umbrel-window-floor {
+		opacity: 0;
+		mask-image: linear-gradient(to bottom, transparent, black 16px);
+		animation: fade-in 700ms ease-out 200ms both;
+	}
+
+	[data-state='closed'] + .umbrel-window-floor {
+		animation: none;
+	}
+
 	.umbrel-material.umbrel-window-surface-all {
 		-webkit-backdrop-filter: blur(var(--immersive-blur)) saturate(var(--window-background-saturation))
 			brightness(var(--window-background-brightness));
@@ -372,9 +519,7 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	   sits on the bottom edge and the travel is a rise/sink, so the sheet grows
 	   out of the dock that opened it and settles back toward it. The ease-out
 	   quint's punchy start keeps the response feeling instant; its long tail is
-	   what reads as the settle. The close duration must match
-	   SHEET_EXIT_DURATION_MS in layouts/sheet.tsx, which navigates away
-	   (unmounting the route) once the animation lands. */
+	   what reads as the settle. */
 	.umbrel-sheet-zoom {
 		transform-origin: 50% 100%;
 	}
@@ -385,6 +530,8 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 
 	.umbrel-sheet-zoom[data-state='closed'] {
 		animation: umbrel-sheet-out 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+		/* The desktop is coming back underneath, and taps are meant for it */
+		pointer-events: none;
 	}
 
 	/* Compositor-driven so it can't stutter while the sheet's route mounts on the
@@ -447,6 +594,474 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 		animation: cmdk-section-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
 	}
 
+	/* Cmd+K showing Search's understanding (see CmdkInsight): the orb, then the
+	   field and the light round the card, then the results. The stage and the
+	   card carry `data-insight` (off | thinking | understood | plain), and the
+	   card the wallpaper's colours as `--orb-deep/primary/secondary/milk`
+	   channels. */
+
+	/* cmdk insight: orb */
+
+	/* While what is shown was found by what is in it, the orb's glow is
+	   warmer, and stays so. It swells in once as the understood answer
+	   arrives: the attribute holds through a refined query, so typing more
+	   never sets it off again. Leaving is a quick fade. */
+	.cmdk-orb-warmth {
+		opacity: 0;
+		transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	.cmdk-orb-stage[data-understood] .cmdk-orb-warmth {
+		opacity: 1;
+		animation: cmdk-orb-warm 640ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		transition-duration: 300ms;
+	}
+
+	@keyframes cmdk-orb-warm {
+		from {
+			transform: scale(0.8);
+		}
+		55% {
+			transform: scale(1.05);
+		}
+		to {
+			transform: none;
+		}
+	}
+
+	/* cmdk insight: field and aura */
+
+	/* The field's glyph: magnifier and sparkle trade places like a symbol
+	   replace. A quick cross-fade with a touch of scale and blur so the two
+	   read as one glyph changing; the one leaving goes faster than the one
+	   arriving. */
+	.cmdk-glyph-sparkle {
+		fill: rgb(var(--orb-milk) / 0.9);
+	}
+
+	.cmdk-glyph-magnifier,
+	.cmdk-glyph-sparkle {
+		transition:
+			opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+			transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+			filter 180ms cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	.cmdk-glyph[data-mode='sparkle'] .cmdk-glyph-magnifier,
+	.cmdk-glyph[data-mode='magnifier'] .cmdk-glyph-sparkle {
+		transform: scale(0.9);
+		opacity: 0;
+		filter: blur(1px);
+		transition-duration: 120ms;
+	}
+
+	/* Everything below answers one state: the results shown were understood.
+	   The card's aura is lit then (and stays lit through a refined query), so
+	   each piece starts once when the light comes on and then simply rests. */
+
+	/* The stars glow in the orb's colour: a soft copy of them behind blooms
+	   out, and the stars themselves catch the light once */
+	.cmdk-glyph-glow {
+		transform: scale(1.3);
+		transform-box: fill-box;
+		transform-origin: center;
+		opacity: 0;
+		filter: blur(3.5px);
+		transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+		fill: rgb(var(--orb-primary));
+	}
+
+	.cmdk-card:has(.cmdk-aura[data-lit]) .cmdk-glyph-glow {
+		opacity: 1;
+		animation: cmdk-stars-bloom 560ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		transition-duration: 300ms;
+	}
+
+	.cmdk-card:has(.cmdk-aura[data-lit]) .cmdk-glyph[data-mode='sparkle'] .cmdk-glyph-sparkle {
+		animation: cmdk-stars-catch 460ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		fill: rgb(var(--orb-milk));
+	}
+
+	@keyframes cmdk-stars-bloom {
+		from {
+			transform: scale(0.6);
+		}
+		50% {
+			transform: scale(1.6);
+		}
+		to {
+			transform: scale(1.3);
+		}
+	}
+
+	@keyframes cmdk-stars-catch {
+		from {
+			transform: none;
+		}
+		40% {
+			transform: scale(1.14) rotate(8deg);
+		}
+		to {
+			transform: none;
+		}
+	}
+
+	/* The field takes on the orb's colour */
+	.cmdk-field {
+		transition:
+			background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+			box-shadow 150ms cubic-bezier(0.23, 1, 0.32, 1);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 0.06),
+			0 0 0 0.5px rgb(255 255 255 / 0.08);
+		background-color: rgb(255 255 255 / 0.06);
+	}
+
+	.cmdk-card:has(.cmdk-aura[data-lit]) .cmdk-field {
+		transition-duration: 300ms;
+		box-shadow:
+			inset 0 1px 0 rgb(var(--orb-milk) / 0.16),
+			0 0 0 0.5px rgb(var(--orb-milk) / 0.22);
+		background-color: rgb(var(--orb-primary) / 0.14);
+	}
+
+	/* The card: the glass takes on the wallpaper's tint, strongest under the
+	   orb, and its top edge catches the orb's light. The line opens out from
+	   the middle and the light settles beneath it as the state comes on. */
+	.cmdk-aura {
+		position: absolute;
+		opacity: 0;
+		z-index: 1;
+		transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+		inset: 0;
+		border-radius: var(--material-modal-radius);
+		background: radial-gradient(
+			90% 70% at 50% 0%,
+			rgb(var(--orb-primary) / 0.3),
+			rgb(var(--orb-secondary) / 0.09) 55%,
+			transparent 85%
+		);
+		pointer-events: none;
+	}
+
+	.cmdk-aura[data-lit] {
+		opacity: 1;
+		transition-duration: 300ms;
+	}
+
+	.cmdk-aura::before {
+		position: absolute;
+		top: 0;
+		right: 14%;
+		left: 14%;
+		background: linear-gradient(90deg, transparent, rgb(var(--orb-milk) / 0.95) 50%, transparent);
+		height: 1px;
+		content: '';
+	}
+
+	.cmdk-aura::after {
+		position: absolute;
+		top: 0;
+		right: 20%;
+		left: 20%;
+		transform-origin: 50% 0;
+		background: radial-gradient(50% 100% at 50% 0%, rgb(var(--orb-milk) / 0.14), transparent);
+		height: 56px;
+		content: '';
+	}
+
+	.cmdk-aura[data-lit]::before {
+		animation: cmdk-edge-open 560ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	}
+
+	.cmdk-aura[data-lit]::after {
+		animation: cmdk-light-settle 720ms cubic-bezier(0.23, 1, 0.32, 1) 60ms both;
+	}
+
+	@keyframes cmdk-edge-open {
+		from {
+			transform: scaleX(0.2);
+			opacity: 0;
+		}
+		to {
+			transform: none;
+			opacity: 1;
+		}
+	}
+
+	@keyframes cmdk-light-settle {
+		from {
+			transform: scaleY(0.4);
+			opacity: 0;
+		}
+		to {
+			transform: none;
+			opacity: 1;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.cmdk-glyph-magnifier,
+		.cmdk-glyph-sparkle,
+		.cmdk-glyph[data-mode] :is(.cmdk-glyph-magnifier, .cmdk-glyph-sparkle) {
+			transform: none;
+			filter: none;
+			transition: opacity 150ms ease;
+		}
+
+		/* The light still comes and goes, by fading alone */
+		.cmdk-orb-stage[data-understood] .cmdk-orb-warmth,
+		.cmdk-card:has(.cmdk-aura[data-lit]) :is(.cmdk-glyph-glow, .cmdk-glyph-sparkle),
+		.cmdk-aura[data-lit]::before,
+		.cmdk-aura[data-lit]::after {
+			animation: none;
+		}
+	}
+
+	/* cmdk insight: results */
+
+	/* A filter Search read out of the query (a person, a place, a year) settles
+	   in under the field: up a little, out of a slight blur. */
+	.search-chip {
+		animation: search-chip-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	}
+
+	/* A transcript followed as it plays (see TranscriptView): in the audio
+	   island, and in the Photos inspector's card for a video. The spoken row
+	   is bright and sharp; the rows around it dim and soften with distance —
+	   a filter on those few rows only, the ones further off being out of view
+	   and merely dim. While the reader has the scroll (`data-browsing`)
+	   everything sharpens to be read. The card is small and read beside the
+	   picture: its type is smaller and its blur gentler. */
+	.lyrics {
+		animation: lyrics-in 320ms ease-out 120ms both;
+	}
+
+	.lyrics-scroller {
+		mask-image: linear-gradient(to bottom, transparent, black 16%, black 72%, transparent);
+	}
+
+	.lyrics[data-variant='island'] .lyrics-scroller {
+		padding-inline: 24px;
+		padding-bottom: 7rem;
+	}
+
+	.lyrics[data-variant='card'] .lyrics-scroller {
+		mask-image: linear-gradient(to bottom, transparent, black 10%, black 70%, transparent);
+		padding-inline: 6px;
+		padding-bottom: 8rem;
+	}
+
+	.lyrics[data-variant='card'] .lyrics-scroller.lyrics-fits {
+		mask-image: none;
+		padding-bottom: 6px;
+	}
+
+	.lyric-row {
+		transform: scale(0.97);
+		transform-origin: left center;
+		content-visibility: auto;
+		opacity: 0.2;
+		transition:
+			opacity 450ms ease-out,
+			filter 450ms ease-out,
+			transform 450ms cubic-bezier(0.23, 1, 0.32, 1);
+		contain-intrinsic-size: auto 2.8em;
+		color: rgb(255 255 255);
+		font-weight: 600;
+		letter-spacing: -0.02em;
+	}
+
+	.lyrics[data-variant='island'] .lyric-row {
+		padding-block: 5px;
+		font-size: 17px;
+		line-height: 1.28;
+	}
+
+	.lyrics[data-variant='card'] .lyric-row {
+		padding: 4px 6px;
+		font-size: 14px;
+		line-height: 1.36;
+	}
+
+	.lyric-row[data-distance='0'] {
+		transform: none;
+		opacity: 1;
+	}
+
+	.lyric-row[data-distance='1'] {
+		opacity: 0.4;
+		filter: blur(0.7px);
+	}
+
+	.lyric-row[data-distance='2'] {
+		opacity: 0.32;
+		filter: blur(1.3px);
+	}
+
+	.lyric-row[data-distance='3'] {
+		opacity: 0.26;
+		filter: blur(1.9px);
+	}
+
+	.lyric-row[data-distance='4'] {
+		opacity: 0.22;
+		filter: blur(2.4px);
+	}
+
+	.lyrics[data-variant='card'] .lyric-row[data-distance='1'] {
+		opacity: 0.5;
+		filter: blur(0.3px);
+	}
+
+	.lyrics[data-variant='card'] .lyric-row[data-distance='2'] {
+		opacity: 0.38;
+		filter: blur(0.6px);
+	}
+
+	.lyrics[data-variant='card'] .lyric-row:is([data-distance='3'], [data-distance='4'], [data-distance='5']) {
+		opacity: 0.3;
+		filter: blur(0.9px);
+	}
+
+	/* A transcript short enough to be seen whole is read, not followed */
+	.lyrics-fits > .lyric-row:not([data-distance='0']) {
+		opacity: 0.55;
+		filter: none;
+	}
+
+	[data-browsing] > .lyric-row {
+		opacity: 0.55;
+		filter: none;
+	}
+
+	[data-browsing] > .lyric-row[data-distance='0'] {
+		opacity: 1;
+	}
+
+	@media (hover: hover) {
+		.lyric-row[data-lyric]:hover {
+			opacity: 0.85;
+			filter: none;
+		}
+
+		.lyric-row[data-distance='0']:hover {
+			opacity: 1;
+		}
+	}
+
+	/* Within the spoken line the words still to come sit a shade back, and
+	   lift to white as they are reached */
+	.lyric-row[data-distance='0'] [data-word] {
+		transition: color 380ms ease-out;
+		color: rgb(255 255 255 / 0.6);
+	}
+
+	.lyric-row[data-distance='0'] [data-word][data-said] {
+		color: rgb(255 255 255);
+	}
+
+	/* The words a search found it by, as a highlighter marks them: the match
+	   colour behind dark text, whether or not they have been said yet */
+	.lyric-row [data-matched] {
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+		border-radius: 4px;
+		background: hsl(var(--color-match));
+		padding: 0 3px;
+	}
+
+	.lyric-row[data-distance] [data-matched] [data-word] {
+		color: hsl(var(--color-match-ink));
+	}
+
+	/* A silence: three dots, unseen until playback is in it, then breathing */
+	.lyric-gap {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		opacity: 0;
+		filter: none;
+		height: 26px;
+	}
+
+	.lyric-gap > span {
+		border-radius: 9999px;
+		background: rgb(255 255 255);
+		width: 7px;
+		height: 7px;
+	}
+
+	.lyrics[data-variant='card'] .lyric-gap {
+		gap: 4px;
+		padding-inline: 6px;
+		height: 20px;
+	}
+
+	.lyrics[data-variant='card'] .lyric-gap > span {
+		width: 5px;
+		height: 5px;
+	}
+
+	.lyric-gap[data-distance='0'] > span {
+		animation: lyric-breathe 1.8s ease-in-out infinite;
+	}
+
+	.lyric-gap[data-distance='0'] > span:nth-child(2) {
+		animation-delay: 0.22s;
+	}
+
+	.lyric-gap[data-distance='0'] > span:nth-child(3) {
+		animation-delay: 0.44s;
+	}
+
+	/* Above every rule that dims by distance: an unlit silence is not drawn */
+	.lyrics[data-variant] .lyric-row.lyric-gap:not([data-distance='0']) {
+		opacity: 0;
+		filter: none;
+	}
+
+	/* Text in a picture, pointed at on the picture (see TextRegions). Each shape
+	   is stroked in its own colour at a width that does not scale with the
+	   picture: round corners, a little air around the letters, and a floor
+	   under the height of a line of small print. Opacity is the shape's own,
+	   so fill and stroke blend as one. */
+	.picture-text-match,
+	.picture-text-line {
+		transform-box: fill-box;
+		transform-origin: center;
+		vector-effect: non-scaling-stroke;
+		stroke-linejoin: round;
+	}
+
+	/* Words a search found: they land a beat brighter and larger than they
+	   rest, then settle to a wash the letters read through. */
+	.picture-text-match {
+		opacity: var(--picture-text-rest, 0.4);
+		animation: picture-text-in 700ms cubic-bezier(0.23, 1, 0.32, 1) both;
+		fill: hsl(var(--color-match));
+		stroke: hsl(var(--color-match));
+		stroke-width: 5px;
+	}
+
+	/* A line the inspector points at: a white outline, lit only while pointed */
+	.picture-text-line {
+		opacity: 0;
+		transition: opacity 160ms ease-out;
+		fill: rgb(255 255 255 / 0.14);
+		stroke: rgb(255 255 255 / 0.85);
+		stroke-width: 1.25px;
+	}
+
+	/* White alone is lost on a receipt or a page */
+	.picture-text-lines {
+		filter: drop-shadow(0 0 0.75px rgb(0 0 0 / 0.75));
+	}
+
+	.picture-text-line[data-lit] {
+		opacity: 1;
+	}
+
 	/* Rows darken progressively down each section, bottoming out at tone 6 —
 	   rows past the sixth stay at the darkest tone. */
 	.settings-list-group > .settings-list-row {
@@ -493,7 +1108,7 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	}
 }
 
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+@media (prefers-reduced-transparency: reduce) {
 	.umbrel-material {
 		-webkit-backdrop-filter: none;
 		backdrop-filter: none;
@@ -512,6 +1127,18 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 		animation-duration: 0.01ms !important;
 	}
 
+	/* The wallpaper's zoom-and-unblur on load (an inline style, which this
+	   outranks). Collapsed rather than removed: its animationend reveals the
+	   full-resolution image */
+	[data-wallpaper-layer] {
+		animation-duration: 0.01ms !important;
+	}
+
+	/* An input error still appears, just without the shake */
+	.animate-shake {
+		animation: none;
+	}
+
 	.umbrel-sheet-zoom[data-state='open'],
 	.umbrel-sheet-zoom[data-state='closed'],
 	.umbrel-dock-bounce {
@@ -522,6 +1149,33 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	.cmdk-card,
 	.cmdk-section {
 		animation: cmdk-fade 150ms ease-out both;
+		transition: none;
+	}
+
+	.search-chip {
+		animation: cmdk-fade 150ms ease-out both;
+	}
+
+	.picture-text-match {
+		animation: picture-text-fade 200ms ease-out both;
+	}
+
+	.lyrics {
+		animation: none;
+	}
+
+	.lyric-row,
+	.lyric-row [data-word] {
+		transform: none;
+		transition: none;
+	}
+
+	.lyric-gap[data-distance='0'] > span {
+		opacity: 0.7;
+		animation: none;
+	}
+
+	.picture-text-line {
 		transition: none;
 	}
 
@@ -546,51 +1200,111 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	}
 }
 
-/* Global scrollbar styling */
-/* We set this here because some components cannot easily use ScrollArea or FadeScroller components (e.g., react-window) */
-::-webkit-scrollbar {
-	background: transparent; /* Transparent track by default */
-	width: 11px;
-	height: 11px;
+/* Scrollbars take no room in umbrelOS. Wherever a mouse is around or the
+   browser's own scrollbars would take a strip of their scroller, they are
+   hidden and a thumb is drawn over the page for the scroller in use
+   (modules/scrollbars/overlay-scrollbars.ts sets the attribute). Touch
+   screens keep the overlay scrollbars they already have. Nothing here styles
+   ::-webkit-scrollbar beyond hiding it: a styled one always takes room. */
+html[data-overlay-scrollbars],
+html[data-overlay-scrollbars] * {
+	scrollbar-width: none;
 }
 
-/* Firefox ignores ::-webkit-scrollbar entirely, so without this it renders full-width
-   native scrollbars in the virtualized Files listing — visually wrong on the dark glass
-   UI, and wider than the gutters the listing budgets for. `thin` lands close to the 11px above.
+html[data-overlay-scrollbars]::-webkit-scrollbar,
+html[data-overlay-scrollbars] *::-webkit-scrollbar {
+	display: none;
+}
 
-	 Gated on the engine lacking ::-webkit-scrollbar (i.e. Firefox): in Chromium a
-	 non-auto `scrollbar-width` disables ::-webkit-scrollbar styling altogether, so
-	 applying this unconditionally would throw away the richer rules above. Keep it
-	 scoped so deliberately hidden scrollbars elsewhere retain `scrollbar-width: none`. */
-@supports not selector(::-webkit-scrollbar) {
-	.umbrel-files-virtual-scroller {
-		scrollbar-color: rgb(255 255 255 / 0.15) transparent;
-		scrollbar-width: thin;
+/* Set on a scroller to keep its vertical thumb clear of what floats over
+   that end of it. Registered so a scroller inside doesn't inherit them. */
+@property --scrollbar-top {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --scrollbar-bottom {
+	syntax: '<length>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+/* The layer the thumbs float in, above everything and out of the pointer's way */
+.umbrel-scrollbars {
+	position: fixed;
+	z-index: 2147483647;
+	contain: layout style;
+	inset: 0;
+	overflow: clip;
+	pointer-events: none;
+}
+
+@media print {
+	.umbrel-scrollbars {
+		display: none;
 	}
 }
 
-::-webkit-scrollbar-track {
-	background: transparent; /* Transparent track by default */
+/* The strip a thumb is grabbed by, placed and sized by the script */
+.umbrel-scrollbar {
+	display: flex;
+	position: absolute;
+	top: 0;
+	left: 0;
+	opacity: 0;
+	transition: opacity 250ms ease-out;
+	will-change: transform, opacity;
+	touch-action: none;
+	pointer-events: none;
+	-webkit-user-select: none;
+	user-select: none;
 }
 
-/* Show track background on hover */
-::-webkit-scrollbar:hover {
-	background: rgba(255, 255, 255, 0.05);
+.umbrel-scrollbar[data-axis='y'] {
+	padding: 0 3.5px;
+	width: 11px;
 }
 
-::-webkit-scrollbar-thumb {
-	border: 4px solid transparent; /* Key trick for obtaining a thin scrollbar */
-	border-radius: 20px;
-	background-clip: padding-box; /* Ensure the background only applies within the content box */
-	background-color: rgba(255, 255, 255, 0.15);
+.umbrel-scrollbar[data-axis='x'] {
+	padding: 3.5px 0;
+	height: 11px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-	background-color: rgba(255, 255, 255, 0.4);
+.umbrel-scrollbar[data-state='visible'] {
+	opacity: 1;
+	transition-duration: 100ms;
+	pointer-events: auto;
 }
 
-::-webkit-scrollbar-corner {
-	background: transparent;
+/* The thumb itself, here and in the scroll areas that draw their own
+   (components/ui/scroll-area.tsx). The hairline keeps it visible over a
+   white page. */
+.umbrel-scrollbar-thumb {
+	flex: 1;
+	transition: background-color 150ms ease-out;
+	box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.2);
+	border-radius: 999px;
+	background-color: rgb(255 255 255 / 0.25);
+}
+
+/* One that is up whenever its list overflows (a sidebar's), not only while it is in use */
+:where(.umbrel-scrollbar-track-quiet) > .umbrel-scrollbar-thumb {
+	background-color: rgb(255 255 255 / 0.1);
+}
+
+:is(.umbrel-scrollbar, .umbrel-scrollbar-track):is(:hover, [data-dragging]) > .umbrel-scrollbar-thumb {
+	background-color: rgb(255 255 255 / 0.5);
+}
+
+[data-increase-contrast] .umbrel-scrollbar-thumb {
+	background-color: rgb(255 255 255 / 0.6);
+}
+
+[data-increase-contrast]
+	:is(.umbrel-scrollbar, .umbrel-scrollbar-track):is(:hover, [data-dragging])
+	> .umbrel-scrollbar-thumb {
+	background-color: rgb(255 255 255 / 0.85);
 }
 
 @supports (font-variation-settings: normal) {
@@ -614,23 +1328,14 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	}
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
+/* A scroller that shows no scrollbar at all: neither the browser's nor a thumb of ours */
 .umbrel-hide-scrollbar::-webkit-scrollbar {
 	display: none;
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
 .umbrel-hide-scrollbar {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
-}
-
-/* Reserve the scrollbar gutter so content doesn't shift when a scroller
-   crosses the overflow threshold (styling ::-webkit-scrollbar opts us out of
-   overlay scrollbars, so ours always consume layout width). No-op where
-   scrollbars are genuinely overlay, e.g. Firefox on macOS. */
-.umbrel-stable-gutter {
-	scrollbar-gutter: stable;
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
 
 .umbrel-button:active {
@@ -809,30 +1514,39 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
 	mask-image: linear-gradient(to bottom, transparent, red 20px calc(100% - 20px), transparent);
 }
 
-/* Targets the correct div inside the react-window component. The generous bottom
-   fade also keeps the item/selected-count label legible over scrolled rows; the
-   extra stop drops most of the visibility by 60% into the ramp so the last ~40%
-   is close to fully faded */
+/* The Files listing's scroller (react-window's own element, inside the two
+   wrappers that measure it). Rows that scroll up under the column names or the
+   bar dissolve into the window, once there is anything scrolled. At the
+   bottom the listing runs on to the sheet's edge and its rows flow on
+   beneath the dock, as the tiles of Photos do; scrolled all the way down,
+   the last of them come to rest above it (VirtualizedList keeps the room).
+
+   The mask also gives the listing a compositor surface of its own, as the
+   Photos scroller's does (see .umbrel-photos-scroller). */
 .umbrel-files-fade-scroller > div > div {
-	mask-image: linear-gradient(
-		to bottom,
-		red 0,
-		red calc(100% - 48px),
-		rgb(255 0 0 / 0.25) calc(100% - 20px),
-		transparent
-	);
+	mask-image: linear-gradient(to bottom, transparent 0, black var(--umbrel-files-fade-top, 0px));
 }
 
 /* Only fade the top when a user has scrolled */
 .umbrel-files-fade-scroller.scrolled > div > div {
+	--umbrel-files-fade-top: 20px;
+}
+
+/* Embedded in Rewind the listing keeps its card, and fades into its bottom
+   edge. The extra stop drops most of the visibility by 60% into the ramp so
+   the last ~40% is close to fully faded */
+.umbrel-files-fade-scroller.embedded > div > div {
 	mask-image: linear-gradient(
 		to bottom,
 		transparent 0,
-		red 24px,
+		red var(--umbrel-files-fade-top, 0px),
 		red calc(100% - 48px),
 		rgb(255 0 0 / 0.25) calc(100% - 20px),
 		transparent 100%
 	);
+}
+.umbrel-files-fade-scroller.embedded.scrolled > div > div {
+	--umbrel-files-fade-top: 24px;
 }
 
 /* Photos actions bar: its controls float over tiles scrolling beneath them,
@@ -852,7 +1566,9 @@ html[data-wallpaper-under-bar]:not(:has(body[data-scroll-locked])) [data-wallpap
    Chrome redraw that surface with every frame of the map, and the sheet's
    blurred wallpaper copy, which the map covers edge to edge, cost a full-window
    layer for nothing. So the copy is dropped, and the surfaces over the map
-   are a solid tint instead of a blur, as for reduced transparency. */
+   are solid instead of blurred: with no blur, all a see-through surface
+   shows of the map is the ghosts of its names and markers, running through
+   whatever is written on it. */
 body:has(.umbrel-photos-map) .umbrel-window-wallpaper {
 	display: none;
 }
@@ -862,10 +1578,10 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	backdrop-filter: none;
 }
 .umbrel-photos-map .umbrel-material {
-	background-color: rgb(16 17 20 / 0.88);
+	background-color: rgb(16 17 20);
 }
 body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
-	background-color: rgb(30 31 36 / 0.86);
+	background-color: rgb(30 31 36);
 }
 
 /* The bar's rest and its pin. At rest it sits --umbrel-photos-drop below its
@@ -920,11 +1636,12 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 
 /* Photos timeline. The actions bar (and a source's strip) floats over the
    scroller's top edge. Tiles scrolling up under it dissolve into the window:
-   gone from --umbrel-photos-fade-from (the last bar-height of the chrome) up, easing in from there — an
-   S-curve, so neither end of the fall-off reads as an edge — to fully there
-   where the first row starts (--umbrel-photos-fade-to). A classic scrollbar (the rightmost
-   --umbrel-photos-scrollbar px, reserved by the gutter so it can't resize the grid as
-   content comes and goes) is left out of the fade.
+   gone from --umbrel-photos-fade-from (the last bar-height of the chrome) up, easing in from there
+   to fully there where the first row starts (--umbrel-photos-fade-to). Most of
+   the way they stay faint, and come up in the last stretch: the bar's title
+   and the line under it are read over this band, and the line stands in its
+   lower half, where an even fall-off had the tiles all but whole behind 12px
+   of half-white text.
 
    The mask also makes Chromium render the whole grid into its own compositor
    surface. Without one, the tall composited scroll layer of images under the
@@ -936,30 +1653,18 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	--umbrel-photos-fade: linear-gradient(
 		to bottom,
 		transparent var(--umbrel-photos-fade-from, 0px),
-		rgb(0 0 0 / 0.1) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.2),
-		rgb(0 0 0 / 0.35) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.4),
-		rgb(0 0 0 / 0.65) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.6),
-		rgb(0 0 0 / 0.9) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.8),
+		rgb(0 0 0 / 0.03) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.2),
+		rgb(0 0 0 / 0.09) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.4),
+		rgb(0 0 0 / 0.2) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.6),
+		rgb(0 0 0 / 0.45) calc(var(--umbrel-photos-fade-from, 0px) + var(--umbrel-photos-fade-span) * 0.8),
 		black var(--umbrel-photos-fade-to, 0px)
 	);
 	mask-image: var(--umbrel-photos-fade);
 	mask-repeat: no-repeat;
 }
-/* With a classic scrollbar (FadedScroller sets data-scrollbar when it measures
-   one) a second, opaque layer spares its strip from the fade. Only then: a
-   zero-width layer is not something every engine agrees on. */
-.umbrel-photos-scroller[data-scrollbar] {
-	mask-image: var(--umbrel-photos-fade), linear-gradient(black, black);
-	mask-position:
-		left top,
-		right top;
-	mask-size:
-		calc(100% - var(--umbrel-photos-scrollbar, 0px)) 100%,
-		var(--umbrel-photos-scrollbar, 0px) 100%;
-}
 /* A scroller whose scrollbar is hidden for the time rail (FadedScroller's
-   hideScrollbar); scrollbar-width is set inline, this covers WebKit engines
-   without it */
+   hideScrollbar), where the browser draws it: scrollbar-width is set inline,
+   this covers WebKit engines without it */
 .umbrel-photos-scroller[data-scrollbar-hidden]::-webkit-scrollbar {
 	display: none;
 }
@@ -1063,6 +1768,63 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 	}
 }
 
+@keyframes lyrics-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes lyric-breathe {
+	0%,
+	100% {
+		transform: scale(0.78);
+		opacity: 0.4;
+	}
+	50% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes picture-text-in {
+	from {
+		transform: scale(1.18);
+		opacity: 0;
+	}
+	35% {
+		opacity: 0.7;
+	}
+	to {
+		transform: none;
+		opacity: var(--picture-text-rest, 0.4);
+	}
+}
+
+@keyframes picture-text-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: var(--picture-text-rest, 0.4);
+	}
+}
+
+@keyframes search-chip-in {
+	from {
+		transform: translateY(3px) scale(0.96);
+		opacity: 0;
+		filter: blur(2px);
+	}
+	to {
+		transform: none;
+		opacity: 1;
+		filter: blur(0);
+	}
+}
+
 @keyframes cmdk-section-in {
 	from {
 		transform: translateY(4px);
@@ -1137,13 +1899,10 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 
 [cmdk-list] {
 	transition: height 100ms ease;
+	/* Rows keep clear of the card's edges, and of the scrollbar's thumb */
+	padding-inline: 11px;
 	/* height: var(--cmdk-list-height); */
 	/* min-height: 200px; */
-	max-height: 500px;
-	/* Results cross the overflow threshold constantly while typing; keep the
-	   scrollbar's space reserved so rows don't jitter sideways — on both edges,
-	   so rows stay centred under the search field */
-	scrollbar-gutter: stable both-edges;
 	/* scroll-padding-block-start: 20px; */
 	/* scroll-padding-block-end: 20px; */
 }
@@ -1254,14 +2013,6 @@ body:has(.umbrel-photos-map) .umbrel-photos-actions .settings-edge-material {
 
 .xterm .xterm-viewport {
 	background-color: transparent !important;
-}
-
-/* Let the terminal use the global slim scrollbar, with a native fallback for Firefox. */
-@supports not selector(::-webkit-scrollbar) {
-	.xterm .xterm-viewport {
-		scrollbar-color: rgb(255 255 255 / 0.15) transparent;
-		scrollbar-width: thin;
-	}
 }
 
 /* Self-hosted display fonts (all SIL OFL). Instrument Serif draws account

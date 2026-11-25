@@ -53,6 +53,9 @@ object MainTheme {
 	// Destructive red.
 	val red = Color(0xFFFF4245)
 
+	// SwiftUI's system orange in dark mode, the mark on an item that couldn't back up.
+	val orange = Color(0xFFFF9F0A)
+
 	// Status dot colors.
 	val online = Color(0xFF34C759)
 	val syncing = Color(0xFFFFC800)

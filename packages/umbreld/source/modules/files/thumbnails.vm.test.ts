@@ -194,6 +194,27 @@ describe('content-addressed thumbnail index', () => {
 		await expect(assetExists(url)).resolves.toBe(true)
 	})
 
+	test('generates thumbnails for files only root can read', async () => {
+		// umbreld writes an upload as root with mode 600 before handing it to the
+		// umbrel user, and some files are left that way. The decoders run
+		// sandboxed as nobody and could never open such a file themselves, so
+		// this only works if they read the descriptor umbreld opened.
+		const made = await umbreld.vm.sshAsRoot(`
+			mkdir -p '${guestSuiteRoot}/formats' &&
+			install -m 600 '${guestHome}/fixture-masters/master-lossless-image.png' '${guestSuiteRoot}/formats/root-only.png' &&
+			ffmpeg -loglevel error -y -i '${guestHome}/fixture-masters/master-lossless-video.mkv' -c:v libx264 /root/root-only.mp4 &&
+			install -m 600 /root/root-only.mp4 '${guestSuiteRoot}/formats/root-only.mp4' &&
+			stat -c '%U %a' '${guestSuiteRoot}/formats/root-only.png' '${guestSuiteRoot}/formats/root-only.mp4'
+		`)
+		expect(made).toBe('root 600\nroot 600')
+
+		// A picture is decoded by ImageMagick, a video by FFmpeg and then ImageMagick
+		for (const name of ['root-only.png', 'root-only.mp4']) {
+			const url = await umbreld.client.files.getThumbnail.mutate({path: `${suiteRoot}/formats/${name}`})
+			await expect(assetExists(url)).resolves.toBe(true)
+		}
+	})
+
 	test('preserves aspect ratio while scaling the short side to 192px', async () => {
 		const path = `${suiteRoot}/formats/landscape.png`
 		const encoded = await umbreld.vm.sshAsRoot('convert -size 300x200 xc:red png:- | base64 -w 0')

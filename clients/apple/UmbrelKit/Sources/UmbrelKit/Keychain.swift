@@ -7,6 +7,7 @@ import Security
 public enum Keychain {
 	private static let service = "com.umbrel.app"
 	private static let localHTTPSCAService = "com.umbrel.app.local-https-ca"
+	private static let photoBackupCAService = "com.umbrel.app.photo-backup-local-https-ca"
 	private static let browserSessionService = "com.umbrel.app.browser-session"
 	private static let photoBackupGrantService = "com.umbrel.app.photo-background-upload"
 	private static let photoBackupSourceService = "com.umbrel.app.photo-backup-source"
@@ -164,19 +165,79 @@ public enum Keychain {
 		SecItemDelete(localHTTPSCAQuery(deviceId: deviceId) as CFDictionary)
 	}
 
-	private static func photoBackupGrantQuery(deviceId: String, accountId: String) -> [String: Any]? {
-		guard
-			let accessGroup = Bundle.main.object(
-				forInfoDictionaryKey: photoBackupAccessGroupInfoKey
-			) as? String,
+	// PhotoKit's extension can't read the app's pins. It gets a copy of the one for the
+	// Umbrel it backs up to, in the group it shares with the app, to check that it reaches
+	// that Umbrel before creating uploads. Returns whether the copy matches the pin.
+	@discardableResult
+	public static func sharePhotoBackupCA(deviceId: String) -> Bool {
+		guard case .found(let certificate) = readLocalHTTPSCA(deviceId: deviceId),
+			let query = photoBackupCAQuery(deviceId: deviceId)
+		else { return false }
+		switch readPhotoBackupCA(deviceId: deviceId) {
+		case .found(let shared) where shared == certificate:
+			return true
+		case .found:
+			let update: [String: Any] = [kSecValueData as String: certificate]
+			return SecItemUpdate(query as CFDictionary, update as CFDictionary) == errSecSuccess
+		case .missing:
+			var add = query
+			add[kSecValueData as String] = certificate
+			add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+			return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
+		case .unavailable:
+			return false
+		}
+	}
+
+	static func readPhotoBackupCA(deviceId: String) -> LocalHTTPSCAReadResult {
+		guard var query = photoBackupCAQuery(deviceId: deviceId) else {
+			return .unavailable(status: Int32(errSecMissingEntitlement))
+		}
+		query[kSecReturnData as String] = true
+		query[kSecMatchLimit as String] = kSecMatchLimitOne
+		var result: CFTypeRef?
+		let status = SecItemCopyMatching(query as CFDictionary, &result)
+		switch status {
+		case errSecSuccess:
+			guard let certificate = result as? Data else { return .unavailable(status: Int32(errSecDecode)) }
+			return .found(certificate)
+		case errSecItemNotFound:
+			return .missing
+		default:
+			return .unavailable(status: Int32(status))
+		}
+	}
+
+	static func deletePhotoBackupCA(deviceId: String) {
+		guard let query = photoBackupCAQuery(deviceId: deviceId) else { return }
+		SecItemDelete(query as CFDictionary)
+	}
+
+	// The group the app shares with PhotoKit's extension. Only the iOS app and its
+	// extension name one.
+	private static var photoBackupAccessGroup: String? {
+		guard let accessGroup = Bundle.main.object(forInfoDictionaryKey: photoBackupAccessGroupInfoKey) as? String,
 			!accessGroup.isEmpty
 		else { return nil }
+		return accessGroup
+	}
+
+	private static func photoBackupCAQuery(deviceId: String) -> [String: Any]? {
+		guard let accessGroup = photoBackupAccessGroup else { return nil }
+		var query = genericPasswordQuery(service: photoBackupCAService, account: deviceId)
+		query[kSecAttrAccessGroup as String] = accessGroup
+		return query
+	}
+
+	private static func photoBackupGrantQuery(deviceId: String, accountId: String) -> [String: Any]? {
+		guard let accessGroup = photoBackupAccessGroup else { return nil }
 		var query = genericPasswordQuery(
 			service: photoBackupGrantService,
 			account: "\(deviceId):\(accountId)"
 		)
-		// The upload extension receives only this source-scoped bearer grant. Sessions,
-		// certificate pins, and the reusable source id remain in the app's private group.
+		// The upload extension receives this source-scoped bearer grant and a copy of the
+		// Umbrel's public CA. Sessions, the app's own pins, and the reusable source id
+		// remain in the app's private group.
 		query[kSecAttrAccessGroup as String] = accessGroup
 		return query
 	}

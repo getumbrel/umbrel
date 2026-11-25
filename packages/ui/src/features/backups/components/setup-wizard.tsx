@@ -14,7 +14,7 @@ import {ErrorAlert, WarningAlert} from '@/components/ui/alert'
 import {Button} from '@/components/ui/button'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form'
-import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialogSeparator, ImmersiveDialogTitle} from '@/components/ui/immersive-dialog'
 import {Input, PasswordInput} from '@/components/ui/input'
 import umbrelPrivateCloudIcon from '@/features/backups/assets/umbrel-private-cloud-icon.png'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
@@ -27,8 +27,10 @@ import {LoadingTile as LoadingCard} from '@/features/backups/components/tiles'
 import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-backup-ignore'
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
 import {normalizeEncryptionPassword, useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
+import {useDescribeBackupLocation} from '@/features/backups/hooks/use-describe-backup-location'
 import {useExistingBackupDetection} from '@/features/backups/hooks/use-existing-backup-detection'
-import {BACKUP_FILE_NAME, getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
+import {getNetworkHostPath} from '@/features/backups/utils/backup-location-helpers'
+import {BACKUP_FILE_NAME} from '@/features/backups/utils/filepath-helpers'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
@@ -39,7 +41,9 @@ import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation'
+import {focusRingClass} from '@/utils/element-classes'
 
 // ---------------------------------------------
 // Types & Schema
@@ -48,7 +52,6 @@ import {useConfirmation} from '@/providers/confirmation'
 const destinationSchema = z.discriminatedUnion('type', [
 	z.object({
 		type: z.literal('nas'),
-		host: z.string().min(1),
 		rootPath: z.string().min(1),
 	}),
 	z.object({
@@ -145,7 +148,6 @@ export function BackupsSetupWizard() {
 	})
 
 	const {setupBackup, isSettingUpBackup, repositories, connectExistingRepository, isConnectingExisting} = useBackups()
-	const {disks} = useExternalStorage()
 	const showExclusionsStep = (repositories?.length ?? 0) === 0
 
 	// Watches so the parent re-renders when these fields change
@@ -288,7 +290,10 @@ export function BackupsSetupWizard() {
 						const h = headerMetaForStep(step)
 						return (
 							<>
-								<h2 className='text-24 font-medium text-white'>{h.title}</h2>
+								{/* Like immersive dialog titles, wraps short of the window's close button */}
+								<ImmersiveDialogTitle asChild>
+									<h2 className='pe-4 text-24 font-medium text-white'>{h.title}</h2>
+								</ImmersiveDialogTitle>
 								{h.subtitle ? <span className='text-13 text-white/60'>{h.subtitle}</span> : null}
 							</>
 						)
@@ -299,7 +304,7 @@ export function BackupsSetupWizard() {
 				</div>
 
 				{/* Body */}
-				<div className='umbrel-stable-gutter min-h-0 flex-1 overflow-y-auto'>
+				<div className='min-h-0 flex-1 overflow-y-auto'>
 					{step === Step.Destination && <DestinationStep onChangeDestination={handleDestinationChange} onNext={next} />}
 					{step === Step.Folder && folderRootPath && (
 						<FolderPickerStep
@@ -307,20 +312,6 @@ export function BackupsSetupWizard() {
 							disabledPaths={destination?.type === 'nas' ? [folderRootPath] : []}
 							value={folder}
 							onChange={(val) => form.setValue('folder', val, {shouldValidate: true})}
-							selectedName={
-								destination?.type === 'nas'
-									? destination.host
-									: destination?.type === 'external'
-										? disks
-												?.flatMap((disk) =>
-													disk.partitions.map((p) => ({
-														mountpoint: p.mountpoints?.[0],
-														label: p.label || disk.name || t('external-drive'),
-													})),
-												)
-												.find((p) => p.mountpoint === destination.mountpoint)?.label
-										: t('external-drive')
-							}
 						/>
 					)}
 					{step === Step.Exclusions && showExclusionsStep && <BackupsExclusions />}
@@ -432,12 +423,16 @@ function DestinationStep({
 		}
 	}, [dest?.type])
 
-	// NAS sources: show hosts that have at least one mounted share
+	// NAS sources: show hosts that have at least one mounted share, each with the
+	// folder its shares are mounted in. That folder can't be worked out from the
+	// host's name, since mount paths only keep a small set of characters.
 	const {shares, isLoadingShares, refetchShares} = useNetworkStorage({suppressNavigateOnAdd: true})
 	const hosts = useMemo(() => {
-		if (!shares) return []
-		const mounted = shares.filter((s) => s.isMounted)
-		return Array.from(new Set(mounted.map((s) => s.host)))
+		const hostsByRootPath = new Map<string, string>()
+		for (const share of shares ?? []) {
+			if (share.isMounted) hostsByRootPath.set(getNetworkHostPath(share.mountPath), share.host)
+		}
+		return Array.from(hostsByRootPath, ([rootPath, host]) => ({host, rootPath}))
 	}, [shares])
 
 	// External drives (partitions)
@@ -519,19 +514,16 @@ function DestinationStep({
 								onClick={() => setAddNasOpen(true)}
 								label={t('backups.add-umbrel-or-nas')}
 							/>,
-							...hosts.map((host) => {
-								const selected =
-									currentDest?.type === 'nas' &&
-									currentDest.host === host &&
-									currentDest.rootPath === `/Network/${host}`
+							...hosts.map(({host, rootPath}) => {
+								const selected = currentDest?.type === 'nas' && currentDest.rootPath === rootPath
 								return (
 									<ServerCard
-										key={host}
-										selected={!!selected}
-										onClick={() => onChangeDestination({type: 'nas', host, rootPath: `/Network/${host}`})}
+										key={rootPath}
+										selected={selected}
+										onClick={() => onChangeDestination({type: 'nas', rootPath})}
 									>
-										<BackupDeviceIcon path={`/Network/${host}`} connected className='mb-2 size-12' />
-										<span className='w-full truncate text-center text-[12px]' title={host}>
+										<BackupDeviceIcon path={rootPath} connected className='mb-2 size-12' />
+										<span className='w-full truncate text-center text-12' title={host}>
 											{host}
 										</span>
 									</ServerCard>
@@ -588,8 +580,8 @@ function DestinationStep({
 													<div className='mb-2 flex h-12 w-12 items-center justify-center'>
 														<BackupDeviceIcon path={firstMount} connected className='size-11' />
 													</div>
-													<div className='w-full truncate text-center text-[12px]'>{label}</div>
-													<div className='w-full truncate text-center text-[11px] text-white/40'>
+													<div className='w-full truncate text-center text-12'>{label}</div>
+													<div className='w-full truncate text-center text-11 text-white/40'>
 														{formatFilesystemSize(p.size)}
 													</div>
 												</ServerCard>,
@@ -604,7 +596,6 @@ function DestinationStep({
 										return (
 											<ServerCard
 												key={`${disk.id}-requires-format`}
-												selected={false}
 												onClick={() => {
 													if (disk.isFormatting) return
 													navigate(`/files/Home?dialog=files-format-drive&deviceId=${disk.id}`)
@@ -613,8 +604,8 @@ function DestinationStep({
 												<div className='mb-2 flex h-12 w-12 items-center justify-center'>
 													<BackupDeviceIcon path='' connected={false} className='size-11' />
 												</div>
-												<div className='w-full truncate text-center text-[12px]'>{label}</div>
-												<div className='w-full truncate text-center text-[11px] text-white/40'>
+												<div className='w-full truncate text-center text-12'>{label}</div>
+												<div className='w-full truncate text-center text-11 text-white/40'>
 													{disk.isFormatting ? t('files-format.formatting') : t('files-format.title-requires-format')}
 												</div>
 											</ServerCard>
@@ -665,7 +656,7 @@ function DestinationStep({
 					refetchShares()
 					// If we know which host was added, select it as the destination and advance
 					if (host) {
-						onChangeDestination({type: 'nas', host, rootPath: `/Network/${host}`})
+						onChangeDestination({type: 'nas', rootPath: `/Network/${host}`})
 						onNext()
 					}
 				}}
@@ -682,24 +673,20 @@ function FolderPickerStep({
 	rootPath,
 	value,
 	onChange,
-	selectedName,
 	disabledPaths = [],
 }: {
 	rootPath: string
 	value?: string
 	onChange: (v: string) => void
-	selectedName?: string
 	disabledPaths?: string[]
 }) {
 	const {t} = useTranslation()
 	const [isBrowserOpen, setBrowserOpen] = useState(false)
 
+	const describeBackupLocation = useDescribeBackupLocation()
+	const deviceName = describeBackupLocation(rootPath).name
 	// Show nothing until a subfolder is chosen
-	const displayValue = value || ''
-	const shownValue = React.useMemo(() => {
-		if (!displayValue) return ''
-		return getRelativePathFromRoot(displayValue, rootPath)
-	}, [displayValue, rootPath])
+	const shownValue = value ? describeBackupLocation(value).folder : ''
 
 	return (
 		<div className='space-y-4'>
@@ -709,7 +696,7 @@ function FolderPickerStep({
 					<Trans
 						t={t}
 						i18nKey='backups.choose-folder-within-device'
-						values={{device: selectedName || ''}}
+						values={{device: deviceName}}
 						tOptions={{interpolation: {escapeValue: true}}}
 						shouldUnescape
 						components={{
@@ -718,13 +705,14 @@ function FolderPickerStep({
 					/>
 				</div>
 
-				{/* Input with inline "Browse" button */}
+				{/* Input with inline "Browse" button; the path stops short of the
+				    button, which widens with the text size */}
 				<div className='relative'>
 					<Input
 						type='text'
 						value={shownValue}
 						readOnly
-						className='pr-28 text-white/90'
+						className='pr-[calc(7.5rem+10*var(--text-boost))] text-white/90'
 						title={shownValue}
 						onClick={() => setBrowserOpen(true)}
 					/>
@@ -739,10 +727,7 @@ function FolderPickerStep({
 				</div>
 
 				<div className='mt-4'>
-					<WarningAlert
-						icon={HardDrive}
-						description={t('backups.storage-capacity-warning', {device: selectedName || ''})}
-					/>
+					<WarningAlert icon={HardDrive} description={t('backups.storage-capacity-warning', {device: deviceName})} />
 				</div>
 			</div>
 
@@ -784,7 +769,7 @@ function EncryptionStep() {
 						name='encryption.password'
 						render={({field}) => (
 							<FormItem>
-								<FormLabel className='text-13 opacity-60'>{t('password')}</FormLabel>
+								<FormLabel className='text-13 text-white/60'>{t('password')}</FormLabel>
 								<FormControl>
 									<PasswordInput
 										value={field.value}
@@ -796,8 +781,10 @@ function EncryptionStep() {
 										}}
 									/>
 								</FormControl>
-								<div className='relative'>
-									<FormMessage className='absolute -top-1 left-0 text-xs' />
+								{/* In flow, so a message pushes the next field down rather than
+								    covering it; the row is there with or without one */}
+								<div>
+									<FormMessage className='-mt-1 text-xs' />
 								</div>
 							</FormItem>
 						)}
@@ -808,12 +795,12 @@ function EncryptionStep() {
 						name='encryption.confirm'
 						render={({field}) => (
 							<FormItem>
-								<FormLabel className='text-13 opacity-60'>{t('backups.confirm-password')}</FormLabel>
+								<FormLabel className='text-13 text-white/60'>{t('backups.confirm-password')}</FormLabel>
 								<FormControl>
 									<PasswordInput value={field.value} onValueChange={field.onChange} />
 								</FormControl>
-								<div className='relative'>
-									<FormMessage className='absolute -top-1 left-0 text-xs' />
+								<div>
+									<FormMessage className='-mt-1 text-xs' />
 								</div>
 							</FormItem>
 						)}
@@ -832,28 +819,12 @@ function EncryptionStep() {
 
 function ReviewStep({values}: {values: FormValues}) {
 	const {t} = useTranslation()
-	let pathOnly = values.folder
-	if (values.destination.type === 'nas') {
-		const hostRoot = `/Network/${values.destination.host}`
-		if (pathOnly.startsWith(hostRoot)) {
-			pathOnly = pathOnly.slice(hostRoot.length) || '/'
-			if (!pathOnly.startsWith('/')) pathOnly = `/${pathOnly}`
-		}
-	} else {
-		const mountRoot = values.destination.mountpoint
-		if (mountRoot && pathOnly.startsWith(mountRoot)) {
-			pathOnly = pathOnly.slice(mountRoot.length) || '/'
-			if (!pathOnly.startsWith('/')) pathOnly = `/${pathOnly}`
-		}
-	}
-
-	let locationCombined: string
+	const describeBackupLocation = useDescribeBackupLocation()
+	const location = describeBackupLocation(values.folder)
 	const {deviceType} = useNetworkDeviceType(values.destination.type === 'nas' ? values.destination.rootPath : '')
-	if (values.destination.type === 'nas') {
-		locationCombined = `${deviceType === 'umbrel' ? t('umbrel') : t('nas')} · ${values.destination.host} · ${pathOnly}`
-	} else {
-		locationCombined = `${t('external-drive')} · ${getLastPathSegment(values.destination.mountpoint)} · ${pathOnly}`
-	}
+	const kind =
+		values.destination.type === 'nas' ? (deviceType === 'umbrel' ? t('umbrel') : t('nas')) : t('external-drive')
+	const locationCombined = `${kind} · ${location.name} · ${location.folder}`
 
 	const [showPw, setShowPw] = useState(false)
 	// What will actually be saved, so what's shown and copied is what restores
@@ -902,28 +873,38 @@ function ReviewStep({values}: {values: FormValues}) {
 									type={showPw ? 'text' : 'text'}
 									className='flex h-6 w-auto max-w-[120px] min-w-0 items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
 								/>
-								<span
-									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+								<button
+									type='button'
+									className={cn(
+										'group inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-4',
+										focusRingClass,
+									)}
 									onClick={() => setShowPw((s) => !s)}
 									title={showPw ? t('backups.hide') : t('backups.show')}
+									aria-label={showPw ? t('backups.hide') : t('backups.show')}
 								>
 									{showPw ? (
 										<EyeOff className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
 									) : (
 										<Eye className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
 									)}
-								</span>
-								<span
-									className='group inline-flex h-6 w-6 shrink-0 items-center justify-center'
+								</button>
+								<button
+									type='button'
+									className={cn(
+										'group inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-4',
+										focusRingClass,
+									)}
 									onClick={() => copyToClipboard(plainPw)}
 									title={t('backups.copy')}
+									aria-label={t('backups.copy')}
 								>
 									<Copy className='h-4 w-4 opacity-80 transition-colors group-hover:opacity-100' />
-								</span>
+								</button>
 							</span>
 						</>
 					) : (
-						<span className='opacity-60'>{t('backups.no-password-set')}</span>
+						<span className='text-white/60'>{t('backups.no-password-set')}</span>
 					)}
 				</div>
 			</ReviewCard>

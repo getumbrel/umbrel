@@ -14,6 +14,7 @@ import {Blake3Hasher} from '../files/blake3.ts'
 import {OWNER_USER_ID} from '../user/constants.ts'
 
 import MapTiles, {UMBREL_MAP_URL, umbrelPlanet} from './map-tiles.ts'
+import type {PeopleChange} from './people.ts'
 import type {PhotoBackupCloudIdentity, PhotoBackupLocation, PhotoFilter, PhotoScopeMode} from './types.ts'
 import {hashFileRevision, type PublishedFileRevision} from '../files/file-index-enrichment.ts'
 
@@ -184,6 +185,8 @@ export default class Photos {
 
 	async start() {
 		this.logger.log('Starting photos')
+		// Files starts the file index without waiting for it to open
+		await this.#umbreld.files.fileIndex.waitForLaunch()
 		await this.#umbreld.files.fileIndex.initializePhotos()
 		for (const removal of (await this.#umbreld.store.get('photos.backupSourceRemovals')) ?? []) {
 			try {
@@ -1073,6 +1076,21 @@ export default class Photos {
 		return changes
 	}
 
+	// People (see people.ts)
+	async listPeople(accountId: string, hidden: boolean) {
+		return this.#umbreld.files.fileIndex.photosListPeople(accountId, hidden)
+	}
+
+	async listPersonSuggestions(accountId: string) {
+		return this.#umbreld.files.fileIndex.photosListPersonSuggestions(accountId)
+	}
+
+	async changePeople(accountId: string, change: PeopleChange) {
+		const changed = await this.#umbreld.files.fileIndex.photosChangePeople(accountId, change)
+		if (changed) this.#changed(accountId)
+		return changed
+	}
+
 	async setAlbumCover(accountId: string, id: string, itemId?: string) {
 		const changes = await this.#umbreld.files.fileIndex.photosSetAlbumCover(accountId, id, itemId)
 		if (changes) this.#changed(accountId)
@@ -1306,6 +1324,9 @@ export default class Photos {
 		try {
 			const state = await this.indexingState(accountId)
 			await this.#umbreld.eventBus.emit('photos:indexing-progress', {accountId, state})
+			// The models' reading is part of what moved
+			const status = await this.#umbreld.search.status(accountId)
+			await this.#umbreld.eventBus.emit('search:indexing-progress', {accountId, status})
 		} catch (error) {
 			// A progress notification is best-effort and must not turn a completed
 			// source mutation into an API failure during file-index startup/recovery.
