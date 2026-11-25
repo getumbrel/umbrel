@@ -65,6 +65,7 @@ export function ImmersiveDialogContent({
 	showScroll = false,
 	ref,
 	className,
+	closeCrossClassName,
 	...contentProps
 }: {
 	children: React.ReactNode
@@ -72,6 +73,8 @@ export function ImmersiveDialogContent({
 	short?: boolean
 	showScroll?: boolean
 	ref?: React.Ref<HTMLDivElement>
+	/** Colours the close button's cross on its own (see CloseButton) */
+	closeCrossClassName?: string
 } & Omit<ComponentPropsWithoutRef<typeof DialogContent>, 'asChild'>) {
 	const returnFocus = useReturnFocus(contentProps)
 	return (
@@ -115,7 +118,7 @@ export function ImmersiveDialogContent({
 				<div className={immersiveScrollAreaContentsClass}>{children}</div>
 			)}
 			<div className='umbrel-window-chrome umbrel-window-surface-all pointer-events-none absolute inset-0 z-50' />
-			<DialogCloseButton surface='immersive' />
+			<DialogCloseButton surface='immersive' crossClassName={closeCrossClassName} />
 		</DialogContent>
 	)
 }
