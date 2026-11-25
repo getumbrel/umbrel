@@ -518,14 +518,20 @@ export default class FileIndexEngine {
 		}
 
 		if (this.#stopping) return
+		const readersStartedAt = performance.now()
 		this.#readers = new FileIndexReaderPool(
 			{databasePath: this.databasePath, umbrelDatabasePath: this.umbrelDatabasePath},
 			this.#readerPoolOptions,
 		)
 		await this.#readers.start()
+		this.logger.log(`Started file index readers in ${elapsedMs(readersStartedAt)}ms`)
 		this.#setAvailable(true)
 		this.logger.log(`Opened file index schema v${this.#schemaVersion}`)
-		if (this.#roots.size > 0) await this.#syncRoots()
+		if (this.#roots.size > 0) {
+			const rootsSyncedAt = performance.now()
+			await this.#syncRoots()
+			this.logger.log(`Synced file index roots in ${elapsedMs(rootsSyncedAt)}ms`)
+		}
 		if (!this.#artifactRecoveryBarrierRequired) this.#enrichment.allowDestructiveArtifactMaintenance()
 	}
 
@@ -557,13 +563,34 @@ export default class FileIndexEngine {
 				)
 			}
 		}
+		// Each step that can be slow on a large index logs how long it took, so a
+		// startup that never finishes shows which step it's stuck in.
+		const trace = (message: string) => this.logger.log(message)
+		const countedAt = performance.now()
+		const counts = this.#database
+			.prepare(
+				`SELECT
+					(SELECT COUNT(*) FROM entries) AS entries,
+					(SELECT COUNT(*) FROM contents) AS contents,
+					(SELECT COUNT(*) FROM directory_sizes_dirty_roots) AS dirtyRoots,
+					(SELECT COUNT(*) FROM directory_sizes_dirty_entries) AS dirtyEntries`,
+			)
+			.get() as {entries: number; contents: number; dirtyRoots: number; dirtyEntries: number}
+		this.logger.log(
+			`File index has ${counts.entries} entries and ${counts.contents} contents, with ${counts.dirtyRoots} roots and ${counts.dirtyEntries} entries waiting for directory sizes (counted in ${elapsedMs(countedAt)}ms)`,
+		)
+		const directorySizesSyncedAt = performance.now()
 		this.#directorySizes = new DirectorySizes(this.#database)
-		this.#directorySizes.sync()
+		this.#directorySizes.sync(trace)
+		this.logger.log(`Synced directory sizes in ${elapsedMs(directorySizesSyncedAt)}ms`)
 		this.#photosAvailable = false
-		await this.#openUmbrelDatabase().catch((error) => {
-			this.logger.error('Umbrel database is unavailable; file indexing will continue without Photos', error)
-			this.#schedulePhotosRecovery()
-		})
+		const photosSyncedAt = performance.now()
+		await this.#openUmbrelDatabase(trace)
+			.then(() => this.logger.log(`Synced Photos library in ${elapsedMs(photosSyncedAt)}ms`))
+			.catch((error) => {
+				this.logger.error('Umbrel database is unavailable; file indexing will continue without Photos', error)
+				this.#schedulePhotosRecovery()
+			})
 		this.#database.exec(`
 			CREATE TEMP TABLE reconciliation_seen (
 				root_id INTEGER NOT NULL,
@@ -615,18 +642,20 @@ export default class FileIndexEngine {
 		`)
 	}
 
-	async #openUmbrelDatabase() {
+	async #openUmbrelDatabase(trace?: (message: string) => void) {
 		await fse.ensureDir(nodePath.dirname(this.umbrelDatabasePath))
 		let umbrelDatabase: Database | undefined
 		let attached = false
 		try {
+			const migratedAt = performance.now()
 			umbrelDatabase = new BetterSqlite3(this.umbrelDatabasePath, {timeout: 5000})
 			migratePhotos(umbrelDatabase)
+			trace?.(`Photos database migrations completed in ${elapsedMs(migratedAt)}ms`)
 			umbrelDatabase.close()
 			umbrelDatabase = undefined
 			this.#requireDatabase().prepare('ATTACH DATABASE ? AS umbrel').run(this.umbrelDatabasePath)
 			attached = true
-			const sync = this.#requireDatabase().transaction(() => this.#syncPhotosState(this.#requireDatabase()))
+			const sync = this.#requireDatabase().transaction(() => this.#syncPhotosState(this.#requireDatabase(), trace))
 			sync.immediate()
 			this.#photosAvailable = true
 			this.#photosRecoveryAttempts = 0
@@ -827,7 +856,7 @@ export default class FileIndexEngine {
 		await this.#loadRootState()
 	}
 
-	#syncPhotosState(database: Database) {
+	#syncPhotosState(database: Database, trace?: (message: string) => void) {
 		if (this.#rootsConfigured) {
 			const activeAccounts = new Set(
 				[...this.#roots.values()].filter(({kind}) => kind === 'home').map(({ownerId}) => ownerId),
@@ -839,7 +868,7 @@ export default class FileIndexEngine {
 				if (!activeAccounts.has(accountId)) this.#photos.removeAccount(database, accountId)
 			}
 		}
-		return this.#photos.syncAll(database)
+		return this.#photos.syncAll(database, undefined, trace)
 	}
 
 	async #loadRootState() {
@@ -2666,6 +2695,10 @@ function reuseMovedContent(
 			destinationPrefix,
 			sourcePrefix,
 		)
+}
+
+function elapsedMs(startedAt: number) {
+	return Math.round(performance.now() - startedAt)
 }
 
 function databaseQuarantineReason(error: unknown) {

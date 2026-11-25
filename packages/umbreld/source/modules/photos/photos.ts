@@ -184,6 +184,8 @@ export default class Photos {
 
 	async start() {
 		this.logger.log('Starting photos')
+		// Files starts the file index without waiting for it to open
+		await this.#umbreld.files.fileIndex.waitForLaunch()
 		await this.#umbreld.files.fileIndex.initializePhotos()
 		for (const removal of (await this.#umbreld.store.get('photos.backupSourceRemovals')) ?? []) {
 			try {

@@ -344,7 +344,10 @@ export default class Umbreld {
 		// Account deletion spans several modules. Retry any cleanup that was
 		// interrupted after the member was durably marked as deleted.
 		await this.user.finishPendingDeletions()
-		await this.photos.start().catch((error) => this.logger.error('Failed to start Photos', error))
+
+		// Photos waits for the file index, which can take a long time to open, so
+		// the rest of startup doesn't wait for Photos.
+		this.photos.start().catch((error) => this.logger.error('Failed to start Photos', error))
 
 		// Apps bind their declared host ports first. Machines then reconcile
 		// autostart domains and can report a precise port conflict for restored

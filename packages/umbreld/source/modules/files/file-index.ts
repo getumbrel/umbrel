@@ -171,6 +171,12 @@ export default class FileIndex {
 		await this.#launchWorker()
 	}
 
+	// Resolves once the worker launch in progress, if any, has finished. The index
+	// may still be unavailable afterwards if the launch failed.
+	async waitForLaunch() {
+		await this.#launch
+	}
+
 	async #launchWorker() {
 		if (this.#launch) return this.#launch
 		const launch = this.#bootWorker().catch((error) => {
@@ -226,6 +232,10 @@ export default class FileIndex {
 			this.logger.log(`Started file index worker thread ${this.#workerThreadId}`)
 		} catch (error) {
 			if (this.#detachWorker(worker, generation, error)) {
+				// terminate() can't interrupt a long SQLite statement, so the worker can
+				// take as long as that statement does to exit. Log the failure now
+				// rather than only once it has.
+				if (!this.#stopping) this.logger.error('File index worker failed to start, waiting for it to exit', error)
 				await worker.terminate().catch(() => {})
 			}
 			throw error
@@ -757,7 +767,9 @@ export default class FileIndex {
 			if (worker) {
 				const generation = this.#workerGeneration
 				this.#detachWorker(worker, generation, new Error('File index worker stopped during startup'))
+				this.logger.log('Terminating file index worker that is still starting')
 				await worker.terminate().catch(() => {})
+				this.logger.log('Terminated file index worker')
 			}
 			await launch
 		}

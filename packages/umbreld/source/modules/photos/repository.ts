@@ -130,8 +130,16 @@ export default class PhotosRepository {
 		if (indexing) this.#indexingStatus.sync(database)
 	}
 
-	syncAll(database: Database, accountId?: string): boolean {
-		if (!database.inTransaction) return database.transaction(() => this.syncAll(database, accountId)).immediate()
+	// trace, when given, is called after each statement that can be slow on a large
+	// library, so a sync that never finishes shows which statement it's stuck in.
+	syncAll(database: Database, accountId?: string, trace?: (message: string) => void): boolean {
+		if (!database.inTransaction) return database.transaction(() => this.syncAll(database, accountId, trace)).immediate()
+		let stepStartedAt = performance.now()
+		const step = (message: string) => {
+			if (!trace) return
+			trace(`Photos sync: ${message} in ${Math.round(performance.now() - stepStartedAt)}ms`)
+			stepStartedAt = performance.now()
+		}
 		const projectionRecovery =
 			!this.#projectionGenerationMatches(database) ||
 			!(
@@ -145,8 +153,10 @@ export default class PhotosRepository {
 				WHERE kind IN ('home', 'trash')`,
 			)
 			.all() as Array<{owner_id: string}>
+		step(`checked state (projection recovery ${projectionRecovery}, ${accounts.length} accounts)`)
 		let changed = projectionRecovery
-		for (const {owner_id: ownerId} of accounts) {
+		for (const [index, {owner_id: ownerId}] of accounts.entries()) {
+			const account = `account ${index + 1}`
 			const sourceId = this.#ensureSource(database, ownerId)
 			const hasReadyHomeMedia = Boolean(
 				database
@@ -160,6 +170,7 @@ export default class PhotosRepository {
 					)
 					.get(ownerId),
 			)
+			step(`${account} has ready Home media ${hasReadyHomeMedia}`)
 			if (!hasReadyHomeMedia) {
 				// A rebuilt disposable index must not inherit visible timeline rows
 				// from durable state before its replacement metadata is ready.
@@ -170,6 +181,7 @@ export default class PhotosRepository {
 							AND effective_taken_at <> ?`,
 					)
 					.run(ownerId, UNKNOWN_EFFECTIVE_TAKEN_AT)
+				step(`${account} cleared timeline dates`)
 			}
 			const requiresBackfill = Boolean(
 				database
@@ -179,6 +191,7 @@ export default class PhotosRepository {
 					)
 					.get(ownerId, UNKNOWN_EFFECTIVE_TAKEN_AT),
 			)
+			step(`${account} requires backfill ${requiresBackfill}`)
 			const inserted = database
 				.prepare(
 					`INSERT INTO umbrel.photos_content_state(
@@ -196,6 +209,7 @@ export default class PhotosRepository {
 					RETURNING content_hash`,
 				)
 				.all(ownerId, sourceId, ownerId) as Array<{content_hash: Buffer}>
+			step(`${account} added ${inserted.length} items`)
 			changed = inserted.length > 0 || changed
 			const dirtyAccount = database
 				.prepare(
@@ -212,6 +226,7 @@ export default class PhotosRepository {
 					.all(ownerId, ownerId) as Array<{content_hash: Buffer}>
 			).map(({content_hash}) => content_hash)
 			const refreshHashes = uniqueBuffers([...inserted.map(({content_hash}) => content_hash), ...dirtyHashes])
+			step(`${account} found ${dirtyHashes.length} changed items (whole account changed ${Boolean(dirtyAccount)})`)
 			changed = changed || Boolean(dirtyAccount) || refreshHashes.length > 0
 			if (
 				projectionRecovery ||
@@ -219,9 +234,11 @@ export default class PhotosRepository {
 				requiresBackfill ||
 				refreshHashes.length > ACCOUNT_WIDE_REFRESH_THRESHOLD
 			) {
-				this.#refreshEffectiveTakenAt(database, ownerId, undefined, false)
+				this.#refreshEffectiveTakenAt(database, ownerId, undefined, false, trace)
+				step(`${account} rebuilt library`)
 			} else if (refreshHashes.length > 0) {
 				this.#refreshEffectiveTakenAt(database, ownerId, refreshHashes, false)
+				step(`${account} refreshed ${refreshHashes.length} items`)
 			}
 		}
 		const orphaned = database
@@ -234,11 +251,13 @@ export default class PhotosRepository {
 			)
 			.all() as Array<{account_id: string}>
 		for (const {account_id: ownerId} of orphaned) this.#readModel.removeAccount(database, ownerId)
+		step(`removed ${orphaned.length} orphaned accounts`)
 		changed = changed || orphaned.length > 0
 		database.exec('UPDATE main.photos_read_model_state SET initialized = 1 WHERE id = 1')
 		if (changed) this.#advanceProjectionGeneration(database)
 		this.#synchronizeProjectionGeneration(database)
 		this.#indexingStatus.sync(database)
+		step('synced indexing status')
 		return changed
 	}
 
@@ -1618,13 +1637,19 @@ export default class PhotosRepository {
 
 	// Keep the durable timeline date consistent with the disposable read model.
 	// Change journals cover callbacks missed while Photos is unavailable.
-	#refreshEffectiveTakenAt(database: Database, accountId: string, hashes?: Buffer[], advanceGeneration = true): void {
+	#refreshEffectiveTakenAt(
+		database: Database,
+		accountId: string,
+		hashes?: Buffer[],
+		advanceGeneration = true,
+		trace?: (message: string) => void,
+	): void {
 		if (!database.inTransaction)
 			return database
-				.transaction(() => this.#refreshEffectiveTakenAt(database, accountId, hashes, advanceGeneration))
+				.transaction(() => this.#refreshEffectiveTakenAt(database, accountId, hashes, advanceGeneration, trace))
 				.immediate()
 		if (hashes?.length === 0) return
-		this.#readModel.refresh(database, accountId, hashes)
+		this.#readModel.refresh(database, accountId, hashes, trace)
 		if (advanceGeneration) this.#advanceProjectionGeneration(database)
 	}
 

@@ -90,7 +90,14 @@ export default class PhotosReadModel {
 		return [...known.values()]
 	}
 
-	refresh(database: Database, accountId: string, hashes?: Buffer[]) {
+	// trace, when given, is called after each statement of the rebuild
+	refresh(database: Database, accountId: string, hashes?: Buffer[], trace?: (message: string) => void) {
+		let stepStartedAt = performance.now()
+		const step = (message: string) => {
+			if (!trace) return
+			trace(`Photos library rebuild: ${message} in ${Math.round(performance.now() - stepStartedAt)}ms`)
+			stepStartedAt = performance.now()
+		}
 		// Call inside the same transaction as the indexed/durable mutation. TEMP
 		// staging bounds intermediate work without storing a second EXIF copy.
 		if (!database.prepare("SELECT 1 FROM sqlite_temp_schema WHERE name = 'photos_stage_hashes'").get()) {
@@ -131,12 +138,13 @@ export default class PhotosReadModel {
 			const parameters = [...(batch ?? []), ...Array<null>(capacity - (batch?.length ?? 0)).fill(null), accountId]
 			for (const [name, cte] of sets) {
 				database.exec(`DELETE FROM temp.photos_stage_${name}`)
-				this.#prepare(
+				const {changes} = this.#prepare(
 					database,
 					`INSERT INTO temp.photos_stage_${name}
 					${rawPhotoLibraryCte(capacity, stages)} SELECT * FROM ${cte}`,
 				).run(...parameters)
 				stages.push(name)
+				step(`staged ${changes} ${name}`)
 			}
 			database.exec('DELETE FROM temp.photos_stage_hashes')
 			if (batch) {
@@ -168,6 +176,7 @@ export default class PhotosReadModel {
 					database,
 					`INSERT INTO photos_library_${name}(${columns}) SELECT ${columns} FROM temp.photos_stage_${name}`,
 				).run()
+				step(`replaced ${name}`)
 			}
 			this.#prepare(
 				database,
@@ -176,6 +185,7 @@ export default class PhotosReadModel {
 				WHERE account_id = state.account_id AND content_hash = state.content_hash AND root_kind = 'home')
 				WHERE account_id = ? ${batch ? 'AND content_hash IN (SELECT content_hash FROM temp.photos_stage_hashes)' : ''}`,
 			).run(accountId)
+			step('updated timeline dates')
 			for (const schema of ['main', 'umbrel']) {
 				this.#prepare(
 					database,
