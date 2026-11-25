@@ -14,6 +14,7 @@ import type Umbreld from '../../index.ts'
 import {escapeSpecialRegExpLiterals} from '../utilities/regexp.ts'
 import pWaitFor from 'p-wait-for'
 import {getGpuDeviceUsage, type GpuDeviceUsage} from '../hardware/gpu-usage.ts'
+import {heldByModels, MODELS_CGROUP} from '../files/memory-room.ts'
 
 // Asked over the Docker socket rather than with the docker CLI: Live Usage
 // polls every second, and a process per poll costs more than the answer
@@ -236,14 +237,39 @@ async function getReclaimableZfsArcSize(): Promise<number> {
 	}
 }
 
+// Returns the memory held by the models that index files for search. umbreld
+// stops them when the device is short of memory, so like the ARC it is
+// reclaimable, and the model scheduler already counts it as free (see
+// memory-room.ts). That is what they hold in RAM, which MemAvailable never
+// includes so it can't be subtracted twice, plus the RAM zram uses for what
+// they have in swap, estimated like an app's.
+async function getReclaimableModelMemory(): Promise<number> {
+	try {
+		const [memoryStat, swap, zramRamFactor] = await Promise.all([
+			fse.readFile(`${MODELS_CGROUP}/memory.stat`, 'utf8'),
+			fse.readFile(`${MODELS_CGROUP}/memory.swap.current`, 'utf8').catch(() => '0'),
+			getZramRamFactor(),
+		])
+		const swapped = clampNonNegativeNumber(parseInt(swap.trim(), 10))
+		return clampNonNegativeNumber(heldByModels(memoryStat) + swapped * zramRamFactor)
+	} catch {
+		return 0
+	}
+}
+
 // Returns total and pressure-relevant used memory from /proc/meminfo.
 // Uses MemAvailable which reflects reclaimable memory and matches free/htop semantics.
-// Also subtracts reclaimable ZFS ARC since MemAvailable doesn't account for it.
+// Also subtracts reclaimable ZFS ARC since MemAvailable doesn't account for it,
+// and the memory of the models that index files, which give it up when needed.
 async function getSystemMemoryFromMeminfo(): Promise<{size: number; totalUsed: number}> {
-	const [meminfo, arcSize] = await Promise.all([fse.readFile('/proc/meminfo', 'utf8'), getReclaimableZfsArcSize()])
+	const [meminfo, arcSize, modelSize] = await Promise.all([
+		fse.readFile('/proc/meminfo', 'utf8'),
+		getReclaimableZfsArcSize(),
+		getReclaimableModelMemory(),
+	])
 	const size = clampByteCount(getProcMemoryField(meminfo, 'MemTotal') ?? 0)
 	const memAvailable = clampByteCount(getProcMemoryField(meminfo, 'MemAvailable') ?? 0)
-	const totalUsed = clampByteCount(size - memAvailable - arcSize, size)
+	const totalUsed = clampByteCount(size - memAvailable - arcSize - modelSize, size)
 	return {size, totalUsed}
 }
 

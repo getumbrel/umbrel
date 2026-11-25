@@ -1,6 +1,21 @@
 import {execFileSync} from 'node:child_process'
 import {readFileSync} from 'node:fs'
 
+// Where the models that read the library run (see umbrelbackground.slice in
+// packages/os)
+export const MODELS_CGROUP = '/sys/fs/cgroup/umbrelbackground.slice'
+
+// What the models hold of the device's memory, in bytes, given their cgroup's
+// memory.stat: what they have in use, and what a model has on a GPU that
+// shares the device's memory, which is counted to it as shared memory. Both
+// are in memory, not swap, and neither is in what the kernel calls available,
+// so this can be added to that, or taken off what is used, without counting
+// anything twice.
+export function heldByModels(memoryStat: string) {
+	const field = (name: string) => Number(new RegExp(`^${name} (\\d+)$`, 'm').exec(memoryStat)?.[1] ?? 0)
+	return field('anon') + field('shmem')
+}
+
 // How much memory the device has to spare, and whether it is short of it now.
 //
 // What is free: what the kernel calls available, and what the models that
@@ -42,11 +57,8 @@ export function memoryRoom(read = readOrNothing, pageBytes = pageSize()) {
 	const cache = read('/proc/spl/kstat/zfs/arcstats')
 	const kept = megabytes(cache, /^size\s+\d+\s+(\d+)/m, 1024 ** 2)
 	const least = megabytes(cache, /^c_min\s+\d+\s+(\d+)/m, 1024 ** 2)
-	// What a model holds on a GPU that shares the device's memory is counted
-	// to it as shared memory
-	const models = read('/sys/fs/cgroup/umbrelbackground.slice/memory.stat')
-	const held = megabytes(models, /^anon (\d+)/m, 1024 ** 2) + megabytes(models, /^shmem (\d+)/m, 1024 ** 2)
-	const swapped = megabytes(read('/sys/fs/cgroup/umbrelbackground.slice/memory.swap.current'), /^(\d+)/, 1024 ** 2)
+	const held = heldByModels(read(`${MODELS_CGROUP}/memory.stat`)) / 1024 ** 2
+	const swapped = megabytes(read(`${MODELS_CGROUP}/memory.swap.current`), /^(\d+)/, 1024 ** 2)
 	return {
 		freeMb: Math.round(available + held),
 		cacheMb: Math.round(Math.max(0, kept - least)),

@@ -132,6 +132,27 @@ describe('getMemoryUsage', () => {
 		})
 	})
 
+	test('should count the memory of the models that index files as available', async () => {
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		vi.mocked(fse.readFile).mockImplementation(async (path) => {
+			if (path === '/proc/meminfo') return 'MemTotal:        1000 kB\n' + 'MemAvailable:     360 kB\n'
+			// 100 kB in use and 50 kB on the GPU, in RAM; file cache is already available
+			if (path === '/sys/fs/cgroup/umbrelbackground.slice/memory.stat') {
+				return 'anon 102400\nfile 999999\nshmem 51200\n'
+			}
+			// 40 kB in swap, which zram keeps in a quarter of that
+			if (path === '/sys/fs/cgroup/umbrelbackground.slice/memory.swap.current') return '40960\n'
+			if (path === '/sys/block/zram0/mm_stat') return '1000 0 250'
+			throw new Error('ENOENT')
+		})
+		vi.mocked(execa.$).mockResolvedValue({stdout: ''})
+		expect(await getMemoryUsage(umbreld)).toMatchObject({
+			size: 1_024_000,
+			totalUsed: 491_520, // 1000kB - 360kB - (100kB + 50kB + 40kB * 0.25)
+			system: 491_520,
+		})
+	})
+
 	test('should clamp memory outputs to non-negative values within total size', async () => {
 		const umbreld = new Umbreld({dataDirectory: '/tmp'})
 		;(umbreld.apps as any).instances = [
@@ -157,13 +178,13 @@ describe('getMemoryUsage', () => {
 					'Shmem:           2000 kB\n'
 				)
 			}
-			if (String(path).includes('memory.current')) {
+			if (String(path).includes('docker-') && String(path).endsWith('memory.current')) {
 				return '5120000'
 			}
-			if (String(path).includes('memory.stat')) {
+			if (String(path).includes('docker-') && String(path).endsWith('memory.stat')) {
 				return 'inactive_file 0\n'
 			}
-			if (String(path).includes('memory.swap.current')) {
+			if (String(path).includes('docker-') && String(path).endsWith('memory.swap.current')) {
 				return '5120000'
 			}
 			if (path === '/sys/block/zram0/mm_stat') {
