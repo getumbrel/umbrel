@@ -2716,34 +2716,6 @@ export default class App {
 		return containers
 	}
 
-	async getPids() {
-		const containers = await this.getContainerNames()
-		try {
-			// If we fail to get the PIDs of one container, skip it and continue for
-			// the other containers. We'll expect to get it on some misses for the app
-			// proxy and tor server containers.
-			const outputs = await Promise.all(
-				containers.map(async (container) => {
-					try {
-						const {stdout} = await $`docker top ${container} -o pid`
-						return stdout
-					} catch {
-						return ''
-					}
-				}),
-			)
-			return outputs
-				.join('\n')
-				.split('\n') // Split on newline
-				.map((line) => line.trim()) // Trim whitespace
-				.filter((line) => /^([1-9][0-9]*|0)$/.test(line)) // Keep only integers
-				.map((line) => parseInt(line, 10)) // And convert
-		} catch (error) {
-			this.logger.error(`Failed to get pids for app ${this.id}`, error)
-			return []
-		}
-	}
-
 	async getDiskUsage() {
 		const paths = [`/Apps/${this.id}`]
 		const dataRootLocation = await this.getDataRootLocation()

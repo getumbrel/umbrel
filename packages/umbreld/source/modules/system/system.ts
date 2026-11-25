@@ -7,12 +7,17 @@ import systemInformation from 'systeminformation'
 import {$, type ExecaError} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
+import Dockerode from 'dockerode'
 
 import type Umbreld from '../../index.ts'
 
 import {escapeSpecialRegExpLiterals} from '../utilities/regexp.ts'
 import pWaitFor from 'p-wait-for'
 import {getGpuDeviceUsage, type GpuDeviceUsage} from '../hardware/gpu-usage.ts'
+
+// Asked over the Docker socket rather than with the docker CLI: Live Usage
+// polls every second, and a process per poll costs more than the answer
+const docker = new Dockerode()
 
 export async function getCpuTemperature(): Promise<{
 	warning: 'normal' | 'warm' | 'hot'
@@ -127,19 +132,13 @@ function clampByteCount(value: number, max = Number.MAX_SAFE_INTEGER): number {
 	return Math.min(safeMax, Math.round(safeValue))
 }
 
-// Returns a map of Docker container name to full container ID by running
-// a single `docker ps` command. This lets us locate cgroup paths efficiently.
+// Returns a map of running Docker container name to full container ID from a
+// single request to the Docker socket. This lets us locate cgroup paths efficiently.
 async function getDockerContainerIds(): Promise<Map<string, string>> {
 	try {
-		const {stdout} = await $`docker ps --no-trunc --format={{.ID}}|{{.Names}}`
 		const result = new Map<string, string>()
-		for (const line of stdout.trim().split('\n')) {
-			if (!line) continue
-			const separatorIndex = line.indexOf('|')
-			if (separatorIndex === -1) continue
-			const id = line.slice(0, separatorIndex)
-			const name = line.slice(separatorIndex + 1)
-			if (id && name) result.set(name, id)
+		for (const container of await docker.listContainers()) {
+			for (const name of container.Names) result.set(name.replace(/^\//, ''), container.Id)
 		}
 		return result
 	} catch {
@@ -149,7 +148,7 @@ async function getDockerContainerIds(): Promise<Map<string, string>> {
 
 // Map host PIDs to their Umbrel app without running `docker top` once per
 // container. Docker's systemd cgroup contains every process in a container,
-// including children, and the single `docker ps` snapshot gives us the stable
+// including children, and the single container listing gives us the stable
 // full container ID used by that cgroup path.
 export async function getAppPids(umbreld: Umbreld): Promise<Map<number, string>> {
 	const [containerIds, appContainers] = await Promise.all([
@@ -465,29 +464,24 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 	machines: Array<{id: string; name: string; osId: string; used: number}>
 }> {
 	// Get snapshots close together so the residual system bucket stays useful.
-	const [processes, machineUsage] = await Promise.all([getProcessesCpu(), umbreld.machines.runtimeResourceUsage()])
+	// App processes come from their containers' cgroups rather than `docker top`,
+	// which would start a process per container on every poll.
+	const [processes, machineUsage, pidToApp] = await Promise.all([
+		getProcessesCpu(),
+		umbreld.machines.runtimeResourceUsage(),
+		getAppPids(umbreld),
+	])
 
 	// Calculate total CPU used by all processes
 	const totalUsed = processes.reduce((total, process) => total + process.cpu, 0)
 
 	// Calculate CPU used by the processes owned by each app
-	const apps = await Promise.all(
-		umbreld.apps.instances.map(async (app) => {
-			let appUsed = 0
-			try {
-				const appPids = await app.getPids()
-				appUsed = processes
-					.filter((process) => appPids.includes(process.pid))
-					.reduce((total, process) => total + process.cpu, 0)
-			} catch (error) {
-				umbreld.logger.error(`Error getting cpu`, error)
-			}
-			return {
-				id: app.id,
-				used: appUsed,
-			}
-		}),
-	)
+	const appUsed = new Map<string, number>()
+	for (const process of processes) {
+		const appId = pidToApp.get(process.pid)
+		if (appId) appUsed.set(appId, (appUsed.get(appId) ?? 0) + process.cpu)
+	}
+	const apps = umbreld.apps.instances.map((app) => ({id: app.id, used: appUsed.get(app.id) ?? 0}))
 
 	// Calculate CPU used by the system (total - apps)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)

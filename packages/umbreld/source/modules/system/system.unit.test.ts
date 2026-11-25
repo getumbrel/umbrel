@@ -27,6 +27,12 @@ import {
 vi.mock('systeminformation')
 vi.mock('execa')
 vi.mock('fs-extra')
+const {listContainers} = vi.hoisted(() => ({listContainers: vi.fn(async () => [])}))
+vi.mock('dockerode', () => ({
+	default: class {
+		listContainers = listContainers
+	},
+}))
 // Don't actually wait between WiFi restore attempts
 vi.mock('node:timers/promises', () => ({setTimeout: vi.fn(async () => {})}))
 
@@ -137,11 +143,9 @@ describe('getMemoryUsage', () => {
 		vi.mocked(execa.$).mockImplementation(async (...args: any[]) => {
 			const template = args[0]
 			const str = Array.isArray(template) ? template.join('') : String(template)
-			if (str.includes('docker ps')) {
-				return {stdout: 'abc123def456|test_web_1'} as any
-			}
 			return {stdout: ''} as any
 		})
+		listContainers.mockResolvedValue([{Id: 'abc123def456', Names: ['/test_web_1']}])
 		vi.mocked(fse.readFile).mockImplementation(async (path) => {
 			if (path === '/proc/meminfo') {
 				return (
