@@ -43,7 +43,9 @@ function EnsureLoggedInState({
 		return <LoadingCover label={t('auth.checking-backend-for-user')} />
 	}
 
-	if (isLoggedInQ.isError) {
+	// Block an unknown login state, but keep the page when a background check fails: the last
+	// answer still stands, and it's the system status check that reports a lost connection
+	if (isLoggedInQ.isError && isLoggedInQ.data === undefined) {
 		return (
 			<Cover
 				surface='black'
