@@ -236,6 +236,10 @@ private struct FullScreenVideoPresenter: UIViewControllerRepresentable {
 			let playerController = AVPlayerViewController()
 			playerController.player = pendingPlayer
 			playerController.delegate = self
+			// Over the viewer, not in place of it: a full-screen presentation takes the
+			// viewer out of the window, and if an alert or sheet elsewhere then closes the
+			// viewer under the player, UIKit can't zoom back from it and throws.
+			playerController.modalPresentationStyle = .overFullScreen
 			activePlayerController = playerController
 			activateAudioSession()
 			present(playerController, animated: true) {
