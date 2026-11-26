@@ -23,6 +23,8 @@ export default class NetworkStorage {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	mountedShares: Set<string>
+	// Shares that were still in the mount table but didn't respond at the last check
+	unresponsiveShares: Set<string>
 	shareWatchInterval = 1000 * 60 // One minute
 	isRunning = false
 	watchJobPromise?: Promise<void>
@@ -32,6 +34,7 @@ export default class NetworkStorage {
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLowerCase()}`)
 		this.mountedShares = new Set()
+		this.unresponsiveShares = new Set()
 	}
 
 	async start() {
@@ -100,12 +103,28 @@ export default class NetworkStorage {
 				shares.map(async (share) => {
 					try {
 						if (await this.#isMounted(share)) {
+							this.unresponsiveShares.delete(share.mountPath)
 							this.mountedShares.add(share.mountPath)
 						} else {
 							// Announce the disconnect so clients stop treating the share as usable
 							if (this.mountedShares.delete(share.mountPath)) {
 								this.#umbreld.eventBus.emit('files:network-storage:change')
 							}
+
+							// When a CIFS server stops responding, its mount stays in the kernel
+							// mount table but `mountpoint` can't stat it, so it looks unmounted.
+							// Mounting over it then fails on the dead path. Give the kernel one
+							// watch interval to reconnect on its own, then detach the mount.
+							if (await this.#isInMountTable(share)) {
+								if (!this.unresponsiveShares.has(share.mountPath)) {
+									this.unresponsiveShares.add(share.mountPath)
+									this.logger.log(`Network share is not responding: ${share.mountPath}`)
+									return
+								}
+								await this.#detachUnresponsiveMounts(share)
+							}
+							this.unresponsiveShares.delete(share.mountPath)
+
 							await this.#mountShare(share)
 						}
 					} catch (error) {}
@@ -124,6 +143,31 @@ export default class NetworkStorage {
 			return true
 		} catch (error) {
 			return false
+		}
+	}
+
+	// Check if the kernel mount table has an entry at the share's mount path. Unlike
+	// `mountpoint`, this never touches the path itself, so it also finds CIFS mounts
+	// whose server has stopped responding (stat fails on those, e.g. with EHOSTDOWN).
+	async #isInMountTable(share: NetworkShare): Promise<boolean> {
+		try {
+			const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
+			await $`findmnt --nocanonicalize --noheadings --mountpoint ${systemMountPath}`
+
+			return true
+		} catch (error) {
+			return false
+		}
+	}
+
+	// Detach every mount at the share's path that is in the mount table but doesn't
+	// respond. A lazy unmount detaches it without waiting on the unreachable server.
+	async #detachUnresponsiveMounts(share: NetworkShare): Promise<void> {
+		const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
+		for (let attempts = 0; (await this.#isInMountTable(share)) && !(await this.#isMounted(share)); attempts++) {
+			if (attempts >= 32) throw new Error(`Too many stacked mounts at ${share.mountPath}`)
+			this.logger.log(`Detaching unresponsive network share: ${share.mountPath}`)
+			await $`umount --lazy --no-canonicalize ${systemMountPath}`
 		}
 	}
 
@@ -187,6 +231,10 @@ export default class NetworkStorage {
 				await $`umount ${systemMountPath}`
 			}
 
+			// `#isMounted` doesn't see mounts whose server stopped responding, so the
+			// loop above skips them. Detach those too, or a dead mount stays behind.
+			await this.#detachUnresponsiveMounts(share)
+
 			// Directory cleanup is housekeeping, not part of proving that the
 			// filesystem was detached. A failed mount may already have removed
 			// these paths, and non-empty paths must be left untouched.
@@ -199,6 +247,7 @@ export default class NetworkStorage {
 			if (isParentChildOfNetwork) await this.#removeEmptyDirectory(parentDirectory)
 
 			this.mountedShares.delete(share.mountPath)
+			this.unresponsiveShares.delete(share.mountPath)
 			this.logger.log(`Successfully unmounted network share: ${share.mountPath}`)
 		} catch (error) {
 			this.logger.error(`Failed to unmount network share ${share.mountPath}`, error)
