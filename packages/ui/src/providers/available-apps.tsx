@@ -2,7 +2,7 @@ import {createContext, useContext} from 'react'
 import {groupBy, indexBy, mapValues} from 'remeda'
 
 import {UMBREL_APP_STORE_ID} from '@/constants/app-store'
-import {indexRegistryApps} from '@/lib/app-store-registry'
+import {indexRegistryApps, resolveRegistryAppsFirstWins} from '@/lib/app-store-registry'
 import {RegistryApp, RouterOutput, trpcReact} from '@/trpc/trpc'
 
 type AppsContextT =
@@ -14,6 +14,7 @@ type AppsContextT =
 			repos: RouterOutput['appStore']['registry']
 			apps: RegistryApp[]
 			appsKeyed: Record<string, RegistryApp>
+			resolvedAppsKeyed: Record<string, RegistryApp>
 			ambiguousAppIds: ReadonlySet<string>
 			repoAppsKeyed: Record<string, Record<string, RegistryApp>>
 			// Keyed by plain strings: manifests may declare categories umbrelOS
@@ -38,13 +39,14 @@ export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 
 	const reposKeyed = indexBy(repos, (repo) => repo?.meta.id)
 	const {appsKeyed, ambiguousAppIds} = indexRegistryApps(repos)
+	const resolvedAppsKeyed = resolveRegistryAppsFirstWins(repos)
 	const apps = repos.flatMap((repo) => repo?.apps ?? []).filter((app) => !ambiguousAppIds.has(app.id))
 	const repoAppsKeyed = mapValues(reposKeyed, (repo) => indexBy(repo?.apps ?? [], (app) => app.id))
 	const repoAppsGroupedByCategory = mapValues(reposKeyed, (repo) => groupBy(repo?.apps ?? [], (app) => app.category))
 
 	const providerProps: AppsContextT = appsQ.isLoading
 		? {isLoading: true}
-		: {repos, apps, appsKeyed, ambiguousAppIds, repoAppsKeyed, repoAppsGroupedByCategory, isLoading: false}
+		: {repos, apps, appsKeyed, resolvedAppsKeyed, ambiguousAppIds, repoAppsKeyed, repoAppsGroupedByCategory, isLoading: false}
 
 	return <AppsContext value={providerProps}>{children}</AppsContext>
 }
@@ -77,6 +79,7 @@ export function useAllAvailableApps() {
 		isLoading: false,
 		apps: ctx.apps,
 		appsKeyed: ctx.appsKeyed,
+		resolvedAppsKeyed: ctx.resolvedAppsKeyed,
 		ambiguousAppIds: ctx.ambiguousAppIds,
 		repoAppsKeyed: ctx.repoAppsKeyed,
 	} as const
