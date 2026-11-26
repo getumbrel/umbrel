@@ -24,6 +24,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 			// (INSTALLED_AGENT_MCP_URL in ui/src/routes/settings/mcp/agents.ts) —
 			// keep them in sync if this ever changes
 			NETWORK_IP: '10.21.0.0',
+			NETWORK_IP_v6: 'fd40:95bc:786f::',
 			GATEWAY_IP: '10.21.0.1',
 			TOR_PROXY_IP: '10.21.21.11',
 			TOR_PROXY_PORT: '9050',
