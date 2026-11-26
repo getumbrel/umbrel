@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH="/usr/local/sbin:/usr/sbin:/sbin:$PATH"
 
 # This script is used to bootstrap the mender update process
 # The update server references it in the form:
